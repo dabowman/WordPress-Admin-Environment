@@ -9,6 +9,10 @@
     "format": "wp-scripts format"
   },
   "devDependencies": {
+    "@base-ui/react": "^1.4.0",
+    "@wordpress/core-data": "^7.43.0",
+    "@wordpress/data": "^10.43.0",
+    "@wordpress/dataviews": "^14.0.0",
     "@wordpress/icons": "^12.1.0",
     "@wordpress/scripts": "^30.7.0"
   }

@@ -70,7 +70,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',
-		array( 'wp-components' ),
+		array( 'wp-components', 'wp-dataviews' ),
 		$asset['version']
 	);
 
