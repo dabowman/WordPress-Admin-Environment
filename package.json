@@ -1,0 +1,15 @@
+{
+  "name": "wp-admin-shell",
+  "version": "0.1.0",
+  "description": "A configurable, React-based WordPress admin environment.",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "lint:js": "wp-scripts lint-js",
+    "format": "wp-scripts format"
+  },
+  "devDependencies": {
+    "@wordpress/icons": "^12.1.0",
+    "@wordpress/scripts": "^30.7.0"
+  }
+}
