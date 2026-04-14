@@ -1,0 +1,75 @@
+{
+  "name": "acme-client-portal",
+  "title": "Acme Corp Portal",
+  "description": "Client portal for Acme Corp website management.",
+  "version": 1,
+  "branding": {
+    "logo": "./assets/acme-logo.svg",
+    "title": "Acme Corp",
+    "accentColor": "#e63946"
+  },
+  "layout": {
+    "navigation": "left",
+    "navigationCollapsed": false,
+    "navigationWidth": 240
+  },
+  "applications": [
+    {
+      "id": "pages",
+      "source": "core:posts",
+      "title": "Pages",
+      "icon": "page",
+      "config": { "postType": "page" }
+    },
+    {
+      "id": "posts",
+      "source": "core:posts",
+      "title": "Blog",
+      "icon": "post",
+      "config": { "postType": "post" }
+    },
+    {
+      "id": "editor",
+      "source": "core:editor",
+      "title": "Editor",
+      "icon": "edit",
+      "hidden": true
+    },
+    {
+      "id": "media",
+      "source": "core:media",
+      "title": "Images & Files",
+      "icon": "media"
+    },
+    {
+      "id": "profile",
+      "source": "core:profile",
+      "title": "My Account",
+      "icon": "user"
+    }
+  ],
+  "navigation": [
+    { "app": "pages" },
+    { "app": "posts" },
+    { "app": "media" },
+    { "separator": true },
+    { "app": "profile" },
+    {
+      "label": "View My Site",
+      "icon": "external",
+      "href": "/",
+      "external": true
+    }
+  ],
+  "toolbar": {
+    "right": [
+      {
+        "href": "/",
+        "icon": "external",
+        "label": "View Site",
+        "external": true
+      }
+    ]
+  },
+  "defaultApp": "pages"
+}
