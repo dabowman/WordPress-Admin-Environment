@@ -162,6 +162,10 @@
 	box-sizing: border-box;
 }
 
+.wp-admin-shell-content__app.is-iframe {
+	padding: 0;
+}
+
 .wp-admin-shell-content__empty {
 	display: flex;
 	align-items: center;
@@ -181,4 +185,30 @@
 
 .wp-admin-shell-app-posts .dataviews-wrapper {
 	height: 100%;
+}
+
+/* ==========================================================================
+   IframeApp
+   ========================================================================== */
+
+.wp-admin-shell-app-iframe {
+	height: 100%;
+	position: relative;
+}
+
+.wp-admin-shell-app-iframe__frame {
+	width: 100%;
+	height: 100%;
+	border: none;
+	display: block;
+}
+
+.wp-admin-shell-app-iframe__loading {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #fff;
+	z-index: 1;
 }

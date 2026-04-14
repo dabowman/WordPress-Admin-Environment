@@ -27,8 +27,14 @@ export function ShellContent( { config } ) {
 		);
 	}
 
+	const isIframe = app.source.startsWith( 'iframe:' );
+
 	return (
-		<div className="wp-admin-shell-content__app">
+		<div
+			className={ `wp-admin-shell-content__app${
+				isIframe ? ' is-iframe' : ''
+			}` }
+		>
 			<AppComponent
 				app={ app }
 				config={ app.config }
