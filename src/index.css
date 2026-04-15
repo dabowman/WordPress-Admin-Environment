@@ -182,17 +182,182 @@
 	color: #f0f0f0;
 }
 
+/* ==========================================================================
+   Sidebar Content & Slide Animations
+   ========================================================================== */
+
+.wp-admin-shell-sidebar__content {
+	flex-grow: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	contain: content;
+}
+
+@keyframes wp-admin-shell--slide-from-right {
+	from {
+		transform: translateX(50px);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
+@keyframes wp-admin-shell--slide-from-left {
+	from {
+		transform: translateX(-50px);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
+.wp-admin-shell-sidebar__screen-wrapper {
+	overflow-x: auto;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	max-height: 100%;
+	padding: 0 12px;
+	animation-duration: 0.14s;
+	animation-timing-function: ease-in-out;
+	will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-admin-shell-sidebar__screen-wrapper {
+		animation-duration: 0s;
+	}
+}
+
+.wp-admin-shell-sidebar__screen-wrapper.slide-from-left {
+	animation-name: wp-admin-shell--slide-from-left;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper.slide-from-right {
+	animation-name: wp-admin-shell--slide-from-right;
+}
+
+/* ==========================================================================
+   SidebarNavigationScreen
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-screen__main {
+	flex-grow: 1;
+	margin-bottom: 16px;
+}
+
+.wp-admin-shell-sidebar-screen__title-bar {
+	position: sticky;
+	top: 0;
+	background: #1e1e1e;
+	padding-top: 48px;
+	margin-bottom: 8px;
+	padding-bottom: 8px;
+	z-index: 1;
+}
+
+.wp-admin-shell-sidebar-screen__title {
+	flex-grow: 1;
+	overflow-wrap: break-word;
+	line-height: 1.4;
+}
+
+.wp-admin-shell-sidebar-screen__content {
+	padding: 0 16px;
+}
+
+.wp-admin-shell-sidebar-screen__description {
+	color: #949494;
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0 0 12px;
+}
+
+.wp-admin-shell-sidebar-screen__items {
+	border: none !important;
+}
+
+.wp-admin-shell-sidebar-screen__footer {
+	position: sticky;
+	bottom: 0;
+	background-color: #1e1e1e;
+	padding: 8px 16px;
+	margin-top: 16px;
+	border-top: 1px solid #2f2f2f;
+}
+
+/* ==========================================================================
+   SidebarButton (back/dashboard button)
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-button.components-button {
+	color: #e0e0e0;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-sidebar-button.components-button:hover {
+	color: #fff;
+}
+
+/* ==========================================================================
+   SidebarNavigationItem
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-nav-item.components-item {
+	color: #757575;
+	padding: 8px 6px 8px 16px;
+	border: none;
+	min-height: 40px;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:hover,
+.wp-admin-shell-sidebar-nav-item.components-item:focus {
+	color: #e0e0e0;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:hover .wp-admin-shell-sidebar-nav-item__chevron,
+.wp-admin-shell-sidebar-nav-item.components-item:focus .wp-admin-shell-sidebar-nav-item__chevron {
+	fill: #e0e0e0;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item.is-active,
+.wp-admin-shell-sidebar-nav-item.components-item[aria-current="true"] {
+	background: #2f2f2f;
+	color: #fff;
+	font-weight: 500;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:focus-visible {
+	transform: translateZ(0);
+}
+
+.wp-admin-shell-sidebar-nav-item__chevron {
+	fill: #757575;
+}
+
+.wp-admin-shell-sidebar-nav-item.with-suffix {
+	padding-right: 16px;
+}
+
+/* ==========================================================================
+   Collapsed Nav (icon-only mode)
+   ========================================================================== */
+
 .wp-admin-shell-nav__items {
 	flex: 1;
 	padding: 0 12px;
 }
 
-/* Nav item buttons */
+/* Nav item buttons (collapsed mode) */
 .wp-admin-shell-nav__item.components-button {
 	width: 100%;
-	justify-content: flex-start;
+	justify-content: center;
 	color: #757575;
-	padding: 8px 6px 8px 16px;
+	padding: 8px;
 	border-radius: 4px;
 	gap: 10px;
 	min-height: 40px;
@@ -210,17 +375,10 @@
 	font-weight: 500;
 }
 
-/* Collapsed nav: center icon-only buttons */
-.is-collapsed .wp-admin-shell-nav__item.components-button {
-	justify-content: center;
-	padding: 8px;
-}
-
 .is-collapsed .wp-admin-shell-nav__items {
 	padding: 0 6px;
 }
 
-/* Focus visible — draw on top of active background */
 .wp-admin-shell-nav__item.components-button:focus-visible {
 	transform: translateZ(0);
 }
@@ -247,7 +405,7 @@
 	padding: 8px 16px 4px;
 }
 
-/* External links */
+/* External links (collapsed mode) */
 .wp-admin-shell-nav__link {
 	display: flex;
 	align-items: center;
@@ -265,7 +423,18 @@
 }
 
 /* ==========================================================================
-   Content Region
+   Content Areas Container
+   ========================================================================== */
+
+.wp-admin-shell-areas {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	gap: 0;
+}
+
+/* ==========================================================================
+   Content Region (primary card)
    ========================================================================== */
 
 .wp-admin-shell-content {
@@ -276,6 +445,12 @@
 	background: #fff;
 	border-radius: 8px;
 	box-shadow: 0 0.7px 1px rgba(0, 0, 0, 0.1), 0 1.2px 1.7px -0.7px rgba(0, 0, 0, 0.1), 0 3px 4.3px -1.4px rgba(0, 0, 0, 0.1);
+	margin: 16px 16px 16px 0;
+}
+
+/* Fullscreen content (iframe/editor) removes the card styling */
+.wp-admin-shell-content.is-fullscreen {
+	border-radius: 8px;
 	margin: 16px 16px 16px 0;
 }
 
@@ -301,6 +476,21 @@
 	height: 100%;
 	color: #757575;
 	font-size: 14px;
+}
+
+/* ==========================================================================
+   Preview Region (secondary card, shown in multi-area mode)
+   ========================================================================== */
+
+.wp-admin-shell-preview {
+	flex: 1;
+	min-width: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 0.7px 1px rgba(0, 0, 0, 0.1), 0 1.2px 1.7px -0.7px rgba(0, 0, 0, 0.1), 0 3px 4.3px -1.4px rgba(0, 0, 0, 0.1);
+	margin: 16px 16px 16px 0;
 }
 
 /* ==========================================================================

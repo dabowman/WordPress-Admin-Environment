@@ -81,7 +81,10 @@
     { "app": "site-editor" },
     { "separator": true },
     {
-      "group": "System",
+      "screen": "system",
+      "label": "System",
+      "icon": "settings",
+      "description": "Manage plugins, users, tools, and site settings.",
       "items": [
         { "app": "plugins" },
         { "app": "users" },

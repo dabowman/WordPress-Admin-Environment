@@ -60,7 +60,12 @@ wp-admin-shell/
 │   │   ├── ShellToolbar.js  # Top toolbar + shell switcher dropdown
 │   │   ├── ShellContent.js  # Content region — resolves route to app component
 │   │   ├── SiteHub.js       # Sidebar header: site icon, title, ⌘K command palette
-│   │   └── SiteIcon.js      # Site icon: branding logo or WordPress icon fallback
+│   │   ├── SiteIcon.js      # Site icon: branding logo or WordPress icon fallback
+│   │   ├── SidebarNavigationContext.js  # Navigation direction state for slide animations
+│   │   ├── SidebarNavigationScreen.js   # Screen with back button, title, description
+│   │   ├── SidebarNavigationItem.js     # Nav item with icon, chevron, active state
+│   │   ├── SidebarContent.js            # Animated wrapper for screen transitions
+│   │   └── SidebarButton.js             # Compact button styled for dark sidebar
 │   ├── apps/
 │   │   ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
 │   │   ├── EditorApp.js     # Block editor in iframe + auto-draft flow
@@ -89,6 +94,25 @@ wp-admin-shell/
 | `core:media` | MediaApp | `useEntityRecords('root', 'media')` | Grid, upload, detail modal |
 | `core:profile` | ProfileApp | `useEntityRecord('root', 'user', userId)` | Form with optimistic edits |
 | `iframe:{url}` | IframeApp | None | URL relative to `adminUrl`, chrome hidden via injected CSS |
+
+## Navigation
+
+The sidebar supports two navigation modes:
+
+- **Flat items**: `{ "app": "posts" }`, `{ "separator": true }`, `{ "group": "Label", "items": [...] }`, `{ "label": "...", "href": "...", "external": true }`
+- **Drill-down screens**: `{ "screen": "id", "label": "...", "icon": "...", "description": "...", "items": [...] }` — renders as a nav item with chevron that slides to a sub-screen with back button
+
+Screens support slide animations (0.14s CSS keyframes) and focus restoration after back navigation.
+
+## Multi-area layout
+
+The content region supports a split layout with primary content + preview cards:
+
+- Set `contentWidth` on an app config to constrain the primary card width
+- Set `preview` on an app config to the ID of another app to render in a secondary preview card
+- Both panels float as elevated white cards on the dark chrome background
+
+Example: `{ "id": "pages", "source": "core:posts", "config": { "postType": "page", "contentWidth": 480, "preview": "editor" } }`
 
 ## Shell switching
 

@@ -4,6 +4,12 @@ import { ShellContent } from './ShellContent';
 
 /**
  * Main layout — renders nav, toolbar, and content regions.
+ *
+ * The content region supports a multi-area model inspired by the site editor:
+ * - A primary content card (always visible)
+ * - An optional preview card (shown when the active app provides one)
+ *
+ * Both content and preview float as elevated cards on the dark chrome background.
  */
 export function ShellLayout( { config } ) {
 	const showNav = config.layout.navigation !== 'hidden';
@@ -21,9 +27,7 @@ export function ShellLayout( { config } ) {
 			<div className="wp-admin-shell-layout__body">
 				{ showNav && <ShellNavigation config={ config } /> }
 
-				<main className="wp-admin-shell-content">
-					<ShellContent config={ config } />
-				</main>
+				<ShellContent config={ config } />
 			</div>
 		</div>
 	);

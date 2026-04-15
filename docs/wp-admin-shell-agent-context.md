@@ -42,7 +42,12 @@ wp-admin-shell/
 │   │   ├── ShellToolbar.js          # Top toolbar renderer
 │   │   ├── ShellContent.js          # Content region — resolves route to app component
 │   │   ├── SiteHub.js               # Sidebar header: site icon, title, command palette
-│   │   └── SiteIcon.js              # Site icon: branding logo or WordPress icon fallback
+│   │   ├── SiteIcon.js              # Site icon: branding logo or WordPress icon fallback
+│   │   ├── SidebarNavigationContext.js  # Direction state for slide animations
+│   │   ├── SidebarNavigationScreen.js   # Screen with back button + title + description
+│   │   ├── SidebarNavigationItem.js     # Nav item (icon, label, chevron, active state)
+│   │   ├── SidebarContent.js            # Animated wrapper for screen transitions
+│   │   └── SidebarButton.js             # Compact button for dark sidebar
 │   ├── apps/
 │   │   ├── PostsApp.js              # DataViews post/page list
 │   │   ├── EditorApp.js             # Block editor mount (or iframe fallback)
