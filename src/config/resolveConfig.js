@@ -34,12 +34,11 @@ export function resolveConfig( raw ) {
 			.map( ( app ) => ( { app: app.id } ) );
 	}
 
-	config.toolbar = config.toolbar || { left: [], right: [] };
-	if ( ! config.toolbar.left ) {
-		config.toolbar.left = [];
-	}
-	if ( ! config.toolbar.right ) {
-		config.toolbar.right = [];
+	if ( typeof config.toolbar === 'object' && config.toolbar !== null ) {
+		config.toolbar.left = config.toolbar.left || [];
+		config.toolbar.right = config.toolbar.right || [];
+	} else {
+		config.toolbar = { left: [], right: [] };
 	}
 
 	config.defaultApp =

@@ -95,7 +95,6 @@ function ShellSwitcher( { shells, currentShell } ) {
 							key={ shell.slug }
 							onClick={ () => {
 								switchShell( shell.slug );
-								onClose();
 							} }
 							suffix={
 								shell.slug === currentShell ? (

@@ -31,6 +31,7 @@ export default function MediaApp() {
 	const [ page, setPage ] = useState( 1 );
 	const [ selectedItem, setSelectedItem ] = useState( null );
 	const [ isUploading, setIsUploading ] = useState( false );
+	const [ refreshKey, setRefreshKey ] = useState( 0 );
 	const fileInputRef = useRef();
 
 	const queryArgs = useMemo( () => {
@@ -38,6 +39,7 @@ export default function MediaApp() {
 			per_page: 40,
 			page,
 			context: 'edit',
+			_cache_bust: refreshKey,
 		};
 		if ( mediaType ) {
 			args.media_type = mediaType;
@@ -71,8 +73,7 @@ export default function MediaApp() {
 						body: formData,
 					} );
 				}
-				// Force a re-fetch by toggling page.
-				setPage( ( p ) => p );
+				setRefreshKey( ( k ) => k + 1 );
 			} finally {
 				setIsUploading( false );
 				if ( fileInputRef.current ) {
