@@ -36,7 +36,7 @@ export default function EditorApp( { params } ) {
 					path: `/wp/v2/${ postType === 'page' ? 'pages' : 'posts' }`,
 					method: 'POST',
 					data: {
-						status: 'auto-draft',
+						status: 'draft',
 						title: '',
 					},
 				} );
