@@ -33,7 +33,6 @@ export default function PostsApp( { app, config } ) {
 		perPage: 20,
 		sort: { field: 'date', direction: 'desc' },
 		fields: [ 'title', 'status', 'author', 'date' ],
-		titleField: 'title',
 		layout: {},
 	} );
 
