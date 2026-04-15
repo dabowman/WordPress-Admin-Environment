@@ -90,16 +90,24 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 
 	$config = wp_admin_shell_get_active_config();
 
+	$current_user = wp_get_current_user();
+
 	wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
-		'config'   => $config,
-		'siteUrl'  => get_site_url(),
-		'adminUrl'  => admin_url(),
-		'pluginUrl' => WP_ADMIN_SHELL_URL,
-		'restUrl'  => get_rest_url(),
-		'nonce'    => wp_create_nonce( 'wp_rest' ),
-		'userId'   => get_current_user_id(),
-		'siteName' => get_bloginfo( 'name' ),
-		'shells'   => wp_admin_shell_get_available_shells(),
+		'config'        => $config,
+		'siteUrl'       => get_site_url(),
+		'homeUrl'       => home_url(),
+		'adminUrl'      => admin_url(),
+		'dashboardUrl'  => admin_url(),
+		'pluginUrl'     => WP_ADMIN_SHELL_URL,
+		'restUrl'       => get_rest_url(),
+		'nonce'         => wp_create_nonce( 'wp_rest' ),
+		'userId'        => get_current_user_id(),
+		'siteName'      => get_bloginfo( 'name' ),
+		'shells'        => wp_admin_shell_get_available_shells(),
+		'user'          => array(
+			'displayName' => $current_user->display_name,
+			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
+		),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '

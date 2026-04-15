@@ -2,6 +2,7 @@ import { Button, Icon, __experimentalVStack as VStack } from '@wordpress/compone
 import { __ } from '@wordpress/i18n';
 import { resolveIcon } from '../config/iconMap';
 import { navigate, useRoute } from '../routing/router';
+import SiteHub from './SiteHub';
 
 /**
  * Renders the sidebar navigation from the config's navigation array.
@@ -21,26 +22,7 @@ export function ShellNavigation( { config } ) {
 					config.layout.navigationWidth + 'px',
 			} }
 		>
-			<div className="wp-admin-shell-nav__header">
-				{ config.branding.logo && (
-					<img
-						src={
-							config.branding.logo.startsWith( 'http' )
-								? config.branding.logo
-								: window.wpAdminShell.pluginUrl +
-								  config.branding.logo.replace( /^\.\//, '' )
-						}
-						alt=""
-						className="wp-admin-shell-nav__logo"
-					/>
-				) }
-				{ ! isCollapsed && (
-					<span className="wp-admin-shell-nav__title">
-						{ config.branding.title ||
-							window.wpAdminShell.siteName }
-					</span>
-				) }
-			</div>
+			{ ! isCollapsed && <SiteHub config={ config } /> }
 
 			<VStack spacing={ 1 } className="wp-admin-shell-nav__items">
 				{ config.navigation.map( ( item, index ) =>

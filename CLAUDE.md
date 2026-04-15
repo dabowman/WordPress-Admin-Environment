@@ -58,7 +58,9 @@ wp-admin-shell/
 │   │   ├── ShellLayout.js   # Layout regions: nav + toolbar + content
 │   │   ├── ShellNavigation.js # Sidebar nav renderer (items, groups, separators, external links)
 │   │   ├── ShellToolbar.js  # Top toolbar + shell switcher dropdown
-│   │   └── ShellContent.js  # Content region — resolves route to app component
+│   │   ├── ShellContent.js  # Content region — resolves route to app component
+│   │   ├── SiteHub.js       # Sidebar header: site icon, title, ⌘K command palette
+│   │   └── SiteIcon.js      # Site icon: branding logo or WordPress icon fallback
 │   ├── apps/
 │   │   ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
 │   │   ├── EditorApp.js     # Block editor in iframe + auto-draft flow

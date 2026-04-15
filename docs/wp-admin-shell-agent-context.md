@@ -40,7 +40,9 @@ wp-admin-shell/
 │   │   ├── ShellLayout.js           # Layout regions: nav + toolbar + content
 │   │   ├── ShellNavigation.js       # Sidebar nav renderer
 │   │   ├── ShellToolbar.js          # Top toolbar renderer
-│   │   └── ShellContent.js          # Content region — resolves route to app component
+│   │   ├── ShellContent.js          # Content region — resolves route to app component
+│   │   ├── SiteHub.js               # Sidebar header: site icon, title, command palette
+│   │   └── SiteIcon.js              # Site icon: branding logo or WordPress icon fallback
 │   ├── apps/
 │   │   ├── PostsApp.js              # DataViews post/page list
 │   │   ├── EditorApp.js             # Block editor mount (or iframe fallback)
@@ -406,15 +408,24 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
     // Use wp_add_inline_script + wp_json_encode instead of wp_localize_script
     // because wp_localize_script coerces all values to strings, breaking
     // booleans, numbers, and nested objects in the config.
+    $current_user = wp_get_current_user();
+
     wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
-        'config'   => wp_admin_shell_get_active_config(),
-        'siteUrl'  => site_url(),
-        'adminUrl' => admin_url(),
-        'restUrl'  => rest_url(),
-        'nonce'    => wp_create_nonce( 'wp_rest' ),
-        'userId'   => get_current_user_id(),
-        'siteName' => get_bloginfo( 'name' ),
-        'shells'   => wp_admin_shell_get_available_shells(),
+        'config'       => wp_admin_shell_get_active_config(),
+        'siteUrl'      => site_url(),
+        'homeUrl'      => home_url(),
+        'adminUrl'     => admin_url(),
+        'dashboardUrl' => admin_url(),
+        'pluginUrl'    => plugins_url( '', __FILE__ ),
+        'restUrl'      => rest_url(),
+        'nonce'        => wp_create_nonce( 'wp_rest' ),
+        'userId'       => get_current_user_id(),
+        'siteName'     => get_bloginfo( 'name' ),
+        'shells'       => wp_admin_shell_get_available_shells(),
+        'user'         => array(
+            'displayName' => $current_user->display_name,
+            'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
+        ),
     ) ) . ';', 'before' );
 } );
 ```

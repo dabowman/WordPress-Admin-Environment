@@ -18,7 +18,7 @@ export function resolveConfig( raw ) {
 		navigation: 'left',
 		navigationCollapsed: false,
 		toolbar: true,
-		navigationWidth: 280,
+		navigationWidth: 300,
 		...config.layout,
 	};
 
