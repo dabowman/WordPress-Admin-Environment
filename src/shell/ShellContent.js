@@ -27,12 +27,13 @@ export function ShellContent( { config } ) {
 		);
 	}
 
-	const isIframe = app.source.startsWith( 'iframe:' );
+	const isFullscreen =
+		app.source.startsWith( 'iframe:' ) || app.source === 'core:editor';
 
 	return (
 		<div
 			className={ `wp-admin-shell-content__app${
-				isIframe ? ' is-iframe' : ''
+				isFullscreen ? ' is-iframe' : ''
 			}` }
 		>
 			<AppComponent
