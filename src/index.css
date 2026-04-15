@@ -241,6 +241,104 @@
 }
 
 /* IframeApp (continued) */
+/* ==========================================================================
+   MediaApp
+   ========================================================================== */
+
+.wp-admin-shell-app-media {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-app-media__toolbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-app-media__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 12px;
+	flex: 1;
+	overflow-y: auto;
+	align-content: start;
+}
+
+.wp-admin-shell-app-media__item {
+	aspect-ratio: 1;
+	border: 2px solid #e0e0e0;
+	border-radius: 4px;
+	overflow: hidden;
+	cursor: pointer;
+	background: #f6f7f7;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.wp-admin-shell-app-media__item:hover {
+	border-color: #949494;
+}
+
+.wp-admin-shell-app-media__item.is-selected {
+	border-color: var(--wp-admin-shell-accent, #3858e9);
+	box-shadow: 0 0 0 1px var(--wp-admin-shell-accent, #3858e9);
+}
+
+.wp-admin-shell-app-media__item img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.wp-admin-shell-app-media__file-icon {
+	padding: 12px;
+	text-align: center;
+	font-size: 11px;
+	color: #757575;
+	word-break: break-all;
+}
+
+.wp-admin-shell-app-media__pagination {
+	padding: 16px 0;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-app-media__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+}
+
+.wp-admin-shell-app-media__preview img {
+	max-width: 300px;
+	max-height: 300px;
+	object-fit: contain;
+	border-radius: 4px;
+}
+
+/* ==========================================================================
+   ProfileApp
+   ========================================================================== */
+
+.wp-admin-shell-app-profile {
+	max-width: 600px;
+}
+
+.wp-admin-shell-app-profile__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 200px;
+}
+
+/* IframeApp (continued) */
 .wp-admin-shell-app-iframe__loading {
 	position: absolute;
 	inset: 0;
