@@ -59,10 +59,17 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 
 	$asset = include $asset_path;
 
+	// Filter out script dependencies that aren't registered in this
+	// WordPress version (e.g., wp-dataviews requires Gutenberg plugin
+	// or may not be registered on all admin pages).
+	$deps = array_filter( $asset['dependencies'], function ( $dep ) {
+		return wp_scripts()->query( $dep, 'registered' ) || wp_scripts()->query( $dep, 'enqueued' );
+	} );
+
 	wp_enqueue_script(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.js',
-		$asset['dependencies'],
+		array_values( $deps ),
 		$asset['version'],
 		true
 	);
@@ -70,7 +77,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',
-		array( 'wp-components', 'wp-dataviews' ),
+		array( 'wp-components' ),
 		$asset['version']
 	);
 

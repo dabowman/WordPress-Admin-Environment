@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { DataViews } from '@wordpress/dataviews/wp';
+import { DataViews } from '@wordpress/dataviews';
 import {
 	Button,
 	__experimentalText as Text,
