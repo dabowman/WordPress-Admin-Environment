@@ -134,7 +134,7 @@ function wp_admin_shell_get_active_config() {
 /**
  * Register the shell settings.
  */
-add_action( 'admin_init', function () {
+add_action( 'init', function () {
 	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_config', array(
 		'type'              => 'string',
 		'default'           => 'developer-admin',
