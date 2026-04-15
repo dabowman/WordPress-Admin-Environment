@@ -1,6 +1,12 @@
 import { resolveConfig } from '../config/resolveConfig';
 import { RouterProvider } from '../routing/router';
 import { ShellLayout } from './ShellLayout';
+import { useShellCommands } from '../commands/useShellCommands';
+
+function ShellInner( { config } ) {
+	useShellCommands( config );
+	return <ShellLayout config={ config } />;
+}
 
 export default function Shell() {
 	if ( ! window.wpAdminShell?.config ) {
@@ -11,7 +17,7 @@ export default function Shell() {
 
 	return (
 		<RouterProvider>
-			<ShellLayout config={ config } />
+			<ShellInner config={ config } />
 		</RouterProvider>
 	);
 }

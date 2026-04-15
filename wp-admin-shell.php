@@ -132,6 +132,7 @@ add_action( 'admin_init', function () {
 		'type'              => 'string',
 		'default'           => 'developer-admin',
 		'sanitize_callback' => 'sanitize_file_name',
+		'show_in_rest'      => true,
 	) );
 } );
 
