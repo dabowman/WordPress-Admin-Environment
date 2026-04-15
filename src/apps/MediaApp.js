@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import apiFetch from '@wordpress/api-fetch';
 import {
@@ -31,7 +31,6 @@ export default function MediaApp() {
 	const [ page, setPage ] = useState( 1 );
 	const [ selectedItem, setSelectedItem ] = useState( null );
 	const [ isUploading, setIsUploading ] = useState( false );
-	const [ refreshKey, setRefreshKey ] = useState( 0 );
 	const fileInputRef = useRef();
 
 	const queryArgs = useMemo( () => {
@@ -39,7 +38,6 @@ export default function MediaApp() {
 			per_page: 40,
 			page,
 			context: 'edit',
-			_cache_bust: refreshKey,
 		};
 		if ( mediaType ) {
 			args.media_type = mediaType;
@@ -53,7 +51,11 @@ export default function MediaApp() {
 		queryArgs
 	);
 
-	const { deleteEntityRecord, saveEntityRecord } = useDispatch( coreStore );
+	const {
+		deleteEntityRecord,
+		saveEntityRecord,
+		invalidateResolution,
+	} = useDispatch( coreStore );
 
 	const handleUpload = useCallback(
 		async ( event ) => {
@@ -73,7 +75,11 @@ export default function MediaApp() {
 						body: formData,
 					} );
 				}
-				setRefreshKey( ( k ) => k + 1 );
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'media',
+					queryArgs,
+				] );
 			} finally {
 				setIsUploading( false );
 				if ( fileInputRef.current ) {
@@ -81,7 +87,7 @@ export default function MediaApp() {
 				}
 			}
 		},
-		[]
+		[ queryArgs, invalidateResolution ]
 	);
 
 	const handleDelete = useCallback(
@@ -139,6 +145,21 @@ export default function MediaApp() {
 			{ isResolving && ! records?.length ? (
 				<div className="wp-admin-shell-app-media__loading">
 					<Spinner />
+				</div>
+			) : ! records?.length ? (
+				<div className="wp-admin-shell-app-media__empty">
+					<VStack alignment="center" spacing={ 3 }>
+						<Text variant="muted">
+							{ __( 'No media items found.', 'wp-admin-shell' ) }
+						</Text>
+						<Button
+							variant="secondary"
+							icon={ upload }
+							onClick={ () => fileInputRef.current?.click() }
+						>
+							{ __( 'Upload your first file', 'wp-admin-shell' ) }
+						</Button>
+					</VStack>
 				</div>
 			) : (
 				<>

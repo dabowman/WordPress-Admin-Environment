@@ -309,7 +309,8 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-app-media__loading {
+.wp-admin-shell-app-media__loading,
+.wp-admin-shell-app-media__empty {
 	display: flex;
 	align-items: center;
 	justify-content: center;
