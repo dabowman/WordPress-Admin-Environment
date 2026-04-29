@@ -558,6 +558,134 @@
 	z-index: 1;
 }
 
+/* ==========================================================================
+   SimpleEditorApp (Substack-style)
+   ========================================================================== */
+
+.wp-admin-shell-app-simple-editor {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	background: #fff;
+}
+
+.wp-admin-shell-app-simple-editor__toolbar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 16px;
+	border-bottom: 1px solid #e0e0e0;
+	background: #fff;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-app-simple-editor__status {
+	font-size: 12px;
+	color: #6c6c6c;
+	margin-left: auto;
+}
+
+.wp-admin-shell-app-simple-editor__status--error {
+	color: #cc1818;
+}
+
+.wp-admin-shell-app-simple-editor__status--saved {
+	color: #007017;
+}
+
+.wp-admin-shell-app-simple-editor__body {
+	flex: 1;
+	overflow: auto;
+	padding: 80px 24px 160px;
+	font-family: Charter, "Iowan Old Style", "Source Serif Pro", Georgia, serif;
+	color: #292929;
+}
+
+.wp-admin-shell-app-simple-editor__loading {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #fff;
+	z-index: 1;
+}
+
+.wp-admin-shell-app-simple-editor__column {
+	max-width: 680px;
+	margin: 0 auto;
+}
+
+.wp-admin-shell-app-simple-editor__title {
+	width: 100%;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: 48px;
+	font-weight: 600;
+	line-height: 1.15;
+	color: #1a1a1a;
+	margin: 0 0 32px;
+	padding: 0;
+	letter-spacing: -0.02em;
+	font-family: Charter, "Iowan Old Style", "Source Serif Pro", Georgia, serif;
+}
+
+.wp-admin-shell-app-simple-editor__title::placeholder {
+	color: #c0c0c0;
+}
+
+/* Body block typography. */
+.wp-admin-shell-app-simple-editor__body .block-editor-block-list__block {
+	font-size: 19px;
+	line-height: 1.7;
+}
+
+.wp-admin-shell-app-simple-editor__body .wp-block-paragraph {
+	font-size: 19px;
+	line-height: 1.7;
+	margin: 0 0 1.2em;
+}
+
+.wp-admin-shell-app-simple-editor__body .wp-block-heading {
+	font-weight: 600;
+	letter-spacing: -0.015em;
+	margin: 1.6em 0 0.4em;
+	line-height: 1.25;
+}
+
+.wp-admin-shell-app-simple-editor__body h2.wp-block-heading {
+	font-size: 30px;
+}
+
+.wp-admin-shell-app-simple-editor__body h3.wp-block-heading {
+	font-size: 24px;
+}
+
+.wp-admin-shell-app-simple-editor__body .wp-block-quote {
+	border-left: 3px solid #292929;
+	padding-left: 20px;
+	font-style: italic;
+	font-size: 21px;
+	line-height: 1.6;
+	margin: 1.5em 0;
+}
+
+.wp-admin-shell-app-simple-editor__body .wp-block-code {
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+	font-size: 15px;
+	background: #f6f7f7;
+	padding: 16px;
+	border-radius: 4px;
+}
+
+.wp-admin-shell-app-simple-editor__body .wp-block-separator {
+	border-color: #e0e0e0;
+	max-width: 80px;
+	margin: 2em auto;
+}
+
 /* IframeApp (continued) */
 /* ==========================================================================
    MediaApp

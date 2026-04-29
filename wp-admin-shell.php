@@ -81,6 +81,11 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		$asset['version']
 	);
 
+	// Block editor styles — needed by SimpleEditorApp (BlockEditorProvider + BlockList).
+	wp_enqueue_style( 'wp-block-editor' );
+	wp_enqueue_style( 'wp-block-library' );
+	wp_enqueue_style( 'wp-format-library' );
+
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',

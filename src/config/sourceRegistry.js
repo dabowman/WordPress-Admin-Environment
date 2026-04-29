@@ -1,5 +1,6 @@
 import PostsApp from '../apps/PostsApp';
 import EditorApp from '../apps/EditorApp';
+import SimpleEditorApp from '../apps/SimpleEditorApp';
 import MediaApp from '../apps/MediaApp';
 import ProfileApp from '../apps/ProfileApp';
 import IframeApp from '../apps/IframeApp';
@@ -12,6 +13,7 @@ function register( source, component ) {
 
 register( 'core:posts', PostsApp );
 register( 'core:editor', EditorApp );
+register( 'core:simple-editor', SimpleEditorApp );
 register( 'core:media', MediaApp );
 register( 'core:profile', ProfileApp );
 

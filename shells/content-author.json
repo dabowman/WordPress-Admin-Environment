@@ -24,7 +24,7 @@
     },
     {
       "id": "editor",
-      "source": "core:editor",
+      "source": "core:simple-editor",
       "title": "Editor",
       "icon": "edit",
       "hidden": true
