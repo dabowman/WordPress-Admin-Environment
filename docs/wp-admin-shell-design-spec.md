@@ -20,7 +20,9 @@
       - [Selection event bus](#423-selection-event-bus)
       - [Capability gating](#424-capability-gating)
    3. [`styles` — presentation](#43-styles--presentation)
-      - [Required token coverage](#431-required-token-coverage)
+      - [Expected slot contract](#431-expected-slot-contract)
+      - [CSS emission](#432-css-emission)
+      - [Worked example](#433-worked-example)
    4. [Origin cascade](#44-origin-cascade)
       - [Restrict-only override semantics](#441-override-stack-restrict-only-semantics)
       - [Customization affordances](#442-customization-affordances)
@@ -67,7 +69,7 @@ The design rests on seven principles. When a decision is unclear, they are the t
 
 1. **Declarative over imperative.** `admin.json` describes *what* exists, not *how* to render it. The runtime interprets the declaration. Lesson from `theme.json`, KDE Global Themes, VS Code `package.json` contributions.
 2. **Convention parity with `theme.json`.** Anyone who can read `theme.json` should be able to read `admin.json`. Same vocabulary (`settings`/`styles`), same cascade idea (origins merge deepest-wins), same schema discipline (versioned JSON Schema at `schemas.wp.org`), same extension hooks (`*_data` filters).
-3. **Three-tier design system: primitives → common → component.** A separate `tokens.json` document holds the author's design system as a standard W3C DTCG (Design Tokens Community Group, 2025.10) token file. `theme.json` and `admin.json` are sibling consumers — each declares the *names* WordPress expects (e.g., `color.palette.accent`) and *aliases* those names to whatever tokens the author has defined. Authors bring any DTCG-conformant design system (Carbon, Material, custom); WordPress dictates only the consumer slot names, not the primitive shape. This is a deliberate fix for theme.json's awkward `settings.custom` injection pattern.
+3. **Three-tier design system: primitives → common → component.** A separate `tokens.json` document holds the author's design system as a standard W3C DTCG (Design Tokens Community Group, 2025.10) token file. `theme.json` and `admin.json` are sibling consumers — each declares the *names* WordPress expects (theme.json's `settings.color.palette[].slug`, admin.json's WPDS token-matrix paths) and *aliases* those names to whatever tokens the author has defined. Authors bring any DTCG-conformant design system (Carbon, Material, custom); WordPress dictates only the consumer slot names, not the primitive shape. This is a deliberate fix for theme.json's awkward `settings.custom` injection pattern.
 4. **Pure data, no code.** Configuration is JSON. Code lives elsewhere — in PHP filters, in registered React components, in plugin source registrations. This keeps configs portable across stores, AI-generatable, and trivially diff-able.
 5. **REST API is the only contract.** The shell never reaches into PHP-rendered admin internals. Every screen reads/writes through `/wp-json/`. If the API can't do it, the shell can't do it (or it lives in the iframe escape hatch until the API can).
 6. **Open extension, closed defaults.** Plugins extend by registering new sources, filtering data, contributing slots — never by patching the shell. The shell ships a small, opinionated set of `core:*` sources; everything else comes through declared extension points.
@@ -169,7 +171,7 @@ WP Admin Shell does not invent a design system. It joins one. Three sibling docu
               --wp-admin-shell--*        --wp--preset--* (existing)
 ```
 
-**The contract is the *names*, not the shape.** WordPress (this shell + theme.json's existing surface) defines a set of consumer-slot names — `styles.color.palette[].slug`, `styles.typography.fontSizes[].slug`, etc. Authors must produce values for those slots. The values can be literal (`"#3b82f6"`) or — preferably — DTCG aliases into a tokens.json file. The author's tokens.json shape is unconstrained; only the names admin.json/theme.json *expose* are constrained.
+**The contract is the *names*, not the shape.** WordPress defines two consumer-slot vocabularies: `theme.json` (existing schema — `settings.color.palette[].slug`, `settings.typography.fontSizes[].slug`, etc.) and `admin.json.styles` (this spec — the WPDS token matrix, e.g. `color.bg.interactive.brand.strong`, `dimension.gap.md`). Authors must produce values for those slots. The values can be literal (`"#3b82f6"`, `"16px"`) or — preferably — DTCG aliases into a tokens.json file. The author's tokens.json shape is unconstrained; only the names admin.json/theme.json *expose* are constrained.
 
 Three tiers, mapping to the DTCG architecture:
 
@@ -236,33 +238,29 @@ CSS variable emission: each DTCG token compiles to a `--wp--token--{path-with-da
 
 #### 4.0.2 Aliasing tokens into admin.json / theme.json slots
 
-WordPress dictates the *slot names* downstream consumers expect (e.g., a color named `accent` in `styles.color.palette[]`). Authors fill those slots — typically by aliasing into their tokens.json, sometimes by inlining literal values.
+WordPress dictates the *slot names* downstream consumers expect. For `theme.json` these are the existing schema slot names (e.g., `settings.color.palette[].slug`). For `admin.json` these are the WPDS token-matrix paths (e.g., `color.bg.interactive.brand.strong`) plus the chrome extension slugs. Authors fill those slots — typically by aliasing into their tokens.json, sometimes by inlining literal values.
 
-The aliasing syntax in admin.json/theme.json is the same DTCG curly-brace form, expanded by the resolver against the loaded tokens.json:
+The aliasing syntax is the same DTCG curly-brace form, expanded by the resolver against the loaded tokens.json:
 
 ```jsonc
-// admin.json
+// admin.json — WPDS-shaped slots
 "styles": {
+  "$wpds": "6.9",
   "color": {
-    "palette": [
-      { "slug": "accent",     "color": "{color.blue.500}",     "name": "Accent"   },
-      { "slug": "surface",    "color": "{color.neutral.900}",  "name": "Surface"  },
-      { "slug": "card",       "color": "{color.neutral.0}",    "name": "Card"     },
-      { "slug": "text",       "color": "{color.neutral.0}",    "name": "Text"     },
-      { "slug": "text-muted", "color": "{color.neutral.500}",  "name": "Muted"    },
-      { "slug": "border",     "color": "{color.neutral.200}",  "name": "Border"   },
-      { "slug": "error",      "color": "{color.red.500}",      "name": "Error"    },
-      { "slug": "success",    "color": "{color.green.500}",    "name": "Success"  }
-    ]
+    "bg": {
+      "interactive": { "brand":   { "strong": "{color.blue.500}", "strong-active": "{color.blue.600}" } },
+      "surface":     { "neutral": { "strong": "{color.neutral.0}", "weak": "{color.neutral.50}" } }
+    },
+    "fg":     { "content":     { "neutral": { "default": "{color.neutral.900}" } } },
+    "stroke": { "focus":       { "brand":   "{color.blue.500}" } }
   },
-  "typography": {
-    "fontFamilies": [
-      { "slug": "system", "fontFamily": "{font.sans}", "name": "System" }
-    ],
-    "fontSizes": [
-      { "slug": "md", "size": "{size.fontSize.md}", "name": "Medium" }
-    ]
-  }
+  "font":      { "family": { "body": "{font.sans}" }, "size": { "md": "13px" } }
+}
+
+// theme.json — existing palette/preset shape
+"settings": {
+  "color":      { "palette": [ { "slug": "accent", "color": "{color.blue.500}", "name": "Accent" } ] },
+  "typography": { "fontFamilies": [ { "slug": "system", "fontFamily": "{font.sans}", "name": "System" } ] }
 }
 ```
 
@@ -271,21 +269,21 @@ Resolver rules:
 - **Curly-brace strings inside expected-slot values are DTCG aliases.** `"{color.blue.500}"` resolves against the merged tokens.json.
 - **Literal CSS values still work.** A theme that wants to skip tokens.json entirely can write `"color": "#3858e9"`; backwards compatible with current theme.json.
 - **Resolution is deep.** A DTCG alias may itself reference another alias (`{color.brand.primary}` → `{color.blue.500}`); the resolver follows chains and detects cycles.
-- **Type coercion.** When admin.json expects a CSS color string but the DTCG token is `{ "colorSpace": "srgb", "components": [...] }`, the resolver converts to the appropriate CSS form (`rgb()`, `oklch()`, `color(srgb ...)`) per the slot's declared output. Same for dimensions, durations, etc.
-- **Schema enforces slot names, not token shapes.** The admin.json/theme.json schemas validate that `styles.color.palette[].slug` exists and matches the expected enum (or extends it); they do not care what the resolved color value is.
+- **Type coercion.** When admin.json/theme.json expects a CSS color string but the DTCG token is `{ "colorSpace": "srgb", "components": [...] }`, the resolver converts to the appropriate CSS form (`rgb()`, `oklch()`, `color(srgb ...)`) per the slot's declared output. Same for dimensions, durations, etc.
+- **Schema enforces slot names, not token shapes.** The admin.json schema validates that the `styles` tree matches the WPDS matrix at the pinned `$wpds` version; the theme.json schema validates the theme.json slot enum. Neither cares what the resolved value's source shape is.
 
-If an author's tokens.json doesn't have a token named `color.blue.500` (e.g., because it uses Material's `md.ref.palette.primary40`), the author writes `"{md.ref.palette.primary40}"` instead. The slot name (`accent`) is the contract WordPress reads; the alias path is the author's mapping.
+If an author's tokens.json doesn't have a token named `color.blue.500` (e.g., because it uses Material's `md.ref.palette.primary40`), the author writes `"{md.ref.palette.primary40}"` instead. The slot name (`color.bg.interactive.brand.strong` or `settings.color.palette.accent`) is the contract WordPress reads; the alias path is the author's mapping.
 
 #### 4.0.3 The expected-slot contract
 
-WordPress (this shell + theme.json) declares a fixed set of slot names that consumers must fill (or that fall back to `core` defaults). Slot names are documented in:
+WordPress declares two fixed slot vocabularies that consumers must fill (or that fall back to `core` defaults). Slot names are documented in:
 
 - **theme.json** — existing schema at `https://schemas.wp.org/trunk/theme.json` (`settings.color.palette[].slug`, `settings.typography.fontSizes[].slug`, etc.)
-- **admin.json** — this spec, §4.3.1 (the "minimum slug" column of the token coverage table).
+- **admin.json** — this spec, §4.3.1: the WPDS token matrix at the pinned `$wpds` version (sourced from `wp-includes/css/dist/theme/style.css`) plus the chrome extension slug list.
 
 Neither document constrains the *shape* or *naming* of the underlying DTCG tokens. The author can use Carbon, Material, Polaris, Tailwind-style scales, or hand-curated names. The mapping job is one alias-string per slot.
 
-The `admin.json` schema may extend the slot enum over time; new slugs are additive. Authors may also add author-defined slugs (a custom `accent-warm` palette entry); those compile to CSS variables in the same namespace and are available to apps that opt into them.
+WordPress core governs the WPDS matrix; the shell tracks it via the `$wpds` version pin (§4.3.1). New WPDS slots become available when the shell bumps the pin. Chrome slugs are stable across spec versions and additive — new slugs may be added, existing slugs do not change. Authors may add custom slugs under `chrome.*` for engines that declare `requiredTokens`; the WPDS surface is not author-extensible.
 
 #### 4.0.4 Discovery and precedence
 
@@ -526,155 +524,411 @@ Apps and regions both accept a `capability` field. The runtime hides apps and re
 
 ### 4.3 `styles` — presentation
 
-`styles` declares **how the shell looks**. Like `theme.json`, presets defined here compile to CSS custom properties consumable everywhere.
+`styles` declares **how the shell looks**. The shell consumes WordPress's existing `--wpds-*` design-token surface (the `@wordpress/theme` package, autogenerated by Terrazzo) directly. The shell does not invent a parallel namespace; it fills the existing one. The full WPDS surface, its sibling systems, and their cross-relationships are catalogued in [`wordpress-design-tokens-catalog.md`](./wordpress-design-tokens-catalog.md).
 
-**The token contract is the layout engine contract.** Every visual property a layout engine renders — surfaces, borders, shadows, spacing, type, motion, focus — must resolve to a token in the `--wp-admin-shell--*` namespace. Engines never hardcode colors, sizes, or timings; they read tokens. This is the first-principles fix for the WordPress ecosystem-debt problem the user noted: when a core token system is incomplete, plugin authors invent their own, fragmenting the surface and making theming brittle. The token model below is intentionally comprehensive so engines never need to.
+**Why WPDS-native.** Per the catalog's migration trajectory, `@wordpress/components` and `@wordpress/ui` are converging on `--wpds-*`. Setting our shell theming on the WPDS surface means every present and future component consumer inside the shell picks up the shell's overrides automatically — including rebrand-via-tokens, density variants, and per-shell color schemes.
+
+**The token contract is the layout engine contract.** Every visual property a layout engine renders — surfaces, borders, shadows, spacing, type, motion, focus — must resolve to a `--wpds-*` token. Engines never hardcode colors, sizes, or timings. Engines reading shell-only chrome slots (sidebar, toolbar, siteHub, content card) read `--wp-admin-shell--chrome--*` instead; that small extension namespace covers the surfaces WPDS does not yet describe.
+
+`styles` is a tree shaped 1:1 to the WPDS token matrix. Each leaf accepts a DTCG alias (`"{color.brand.500}"`), a literal CSS value (`"#3858e9"`, `"16px"`), or an inline DTCG object (`{ "$value": "#3858e9", "$type": "color" }`). The resolver walks the tree and for each leaf emits a CSS variable whose name is the path joined by `-`, prefixed `--wpds-`. The tree mirrors WPDS slot names verbatim — no translation table.
 
 ```jsonc
 "styles": {
+  // Pin the WPDS slot matrix to a WordPress release. The resolver loads
+  // wpds-defaults-{version}.json as the implicit `core` baseline so missing
+  // author values cannot break the runtime.
+  "$wpds": "6.9",
+
   // Brand identity for this shell.
   "branding": {
-    "logo":        "./assets/acme-logo.svg",
-    "title":       "Acme Corp",          // overrides site title in SiteHub
-    "icon":        "./assets/icon.svg"   // square mark, fallback to logo
+    "logo":  "./assets/acme-logo.svg",
+    "title": "Acme Corp",                 // overrides site title in SiteHub
+    "icon":  "./assets/icon.svg"          // square mark, fallback to logo
   },
 
-  // Color tokens. Compiled to --wp-admin-shell--color--{name} CSS vars.
+  // WPDS surface — output is --wpds-*. Path = wpds slot name verbatim.
   "color": {
-    "palette": [
-      // Either inline literal CSS values…
-      { "slug": "accent",  "color": "#3858e9",            "name": "Accent" },
-      // …or DTCG aliases into the loaded tokens.json (preferred):
-      { "slug": "surface", "color": "{color.neutral.900}", "name": "Surface" },
-      { "slug": "card",    "color": "{color.neutral.0}",   "name": "Card" }
-    ],
-    "background": "{color.neutral.900}",
-    "text":       "{color.neutral.0}"
-  },
-
-  // Typography tokens.
-  "typography": {
-    "fontFamilies": [
-      // Inline literal value:
-      { "slug": "system", "fontFamily": "system-ui, -apple-system, sans-serif", "name": "System" },
-      // Or DTCG alias:
-      { "slug": "mono",   "fontFamily": "{font.mono}", "name": "Monospace" }
-    ],
-    "fontSizes": [
-      { "slug": "sm", "size": "{size.fontSize.sm}" },
-      { "slug": "md", "size": "{size.fontSize.md}" },
-      { "slug": "lg", "size": "{size.fontSize.lg}" }
-    ]
-  },
-
-  // Spacing scale. Compiled to --wp-admin-shell--space-* vars.
-  "spacing": {
-    "scale": [
-      { "slug": "xs", "size": "4px"  },
-      { "slug": "sm", "size": "8px"  },
-      { "slug": "md", "size": "16px" },
-      { "slug": "lg", "size": "24px" }
-    ]
-  },
-
-  // Border tokens.
-  "border": {
-    "radii":  [
-      { "slug": "sm", "size": "4px" },
-      { "slug": "md", "size": "8px" },
-      { "slug": "lg", "size": "12px" }
-    ],
-    "widths": [
-      { "slug": "thin",  "size": "1px" },
-      { "slug": "thick", "size": "2px" }
-    ]
-  },
-
-  // Shadow tokens.
-  "shadow": {
-    "presets": [
-      { "slug": "card",   "shadow": "0 1px 3px rgba(0,0,0,0.08)" },
-      { "slug": "modal",  "shadow": "0 12px 40px rgba(0,0,0,0.25)" },
-      { "slug": "focus",  "shadow": "0 0 0 2px var(--wp-admin-shell--color--accent)" }
-    ]
-  },
-
-  // Motion tokens — durations and easings layout engines use for transitions.
-  "motion": {
-    "durations": [
-      { "slug": "instant", "size": "0ms"   },
-      { "slug": "fast",    "size": "120ms" },
-      { "slug": "medium",  "size": "240ms" },
-      { "slug": "slow",    "size": "400ms" }
-    ],
-    "easings": [
-      { "slug": "standard", "easing": "cubic-bezier(0.2, 0, 0, 1)"   },
-      { "slug": "emphasis", "easing": "cubic-bezier(0.3, 0, 0, 1.2)" }
-    ]
-  },
-
-  // Z-index tokens — layering scale layout engines use for overlay/floating.
-  "zIndex": {
-    "scale": [
-      { "slug": "base",    "value": 0    },
-      { "slug": "raised",  "value": 10   },
-      { "slug": "drawer",  "value": 100  },
-      { "slug": "overlay", "value": 1000 },
-      { "slug": "modal",   "value": 1100 },
-      { "slug": "toast",   "value": 1200 }
-    ]
-  },
-
-  // Per-region style overrides. Mirrors theme.json's styles.blocks.
-  "regions": {
-    "sidebar":  { "color": { "background": "{color.neutral.900}" } },
-    "content":  { "color": { "background": "{color.neutral.0}"   } },
-    "preview":  { "color": { "background": "{color.neutral.0}"   } }
-  },
-
-  // Per-application style overrides.
-  "applications": {
-    "posts": {
-      "color": { "background": "{color.neutral.0}" }
+    "bg": {
+      "interactive": {
+        "brand":   { "strong": "{color.brand.500}", "strong-active": "{color.brand.600}",
+                     "weak":   "transparent",       "weak-active":   "{color.brand.50}" },
+        "neutral": { "strong": "{color.neutral.900}", "strong-active": "{color.neutral.950}",
+                     "strong-disabled": "{color.neutral.200}",
+                     "weak":   "transparent",         "weak-active":   "{color.neutral.100}",
+                     "weak-disabled": "transparent" },
+        "error":   { "strong": "{color.red.600}",  "strong-active": "{color.red.700}",
+                     "weak":   "transparent",       "weak-active":   "{color.red.50}" }
+      },
+      "surface": {
+        "neutral": { "strong": "{color.neutral.0}", "weak": "{color.neutral.50}",
+                     "default": "{color.neutral.100}" },
+        "brand":   "{color.brand.50}",
+        "error":   "{color.red.100}",
+        "info":    "{color.blue.100}",
+        "success": "{color.green.100}",
+        "warning": "{color.yellow.100}",
+        "caution": "{color.amber.100}"
+      },
+      "thumb":   { "brand":   { "default": "{color.brand.500}",   "active": "{color.brand.500}" },
+                   "neutral": { "weak":    "{color.neutral.500}", "weak-active": "{color.neutral.600}",
+                                "disabled": "{color.neutral.300}" } },
+      "track":   { "neutral": { "default": "{color.neutral.300}", "weak": "{color.neutral.200}" } }
+    },
+    "fg": {
+      "content":     { "neutral":  { "default": "{color.neutral.900}", "weak": "{color.neutral.600}" },
+                       "error":    { "default": "{color.red.900}",     "weak": "{color.red.600}" },
+                       "info":     { "default": "{color.blue.900}",    "weak": "{color.blue.600}" },
+                       "success":  { "default": "{color.green.900}",   "weak": "{color.green.700}" },
+                       "warning":  { "default": "{color.yellow.900}",  "weak": "{color.yellow.700}" },
+                       "caution":  { "default": "{color.amber.900}",   "weak": "{color.amber.700}" } },
+      "interactive": { "brand":    { "default": "{color.brand.500}",   "active": "{color.brand.500}",
+                                     "strong":  "{color.neutral.50}",  "strong-active": "{color.neutral.50}" },
+                       "neutral":  { "default": "{color.neutral.900}", "active": "{color.neutral.900}",
+                                     "disabled": "{color.neutral.500}",
+                                     "weak":    "{color.neutral.600}", "weak-disabled": "{color.neutral.500}",
+                                     "strong":  "{color.neutral.100}", "strong-active": "{color.neutral.100}",
+                                     "strong-disabled": "{color.neutral.500}" },
+                       "error":    { "default": "{color.red.600}",     "active": "{color.red.600}",
+                                     "strong":  "{color.neutral.50}",  "strong-active": "{color.neutral.50}" } }
+    },
+    "stroke": {
+      "focus":       { "brand": "{color.brand.500}" },
+      "interactive": { "brand":   { "default": "{color.brand.500}", "active": "{color.brand.700}" },
+                       "neutral": { "default": "{color.neutral.500}", "active": "{color.neutral.600}",
+                                    "disabled": "{color.neutral.300}", "strong": "{color.neutral.600}" },
+                       "error":   { "default": "{color.red.600}",  "active": "{color.red.800}",
+                                    "strong":  "{color.red.600}" } },
+      "surface":     { "brand":   { "default": "{color.brand.300}", "strong": "{color.brand.500}" },
+                       "neutral": { "default": "{color.neutral.300}", "weak": "{color.neutral.200}",
+                                    "strong":  "{color.neutral.500}" },
+                       "error":   { "default": "{color.red.300}",  "strong": "{color.red.600}" },
+                       "info":    { "default": "{color.blue.300}", "strong": "{color.blue.600}" },
+                       "success": { "default": "{color.green.300}","strong": "{color.green.700}" },
+                       "warning": { "default": "{color.yellow.300}","strong": "{color.yellow.700}" } }
     }
+  },
+
+  "dimension": {
+    "base":    "{spacing.4}",
+    "gap":     { "xs": "{spacing.4}", "sm": "{spacing.8}", "md": "{spacing.12}",
+                 "lg": "{spacing.16}", "xl": "{spacing.24}", "2xl": "{spacing.32}", "3xl": "{spacing.40}" },
+    "padding": { "xs": "{spacing.4}", "sm": "{spacing.8}", "md": "{spacing.12}",
+                 "lg": "{spacing.16}", "xl": "{spacing.20}", "2xl": "{spacing.24}", "3xl": "{spacing.32}" }
+  },
+
+  "border": {
+    "radius": { "xs": "{radius.1}", "sm": "{radius.2}", "md": "{radius.4}", "lg": "{radius.8}" },
+    "width":  { "xs": "{border.1}", "sm": "{border.2}", "md": "{border.4}", "lg": "{border.8}",
+                "focus": "{border.focus}" }
+  },
+
+  "elevation": {
+    "x-small": "{shadow.xs}",
+    "small":   "{shadow.sm}",
+    "medium":  "{shadow.md}",
+    "large":   "{shadow.lg}"
+  },
+
+  "font": {
+    "family":      { "body":    "{font.family.sans}",
+                     "heading": "{font.family.sans}",
+                     "mono":    "{font.family.mono}" },
+    "size":        { "xs": "11px", "sm": "12px", "md": "13px",
+                     "lg": "15px", "xl": "20px", "2xl": "32px" },
+    "line-height": { "xs": "16px", "sm": "20px", "md": "24px",
+                     "lg": "28px", "xl": "32px", "2xl": "40px" },
+    "weight":      { "regular": 400, "medium": 499 }
+  },
+
+  // Density variant. Resolver writes `data-wpds-density` attribute on the
+  // shell root. WPDS already ships density-keyed gap/padding overrides.
+  "density": "default",   // "default" | "compact" | "comfortable"
+
+  // Shell-only chrome — surfaces WPDS does not describe.
+  // Output is --wp-admin-shell--chrome--*.
+  "chrome": {
+    "sidebar":  { "background": "{color.neutral.950}",
+                  "foreground": "{color.neutral.50}",
+                  "border":     "{color.neutral.800}",
+                  "item": { "background":        "transparent",
+                            "background-hover":  "{color.neutral.900}",
+                            "background-active": "{color.brand.700}",
+                            "foreground":        "{color.neutral.100}",
+                            "foreground-active": "{color.neutral.0}" },
+                  "width":      "240px" },
+    "toolbar":  { "background": "{color.neutral.0}",
+                  "foreground": "{color.neutral.900}",
+                  "border":     "{color.neutral.200}",
+                  "height":     "48px" },
+    "siteHub":  { "background": "{color.neutral.950}",
+                  "foreground": "{color.neutral.50}",
+                  "icon-size":  "32px",
+                  "padding":    "{spacing.16}" },
+    "content":  { "background":      "{color.neutral.50}",
+                  "card-background": "{color.neutral.0}",
+                  "card-radius":     "{radius.8}",
+                  "card-shadow":     "{shadow.sm}",
+                  "card-padding":    "{spacing.24}",
+                  "card-max-width":  "1200px" }
+  },
+
+  // Per-region style overrides. Same shape as styles, restricted to leaves.
+  "regions": {
+    "sidebar": { "color": { "bg": { "surface": { "neutral": { "strong": "{color.neutral.950}" } } } } }
+  },
+
+  // Per-application style overrides. Same shape.
+  "applications": {
+    "posts": { "color": { "bg": { "surface": { "neutral": { "strong": "{color.neutral.0}" } } } } }
   }
 }
 ```
 
 **DTCG alias resolution.** Strings of the form `"{path.to.token}"` are DTCG aliases (§4.0.2) resolved against the merged tokens.json. Literal CSS values still work — both forms coexist field-by-field.
 
-**Within-document references.** When you need to point one slot at another inside admin.json (e.g., `styles.color.background` should equal whatever `palette.surface` resolves to), the same curly-brace syntax works with a `styles.` prefix: `"{styles.color.palette.surface}"`. The resolver disambiguates: paths starting with a top-level token category (`color`, `size`, etc) resolve into tokens.json; paths starting with `styles.` resolve within admin.json.
-
-**CSS variable emission.**
-- DTCG tokens compile to `--wp--token--{path-with-dashes}`. Shared with theme.json.
-- Admin slot values compile to `--wp-admin-shell--{category}--{slug}`. Shell-scoped.
-
-Plugins, layout engines, and apps consuming admin styling reference the named-slot variables. They should not read hex values, raw px, or hardcoded durations from inline styles.
+**Within-document references.** When you need to point one slot at another inside admin.json (e.g., chrome's sidebar background should equal whatever `color.bg.surface.neutral.strong` resolves to), the same curly-brace syntax works with a `styles.` prefix: `"{styles.color.bg.surface.neutral.strong}"`. The resolver disambiguates: paths starting with a top-level token category in tokens.json (`color`, `spacing`, `radius`, etc.) resolve into tokens.json; paths starting with `styles.` resolve within admin.json.
 
 #### 4.3.1 Expected slot contract
 
-The following slots are the *names WordPress reads*. Authors must produce values for them — by alias into tokens.json (preferred) or by literal CSS value. The `core` origin ships defaults for every required slug so missing author values don't break the runtime.
+The required slot list **is the WPDS token matrix at a pinned WPDS version**. Authors do not write a flat slug list; they write the WPDS-shaped tree above. The `core` origin ships defaults for every WPDS slot, taken from the upstream Terrazzo output (`wp-includes/css/dist/theme/style.css`), so missing author values cannot break the runtime.
 
-This is the contract that defines what a well-formed admin shell theme must provide. Sources, layout engines, and apps may rely on these slots being present.
+```jsonc
+"styles": {
+  "$wpds": "6.9"   // resolver loads wpds-defaults-6.9.json as the `core` baseline
+}
+```
 
-| Category | CSS variable prefix | Required slugs |
-|---|---|---|
-| Color | `--wp-admin-shell--color--{slug}` | `accent`, `surface`, `card`, `text`, `text-muted`, `border`, `error`, `warning`, `success` |
-| Typography family | `--wp-admin-shell--font-family--{slug}` | `system`, `mono` |
-| Typography size | `--wp-admin-shell--font-size--{slug}` | `xs`, `sm`, `md`, `lg`, `xl` |
-| Typography weight | `--wp-admin-shell--font-weight--{slug}` | `regular`, `medium`, `semibold`, `bold` |
-| Typography line-height | `--wp-admin-shell--line-height--{slug}` | `tight`, `normal`, `loose` |
-| Spacing | `--wp-admin-shell--space--{slug}` | `xs`, `sm`, `md`, `lg`, `xl` |
-| Border radius | `--wp-admin-shell--radius--{slug}` | `sm`, `md`, `lg` |
-| Border width | `--wp-admin-shell--border-width--{slug}` | `thin`, `thick` |
-| Shadow | `--wp-admin-shell--shadow--{slug}` | `card`, `modal`, `focus` |
-| Motion duration | `--wp-admin-shell--duration--{slug}` | `instant`, `fast`, `medium`, `slow` |
-| Motion easing | `--wp-admin-shell--easing--{slug}` | `standard`, `emphasis` |
-| Z-index | `--wp-admin-shell--z--{slug}` | `base`, `raised`, `drawer`, `overlay`, `modal`, `toast` |
+A CI parity test parses the pinned WordPress's `dist/theme/style.css` and diffs against the snapshot. Added, renamed, or removed WPDS slots fail the build so we ship a coordinated bump on each WordPress release. See §13 for the open question on cross-version compat shims.
 
-Authors may add their own slugs to extend a category. Custom slugs compile to the same namespace and become available to apps that opt in. Layout engines depending on custom slugs declare them via `requiredTokens` (§5.4) so configs can be validated against the engine.
+The chrome extension namespace adds shell-only slots WPDS does not yet describe:
 
-The slot contract evolves additively across spec versions. New slugs may be added in `version: 2`; existing slugs are stable.
+| Path under `styles.chrome` | Output CSS variable |
+|---|---|
+| `sidebar.background` | `--wp-admin-shell--chrome--sidebar--background` |
+| `sidebar.foreground` | `--wp-admin-shell--chrome--sidebar--foreground` |
+| `sidebar.border` | `--wp-admin-shell--chrome--sidebar--border` |
+| `sidebar.item.background` | `--wp-admin-shell--chrome--sidebar--item--background` |
+| `sidebar.item.background-hover` | `--wp-admin-shell--chrome--sidebar--item--background-hover` |
+| `sidebar.item.background-active` | `--wp-admin-shell--chrome--sidebar--item--background-active` |
+| `sidebar.item.foreground` | `--wp-admin-shell--chrome--sidebar--item--foreground` |
+| `sidebar.item.foreground-active` | `--wp-admin-shell--chrome--sidebar--item--foreground-active` |
+| `sidebar.width` | `--wp-admin-shell--chrome--sidebar--width` |
+| `toolbar.background` | `--wp-admin-shell--chrome--toolbar--background` |
+| `toolbar.foreground` | `--wp-admin-shell--chrome--toolbar--foreground` |
+| `toolbar.border` | `--wp-admin-shell--chrome--toolbar--border` |
+| `toolbar.height` | `--wp-admin-shell--chrome--toolbar--height` |
+| `siteHub.background` | `--wp-admin-shell--chrome--site-hub--background` |
+| `siteHub.foreground` | `--wp-admin-shell--chrome--site-hub--foreground` |
+| `siteHub.icon-size` | `--wp-admin-shell--chrome--site-hub--icon-size` |
+| `siteHub.padding` | `--wp-admin-shell--chrome--site-hub--padding` |
+| `content.background` | `--wp-admin-shell--chrome--content--background` |
+| `content.card-background` | `--wp-admin-shell--chrome--content--card-background` |
+| `content.card-radius` | `--wp-admin-shell--chrome--content--card-radius` |
+| `content.card-shadow` | `--wp-admin-shell--chrome--content--card-shadow` |
+| `content.card-padding` | `--wp-admin-shell--chrome--content--card-padding` |
+| `content.card-max-width` | `--wp-admin-shell--chrome--content--card-max-width` |
+
+Roughly 23 chrome-only slots. Authors may add custom slugs under `chrome.*`. Layout engines reading custom chrome slugs declare them via `EngineSource.requiredTokens` (§5.4) so the runtime validates at activation and surfaces a clear error when a config does not supply them.
+
+The slot contract evolves additively across spec versions. WPDS slot churn is governed by the `$wpds` pin; chrome slugs are stable across spec versions.
+
+#### 4.3.2 CSS emission
+
+Three families are written into the shell stylesheet, in this order:
+
+```css
+#wp-admin-shell {
+  /* 1. WPDS surface — full matrix from styles tree. */
+  --wpds-color-bg-interactive-brand-strong:        #3858e9;
+  --wpds-color-bg-interactive-brand-strong-active: #2e49d9;
+  /* …154 wpds vars… */
+
+  /* 2. Chrome extensions — shell-only, no wpds analog. */
+  --wp-admin-shell--chrome--sidebar--background: #0a0a0a;
+  /* …chrome vars… */
+
+  /* 3. Compat bridge — fixed map. Makes legacy WordPress consumers inherit
+        shell theming without needing wpds awareness. */
+  --wp-admin-theme-color:           var(--wpds-color-bg-interactive-brand-strong);
+  --wp-admin-theme-color--rgb:      56, 88, 233;            /* derived numerically */
+  --wp-admin-theme-color-darker-10: var(--wpds-color-bg-interactive-brand-strong-active);
+  --wp-admin-theme-color-darker-20: rgb(23.69, 58.15, 214.31);
+  --wp-admin-border-width-focus:    var(--wpds-border-width-focus);
+  --wp-components-color-accent:     var(--wpds-color-bg-interactive-brand-strong);
+  --wp-components-color-background: var(--wpds-color-bg-surface-neutral-strong);
+  --wp-components-color-foreground: var(--wpds-color-fg-content-neutral);
+}
+
+#wp-admin-shell[data-wpds-density="compact"]      { /* WPDS density block applies as-is */ }
+#wp-admin-shell[data-wpds-density="comfortable"]  { /* WPDS density block applies as-is */ }
+```
+
+The compat bridge is **static** — it lives in the resolver as a hardcoded post-pass, not in author files. Authors cannot remove or override the bridge; it is the contract that makes legacy `@wordpress/components`, wp-admin pages, and SCSS-compiled CSS inherit shell theming.
+
+`--wp-admin-theme-color--rgb` and `-darker-20` need numeric derivation (RGB triplet, HSL lightness adjust). The resolver computes both from the resolved `bg-interactive-brand-strong` value at compile time. The brand value must terminate at a literal hex/rgb after alias chasing, so derivation is possible — the resolver surfaces a clear error if it terminates at an unresolvable `var()`.
+
+`--wp-admin-theme-color--rgb` is consumed by `rgba(var(--wp-admin-theme-color--rgb), 0.04)` patterns in legacy SCSS-compiled CSS. The triplet must match the brand color or buttons render off-tinted on hover.
+
+Sources, layout engines, and apps consuming admin styling reference the named variables. They do not read hex values, raw px, or hardcoded durations from inline styles.
+
+#### 4.3.3 Worked example
+
+One tokens.json drives both admin.json (WPDS output) and theme.json (theme.json output).
+
+**Author writes one tokens.json:**
+
+```jsonc
+// /tokens.json — DTCG, author-owned shape
+{
+  "$schema": "https://design-tokens.org/schemas/2025-10/tokens.schema.json",
+
+  "color": {
+    "$type": "color",
+    "brand":   { "500": { "$value": "#3858e9" }, "600": { "$value": "#2e49d9" },
+                 "700": { "$value": "#2337c8" }, "50":  { "$value": "#ecf0f9" } },
+    "neutral": { "0":   { "$value": "#ffffff" }, "50":  { "$value": "#f8f8f8" },
+                 "100": { "$value": "#f0f0f0" }, "200": { "$value": "#e0e0e0" },
+                 "300": { "$value": "#d8d8d8" }, "500": { "$value": "#8a8a8a" },
+                 "600": { "$value": "#6d6d6d" }, "900": { "$value": "#1e1e1e" },
+                 "950": { "$value": "#0a0a0a" } },
+    "red":     { "100": { "$value": "#f6e6e3" }, "300": { "$value": "#daa39b" },
+                 "600": { "$value": "#cc1818" }, "700": { "$value": "#b90000" },
+                 "900": { "$value": "#470000" } }
+  },
+
+  "spacing": { "$type": "dimension",
+               "4":  { "$value": "4px"  }, "8":  { "$value": "8px"  },
+               "12": { "$value": "12px" }, "16": { "$value": "16px" },
+               "20": { "$value": "20px" }, "24": { "$value": "24px" },
+               "32": { "$value": "32px" }, "40": { "$value": "40px" } },
+
+  "radius":  { "$type": "dimension",
+               "1": { "$value": "1px" }, "2": { "$value": "2px" },
+               "4": { "$value": "4px" }, "8": { "$value": "8px" } },
+
+  "border":  { "$type": "dimension",
+               "1": { "$value": "1px" }, "2": { "$value": "2px" },
+               "focus": { "$value": "2px" } },
+
+  "shadow":  { "$type": "shadow",
+               "sm": { "$value": "0 1px 3px rgba(0,0,0,0.08)"  },
+               "md": { "$value": "0 4px 12px rgba(0,0,0,0.12)" },
+               "lg": { "$value": "0 12px 40px rgba(0,0,0,0.25)" } },
+
+  "font":    { "family": { "$type": "fontFamily",
+                           "sans": { "$value": "system-ui, -apple-system, sans-serif" },
+                           "mono": { "$value": "Menlo, Consolas, monospace" } } }
+}
+```
+
+**admin.json aliases tokens.json into WPDS slots** (excerpted to show the brand path end-to-end):
+
+```jsonc
+// /admin.json
+{
+  "version": 1,
+  "styles": {
+    "$wpds": "6.9",
+    "color": {
+      "bg":     { "interactive": { "brand": { "strong": "{color.brand.500}",
+                                               "strong-active": "{color.brand.600}" } },
+                  "surface":     { "neutral": { "strong": "{color.neutral.0}",
+                                                "weak":   "{color.neutral.100}" } } },
+      "fg":     { "content":     { "neutral": { "default": "{color.neutral.900}" } },
+                  "interactive": { "brand":   { "strong":  "{color.neutral.0}" } } },
+      "stroke": { "focus":       { "brand":   "{color.brand.500}" } }
+    },
+    "dimension": { "base": "{spacing.4}", "gap": { "md": "{spacing.12}" } },
+    "border":    { "width": { "focus": "{border.focus}" } },
+    "chrome":    { "sidebar": { "background": "{color.neutral.950}",
+                                "foreground": "{color.neutral.50}",
+                                "width":      "240px" } }
+  }
+}
+```
+
+**theme.json aliases the same tokens.json into theme.json slots:**
+
+```jsonc
+// /theme.json
+{
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "version": 3,
+  "settings": {
+    "color": {
+      "palette": [
+        { "slug": "accent",     "name": "Accent",     "color": "{color.brand.500}" },
+        { "slug": "background", "name": "Background", "color": "{color.neutral.0}" },
+        { "slug": "foreground", "name": "Foreground", "color": "{color.neutral.900}" },
+        { "slug": "muted",      "name": "Muted",      "color": "{color.neutral.500}" }
+      ]
+    },
+    "typography": {
+      "fontFamilies": [
+        { "slug": "system", "name": "System", "fontFamily": "{font.family.sans}" },
+        { "slug": "mono",   "name": "Mono",   "fontFamily": "{font.family.mono}" }
+      ]
+    },
+    "spacing": {
+      "spacingSizes": [
+        { "slug": "20", "name": "Small",  "size": "{spacing.8}"  },
+        { "slug": "30", "name": "Medium", "size": "{spacing.16}" },
+        { "slug": "40", "name": "Large",  "size": "{spacing.24}" }
+      ]
+    }
+  }
+}
+```
+
+**Resolved CSS output:**
+
+```css
+/* admin.json output — written by shell, applied to #wp-admin-shell */
+#wp-admin-shell {
+  /* WPDS surface */
+  --wpds-color-bg-interactive-brand-strong:        #3858e9;
+  --wpds-color-bg-interactive-brand-strong-active: #2e49d9;
+  --wpds-color-bg-surface-neutral-strong:          #ffffff;
+  --wpds-color-bg-surface-neutral-weak:            #f0f0f0;
+  --wpds-color-fg-content-neutral:                 #1e1e1e;
+  --wpds-color-fg-interactive-brand-strong:        #ffffff;
+  --wpds-color-stroke-focus-brand:                 #3858e9;
+  --wpds-dimension-base:                           4px;
+  --wpds-dimension-gap-md:                         12px;
+  --wpds-border-width-focus:                       2px;
+  /* …remaining wpds slots from core defaults… */
+
+  /* Chrome extensions */
+  --wp-admin-shell--chrome--sidebar--background: #0a0a0a;
+  --wp-admin-shell--chrome--sidebar--foreground: #f8f8f8;
+  --wp-admin-shell--chrome--sidebar--width:      240px;
+
+  /* Compat bridge */
+  --wp-admin-theme-color:           var(--wpds-color-bg-interactive-brand-strong);
+  --wp-admin-theme-color--rgb:      56, 88, 233;
+  --wp-admin-theme-color-darker-10: var(--wpds-color-bg-interactive-brand-strong-active);
+  --wp-admin-theme-color-darker-20: rgb(23.69, 58.15, 214.31);
+  --wp-admin-border-width-focus:    var(--wpds-border-width-focus);
+  --wp-components-color-accent:     var(--wpds-color-bg-interactive-brand-strong);
+  --wp-components-color-background: var(--wpds-color-bg-surface-neutral-strong);
+  --wp-components-color-foreground: var(--wpds-color-fg-content-neutral);
+}
+
+/* theme.json output — written by core, applied site-wide */
+:root {
+  --wp--preset--color--accent:       #3858e9;
+  --wp--preset--color--background:   #ffffff;
+  --wp--preset--color--foreground:   #1e1e1e;
+  --wp--preset--color--muted:        #8a8a8a;
+  --wp--preset--font-family--system: system-ui, -apple-system, sans-serif;
+  --wp--preset--font-family--mono:   Menlo, Consolas, monospace;
+  --wp--preset--spacing--20:         8px;
+  --wp--preset--spacing--30:         16px;
+  --wp--preset--spacing--40:         24px;
+}
+```
+
+Brand `#3858e9` flows from `tokens.json:color.brand.500` to four destinations: `--wpds-color-bg-interactive-brand-strong` (admin), `--wp-admin-theme-color` (legacy admin, via bridge), `--wp-components-color-accent` (legacy components, via bridge), and `--wp--preset--color--accent` (frontend, via theme.json). One token, four destinations, no duplication. To re-brand the shell + frontend, the author edits `color.brand.500` once.
 
 ### 4.4 Origin cascade
 
@@ -1105,17 +1359,19 @@ The `defaultRoute` falls through: if the configured default isn't permitted, the
 
 ## 9. Theming and tokens
 
-Every visual property the shell renders is bound to a CSS variable in the `--wp-admin-shell--*` namespace. The full token set is enumerated in §4.3.1; this section covers the operating model.
+Every visual property the shell renders is bound to a CSS variable. The shell consumes WordPress's existing `--wpds-*` token surface directly (the `@wordpress/theme` package, autogenerated by Terrazzo); chrome surfaces WPDS does not describe use a small `--wp-admin-shell--chrome--*` extension namespace. The full slot set is enumerated in §4.3.1; this section covers the operating model. The catalog of WordPress's three coexisting CSS-variable token systems is in [`wordpress-design-tokens-catalog.md`](./wordpress-design-tokens-catalog.md).
 
-**The token contract is the layout engine contract.** A layout engine that needs a color, a duration, a shadow, or a z-index reads a token. Engines never hardcode values, never invent ad-hoc CSS variables, and never branch on theme detection. This is the deliberate first-principles fix for the WordPress ecosystem-debt problem: when the core token model is incomplete, plugin authors invent their own, and the surface fragments. The token model in §4.3 is intentionally comprehensive — color, type, spacing, border, shadow, motion, z-index — so engines never need to.
+**The token contract is the layout engine contract.** A layout engine that needs a color, a duration, a shadow, or a z-index reads a `--wpds-*` token. Engines never hardcode values, never invent ad-hoc CSS variables, and never branch on theme detection. This is the deliberate first-principles fix for the WordPress ecosystem-debt problem: when the core token model is incomplete, plugin authors invent their own and the surface fragments. WPDS's matrix is intentionally comprehensive — color (bg/fg/stroke × interactive/surface/content × brand/neutral/status × weak/normal/strong × default/active/disabled), type, spacing, border, shadow, density — so engines never need to. Chrome engines additionally read `--wp-admin-shell--chrome--*` for sidebar/toolbar/siteHub/content surfaces WPDS does not yet describe.
 
-**Token emission.** Tokens are emitted at mount time as a `<style id="wp-admin-shell-tokens">` block scoped to `#wp-admin-shell` (or `:root` when the shell is the entire document). Sources consume them via CSS. Inline `style={{ color: '#...' }}` is forbidden in shell code; use `style={{ color: 'var(--wp-admin-shell--color--accent)' }}` or, preferably, a class.
+**Token emission.** Tokens are emitted at mount time as a `<style id="wp-admin-shell-tokens">` block scoped to `#wp-admin-shell` (or `:root` when the shell is the entire document). Three families are emitted in order: WPDS surface (full matrix), chrome extensions, and a fixed compat bridge that aliases legacy `--wp-admin-theme-color*` and `--wp-components-*` variables onto the WPDS surface so unmodified `@wordpress/components` and wp-admin pages inherit shell theming. See §4.3.2.
 
-**Custom token slugs.** Authors may add slugs beyond the §4.3.1 minimum set. They compile to the same `--wp-admin-shell--{category}--{slug}` namespace. Engines reading custom slugs declare them via `EngineSource.requiredTokens` (§5.4) so the runtime can validate at activation time and surface a clear error if a config doesn't supply them.
+**Custom token slugs.** Authors may add custom slugs under `chrome.*`. They compile to the same `--wp-admin-shell--chrome--{category}--{slug}` namespace. Engines reading custom slugs declare them via `EngineSource.requiredTokens` (§5.4) so the runtime can validate at activation time and surface a clear error if a config doesn't supply them. Authors do not invent new slots inside the WPDS surface — that namespace is governed by WordPress core.
+
+**Density.** The `styles.density` enum (`default | compact | comfortable`) writes a `data-wpds-density` attribute on the shell root. WPDS already ships density-keyed gap/padding overrides under that selector; no shell-side density CSS is needed.
 
 **User-origin overrides** (§4.4 user origin) support density, accent customization, dark/light variant. The user prefs UI is a small standalone application (`core:appearance`, v1) that writes to `wp_admin_shell_user_prefs`.
 
-**Future cross-pollination with `theme.json`.** The frontend theme's color palette could feed into the shell's `color.palette` automatically when the shell is associated with a theme. Not in v1, but the namespace alignment (`--wp--preset--color--*` vs `--wp-admin-shell--color--*`) is intentional so they can interleave.
+**Cross-pollination with `theme.json`.** Both `admin.json.styles` (WPDS-shaped) and `theme.json.settings` (theme.json-shaped) consume the same DTCG `tokens.json` via aliasing. One brand token in tokens.json fans out to admin (`--wpds-*`), legacy admin/components (compat bridge), and frontend (`--wp--preset--*`) without duplication. See the worked example in §4.3.3.
 
 ---
 
@@ -1223,10 +1479,16 @@ Real unknowns. Each needs resolution before its dependent roadmap item ships.
 5. **Source script lifecycle / memory pressure.** Confirmed warm-by-default with LRU eviction. Open: what's the eviction threshold? — Lean: 5 most-recently-used non-active app sources kept warm. Needs measurement.
 6. **Resolver cache invalidation on tokens-file change.** When a tokens file changes, every shell config that aliases into it needs re-resolution. Watch via file mtime (disk-backed) and option version (DB-backed). Need to confirm that WP_Object_Cache + transient versioning is sufficient under high write contention.
 7. **DTCG `$extensions` for WordPress-specific metadata?** DTCG allows vendor extensions (`$extensions.com.wordpress.*`). Use this to mark which tokens are intended for which consumers (admin vs frontend), accessibility flags, or expected-slot hints in tokens.json. — Pursue in `tokens-json-spec.md`. Useful but not critical for v1.
+8. **WPDS slot drift across WordPress versions.** `styles.$wpds` pins the matrix to a WordPress release; a CI parity test against `wp-includes/css/dist/theme/style.css` flags rename/remove. When WP 7.0 renames a wpds slot, do we ship a one-version compat shim that re-emits the old name as `var(new-name)` for plugin authors who hardcoded the old slug? — Lean: yes for one minor cycle with a deprecation notice; align with WP core's own deprecation policy.
+9. **`$wpds` field placement.** Currently nested at `styles.$wpds`. The version pin governs the whole resolver, not just `styles`. Move to top level (`{ "$wpds": "6.9", "version": 1, "styles": {...} }`)? — Lean: top level, alongside `version`. Decide before the v2 resolver lands.
+10. **`color.palette[]` in `admin.json`?** Earlier drafts exposed a named palette under `styles.color.palette[]`. WPDS has no palette concept and apps inside the shell now read `--wpds-*` directly. Drop the slot entirely (palette is a `theme.json` concern), or keep a thin layer for apps that want a named accent independent of WPDS? — Lean: drop in v1; revisit if a real consumer surfaces.
+11. **`theme.json` v3 dependency.** The §4.3.3 worked example uses `theme.json` v3 (RC late March 2026). DTCG aliasing inside `settings.color.palette[].color` requires v3 resolver support. v2 themes can only inline literal values. Document the constraint and the migration path.
+12. **Chrome surface upstreaming.** Sidebar/toolbar/siteHub/content slots live in `--wp-admin-shell--chrome--*` because WPDS does not describe them. If WPDS adds analogous tokens (e.g., `--wpds-color-bg-surface-sidebar-*`), do we migrate and emit both for a deprecation cycle? — Lean: migrate to WPDS when available; one-version dual emit; track via the v2 work.
 
 ### Resolved (kept for history)
 
-- **Engines and tokens** (resolved 2026-04-29): engines must use the `--wp-admin-shell--*` token namespace. The slot contract (§4.3.1) is the engine contract. Engines that want tokens beyond the required slug list declare them via `requiredTokens`; the runtime validates at activation.
+- **Engines and tokens** (resolved 2026-04-29, revised 2026-04-29): engines read the WPDS `--wpds-*` namespace directly; chrome engines additionally read `--wp-admin-shell--chrome--*` for shell-only surfaces (sidebar, toolbar, siteHub, content card). The slot contract (§4.3.1) — WPDS matrix at the pinned `$wpds` version, plus the chrome slug list — is the engine contract. Engines reading custom chrome slugs declare them via `requiredTokens`; the runtime validates at activation. Earlier draft proposed a parallel `--wp-admin-shell--*` namespace for the full surface; superseded by the WPDS-native decision below.
+- **WPDS-native styles** (resolved 2026-04-29): `admin.json.styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-shell--chrome--*` (shell-only chrome) plus a fixed compat bridge that aliases legacy `--wp-admin-theme-color*` and `--wp-components-*` onto WPDS. Rationale: `@wordpress/components` and `@wordpress/ui` are converging on `--wpds-*` (catalog §Migration trajectory). Setting shell theming on the WPDS surface means every present and future component consumer inside the shell inherits the shell's overrides automatically. No shadow namespace, no drift. Trade-off: shell tracks WPDS slot churn across WordPress versions; mitigated by `styles.$wpds` version pin and a CI parity test against `wp-includes/css/dist/theme/style.css`.
 - **Live engine switching** (resolved 2026-04-29): not supported. Engines are set-and-use. Multiple sub-layouts within an engine = engine's responsibility, not the shell's. Listed as a non-goal in §12.
 - **Per-region engines** (resolved 2026-04-29): not supported. One engine renders the entire shell. Listed as a non-goal in §12.
 - **Bindings between `theme.json` and `admin.json`** (resolved 2026-04-29): both are sibling consumers of one DTCG `tokens.json` file (§4.0). They share primitives via aliasing; no automatic palette feed.
