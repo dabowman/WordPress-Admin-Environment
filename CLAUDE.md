@@ -6,6 +6,8 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 MVP complete (Steps 1–7). All core application sources implemented. Three bundled shell configs working. Ready for testing on WordPress 6.7+.
 
+Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-spec.md`. The MVP spec remains as the record of what the proof-of-concept validated.
+
 ## Before modifying code
 
 1. Load these skills (symlinked in `.claude/skills/`):
@@ -13,9 +15,10 @@ MVP complete (Steps 1–7). All core application sources implemented. Three bund
    - `/wordpress-dataviews` — DataViews component for PostsApp: fields, views, actions, filtering
    - `/gutenberg-contributor` — `@wordpress/*` package APIs, package boundaries, build tooling
 2. Read `docs/wp-admin-shell-agent-context.md` — project rules, structure, API reference, common mistakes
-3. Read `docs/wp-admin-shell-mvp-spec.md` — full design spec with validated code samples
-4. Read `docs/admin-json-schema.md` — schema design and example configurations
-5. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
+3. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model)
+4. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
+5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
+6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
 
 ## Key rules
 
@@ -68,7 +71,8 @@ wp-admin-shell/
 │   │   └── SidebarButton.js             # Compact button styled for dark sidebar
 │   ├── apps/
 │   │   ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
-│   │   ├── EditorApp.js     # Block editor in iframe + auto-draft flow
+│   │   ├── EditorApp.js     # Block editor in iframe + auto-draft flow (legacy escape hatch)
+│   │   ├── SimpleEditorApp.js # Substack-style native block editor (title + restricted blocks + auto-save)
 │   │   ├── MediaApp.js      # Media grid with upload, detail modal, delete
 │   │   ├── ProfileApp.js    # User profile form via useEntityRecord
 │   │   └── IframeApp.js     # Legacy wp-admin page in iframe with chrome hiding
@@ -90,10 +94,24 @@ wp-admin-shell/
 | Source | Component | Data layer | Notes |
 |--------|-----------|------------|-------|
 | `core:posts` | PostsApp | `useEntityRecords('postType', config.postType)` | DataViews table, server-side fetch |
-| `core:editor` | EditorApp | `apiFetch` for auto-draft | Iframe to `post.php?post={id}&action=edit` |
+| `core:editor` | EditorApp | `apiFetch` for auto-draft | Iframe to `post.php?post={id}&action=edit` (escape hatch / full editor) |
+| `core:simple-editor` | SimpleEditorApp | `useEntityRecord('postType', 'post', id)` + `apiFetch` for new draft | Native block editor, title + 9 allowed blocks, debounced auto-save, Publish/Update |
 | `core:media` | MediaApp | `useEntityRecords('root', 'media')` | Grid, upload, detail modal |
 | `core:profile` | ProfileApp | `useEntityRecord('root', 'user', userId)` | Form with optimistic edits |
 | `iframe:{url}` | IframeApp | None | URL relative to `adminUrl`, chrome hidden via injected CSS |
+
+### `core:simple-editor` notes
+
+- Substack-style minimal editor — title + content only. Featured image, taxonomy, excerpt, scheduling, etc. are deferred to a future post settings panel.
+- Allowed blocks (9): `core/paragraph`, `core/heading`, `core/image`, `core/quote`, `core/list`, `core/list-item`, `core/code`, `core/separator`, `core/embed`.
+- Composes `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` (inline, not iframed — keeps editor styles in the shell DOM).
+- Block registration via `registerCoreBlocks()` is gated by a module-level idempotent guard (`getBlockTypes().length === 0`).
+- Settings: `allowedBlockTypes`, `bodyPlaceholder`, `__experimentalBlockPatterns: []`, `__experimentalBlockPatternCategories: []`, `__experimentalReusableBlocks: []`, `__experimentalFeatures.layout.contentSize: '680px'`.
+- Auto-save: 2s debounce on `hasEdits`; cancellable timer ref so Publish flushes immediately. Status indicator: `Unsaved changes` / `Saving…` / `Saved` (auto-fades) / `Save failed`.
+- Publish button label flips between `Publish` and `Update` based on `record.status`.
+- New-post flow seeds `<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->` into `content` because WP rejects fully-empty posts (`Content, title, and excerpt are empty`). EditorApp has the same latent bug — fix when touched.
+- PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the shell page so block chrome and default block styles render.
+- Title is a native `<input>` outside the block tree (not a "title block"); Tab/Enter from the title focuses the first contenteditable in the body.
 
 ## Navigation
 

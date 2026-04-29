@@ -4,7 +4,9 @@
 
 A WordPress plugin that renders a configurable, React-based admin shell. The shell reads its layout, navigation, and application configuration from an `admin.json` file and renders a complete admin UI using `@wordpress/components`, powered by the REST API via `@wordpress/core-data`.
 
-Read `docs/wp-admin-shell-mvp-spec.md` for the full design spec before writing any code.
+Read `docs/wp-admin-shell-mvp-spec.md` for the validated MVP design spec before writing any code targeting the current shipped surface.
+
+For post-MVP architecture work — regions+apps+layout-engines, 5-origin cascade, DTCG `tokens.json` integration, plugin source registry, drop-in replacement — read `docs/wp-admin-shell-design-spec.md`. That is the canonical doc for new design decisions; the MVP spec is the record of what's been built.
 
 ## Critical rules
 
@@ -51,6 +53,7 @@ wp-admin-shell/
 │   ├── apps/
 │   │   ├── PostsApp.js              # DataViews post/page list
 │   │   ├── EditorApp.js             # Block editor mount (or iframe fallback)
+│   │   ├── SimpleEditorApp.js       # Substack-style native block editor (restricted block set)
 │   │   ├── MediaApp.js              # Media library grid
 │   │   ├── ProfileApp.js            # User profile form
 │   │   └── IframeApp.js             # Legacy wp-admin page in iframe
@@ -533,6 +536,16 @@ const onIframeLoad = ( event ) => {
 9. **Don't add capability checks in the MVP.** The shell shows everything the config declares. Capability-based filtering is deferred.
 
 10. **Don't build a settings UI from scratch for the shell switcher.** Use WordPress's Settings API (`register_setting`, `add_settings_section`, `add_settings_field`) for the shell picker on the settings page. The settings page itself is a standard wp-admin page, not part of the shell.
+
+11. **Don't `POST /wp/v2/posts` with an empty body.** WP rejects fully-empty posts with `Content, title, and excerpt are empty` (400). When creating drafts programmatically, seed `content` with at least an empty paragraph block (`<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->`) or set a placeholder title. SimpleEditorApp does this; EditorApp has the same latent bug (fix when touched).
+
+12. **Don't forget to enqueue block-editor CSS on the shell page.** The shell page is `toplevel_page_wp-admin-shell`, not a post-edit page, so `wp-block-editor`, `wp-block-library`, `wp-format-library` styles are not auto-loaded. SimpleEditorApp requires them — `wp-admin-shell.php` enqueues them explicitly.
+
+13. **Don't call `registerCoreBlocks()` more than once per page load.** Use a module-level idempotent guard (check `getBlockTypes().length === 0` before registering). Without the guard, switching between shells or remounting the editor double-registers and warns to the console.
+
+14. **Don't rely on stable behavior of `__experimental*` settings.** SimpleEditorApp passes `__experimentalBlockPatterns: []`, `__experimentalReusableBlocks: []`, `__experimentalFeatures.layout.contentSize` — these may rename or move between WordPress versions. Pin to WP 6.7+ verified behavior; verify after each major upgrade.
+
+15. **Don't put title inside the block tree.** SimpleEditorApp uses a native `<input>` outside `BlockEditorProvider`, bound directly to `record.title` via `editEntityRecord`. Treating title as content (a "title block") complicates serialization and conflicts with REST API expectations.
 
 ## Testing approach
 

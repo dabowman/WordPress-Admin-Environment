@@ -1,5 +1,8 @@
 # WordPress Admin Shell — MVP Design Spec
 
+> **Scope:** Proof-of-concept implementation. Validated 2026-04-14.
+> **Successor:** [`wp-admin-shell-design-spec.md`](./wp-admin-shell-design-spec.md) — comprehensive design for the post-MVP system. New design work happens there. This document remains as the record of what the MVP proved.
+
 ---
 
 ## 1. What this is
@@ -21,7 +24,7 @@ The MVP proves three things:
 - Render a complete admin shell in a full-screen React application at `wp-admin/admin.php?page=wp-admin-shell`.
 - Read shell configuration from an `admin.json` file bundled with the plugin.
 - Support switching between multiple `admin.json` configurations from a settings screen.
-- Implement four native application sources: `core:posts`, `core:editor`, `core:media`, `core:profile`.
+- Implement five native application sources: `core:posts`, `core:editor`, `core:simple-editor`, `core:media`, `core:profile`.
 - Implement the `iframe:` escape hatch for legacy wp-admin screens.
 - Integrate the WordPress command palette, scoped to the active shell configuration.
 - Ship three example configurations: Content Author, Client Portal, Developer Admin.
@@ -157,6 +160,14 @@ The MVP proves three things:
 
 // core:editor
 { "postTypes": ["post", "page"] }
+
+// core:simple-editor — no config needed
+//   Substack-style minimal editor. Title + restricted block set. Auto-saves
+//   every 2s, Publish/Update flips status. New-post flow seeds an empty
+//   paragraph block (WP rejects fully-empty posts via REST). Allowed blocks:
+//   paragraph, heading, image, quote, list, list-item, code, separator, embed.
+//   Featured image, taxonomy, excerpt, scheduling, etc. are deferred to a
+//   future post settings panel.
 
 // core:media — no config needed
 
@@ -522,6 +533,7 @@ export const sourceRegistry = {};
 // Register core sources
 register( 'core:posts', PostsApp );
 register( 'core:editor', EditorApp );
+register( 'core:simple-editor', SimpleEditorApp );
 register( 'core:media', MediaApp );
 register( 'core:profile', ProfileApp );
 
