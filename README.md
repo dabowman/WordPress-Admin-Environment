@@ -201,7 +201,7 @@ wp-admin-shell/
 │       ├── resolveConfig.js    # Config validation + defaults
 │       ├── sourceRegistry.js   # Source string → component mapping
 │       └── iconMap.js          # Icon name → component mapping
-├── build/                      # Compiled output
+├── build/                      # Compiled output (gitignored — run `npm run build`)
 └── docs/                       # Design specs and references
 ```
 
