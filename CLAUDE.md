@@ -4,9 +4,9 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 ## Status
 
-MVP complete (Steps 1–7). All core application sources implemented. Three bundled shell configs working. Ready for testing on WordPress 6.7+.
+MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled shell configs working (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`). Tested on WordPress 6.7+.
 
-Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-spec.md`. The MVP spec remains as the record of what the proof-of-concept validated.
+**v1 in planning (2026-04-30).** Master design spec at `docs/wp-admin-shell-design-spec.md` is the authoritative architecture. v1 implementation plan at `docs/wp-admin-shell-v1-plan.md` breaks the work into five sequential milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship). v1 is a kernel rebuild, not a refactor — MVP `src/shell/*` retires when `src/runtime/*` reaches parity. MVP app components (`PostsApp`, `MediaApp`, `ProfileApp`, `SimpleEditorApp`, `SettingsGeneralApp`, `EditorApp`, `IframeApp`) survive as adapted source registrations.
 
 ## Before modifying code
 
@@ -14,11 +14,12 @@ Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-
    - `/wordpress-rest-api` — REST API endpoints, authentication, `_fields`/`_embed`, entity records
    - `/wordpress-dataviews` — DataViews component for PostsApp: fields, views, actions, filtering
    - `/gutenberg-contributor` — `@wordpress/*` package APIs, package boundaries, build tooling
-2. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model)
-3. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
-4. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
-5. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
-6. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
+2. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model). `$wpds` is **top-level** (resolved 2026-04-30); selection scopes are per-mount with opt-in `persist: true` (resolved 2026-04-30); `color.palette[]` is dropped from admin.json (resolved 2026-04-30).
+3. Read `docs/wp-admin-shell-v1-plan.md` — **v1 implementation plan** (M1–M5 milestones, source layout, ordered tasks, exit criteria, MVP code disposition table). Required reading before any v1 work.
+4. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
+5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
+6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source. The `core:settings` v1 scope split (REST-native panels vs iframe fallbacks) is bounded by this doc.
+7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
 
 ## Key rules
 

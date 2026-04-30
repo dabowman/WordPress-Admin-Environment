@@ -243,9 +243,9 @@ WordPress dictates the *slot names* downstream consumers expect. For `theme.json
 The aliasing syntax is the same DTCG curly-brace form, expanded by the resolver against the loaded tokens.json:
 
 ```jsonc
-// admin.json — WPDS-shaped slots
+// admin.json — top-level $wpds + WPDS-shaped slots
+"$wpds": "6.9",
 "styles": {
-  "$wpds": "6.9",
   "color": {
     "bg": {
       "interactive": { "brand":   { "strong": "{color.blue.500}", "strong-active": "{color.blue.600}" } },
@@ -313,6 +313,7 @@ The full proposal warrants its own spec document: [`tokens-json-spec.md`](./toke
 {
   "$schema": "https://schemas.wp.org/admin/v1.json",
   "version": 1,
+  "$wpds": "6.9",                     // pins the WPDS slot matrix (§4.3.1)
 
   "name": "developer-admin",          // kebab-case, unique per install
   "title": "Developer Admin",         // human-readable
@@ -322,6 +323,8 @@ The full proposal warrants its own spec document: [`tokens-json-spec.md`](./toke
   "styles":   { /* presentation — see §4.3 */ }
 }
 ```
+
+`$wpds` is a **top-level field**, not nested under `styles`. The pin governs the entire resolver — slot validation, defaults loading, and compat-bridge derivation — not just the styles tree. The resolver loads `wpds-defaults-{$wpds}.json` as the implicit `core` baseline so missing author values cannot break the runtime.
 
 This is a structural change from the MVP's flat layout. The flat layout (`branding`, `applications`, `navigation`, `toolbar` all at root) is preserved as a deprecated reading path; new authoring uses the partitioned form. The runtime accepts both via the cascade resolver (§4.4), which normalizes flat configs into the partitioned shape on load.
 
@@ -516,7 +519,9 @@ Regions communicate via a small typed event bus. The runtime kernel exposes sele
 - A region with `config.selectionScope: "content"` publishes selection events to scope `content`.
 - A region with `config.respondsTo: "content.selection"` receives those events; the apps it contains can read the current selection via the `useSelection( scope )` hook.
 
-Scopes are namespaced (`content.selection`, `preview.selection`, `nav.activeItem`). Custom regions may declare custom scopes. The bus is a `core/admin-shell/selection` Redux store under the hood; selections survive across in-region navigation but reset on app unmount.
+Scopes are namespaced (`content.selection`, `preview.selection`, `nav.activeItem`). Custom regions may declare custom scopes. The bus is a `core/admin-shell/selection` Redux store under the hood.
+
+**Lifetime: per-mount by default; opt-in `persist: true` on the publishing region keeps the scope's last value across remount.** Selections clear when the publishing region unmounts unless the region declares `config.persist: true` for that scope. This keeps the common case simple (selections are ephemeral UI state tied to what is on screen) while allowing apps that need cross-mount memory (a recently-edited post id, a sticky filter) to opt in. Persisted scopes are stored under `wp_admin_shell_user_prefs.selection[<scope>]` and reload on shell mount. Subscribers always read whatever value is current; the persist flag is a publisher-side concern.
 
 #### 4.2.4 Capability gating
 
@@ -534,11 +539,6 @@ Apps and regions both accept a `capability` field. The runtime hides apps and re
 
 ```jsonc
 "styles": {
-  // Pin the WPDS slot matrix to a WordPress release. The resolver loads
-  // wpds-defaults-{version}.json as the implicit `core` baseline so missing
-  // author values cannot break the runtime.
-  "$wpds": "6.9",
-
   // Brand identity for this shell.
   "branding": {
     "logo":  "./assets/acme-logo.svg",
@@ -693,8 +693,10 @@ Apps and regions both accept a `capability` field. The runtime hides apps and re
 The required slot list **is the WPDS token matrix at a pinned WPDS version**. Authors do not write a flat slug list; they write the WPDS-shaped tree above. The `core` origin ships defaults for every WPDS slot, taken from the upstream Terrazzo output (`wp-includes/css/dist/theme/style.css`), so missing author values cannot break the runtime.
 
 ```jsonc
-"styles": {
-  "$wpds": "6.9"   // resolver loads wpds-defaults-6.9.json as the `core` baseline
+{
+  "version": 1,
+  "$wpds": "6.9",   // resolver loads wpds-defaults-6.9.json as the `core` baseline
+  "styles": { /* WPDS-shaped tree */ }
 }
 ```
 
@@ -827,8 +829,8 @@ One tokens.json drives both admin.json (WPDS output) and theme.json (theme.json 
 // /admin.json
 {
   "version": 1,
+  "$wpds": "6.9",
   "styles": {
-    "$wpds": "6.9",
     "color": {
       "bg":     { "interactive": { "brand": { "strong": "{color.brand.500}",
                                                "strong-active": "{color.brand.600}" } },
@@ -1397,6 +1399,8 @@ Three releases after MVP. Each builds on the prior; no skipped foundations.
 
 Goal: every wp-admin surface has a path through the shell, native or iframed, with the cascade, token system, and regions+apps model fully in place. Single layout engine (`core:site-editor-layout`).
 
+**v1 is a kernel rebuild, not a refactor.** The MVP runtime (`src/shell/Shell.js`, `ShellLayout.js`, `ShellNavigation.js`, etc.) hardcodes a single arrangement: sidebar + toolbar + content. v1's regions+apps+engine model requires every layout decision to flow through a registry-driven indirection layer the MVP does not have. Attempting to retrofit the MVP code in place produces a worst-of-both intermediate that has neither the MVP's simplicity nor v1's flexibility. v1 builds the kernel from scratch in `src/runtime/` (or equivalent), keeps the MVP's working app components (`PostsApp`, `MediaApp`, `ProfileApp`, `SimpleEditorApp`, `SettingsGeneralApp`) as adapted source registrations, and retires the MVP shell scaffolding when the new kernel reaches feature parity. The MVP code stays on `feat/wp-admin-shell-mvp` as the validated proof-of-concept. The detailed milestone plan lives in [`wp-admin-shell-v1-plan.md`](./wp-admin-shell-v1-plan.md).
+
 - [ ] `settings`/`styles` partition + cascade resolver (§4.4)
 - [ ] 5-origin cascade with restrict-only override semantics (§4.4.1)
 - [ ] `userCustomizable` affordance declarations (§4.4.2)
@@ -1472,23 +1476,26 @@ These are explicitly out of scope. Listing them prevents scope creep arguments l
 
 Real unknowns. Each needs resolution before its dependent roadmap item ships.
 
-1. **Selection scope API surface.** §4.2.3 describes a typed selection bus. v1 plan: `useSelection(scope)` and `dispatch('core/admin-shell/selection').setSelection(scope, payload)` hooks, with scopes namespaced by region id and a small set of well-known scopes (`<regionId>.selection`, `<regionId>.activeItem`, `<regionId>.focus`). Custom regions register custom scopes via region source `selectionScope` config. Open question: do scopes survive cross-region navigation, or are they per-region-mount? — Lean: per-region-mount with explicit `persist: true` opt-in, evaluated against use cases as v1 builds.
+1. ~~**Selection scope API surface.**~~ Resolved 2026-04-30 (moved below).
 2. **`tokens.json` precedence under multiple sources.** §4.0.4 lists discovery order: site > theme > plugin > core. Within plugins specifically, if two plugins both ship `tokens.json` with overlapping token paths, who wins? — Lean: alphabetical plugin slug with logged warning. Validate with v2 implementation.
 3. **DTCG type-coercion table.** Resolver must convert DTCG values (e.g., `{ colorSpace: "srgb", components: [r,g,b] }`) into CSS strings appropriate to the admin/theme slot they're aliased into. Need an exhaustive coercion table covering all 13 DTCG types × all CSS-string formats admin/theme schemas accept (`#hex`, `rgb()`, `oklch()`, `color(srgb ...)`, etc). Authoring belongs in [`tokens-json-spec.md`](./tokens-json-spec.md).
 4. **Token-file extension and discovery.** §4.0.1 accepts both `tokens.json` and `*.tokens.json`. DTCG convention is `*.tokens.json`. WordPress convention is `theme.json`/`admin.json` without dot prefix. Final pick affects schema URL, IDE config, and core proposal language. — Lean: accept both, document `tokens.json` as canonical for parity.
 5. **Source script lifecycle / memory pressure.** Confirmed warm-by-default with LRU eviction. Open: what's the eviction threshold? — Lean: 5 most-recently-used non-active app sources kept warm. Needs measurement.
 6. **Resolver cache invalidation on tokens-file change.** When a tokens file changes, every shell config that aliases into it needs re-resolution. Watch via file mtime (disk-backed) and option version (DB-backed). Need to confirm that WP_Object_Cache + transient versioning is sufficient under high write contention.
 7. **DTCG `$extensions` for WordPress-specific metadata?** DTCG allows vendor extensions (`$extensions.com.wordpress.*`). Use this to mark which tokens are intended for which consumers (admin vs frontend), accessibility flags, or expected-slot hints in tokens.json. — Pursue in `tokens-json-spec.md`. Useful but not critical for v1.
-8. **WPDS slot drift across WordPress versions.** `styles.$wpds` pins the matrix to a WordPress release; a CI parity test against `wp-includes/css/dist/theme/style.css` flags rename/remove. When WP 7.0 renames a wpds slot, do we ship a one-version compat shim that re-emits the old name as `var(new-name)` for plugin authors who hardcoded the old slug? — Lean: yes for one minor cycle with a deprecation notice; align with WP core's own deprecation policy.
-9. **`$wpds` field placement.** Currently nested at `styles.$wpds`. The version pin governs the whole resolver, not just `styles`. Move to top level (`{ "$wpds": "6.9", "version": 1, "styles": {...} }`)? — Lean: top level, alongside `version`. Decide before the v2 resolver lands.
-10. **`color.palette[]` in `admin.json`?** Earlier drafts exposed a named palette under `styles.color.palette[]`. WPDS has no palette concept and apps inside the shell now read `--wpds-*` directly. Drop the slot entirely (palette is a `theme.json` concern), or keep a thin layer for apps that want a named accent independent of WPDS? — Lean: drop in v1; revisit if a real consumer surfaces.
+8. **WPDS slot drift across WordPress versions.** Top-level `$wpds` pins the matrix to a WordPress release; a CI parity test against `wp-includes/css/dist/theme/style.css` flags rename/remove. When WP 7.0 renames a wpds slot, do we ship a one-version compat shim that re-emits the old name as `var(new-name)` for plugin authors who hardcoded the old slug? — Lean: yes for one minor cycle with a deprecation notice; align with WP core's own deprecation policy.
+9. ~~**`$wpds` field placement.**~~ Resolved 2026-04-30 (moved below).
+10. ~~**`color.palette[]` in `admin.json`?**~~ Resolved 2026-04-30 (moved below).
 11. **`theme.json` v3 dependency.** The §4.3.3 worked example uses `theme.json` v3 (RC late March 2026). DTCG aliasing inside `settings.color.palette[].color` requires v3 resolver support. v2 themes can only inline literal values. Document the constraint and the migration path.
 12. **Chrome surface upstreaming.** Sidebar/toolbar/siteHub/content slots live in `--wp-admin-shell--chrome--*` because WPDS does not describe them. If WPDS adds analogous tokens (e.g., `--wpds-color-bg-surface-sidebar-*`), do we migrate and emit both for a deprecation cycle? — Lean: migrate to WPDS when available; one-version dual emit; track via the v2 work.
 
 ### Resolved (kept for history)
 
+- **Selection scope lifetime** (resolved 2026-04-30): selection scopes are **per-mount by default**, with opt-in `config.persist: true` on the publishing region for scopes that need to survive remount. Persisted scopes write through the user origin (`wp_admin_shell_user_prefs.selection[<scope>]`); ephemeral scopes live only in the in-memory `core/admin-shell/selection` Redux store. Common case (transient on-screen UI state) stays simple; cross-mount memory is explicit. v1 implements both modes; the bus API (`useSelection`, `dispatch('core/admin-shell/selection').setSelection`) is identical for callers regardless of persistence.
+- **`$wpds` field placement** (resolved 2026-04-30): `$wpds` is a **top-level** field on `admin.json`, alongside `$schema` and `version`. Earlier drafts placed it under `styles.$wpds`; the pin governs the entire resolver (slot validation, defaults loading, compat-bridge derivation), so top-level is the right home. §4.1, §4.3.1, and the §4.3.3 worked example reflect the top-level form.
+- **`color.palette[]` in `admin.json`** (resolved 2026-04-30): **dropped from admin.json.** Palette is a `theme.json` concern (block bindings, block supports). WPDS has no palette concept; apps inside the shell read `--wpds-*` directly. A shell that needs a named accent independent of WPDS aliases it via the chrome extension namespace or an app-level config field. Removes one slot category and avoids confusion between admin and frontend palette semantics.
 - **Engines and tokens** (resolved 2026-04-29, revised 2026-04-29): engines read the WPDS `--wpds-*` namespace directly; chrome engines additionally read `--wp-admin-shell--chrome--*` for shell-only surfaces (sidebar, toolbar, siteHub, content card). The slot contract (§4.3.1) — WPDS matrix at the pinned `$wpds` version, plus the chrome slug list — is the engine contract. Engines reading custom chrome slugs declare them via `requiredTokens`; the runtime validates at activation. Earlier draft proposed a parallel `--wp-admin-shell--*` namespace for the full surface; superseded by the WPDS-native decision below.
-- **WPDS-native styles** (resolved 2026-04-29): `admin.json.styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-shell--chrome--*` (shell-only chrome) plus a fixed compat bridge that aliases legacy `--wp-admin-theme-color*` and `--wp-components-*` onto WPDS. Rationale: `@wordpress/components` and `@wordpress/ui` are converging on `--wpds-*` (catalog §Migration trajectory). Setting shell theming on the WPDS surface means every present and future component consumer inside the shell inherits the shell's overrides automatically. No shadow namespace, no drift. Trade-off: shell tracks WPDS slot churn across WordPress versions; mitigated by `styles.$wpds` version pin and a CI parity test against `wp-includes/css/dist/theme/style.css`.
+- **WPDS-native styles** (resolved 2026-04-29): `admin.json.styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-shell--chrome--*` (shell-only chrome) plus a fixed compat bridge that aliases legacy `--wp-admin-theme-color*` and `--wp-components-*` onto WPDS. Rationale: `@wordpress/components` and `@wordpress/ui` are converging on `--wpds-*` (catalog §Migration trajectory). Setting shell theming on the WPDS surface means every present and future component consumer inside the shell inherits the shell's overrides automatically. No shadow namespace, no drift. Trade-off: shell tracks WPDS slot churn across WordPress versions; mitigated by the top-level `$wpds` version pin (§4.3.1, resolved 2026-04-30) and a CI parity test against `wp-includes/css/dist/theme/style.css`.
 - **Live engine switching** (resolved 2026-04-29): not supported. Engines are set-and-use. Multiple sub-layouts within an engine = engine's responsibility, not the shell's. Listed as a non-goal in §12.
 - **Per-region engines** (resolved 2026-04-29): not supported. One engine renders the entire shell. Listed as a non-goal in §12.
 - **Bindings between `theme.json` and `admin.json`** (resolved 2026-04-29): both are sibling consumers of one DTCG `tokens.json` file (§4.0). They share primitives via aliasing; no automatic palette feed.
