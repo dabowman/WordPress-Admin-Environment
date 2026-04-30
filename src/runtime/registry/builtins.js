@@ -30,6 +30,7 @@ import ToolbarActionsApp from '../apps/ToolbarActionsApp';
 import CommandPickerApp from '../apps/CommandPickerApp';
 import PreviewPaneApp from '../apps/PreviewPaneApp';
 import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
+import AppearanceApp from '../apps/AppearanceApp';
 
 // v1 engine + regions.
 import coreSiteEditorLayout from '../engines/core-site-editor-layout';
@@ -255,6 +256,14 @@ export function registerBuiltins( registry ) {
 		id: 'core:notices-snackbar',
 		title: 'Notices (snackbar)',
 		Component: NoticesSnackbarApp,
+		configSchema: { type: 'object', additionalProperties: false },
+	} );
+	registry.register( {
+		kind: 'app',
+		id: 'core:appearance',
+		title: 'Appearance',
+		routable: true,
+		Component: AppearanceApp,
 		configSchema: { type: 'object', additionalProperties: false },
 	} );
 
