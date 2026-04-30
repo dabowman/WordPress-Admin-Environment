@@ -10,6 +10,7 @@ import { ensureSelectionStore } from './selection/store';
 import { bootstrapSelections } from './selection/persist';
 import { injectTokens } from './styles/emitTokens';
 import { resolveDensity, applyDensity } from './styles/density';
+import { userCan } from './capabilities/userCan';
 
 /**
  * Mount the v1 kernel against a raw config.
@@ -68,6 +69,12 @@ export function kernel( rawConfig ) {
 	const regions = {};
 	const regionSources = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
+		// Spec §8 layer 1 — region capability fast-path. A region the
+		// user lacks capability for is dropped before its source is
+		// looked up, so contains[] never evaluates.
+		if ( regionInstance.capability && ! userCan( regionInstance.capability ) ) {
+			return;
+		}
 		const sourceDef = registry.get( regionInstance.source, 'region' );
 		if ( ! sourceDef ) {
 			return;

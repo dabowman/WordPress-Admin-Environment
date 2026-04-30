@@ -19,6 +19,7 @@ import {
 import { navigate, useRoute } from '../routing/router';
 import { useKernel } from '../kernel-context';
 import { toApplicationList } from '../regions/mountApp';
+import { userCan } from '../capabilities/userCan';
 
 /**
  * core:navigation — sidebar nav app.
@@ -33,12 +34,17 @@ import { toApplicationList } from '../regions/mountApp';
  */
 export default function NavigationApp( { config: navConfig = {} } ) {
 	const { config: shellConfig } = useKernel();
-	const items = Array.isArray( navConfig.items ) ? navConfig.items : [];
 	const collapsed = !! navConfig.collapsed;
 
 	const apps = toApplicationList( shellConfig.applications );
 	const { appId: routeAppId } = useRoute();
 	const currentAppId = routeAppId || resolveDefaultApp( shellConfig, apps );
+
+	// Spec §8 — recursive prune of items the user cannot reach. App items
+	// gated out by capability disappear; screens whose entire items[]
+	// prune to empty disappear too (recursive).
+	const rawItems = Array.isArray( navConfig.items ) ? navConfig.items : [];
+	const items = pruneNavItems( rawItems, apps );
 
 	if ( collapsed ) {
 		return <CollapsedNavigation items={ items } apps={ apps } currentAppId={ currentAppId } />;
@@ -258,4 +264,58 @@ function findScreen( items, screenId ) {
 		}
 	}
 	return null;
+}
+
+/**
+ * Recursive navigation prune. An app/screen/group is dropped when:
+ *   - the linked app has a capability the user lacks, or
+ *   - the source declares a capability floor the user lacks, or
+ *   - it's a screen whose pruned children are empty, or
+ *   - it's a group whose pruned children are empty.
+ * Separators that would orphan at the top/bottom are preserved as-is —
+ * the renderer handles them.
+ */
+function pruneNavItems( items, apps ) {
+	if ( ! Array.isArray( items ) ) {
+		return [];
+	}
+	const out = [];
+	for ( const item of items ) {
+		if ( ! item || typeof item !== 'object' ) {
+			continue;
+		}
+		if ( item.separator ) {
+			out.push( item );
+			continue;
+		}
+		if ( item.screen || item.group ) {
+			const children = pruneNavItems( item.items, apps );
+			if ( children.length === 0 ) {
+				continue;
+			}
+			out.push( { ...item, items: children } );
+			continue;
+		}
+		if ( item.app ) {
+			const app = apps.find( ( a ) => a.id === item.app );
+			if ( ! app ) {
+				continue;
+			}
+			if ( app.capability && ! userCan( app.capability ) ) {
+				continue;
+			}
+			out.push( item );
+			continue;
+		}
+		// Plain external link or other — pass through.
+		out.push( item );
+	}
+	// Drop leading/trailing separator runs.
+	while ( out.length && out[ 0 ].separator ) {
+		out.shift();
+	}
+	while ( out.length && out[ out.length - 1 ].separator ) {
+		out.pop();
+	}
+	return out;
 }

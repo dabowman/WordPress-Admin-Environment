@@ -10,13 +10,19 @@
  */
 import { useKernel } from '../kernel-context';
 import { Slot } from '../slots/Slot';
+import { userCan } from '../capabilities/userCan';
 
-export function MountedApp( { appRef, regionId, segments } ) {
+export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const { registry, config } = useKernel();
 
 	const appInstance = resolveAppInstance( appRef, config );
 	if ( ! appInstance ) {
 		return null;
+	}
+
+	// Spec §8 layer 2 — apps with `capability` are hidden from rendering.
+	if ( appInstance.capability && ! userCan( appInstance.capability ) ) {
+		return fallback;
 	}
 
 	const sourceDef = resolveAppSource( appInstance.source, registry );
@@ -26,6 +32,16 @@ export function MountedApp( { appRef, regionId, segments } ) {
 				Unknown source: { appInstance.source }
 			</div>
 		);
+	}
+
+	// Spec §8 layer 3 — source-declared capability floor. Even if the
+	// shell config omits `capability`, the source's required caps still
+	// apply.
+	const sourceCaps = Array.isArray( sourceDef.capabilities ) ? sourceDef.capabilities : [];
+	for ( const cap of sourceCaps ) {
+		if ( ! userCan( cap ) ) {
+			return fallback;
+		}
 	}
 
 	const Component = sourceDef.Component;

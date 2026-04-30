@@ -815,6 +815,26 @@
 }
 
 /* ==========================================================================
+   Cap-gated 403
+   ========================================================================== */
+
+.wp-admin-shell-content__forbidden {
+	padding: 64px 24px;
+	text-align: center;
+	color: var(--wpds-color-fg-content-neutral-default);
+}
+
+.wp-admin-shell-content__forbidden h2 {
+	margin: 0 0 8px;
+	font-size: 20px;
+}
+
+.wp-admin-shell-content__forbidden p {
+	margin: 0;
+	color: var(--wpds-color-fg-content-neutral-weak);
+}
+
+/* ==========================================================================
    SettingsApp (composable)
    ========================================================================== */
 

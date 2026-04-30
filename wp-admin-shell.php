@@ -28,6 +28,7 @@ add_action( 'init', function () {
 }, 5 );
 
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-can-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
@@ -139,6 +140,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
 			: null,
+		'capabilities'  => wp_admin_shell_resolve_capabilities( $config ),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -161,6 +163,42 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
  */
 function wp_admin_shell_get_active_config() {
 	return WP_Admin_Shell_Resolver::resolve();
+}
+
+/**
+ * Pre-compute capability decisions for every cap declared in the resolved
+ * config. Walks regions[*].capability + applications[*].capability, plus
+ * built-in source capability floors. The runtime sees an absolute
+ * `{cap: bool}` map for everything that matters during initial render;
+ * the /wp-admin-shell/v1/can/{cap} endpoint covers anything plugin code
+ * looks up dynamically.
+ */
+function wp_admin_shell_resolve_capabilities( $config ) {
+	$declared = array();
+
+	foreach ( ( $config['settings']['regions'] ?? array() ) as $region ) {
+		if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
+			$declared[ $region['capability'] ] = true;
+		}
+	}
+	foreach ( ( $config['settings']['applications'] ?? array() ) as $app ) {
+		if ( isset( $app['capability'] ) && is_string( $app['capability'] ) ) {
+			$declared[ $app['capability'] ] = true;
+		}
+	}
+
+	// Built-in source capability floors (mirrors registry/builtins.js
+	// `capabilities` arrays). Kept tight to the surface authors actually
+	// declare — adding every WP cap here would inflate the inline script.
+	foreach ( array( 'list_users', 'moderate_comments', 'manage_options', 'edit_theme_options' ) as $cap ) {
+		$declared[ $cap ] = true;
+	}
+
+	$out = array();
+	foreach ( array_keys( $declared ) as $cap ) {
+		$out[ $cap ] = current_user_can( $cap );
+	}
+	return $out;
 }
 
 /**

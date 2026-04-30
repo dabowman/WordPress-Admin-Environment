@@ -2,6 +2,7 @@ import { __ } from '@wordpress/i18n';
 import { MountedApp, toApplicationList } from '../mountApp';
 import { useRoute } from '../../routing/useRoute';
 import { useKernel } from '../../kernel-context';
+import { userCan } from '../../capabilities/userCan';
 
 /**
  * core:content-region — main content area.
@@ -40,6 +41,24 @@ function ContentRegion( { region } ) {
 						</div>
 					</main>
 				</div>
+			);
+		}
+
+		// Spec §8 layer 2 — direct routing to a capability-gated app
+		// renders 403 from the kernel rather than mounting the source.
+		if ( matched.capability && ! userCan( matched.capability ) ) {
+			return (
+				<main className="wp-admin-shell-content" data-region-id={ region.id }>
+					<div className="wp-admin-shell-content__forbidden">
+						<h2>{ __( 'Access denied', 'wp-admin-shell' ) }</h2>
+						<p>
+							{ __(
+								'You do not have permission to view this app.',
+								'wp-admin-shell'
+							) }
+						</p>
+					</div>
+				</main>
 			);
 		}
 
