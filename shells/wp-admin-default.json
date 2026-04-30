@@ -1,0 +1,172 @@
+{
+  "name": "wp-admin-default",
+  "title": "WP Admin (Default)",
+  "description": "Mirrors the stock WordPress admin: every screen rendered as an iframe of its wp-admin counterpart.",
+  "version": 1,
+  "layout": {
+    "navigation": "left",
+    "navigationCollapsed": false,
+    "toolbar": false
+  },
+  "applications": [
+    { "id": "dashboard-home",       "source": "iframe:index.php",                                              "title": "Home",                  "icon": "home" },
+    { "id": "dashboard-updates",    "source": "iframe:update-core.php",                                        "title": "Updates",               "icon": "dashboard" },
+
+    { "id": "posts-all",            "source": "iframe:edit.php",                                               "title": "All Posts",             "icon": "post" },
+    { "id": "posts-new",            "source": "iframe:post-new.php",                                           "title": "Add New Post",          "icon": "plus" },
+    { "id": "posts-categories",     "source": "iframe:edit-tags.php?taxonomy=category",                        "title": "Categories",            "icon": "category" },
+    { "id": "posts-tags",           "source": "iframe:edit-tags.php?taxonomy=post_tag",                        "title": "Tags",                  "icon": "category" },
+
+    { "id": "media-library",        "source": "iframe:upload.php",                                             "title": "Library",               "icon": "media" },
+    { "id": "media-new",            "source": "iframe:media-new.php",                                          "title": "Add New Media",         "icon": "plus" },
+
+    { "id": "pages-all",            "source": "iframe:edit.php?post_type=page",                                "title": "All Pages",             "icon": "page" },
+    { "id": "pages-new",            "source": "iframe:post-new.php?post_type=page",                            "title": "Add New Page",          "icon": "plus" },
+
+    { "id": "comments",             "source": "iframe:edit-comments.php",                                      "title": "Comments",              "icon": "comment" },
+
+    { "id": "appearance-themes",    "source": "iframe:themes.php",                                             "title": "Themes",                "icon": "brush" },
+    { "id": "appearance-editor",    "source": "iframe:site-editor.php",                                        "title": "Editor",                "icon": "styles" },
+    { "id": "appearance-customize", "source": "iframe:customize.php",                                          "title": "Customize",             "icon": "styles" },
+
+    { "id": "plugins-installed",    "source": "iframe:plugins.php",                                            "title": "Installed Plugins",     "icon": "plugins" },
+    { "id": "plugins-add",          "source": "iframe:plugin-install.php",                                     "title": "Add New Plugin",        "icon": "plus" },
+    { "id": "plugins-editor",       "source": "iframe:plugin-editor.php",                                      "title": "Plugin File Editor",    "icon": "edit" },
+
+    { "id": "users-all",            "source": "iframe:users.php",                                              "title": "All Users",             "icon": "people" },
+    { "id": "users-new",            "source": "iframe:user-new.php",                                           "title": "Add New User",          "icon": "plus" },
+    { "id": "users-profile",        "source": "iframe:profile.php",                                            "title": "Profile",               "icon": "user" },
+
+    { "id": "tools-available",      "source": "iframe:tools.php",                                              "title": "Available Tools",       "icon": "wrench" },
+    { "id": "tools-import",         "source": "iframe:import.php",                                             "title": "Import",                "icon": "wrench" },
+    { "id": "tools-export",         "source": "iframe:export.php",                                             "title": "Export",                "icon": "external" },
+    { "id": "tools-site-health",    "source": "iframe:site-health.php",                                        "title": "Site Health",           "icon": "wrench" },
+    { "id": "tools-export-data",    "source": "iframe:export-personal-data.php",                               "title": "Export Personal Data",  "icon": "external" },
+    { "id": "tools-erase-data",     "source": "iframe:erase-personal-data.php",                                "title": "Erase Personal Data",   "icon": "wrench" },
+
+    { "id": "settings-general",     "source": "iframe:options-general.php",                                    "title": "General",               "icon": "settings" },
+    { "id": "settings-writing",     "source": "iframe:options-writing.php",                                    "title": "Writing",               "icon": "edit" },
+    { "id": "settings-reading",     "source": "iframe:options-reading.php",                                    "title": "Reading",               "icon": "settings" },
+    { "id": "settings-discussion",  "source": "iframe:options-discussion.php",                                 "title": "Discussion",            "icon": "comment" },
+    { "id": "settings-media",       "source": "iframe:options-media.php",                                      "title": "Media",                 "icon": "media" },
+    { "id": "settings-permalinks",  "source": "iframe:options-permalink.php",                                  "title": "Permalinks",            "icon": "settings" },
+    { "id": "settings-privacy",     "source": "iframe:options-privacy.php",                                    "title": "Privacy",               "icon": "settings" }
+  ],
+  "navigation": [
+    {
+      "screen": "dashboard",
+      "label": "Dashboard",
+      "icon": "dashboard",
+      "description": "Site overview and core updates.",
+      "items": [
+        { "app": "dashboard-home" },
+        { "app": "dashboard-updates" }
+      ]
+    },
+    { "separator": true },
+    {
+      "screen": "posts",
+      "label": "Posts",
+      "icon": "post",
+      "description": "Manage posts, categories, and tags.",
+      "items": [
+        { "app": "posts-all" },
+        { "app": "posts-new" },
+        { "app": "posts-categories" },
+        { "app": "posts-tags" }
+      ]
+    },
+    {
+      "screen": "media",
+      "label": "Media",
+      "icon": "media",
+      "description": "Manage uploads.",
+      "items": [
+        { "app": "media-library" },
+        { "app": "media-new" }
+      ]
+    },
+    {
+      "screen": "pages",
+      "label": "Pages",
+      "icon": "page",
+      "description": "Manage pages.",
+      "items": [
+        { "app": "pages-all" },
+        { "app": "pages-new" }
+      ]
+    },
+    { "app": "comments" },
+    { "separator": true },
+    {
+      "screen": "appearance",
+      "label": "Appearance",
+      "icon": "brush",
+      "description": "Themes, Site Editor, and Customizer.",
+      "items": [
+        { "app": "appearance-themes" },
+        { "app": "appearance-editor" },
+        { "app": "appearance-customize" }
+      ]
+    },
+    {
+      "screen": "plugins",
+      "label": "Plugins",
+      "icon": "plugins",
+      "description": "Install, activate, and edit plugins.",
+      "items": [
+        { "app": "plugins-installed" },
+        { "app": "plugins-add" },
+        { "app": "plugins-editor" }
+      ]
+    },
+    {
+      "screen": "users",
+      "label": "Users",
+      "icon": "people",
+      "description": "Manage users and your profile.",
+      "items": [
+        { "app": "users-all" },
+        { "app": "users-new" },
+        { "app": "users-profile" }
+      ]
+    },
+    {
+      "screen": "tools",
+      "label": "Tools",
+      "icon": "wrench",
+      "description": "Import, export, site health, and personal data tools.",
+      "items": [
+        { "app": "tools-available" },
+        { "app": "tools-import" },
+        { "app": "tools-export" },
+        { "app": "tools-site-health" },
+        { "app": "tools-export-data" },
+        { "app": "tools-erase-data" }
+      ]
+    },
+    {
+      "screen": "settings",
+      "label": "Settings",
+      "icon": "settings",
+      "description": "Site configuration.",
+      "items": [
+        { "app": "settings-general" },
+        { "app": "settings-writing" },
+        { "app": "settings-reading" },
+        { "app": "settings-discussion" },
+        { "app": "settings-media" },
+        { "app": "settings-permalinks" },
+        { "app": "settings-privacy" }
+      ]
+    },
+    { "separator": true },
+    {
+      "label": "View Site",
+      "icon": "external",
+      "href": "/",
+      "external": true
+    }
+  ],
+  "defaultApp": "dashboard-home"
+}

@@ -37,7 +37,7 @@
     },
     {
       "id": "media",
-      "source": "core:media",
+      "source": "iframe:upload.php",
       "title": "Images & Files",
       "icon": "media"
     },
