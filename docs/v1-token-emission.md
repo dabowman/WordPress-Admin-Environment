@@ -20,6 +20,8 @@ The kernel calls `injectTokens(config.styles)` once at mount. `data-wpds-density
 
 Emission order matters — later declarations win on the cascade.
 
+**Selector scope.** The three families emit at `:root` rather than `#wp-admin-shell`. Portal-mounted UI (command palette, modals, dropdowns) renders outside the `#wp-admin-shell` DOM tree via React portals, so anchoring tokens to the shell root would leave portaled UI on the WordPress defaults. Per-region / per-app overrides stay narrowly scoped because their selectors target descendants of `#wp-admin-shell` directly — a more specific selector still wins inside the shell.
+
 ### 1. WPDS surface
 
 Slot path joined by `-`, prefixed `--wpds-`. Path mirrors the `@wordpress/theme` token names verbatim.
@@ -128,7 +130,7 @@ The parity test (`tests/parity/wpds-snapshot.test.mjs`, `npm run test:parity`) p
 With `styles.branding.accentColor = '#3858e9'` (no further overrides), the v0 normalizer seeds the chrome surfaces and the runtime emits roughly:
 
 ```css
-#wp-admin-shell {
+:root {
 	/* WPDS surface (subset; full matrix when tokens are authored) */
 	--wpds-color-bg-interactive-brand-strong:        #3858e9;
 	--wpds-color-bg-interactive-brand-strong-active: #3858e9;

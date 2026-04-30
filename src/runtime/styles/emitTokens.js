@@ -26,7 +26,13 @@ export function emitTokensCss( styles ) {
 	const compat   = buildCompatBridge( compiled.wpds );
 
 	const lines = [];
-	lines.push( '#wp-admin-shell {' );
+
+	// Emit the global token surface at `:root` so portal-mounted UI
+	// (command palette, dropdowns, modals — anything @wordpress/components
+	// renders outside the #wp-admin-shell DOM via portal) inherits the
+	// shell's overrides. The shell's chrome elements live inside
+	// `#wp-admin-shell` and inherit through the same root.
+	lines.push( ':root {' );
 	for ( const [ name, value ] of Object.entries( compiled.wpds ) ) {
 		lines.push( `\t${ name }: ${ value };` );
 	}
@@ -38,6 +44,8 @@ export function emitTokensCss( styles ) {
 	}
 	lines.push( '}' );
 
+	// Per-region / per-app scoped overrides — narrower selectors win
+	// for descendants of those regions/apps without leaking outside.
 	for ( const [ scopeKey, vars ] of Object.entries( compiled.scoped ) ) {
 		const selector = scopeToSelector( scopeKey );
 		if ( ! selector ) {
