@@ -13,6 +13,8 @@ defined( 'ABSPATH' ) || exit;
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
 
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
+
 /**
  * Register the shell admin page and settings.
  */
