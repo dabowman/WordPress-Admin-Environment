@@ -55,15 +55,38 @@ function parseColorToRgb( value ) {
 		return { r, g, b };
 	}
 
+	// 4-digit (RGBA shorthand) — drop alpha for the compat bridge.
+	const hex4 = trimmed.match( /^#([0-9a-f]{4})$/i );
+	if ( hex4 ) {
+		const [ r, g, b ] = hex4[ 1 ].slice( 0, 3 ).split( '' ).map( ( c ) => parseInt( c + c, 16 ) );
+		return { r, g, b };
+	}
+
 	const hex6 = trimmed.match( /^#([0-9a-f]{6})$/i );
 	if ( hex6 ) {
 		const n = parseInt( hex6[ 1 ], 16 );
 		return { r: ( n >> 16 ) & 0xff, g: ( n >> 8 ) & 0xff, b: n & 0xff };
 	}
 
+	// 8-digit (RRGGBBAA) — drop alpha. The compat bridge's RGB triplet
+	// has no alpha channel; anything calling rgba(var(--wp-admin-theme-color--rgb), x)
+	// supplies its own alpha at use site.
+	const hex8 = trimmed.match( /^#([0-9a-f]{8})$/i );
+	if ( hex8 ) {
+		const n = parseInt( hex8[ 1 ].slice( 0, 6 ), 16 );
+		return { r: ( n >> 16 ) & 0xff, g: ( n >> 8 ) & 0xff, b: n & 0xff };
+	}
+
 	const rgbFn = trimmed.match( /^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i );
 	if ( rgbFn ) {
 		return { r: +rgbFn[ 1 ], g: +rgbFn[ 2 ], b: +rgbFn[ 3 ] };
+	}
+
+	const rgbaFn = trimmed.match(
+		/^rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*[\d.]+\s*\)$/i
+	);
+	if ( rgbaFn ) {
+		return { r: +rgbaFn[ 1 ], g: +rgbaFn[ 2 ], b: +rgbaFn[ 3 ] };
 	}
 
 	return null;

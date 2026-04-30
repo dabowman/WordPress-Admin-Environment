@@ -26,6 +26,29 @@
 
 const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'userCustomizable' ] );
 
+const IS_DEV =
+	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+
+function devWarn( message ) {
+	if ( ! IS_DEV ) {
+		return;
+	}
+	// eslint-disable-next-line no-console
+	console.warn( `wp-admin-shell compileStyles: ${ message }` );
+}
+
+function emitTo( map, name, value, sourcePath ) {
+	if ( name in map && map[ name ] !== value ) {
+		// Two different slot paths produced the same CSS variable name.
+		// e.g. `a.bc` and `a-bc` both → `--wpds-a-bc`. Last write wins
+		// (matches normal map semantics) but warn so the author can rename.
+		devWarn(
+			`slot-name collision on ${ name } (path "${ sourcePath }" overwrites prior value "${ map[ name ] }")`
+		);
+	}
+	map[ name ] = value;
+}
+
 export function compileStyles( styles ) {
 	if ( ! styles || typeof styles !== 'object' ) {
 		return { wpds: {}, chrome: {}, scoped: {} };
@@ -37,14 +60,24 @@ export function compileStyles( styles ) {
 			continue;
 		}
 		walk( value, [ key ], ( path, leaf ) => {
-			wpds[ pathToWpds( path ) ] = resolveValue( leaf, styles );
+			emitTo(
+				wpds,
+				pathToWpds( path ),
+				resolveValue( leaf, styles ),
+				path.join( '.' )
+			);
 		} );
 	}
 
 	const chrome = {};
 	if ( styles.chrome && typeof styles.chrome === 'object' ) {
 		walk( styles.chrome, [], ( path, leaf ) => {
-			chrome[ pathToChrome( path ) ] = resolveValue( leaf, styles );
+			emitTo(
+				chrome,
+				pathToChrome( path ),
+				resolveValue( leaf, styles ),
+				path.join( '.' )
+			);
 		} );
 	}
 
@@ -119,7 +152,9 @@ function pathToChrome( path ) {
 	return `--wp-admin-shell--chrome--${ path.join( '--' ) }`;
 }
 
-function resolveValue( raw, rootStyles ) {
+const MAX_ALIAS_DEPTH = 16;
+
+function resolveValue( raw, rootStyles, visited, depth = 0 ) {
 	if ( typeof raw !== 'string' ) {
 		return String( raw );
 	}
@@ -129,13 +164,27 @@ function resolveValue( raw, rootStyles ) {
 	}
 	const aliasPath = aliasMatch[ 1 ];
 
+	// Cycle detection. visited is a Set carried through alias-chain
+	// recursion; depth caps the chain length even if the visited set
+	// somehow misses a self-reference.
+	const seen = visited || new Set();
+	if ( seen.has( aliasPath ) ) {
+		devWarn( `alias cycle detected on "${ aliasPath }"; emitting raw string` );
+		return raw;
+	}
+	if ( depth >= MAX_ALIAS_DEPTH ) {
+		devWarn( `alias chain exceeded ${ MAX_ALIAS_DEPTH } levels at "${ aliasPath }"; emitting raw string` );
+		return raw;
+	}
+
 	// Within-document reference: `{styles.color.bg...}` →  resolve through the
 	// styles tree. Strip the leading `styles.` and walk.
 	if ( aliasPath.startsWith( 'styles.' ) ) {
 		const segments = aliasPath.slice( 'styles.'.length ).split( '.' );
 		const resolved = resolveByPath( rootStyles, segments );
 		if ( resolved !== undefined ) {
-			return resolveValue( resolved, rootStyles );
+			seen.add( aliasPath );
+			return resolveValue( resolved, rootStyles, seen, depth + 1 );
 		}
 	}
 
