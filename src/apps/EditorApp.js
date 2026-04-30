@@ -38,6 +38,12 @@ export default function EditorApp( { params } ) {
 					data: {
 						status: 'draft',
 						title: '',
+						// REST rejects fully-empty posts with
+						// "Content, title, and excerpt are empty". Seed a
+						// blank paragraph block so the auto-draft saves
+						// even before the user types a title. SimpleEditorApp
+						// uses the same placeholder.
+						content: '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
 					},
 				} );
 
