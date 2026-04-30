@@ -254,6 +254,13 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
  * `{cap: bool}` map for everything that matters during initial render;
  * the /wp-admin-shell/v1/can/{cap} endpoint covers anything plugin code
  * looks up dynamically.
+ *
+ * Cost: each unique declared cap costs one `current_user_can()` call.
+ * A 50-app shell with 30 unique caps = 30 cap checks per page load on
+ * a cold resolver-cache miss. The M2.7 resolver cache memoizes the
+ * entire resolved config + cap precomputation across requests, so this
+ * cost only fires when origin signals (option / user-meta / file-mtime)
+ * change. Hot path = zero cap checks.
  */
 function wp_admin_shell_resolve_capabilities( $config ) {
 	$declared = array();

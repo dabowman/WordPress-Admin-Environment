@@ -34,6 +34,10 @@ import { useKernel } from '../kernel-context';
 
 const PREFS_PATH = '/wp-admin-shell/v1/user-prefs';
 
+const IS_DEV =
+	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+const warnedDeclarations = new WeakSet();
+
 function isCustomizable( declaration, path ) {
 	if ( declaration === true ) {
 		return true;
@@ -43,6 +47,18 @@ function isCustomizable( declaration, path ) {
 	}
 	if ( Array.isArray( declaration ) ) {
 		return declaration.includes( path );
+	}
+	// Anything else (object, number, etc.) is treated as locked to match
+	// the server-side default-deny posture. Surface a dev-mode warn so
+	// the author sees the typo instead of wondering why their controls
+	// don't render. Production silent.
+	if ( IS_DEV && typeof declaration === 'object' && ! warnedDeclarations.has( declaration ) ) {
+		warnedDeclarations.add( declaration );
+		// eslint-disable-next-line no-console
+		console.warn(
+			'wp-admin-shell AppearanceApp: malformed userCustomizable declaration; expected boolean | string[]. Got:',
+			declaration
+		);
 	}
 	return false;
 }

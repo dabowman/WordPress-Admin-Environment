@@ -86,7 +86,16 @@ class WP_Admin_Shell_Prefs_REST {
 		return rest_ensure_response( (object) array() );
 	}
 
-	private static function deep_merge( $base, $over ) {
+	const MAX_MERGE_DEPTH = 10;
+
+	private static function deep_merge( $base, $over, $depth = 0 ) {
+		if ( $depth >= self::MAX_MERGE_DEPTH ) {
+			// Cap recursion. Pathological nested payloads (legitimate or
+			// adversarial) can't push past this, even though PHP's
+			// memory_limit would catch true exhaustion. Replace at the
+			// cap-depth boundary so the structure terminates predictably.
+			return $over;
+		}
 		if ( ! is_array( $base ) ) {
 			return $over;
 		}
@@ -100,7 +109,7 @@ class WP_Admin_Shell_Prefs_REST {
 				continue;
 			}
 			$out[ $k ] = is_array( $v ) && is_array( $base[ $k ] ?? null )
-				? self::deep_merge( $base[ $k ], $v )
+				? self::deep_merge( $base[ $k ], $v, $depth + 1 )
 				: $v;
 		}
 		return $out;

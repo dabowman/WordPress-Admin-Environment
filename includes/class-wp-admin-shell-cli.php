@@ -108,6 +108,14 @@ class WP_Admin_Shell_CLI {
 			WP_CLI::error( "Source file not found: $source_path" );
 		}
 
+		// Defensive: refuse symlinks / non-regular files. Operator is
+		// already trusted (CLI access), but this stops a stray symlink
+		// in a tarball-imported install from pulling content out of the
+		// expected directory.
+		if ( ! is_file( $source_path ) ) {
+			WP_CLI::error( "Source must be a regular file: $source_path" );
+		}
+
 		$json = file_get_contents( $source_path );
 		$doc  = json_decode( $json, true );
 		if ( ! is_array( $doc ) ) {
@@ -160,11 +168,28 @@ class WP_Admin_Shell_CLI {
 			return;
 		}
 
-		$backup = WP_ADMIN_SHELL_PATH . 'shells/' . $name . '.v0.json';
-		file_put_contents( $backup, file_get_contents( $path ) );
+		$shells_dir = WP_ADMIN_SHELL_PATH . 'shells/';
+		if ( ! is_writable( $shells_dir ) ) {
+			WP_CLI::error( "shells/ is not writable; cannot back up before upgrade." );
+		}
+
+		// Write the backup BEFORE touching the original. Bail loudly if
+		// the backup write fails — overwriting the original without a
+		// preserved v0 copy would lose author intent.
+		$backup       = $shells_dir . $name . '.v0.json';
+		$backup_bytes = file_put_contents( $backup, file_get_contents( $path ) );
+		if ( $backup_bytes === false ) {
+			WP_CLI::error( "Backup write failed: $backup" );
+		}
 
 		$v1 = WP_Admin_Shell_Origin_Core::normalize_v0( $raw );
-		file_put_contents( $path, wp_json_encode( $v1, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n" );
+		$write_bytes = file_put_contents(
+			$path,
+			wp_json_encode( $v1, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
+		);
+		if ( $write_bytes === false ) {
+			WP_CLI::error( "Upgrade write failed; backup preserved at $backup" );
+		}
 
 		WP_CLI::success( "Upgraded $name to v1. v0 backup: shells/$name.v0.json" );
 	}
