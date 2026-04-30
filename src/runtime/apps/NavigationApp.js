@@ -63,11 +63,18 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 }
 
 function resolveDefaultApp( shellConfig, apps ) {
+	// v1 canonical: settings.defaultRoute. v0 mirrors at top-level
+	// (defaultApp + defaultRoute). Check all three so both shapes
+	// work without the v1 author having to also write the v0 mirrors.
+	const route =
+		shellConfig.settings?.defaultRoute ||
+		shellConfig.defaultRoute ||
+		null;
+	if ( route ) {
+		return String( route ).replace( /^#?\/?/, '' ).split( '/' )[ 0 ];
+	}
 	if ( shellConfig.defaultApp ) {
 		return shellConfig.defaultApp;
-	}
-	if ( shellConfig.defaultRoute ) {
-		return String( shellConfig.defaultRoute ).replace( /^#?\/?/, '' ).split( '/' )[ 0 ];
 	}
 	return apps.find( ( a ) => ! a.hidden )?.id || null;
 }

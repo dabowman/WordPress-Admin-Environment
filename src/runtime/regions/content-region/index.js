@@ -22,8 +22,13 @@ function ContentRegion( { region } ) {
 
 	if ( isRouted ) {
 		const apps = toApplicationList( config.applications );
-		const fallbackId = config.defaultRoute
-			? routeToAppId( config.defaultRoute, apps )
+		// v1 canonical path is `settings.defaultRoute`; v0 mirrors it at
+		// top level. Read both so v1-shape authors and v0 authors share
+		// the same fallback behavior.
+		const defaultRoute =
+			config.settings?.defaultRoute || config.defaultRoute || null;
+		const fallbackId = defaultRoute
+			? routeToAppId( defaultRoute, apps )
 			: ( apps.find( ( a ) => ! a.hidden )?.id || null );
 
 		const requestedId = route.appId || fallbackId;
