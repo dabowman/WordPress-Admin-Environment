@@ -176,6 +176,41 @@ class WP_Admin_Shell_Origin_Core {
 				),
 			),
 			'border' => array( 'width' => array( 'focus' => '2px' ) ),
+			'chrome' => array(
+				'sidebar' => array(
+					'background'        => '#1e1e1e',
+					'foreground'        => '#949494',
+					'foreground-active' => '#e0e0e0',
+					'border'            => '#2f2f2f',
+					'item'              => array(
+						'background'        => 'transparent',
+						'background-hover'  => '#2f2f2f',
+						'background-active' => $accent,
+						'foreground'        => '#e0e0e0',
+						'foreground-active' => '#ffffff',
+					),
+					'width'             => '300px',
+				),
+				'toolbar' => array(
+					'background' => '#1e1e1e',
+					'foreground' => '#e0e0e0',
+					'border'     => '#2f2f2f',
+					'height'     => '48px',
+				),
+				'site-hub' => array(
+					'background' => '#1e1e1e',
+					'foreground' => '#ffffff',
+					'icon-size'  => '32px',
+					'padding'    => '12px',
+				),
+				'content' => array(
+					'background'      => '#1e1e1e',
+					'card-background' => '#ffffff',
+					'card-radius'     => '4px',
+					'card-padding'    => '16px',
+					'card-max-width'  => '1200px',
+				),
+			),
 		);
 	}
 

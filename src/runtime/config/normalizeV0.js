@@ -144,6 +144,41 @@ function stylesFromBranding( branding ) {
 			},
 		},
 		border: { width: { focus: '2px' } },
+		chrome: {
+			sidebar: {
+				background: '#1e1e1e',
+				foreground: '#949494',
+				'foreground-active': '#e0e0e0',
+				border: '#2f2f2f',
+				item: {
+					background: 'transparent',
+					'background-hover': '#2f2f2f',
+					'background-active': accent,
+					foreground: '#e0e0e0',
+					'foreground-active': '#ffffff',
+				},
+				width: '300px',
+			},
+			toolbar: {
+				background: '#1e1e1e',
+				foreground: '#e0e0e0',
+				border: '#2f2f2f',
+				height: '48px',
+			},
+			'site-hub': {
+				background: '#1e1e1e',
+				foreground: '#ffffff',
+				'icon-size': '32px',
+				padding: '12px',
+			},
+			content: {
+				background: '#1e1e1e',
+				'card-background': '#ffffff',
+				'card-radius': '4px',
+				'card-padding': '16px',
+				'card-max-width': '1200px',
+			},
+		},
 	};
 }
 
