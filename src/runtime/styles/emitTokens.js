@@ -21,6 +21,16 @@ import { buildCompatBridge } from './compatBridge';
 
 const STYLE_ID = 'wp-admin-shell-tokens';
 
+/**
+ * Lifecycle: in v1 the shell-switching path (`switchShell()`) is a
+ * hard page reload, so the entire DOM disposes between shells and
+ * `<style id="wp-admin-shell-tokens">` is freshly created on the next
+ * mount. The singleton-by-id pattern below is sufficient for v1.
+ *
+ * v2 in-process re-mount (issue #28) needs to clear stale tokens
+ * between mounts; `clearTokens()` is the entry point for that path.
+ */
+
 export function emitTokensCss( styles ) {
 	const compiled = compileStyles( styles );
 	const compat   = buildCompatBridge( compiled.wpds );
@@ -74,6 +84,23 @@ export function injectTokens( styles ) {
 	}
 	tag.textContent = css;
 	return css;
+}
+
+/**
+ * Remove the `<style id="wp-admin-shell-tokens">` tag entirely. Called
+ * by the v2 in-process shell re-mount path before injecting the next
+ * shell's tokens. v1 callers don't need this — the page reload handles
+ * cleanup. No-op in non-browser environments and when the tag is
+ * already absent.
+ */
+export function clearTokens() {
+	if ( typeof document === 'undefined' ) {
+		return;
+	}
+	const tag = document.getElementById( STYLE_ID );
+	if ( tag ) {
+		tag.remove();
+	}
 }
 
 function scopeToSelector( scopeKey ) {

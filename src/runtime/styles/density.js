@@ -9,12 +9,32 @@
 
 export const ALLOWED_DENSITIES = [ 'default', 'compact', 'comfortable' ];
 
+/**
+ * Resolve the density value for the current styles tree. Returns
+ * `'default'` when missing or invalid so a shell switching from
+ * `compact` to a shell that omits density correctly overwrites the
+ * stale attribute on `#wp-admin-shell` (rather than leaving the
+ * previous shell's value attached).
+ */
 export function resolveDensity( styles ) {
 	const raw = styles?.density;
 	if ( typeof raw !== 'string' ) {
 		return 'default';
 	}
 	return ALLOWED_DENSITIES.includes( raw ) ? raw : 'default';
+}
+
+/**
+ * Strip the data-wpds-density attribute. Companion to `clearTokens()`
+ * for the v2 in-process shell re-mount path. v1 page-reload makes
+ * this redundant; v2 (issue #28) needs it before applying the next
+ * shell's density.
+ */
+export function clearDensity( element ) {
+	if ( ! element ) {
+		return;
+	}
+	element.removeAttribute( 'data-wpds-density' );
 }
 
 export function applyDensity( element, density ) {
