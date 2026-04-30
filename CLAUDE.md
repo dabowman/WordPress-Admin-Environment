@@ -68,7 +68,7 @@ Without Gutenberg, overlay components throw at module-load time — the throw fi
 ```
 wp-admin-shell/
 ├── wp-admin-shell.php       # Plugin entry point (admin page, assets, settings, config loading)
-├── webpack.config.js        # Custom webpack config (externalizes @wordpress/dataviews)
+├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
 ├── shells/                  # Bundled admin.json configurations
 │   ├── content-author.json  # Minimal writer shell (collapsed nav, posts/pages/media only)
 │   ├── client-portal.json   # Branded client shell (acme logo, accent color, scoped nav)

@@ -5,13 +5,9 @@ import {
 	InputControl,
 	Stack,
 	Text,
-} from '@wordpress/ui';
-// Notice stays on @wordpress/components: the @wordpress/ui Notice pulls
-// CloseIcon → IconButton → Tooltip → @wordpress/theme private-apis, which
-// throws on WP 6.9 because its private-apis allowlist excludes
-// @wordpress/theme/@wordpress/ui. See CLAUDE.md "Webpack externals".
-import {
 	Notice,
+} from '@wordpress/ui';
+import {
 	SelectControl,
 	CheckboxControl,
 	RadioControl,
@@ -49,12 +45,12 @@ export default function SettingsGeneralApp() {
 		try {
 			await save();
 			setNotice( {
-				status: 'success',
+				intent: 'success',
 				message: __( 'Settings saved.', 'wp-admin-shell' ),
 			} );
 		} catch ( err ) {
 			setNotice( {
-				status: 'error',
+				intent: 'error',
 				message:
 					err.message ||
 					__( 'Failed to save settings.', 'wp-admin-shell' ),
@@ -108,13 +104,16 @@ export default function SettingsGeneralApp() {
 				</Text>
 
 				{ notice && (
-					<Notice
-						status={ notice.status }
-						isDismissible
-						onDismiss={ () => setNotice( null ) }
-					>
-						{ notice.message }
-					</Notice>
+					<Notice.Root intent={ notice.intent }>
+						<Notice.Description>
+							{ notice.message }
+						</Notice.Description>
+						<Notice.Actions>
+							<Notice.CloseIcon
+								onClick={ () => setNotice( null ) }
+							/>
+						</Notice.Actions>
+					</Notice.Root>
 				) }
 
 				{ /* Site identity */ }
@@ -202,16 +201,17 @@ export default function SettingsGeneralApp() {
 						/>
 						{ data.pendingAdminEmail &&
 							data.pendingAdminEmail !== record.email && (
-								<Notice
-									status="info"
-									isDismissible={ false }
-								>
-									{ __(
-										'There is a pending admin email change to: ',
-										'wp-admin-shell'
-									) }
-									<code>{ data.pendingAdminEmail }</code>
-								</Notice>
+								<Notice.Root intent="info">
+									<Notice.Description>
+										{ __(
+											'There is a pending admin email change to: ',
+											'wp-admin-shell'
+										) }
+										<code>
+											{ data.pendingAdminEmail }
+										</code>
+									</Notice.Description>
+								</Notice.Root>
 							) }
 					</>
 				) }

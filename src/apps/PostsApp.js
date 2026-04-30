@@ -98,6 +98,10 @@ export default function PostsApp( { app, config } ) {
 				label: __( 'Title', 'wp-admin-shell' ),
 				enableGlobalSearch: true,
 				enableHiding: false,
+				// TODO: navigate('editor', ...) routes to post.php which 404s for
+				// wp_template / wp_block / wp_navigation (edited in site-editor.php).
+				// Also wp_template IDs are slug strings like "theme//slug" — needs
+				// URL-encoding when wired to a canvas iframe.
 				render: ( { item } ) => (
 					<Button
 						variant="link"
@@ -145,6 +149,7 @@ export default function PostsApp( { app, config } ) {
 				label: __( 'Edit', 'wp-admin-shell' ),
 				isPrimary: true,
 				icon: pencil,
+				// TODO: same as title-click — broken for site-editor post types.
 				callback: ( items ) => {
 					const item = items[ 0 ];
 					navigate( 'editor', postType, item.id );
