@@ -19,6 +19,7 @@ class WP_Admin_Shell_Selection_REST {
 	const ROUTE_BASE    = '/selection';
 	const META_KEY      = 'wp_admin_shell_user_prefs';
 	const SELECTION_KEY = 'selection';
+	const MAX_VALUE_BYTES = 65536; // 64 KiB cap on a single scope payload (pre-JSON encode).
 
 	public static function register() {
 		register_rest_route(
@@ -35,7 +36,12 @@ class WP_Admin_Shell_Selection_REST {
 
 		register_rest_route(
 			self::NAMESPACE,
-			self::ROUTE_BASE . '/(?P<scope>[A-Za-z0-9._-]+)',
+			// Scope pattern allows `:` so namespaced scopes (`posts:selection`,
+			// `nav:activeItem`) work alongside the dotted form. Keep the
+			// pattern conservative — broad enough for common shapes, narrow
+			// enough that unsanitized scope strings can't smuggle path
+			// segments or query separators.
+			self::ROUTE_BASE . '/(?P<scope>[A-Za-z0-9.:_-]+)',
 			array(
 				array(
 					'methods'             => 'GET',
@@ -59,6 +65,14 @@ class WP_Admin_Shell_Selection_REST {
 		);
 	}
 
+	/**
+	 * Permission check: any logged-in user can read/write their own
+	 * selection-bus state. Selection writes target only the current
+	 * user's user_meta, so isolation holds without an additional
+	 * capability gate. M5's four-layer cap-gating pass leaves this
+	 * intentionally permissive — every user with `read` (the WP
+	 * subscriber-and-up floor) can use the bus for their own UI state.
+	 */
 	public static function permission_check() {
 		return is_user_logged_in();
 	}
@@ -76,8 +90,26 @@ class WP_Admin_Shell_Selection_REST {
 	}
 
 	public static function set_one( $request ) {
-		$scope = $request->get_param( 'scope' );
-		$value = $request->get_param( 'value' );
+		$scope    = $request->get_param( 'scope' );
+		$value    = $request->get_param( 'value' );
+
+		// Cap the per-scope payload before write. Selection state is
+		// transient UI state; legitimate values fit in well under 64 KiB.
+		// Without a cap, an authenticated user could fill their own
+		// user_meta via repeated POSTs (self-DoS).
+		$encoded  = wp_json_encode( $value );
+		if ( $encoded !== false && strlen( $encoded ) > self::MAX_VALUE_BYTES ) {
+			return new WP_Error(
+				'rest_payload_too_large',
+				sprintf(
+					/* translators: %d: maximum payload size in bytes */
+					__( 'Selection payload exceeds the %d-byte limit.', 'wp-admin-shell' ),
+					self::MAX_VALUE_BYTES
+				),
+				array( 'status' => 413 )
+			);
+		}
+
 		$prefs = self::read_prefs();
 		if ( ! isset( $prefs[ self::SELECTION_KEY ] ) || ! is_array( $prefs[ self::SELECTION_KEY ] ) ) {
 			$prefs[ self::SELECTION_KEY ] = array();

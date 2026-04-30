@@ -20,6 +20,17 @@ ensureSelectionStore();
 
 const BASE = '/wp-admin-shell/v1/selection';
 
+const IS_DEV =
+	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+
+function devWarn( label, err ) {
+	if ( ! IS_DEV ) {
+		return;
+	}
+	// eslint-disable-next-line no-console
+	console.warn( `wp-admin-shell selection bus: ${ label }`, err );
+}
+
 let bootstrapped = false;
 
 export async function bootstrapSelections() {
@@ -41,10 +52,12 @@ export async function bootstrapSelections() {
 			};
 		} );
 		dispatch( STORE_NAME ).hydrateSelection( byScope );
-	} catch {
+	} catch ( err ) {
 		// Endpoint absence (pre-M1 install) or auth failure should never
 		// block shell mount. Silent failure is acceptable here — the
-		// in-memory bus continues to work for ephemeral scopes.
+		// in-memory bus continues to work for ephemeral scopes. Dev mode
+		// surfaces the cause for debugging.
+		devWarn( 'bootstrap fetch failed', err );
 	}
 }
 
@@ -58,8 +71,9 @@ export async function writeSelection( scope, value ) {
 			method: 'POST',
 			data: { value },
 		} );
-	} catch {
+	} catch ( err ) {
 		// Best-effort: persistence failures don't break the in-memory bus.
+		devWarn( `write '${ scope }' failed`, err );
 	}
 }
 
@@ -72,7 +86,8 @@ export async function clearPersistedSelection( scope ) {
 			path: `${ BASE }/${ encodeURIComponent( scope ) }`,
 			method: 'DELETE',
 		} );
-	} catch {
+	} catch ( err ) {
 		// Same logic as writeSelection.
+		devWarn( `delete '${ scope }' failed`, err );
 	}
 }
