@@ -10,7 +10,7 @@ import { store as commandsStore } from '@wordpress/commands';
 import { displayShortcut } from '@wordpress/keycodes';
 import { decodeEntities } from '@wordpress/html-entities';
 
-import SiteIcon from '../../shell/SiteIcon';
+import SiteIcon from './_components/SiteIcon';
 import { useKernel } from '../kernel-context';
 
 /**

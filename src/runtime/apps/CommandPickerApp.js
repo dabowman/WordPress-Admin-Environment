@@ -2,7 +2,7 @@ import { useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { store as commandsStore } from '@wordpress/commands';
 
-import { resolveIcon } from '../../config/iconMap';
+import { resolveIcon } from '../config/iconMap';
 import { navigate } from '../routing/router';
 import { useKernel } from '../kernel-context';
 import { toApplicationList } from '../regions/mountApp';

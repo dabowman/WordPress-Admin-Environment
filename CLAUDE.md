@@ -6,7 +6,11 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled shell configs working (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`). Tested on WordPress 6.7+.
 
-**v1 in planning (2026-04-30).** Master design spec at `docs/wp-admin-shell-design-spec.md` is the authoritative architecture. v1 implementation plan at `docs/wp-admin-shell-v1-plan.md` breaks the work into five sequential milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship). v1 is a kernel rebuild, not a refactor — MVP `src/shell/*` retires when `src/runtime/*` reaches parity. MVP app components (`PostsApp`, `MediaApp`, `ProfileApp`, `SimpleEditorApp`, `SettingsGeneralApp`, `EditorApp`, `IframeApp`) survive as adapted source registrations.
+**v1 in progress on branch `feat/wp-admin-shell-v1`.** Master design spec at `docs/wp-admin-shell-design-spec.md` is the authoritative architecture. v1 implementation plan at `docs/wp-admin-shell-v1-plan.md` breaks the work into five sequential milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship).
+
+**M1 complete (2026-04-30).** Kernel rebuild landed: registry-driven mount through `src/runtime/`, `core:site-editor-layout` engine, six built-in region sources, hash router, selection bus + REST endpoint, slot registry, system apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-{banner,snackbar}` stubs), MVP user apps registered as `AppSource` definitions, `normalizeV0()` shim mapping v0 (MVP flat) configs into the v1 partitioned shape. `src/shell/*`, `src/routing/*`, `src/commands/*`, `src/config/*` retired; surviving presentational helpers relocated to `src/runtime/apps/_components/` and `src/runtime/config/iconMap.js`. All four bundled shells render through the new kernel with parity (the v0 shell-switcher dropdown is intentionally absent per spec §6.4.1; switching is option-write + reload only in v1, prefs UI surface lands in v2).
+
+**M2 (cascade resolver) up next.**
 
 ## Before modifying code
 
@@ -76,40 +80,66 @@ wp-admin-shell/
 │   └── developer-admin.json # Full admin (all apps, iframe escape hatches for system screens)
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
+├── includes/                # PHP classes (REST endpoints, future M2 cascade resolver)
+│   └── class-wp-admin-shell-selection-rest.php  # GET/POST/DELETE /wp-admin-shell/v1/selection[/{scope}]
 ├── src/                     # JS source (built with @wordpress/scripts)
-│   ├── index.js             # Entry — mounts Shell into #wp-admin-shell
+│   ├── index.js             # Entry — calls kernel(window.wpAdminShell.config) and mounts result
 │   ├── index.css            # All custom CSS (layout, nav, apps)
-│   ├── shell/
-│   │   ├── Shell.js         # Top-level: reads config, sets up router + commands
-│   │   ├── ShellLayout.js   # Layout regions: nav + toolbar + content
-│   │   ├── ShellNavigation.js # Sidebar nav renderer (items, groups, separators, external links)
-│   │   ├── ShellToolbar.js  # Top toolbar + shell switcher dropdown
-│   │   ├── ShellContent.js  # Content region — resolves route to app component
-│   │   ├── SiteHub.js       # Sidebar header: site icon, title, ⌘K command palette
-│   │   ├── SiteIcon.js      # Site icon: branding logo or WordPress icon fallback
-│   │   ├── SidebarNavigationContext.js  # Navigation direction state for slide animations
-│   │   ├── SidebarNavigationScreen.js   # Screen with back button, title, description
-│   │   ├── SidebarNavigationItem.js     # Nav item with icon, chevron, active state
-│   │   ├── SidebarContent.js            # Animated wrapper for screen transitions
-│   │   └── SidebarButton.js             # Compact button styled for dark sidebar
-│   ├── apps/
-│   │   ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
-│   │   ├── EditorApp.js     # Block editor in iframe + auto-draft flow (legacy escape hatch)
-│   │   ├── SimpleEditorApp.js # Substack-style native block editor (title + restricted blocks + auto-save)
-│   │   ├── MediaApp.js      # Media grid with upload, detail modal, delete
-│   │   ├── ProfileApp.js    # User profile form via useEntityRecord
-│   │   ├── SettingsGeneralApp.js # WPDS rebuild of options-general.php (site, membership, locale, dates)
-│   │   └── IframeApp.js     # Legacy wp-admin page in iframe with chrome hiding
-│   ├── routing/
-│   │   ├── router.js        # Hash-based router (context + navigate())
-│   │   └── useCurrentApp.js # Hook: route → application from config
-│   ├── commands/
-│   │   └── useShellCommands.js # Register command palette commands from config
-│   └── config/
-│       ├── resolveConfig.js # Validate admin.json, apply defaults
-│       ├── sourceRegistry.js # Map source strings → React components
-│       └── iconMap.js       # Map icon name strings → @wordpress/icons components
-├── build/                   # Compiled output (~16KB JS, ~4.5KB CSS)
+│   ├── runtime/             # v1 kernel — registry-driven, replaces MVP src/shell/*
+│   │   ├── kernel.js        # Top-level mount: registry + normalizer + engine + region resolution
+│   │   ├── kernel-context.js  # KernelProvider exposing { registry, config } to all sources
+│   │   ├── registry/
+│   │   │   ├── createRegistry.js   # Kind-checked registry (app | region | engine), dup-rejection
+│   │   │   ├── builtins.js         # Imperative registration of every core:* source
+│   │   │   └── source-types.js     # JSDoc typedefs for SourceProps (no runtime)
+│   │   ├── engines/
+│   │   │   └── core-site-editor-layout/
+│   │   │       ├── index.js        # EngineSource definition
+│   │   │       └── Layout.js       # Arranges regions: dark chrome + elevated cards
+│   │   ├── regions/                # Six built-in region sources, thin contains[] wrappers
+│   │   │   ├── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
+│   │   │   ├── sidebar-region/index.js
+│   │   │   ├── toolbar-region/index.js
+│   │   │   ├── content-region/index.js   # router:true honored; routable single-region
+│   │   │   ├── preview-region/index.js   # subscribes to selection scope via useSelection
+│   │   │   ├── overlay-region/index.js   # display:contents pass-through (command palette host)
+│   │   │   └── drawer-region/index.js    # slides L/R, dismissOn: escape | overlay-click
+│   │   ├── routing/
+│   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute
+│   │   │   └── useRoute.js         # Re-export
+│   │   ├── selection/              # Cross-region selection event bus
+│   │   │   ├── store.js            # core/admin-shell/selection Redux store
+│   │   │   ├── useSelection.js     # Subscriber hook
+│   │   │   └── persist.js          # apiFetch bridge to selection REST endpoint
+│   │   ├── slots/
+│   │   │   ├── createSlotRegistry.js  # Known slot names (toolbar, navigation.footer, posts.row-actions, etc.)
+│   │   │   └── Slot.js             # Slot/Fill wrappers + SlotFillProvider re-export
+│   │   ├── config/
+│   │   │   ├── normalizeV0.js      # M1 v0 (MVP flat) → v1 partitioned shape; retires into M2 cascade
+│   │   │   └── iconMap.js          # icon name string → @wordpress/icons component
+│   │   └── apps/                   # System apps (sidebar/toolbar/overlay content)
+│   │       ├── NavigationApp.js    # core:navigation — drilldown sidebar tree
+│   │       ├── SiteHubApp.js       # core:site-hub — icon + title + ⌘K
+│   │       ├── ToolbarActionsApp.js  # core:toolbar-actions — left/right action clusters
+│   │       ├── CommandPickerApp.js   # core:command-picker — registers shell commands w/ commandsStore
+│   │       ├── PreviewPaneApp.js     # core:preview-pane — selection-driven placeholder
+│   │       ├── NoticesStubApp.js     # core:notices-{banner,snackbar} — M1 stubs; M4 real impl
+│   │       └── _components/        # Presentational helpers shared by system apps
+│   │           ├── SiteIcon.js
+│   │           ├── SidebarNavigationContext.js
+│   │           ├── SidebarNavigationScreen.js
+│   │           ├── SidebarNavigationItem.js
+│   │           ├── SidebarContent.js
+│   │           └── SidebarButton.js
+│   └── apps/                # User apps (MVP — registered as AppSource via builtins.js)
+│       ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
+│       ├── EditorApp.js     # Block editor in iframe + auto-draft flow (legacy escape hatch)
+│       ├── SimpleEditorApp.js # Substack-style native block editor (title + restricted blocks + auto-save)
+│       ├── MediaApp.js      # Media grid with upload, detail modal, delete
+│       ├── ProfileApp.js    # User profile form via useEntityRecord
+│       ├── SettingsGeneralApp.js # WPDS rebuild of options-general.php (site, membership, locale, dates)
+│       └── IframeApp.js     # Legacy wp-admin page in iframe with chrome hiding (core:iframe-fallback)
+├── build/                   # Compiled output (~440KB JS post-M1; size budget set in M5)
 └── docs/                    # Specs and reference docs
 ```
 

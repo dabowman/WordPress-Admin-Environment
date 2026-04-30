@@ -7,14 +7,14 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { resolveIcon } from '../../config/iconMap';
-import SidebarNavigationScreen from '../../shell/SidebarNavigationScreen';
-import SidebarNavigationItem from '../../shell/SidebarNavigationItem';
-import SidebarContent from '../../shell/SidebarContent';
+import { resolveIcon } from '../config/iconMap';
+import SidebarNavigationScreen from './_components/SidebarNavigationScreen';
+import SidebarNavigationItem from './_components/SidebarNavigationItem';
+import SidebarContent from './_components/SidebarContent';
 import {
 	SidebarNavigationProvider,
 	useSidebarNavigation,
-} from '../../shell/SidebarNavigationContext';
+} from './_components/SidebarNavigationContext';
 
 import { navigate, useRoute } from '../routing/router';
 import { useKernel } from '../kernel-context';

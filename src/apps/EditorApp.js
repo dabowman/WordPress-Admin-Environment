@@ -3,7 +3,7 @@ import { Button, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
-import { navigate } from '../routing/router';
+import { navigate } from '../runtime/routing/router';
 
 /**
  * Block editor via iframe. Handles existing posts and new post (auto-draft) flow.

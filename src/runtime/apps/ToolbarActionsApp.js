@@ -4,7 +4,7 @@ import {
 	__experimentalSpacer as Spacer,
 } from '@wordpress/components';
 
-import { resolveIcon } from '../../config/iconMap';
+import { resolveIcon } from '../config/iconMap';
 import { navigate } from '../routing/router';
 
 /**
