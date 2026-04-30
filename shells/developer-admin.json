@@ -70,7 +70,7 @@
     },
     {
       "id": "users",
-      "source": "iframe:users.php",
+      "source": "core:users",
       "title": "Users",
       "icon": "people"
     },
