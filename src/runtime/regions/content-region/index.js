@@ -1,5 +1,5 @@
 import { __ } from '@wordpress/i18n';
-import { MountedApp, toApplicationList } from '../mountApp';
+import { MountedApp, getApplications } from '../mountApp';
 import { useRoute } from '../../routing/useRoute';
 import { useKernel } from '../../kernel-context';
 import { userCan } from '../../capabilities/userCan';
@@ -21,7 +21,7 @@ function ContentRegion( { region } ) {
 	const { config } = useKernel();
 
 	if ( isRouted ) {
-		const apps = toApplicationList( config.applications );
+		const apps = getApplications( config );
 		// v1 canonical path is `settings.defaultRoute`; v0 mirrors it at
 		// top level. Read both so v1-shape authors and v0 authors share
 		// the same fallback behavior.

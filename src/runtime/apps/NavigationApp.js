@@ -18,7 +18,7 @@ import {
 
 import { navigate, useRoute } from '../routing/router';
 import { useKernel } from '../kernel-context';
-import { toApplicationList } from '../regions/mountApp';
+import { getApplications } from '../regions/mountApp';
 import { userCan } from '../capabilities/userCan';
 
 /**
@@ -36,7 +36,7 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 	const { config: shellConfig } = useKernel();
 	const collapsed = !! navConfig.collapsed;
 
-	const apps = toApplicationList( shellConfig.applications );
+	const apps = getApplications( shellConfig );
 	const { appId: routeAppId } = useRoute();
 	const currentAppId = routeAppId || resolveDefaultApp( shellConfig, apps );
 

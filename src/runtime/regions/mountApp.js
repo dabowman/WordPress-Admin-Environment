@@ -72,7 +72,7 @@ function resolveAppInstance( appRef, config ) {
 		return null;
 	}
 	if ( typeof appRef === 'string' ) {
-		const apps = toApplicationList( config.applications );
+		const apps = getApplications( config );
 		return apps.find( ( a ) => a.id === appRef ) || null;
 	}
 	return appRef;
@@ -104,4 +104,15 @@ export function toApplicationList( applications ) {
 		id,
 		...body,
 	} ) );
+}
+
+/**
+ * Pull the applications list off a resolved config. v1 canonical path
+ * is `settings.applications`; v0 mirrors at top-level. Read the v1 path
+ * first so v1-shape shells work without depending on the v0 mirrors.
+ */
+export function getApplications( config ) {
+	return toApplicationList(
+		config?.settings?.applications || config?.applications
+	);
 }

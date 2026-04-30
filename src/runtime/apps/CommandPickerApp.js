@@ -5,7 +5,7 @@ import { store as commandsStore } from '@wordpress/commands';
 import { resolveIcon } from '../config/iconMap';
 import { navigate } from '../routing/router';
 import { useKernel } from '../kernel-context';
-import { toApplicationList } from '../regions/mountApp';
+import { getApplications } from '../regions/mountApp';
 
 /**
  * core:command-picker — overlay-region content app.
@@ -23,8 +23,8 @@ export default function CommandPickerApp() {
 	const { registerCommand, unregisterCommand } = useDispatch( commandsStore );
 
 	const apps = useMemo(
-		() => toApplicationList( config.applications ),
-		[ config.applications ]
+		() => getApplications( config ),
+		[ config ]
 	);
 
 	// Stable signature over the fields that actually drive command output.
