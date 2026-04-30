@@ -815,6 +815,41 @@
 }
 
 /* ==========================================================================
+   SettingsApp (composable)
+   ========================================================================== */
+
+.wp-admin-shell-app-settings {
+	height: 100%;
+	display: flex;
+}
+
+.wp-admin-shell-app-settings__nav {
+	width: 200px;
+	flex-shrink: 0;
+	border-right: 1px solid #e0e0e0;
+	padding-right: 16px;
+}
+
+.wp-admin-shell-app-settings__nav .components-item.is-selected {
+	background: var(--wpds-color-bg-interactive-neutral-weak-active);
+	font-weight: 500;
+}
+
+.wp-admin-shell-app-settings__panel {
+	flex: 1;
+	min-width: 0;
+	padding-left: 24px;
+	overflow-y: auto;
+}
+
+.wp-admin-shell-app-settings__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 200px;
+}
+
+/* ==========================================================================
    CommentsApp
    ========================================================================== */
 

@@ -20,6 +20,7 @@ import SettingsGeneralApp from '../../apps/SettingsGeneralApp';
 import IframeApp from '../../apps/IframeApp';
 import UsersApp from '../../apps/UsersApp';
 import CommentsApp from '../../apps/CommentsApp';
+import SettingsApp from '../../apps/SettingsApp';
 
 // v1 system apps (sidebar / toolbar / overlay content).
 import NavigationApp from '../apps/NavigationApp';
@@ -115,6 +116,14 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: CommentsApp,
 		capabilities: [ 'moderate_comments' ],
+	} );
+	registry.register( {
+		kind: 'app',
+		id: 'core:settings',
+		title: 'Settings',
+		routable: true,
+		Component: SettingsApp,
+		capabilities: [ 'manage_options' ],
 	} );
 
 	// v1 system apps.

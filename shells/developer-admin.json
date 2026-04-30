@@ -87,17 +87,10 @@
       "icon": "wrench"
     },
     {
-      "id": "settings-general",
-      "source": "core:settings-general",
-      "title": "General Settings",
-      "icon": "settings"
-    },
-    {
       "id": "settings",
-      "source": "iframe:options-general.php",
-      "title": "Settings (legacy)",
-      "icon": "settings",
-      "hidden": true
+      "source": "core:settings",
+      "title": "Settings",
+      "icon": "settings"
     },
     {
       "id": "profile",
@@ -135,7 +128,7 @@
         { "app": "plugins" },
         { "app": "users" },
         { "app": "tools" },
-        { "app": "settings-general" }
+        { "app": "settings" }
       ]
     },
     { "separator": true },
