@@ -139,10 +139,43 @@ class WP_Admin_Shell_Origin_Core {
 				'applications' => $all_apps,
 				'defaultRoute' => $default_route,
 			),
-			'styles'      => array(
-				'branding' => $branding,
-			),
+			'styles'      => self::v0_styles_from_branding( $branding ),
 			'defaultRoute' => $default_route,
+		);
+	}
+
+	/**
+	 * Map v0 `branding.accentColor` into a minimal v1 `styles` tree so the
+	 * compat bridge has a brand slot to derive from. v0 shells didn't ship
+	 * a styles block — this bridges them onto the M3 token system without
+	 * forcing every shell author to author a full styles tree.
+	 */
+	private static function v0_styles_from_branding( $branding ) {
+		$accent = $branding['accentColor'] ?? '#3858e9';
+		return array(
+			'branding' => $branding,
+			'color'    => array(
+				'bg' => array(
+					'interactive' => array(
+						'brand' => array(
+							'strong'        => $accent,
+							'strong-active' => $accent,
+						),
+					),
+					'surface' => array(
+						'neutral' => array( 'strong' => '#ffffff' ),
+					),
+				),
+				'fg' => array(
+					'content' => array(
+						'neutral' => array( 'default' => '#1e1e1e' ),
+					),
+				),
+				'stroke' => array(
+					'focus' => array( 'brand' => $accent ),
+				),
+			),
+			'border' => array( 'width' => array( 'focus' => '2px' ) ),
 		);
 	}
 

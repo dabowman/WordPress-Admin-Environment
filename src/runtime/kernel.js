@@ -8,6 +8,8 @@ import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from './slots/Slot';
 import { ensureSelectionStore } from './selection/store';
 import { bootstrapSelections } from './selection/persist';
+import { injectTokens } from './styles/emitTokens';
+import { resolveDensity, applyDensity } from './styles/density';
 
 /**
  * Mount the v1 kernel against a raw config.
@@ -34,6 +36,16 @@ export function kernel( rawConfig ) {
 	registerBuiltins( registry );
 
 	const config = normalizeV0( rawConfig );
+
+	// Token emission (§4.3.2): write `<style id="wp-admin-shell-tokens">`
+	// with the WPDS surface, chrome extensions, compat bridge, and any
+	// per-region/per-app scoped overrides. Density is an attribute, not
+	// a CSS variable — applied to #wp-admin-shell directly.
+	injectTokens( config.styles || {} );
+	if ( typeof document !== 'undefined' ) {
+		const root = document.getElementById( 'wp-admin-shell' );
+		applyDensity( root, resolveDensity( config.styles || {} ) );
+	}
 
 	ensureSelectionStore();
 	// Fire-and-forget; UI never blocks on persisted-selection hydration.

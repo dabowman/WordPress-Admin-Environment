@@ -116,10 +116,34 @@ export function normalizeV0( raw ) {
 			applications: [ ...applications, ...systemApps ],
 			defaultRoute: defaultApp ? `/${ defaultApp }` : null,
 		},
-		styles: {
-			branding,
-		},
+		styles: stylesFromBranding( branding ),
 		defaultRoute: defaultApp ? `/${ defaultApp }` : null,
+	};
+}
+
+function stylesFromBranding( branding ) {
+	const accent = branding?.accentColor || '#3858e9';
+	return {
+		branding,
+		color: {
+			bg: {
+				interactive: {
+					brand: { strong: accent, 'strong-active': accent },
+				},
+				surface: {
+					neutral: { strong: '#ffffff' },
+				},
+			},
+			fg: {
+				content: {
+					neutral: { default: '#1e1e1e' },
+				},
+			},
+			stroke: {
+				focus: { brand: accent },
+			},
+		},
+		border: { width: { focus: '2px' } },
 	};
 }
 
