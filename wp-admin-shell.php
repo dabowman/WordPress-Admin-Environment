@@ -172,25 +172,26 @@ function wp_admin_shell_get_active_config() {
  * users_can_register, default_role.
  */
 add_action( 'init', function () {
-	// v1 canonical key. The MVP wrote `wp_admin_shell_active_config`;
-	// migration runs once on plugin load (see below) to copy the value
-	// over. Both keys remain registered through v1 so reads still
-	// resolve cleanly until the legacy key drops in v2.
+	// Active shell (canonical v1 key). Sole setting on the
+	// `wp_admin_shell_settings` page-form group so options.php doesn't
+	// NULL-out adjacent options when the form posts.
+	//
+	// Wrap `sanitize_file_name` defensively: the core sanitizer fatals
+	// on NULL since PHP 8.1 — see wp_is_valid_utf8 in /wp-includes/utf8.php.
 	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_shell', array(
 		'type'              => 'string',
 		'default'           => '',
-		'sanitize_callback' => 'sanitize_file_name',
+		'sanitize_callback' => function ( $value ) {
+			return sanitize_file_name( (string) $value );
+		},
 		'show_in_rest'      => true,
 	) );
 
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_config', array(
-		'type'              => 'string',
-		'default'           => 'developer-admin',
-		'sanitize_callback' => 'sanitize_file_name',
-		'show_in_rest'      => true,
-	) );
-
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_site_config', array(
+	// Cascade-origin options live in a separate group — REST-exposed but
+	// not edited by the settings page. Keeping them off the page-form
+	// group avoids the "form posts only one option, options.php NULLs the
+	// rest" failure mode the MVP migration hit on PHP 8.1+.
+	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_site_config', array(
 		'type'         => 'object',
 		'default'      => array(),
 		'show_in_rest' => array(
@@ -201,7 +202,7 @@ add_action( 'init', function () {
 		),
 	) );
 
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_role_config', array(
+	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_role_config', array(
 		'type'         => 'object',
 		'default'      => array(),
 		'show_in_rest' => array(
