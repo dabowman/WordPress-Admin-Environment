@@ -31,19 +31,46 @@ add_action( 'admin_notices', function () {
 
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
+define( 'WP_ADMIN_SHELL_DB_VERSION', 1 );
 
 /**
- * One-time migration: copy MVP `wp_admin_shell_active_config` value into
- * v1's `wp_admin_shell_active_shell`. The legacy key stays around for
- * one minor cycle; reads check the new key first and fall back. Plan §M2.9.
+ * Version-stamped migration. Plan §M2.9 + issue #6.
+ *
+ * The `wp_admin_shell_db_version` option stamps the highest migration
+ * step that has run for this install. Each step runs at most once per
+ * install lifetime; reactivation / downgrade-then-upgrade cycles
+ * cannot re-fire steps that already completed (which would otherwise
+ * clobber a user's later choice with the legacy MVP value).
+ *
+ * Step 1: copy legacy `wp_admin_shell_active_config` into v1's
+ *         `wp_admin_shell_active_shell` if the new key is empty AND
+ *         the legacy key has a non-default value. The legacy key
+ *         survives one minor cycle so MVP reads still work; reads in
+ *         v1 check the new key first.
+ *
+ * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
+ * disk), bump WP_ADMIN_SHELL_DB_VERSION and add a step here. Steps
+ * must be idempotent w.r.t. their own stamp — running twice is a bug,
+ * but a partially-failed migration that re-runs from a lower stamp
+ * should converge.
  */
 add_action( 'init', function () {
-	if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
-		$legacy = get_option( 'wp_admin_shell_active_config', '' );
-		if ( $legacy !== '' ) {
-			update_option( 'wp_admin_shell_active_shell', $legacy );
+	$current_version = (int) get_option( 'wp_admin_shell_db_version', 0 );
+	if ( $current_version >= WP_ADMIN_SHELL_DB_VERSION ) {
+		return;
+	}
+
+	if ( $current_version < 1 ) {
+		// Step 1 — legacy active-config write-copy.
+		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
+			$legacy = get_option( 'wp_admin_shell_active_config', '' );
+			if ( $legacy !== '' ) {
+				update_option( 'wp_admin_shell_active_shell', $legacy );
+			}
 		}
 	}
+
+	update_option( 'wp_admin_shell_db_version', WP_ADMIN_SHELL_DB_VERSION );
 }, 5 );
 
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
