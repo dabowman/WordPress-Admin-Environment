@@ -14,6 +14,11 @@ define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
 
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 
 /**
  * Register the shell admin page and settings.
@@ -130,30 +135,16 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 } );
 
 /**
- * Read the active admin.json configuration.
+ * Read the active admin.json configuration through the M2 cascade resolver.
+ *
+ * Five origins (core / plugin / site / role / user) are loaded, filtered,
+ * and merged into a single resolved doc. The legacy single-file loader is
+ * gone — every shell file goes through the same pipeline so behavior is
+ * uniform whether the shell ships with the plugin, lives in DB options,
+ * or is contributed by a programmatic registration.
  */
 function wp_admin_shell_get_active_config() {
-	$active = sanitize_file_name( get_option( 'wp_admin_shell_active_config', 'developer-admin' ) );
-	$path   = WP_ADMIN_SHELL_PATH . 'shells/' . $active . '.json';
-
-	if ( ! file_exists( $path ) ) {
-		$path = WP_ADMIN_SHELL_PATH . 'shells/developer-admin.json';
-	}
-
-	if ( ! file_exists( $path ) ) {
-		return array(
-			'name'  => 'default',
-			'title' => 'Default Shell',
-		);
-	}
-
-	$json   = file_get_contents( $path );
-	$config = json_decode( $json, true );
-
-	return is_array( $config ) ? $config : array(
-		'name'  => 'default',
-		'title' => 'Default Shell',
-	);
+	return WP_Admin_Shell_Resolver::resolve();
 }
 
 /**
