@@ -24,6 +24,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
 6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source. The `core:settings` v1 scope split (REST-native panels vs iframe fallbacks) is bounded by this doc.
 7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
+8. Consult `docs/screens/` — per-screen functional specs covering every wp-admin screen (site admin + network admin). 17-section template (Identity, Purpose, Capabilities, Data model, Layout, States, Actions, Filters, Forms, Routing, Inter-app nav, Notifications, A11y, Extension points, Mapping & gaps, Out of scope, Reference). `posts.md` is the canonical template. Source of truth when (re)building any `core:*` app or evaluating REST coverage. Each spec ends with a "Gaps" section enumerating the actionable rebuild tickets for the screen.
 
 ## Key rules
 
@@ -69,6 +70,26 @@ npm install
 npm run build    # production build
 npm run start    # dev build with watch
 ```
+
+## Testing
+
+171 assertions across six suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+
+```bash
+# Node — schema + WPDS parity
+npm run test:schema      # 11 — Ajv against admin-v1.json (bundled shells + fixtures)
+npm run test:parity      # 4  — WPDS slot-list drift detector
+
+# PHP — wp-env CLI container
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-selection-tests.php  # 5
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 75
+```
+
+`run-shape-tests.php` walks every bundled shell through the resolver and asserts structural invariants (engine + regions + applications + defaultRoute resolves). Catches the v1-canonical-path-drift bug class. Runtime React-component smoke (JSDOM) tracked in issue #30.
+
+Test layering matches `WP_Theme_JSON_*Test`'s pattern: schema validation, fixture-driven unit, end-to-end shape, plus pending JSDOM mount. Add a fixture before fixing the next runtime-reader bug — never in the fix commit.
 
 ## Webpack externals
 
@@ -227,16 +248,12 @@ The active shell config is stored in `wp_admin_shell_active_config` option (regi
 - Settings page (`wp-admin/admin.php?page=wp-admin-shell-settings`)
 - Toolbar dropdown (saves via `POST /wp/v2/settings`, then reloads)
 
-## Testing
+## Manual smoke before tagging
 
-Manual testing on WordPress 6.7+:
-1. Activate plugin, navigate to "Shell Admin"
-2. Verify navigation renders from active config
-3. Test PostsApp: list, search, pagination, edit/trash actions
-4. Test EditorApp: edit existing post, create new post (auto-draft)
-5. Test MediaApp: grid, upload, detail edit, delete
-6. Test ProfileApp: edit fields, save
-7. Test IframeApp: plugins.php, users.php render with chrome hidden
-8. Test shell switching: dropdown in toolbar, verify config changes
-9. Test command palette: Cmd+K shows scoped commands
-10. Test all three configs: content-author, client-portal, developer-admin
+Per `docs/v1-readiness.md`. Required before any v1.0.0-beta.x cut:
+
+1. Cap gating across roles (subscriber → admin) — visual confirmation that `wp-admin-default` matches what wp-admin would surface natively.
+2. Cold-mount perf measurement → fill `docs/v1-perf-baseline.md`.
+3. a11y: keyboard pass, VoiceOver pass on macOS, axe against rendered DOM.
+4. Each bundled shell renders + Cmd+K palette + shell switching + form-save (PHP 8.1+).
+5. Notices: snackbar on success, dismissible banner on error.
