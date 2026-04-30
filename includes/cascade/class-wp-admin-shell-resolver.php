@@ -26,8 +26,23 @@ class WP_Admin_Shell_Resolver {
 	const ORIGINS_ORDER = array( 'core', 'plugin', 'site', 'role', 'user' );
 
 	public static function resolve( $context = array() ) {
-		$origins = self::load_origins( $context );
-		return self::resolve_with( $origins );
+		$context['shell'] = $context['shell'] ?? self::active_shell_slug();
+
+		if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
+			$cache_key = WP_Admin_Shell_Cache::key_for( $context );
+			$cached    = WP_Admin_Shell_Cache::get( $cache_key );
+			if ( $cached !== null ) {
+				return $cached;
+			}
+		}
+
+		$origins  = self::load_origins( $context );
+		$resolved = self::resolve_with( $origins );
+
+		if ( class_exists( 'WP_Admin_Shell_Cache' ) && isset( $cache_key ) ) {
+			WP_Admin_Shell_Cache::set( $cache_key, $resolved );
+		}
+		return $resolved;
 	}
 
 	/**
