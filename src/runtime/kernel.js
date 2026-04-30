@@ -11,6 +11,7 @@ import { bootstrapSelections } from './selection/persist';
 import { injectTokens } from './styles/emitTokens';
 import { resolveDensity, applyDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
+import { attachShellSwitcherToWindow } from './shell-switching';
 
 /**
  * Mount the v1 kernel against a raw config.
@@ -51,6 +52,8 @@ export function kernel( rawConfig ) {
 	ensureSelectionStore();
 	// Fire-and-forget; UI never blocks on persisted-selection hydration.
 	bootstrapSelections();
+	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
+	attachShellSwitcherToWindow();
 
 	const engineId =
 		config.settings?.shell?.layoutEngine || 'core:site-editor-layout';

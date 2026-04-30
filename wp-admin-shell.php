@@ -37,6 +37,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 
 /**
  * Register the shell admin page and settings.
