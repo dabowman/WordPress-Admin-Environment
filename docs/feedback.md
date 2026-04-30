@@ -68,6 +68,8 @@ _New items land here. No triage yet._
 - [2026-04-30] [doc] `core:settings` route falls back to `panels[0]` for unknown sub-route — `src/apps/SettingsApp.js:95` no 404 / warning for `#/settings/nonexistent`. Acceptable v1 behavior but worth documenting in admin-json-schema.md or settings docs. (source: M4 review)
 - [2026-04-30] [doc] CommentsApp uses `dangerouslySetInnerHTML` for rendered comment content — `src/apps/CommentsApp.js:82`. WordPress core filters comment HTML server-side so OK in practice; document the trust boundary inline. (source: M4 review)
 - [2026-04-30] [feat] UsersApp bulk-delete reassign UX — `src/apps/UsersApp.js:154` defaults reassign to current user via `window.wpAdminShell?.userId`. Sensible default; admins might expect to choose a different reassign target. Consider a confirm dialog with reassign-target selector before bulk delete in v2. (source: M4 review)
+- [2026-04-30] [feat] Demo shells need refresh — content-author / client-portal / wp-admin-default carry the MVP application list; v1 native apps (`core:users`, `core:comments`, `core:settings` composable, `core:appearance`) are wired into developer-admin only. Refactor the other three so the demos showcase the v1 surface. (source: M5 browser smoke)
+- [2026-04-30] [chore] Token discrepancy in non-developer-admin shells (M3 review residue) — user reported palette tokens off in "default" shell. Resolver emits identical brand+chrome across all shells; cause not yet pinned. If still reproducible, capture `<style id="wp-admin-shell-tokens">` from devtools to diagnose. (source: M3 review)
 
 ---
 
