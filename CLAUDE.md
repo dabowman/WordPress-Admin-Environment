@@ -4,34 +4,13 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 ## Status
 
-MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled shell configs working (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`). Tested on WordPress 6.7+.
+**v1.0.0-beta.1 shipping on `feat/wp-admin-shell-v1`.** All five planned milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship) landed; the open-issue review pass is in flight before merge to `main`. Master design spec at `docs/wp-admin-shell-design-spec.md` is authoritative; per-milestone implementation lives in `docs/wp-admin-shell-v1-plan.md`. Detailed change list in `CHANGELOG.md`.
 
-**v1 in progress on branch `feat/wp-admin-shell-v1`.** Master design spec at `docs/wp-admin-shell-design-spec.md` is the authoritative architecture. v1 implementation plan at `docs/wp-admin-shell-v1-plan.md` breaks the work into five sequential milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship).
+**Architecture in one paragraph.** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine + region sources from a registry, mounts apps inside regions via `MountedApp`, and emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload (no UI surface in v1). Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability so each user role sees what wp-admin would surface natively.
 
-**M1 complete (2026-04-30).** Kernel rebuild landed: registry-driven mount through `src/runtime/`, `core:site-editor-layout` engine, six built-in region sources, hash router, selection bus + REST endpoint, slot registry, system apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-{banner,snackbar}` stubs), MVP user apps registered as `AppSource` definitions, `normalizeV0()` shim mapping v0 (MVP flat) configs into the v1 partitioned shape. `src/shell/*`, `src/routing/*`, `src/commands/*`, `src/config/*` retired; surviving presentational helpers relocated to `src/runtime/apps/_components/` and `src/runtime/config/iconMap.js`. All four bundled shells render through the new kernel with parity (the v0 shell-switcher dropdown is intentionally absent per spec §6.4.1; switching is option-write + reload only in v1, prefs UI surface lands in v2).
+**Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), all via `wp eval-file`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; both must be re-run before tagging.
 
-**M2 complete (2026-04-30).** Cascade resolver landed in `includes/`: `WP_Admin_Shell_Resolver` two-phase pipeline (trusted core/plugin via `merge_authoritative`, consumer site/role/user via plain `merge` filtered through `userCustomizable`), `WP_Admin_Shell_Config` accessor class, `WP_Admin_Shell_Cache` two-layer (object cache + transient) with hash-based invalidation, `WP_Admin_Shell_Origin_Core` owning the v0 → v1 normalizer (the M1 JS shim is now redundant; passes through). Per-role / per-user shell selection with `userSwitchable` gating; legacy `wp_admin_shell_active_config` migrates to `wp_admin_shell_active_shell`. `wp-admin-shell-data_{core|plugin|site|role|user}` per-origin filters plus a final `wp_admin_shell_data` filter for plugin extension. 22 cascade tests + 5 selection tests pass via `wp eval-file`. configSchema validation cache stub registered; real validators land in M4.
-
-**M3 complete (2026-04-30).** Token emission landed in `src/runtime/styles/`: `compileStyles` walks the styles tree into three CSS-variable families (WPDS surface `--wpds-{path-with-dashes}`, chrome extensions `--wp-admin-shell--chrome--{cat}--{slug}`, scoped per-region/per-app overrides under `[data-region-id]`/`[data-app-id]`); `compatBridge` adds the static legacy aliases (`--wp-admin-theme-color`, `--rgb` triplet derived numerically, `-darker-20` from HSL.lightness − 20, `--wp-components-color-{accent,background,foreground}`, `--wp-admin-border-width-focus`); `density.js` writes `data-wpds-density` on the shell root; `emitTokens` injects everything as `<style id="wp-admin-shell-tokens">` at kernel mount. Within-doc DTCG aliases (`{styles.path}`) resolve; tokens.json aliases pass through as `var(--token-…)` fallback for v2. Pinned WPDS 6.9 baseline at `src/runtime/styles/wpds-defaults/6.9.json` (140 slots), regenerated via `npm run snapshot:wpds`. Parity test (`npm run test:parity`) diffs the snapshot against live `@wordpress/theme/src/prebuilt/css/design-tokens.css`; drift fails the build. Chrome-surface inline-style audit converted MVP `index.css` chrome surfaces (sidebar / toolbar / site-hub / content-card) onto chrome vars (167 hex/px occurrences down to 26; remaining are app-internal styles inside the elevated card). One-pager reference at `docs/v1-token-emission.md`. Tokens emit at `:root` so portal-mounted UI (command palette, modals) inherits shell theming.
-
-**M4 complete (2026-04-30).** Core app expansion landed:
-- App-level slots: render slots `core:app.before`/`.after` around every MountedApp + `core:editor.sidebar` inside SimpleEditorApp; data slots (`useSlotItems` hook) for `core:posts.row-actions`, `core:users.row-actions`, `core:comments.row-actions`, `core:settings.panels`. Plugins call `registerSlotItem(name, item)` for action descriptors. **`core:editor.sidebar` is SimpleEditorApp-only in v1.** EditorApp is iframed and cannot host React fills across the document boundary; the slot lights up for the iframed editor when the native `@wordpress/editor` mount lands post-v1.
-- Notices via `@wordpress/notices`: M1 stubs replaced with real banner + snackbar apps; pinned in a new `notices` overlay region the v0 normalizer emits on every shell. ProfileApp + SettingsGeneralApp migrated off ad-hoc local notice state onto `core/notices` dispatchers.
-- `core:users` (DataViews + bulk delete with reassign), `core:comments` (DataViews + approve/unapprove/spam/trash via partial saveEntityRecord), `core:settings` composable host (REST-bounded panels: native general/writing/reading/discussion partial; iframed permalinks/media/privacy; plugins extend via `core:settings.panels` slot). Capability floors enforced at registry lookup (`list_users`, `moderate_comments`, `manage_options`, `edit_theme_options`).
-- `core:site-editor` ships as iframe-backed adapter for v1 (spike outcome: native `@wordpress/edit-site` embedding deferred to v2 — package not externalized on the wp-admin-shell admin page; four collisions per plan §M4 risk are tractable individually but bundled exceed the v1 calendar). Shell authors use `core:site-editor` API name; v2 native mount slots in without admin.json changes.
-- Per-source `configSchema` declarations on every registration; M2's `WP_Admin_Shell_Config_Validator` cache picks them up.
-
-**Default shell.** `wp-admin-default` (titled "WordPress") is the install default — every wp-admin screen rendered as an iframe with a `capability` declared per app. Recursive nav prune (M5.5) drops apps the user lacks caps for, screens whose children all gated out, and orphan separators. Verified per role: subscriber sees Dashboard Home + Profile + View Site only; contributor adds Posts; author adds Media; editor adds Pages + Comments + Categories/Tags; admin sees everything. Single shell, capability-driven — no per-role config files needed. Demo shells (`developer-admin`, `content-author`, `client-portal`) survive for showcasing the v1 native-app surface but are not the install default.
-
-**M5 complete (2026-04-30) — v1 ready to ship.**
-- Four-layer capability gating (spec §8). PHP precomputes a `{cap: bool}` map from the resolved config + built-in source floors, ships it on `window.wpAdminShell.capabilities`. Layer 1 region fast-path (kernel resolver drops gated regions before `contains[]` evaluates). Layer 2 app gate (MountedApp returns null/fallback; ContentRegion's routable path renders 403 view). Layer 3 source-cap floor (registry-time check). Layer 4 REST observation. `useCan(cap)` synchronous; `checkCan(cap)` async via `/wp-admin-shell/v1/can/{cap}` with per-request object cache.
-- Recursive nav prune: `NavigationApp.pruneNavItems` drops gated apps, empty screens/groups (recursive), and orphan separators. Lives in the nav app, not the kernel, per spec §8.
-- `core:appearance` user-prefs UI: reads active shell's `userCustomizable` declarations, renders only allowed controls (density / accent / default-route in v1). Saves through POST `/wp-admin-shell/v1/user-prefs` (server deep-merges; null deletes).
-- Shell-switching plumbing without UI surface (spec §6.4.1): `window.wpAdminShell.switchShell(slug)` writes the option via `/wp/v2/settings`, hash survives reload, cache invalidates server-side via M2.7 hook. v2 surfaces a switcher inside `core:appearance`.
-- WP-CLI: `wp admin-shell list | activate <slug> | register <name> <path> | upgrade-config <name>`.
-- JSON Schema: `docs/schemas/admin-v1.json` describes the v1 config surface; bundled shells reference it via `$schema`.
-- MVP spec archived at `docs/archive/wp-admin-shell-mvp-spec.md`.
-- Production-readiness notes in `docs/v1-readiness.md` (bundle size, perf smoke, a11y checklist, Gutenberg dependency).
+**Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg` header). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without Gutenberg, the shell renders empty.
 
 ## Before modifying code
 
@@ -114,13 +93,26 @@ wp-admin-shell/
 ├── wp-admin-shell.php       # Plugin entry point (admin page, assets, settings, config loading)
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
 ├── shells/                  # Bundled admin.json configurations
-│   ├── content-author.json  # Minimal writer shell (collapsed nav, posts/pages/media only)
-│   ├── client-portal.json   # Branded client shell (acme logo, accent color, scoped nav)
-│   └── developer-admin.json # Full admin (all apps, iframe escape hatches for system screens)
+│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated apps
+│   ├── developer-admin.json   # Demo: native v1 apps (users / comments / settings / site-editor)
+│   ├── content-author.json    # Demo: minimal writer shell (collapsed nav)
+│   └── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
-├── includes/                # PHP classes (REST endpoints, future M2 cascade resolver)
-│   └── class-wp-admin-shell-selection-rest.php  # GET/POST/DELETE /wp-admin-shell/v1/selection[/{scope}]
+├── includes/                # PHP
+│   ├── class-wp-admin-shell-config.php           # Read-only wrapper around merged tree
+│   ├── class-wp-admin-shell-can-rest.php         # /wp-admin-shell/v1/can/{cap}
+│   ├── class-wp-admin-shell-prefs-rest.php       # /wp-admin-shell/v1/user-prefs
+│   ├── class-wp-admin-shell-selection-rest.php   # /wp-admin-shell/v1/selection[/{scope}]
+│   ├── class-wp-admin-shell-cli.php              # `wp admin-shell …` commands
+│   ├── cascade/                                  # Cascade resolver
+│   │   ├── class-wp-admin-shell-resolver.php     # Two-phase merge + load_origins
+│   │   ├── class-wp-admin-shell-merge.php        # merge_authoritative + plain merge w/ tombstones
+│   │   ├── class-wp-admin-shell-customizable.php # userCustomizable filter (default-deny)
+│   │   ├── class-wp-admin-shell-cache.php        # WP_Object_Cache + transient w/ hash keying
+│   │   └── class-wp-admin-shell-config-validator.php  # configSchema cache
+│   └── origins/
+│       └── class-wp-admin-shell-origin-core.php  # v0 → v1 normalize + empty baseline + chrome defaults
 ├── src/                     # JS source (built with @wordpress/scripts)
 │   ├── index.js             # Entry — calls kernel(window.wpAdminShell.config) and mounts result
 │   ├── index.css            # All custom CSS (layout, nav, apps)
@@ -150,49 +142,52 @@ wp-admin-shell/
 │   │   │   ├── store.js            # core/admin-shell/selection Redux store
 │   │   │   ├── useSelection.js     # Subscriber hook
 │   │   │   └── persist.js          # apiFetch bridge to selection REST endpoint
-│   │   ├── slots/
-│   │   │   ├── createSlotRegistry.js  # Known slot names (toolbar, navigation.footer, posts.row-actions, etc.)
-│   │   │   └── Slot.js             # Slot/Fill wrappers + SlotFillProvider re-export
-│   │   ├── config/
-│   │   │   ├── normalizeV0.js      # M1 v0 (MVP flat) → v1 partitioned shape; retires into M2 cascade
-│   │   │   └── iconMap.js          # icon name string → @wordpress/icons component
-│   │   └── apps/                   # System apps (sidebar/toolbar/overlay content)
-│   │       ├── NavigationApp.js    # core:navigation — drilldown sidebar tree
-│   │       ├── SiteHubApp.js       # core:site-hub — icon + title + ⌘K
-│   │       ├── ToolbarActionsApp.js  # core:toolbar-actions — left/right action clusters
-│   │       ├── CommandPickerApp.js   # core:command-picker — registers shell commands w/ commandsStore
-│   │       ├── PreviewPaneApp.js     # core:preview-pane — selection-driven placeholder
-│   │       ├── NoticesStubApp.js     # core:notices-{banner,snackbar} — M1 stubs; M4 real impl
-│   │       └── _components/        # Presentational helpers shared by system apps
-│   │           ├── SiteIcon.js
-│   │           ├── SidebarNavigationContext.js
-│   │           ├── SidebarNavigationScreen.js
-│   │           ├── SidebarNavigationItem.js
-│   │           ├── SidebarContent.js
-│   │           └── SidebarButton.js
-│   └── apps/                # User apps (MVP — registered as AppSource via builtins.js)
-│       ├── PostsApp.js      # DataViews post/page list (server-side fetch, actions)
-│       ├── EditorApp.js     # Block editor in iframe + auto-draft flow (legacy escape hatch)
-│       ├── SimpleEditorApp.js # Substack-style native block editor (title + restricted blocks + auto-save)
-│       ├── MediaApp.js      # Media grid with upload, detail modal, delete
-│       ├── ProfileApp.js    # User profile form via useEntityRecord
-│       ├── SettingsGeneralApp.js # WPDS rebuild of options-general.php (site, membership, locale, dates)
-│       └── IframeApp.js     # Legacy wp-admin page in iframe with chrome hiding (core:iframe-fallback)
-├── build/                   # Compiled output (~440KB JS post-M1; size budget set in M5)
-└── docs/                    # Specs and reference docs
+│   │   ├── slots/                  # Render slots (Slot/Fill) + data slots (useSlotItems)
+│   │   ├── styles/                 # Token compiler + compat bridge + density + WPDS baseline
+│   │   ├── capabilities/userCan.js # userCan() sync + checkCan() async via /can REST
+│   │   ├── config/iconMap.js       # icon name → @wordpress/icons (dev-warn on miss)
+│   │   ├── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
+│   │   └── apps/                   # System apps (sidebar / toolbar / overlay / appearance)
+│   │       ├── NavigationApp.js      # core:navigation — recursive cap-prune
+│   │       ├── SiteHubApp.js         # core:site-hub
+│   │       ├── ToolbarActionsApp.js  # core:toolbar-actions
+│   │       ├── CommandPickerApp.js   # core:command-picker (signs into @wordpress/commands)
+│   │       ├── PreviewPaneApp.js     # core:preview-pane
+│   │       ├── NoticesApp.js         # core:notices-banner + core:notices-snackbar
+│   │       ├── AppearanceApp.js      # core:appearance — userCustomizable-driven prefs UI
+│   │       ├── SiteEditorApp.js      # core:site-editor iframe adapter (v2 native mount)
+│   │       └── _components/          # Sidebar* + SiteIcon presentational helpers
+│   └── apps/                # User-facing apps (registered via builtins.js)
+│       ├── PostsApp.js / SimpleEditorApp.js / EditorApp.js / MediaApp.js
+│       ├── ProfileApp.js / SettingsGeneralApp.js / IframeApp.js
+│       ├── UsersApp.js / CommentsApp.js
+│       ├── SettingsApp.js               # core:settings composable host
+│       └── settings-panels/             # writing / reading / discussion native panels
+├── tests/
+│   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
+│   └── parity/              # node: WPDS slot-drift detector (4)
+├── scripts/snapshot-wpds.mjs   # Regenerate src/runtime/styles/wpds-defaults/<wpds>.json
+├── build/                   # webpack output (gitignored)
+└── docs/                    # spec, plan, schemas, readiness, perf-baseline, archive
 ```
 
 ## Application sources
 
-| Source | Component | Data layer | Notes |
-|--------|-----------|------------|-------|
-| `core:posts` | PostsApp | `useEntityRecords('postType', config.postType)` | DataViews table, server-side fetch |
-| `core:editor` | EditorApp | `apiFetch` for auto-draft | Iframe to `post.php?post={id}&action=edit` (escape hatch / full editor) |
-| `core:simple-editor` | SimpleEditorApp | `useEntityRecord('postType', 'post', id)` + `apiFetch` for new draft | Native block editor, title + 9 allowed blocks, debounced auto-save, Publish/Update |
-| `core:media` | MediaApp | `useEntityRecords('root', 'media')` | Grid, upload, detail modal |
-| `core:profile` | ProfileApp | `useEntityRecord('root', 'user', userId)` | Form with optimistic edits |
-| `core:settings-general` | SettingsGeneralApp | `useEntityRecord('root', 'site')` | Recreates `wp-admin/options-general.php` with WPDS components |
-| `iframe:{url}` | IframeApp | None | URL relative to `adminUrl`, chrome hidden via injected CSS |
+| Source | Component | Native? | Cap floor | Notes |
+|---|---|---|---|---|
+| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType` |
+| `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
+| `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. v2 native mount. |
+| `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
+| `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
+| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign |
+| `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord |
+| `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
+| `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
+| `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter; v2 native mount |
+| `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `userCustomizable` |
+| `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
+| System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar` — pinned by the v0 normalizer |
 
 ### `core:simple-editor` notes
 
