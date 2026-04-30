@@ -79,7 +79,7 @@ The design rests on seven principles. When a decision is unclear, they are the t
 
 ## 3. Architecture
 
-Three layers, mirroring the structure of every shell environment surveyed (GNOME, KDE, VS Code, fish, Hyprland — see [`shell-architecture-research.md`](./shell-architecture-research.md)):
+Three layers, mirroring the structure of every shell environment surveyed (GNOME, KDE, VS Code, fish, Hyprland):
 
 | Layer | What it is | WordPress equivalent |
 |---|---|---|
@@ -1514,8 +1514,6 @@ In-repo:
 - [`admin-json-schema.md`](./admin-json-schema.md) — original schema design (v0/flat shape); kept as schema reference for the cascade resolver to read
 - [`admin-json-api-validation.md`](./admin-json-api-validation.md) — REST API coverage matrix per source; informs §5.1
 - [`wp-admin-screen-inventory.md`](./wp-admin-screen-inventory.md) — full surface map of `wp-admin` for porting prioritization
-- [`shell-architecture-research.md`](./shell-architecture-research.md) — prior-art survey (GNOME, KDE, COSMIC, fish, VS Code, Hyprland)
-- [`wp-admin-shell-agent-context.md`](./wp-admin-shell-agent-context.md) — build rules for AI agents working on the codebase
 
 External:
 

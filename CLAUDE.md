@@ -14,24 +14,27 @@ Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-
    - `/wordpress-rest-api` — REST API endpoints, authentication, `_fields`/`_embed`, entity records
    - `/wordpress-dataviews` — DataViews component for PostsApp: fields, views, actions, filtering
    - `/gutenberg-contributor` — `@wordpress/*` package APIs, package boundaries, build tooling
-2. Read `docs/wp-admin-shell-agent-context.md` — project rules, structure, API reference, common mistakes
-3. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model)
-4. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
-5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
-6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
-7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
+2. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model)
+3. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
+4. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
+5. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
+6. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
 
 ## Key rules
 
-- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists AND the import path stays inside `@wordpress/ui`.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is already in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles into the build with no extra config. Fall back to `@wordpress/components` for: (a) primitives `@wordpress/ui` doesn't ship yet (`RadioControl`, `CheckboxControl`, `SelectControl`, `Spinner`, `Divider` as of `0.12.0`); (b) anything that pulls in `@wordpress/theme` — those throw on WP 6.9 because the runtime `wp.privateApis` allowlist excludes `@wordpress/theme`/`@wordpress/ui`. See "Webpack externals" below for the full picture. Concretely: do NOT use `@wordpress/ui`'s `Notice`, `Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `IconButton`, or the form `Select`/`Autocomplete` primitives until WP core allowlists `@wordpress/theme`. No custom component libraries.
-- Component-mapping cheat sheet (use the `@wordpress/ui` left side when available AND safe):
-  - `Button` (props: `tone`, `variant`, `size`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `isBusy` → `loading`).
-  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — note onChange takes a DOM event, not the raw value.
+- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles with no extra config. Fall back to `@wordpress/components` for primitives `@wordpress/ui` doesn't ship yet: `RadioControl`, `CheckboxControl`, `SelectControl` (also needed for native `<optgroup>` support), `Spinner`, `Divider` as of `0.12.0`. No custom component libraries.
+- **Gutenberg plugin is a hard runtime dependency.** Any `@wordpress/ui` overlay component (`Notice`, `Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `IconButton`, form `Select`/`Autocomplete`) transitively imports `@wordpress/theme`, which calls `__dangerousOptInToUnstableAPIsOnlyForCoreModules` against `wp.privateApis`. WP 6.9 core's allowlist excludes `@wordpress/theme`/`@wordpress/ui`/`@wordpress/dataviews`; the Gutenberg plugin overrides `wp-private-apis` with one that includes them. Without Gutenberg, those modules throw at load and the shell renders empty. Local dev: `gutenberg` is in `.wp-env.json`'s `plugins` array. Production: declare a `Requires Plugins: gutenberg` header (or detect-and-conditionally-render) before shipping.
+- Component-mapping cheat sheet (use `@wordpress/ui` left side when available):
+  - `Button` (`tone`, `variant`, `size`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `isBusy` → `loading`).
+  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — onChange takes a DOM event, not the raw value.
   - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`) replaces `__experimentalVStack` / `__experimentalHStack`.
   - `Text` (`variant="heading-xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`.
-  - **Stay on `@wordpress/components` for now:** `Notice`, `Tooltip`, `Popover`, `Modal`/`Dialog`, `Drawer`, `IconButton`, `SelectControl` (also needed for native `<optgroup>` support).
+  - `Notice.Root` (`intent="info|warning|success|error|neutral"`) + `Notice.Description` + `Notice.Actions` + `Notice.CloseIcon` replaces `Notice`.
+  - Other namespaced replacements when needed: `Card.*`, `Dialog.*`, `Drawer.*`, `Tabs.*`, `Tooltip.*`, `Popover.*`, `EmptyState.*`, `Collapsible.*`.
 - All data fetching uses `@wordpress/core-data` (`useEntityRecords`, `useEntityRecord`). No raw `fetch()`.
 - Exception: `@wordpress/api-fetch` is used for non-entity operations (media upload, auto-draft creation).
+- Always pass `context: 'edit'` on entity queries that need raw field values. Without it, `view` context is used and `title`/`content`/`excerpt` return only `rendered`, not `raw` — edits silently break.
+- `deleteEntityRecord('postType', name, id)` without extra args sends posts to trash. Pass `force: true` for permanent delete. Media and taxonomy terms have no trash and require `force: true`.
 - No external npm dependencies. Only `@wordpress/*` packages (loaded as externals by `@wordpress/scripts`).
 - Config is passed to JS via `wp_add_inline_script` + `wp_json_encode` (not `wp_localize_script` — it coerces types).
 - The `iframe:` escape hatch is a feature, not a compromise. The EditorApp and site-editor use it for MVP.
@@ -48,13 +51,17 @@ npm run start    # dev build with watch
 
 `webpack.config.js` extends the default `@wordpress/scripts` config with a `copy-webpack-plugin` step that copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`. The dep-extraction plugin's defaults handle the rest — `@wordpress/dataviews` and `@wordpress/ui` are both in the upstream `BUNDLED_PACKAGES` list and bundle themselves; everything else externalizes to `wp.*`.
 
-### `@wordpress/ui` cannot pull in `@wordpress/theme`
+### `@wordpress/ui` requires the Gutenberg plugin
 
-WP 6.9's runtime `wp.privateApis` allowlist (`CORE_MODULES_USING_PRIVATE_APIS`) is the 16-package set core ships with — it does **not** include `@wordpress/ui`, `@wordpress/theme`, or `@wordpress/dataviews`. The list and the `allowCoreModule` helper are not exported on the `wp.privateApis` namespace, so we cannot extend the allowlist from outside.
+`@wordpress/ui` and `@wordpress/theme` opt into private APIs via `__dangerousOptInToUnstableAPIsOnlyForCoreModules`. WP core 6.9's runtime allowlist (`CORE_MODULES_USING_PRIVATE_APIS`) is a 16-package set that does **not** include `@wordpress/ui`/`@wordpress/theme`/`@wordpress/dataviews`. The list and the `allowCoreModule` helper are not exported on `wp.privateApis`, so we cannot extend the allowlist from outside.
 
-Implication: any `@wordpress/ui` import path that transitively pulls in `@wordpress/theme` will throw `"Cannot unlock an object that was not locked before"` (or fail the consent check) at module-load time, taking down the whole React tree. Concretely, `Notice.CloseIcon → IconButton → Tooltip → themePrivateApis` is the chain that breaks.
+The **Gutenberg plugin** ships its own `wp-private-apis` script bundle (`build/scripts/private-apis/`) that overrides core's. Its allowlist (verified on Gutenberg 23.0.1) includes `@wordpress/ui`, `@wordpress/theme`, `@wordpress/dataviews`, `@wordpress/fields`, `@wordpress/admin-ui`, `@wordpress/views` and more, with the `'I acknowledge…'` consent string those packages send. With Gutenberg active, every `@wordpress/ui` component loads cleanly.
 
-**Rule of thumb:** stick to the `@wordpress/ui` primitives whose import graphs stay inside `@wordpress/ui` itself — `Button`, `Stack`, `Text`, `InputControl`, `Field.*`, `Input`, `Textarea`, `Fieldset.*`, `Badge`, `Link`, `VisuallyHidden`. Avoid anything that needs an overlay (`Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `Notice` (because of CloseIcon), the form `Select`/`Autocomplete` primitives, `IconButton`) until WP core allowlists `@wordpress/theme`. For those, fall back to `@wordpress/components`.
+Without Gutenberg, overlay components throw at module-load time — the throw fires inside the import graph before React mounts, so the entire shell renders empty with no React error boundary catching it. `Notice.CloseIcon → IconButton → Tooltip → themePrivateApis` is one of several chains that breaks.
+
+**Implication:** Gutenberg is a hard runtime dependency. `.wp-env.json` includes `gutenberg` in its `plugins` array. Distribution must declare `Requires Plugins: gutenberg` (or detect-and-conditionally-render a `@wordpress/components` fallback when missing).
+
+**Past failed workaround — don't repeat:** bundling `@wordpress/private-apis` to control the allowlist creates a *separate registry* from the runtime `wp.privateApis`. `@wordpress/dataviews` (also bundled) then tries to `unlock()` objects locked by `wp.components` in the runtime registry → `"Cannot unlock an object that was not locked before"`.
 
 ## Project structure
 
