@@ -10,7 +10,9 @@ MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled she
 
 **M1 complete (2026-04-30).** Kernel rebuild landed: registry-driven mount through `src/runtime/`, `core:site-editor-layout` engine, six built-in region sources, hash router, selection bus + REST endpoint, slot registry, system apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-{banner,snackbar}` stubs), MVP user apps registered as `AppSource` definitions, `normalizeV0()` shim mapping v0 (MVP flat) configs into the v1 partitioned shape. `src/shell/*`, `src/routing/*`, `src/commands/*`, `src/config/*` retired; surviving presentational helpers relocated to `src/runtime/apps/_components/` and `src/runtime/config/iconMap.js`. All four bundled shells render through the new kernel with parity (the v0 shell-switcher dropdown is intentionally absent per spec §6.4.1; switching is option-write + reload only in v1, prefs UI surface lands in v2).
 
-**M2 (cascade resolver) up next.**
+**M2 complete (2026-04-30).** Cascade resolver landed in `includes/`: `WP_Admin_Shell_Resolver` two-phase pipeline (trusted core/plugin via `merge_authoritative`, consumer site/role/user via plain `merge` filtered through `userCustomizable`), `WP_Admin_Shell_Config` accessor class, `WP_Admin_Shell_Cache` two-layer (object cache + transient) with hash-based invalidation, `WP_Admin_Shell_Origin_Core` owning the v0 → v1 normalizer (the M1 JS shim is now redundant; passes through). Per-role / per-user shell selection with `userSwitchable` gating; legacy `wp_admin_shell_active_config` migrates to `wp_admin_shell_active_shell`. `wp-admin-shell-data_{core|plugin|site|role|user}` per-origin filters plus a final `wp_admin_shell_data` filter for plugin extension. 22 cascade tests + 5 selection tests pass via `wp eval-file`. configSchema validation cache stub registered; real validators land in M4.
+
+**M3 (token system) up next.**
 
 ## Before modifying code
 
