@@ -6,7 +6,9 @@
     "build": "wp-scripts build",
     "start": "wp-scripts start",
     "lint:js": "wp-scripts lint-js",
-    "format": "wp-scripts format"
+    "format": "wp-scripts format",
+    "snapshot:wpds": "node scripts/snapshot-wpds.mjs",
+    "test:parity": "node tests/parity/wpds-snapshot.test.mjs"
   },
   "devDependencies": {
     "@base-ui/react": "^1.4.0",
