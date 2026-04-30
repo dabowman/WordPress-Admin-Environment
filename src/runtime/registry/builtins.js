@@ -25,7 +25,7 @@ import SiteHubApp from '../apps/SiteHubApp';
 import ToolbarActionsApp from '../apps/ToolbarActionsApp';
 import CommandPickerApp from '../apps/CommandPickerApp';
 import PreviewPaneApp from '../apps/PreviewPaneApp';
-import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesStubApp';
+import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 
 // v1 engine + regions.
 import coreSiteEditorLayout from '../engines/core-site-editor-layout';
@@ -131,17 +131,16 @@ export function registerBuiltins( registry ) {
 		Component: PreviewPaneApp,
 	} );
 
-	// M1 stubs — implementation lands in M4 backed by @wordpress/notices.
 	registry.register( {
 		kind: 'app',
 		id: 'core:notices-banner',
-		title: 'Notices (banner) — stub',
+		title: 'Notices (banner)',
 		Component: NoticesBannerApp,
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:notices-snackbar',
-		title: 'Notices (snackbar) — stub',
+		title: 'Notices (snackbar)',
 		Component: NoticesSnackbarApp,
 	} );
 

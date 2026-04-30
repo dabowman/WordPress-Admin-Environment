@@ -1,12 +1,12 @@
-import { useState, useEffect } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import {
 	Button,
 	TextControl,
 	TextareaControl,
 	SelectControl,
 	Spinner,
-	Notice,
 	__experimentalVStack as VStack,
 	__experimentalHeading as Heading,
 } from '@wordpress/components';
@@ -17,7 +17,7 @@ export default function ProfileApp() {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
-	const [ notice, setNotice ] = useState( null );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	if ( ! record ) {
 		return (
@@ -30,17 +30,14 @@ export default function ProfileApp() {
 	const handleSave = async () => {
 		try {
 			await save();
-			setNotice( {
-				status: 'success',
-				message: __( 'Profile updated.', 'wp-admin-shell' ),
+			createSuccessNotice( __( 'Profile updated.', 'wp-admin-shell' ), {
+				type: 'snackbar',
 			} );
 		} catch ( err ) {
-			setNotice( {
-				status: 'error',
-				message:
-					err.message ||
-					__( 'Failed to save profile.', 'wp-admin-shell' ),
-			} );
+			createErrorNotice(
+				err.message || __( 'Failed to save profile.', 'wp-admin-shell' ),
+				{ isDismissible: true }
+			);
 		}
 	};
 
@@ -67,16 +64,6 @@ export default function ProfileApp() {
 				<Heading level={ 2 }>
 					{ __( 'Profile', 'wp-admin-shell' ) }
 				</Heading>
-
-				{ notice && (
-					<Notice
-						status={ notice.status }
-						isDismissible
-						onDismiss={ () => setNotice( null ) }
-					>
-						{ notice.message }
-					</Notice>
-				) }
 
 				<TextControl
 					label={ __( 'First Name', 'wp-admin-shell' ) }

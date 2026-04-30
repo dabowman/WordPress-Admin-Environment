@@ -237,6 +237,18 @@ class WP_Admin_Shell_Origin_Core {
 				'hidden' => true,
 				'config' => array(),
 			),
+			array(
+				'id'     => '__notices-banner',
+				'source' => 'core:notices-banner',
+				'hidden' => true,
+				'config' => array(),
+			),
+			array(
+				'id'     => '__notices-snackbar',
+				'source' => 'core:notices-snackbar',
+				'hidden' => true,
+				'config' => array(),
+			),
 		);
 		if ( $has_toolbar_actions ) {
 			$apps[] = array(
@@ -294,6 +306,13 @@ class WP_Admin_Shell_Origin_Core {
 			'kind'     => 'overlay',
 			'config'   => array(),
 			'contains' => array( '__command-picker' ),
+		);
+		$regions['notices'] = array(
+			'id'       => 'notices',
+			'source'   => 'core:overlay-region',
+			'kind'     => 'overlay',
+			'config'   => array(),
+			'contains' => array( '__notices-banner', '__notices-snackbar' ),
 		);
 		return $regions;
 	}

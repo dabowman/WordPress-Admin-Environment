@@ -1,11 +1,12 @@
 import { useState } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import {
 	Button,
 	InputControl,
 	Stack,
 	Text,
-	Notice,
 } from '@wordpress/ui';
 import {
 	SelectControl,
@@ -23,7 +24,7 @@ export default function SettingsGeneralApp() {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'site' );
 
-	const [ notice, setNotice ] = useState( null );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 	const [ dateFormatCustom, setDateFormatCustom ] = useState(
 		editedRecord?.date_format || ''
 	);
@@ -44,17 +45,14 @@ export default function SettingsGeneralApp() {
 	const handleSave = async () => {
 		try {
 			await save();
-			setNotice( {
-				intent: 'success',
-				message: __( 'Settings saved.', 'wp-admin-shell' ),
+			createSuccessNotice( __( 'Settings saved.', 'wp-admin-shell' ), {
+				type: 'snackbar',
 			} );
 		} catch ( err ) {
-			setNotice( {
-				intent: 'error',
-				message:
-					err.message ||
-					__( 'Failed to save settings.', 'wp-admin-shell' ),
-			} );
+			createErrorNotice(
+				err.message || __( 'Failed to save settings.', 'wp-admin-shell' ),
+				{ isDismissible: true }
+			);
 		}
 	};
 
@@ -102,19 +100,6 @@ export default function SettingsGeneralApp() {
 				<Text variant="heading-xl" render={ <h2 /> }>
 					{ __( 'General Settings', 'wp-admin-shell' ) }
 				</Text>
-
-				{ notice && (
-					<Notice.Root intent={ notice.intent }>
-						<Notice.Description>
-							{ notice.message }
-						</Notice.Description>
-						<Notice.Actions>
-							<Notice.CloseIcon
-								onClick={ () => setNotice( null ) }
-							/>
-						</Notice.Actions>
-					</Notice.Root>
-				) }
 
 				{ /* Site identity */ }
 				<InputControl

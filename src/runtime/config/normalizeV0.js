@@ -184,12 +184,7 @@ function stylesFromBranding( branding ) {
 
 function buildSystemApps( { navigation, layout, toolbar, hasToolbarActions } ) {
 	const apps = [
-		{
-			id: '__site-hub',
-			source: 'core:site-hub',
-			hidden: true,
-			config: {},
-		},
+		{ id: '__site-hub',         source: 'core:site-hub',         hidden: true, config: {} },
 		{
 			id: '__nav',
 			source: 'core:navigation',
@@ -199,12 +194,9 @@ function buildSystemApps( { navigation, layout, toolbar, hasToolbarActions } ) {
 				collapsed: !! layout.navigationCollapsed,
 			},
 		},
-		{
-			id: '__command-picker',
-			source: 'core:command-picker',
-			hidden: true,
-			config: {},
-		},
+		{ id: '__command-picker',   source: 'core:command-picker',   hidden: true, config: {} },
+		{ id: '__notices-banner',   source: 'core:notices-banner',   hidden: true, config: {} },
+		{ id: '__notices-snackbar', source: 'core:notices-snackbar', hidden: true, config: {} },
 	];
 
 	if ( hasToolbarActions ) {
@@ -264,6 +256,14 @@ function buildRegions( { showSidebar, showToolbar, layout, systemApps } ) {
 		kind: 'overlay',
 		config: {},
 		contains: [ '__command-picker' ],
+	};
+
+	regions.notices = {
+		id: 'notices',
+		source: 'core:overlay-region',
+		kind: 'overlay',
+		config: {},
+		contains: [ '__notices-banner', '__notices-snackbar' ],
 	};
 
 	return regions;
