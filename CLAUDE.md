@@ -22,7 +22,13 @@ Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-
 
 ## Key rules
 
-- All UI uses `@wordpress/components`. No custom component libraries.
+- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists AND the import path stays inside `@wordpress/ui`.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is already in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles into the build with no extra config. Fall back to `@wordpress/components` for: (a) primitives `@wordpress/ui` doesn't ship yet (`RadioControl`, `CheckboxControl`, `SelectControl`, `Spinner`, `Divider` as of `0.12.0`); (b) anything that pulls in `@wordpress/theme` — those throw on WP 6.9 because the runtime `wp.privateApis` allowlist excludes `@wordpress/theme`/`@wordpress/ui`. See "Webpack externals" below for the full picture. Concretely: do NOT use `@wordpress/ui`'s `Notice`, `Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `IconButton`, or the form `Select`/`Autocomplete` primitives until WP core allowlists `@wordpress/theme`. No custom component libraries.
+- Component-mapping cheat sheet (use the `@wordpress/ui` left side when available AND safe):
+  - `Button` (props: `tone`, `variant`, `size`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `isBusy` → `loading`).
+  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — note onChange takes a DOM event, not the raw value.
+  - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`) replaces `__experimentalVStack` / `__experimentalHStack`.
+  - `Text` (`variant="heading-xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`.
+  - **Stay on `@wordpress/components` for now:** `Notice`, `Tooltip`, `Popover`, `Modal`/`Dialog`, `Drawer`, `IconButton`, `SelectControl` (also needed for native `<optgroup>` support).
 - All data fetching uses `@wordpress/core-data` (`useEntityRecords`, `useEntityRecord`). No raw `fetch()`.
 - Exception: `@wordpress/api-fetch` is used for non-entity operations (media upload, auto-draft creation).
 - No external npm dependencies. Only `@wordpress/*` packages (loaded as externals by `@wordpress/scripts`).
@@ -39,7 +45,15 @@ npm run start    # dev build with watch
 
 ## Webpack externals
 
-Custom `webpack.config.js` extends `@wordpress/scripts` default config to externalize `@wordpress/dataviews` (listed in `BUNDLED_PACKAGES` by default but available as `wp-dataviews` in WordPress 6.7+). The dep extraction plugin is replaced with a custom instance that maps `@wordpress/dataviews` → `['wp', 'dataviews']`.
+`webpack.config.js` extends the default `@wordpress/scripts` config with a `copy-webpack-plugin` step that copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`. The dep-extraction plugin's defaults handle the rest — `@wordpress/dataviews` and `@wordpress/ui` are both in the upstream `BUNDLED_PACKAGES` list and bundle themselves; everything else externalizes to `wp.*`.
+
+### `@wordpress/ui` cannot pull in `@wordpress/theme`
+
+WP 6.9's runtime `wp.privateApis` allowlist (`CORE_MODULES_USING_PRIVATE_APIS`) is the 16-package set core ships with — it does **not** include `@wordpress/ui`, `@wordpress/theme`, or `@wordpress/dataviews`. The list and the `allowCoreModule` helper are not exported on the `wp.privateApis` namespace, so we cannot extend the allowlist from outside.
+
+Implication: any `@wordpress/ui` import path that transitively pulls in `@wordpress/theme` will throw `"Cannot unlock an object that was not locked before"` (or fail the consent check) at module-load time, taking down the whole React tree. Concretely, `Notice.CloseIcon → IconButton → Tooltip → themePrivateApis` is the chain that breaks.
+
+**Rule of thumb:** stick to the `@wordpress/ui` primitives whose import graphs stay inside `@wordpress/ui` itself — `Button`, `Stack`, `Text`, `InputControl`, `Field.*`, `Input`, `Textarea`, `Fieldset.*`, `Badge`, `Link`, `VisuallyHidden`. Avoid anything that needs an overlay (`Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `Notice` (because of CloseIcon), the form `Select`/`Autocomplete` primitives, `IconButton`) until WP core allowlists `@wordpress/theme`. For those, fall back to `@wordpress/components`.
 
 ## Project structure
 
@@ -75,6 +89,7 @@ wp-admin-shell/
 │   │   ├── SimpleEditorApp.js # Substack-style native block editor (title + restricted blocks + auto-save)
 │   │   ├── MediaApp.js      # Media grid with upload, detail modal, delete
 │   │   ├── ProfileApp.js    # User profile form via useEntityRecord
+│   │   ├── SettingsGeneralApp.js # WPDS rebuild of options-general.php (site, membership, locale, dates)
 │   │   └── IframeApp.js     # Legacy wp-admin page in iframe with chrome hiding
 │   ├── routing/
 │   │   ├── router.js        # Hash-based router (context + navigate())
@@ -98,6 +113,7 @@ wp-admin-shell/
 | `core:simple-editor` | SimpleEditorApp | `useEntityRecord('postType', 'post', id)` + `apiFetch` for new draft | Native block editor, title + 9 allowed blocks, debounced auto-save, Publish/Update |
 | `core:media` | MediaApp | `useEntityRecords('root', 'media')` | Grid, upload, detail modal |
 | `core:profile` | ProfileApp | `useEntityRecord('root', 'user', userId)` | Form with optimistic edits |
+| `core:settings-general` | SettingsGeneralApp | `useEntityRecord('root', 'site')` | Recreates `wp-admin/options-general.php` with WPDS components |
 | `iframe:{url}` | IframeApp | None | URL relative to `adminUrl`, chrome hidden via injected CSS |
 
 ### `core:simple-editor` notes

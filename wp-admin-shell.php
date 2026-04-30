@@ -113,6 +113,9 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
 		),
+		'settingsGeneral' => current_user_can( 'manage_options' )
+			? wp_admin_shell_get_settings_general_data()
+			: null,
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -153,6 +156,11 @@ function wp_admin_shell_get_active_config() {
 
 /**
  * Register the shell settings.
+ *
+ * Also extend core `general` options so SettingsGeneralApp can read/write
+ * them via /wp/v2/settings. Core registers blogname/blogdescription/url/email/
+ * timezone/date_format/time_format/start_of_week/language but skips home,
+ * users_can_register, default_role.
  */
 add_action( 'init', function () {
 	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_config', array(
@@ -161,7 +169,161 @@ add_action( 'init', function () {
 		'sanitize_callback' => 'sanitize_file_name',
 		'show_in_rest'      => true,
 	) );
+
+	if ( ! is_multisite() ) {
+		register_setting( 'general', 'home', array(
+			'show_in_rest' => array(
+				'name'   => 'home',
+				'schema' => array( 'format' => 'uri' ),
+			),
+			'type'         => 'string',
+			'description'  => __( 'Site address (front-end URL).', 'wp-admin-shell' ),
+		) );
+
+		register_setting( 'general', 'users_can_register', array(
+			'show_in_rest' => true,
+			'type'         => 'boolean',
+			'description'  => __( 'Allow new user registration.', 'wp-admin-shell' ),
+		) );
+
+		register_setting( 'general', 'default_role', array(
+			'show_in_rest' => true,
+			'type'         => 'string',
+			'description'  => __( 'Default role for new users.', 'wp-admin-shell' ),
+		) );
+	}
 } );
+
+/**
+ * Build the data payload that SettingsGeneralApp consumes (timezone groups,
+ * languages, roles, date/time format presets, format previews). Uses the same
+ * core helpers wp-admin/options-general.php uses so the app stays in lockstep.
+ */
+function wp_admin_shell_get_settings_general_data() {
+	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+
+	// Languages (locales installed + downloadable translations).
+	$installed_languages = get_available_languages();
+	$translations        = wp_get_available_translations();
+
+	$language_options = array(
+		array( 'value' => '', 'label' => 'English (United States)' ),
+	);
+	$installed_group = array();
+	foreach ( $installed_languages as $locale ) {
+		$label = isset( $translations[ $locale ]['native_name'] )
+			? $translations[ $locale ]['native_name']
+			: $locale;
+		$installed_group[] = array( 'value' => $locale, 'label' => $label );
+	}
+	$available_group = array();
+	if ( current_user_can( 'install_languages' ) && wp_can_install_language_pack() ) {
+		foreach ( $translations as $locale => $data ) {
+			if ( in_array( $locale, $installed_languages, true ) ) {
+				continue;
+			}
+			$available_group[] = array(
+				'value' => $locale,
+				'label' => isset( $data['native_name'] ) ? $data['native_name'] : $locale,
+			);
+		}
+	}
+
+	// Timezones, grouped by continent. Mirrors wp_timezone_choice() output.
+	$tz_identifiers = timezone_identifiers_list();
+	$tz_groups      = array(
+		array( 'label' => __( 'UTC', 'wp-admin-shell' ), 'options' => array(
+			array( 'value' => 'UTC', 'label' => 'UTC' ),
+		) ),
+	);
+	$by_continent = array();
+	foreach ( $tz_identifiers as $zone ) {
+		if ( $zone === 'UTC' ) {
+			continue;
+		}
+		$parts     = explode( '/', $zone );
+		$continent = $parts[0];
+		if ( ! in_array( $continent, array( 'Africa', 'America', 'Antarctica', 'Arctic', 'Asia', 'Atlantic', 'Australia', 'Europe', 'Indian', 'Pacific' ), true ) ) {
+			continue;
+		}
+		$by_continent[ $continent ][] = array(
+			'value' => $zone,
+			'label' => str_replace( array( $continent . '/', '_' ), array( '', ' ' ), $zone ),
+		);
+	}
+	foreach ( $by_continent as $continent => $zones ) {
+		$tz_groups[] = array(
+			'label'   => $continent,
+			'options' => $zones,
+		);
+	}
+	// Manual UTC offsets (UTC-12 through UTC+14, half/quarter step).
+	$offset_options = array();
+	$offset_range   = array( -12, -11.5, -11, -10.5, -10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 7.5, 8, 8.5, 8.75, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.75, 13, 13.75, 14 );
+	foreach ( $offset_range as $offset ) {
+		$value = 'UTC' . ( $offset >= 0 ? '+' : '' ) . $offset;
+		$offset_options[] = array( 'value' => $value, 'label' => $value );
+	}
+	$tz_groups[] = array(
+		'label'   => __( 'Manual offsets', 'wp-admin-shell' ),
+		'options' => $offset_options,
+	);
+
+	// Roles for new-user default.
+	$roles_raw = wp_roles()->get_names();
+	$role_options = array();
+	foreach ( $roles_raw as $slug => $name ) {
+		$role_options[] = array(
+			'value' => $slug,
+			'label' => translate_user_role( $name ),
+		);
+	}
+
+	// Date/time format presets (same filters core uses).
+	$date_formats = array_unique( apply_filters( 'date_formats', array( __( 'F j, Y' ), 'Y-m-d', 'm/d/Y', 'd/m/Y' ) ) );
+	$time_formats = array_unique( apply_filters( 'time_formats', array( __( 'g:i a' ), 'g:i A', 'H:i' ) ) );
+
+	$current_offset = get_option( 'gmt_offset' );
+	$current_tz     = get_option( 'timezone_string' );
+	if ( empty( $current_tz ) ) {
+		if ( 0 == $current_offset ) {
+			$current_tz = 'UTC+0';
+		} elseif ( $current_offset < 0 ) {
+			$current_tz = 'UTC' . $current_offset;
+		} else {
+			$current_tz = 'UTC+' . $current_offset;
+		}
+	}
+
+	return array(
+		'languages' => array(
+			'installed' => $installed_group,
+			'available' => $available_group,
+			'default'   => $language_options,
+		),
+		'timezone'    => array(
+			'groups'  => $tz_groups,
+			'current' => $current_tz,
+			'utcNow'  => date_i18n( 'Y-m-d H:i:s', false, true ),
+			'localNow' => date_i18n( 'Y-m-d H:i:s' ),
+		),
+		'roles'       => $role_options,
+		'dateFormats' => array_values( array_map( function ( $fmt ) {
+			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
+		}, $date_formats ) ),
+		'timeFormats' => array_values( array_map( function ( $fmt ) {
+			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
+		}, $time_formats ) ),
+		'isMultisite' => is_multisite(),
+		'siteurlConst' => defined( 'WP_SITEURL' ),
+		'homeConst'    => defined( 'WP_HOME' ),
+		'pendingAdminEmail' => get_option( 'new_admin_email' ),
+		'weekdays'     => array_map( function ( $i ) {
+			global $wp_locale;
+			return array( 'value' => (string) $i, 'label' => $wp_locale->get_weekday( $i ) );
+		}, range( 0, 6 ) ),
+	);
+}
 
 /**
  * Render the settings page.

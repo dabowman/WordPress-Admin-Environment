@@ -31,15 +31,36 @@
     },
     {
       "id": "media",
-      "source": "core:media",
+      "source": "iframe:upload.php",
       "title": "Media",
       "icon": "media"
     },
     {
-      "id": "site-editor",
-      "source": "iframe:site-editor.php",
-      "title": "Design",
-      "icon": "layout"
+      "id": "design-styles",
+      "source": "iframe:site-editor.php?p=%2Fstyles&canvas=edit",
+      "title": "Styles",
+      "icon": "styles"
+    },
+    {
+      "id": "design-navigation",
+      "source": "core:posts",
+      "title": "Navigation",
+      "icon": "navigation",
+      "config": { "postType": "wp_navigation" }
+    },
+    {
+      "id": "design-templates",
+      "source": "core:posts",
+      "title": "Templates",
+      "icon": "layout",
+      "config": { "postType": "wp_template" }
+    },
+    {
+      "id": "design-patterns",
+      "source": "core:posts",
+      "title": "Patterns",
+      "icon": "symbol",
+      "config": { "postType": "wp_block" }
     },
     {
       "id": "plugins",
@@ -60,10 +81,17 @@
       "icon": "wrench"
     },
     {
+      "id": "settings-general",
+      "source": "core:settings-general",
+      "title": "General Settings",
+      "icon": "settings"
+    },
+    {
       "id": "settings",
       "source": "iframe:options-general.php",
-      "title": "Settings",
-      "icon": "settings"
+      "title": "Settings (legacy)",
+      "icon": "settings",
+      "hidden": true
     },
     {
       "id": "profile",
@@ -78,7 +106,18 @@
     { "app": "pages" },
     { "app": "media" },
     { "separator": true },
-    { "app": "site-editor" },
+    {
+      "screen": "design",
+      "label": "Design",
+      "icon": "layout",
+      "description": "Edit your site's appearance, navigation, templates, and patterns.",
+      "items": [
+        { "app": "design-styles" },
+        { "app": "design-navigation" },
+        { "app": "design-templates" },
+        { "app": "design-patterns" }
+      ]
+    },
     { "separator": true },
     {
       "screen": "system",
@@ -89,7 +128,7 @@
         { "app": "plugins" },
         { "app": "users" },
         { "app": "tools" },
-        { "app": "settings" }
+        { "app": "settings-general" }
       ]
     },
     { "separator": true },

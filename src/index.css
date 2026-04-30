@@ -785,6 +785,28 @@
 	height: 200px;
 }
 
+/* ==========================================================================
+   SettingsGeneralApp
+   ========================================================================== */
+
+.wp-admin-shell-app-settings-general {
+	max-width: 720px;
+}
+
+.wp-admin-shell-app-settings-general__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 200px;
+}
+
+.wp-admin-shell-app-settings-general code {
+	font-size: 12px;
+	background: #f0f0f0;
+	padding: 1px 6px;
+	border-radius: 3px;
+}
+
 /* IframeApp (continued) */
 .wp-admin-shell-app-iframe__loading {
 	position: absolute;

@@ -3,6 +3,7 @@ import EditorApp from '../apps/EditorApp';
 import SimpleEditorApp from '../apps/SimpleEditorApp';
 import MediaApp from '../apps/MediaApp';
 import ProfileApp from '../apps/ProfileApp';
+import SettingsGeneralApp from '../apps/SettingsGeneralApp';
 import IframeApp from '../apps/IframeApp';
 
 const sourceRegistry = {};
@@ -16,6 +17,7 @@ register( 'core:editor', EditorApp );
 register( 'core:simple-editor', SimpleEditorApp );
 register( 'core:media', MediaApp );
 register( 'core:profile', ProfileApp );
+register( 'core:settings-general', SettingsGeneralApp );
 
 /**
  * Resolves a source string to a React component.
