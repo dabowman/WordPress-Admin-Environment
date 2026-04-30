@@ -127,3 +127,21 @@ add_action( 'updated_user_meta', function ( $meta_id, $object_id, $meta_key ) {
 		WP_Admin_Shell_Cache::flush();
 	}
 }, 10, 3 );
+
+// Plugin activation/deactivation invalidates the cache so freshly-
+// hooked `wp_admin_shell_data_*` filters or sources contributed by
+// the activated plugin take effect on the next page load. The
+// `activated_plugin` / `deactivated_plugin` actions fire for every
+// plugin (not just ours); the cost of an extra flush during plugin
+// management is well below the cost of a plugin author seeing stale
+// cache and filing a bug.
+add_action( 'activated_plugin',   array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'deactivated_plugin', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+
+// Theme switch can change source registrations and capability surfaces.
+add_action( 'switch_theme', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+
+// User role changes affect cap precomputation + role-origin reads.
+add_action( 'set_user_role',    array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'add_user_role',    array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'remove_user_role', array( 'WP_Admin_Shell_Cache', 'flush' ) );

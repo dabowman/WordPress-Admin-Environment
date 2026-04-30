@@ -16,6 +16,21 @@
  * semantics. After all origins fold in, `wp_admin_shell_data` runs as
  * the final filter.
  *
+ * Cache + filter timing.
+ * The resolver memoizes through WP_Admin_Shell_Cache (object cache +
+ * transient). On a cache hit, origin loaders AND filters are skipped —
+ * the merged tree returns directly. This matches `WP_Theme_JSON_Resolver`
+ * behavior. Implications for plugin authors:
+ *
+ *   - `wp_admin_shell_data_*` filter changes do not take effect until
+ *     the next natural cache invalidation (option/meta write,
+ *     plugin/theme activation, role change) or a manual flush via
+ *     `WP_Admin_Shell_Cache::flush()`.
+ *   - Plugins hooking the filter at activation time get a flush
+ *     automatically (the `activated_plugin` action triggers it).
+ *   - Plugins hooking conditionally (e.g. only when a setting toggles)
+ *     should call the flush themselves on the trigger.
+ *
  * @package WP_Admin_Shell
  */
 
