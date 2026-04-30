@@ -1,4 +1,5 @@
 {
+  "$schema": "../docs/schemas/admin-v1.json",
   "name": "wp-admin-default",
   "title": "WP Admin (Default)",
   "description": "Mirrors the stock WordPress admin: every screen rendered as an iframe of its wp-admin counterpart.",

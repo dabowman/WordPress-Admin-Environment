@@ -1,4 +1,5 @@
 {
+  "$schema": "../docs/schemas/admin-v1.json",
   "name": "acme-client-portal",
   "title": "Acme Corp Portal",
   "description": "Client portal for Acme Corp website management.",

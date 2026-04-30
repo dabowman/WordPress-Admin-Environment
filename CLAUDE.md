@@ -21,7 +21,15 @@ MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled she
 - `core:site-editor` ships as iframe-backed adapter for v1 (spike outcome: native `@wordpress/edit-site` embedding deferred to v2 — package not externalized on the wp-admin-shell admin page; four collisions per plan §M4 risk are tractable individually but bundled exceed the v1 calendar). Shell authors use `core:site-editor` API name; v2 native mount slots in without admin.json changes.
 - Per-source `configSchema` declarations on every registration; M2's `WP_Admin_Shell_Config_Validator` cache picks them up.
 
-**M5 (permissions, prefs, ship) up next.**
+**M5 complete (2026-04-30) — v1 ready to ship.**
+- Four-layer capability gating (spec §8). PHP precomputes a `{cap: bool}` map from the resolved config + built-in source floors, ships it on `window.wpAdminShell.capabilities`. Layer 1 region fast-path (kernel resolver drops gated regions before `contains[]` evaluates). Layer 2 app gate (MountedApp returns null/fallback; ContentRegion's routable path renders 403 view). Layer 3 source-cap floor (registry-time check). Layer 4 REST observation. `useCan(cap)` synchronous; `checkCan(cap)` async via `/wp-admin-shell/v1/can/{cap}` with per-request object cache.
+- Recursive nav prune: `NavigationApp.pruneNavItems` drops gated apps, empty screens/groups (recursive), and orphan separators. Lives in the nav app, not the kernel, per spec §8.
+- `core:appearance` user-prefs UI: reads active shell's `userCustomizable` declarations, renders only allowed controls (density / accent / default-route in v1). Saves through POST `/wp-admin-shell/v1/user-prefs` (server deep-merges; null deletes).
+- Shell-switching plumbing without UI surface (spec §6.4.1): `window.wpAdminShell.switchShell(slug)` writes the option via `/wp/v2/settings`, hash survives reload, cache invalidates server-side via M2.7 hook. v2 surfaces a switcher inside `core:appearance`.
+- WP-CLI: `wp admin-shell list | activate <slug> | register <name> <path> | upgrade-config <name>`.
+- JSON Schema: `docs/schemas/admin-v1.json` describes the v1 config surface; bundled shells reference it via `$schema`.
+- MVP spec archived at `docs/archive/wp-admin-shell-mvp-spec.md`.
+- Production-readiness notes in `docs/v1-readiness.md` (bundle size, perf smoke, a11y checklist, Gutenberg dependency).
 
 ## Before modifying code
 
@@ -31,7 +39,7 @@ MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled she
    - `/gutenberg-contributor` — `@wordpress/*` package APIs, package boundaries, build tooling
 2. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model). `$wpds` is **top-level** (resolved 2026-04-30); selection scopes are per-mount with opt-in `persist: true` (resolved 2026-04-30); `color.palette[]` is dropped from admin.json (resolved 2026-04-30).
 3. Read `docs/wp-admin-shell-v1-plan.md` — **v1 implementation plan** (M1–M5 milestones, source layout, ordered tasks, exit criteria, MVP code disposition table). Required reading before any v1 work.
-4. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
+4. Skim `docs/archive/wp-admin-shell-mvp-spec.md` — archived MVP design spec (kept for historical reference; v1 architecture supersedes it)
 5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
 6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source. The `core:settings` v1 scope split (REST-native panels vs iframe fallbacks) is bounded by this doc.
 7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.

@@ -2,13 +2,32 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 0.1.0
+ * Version: 1.0.0-beta.1
  * Requires PHP: 7.4
  * Requires at least: 6.7
+ * Requires Plugins: gutenberg
  * Text Domain: wp-admin-shell
  */
 
 defined( 'ABSPATH' ) || exit;
+
+// Hard runtime dep: @wordpress/ui transitively imports @wordpress/theme,
+// which calls __dangerousOptInToUnstableAPIsOnlyForCoreModules against
+// wp.privateApis. WP core 6.9's allowlist excludes @wordpress/theme;
+// the Gutenberg plugin overrides wp-private-apis with one that includes
+// it. Without Gutenberg, every @wordpress/ui overlay component throws
+// at module-load and the shell renders empty. Surface a clear notice
+// instead of letting that happen silently.
+add_action( 'admin_notices', function () {
+	if ( ! function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+	if ( ! is_plugin_active( 'gutenberg/gutenberg.php' ) ) {
+		echo '<div class="notice notice-error"><p>';
+		echo esc_html__( 'WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists.', 'wp-admin-shell' );
+		echo '</p></div>';
+	}
+} );
 
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );

@@ -1,0 +1,141 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://schemas.wp.org/admin/v1.json",
+	"title": "WP Admin Shell — v1 admin.json",
+	"description": "Schema for the v1 admin.json configuration consumed by the WP Admin Shell cascade resolver. The v0 (MVP flat) shape is also accepted at runtime via the core origin loader's normalize_v0 path; this schema describes the v1 partitioned shape author files should target going forward.",
+	"type": "object",
+	"properties": {
+		"$schema":        { "type": "string" },
+		"name":           { "type": "string", "description": "Stable identifier; used as cache key + WP-CLI argument." },
+		"title":          { "type": "string" },
+		"description":    { "type": "string" },
+		"version":        { "type": "integer", "const": 1 },
+		"$wpds":          { "type": "string", "description": "Pinned WPDS version (e.g. '6.9'). Resolver loads wpds-defaults-{version}.json as the implicit core baseline." },
+		"userSwitchable": { "type": "boolean", "description": "Whether end users can opt into this shell via wp_admin_shell_user_prefs.shell. Default false." },
+
+		"settings": {
+			"type": "object",
+			"description": "Capability declarations — what is available in this shell.",
+			"properties": {
+				"shell": {
+					"type": "object",
+					"properties": {
+						"layoutEngine": { "type": "string", "examples": [ "core:site-editor-layout" ] },
+						"config": {
+							"type": "object",
+							"properties": {
+								"arrangement": { "type": "string" },
+								"regions":     { "type": "array", "items": { "type": "string" } }
+							},
+							"additionalProperties": true
+						}
+					},
+					"required": [ "layoutEngine" ],
+					"additionalProperties": true
+				},
+				"regions": {
+					"type": "object",
+					"description": "Region instances keyed by id. Each region is itself an app whose source produces a container.",
+					"additionalProperties": { "$ref": "#/$defs/region" }
+				},
+				"applications": {
+					"oneOf": [
+						{ "type": "object", "additionalProperties": { "$ref": "#/$defs/application" } },
+						{ "type": "array",  "items": { "$ref": "#/$defs/application" } }
+					]
+				},
+				"defaultRoute": { "type": [ "string", "null" ] },
+				"commands":     { "type": "array", "items": { "$ref": "#/$defs/command" } },
+				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
+			},
+			"required": [ "shell" ],
+			"additionalProperties": true
+		},
+
+		"styles": {
+			"type": "object",
+			"description": "Presentation. Tree mirrors the WPDS slot matrix verbatim — leaf paths emit --wpds-{path-with-dashes} CSS variables. Chrome extensions live under styles.chrome.*; per-region/per-app overrides under styles.regions[id] / styles.applications[id].",
+			"properties": {
+				"branding": {
+					"type": "object",
+					"properties": {
+						"logo":        { "type": "string" },
+						"icon":        { "type": "string" },
+						"title":       { "type": "string" },
+						"accentColor": { "type": "string" }
+					},
+					"additionalProperties": false
+				},
+				"density": {
+					"type": "string",
+					"enum": [ "default", "compact", "comfortable" ]
+				},
+				"chrome":       { "type": "object", "description": "Shell-only surfaces emitting --wp-admin-shell--chrome--* variables." },
+				"color":        { "type": "object" },
+				"dimension":    { "type": "object" },
+				"border":       { "type": "object" },
+				"elevation":    { "type": "object" },
+				"font":         { "type": "object" },
+				"regions":      { "type": "object", "description": "Per-region scoped overrides (same shape as styles, restricted to leaves)." },
+				"applications": { "type": "object", "description": "Per-app scoped overrides (same shape as styles, restricted to leaves)." },
+				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
+			},
+			"additionalProperties": true
+		}
+	},
+	"required": [ "version" ],
+	"additionalProperties": true,
+
+	"$defs": {
+		"region": {
+			"type": "object",
+			"properties": {
+				"id":         { "type": "string" },
+				"source":     { "type": "string" },
+				"kind": {
+					"type": "string",
+					"enum": [ "persistent", "overlay", "drawer", "floating", "tiled" ]
+				},
+				"capability": { "type": "string" },
+				"config":     { "type": "object", "additionalProperties": true },
+				"contains":   { "type": "array", "items": { "type": "string" } },
+				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
+			},
+			"required": [ "source" ],
+			"additionalProperties": true
+		},
+		"application": {
+			"type": "object",
+			"properties": {
+				"id":         { "type": "string" },
+				"source":     { "type": "string", "description": "Registered source id (e.g. core:posts) or iframe:{url}." },
+				"title":      { "type": "string" },
+				"icon":       { "type": "string" },
+				"hidden":     { "type": "boolean" },
+				"capability": { "type": "string" },
+				"route":      { "type": "string" },
+				"config":     { "type": "object", "additionalProperties": true },
+				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
+			},
+			"required": [ "source" ],
+			"additionalProperties": true
+		},
+		"command": {
+			"type": "object",
+			"properties": {
+				"id":     { "type": "string" },
+				"label":  { "type": "string" },
+				"icon":   { "type": "string" },
+				"action": { "type": "object" }
+			},
+			"required": [ "id", "label" ]
+		},
+		"userCustomizable": {
+			"description": "Cascade-resolver write filter (default-deny). true = all fields writable downstream; false / absent = locked; array of dotted paths = only listed paths writable.",
+			"oneOf": [
+				{ "type": "boolean" },
+				{ "type": "array", "items": { "type": "string" } }
+			]
+		}
+	}
+}

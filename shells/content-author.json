@@ -1,4 +1,5 @@
 {
+  "$schema": "../docs/schemas/admin-v1.json",
   "name": "content-author",
   "title": "Writer",
   "description": "A focused writing environment.",

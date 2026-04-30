@@ -1,4 +1,5 @@
 {
+  "$schema": "../docs/schemas/admin-v1.json",
   "name": "developer-admin",
   "title": "Developer Admin",
   "description": "Full admin shell with access to all WordPress features.",
