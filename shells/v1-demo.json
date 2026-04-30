@@ -1,0 +1,226 @@
+{
+	"$schema": "../docs/schemas/admin-v1.json",
+	"name": "v1-demo",
+	"title": "v1 Demo (partitioned shape)",
+	"description": "Authored in the v1 partitioned shape (settings + styles + userCustomizable) instead of the v0 flat form the other bundled shells use. Demonstrates the canonical author surface mirrored on theme.json.",
+	"version": 1,
+	"$wpds": "6.9",
+	"userSwitchable": true,
+
+	"settings": {
+		"shell": {
+			"layoutEngine": "core:site-editor-layout",
+			"config": {
+				"regions": [ "toolbar", "sidebar", "content", "command-palette", "notices" ]
+			}
+		},
+
+		"regions": {
+			"toolbar": {
+				"id": "toolbar",
+				"source": "core:toolbar-region",
+				"kind": "persistent",
+				"config": { "height": 48 },
+				"contains": [ "__toolbar-actions" ]
+			},
+			"sidebar": {
+				"id": "sidebar",
+				"source": "core:sidebar-region",
+				"kind": "persistent",
+				"config": {
+					"position": "left",
+					"width": 280,
+					"label": "v1 demo navigation"
+				},
+				"contains": [ "__site-hub", "__nav" ]
+			},
+			"content": {
+				"id": "content",
+				"source": "core:content-region",
+				"kind": "persistent",
+				"config": { "router": true, "selectionScope": "content" },
+				"contains": []
+			},
+			"command-palette": {
+				"id": "command-palette",
+				"source": "core:overlay-region",
+				"kind": "overlay",
+				"config": {},
+				"contains": [ "__command-picker" ]
+			},
+			"notices": {
+				"id": "notices",
+				"source": "core:overlay-region",
+				"kind": "overlay",
+				"config": {},
+				"contains": [ "__notices-banner", "__notices-snackbar" ]
+			}
+		},
+
+		"applications": [
+			{
+				"id": "__site-hub",
+				"source": "core:site-hub",
+				"hidden": true,
+				"config": {}
+			},
+			{
+				"id": "__nav",
+				"source": "core:navigation",
+				"hidden": true,
+				"config": {
+					"items": [
+						{ "app": "posts" },
+						{ "app": "media" },
+						{ "separator": true },
+						{ "app": "appearance" },
+						{ "app": "profile" },
+						{ "separator": true },
+						{ "label": "View site", "icon": "external", "href": "/", "external": true }
+					]
+				}
+			},
+			{
+				"id": "__toolbar-actions",
+				"source": "core:toolbar-actions",
+				"hidden": true,
+				"config": {
+					"right": [
+						{ "command": "core/new-post", "icon": "plus", "label": "New post" }
+					]
+				}
+			},
+			{
+				"id": "__command-picker",
+				"source": "core:command-picker",
+				"hidden": true,
+				"config": {}
+			},
+			{
+				"id": "__notices-banner",
+				"source": "core:notices-banner",
+				"hidden": true,
+				"config": {}
+			},
+			{
+				"id": "__notices-snackbar",
+				"source": "core:notices-snackbar",
+				"hidden": true,
+				"config": {}
+			},
+
+			{
+				"id": "posts",
+				"source": "core:posts",
+				"title": "Posts",
+				"icon": "post",
+				"capability": "edit_posts",
+				"route": "/posts",
+				"config": { "postType": "post" }
+			},
+			{
+				"id": "media",
+				"source": "core:media",
+				"title": "Media",
+				"icon": "media",
+				"capability": "upload_files",
+				"route": "/media"
+			},
+			{
+				"id": "profile",
+				"source": "core:profile",
+				"title": "Profile",
+				"icon": "user",
+				"capability": "read",
+				"route": "/profile"
+			},
+			{
+				"id": "appearance",
+				"source": "core:appearance",
+				"title": "Appearance",
+				"icon": "brush",
+				"capability": "read",
+				"route": "/appearance"
+			}
+		],
+
+		"defaultRoute": "/posts"
+	},
+
+	"styles": {
+		"branding": {
+			"title": "v1 Demo",
+			"accentColor": "#7c3aed"
+		},
+
+		"color": {
+			"bg": {
+				"interactive": {
+					"brand": {
+						"strong": "#7c3aed",
+						"strong-active": "#6d28d9"
+					}
+				},
+				"surface": {
+					"neutral": { "strong": "#ffffff" }
+				}
+			},
+			"fg": {
+				"content": {
+					"neutral": { "default": "#1e1e1e" }
+				}
+			},
+			"stroke": {
+				"focus": { "brand": "#7c3aed" }
+			}
+		},
+
+		"border": {
+			"width": { "focus": "2px" }
+		},
+
+		"chrome": {
+			"sidebar": {
+				"background": "#0f172a",
+				"foreground": "#94a3b8",
+				"foreground-active": "#e2e8f0",
+				"border": "#1e293b",
+				"item": {
+					"background": "transparent",
+					"background-hover": "#1e293b",
+					"background-active": "{styles.color.bg.interactive.brand.strong}",
+					"foreground": "#e2e8f0",
+					"foreground-active": "#ffffff"
+				},
+				"width": "280px"
+			},
+			"toolbar": {
+				"background": "#0f172a",
+				"foreground": "#e2e8f0",
+				"border": "#1e293b",
+				"height": "48px"
+			},
+			"site-hub": {
+				"background": "#0f172a",
+				"foreground": "#ffffff",
+				"icon-size": "32px",
+				"padding": "12px"
+			},
+			"content": {
+				"background": "#0f172a",
+				"card-background": "#ffffff",
+				"card-radius": "8px",
+				"card-padding": "16px",
+				"card-max-width": "1200px"
+			}
+		},
+
+		"density": "default",
+
+		"userCustomizable": [
+			"density",
+			"branding.accentColor",
+			"color.bg.interactive.brand.strong"
+		]
+	}
+}
