@@ -43,9 +43,10 @@
     },
     {
       "id": "design-styles",
-      "source": "iframe:site-editor.php?p=%2Fstyles&canvas=edit",
+      "source": "core:site-editor",
       "title": "Styles",
-      "icon": "styles"
+      "icon": "styles",
+      "config": { "url": "site-editor.php?p=%2Fstyles&canvas=edit" }
     },
     {
       "id": "design-navigation",

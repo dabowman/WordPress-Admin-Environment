@@ -21,6 +21,7 @@ import IframeApp from '../../apps/IframeApp';
 import UsersApp from '../../apps/UsersApp';
 import CommentsApp from '../../apps/CommentsApp';
 import SettingsApp from '../../apps/SettingsApp';
+import SiteEditorApp from '../apps/SiteEditorApp';
 
 // v1 system apps (sidebar / toolbar / overlay content).
 import NavigationApp from '../apps/NavigationApp';
@@ -124,6 +125,14 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: SettingsApp,
 		capabilities: [ 'manage_options' ],
+	} );
+	registry.register( {
+		kind: 'app',
+		id: 'core:site-editor',
+		title: 'Site editor',
+		routable: true,
+		Component: SiteEditorApp,
+		capabilities: [ 'edit_theme_options' ],
 	} );
 
 	// v1 system apps.
