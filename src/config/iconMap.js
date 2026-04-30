@@ -13,6 +13,14 @@ import {
 	drafts,
 	wordpress,
 	search,
+	styles,
+	navigation,
+	symbol,
+	category,
+	dashboard,
+	comment,
+	brush,
+	home,
 } from '@wordpress/icons';
 
 const iconMap = {
@@ -34,6 +42,16 @@ const iconMap = {
 	drafts,
 	search,
 	wordpress,
+	styles,
+	navigation,
+	symbol,
+	category,
+	dashboard,
+	comment,
+	comments: comment,
+	brush,
+	appearance: brush,
+	home,
 };
 
 export function resolveIcon( name ) {

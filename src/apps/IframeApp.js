@@ -22,6 +22,9 @@ export default function IframeApp( { app } ) {
 				return;
 			}
 			const style = doc.createElement( 'style' );
+			// TODO: site-editor chrome-hiding selectors are fragile —
+			// rev with each WP release. Verify Style Book canvas layout
+			// after upgrades.
 			style.textContent = `
 				#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter {
 					display: none !important;
@@ -29,6 +32,17 @@ export default function IframeApp( { app } ) {
 				#wpcontent { margin-left: 0 !important; }
 				html.wp-toolbar { padding-top: 0 !important; }
 				#wpbody-content { padding-top: 0; }
+				.edit-site-layout__sidebar-region,
+				.edit-site-layout__sidebar,
+				.edit-site-site-hub,
+				.edit-site-layout__header-container {
+					display: none !important;
+				}
+				.edit-site-layout__canvas-container,
+				.edit-site-layout__canvas {
+					inset: 0 !important;
+					left: 0 !important;
+				}
 			`;
 			doc.head.appendChild( style );
 		} catch ( e ) {
