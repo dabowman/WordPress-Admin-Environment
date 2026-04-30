@@ -94,19 +94,22 @@ function compileTree( tree, rootStyles, { splitChrome = false } = {} ) {
 		return { wpds, chrome };
 	}
 
+	// Chrome is special-cased OUT of the wpds-traversal loop below
+	// because `chrome` is in NON_TOKEN_KEYS — emit it before the loop
+	// so the NON_TOKEN_KEYS skip doesn't dead-code the chrome path.
+	if ( tree.chrome && typeof tree.chrome === 'object' ) {
+		walk( tree.chrome, [], ( path, leaf ) => {
+			emitTo(
+				chrome,
+				pathToChrome( path ),
+				resolveValue( leaf, rootStyles ),
+				path.join( '.' )
+			);
+		} );
+	}
+
 	for ( const [ key, value ] of Object.entries( tree ) ) {
 		if ( NON_TOKEN_KEYS.has( key ) ) {
-			continue;
-		}
-		if ( key === 'chrome' && value && typeof value === 'object' ) {
-			walk( value, [], ( path, leaf ) => {
-				emitTo(
-					chrome,
-					pathToChrome( path ),
-					resolveValue( leaf, rootStyles ),
-					path.join( '.' )
-				);
-			} );
 			continue;
 		}
 		walk( value, [ key ], ( path, leaf ) => {
