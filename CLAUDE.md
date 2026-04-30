@@ -19,6 +19,7 @@ Master design work for the post-MVP system lives in `docs/wp-admin-shell-design-
 4. Read `docs/wp-admin-shell-mvp-spec.md` — MVP design spec (validated implementation, working code samples)
 5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
 6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source
+7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
 
 ## Key rules
 
