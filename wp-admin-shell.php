@@ -31,6 +31,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
