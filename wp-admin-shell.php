@@ -13,6 +13,20 @@ defined( 'ABSPATH' ) || exit;
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
 
+/**
+ * One-time migration: copy MVP `wp_admin_shell_active_config` value into
+ * v1's `wp_admin_shell_active_shell`. The legacy key stays around for
+ * one minor cycle; reads check the new key first and fall back. Plan §M2.9.
+ */
+add_action( 'init', function () {
+	if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
+		$legacy = get_option( 'wp_admin_shell_active_config', '' );
+		if ( $legacy !== '' ) {
+			update_option( 'wp_admin_shell_active_shell', $legacy );
+		}
+	}
+}, 5 );
+
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
@@ -157,11 +171,44 @@ function wp_admin_shell_get_active_config() {
  * users_can_register, default_role.
  */
 add_action( 'init', function () {
+	// v1 canonical key. The MVP wrote `wp_admin_shell_active_config`;
+	// migration runs once on plugin load (see below) to copy the value
+	// over. Both keys remain registered through v1 so reads still
+	// resolve cleanly until the legacy key drops in v2.
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_shell', array(
+		'type'              => 'string',
+		'default'           => '',
+		'sanitize_callback' => 'sanitize_file_name',
+		'show_in_rest'      => true,
+	) );
+
 	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_config', array(
 		'type'              => 'string',
 		'default'           => 'developer-admin',
 		'sanitize_callback' => 'sanitize_file_name',
 		'show_in_rest'      => true,
+	) );
+
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_site_config', array(
+		'type'         => 'object',
+		'default'      => array(),
+		'show_in_rest' => array(
+			'schema' => array(
+				'type'                 => 'object',
+				'additionalProperties' => true,
+			),
+		),
+	) );
+
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_role_config', array(
+		'type'         => 'object',
+		'default'      => array(),
+		'show_in_rest' => array(
+			'schema' => array(
+				'type'                 => 'object',
+				'additionalProperties' => true,
+			),
+		),
 	) );
 
 	if ( ! is_multisite() ) {
@@ -326,7 +373,10 @@ function wp_admin_shell_render_settings() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$active = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
+	$active = get_option( 'wp_admin_shell_active_shell', '' );
+	if ( $active === '' ) {
+		$active = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
+	}
 	$shells = wp_admin_shell_get_available_shells();
 	?>
 	<div class="wrap">
@@ -335,9 +385,9 @@ function wp_admin_shell_render_settings() {
 			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Active Configuration', 'wp-admin-shell' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Active Shell', 'wp-admin-shell' ); ?></th>
 					<td>
-						<select name="wp_admin_shell_active_config">
+						<select name="wp_admin_shell_active_shell">
 							<?php foreach ( $shells as $shell ) : ?>
 								<option value="<?php echo esc_attr( $shell['slug'] ); ?>"
 									<?php selected( $active, $shell['slug'] ); ?>>
@@ -368,9 +418,10 @@ function wp_admin_shell_get_available_shells() {
 			continue;
 		}
 		$shells[] = array(
-			'slug'        => basename( $file, '.json' ),
-			'title'       => $data['title'] ?? basename( $file, '.json' ),
-			'description' => $data['description'] ?? '',
+			'slug'           => basename( $file, '.json' ),
+			'title'          => $data['title'] ?? basename( $file, '.json' ),
+			'description'    => $data['description'] ?? '',
+			'userSwitchable' => ! empty( $data['userSwitchable'] ),
 		);
 	}
 
