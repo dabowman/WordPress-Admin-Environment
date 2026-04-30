@@ -7,6 +7,12 @@ import { useSelection } from '../selection/useSelection';
  * Reads the configured `follow` selection scope and displays whatever is
  * there. For M1 this is a debug stub; M4 will replace it with real preview
  * content for posts/pages/templates.
+ *
+ * The default `follow` value (`'content.selection'`) is intentionally
+ * single-region — v1 ships with one routable region, so the only
+ * publishing scope worth following by default is the content region's.
+ * v2 multi-routable regions need explicit `config.follow` per consumer;
+ * the resolver does not auto-pick when more than one publisher exists.
  */
 export default function PreviewPaneApp( { config = {} } ) {
 	const follow = config.follow || 'content.selection';

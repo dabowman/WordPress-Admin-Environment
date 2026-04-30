@@ -1,4 +1,4 @@
-import { useEffect } from '@wordpress/element';
+import { useEffect, useMemo } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { store as commandsStore } from '@wordpress/commands';
 
@@ -22,8 +22,33 @@ export default function CommandPickerApp() {
 	const { config } = useKernel();
 	const { registerCommand, unregisterCommand } = useDispatch( commandsStore );
 
+	const apps = useMemo(
+		() => toApplicationList( config.applications ),
+		[ config.applications ]
+	);
+
+	// Stable signature over the fields that actually drive command output.
+	// Cascade re-resolution often hands back a fresh applications array
+	// with byte-identical entries; gating the effect on this signature
+	// avoids the unregister-then-re-register thrash on every render.
+	const commandsKey = useMemo(
+		() =>
+			apps
+				.map( ( a ) =>
+					[
+						a.id,
+						a.hidden ? '1' : '0',
+						a.title || '',
+						a.icon || '',
+						a.source || '',
+						a.config?.postType || '',
+					].join( '' )
+				)
+				.join( '' ),
+		[ apps ]
+	);
+
 	useEffect( () => {
-		const apps = toApplicationList( config.applications );
 		const ids = [];
 
 		apps
@@ -61,7 +86,10 @@ export default function CommandPickerApp() {
 			} );
 
 		return () => ids.forEach( ( id ) => unregisterCommand( id ) );
-	}, [ config.applications, registerCommand, unregisterCommand ] );
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- apps is intentionally
+		// not a dep; commandsKey captures the relevant identity. Re-registering on
+		// every fresh array reference would thrash the commands store.
+	}, [ commandsKey, registerCommand, unregisterCommand ] );
 
 	return null;
 }
