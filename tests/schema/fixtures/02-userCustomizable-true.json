@@ -1,0 +1,12 @@
+{
+	"$schema": "../../../docs/schemas/admin-v1.json",
+	"name": "ucd-true",
+	"version": 1,
+	"settings": {
+		"shell": { "layoutEngine": "core:site-editor-layout" },
+		"applications": [
+			{ "id": "posts", "source": "core:posts", "userCustomizable": true }
+		]
+	},
+	"styles": { "userCustomizable": true }
+}

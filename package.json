@@ -8,7 +8,8 @@
     "lint:js": "wp-scripts lint-js",
     "format": "wp-scripts format",
     "snapshot:wpds": "node scripts/snapshot-wpds.mjs",
-    "test:parity": "node tests/parity/wpds-snapshot.test.mjs"
+    "test:parity": "node tests/parity/wpds-snapshot.test.mjs",
+    "test:schema": "node tests/schema/validate-shells.test.mjs"
   },
   "devDependencies": {
     "@base-ui/react": "^1.4.0",
@@ -17,6 +18,8 @@
     "@wordpress/dataviews": "^14.0.0",
     "@wordpress/icons": "^12.1.0",
     "@wordpress/scripts": "^30.7.0",
-    "@wordpress/ui": "^0.12.0"
+    "@wordpress/ui": "^0.12.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
   }
 }

@@ -1,0 +1,18 @@
+{
+	"$schema": "../../../docs/schemas/admin-v1.json",
+	"name": "ucd-paths",
+	"version": 1,
+	"settings": {
+		"shell": { "layoutEngine": "core:site-editor-layout" },
+		"applications": [
+			{
+				"id": "posts",
+				"source": "core:posts",
+				"userCustomizable": [ "title", "icon" ]
+			}
+		]
+	},
+	"styles": {
+		"userCustomizable": [ "branding.accentColor", "density" ]
+	}
+}
