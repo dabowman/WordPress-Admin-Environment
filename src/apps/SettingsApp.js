@@ -86,10 +86,52 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 
 	const panels = useMemo( () => {
 		const allowedIds = config.panels;
-		const filtered = Array.isArray( allowedIds ) && allowedIds.length > 0
-			? BUILTIN_PANELS.filter( ( p ) => allowedIds.includes( p.id ) )
-			: BUILTIN_PANELS;
-		return [ ...filtered, ...slotPanels ];
+		const passesAllowlist = ( panel ) =>
+			! Array.isArray( allowedIds ) ||
+			allowedIds.length === 0 ||
+			allowedIds.includes( panel.id );
+
+		// Builtins keep authority over their ids — a plugin registering
+		// `core:settings.panels` with `id: 'general'` does NOT shadow the
+		// builtin General panel. Document this at the slot contract.
+		const builtinIds = new Set( BUILTIN_PANELS.map( ( p ) => p.id ) );
+
+		const seen = new Set();
+		const out = [];
+
+		for ( const panel of BUILTIN_PANELS ) {
+			if ( ! passesAllowlist( panel ) ) {
+				continue;
+			}
+			out.push( panel );
+			seen.add( panel.id );
+		}
+
+		// Plugin panels: must have a unique id, must pass the shell's
+		// allowlist if one is set. Last-write-wins between plugin panels
+		// with duplicate ids — same convention as registerSlotItem.
+		for ( const panel of slotPanels ) {
+			if ( ! panel || typeof panel !== 'object' || ! panel.id ) {
+				continue;
+			}
+			if ( builtinIds.has( panel.id ) ) {
+				continue;
+			}
+			if ( ! passesAllowlist( panel ) ) {
+				continue;
+			}
+			if ( seen.has( panel.id ) ) {
+				const existingIndex = out.findIndex( ( p ) => p.id === panel.id );
+				if ( existingIndex >= 0 ) {
+					out[ existingIndex ] = panel;
+				}
+				continue;
+			}
+			out.push( panel );
+			seen.add( panel.id );
+		}
+
+		return out;
 	}, [ config.panels, slotPanels ] );
 
 	const initialPanelId = segments[ 0 ] || panels[ 0 ]?.id;
