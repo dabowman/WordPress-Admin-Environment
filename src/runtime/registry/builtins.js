@@ -52,13 +52,25 @@ export function registerBuiltins( registry ) {
 	registry.register( overlayRegion );
 	registry.register( drawerRegion );
 
-	// MVP user apps.
+	// MVP user apps. configSchemas describe the per-instance config; the
+	// M2 validator cache (WP_Admin_Shell_Config_Validator) memoizes against
+	// (sourceId, sha1(configJson)) once a real validator runtime lands.
 	registry.register( {
 		kind: 'app',
 		id: 'core:posts',
 		title: 'Posts',
 		routable: true,
 		Component: PostsApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				postType:     { type: 'string', default: 'post' },
+				status:       { type: 'string' },
+				contentWidth: { type: [ 'number', 'string' ] },
+				preview:      { type: 'string' },
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
@@ -66,6 +78,13 @@ export function registerBuiltins( registry ) {
 		title: 'Editor (post)',
 		routable: true,
 		Component: EditorApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				postType: { type: 'string', default: 'post' },
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
@@ -73,6 +92,13 @@ export function registerBuiltins( registry ) {
 		title: 'Simple editor',
 		routable: true,
 		Component: SimpleEditorApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				postType: { type: 'string', default: 'post' },
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
@@ -80,6 +106,7 @@ export function registerBuiltins( registry ) {
 		title: 'Media',
 		routable: true,
 		Component: MediaApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -87,6 +114,7 @@ export function registerBuiltins( registry ) {
 		title: 'Profile',
 		routable: true,
 		Component: ProfileApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -94,6 +122,7 @@ export function registerBuiltins( registry ) {
 		title: 'Settings — General',
 		routable: true,
 		Component: SettingsGeneralApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -101,6 +130,7 @@ export function registerBuiltins( registry ) {
 		title: 'Iframe fallback',
 		routable: true,
 		Component: IframeApp,
+		configSchema: { type: 'object', additionalProperties: true },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -109,6 +139,7 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: UsersApp,
 		capabilities: [ 'list_users' ],
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -117,6 +148,7 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: CommentsApp,
 		capabilities: [ 'moderate_comments' ],
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
@@ -125,6 +157,16 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: SettingsApp,
 		capabilities: [ 'manage_options' ],
+		configSchema: {
+			type: 'object',
+			properties: {
+				panels: {
+					type: 'array',
+					items: { type: 'string' },
+				},
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
@@ -133,6 +175,13 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: SiteEditorApp,
 		capabilities: [ 'edit_theme_options' ],
+		configSchema: {
+			type: 'object',
+			properties: {
+				url: { type: 'string', default: 'site-editor.php' },
+			},
+			additionalProperties: false,
+		},
 	} );
 
 	// v1 system apps.
@@ -141,30 +190,57 @@ export function registerBuiltins( registry ) {
 		id: 'core:navigation',
 		title: 'Navigation',
 		Component: NavigationApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				items:     { type: 'array' },
+				collapsed: { type: 'boolean' },
+				title:     { type: 'string' },
+				description: { type: 'string' },
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:site-hub',
 		title: 'Site hub',
 		Component: SiteHubApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:toolbar-actions',
 		title: 'Toolbar actions',
 		Component: ToolbarActionsApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				left:  { type: 'array' },
+				right: { type: 'array' },
+			},
+			additionalProperties: false,
+		},
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:command-picker',
 		title: 'Command picker',
 		Component: CommandPickerApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:preview-pane',
 		title: 'Preview pane',
 		Component: PreviewPaneApp,
+		configSchema: {
+			type: 'object',
+			properties: {
+				follow: { type: 'string', default: 'content.selection' },
+			},
+			additionalProperties: false,
+		},
 	} );
 
 	registry.register( {
@@ -172,12 +248,14 @@ export function registerBuiltins( registry ) {
 		id: 'core:notices-banner',
 		title: 'Notices (banner)',
 		Component: NoticesBannerApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 	registry.register( {
 		kind: 'app',
 		id: 'core:notices-snackbar',
 		title: 'Notices (snackbar)',
 		Component: NoticesSnackbarApp,
+		configSchema: { type: 'object', additionalProperties: false },
 	} );
 
 	return registry;
