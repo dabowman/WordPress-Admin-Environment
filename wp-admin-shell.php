@@ -214,6 +214,40 @@ function wp_admin_shell_get_active_config() {
 }
 
 /**
+ * Sanitize + validate the wp_admin_shell_active_shell option write.
+ *
+ * Returns the sanitized slug if a matching shell file exists; returns
+ * the previous option value (or empty string for the first write)
+ * when the slug is unknown. Empty string passes through so the
+ * resolver's fallback chain still resolves (legacy active_config →
+ * default).
+ */
+function wp_admin_shell_sanitize_active_shell( $value ) {
+	$sanitized = sanitize_file_name( (string) $value );
+	if ( $sanitized === '' ) {
+		return '';
+	}
+	$path = WP_ADMIN_SHELL_PATH . 'shells/' . $sanitized . '.json';
+	if ( file_exists( $path ) ) {
+		return $sanitized;
+	}
+
+	add_settings_error(
+		'wp_admin_shell_active_shell',
+		'wp_admin_shell_unknown_shell',
+		sprintf(
+			/* translators: %s: shell slug */
+			__( 'Unknown shell: "%s". The previous active shell was kept.', 'wp-admin-shell' ),
+			esc_html( $sanitized )
+		),
+		'error'
+	);
+
+	$previous = get_option( 'wp_admin_shell_active_shell', '' );
+	return $previous;
+}
+
+/**
  * Pre-compute capability decisions for every cap declared in the resolved
  * config. Walks regions[*].capability + applications[*].capability, plus
  * built-in source capability floors. The runtime sees an absolute
@@ -262,14 +296,20 @@ add_action( 'init', function () {
 	// `wp_admin_shell_settings` page-form group so options.php doesn't
 	// NULL-out adjacent options when the form posts.
 	//
-	// Wrap `sanitize_file_name` defensively: the core sanitizer fatals
-	// on NULL since PHP 8.1 — see wp_is_valid_utf8 in /wp-includes/utf8.php.
+	// Sanitize-and-validate: core's sanitize_file_name fatals on NULL
+	// since PHP 8.1 (see wp_is_valid_utf8 in /wp-includes/utf8.php), so
+	// the (string) coercion is required. Then verify the sanitized
+	// slug corresponds to a shell file on disk — unknown slugs return
+	// the previous value, preserving the working state instead of
+	// putting the admin in a "Shell configuration not found" state on
+	// the next load. WP-CLI `wp admin-shell activate <slug>` and the
+	// JS `switchShell()` both pre-validate, but this is the
+	// belt-and-suspenders against direct option writes (e.g. via
+	// `wp option update`).
 	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_shell', array(
 		'type'              => 'string',
 		'default'           => '',
-		'sanitize_callback' => function ( $value ) {
-			return sanitize_file_name( (string) $value );
-		},
+		'sanitize_callback' => 'wp_admin_shell_sanitize_active_shell',
 		'show_in_rest'      => true,
 	) );
 

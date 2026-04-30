@@ -27,6 +27,20 @@ export async function switchShell( slug ) {
 	if ( ! slug || typeof slug !== 'string' ) {
 		throw new Error( 'switchShell: slug must be a non-empty string' );
 	}
+
+	// Client-side pre-flight against the shells list PHP injected on
+	// page load. Catches typos and stale slugs before the option write
+	// puts the admin in a broken-on-next-load state. Server-side
+	// sanitize_callback (registered in wp-admin-shell.php) is the
+	// second line of defense — rejects unknown slugs with the option's
+	// previous value preserved.
+	const shells = ( typeof window !== 'undefined' && window.wpAdminShell?.shells ) || [];
+	if ( shells.length > 0 && ! shells.some( ( s ) => s.slug === slug ) ) {
+		throw new Error(
+			`switchShell: unknown shell "${ slug }". Known: ${ shells.map( ( s ) => s.slug ).join( ', ' ) }`
+		);
+	}
+
 	await apiFetch( {
 		path: '/wp/v2/settings',
 		method: 'POST',
