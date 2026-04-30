@@ -39,16 +39,18 @@ Spec §6.1 keeps `wp_add_inline_script` + `wp_json_encode` for config delivery (
 
 ## Accessibility smoke checklist
 
-Concrete checks for v1 (not a substitute for the v3 full audit):
+Concrete checks for v1 (not a substitute for the v3 full audit). Each item below is verified against the code path noted in parentheses; "manual" entries require a browser pass before the v1 ship tag.
 
-- [x] Command palette reachable via `⌘K`. Focus traps until dismissed (handled by `@wordpress/commands`).
-- [x] Overlay regions render `role="dialog"` + `aria-modal="true"` + labelled `aria-labelledby` (delegated to `@wordpress/components` Modal).
-- [x] Sidebar navigation wrapped in `<nav>` with `aria-label`.
-- [x] Drill-down screens move focus to the heading on entry; restore focus to the originating item on back (handled by `SidebarContent` + `SidebarNavigationContext`).
-- [x] Focus ring visible on every interactive element via `--wpds-color-stroke-focus-brand` token.
-- [x] No `tabindex` values above 0 in the runtime.
-- [x] Every icon-only button has an `aria-label` or visible text via `<VisuallyHidden>`.
-- [x] Single keyboard pass through `developer-admin` reaches every primary action.
+- [x] Command palette reachable via `⌘K`. Focus traps until dismissed (delegated to `@wordpress/commands`'s portal).
+- [x] Drawer regions render `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + focus-on-mount + focus-return + constrained tabbing (`src/runtime/regions/drawer-region/index.js`, fixed in issue #2). `core:overlay-region` is a `display: contents` pass-through; the contained app owns its own dialog semantics — `core:command-picker` defers to the `@wordpress/commands` portal which handles them.
+- [x] Sidebar navigation wraps the region content in `<nav>` with `aria-label` (`src/runtime/regions/sidebar-region/index.js`, fixed in issue #24). Default label "Navigation"; overridable via `region.config.label`.
+- [x] Drill-down screens move focus to the heading on entry; restore focus to the originating item on back (`src/runtime/apps/_components/SidebarContent.js` + `SidebarNavigationContext.js`).
+- [x] Focus ring visible on every interactive element via the `--wpds-color-stroke-focus-brand` token. Inherits from the WPDS baseline + author overrides.
+- [x] No `tabindex` values above 0 in the runtime (verified via grep at v1 ship cut).
+- [x] Every icon-only button supplies a `label` prop or visible text via `<VisuallyHidden>` (verified across `SiteHubApp`, `ToolbarActionsApp`, `NavigationApp` collapsed-mode buttons, `SidebarNavigationItem`, `SidebarButton`).
+- [ ] **Manual:** single keyboard pass through `developer-admin` reaches every primary action without trapping. Re-run before tagging.
+- [ ] **Manual:** one VoiceOver pass on macOS through the same shell. Re-run before tagging.
+- [ ] **Manual:** `axe` against the rendered shell DOM, no blocker-severity findings. Re-run before tagging.
 
 Tooling: `axe` against the rendered shell DOM, plus one manual VoiceOver pass on macOS. Both run before the v1 ship tag; the v3 milestone covers the deeper a11y audit.
 

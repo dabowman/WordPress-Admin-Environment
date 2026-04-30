@@ -1,11 +1,13 @@
+import { __ } from '@wordpress/i18n';
 import { MountedApp } from '../mountApp';
 
 /**
  * core:sidebar-region — vertical, full-height, persistent.
  *
  * Mounts every app id listed in `region.contains` in order. Width and
- * collapsed state come from `region.config`. The engine places the
- * region into its sidebar slot.
+ * collapsed state come from `region.config`. `region.config.label`
+ * supplies the accessible name on the `<nav>`; defaults to "Navigation".
+ * The engine places the region into its sidebar slot.
  */
 function SidebarRegion( { region } ) {
 	const cfg = region.config || {};
@@ -18,6 +20,7 @@ function SidebarRegion( { region } ) {
 
 	return (
 		<nav
+			aria-label={ cfg.label || __( 'Navigation', 'wp-admin-shell' ) }
 			className={ `wp-admin-shell-nav${ isCollapsed ? ' is-collapsed' : '' }` }
 			data-region-id={ region.id }
 			style={ styleVars }
