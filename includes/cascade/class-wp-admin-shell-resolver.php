@@ -142,7 +142,7 @@ class WP_Admin_Shell_Resolver {
 	public static function active_shell_slug() {
 		$slug = get_option( 'wp_admin_shell_active_shell', null );
 		if ( ! $slug ) {
-			$slug = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
+			$slug = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
 		}
 
 		// Role override (per-role shell selection).

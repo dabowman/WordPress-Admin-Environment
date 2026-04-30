@@ -436,7 +436,7 @@ function wp_admin_shell_render_settings() {
 	}
 	$active = get_option( 'wp_admin_shell_active_shell', '' );
 	if ( $active === '' ) {
-		$active = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
+		$active = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
 	}
 	$shells = wp_admin_shell_get_available_shells();
 	?>
