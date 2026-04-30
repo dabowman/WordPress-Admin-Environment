@@ -65,6 +65,24 @@ MVP complete (Steps 1–7) on branch `feat/wp-admin-shell-mvp`. Four bundled she
 - Config is passed to JS via `wp_add_inline_script` + `wp_json_encode` (not `wp_localize_script` — it coerces types).
 - The `iframe:` escape hatch is a feature, not a compromise. The EditorApp and site-editor use it for MVP.
 
+### Recurring patterns to enforce in review
+
+These three patterns drive most of the bugs caught in code review. Codified here so reviewers and reviewees share the same expectations.
+
+- **Null-guard entity records before reading.** `useEntityRecord('root', 'site')` returns `{ record: null, ... }` while loading. Reading `record.foo` without a guard crashes on first paint. Pattern:
+  ```jsx
+  const { record, editedRecord, edit, save, hasEdits, isSaving } =
+      useEntityRecord( 'root', 'site' );
+  if ( ! record ) {
+      return <Spinner />;
+  }
+  ```
+  `useEntityRecords` (plural) returns `{ records: null }` similarly — always check before iterating.
+
+- **Refresh state after mutations.** When you `deleteEntityRecord` / `saveEntityRecord` outside `useEntityRecord`'s built-in `save()`, the local `useEntityRecords` cache may not invalidate. Use `useDispatch( coreStore ).invalidateResolution()` or rely on `core-data`'s entity store to propagate. If you're maintaining shadow state (`useState` mirroring an entity field), reset it whenever the entity record updates.
+
+- **Icon names go through `iconMap`.** Strings like `"post"`, `"page"`, `"comment"` resolve via `src/runtime/config/iconMap.js`. `resolveIcon` falls back to the `wordpress` icon and emits a dev-mode console warning on misses (M5 #14). When adding a new icon name, add the mapping to `iconMap.js` first; the warn-on-miss surfaces typos in browser console without a dedicated lint pass.
+
 ## Build
 
 ```bash
