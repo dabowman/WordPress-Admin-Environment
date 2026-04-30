@@ -239,7 +239,7 @@ class WP_Admin_Shell_Merge {
 
 	public static function is_assoc( $arr ) {
 		if ( ! is_array( $arr ) || empty( $arr ) ) {
-			return is_array( $arr ) && ! empty( $arr ) ? false : false;
+			return false;
 		}
 		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
 	}

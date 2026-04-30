@@ -25,13 +25,27 @@ class WP_Admin_Shell_Resolver {
 
 	const ORIGINS_ORDER = array( 'core', 'plugin', 'site', 'role', 'user' );
 
+	/** @var array Per-request resolved-doc memo, keyed by cache key. */
+	private static $request_memo = array();
+
 	public static function resolve( $context = array() ) {
 		$context['shell'] = $context['shell'] ?? self::active_shell_slug();
 
-		if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-			$cache_key = WP_Admin_Shell_Cache::key_for( $context );
-			$cached    = WP_Admin_Shell_Cache::get( $cache_key );
+		$cache_key = class_exists( 'WP_Admin_Shell_Cache' )
+			? WP_Admin_Shell_Cache::key_for( $context )
+			: null;
+
+		// Request-scope memo — zero cost on repeat calls within a single
+		// request (the WP_Object_Cache layer adds ~0.2ms per hit; this
+		// avoids that for callers that resolve multiple times per request).
+		if ( $cache_key !== null && isset( self::$request_memo[ $cache_key ] ) ) {
+			return self::$request_memo[ $cache_key ];
+		}
+
+		if ( $cache_key !== null ) {
+			$cached = WP_Admin_Shell_Cache::get( $cache_key );
 			if ( $cached !== null ) {
+				self::$request_memo[ $cache_key ] = $cached;
 				return $cached;
 			}
 		}
@@ -39,10 +53,19 @@ class WP_Admin_Shell_Resolver {
 		$origins  = self::load_origins( $context );
 		$resolved = self::resolve_with( $origins );
 
-		if ( class_exists( 'WP_Admin_Shell_Cache' ) && isset( $cache_key ) ) {
+		if ( $cache_key !== null ) {
 			WP_Admin_Shell_Cache::set( $cache_key, $resolved );
+			self::$request_memo[ $cache_key ] = $resolved;
 		}
 		return $resolved;
+	}
+
+	/**
+	 * Reset the per-request memo. Test-only — production code relies on
+	 * the memo lasting the entire request.
+	 */
+	public static function reset_request_memo() {
+		self::$request_memo = array();
 	}
 
 	/**
@@ -86,8 +109,15 @@ class WP_Admin_Shell_Resolver {
 	}
 
 	/**
-	 * Load each origin's doc from disk / DB. Stub for now — M2.2 fills
-	 * out the plugin/site/role/user loaders.
+	 * Load each origin's doc from disk / DB.
+	 *
+	 * Plan §M2 source-layout calls for one origin class per origin
+	 * (`origins/{core,plugin,site,role,user}.php`). v1 keeps the
+	 * core origin as its own class (because of the v0 → v1 normalizer
+	 * surface) and inlines plugin/site/role/user as private methods on
+	 * the resolver. Functionally equivalent to the planned split; if a
+	 * future origin grows complex enough to need its own class
+	 * (programmatic plugin shells, network site config), extract then.
 	 */
 	public static function load_origins( $context = array() ) {
 		$shell_slug = $context['shell'] ?? self::active_shell_slug();

@@ -2,7 +2,6 @@ import { __ } from '@wordpress/i18n';
 
 import { createRegistry } from './registry/createRegistry';
 import { registerBuiltins } from './registry/builtins';
-import { normalizeV0 } from './config/normalizeV0';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from './slots/Slot';
@@ -14,19 +13,24 @@ import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
 
 /**
- * Mount the v1 kernel against a raw config.
+ * Mount the v1 kernel against a resolved config.
  *
  * Flow:
  *   1. Build a registry instance and register all built-in sources.
- *   2. Normalize v0 (MVP flat) input through `normalizeV0` (M1 shim).
- *   3. Resolve the active engine and the region source for each declared
+ *   2. Resolve the active engine and the region source for each declared
  *      region, returning a tree the engine can render.
- *   4. Wrap the engine output in the kernel/router/slot providers.
+ *   3. Wrap the engine output in the kernel/router/slot providers.
+ *
+ * v0 (MVP flat) → v1 normalization runs server-side in
+ * `WP_Admin_Shell_Origin_Core::normalize_v0`. The kernel never sees the
+ * legacy shape regardless of source. The MVP-era JS-side `normalizeV0`
+ * shim retired with this commit; if a future config-delivery path
+ * bypasses PHP, restore it.
  *
  * Returns a React element that the entry script renders into the DOM.
  */
-export function kernel( rawConfig ) {
-	if ( ! rawConfig ) {
+export function kernel( config ) {
+	if ( ! config ) {
 		return (
 			<div style={ { padding: 32 } }>
 				{ __( 'Shell configuration not found.', 'wp-admin-shell' ) }
@@ -36,8 +40,6 @@ export function kernel( rawConfig ) {
 
 	const registry = createRegistry();
 	registerBuiltins( registry );
-
-	const config = normalizeV0( rawConfig );
 
 	// Token emission (§4.3.2): write `<style id="wp-admin-shell-tokens">`
 	// with the WPDS surface, chrome extensions, compat bridge, and any
