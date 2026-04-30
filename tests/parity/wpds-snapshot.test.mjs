@@ -20,6 +20,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { wpdsSlotPattern } from '../../src/runtime/styles/wpds-defaults/_slot-pattern.mjs';
 
 const __dirname    = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot  = resolve( __dirname, '..', '..' );
@@ -68,7 +69,7 @@ if ( ! existsSync( UPSTREAM_PATH ) ) {
 const snapshot = JSON.parse( readFileSync( SNAPSHOT_PATH, 'utf8' ) );
 const upstream = readFileSync( UPSTREAM_PATH, 'utf8' );
 
-const re = /(--wpds-[a-z0-9-]+)\s*:\s*([^;]+?)\s*;/gi;
+const re = wpdsSlotPattern();
 const upstreamSlots = {};
 let match;
 while ( ( match = re.exec( upstream ) ) !== null ) {

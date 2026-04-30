@@ -54,68 +54,72 @@ export function compileStyles( styles ) {
 		return { wpds: {}, chrome: {}, scoped: {} };
 	}
 
-	const wpds = {};
-	for ( const [ key, value ] of Object.entries( styles ) ) {
-		if ( NON_TOKEN_KEYS.has( key ) ) {
-			continue;
-		}
-		walk( value, [ key ], ( path, leaf ) => {
-			emitTo(
-				wpds,
-				pathToWpds( path ),
-				resolveValue( leaf, styles ),
-				path.join( '.' )
-			);
-		} );
-	}
-
-	const chrome = {};
-	if ( styles.chrome && typeof styles.chrome === 'object' ) {
-		walk( styles.chrome, [], ( path, leaf ) => {
-			emitTo(
-				chrome,
-				pathToChrome( path ),
-				resolveValue( leaf, styles ),
-				path.join( '.' )
-			);
-		} );
-	}
+	// Top-level: emit into separate wpds + chrome maps so the engine
+	// can lay them out in the documented order (WPDS surface first,
+	// chrome extensions second).
+	const { wpds, chrome } = compileTree( styles, styles, { splitChrome: true } );
 
 	const scoped = {};
 	if ( styles.regions && typeof styles.regions === 'object' ) {
 		for ( const [ regionId, regionStyles ] of Object.entries( styles.regions ) ) {
-			scoped[ `region:${ regionId }` ] = compileSubtree( regionStyles, styles );
+			scoped[ `region:${ regionId }` ] = compileTree( regionStyles, styles ).wpds;
 		}
 	}
 	if ( styles.applications && typeof styles.applications === 'object' ) {
 		for ( const [ appId, appStyles ] of Object.entries( styles.applications ) ) {
-			scoped[ `app:${ appId }` ] = compileSubtree( appStyles, styles );
+			scoped[ `app:${ appId }` ] = compileTree( appStyles, styles ).wpds;
 		}
 	}
 
 	return { wpds, chrome, scoped };
 }
 
-function compileSubtree( subtree, rootStyles ) {
-	if ( ! subtree || typeof subtree !== 'object' ) {
-		return {};
+/**
+ * Shared traversal: walks a styles subtree and emits CSS-variable
+ * entries into wpds + chrome maps. `rootStyles` carries the document
+ * root so within-doc DTCG aliases (`{styles.path}`) resolve regardless
+ * of which subtree is being compiled.
+ *
+ * `splitChrome: true` (top-level) returns separate wpds + chrome maps.
+ * Default (subtree) merges chrome leaves into the same map as wpds —
+ * region/app overrides emit into a single output keyed by their
+ * `[data-region-id]` / `[data-app-id]` selector and don't need the
+ * top-level split.
+ */
+function compileTree( tree, rootStyles, { splitChrome = false } = {} ) {
+	const wpds = {};
+	const chrome = splitChrome ? {} : wpds;
+
+	if ( ! tree || typeof tree !== 'object' ) {
+		return { wpds, chrome };
 	}
-	const out = {};
-	for ( const [ key, value ] of Object.entries( subtree ) ) {
+
+	for ( const [ key, value ] of Object.entries( tree ) ) {
 		if ( NON_TOKEN_KEYS.has( key ) ) {
 			continue;
 		}
 		if ( key === 'chrome' && value && typeof value === 'object' ) {
 			walk( value, [], ( path, leaf ) => {
-				out[ pathToChrome( path ) ] = resolveValue( leaf, rootStyles );
+				emitTo(
+					chrome,
+					pathToChrome( path ),
+					resolveValue( leaf, rootStyles ),
+					path.join( '.' )
+				);
 			} );
 			continue;
 		}
 		walk( value, [ key ], ( path, leaf ) => {
-			out[ pathToWpds( path ) ] = resolveValue( leaf, rootStyles );
+			emitTo(
+				wpds,
+				pathToWpds( path ),
+				resolveValue( leaf, rootStyles ),
+				path.join( '.' )
+			);
 		} );
 	}
-	return out;
+
+	return { wpds, chrome };
 }
 
 function walk( node, path, emit ) {

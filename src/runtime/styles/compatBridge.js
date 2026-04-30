@@ -5,13 +5,20 @@
  * CSS inherit shell theming.
  *
  * Numeric derivations:
- *   --wp-admin-theme-color--rgb     R, G, B triplet of the brand strong.
- *   --wp-admin-theme-color-darker-20 = HSL.lightness(brand) − 20.
+ *   --wp-admin-theme-color--rgb       R, G, B triplet of the brand strong.
+ *   --wp-admin-theme-color-darker-20  HSL.lightness(brand) − 20.
  *
- * The brand value must terminate at a literal hex/rgb after alias
- * chasing. If derivation fails, we fall back to the raw alias chain so
- * the page still themes — just without the legacy SCSS `rgba(var(--rgb))`
- * patterns. A console warning surfaces the misconfiguration.
+ * The brand value must terminate at a literal hex / rgb / rgba after
+ * alias chasing. parseColorToRgb accepts 3/4/6/8-digit hex and
+ * rgb()/rgba(); 4- and 8-digit hex strip the alpha channel because
+ * the bridge's RGB triplet has no alpha (callers supply alpha at use
+ * site via `rgba(var(--wp-admin-theme-color--rgb), x)`).
+ *
+ * If derivation fails, --wp-admin-theme-color--rgb is omitted entirely
+ * and --wp-admin-theme-color-darker-20 falls back to the strong-active
+ * alias so the page still themes. A console warn would be reasonable;
+ * not currently emitted (issue #7's slot-collision warn covers the
+ * adjacent case).
  */
 
 export function buildCompatBridge( wpdsMap ) {
