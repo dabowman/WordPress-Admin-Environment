@@ -19,6 +19,7 @@ import ProfileApp from '../../apps/ProfileApp';
 import SettingsGeneralApp from '../../apps/SettingsGeneralApp';
 import IframeApp from '../../apps/IframeApp';
 import UsersApp from '../../apps/UsersApp';
+import CommentsApp from '../../apps/CommentsApp';
 
 // v1 system apps (sidebar / toolbar / overlay content).
 import NavigationApp from '../apps/NavigationApp';
@@ -106,6 +107,14 @@ export function registerBuiltins( registry ) {
 		routable: true,
 		Component: UsersApp,
 		capabilities: [ 'list_users' ],
+	} );
+	registry.register( {
+		kind: 'app',
+		id: 'core:comments',
+		title: 'Comments',
+		routable: true,
+		Component: CommentsApp,
+		capabilities: [ 'moderate_comments' ],
 	} );
 
 	// v1 system apps.
