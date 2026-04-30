@@ -1,0 +1,7 @@
+{
+  "settings": {
+    "applications": [
+      { "id": "plugins", "source": "iframe:plugins.php", "title": "Plugins", "icon": "plugins" }
+    ]
+  }
+}
