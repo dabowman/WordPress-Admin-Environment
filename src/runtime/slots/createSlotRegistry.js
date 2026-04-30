@@ -15,11 +15,15 @@ export const KNOWN_SLOTS = Object.freeze( {
 	'core:toolbar.right': 'Toolbar — right cluster',
 	// Navigation
 	'core:navigation.footer': 'Navigation — footer',
-	// Apps
-	'core:posts.row-actions': 'Posts — DataViews row actions',
+	// Apps — render slots
 	'core:editor.sidebar': 'Editor — sidebar panels',
 	'core:app.before': 'App — banner above content',
 	'core:app.after': 'App — banner below content',
+	// Apps — data slots (consumed via useSlotItems)
+	'core:posts.row-actions': 'Posts — DataViews row actions',
+	'core:users.row-actions': 'Users — DataViews row actions',
+	'core:comments.row-actions': 'Comments — DataViews row actions',
+	'core:settings.panels': 'Settings — panel descriptors',
 } );
 
 export function createSlotRegistry() {

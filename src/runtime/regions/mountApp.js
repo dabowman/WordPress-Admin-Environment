@@ -9,6 +9,7 @@
  * Regions delegate to this helper to keep the resolution path uniform.
  */
 import { useKernel } from '../kernel-context';
+import { Slot } from '../slots/Slot';
 
 export function MountedApp( { appRef, regionId, segments } ) {
 	const { registry, config } = useKernel();
@@ -30,13 +31,23 @@ export function MountedApp( { appRef, regionId, segments } ) {
 	const Component = sourceDef.Component;
 	const mergedConfig = { ...( sourceDef.defaults || {} ), ...( appInstance.config || {} ) };
 
+	const fillProps = {
+		appId:    appInstance.id,
+		source:   appInstance.source,
+		regionId,
+	};
+
 	return (
-		<Component
-			app={ appInstance }
-			config={ mergedConfig }
-			regionId={ regionId }
-			segments={ segments || [] }
-		/>
+		<div data-app-id={ appInstance.id } data-app-source={ appInstance.source } style={ { display: 'contents' } }>
+			<Slot name="core:app.before" fillProps={ fillProps } />
+			<Component
+				app={ appInstance }
+				config={ mergedConfig }
+				regionId={ regionId }
+				segments={ segments || [] }
+			/>
+			<Slot name="core:app.after" fillProps={ fillProps } />
+		</div>
 	);
 }
 
