@@ -35,6 +35,8 @@ The path on first paint:
 
 Spec §6.1 keeps `wp_add_inline_script` + `wp_json_encode` for config delivery (preserves type fidelity); the resolver cache (M2.7) makes repeat mounts essentially free server-side.
 
+**Pre-mount FOUC.** Tokens emit from JS at kernel mount, not server-side. Any pre-mount chrome (admin bar, page header before React boots) flashes wp-admin defaults briefly before the shell tokens land. Acceptable for v1 — the shell takes over the viewport on mount and the flash window is small. SSR token emission (a `<style>` tag the PHP enqueue layer prints from the resolved styles tree) is a v2 polish item if the FOUC becomes visually distracting.
+
 ## Accessibility smoke checklist
 
 Concrete checks for v1 (not a substitute for the v3 full audit):

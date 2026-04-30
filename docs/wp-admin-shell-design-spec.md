@@ -736,7 +736,7 @@ The slot contract evolves additively across spec versions. WPDS slot churn is go
 
 #### 4.3.2 CSS emission
 
-Three families are written into the shell stylesheet, in this order:
+Three families are written into the shell stylesheet, in this order. **The runtime emits at `:root` rather than `#wp-admin-shell`** so portal-mounted UI (`@wordpress/commands` palette, modals, dropdowns) inherits shell theming — those portals render outside the `#wp-admin-shell` DOM tree. Per-region / per-app overrides (§4.3.7) keep their narrow `[data-region-id]` / `[data-app-id]` selectors and still win for descendants because of selector specificity. The `#wp-admin-shell` root selector below is illustrative; the actual emission site is `:root`.
 
 ```css
 #wp-admin-shell {

@@ -105,6 +105,13 @@ export default function CommentsApp() {
 				type: 'text',
 				label: __( 'Comment', 'wp-admin-shell' ),
 				enableGlobalSearch: true,
+				// Trust boundary: `item.content` comes from
+				// `record.content.rendered`, which WordPress core filters
+				// server-side via `wp_filter_comment_content` (kses + the
+				// comment-text filter chain). Author-supplied raw HTML
+				// has already been sanitized before it reaches the REST
+				// response. Rendering as HTML preserves the formatted
+				// view comment moderators expect.
 				render: ( { item } ) => (
 					<div
 						className="wp-admin-shell-app-comments__excerpt"

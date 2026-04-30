@@ -137,6 +137,10 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 	const initialPanelId = segments[ 0 ] || panels[ 0 ]?.id;
 	const [ activeId, setActive ] = useState( initialPanelId );
 
+	// Unknown sub-route (e.g. `#/settings/nonexistent`) silently falls
+	// back to the first available panel rather than 404-ing. Acceptable
+	// v1 behavior — the panel list is shallow and the user lands on
+	// something sensible. v2 may surface a "panel not found" notice.
 	const activePanel = panels.find( ( p ) => p.id === activeId ) || panels[ 0 ];
 
 	if ( ! activePanel ) {
