@@ -136,6 +136,28 @@ foreach ( $shells as $slug ) {
 			);
 		}
 	}
+
+	// Navigation must serialize as a JSON array, not an object. v0 shells
+	// auto-build nav from non-hidden apps; if the build path leaves sparse
+	// integer keys, wp_json_encode emits an object → JS Array.isArray() false
+	// → pruneNavItems returns []. Bug fixed by wrapping with array_values()
+	// in the v0→v1 normalizer.
+	$nav = $config['settings']['navigation'] ?? null;
+	if ( $nav === null ) {
+		foreach ( $apps as $a ) {
+			if ( ( $a['id'] ?? null ) === '__nav' ) {
+				$nav = $a['config']['items'] ?? null;
+				break;
+			}
+		}
+	}
+	if ( is_array( $nav ) ) {
+		$T::ok(
+			"$slug: navigation is a sequential list (no sparse keys)",
+			array_is_list( $nav ),
+			'keys: ' . implode( ',', array_keys( $nav ) )
+		);
+	}
 }
 
 // Reset.

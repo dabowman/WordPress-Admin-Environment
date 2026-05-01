@@ -83,9 +83,11 @@ class WP_Admin_Shell_Origin_Core {
 
 		$navigation = isset( $raw['navigation'] ) && is_array( $raw['navigation'] )
 			? $raw['navigation']
-			: array_map(
-				fn( $a ) => array( 'app' => $a['id'] ),
-				array_filter( $applications, fn( $a ) => empty( $a['hidden'] ) )
+			: array_values(
+				array_map(
+					fn( $a ) => array( 'app' => $a['id'] ),
+					array_filter( $applications, fn( $a ) => empty( $a['hidden'] ) )
+				)
 			);
 
 		$toolbar = is_array( $raw['toolbar'] ?? null )
