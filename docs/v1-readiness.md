@@ -56,6 +56,39 @@ Concrete checks for v1 (not a substitute for the v3 full audit). Each item below
 
 Tooling: `axe` against the rendered shell DOM, plus one manual VoiceOver pass on macOS. Both run before the v1 ship tag; the v3 milestone covers the deeper a11y audit.
 
+## Capability gating
+
+Smoke pass for the four-layer cap model (spec §8) on the default install shell `wp-admin-default`. Two scripts back this section; both green on 2026-05-01.
+
+**Server-side resolver smoke** — `tests/php/run-cap-gating-smoke.php` switches `wp_set_current_user()` for each of the five core roles, resolves `wp-admin-default`, mirrors `NavigationApp.pruneNavItems()` in PHP against `current_user_can()`, and asserts the surviving app id set matches a hand-curated expectation per role.
+
+```
+PASS subscriber: 2 apps
+PASS contributor: 5 apps
+PASS author: 7 apps
+PASS editor: 12 apps
+PASS administrator: 33 apps
+```
+
+| Role | Visible apps |
+|---|---|
+| subscriber    | dashboard-home, profile |
+| contributor   | + posts-all, posts-new, tools-available |
+| author        | + media-library, media-new |
+| editor        | + posts-categories, posts-tags, pages-all, pages-new, comments |
+| administrator | every app declared in the shell (33) |
+
+**End-to-end browser smoke** — `tests/php/run-cap-gating-browser-smoke.sh` logs in as `admin` and `subscriber` via `wp-login.php`, fetches `/wp-admin/admin.php?page=wp-admin-shell`, and parses the inline `window.wpAdminShell.capabilities` map. Confirms the PHP→JSON→inline-script handoff matches the resolver smoke. Two roles cover the top and bottom of the cap matrix; the resolver smoke proves equivalence for the middle three.
+
+The pre-computed cap map is built by `wp_admin_shell_resolve_capabilities()` (`wp-admin-shell.php:265`), which walks the resolved doc's region + application capability fields plus four built-in source floors (`list_users`, `moderate_comments`, `manage_options`, `edit_theme_options`) and resolves each via `current_user_can()`. Because the JS `userCan()` reads from this same map (`src/runtime/capabilities/userCan.js`), the resolver smoke is truth-equivalent to what the browser renders.
+
+Re-run both before tagging:
+
+```bash
+npx wp-env run cli -- wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
+bash tests/php/run-cap-gating-browser-smoke.sh
+```
+
 ## Gutenberg dependency gate
 
 The plugin header declares `Requires Plugins: gutenberg`. WordPress 6.7+ honours the header at activation time; on older sites the plugin still loads but raises a dismissible admin notice if Gutenberg is missing.
@@ -72,4 +105,4 @@ The detect-and-conditionally-render alternative (mass-fallback to `@wordpress/co
 
 ## Sign-off
 
-When all four bundled shells render through the kernel with parity, fixture tests stay green (`run-cascade-tests` 22/22, `run-selection-tests` 5/5, `test:parity` 4/4), the build size remains under the ship target, and a manual run of the a11y checklist passes — v1 is ready for tag.
+When all four bundled shells render through the kernel with parity, fixture tests stay green (`run-cascade-tests` 22/22, `run-selection-tests` 5/5, `run-cap-tests` 54/54, `run-shape-tests` 75/75, `test:parity` 4/4, `test:schema` 11/11), the cap-gating smoke passes (`run-cap-gating-smoke.php` 5/5 + `run-cap-gating-browser-smoke.sh` 2/2), the build size remains under the ship target, and a manual run of the a11y checklist passes — v1 is ready for tag.
