@@ -1,17 +1,14 @@
 import {
 	Button,
+	Card,
 	Stack,
 	Text,
 } from '@wordpress/ui';
 import {
-	Card,
-	CardBody,
-	CardHeader,
 	__experimentalGrid as Grid,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { external } from '@wordpress/icons';
-import { navigate } from '../routing/router';
+import { navigate } from '../runtime/routing/router';
 
 const TOOLS = [
 	{
@@ -84,19 +81,22 @@ export default function ToolsApp() {
 
 				<Grid columns={ 2 } gap={ 4 }>
 					{ TOOLS.map( ( tool ) => (
-						<Card key={ tool.id }>
-							<CardHeader>
-								<Text variant="heading-md" render={ <h2 /> }>
-									{ tool.title }
-								</Text>
-							</CardHeader>
-							<CardBody>
+						<Card.Root key={ tool.id }>
+							<Card.Header>
+								<Card.Title>
+									<Text variant="heading-md" render={ <h2 /> }>
+										{ tool.title }
+									</Text>
+								</Card.Title>
+							</Card.Header>
+							<Card.Content>
 								<Stack direction="column" gap="md">
 									<Text variant="body-sm">
 										{ tool.description }
 									</Text>
 									{ tool.appId ? (
 										<Button
+											tone="neutral"
 											variant="outline"
 											onClick={ () =>
 												navigate( tool.appId )
@@ -109,6 +109,7 @@ export default function ToolsApp() {
 										</Button>
 									) : (
 										<Button
+											tone="neutral"
 											variant="outline"
 											onClick={ () =>
 												( window.location.href =
@@ -122,8 +123,8 @@ export default function ToolsApp() {
 										</Button>
 									) }
 								</Stack>
-							</CardBody>
-						</Card>
+							</Card.Content>
+						</Card.Root>
 					) ) }
 				</Grid>
 			</Stack>

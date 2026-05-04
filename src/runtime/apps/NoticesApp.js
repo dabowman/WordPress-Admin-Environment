@@ -1,7 +1,5 @@
-import {
-	NoticeList,
-	SnackbarList,
-} from '@wordpress/components';
+import { Notice } from '@wordpress/ui';
+import { SnackbarList } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 
@@ -17,7 +15,18 @@ import { store as noticesStore } from '@wordpress/notices';
  * Pinning: every bundled shell pins both into named regions through the
  * v0 normalizer (M4.6) so apps can rely on a single store-driven
  * location regardless of which shell mounted them.
+ *
+ * Banner is rendered by hand against `Notice.Root` from `@wordpress/ui`
+ * (the WPDS-native primitive). `SnackbarList` is kept from
+ * `@wordpress/components` because WPDS 0.12 ships no snackbar primitive.
  */
+
+const INTENT_BY_STATUS = {
+	error: 'error',
+	warning: 'warning',
+	success: 'success',
+	info: 'info',
+};
 
 export function NoticesBannerApp() {
 	const notices = useSelect(
@@ -33,10 +42,21 @@ export function NoticesBannerApp() {
 
 	return (
 		<div className="wp-admin-shell-notices-banner">
-			<NoticeList
-				notices={ visible }
-				onRemove={ removeNotice }
-			/>
+			{ visible.map( ( notice ) => (
+				<Notice.Root
+					key={ notice.id }
+					intent={ INTENT_BY_STATUS[ notice.status ] || 'info' }
+				>
+					<Notice.Description>{ notice.content }</Notice.Description>
+					{ notice.isDismissible && (
+						<Notice.Actions>
+							<Notice.CloseIcon
+								onClick={ () => removeNotice( notice.id ) }
+							/>
+						</Notice.Actions>
+					) }
+				</Notice.Root>
+			) ) }
 		</div>
 	);
 }

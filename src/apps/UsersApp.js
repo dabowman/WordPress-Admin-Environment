@@ -3,13 +3,9 @@ import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataViews } from '@wordpress/dataviews';
-import {
-	Button,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { Button, Stack, Text } from '@wordpress/ui';
+import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash } from '@wordpress/icons';
 import { useSlotItems } from '../runtime/slots/dataSlots';
@@ -33,16 +29,20 @@ export default function UsersApp() {
 		page: 1,
 		perPage: 20,
 		sort: { field: 'name', direction: 'asc' },
-		fields: [ 'name', 'email', 'roles', 'registered' ],
+		fields: [ 'name', 'email', 'roles', 'registered_date' ],
 		layout: {},
 	} );
 
 	const queryArgs = useMemo( () => {
+		const sortField = view.sort?.field || 'name';
+		// Map our DataViews field id back to the REST orderby alias.
+		const orderby =
+			sortField === 'registered_date' ? 'registered_date' : sortField;
 		const args = {
 			per_page: view.perPage,
 			page: view.page,
 			order: view.sort?.direction || 'asc',
-			orderby: view.sort?.field || 'name',
+			orderby,
 			context: 'edit',
 		};
 		if ( view.search ) {
@@ -62,7 +62,7 @@ export default function UsersApp() {
 		queryArgs
 	);
 
-	const { deleteEntityRecord } = useDispatch( coreStore );
+	const { deleteEntityRecord, invalidateResolution } = useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
@@ -75,7 +75,7 @@ export default function UsersApp() {
 			email: record.email || '',
 			username: record.username,
 			roles: ( record.roles || [] ).join( ', ' ),
-			registered: record.registered_date,
+			registered_date: record.registered_date,
 			rawRecord: record,
 		} ) );
 	}, [ records ] );
@@ -89,10 +89,17 @@ export default function UsersApp() {
 				enableGlobalSearch: true,
 				enableHiding: false,
 				render: ( { item } ) => (
-					<VStack spacing={ 0 }>
-						<Text weight={ 500 }>{ item.name }</Text>
-						<Text size={ 12 } variant="muted">{ item.username }</Text>
-					</VStack>
+					<Stack direction="column" gap="xs">
+						<Text className="wp-admin-shell-app-users__name">
+							{ item.name }
+						</Text>
+						<Text
+							variant="body-sm"
+							className="wp-admin-shell-app-users__muted"
+						>
+							{ item.username }
+						</Text>
+					</Stack>
 				),
 			},
 			{
@@ -109,7 +116,7 @@ export default function UsersApp() {
 				render: ( { item } ) => <Text>{ item.roles }</Text>,
 			},
 			{
-				id: 'registered',
+				id: 'registered_date',
 				type: 'datetime',
 				label: __( 'Registered', 'wp-admin-shell' ),
 			},
@@ -127,58 +134,122 @@ export default function UsersApp() {
 				isDestructive: true,
 				supportsBulk: true,
 				icon: trash,
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
-						<Text>
-							{ items.length === 1
-								? __( 'Delete this user permanently? Their content will be reassigned to you.', 'wp-admin-shell' )
-								: __( 'Delete these users permanently? Their content will be reassigned to you.', 'wp-admin-shell' ) }
-						</Text>
-						<HStack justify="right">
-							<Button variant="tertiary" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<Button
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									try {
-										await Promise.all(
-											items.map( ( item ) =>
-												deleteEntityRecord(
-													'root',
-													'user',
-													item.id,
-													{
-														force: true,
-														reassign: window.wpAdminShell?.userId,
-													}
+				RenderModal: ( { items, closeModal, onActionPerformed } ) => {
+					const currentUserId = window.wpAdminShell?.userId;
+					const targets = items.filter(
+						( i ) => i.id !== currentUserId
+					);
+					const skipped = items.length - targets.length;
+					return (
+						<Stack
+							direction="column"
+							gap="lg"
+							style={ { padding: '16px' } }
+						>
+							<Text>
+								{ targets.length === 0
+									? __(
+											'You cannot delete your own account.',
+											'wp-admin-shell'
+									  )
+									: targets.length === 1
+									? __(
+											'Delete this user permanently? Their content will be reassigned to you.',
+											'wp-admin-shell'
+									  )
+									: __(
+											'Delete these users permanently? Their content will be reassigned to you.',
+											'wp-admin-shell'
+									  ) }
+								{ skipped > 0 && targets.length > 0 && (
+									<>
+										{ ' ' }
+										{ __(
+											'(Your own account will be skipped.)',
+											'wp-admin-shell'
+										) }
+									</>
+								) }
+							</Text>
+							<Stack direction="row" justify="flex-end" gap="sm">
+								<Button
+									tone="neutral"
+									variant="minimal"
+									onClick={ closeModal }
+								>
+									{ __( 'Cancel', 'wp-admin-shell' ) }
+								</Button>
+								<DestructiveButton
+									variant="primary"
+									isDestructive
+									disabled={ targets.length === 0 }
+									onClick={ async () => {
+										if ( targets.length === 0 ) {
+											createErrorNotice(
+												__(
+													'Cannot delete yourself.',
+													'wp-admin-shell'
 												)
-											)
-										);
-										createSuccessNotice(
-											__( 'User(s) deleted.', 'wp-admin-shell' ),
-											{ type: 'snackbar' }
-										);
-										onActionPerformed?.( items );
-									} catch ( err ) {
-										createErrorNotice(
-											err?.message || __( 'Failed to delete user(s).', 'wp-admin-shell' ),
-											{ isDismissible: true }
-										);
-									}
-									closeModal();
-								} }
-							>
-								{ __( 'Delete', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
-				),
+											);
+											closeModal();
+											return;
+										}
+										try {
+											await Promise.all(
+												targets.map( ( item ) =>
+													deleteEntityRecord(
+														'root',
+														'user',
+														item.id,
+														{
+															force: true,
+															reassign: currentUserId,
+														}
+													)
+												)
+											);
+											invalidateResolution(
+												'getEntityRecords',
+												[ 'root', 'user', queryArgs ]
+											);
+											createSuccessNotice(
+												__(
+													'User(s) deleted.',
+													'wp-admin-shell'
+												),
+												{ type: 'snackbar' }
+											);
+											onActionPerformed?.( targets );
+										} catch ( err ) {
+											createErrorNotice(
+												err?.message ||
+													__(
+														'Failed to delete user(s).',
+														'wp-admin-shell'
+													),
+												{ isDismissible: true }
+											);
+										}
+										closeModal();
+									} }
+								>
+									{ __( 'Delete', 'wp-admin-shell' ) }
+								</DestructiveButton>
+							</Stack>
+						</Stack>
+					);
+				},
 			},
 			...slotActions,
 		],
-		[ deleteEntityRecord, createSuccessNotice, createErrorNotice, slotActions ]
+		[
+			deleteEntityRecord,
+			invalidateResolution,
+			queryArgs,
+			createSuccessNotice,
+			createErrorNotice,
+			slotActions,
+		]
 	);
 
 	const paginationInfo = useMemo(

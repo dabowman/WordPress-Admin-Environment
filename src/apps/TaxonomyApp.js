@@ -2,15 +2,13 @@ import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { DataViews } from '@wordpress/dataviews';
+import { store as noticesStore } from '@wordpress/notices';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { Button, InputControl, Stack, Text } from '@wordpress/ui';
 import {
-	Button,
+	Button as DestructiveButton,
 	Modal,
-	TextControl,
 	TextareaControl,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { plus, trash, pencil } from '@wordpress/icons';
@@ -35,6 +33,7 @@ export default function TaxonomyApp( { config = {} } ) {
 		perPage: 20,
 		sort: { field: 'name', direction: 'asc' },
 		fields: [ 'name', 'slug', 'count', 'description' ],
+		titleField: 'name',
 		layout: {},
 	} );
 
@@ -59,7 +58,9 @@ export default function TaxonomyApp( { config = {} } ) {
 		queryArgs
 	);
 
-	const { saveEntityRecord, deleteEntityRecord } = useDispatch( coreStore );
+	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const [ editTerm, setEditTerm ] = useState( null );
 	const [ isCreating, setIsCreating ] = useState( false );
@@ -89,7 +90,7 @@ export default function TaxonomyApp( { config = {} } ) {
 				enableHiding: false,
 				render: ( { item } ) => (
 					<Button
-						variant="link"
+						variant="minimal"
 						onClick={ () => setEditTerm( item.rawRecord ) }
 					>
 						{ item.name }
@@ -136,7 +137,7 @@ export default function TaxonomyApp( { config = {} } ) {
 				isDestructive: true,
 				supportsBulk: true,
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
+					<Stack direction="column" gap="md" style={ { padding: '16px' } }>
 						<Text>
 							{ items.length === 1
 								? __( 'Delete this term?', 'wp-admin-shell' )
@@ -145,36 +146,58 @@ export default function TaxonomyApp( { config = {} } ) {
 										'wp-admin-shell'
 								  ) }
 						</Text>
-						<HStack justify="right">
-							<Button variant="tertiary" onClick={ closeModal }>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button variant="minimal" onClick={ closeModal }>
 								{ __( 'Cancel', 'wp-admin-shell' ) }
 							</Button>
-							<Button
+							<DestructiveButton
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'taxonomy',
-												taxonomy,
-												item.id,
-												{ force: true }
+									try {
+										await Promise.all(
+											items.map( ( item ) =>
+												deleteEntityRecord(
+													'taxonomy',
+													taxonomy,
+													item.id,
+													{ force: true }
+												)
 											)
-										)
-									);
-									onActionPerformed?.( items );
+										);
+										invalidateResolution(
+											'getEntityRecords',
+											[ 'taxonomy', taxonomy ]
+										);
+										createSuccessNotice(
+											__( 'Term deleted.', 'wp-admin-shell' ),
+											{ type: 'snackbar' }
+										);
+										onActionPerformed?.( items );
+									} catch ( err ) {
+										createErrorNotice(
+											err?.message ||
+												__( 'Failed to delete term.', 'wp-admin-shell' ),
+											{ isDismissible: true }
+										);
+									}
 									closeModal();
 								} }
 							>
 								{ __( 'Delete', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
+							</DestructiveButton>
+						</Stack>
+					</Stack>
 				),
 			},
 		],
-		[ deleteEntityRecord, taxonomy ]
+		[
+			deleteEntityRecord,
+			invalidateResolution,
+			createSuccessNotice,
+			createErrorNotice,
+			taxonomy,
+		]
 	);
 
 	const paginationInfo = useMemo(
@@ -189,22 +212,25 @@ export default function TaxonomyApp( { config = {} } ) {
 
 	return (
 		<div className="wp-admin-shell-app-taxonomy">
-			<HStack
+			<Stack
+				direction="row"
+				align="center"
+				justify="space-between"
 				className="wp-admin-shell-app-taxonomy__toolbar"
-				alignment="center"
 			>
-				<Text size={ 20 } weight={ 600 }>
+				<Text variant="heading-md" render={ <h2 /> }>
 					{ heading }
 				</Text>
 				<Button
-					variant="primary"
+					tone="brand"
+					variant="solid"
 					icon={ plus }
 					onClick={ () => setIsCreating( true ) }
 					size="compact"
 				>
 					{ __( 'Add new', 'wp-admin-shell' ) }
 				</Button>
-			</HStack>
+			</Stack>
 
 			<DataViews
 				data={ data }
@@ -229,6 +255,23 @@ export default function TaxonomyApp( { config = {} } ) {
 						setIsCreating( false );
 					} }
 					onSave={ saveEntityRecord }
+					onSaved={ () => {
+						invalidateResolution( 'getEntityRecords', [
+							'taxonomy',
+							taxonomy,
+						] );
+						createSuccessNotice(
+							__( 'Term saved.', 'wp-admin-shell' ),
+							{ type: 'snackbar' }
+						);
+					} }
+					onError={ ( err ) =>
+						createErrorNotice(
+							err?.message ||
+								__( 'Failed to save term.', 'wp-admin-shell' ),
+							{ isDismissible: true }
+						)
+					}
 				/>
 			) }
 		</div>
@@ -239,7 +282,7 @@ function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
-function TermEditModal( { term, taxonomy, onClose, onSave } ) {
+function TermEditModal( { term, taxonomy, onClose, onSave, onSaved, onError } ) {
 	const isNew = ! term;
 	const [ name, setName ] = useState( term?.name || '' );
 	const [ slug, setSlug ] = useState( term?.slug || '' );
@@ -258,7 +301,10 @@ function TermEditModal( { term, taxonomy, onClose, onSave } ) {
 				payload.id = term.id;
 			}
 			await onSave( 'taxonomy', taxonomy, payload );
+			onSaved?.();
 			onClose();
+		} catch ( err ) {
+			onError?.( err );
 		} finally {
 			setIsSaving( false );
 		}
@@ -273,22 +319,20 @@ function TermEditModal( { term, taxonomy, onClose, onSave } ) {
 			}
 			onRequestClose={ onClose }
 		>
-			<VStack spacing={ 3 }>
-				<TextControl
+			<Stack direction="column" gap="md">
+				<InputControl
 					label={ __( 'Name', 'wp-admin-shell' ) }
 					value={ name }
-					onChange={ setName }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) => setName( e.target.value ) }
 				/>
-				<TextControl
+				<InputControl
 					label={ __( 'Slug', 'wp-admin-shell' ) }
 					value={ slug }
-					onChange={ setSlug }
-					help={ __(
+					onChange={ ( e ) => setSlug( e.target.value ) }
+					description={ __(
 						'URL-friendly version of the name. Auto-generated if blank.',
 						'wp-admin-shell'
 					) }
-					__nextHasNoMarginBottom
 				/>
 				<TextareaControl
 					label={ __( 'Description', 'wp-admin-shell' ) }
@@ -297,22 +341,23 @@ function TermEditModal( { term, taxonomy, onClose, onSave } ) {
 					rows={ 4 }
 					__nextHasNoMarginBottom
 				/>
-				<HStack justify="right">
-					<Button variant="tertiary" onClick={ onClose }>
+				<Stack direction="row" justify="flex-end" gap="sm">
+					<Button variant="minimal" onClick={ onClose }>
 						{ __( 'Cancel', 'wp-admin-shell' ) }
 					</Button>
 					<Button
-						variant="primary"
+						tone="brand"
+						variant="solid"
 						onClick={ handleSave }
-						isBusy={ isSaving }
+						loading={ isSaving }
 						disabled={ ! name || isSaving }
 					>
 						{ isNew
 							? __( 'Add term', 'wp-admin-shell' )
 							: __( 'Save', 'wp-admin-shell' ) }
 					</Button>
-				</HStack>
-			</VStack>
+				</Stack>
+			</Stack>
 		</Modal>
 	);
 }

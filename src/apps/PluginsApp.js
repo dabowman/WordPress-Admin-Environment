@@ -1,12 +1,15 @@
-import { useEffect, useMemo, useState, useCallback } from '@wordpress/element';
+import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { DataViews } from '@wordpress/dataviews';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
 import {
 	Button,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
+	Notice,
+	Stack,
+	Text,
+} from '@wordpress/ui';
+import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash, external, check, closeSmall } from '@wordpress/icons';
 
@@ -17,69 +20,69 @@ const STATUS_LABELS = {
 };
 
 export default function PluginsApp() {
-	const [ records, setRecords ] = useState( null );
-	const [ isLoading, setIsLoading ] = useState( true );
+	const pluginsQuery = useMemo( () => ( { context: 'edit' } ), [] );
+	const {
+		records,
+		isResolving,
+	} = useEntityRecords( 'root', 'plugin', pluginsQuery );
+	const { invalidateResolution } = useDispatch( coreStore );
+
+	const isLoading = isResolving;
 	const [ error, setError ] = useState( null );
-	const [ refreshKey, setRefreshKey ] = useState( 0 );
 
-	useEffect( () => {
-		let cancelled = false;
-		setIsLoading( true );
-		apiFetch( { path: '/wp/v2/plugins?context=edit' } )
-			.then( ( res ) => {
-				if ( ! cancelled ) {
-					setRecords( res );
-					setError( null );
-				}
-			} )
-			.catch( ( err ) => {
-				if ( ! cancelled ) {
-					setError( err.message || __( 'Failed to load plugins.', 'wp-admin-shell' ) );
-				}
-			} )
-			.finally( () => {
-				if ( ! cancelled ) {
-					setIsLoading( false );
-				}
-			} );
-		return () => {
-			cancelled = true;
-		};
-	}, [ refreshKey ] );
-
-	const refresh = useCallback( () => setRefreshKey( ( k ) => k + 1 ), [] );
+	const refresh = useCallback( () => {
+		invalidateResolution( 'getEntityRecords', [
+			'root',
+			'plugin',
+			pluginsQuery,
+		] );
+	}, [ invalidateResolution, pluginsQuery ] );
 
 	const setPluginStatus = useCallback(
 		async ( items, status ) => {
-			await Promise.all(
-				items.map( ( item ) =>
-					apiFetch( {
-						path: `/wp/v2/plugins/${ encodeURIComponent(
-							item.plugin
-						) }`,
-						method: 'POST',
-						data: { status },
-					} )
-				)
-			);
-			refresh();
+			try {
+				await Promise.all(
+					items.map( ( item ) =>
+						apiFetch( {
+							path: `/wp/v2/plugins/${ encodeURIComponent(
+								item.plugin
+							) }`,
+							method: 'POST',
+							data: { status },
+						} )
+					)
+				);
+				refresh();
+			} catch ( err ) {
+				setError(
+					err.message ||
+						__( 'Failed to update plugin status.', 'wp-admin-shell' )
+				);
+			}
 		},
 		[ refresh ]
 	);
 
 	const deletePlugins = useCallback(
 		async ( items ) => {
-			await Promise.all(
-				items.map( ( item ) =>
-					apiFetch( {
-						path: `/wp/v2/plugins/${ encodeURIComponent(
-							item.plugin
-						) }`,
-						method: 'DELETE',
-					} )
-				)
-			);
-			refresh();
+			try {
+				await Promise.all(
+					items.map( ( item ) =>
+						apiFetch( {
+							path: `/wp/v2/plugins/${ encodeURIComponent(
+								item.plugin
+							) }`,
+							method: 'DELETE',
+						} )
+					)
+				);
+				refresh();
+			} catch ( err ) {
+				setError(
+					err.message ||
+						__( 'Failed to delete plugin.', 'wp-admin-shell' )
+				);
+			}
 		},
 		[ refresh ]
 	);
@@ -145,14 +148,16 @@ export default function PluginsApp() {
 				enableGlobalSearch: true,
 				enableHiding: false,
 				render: ( { item } ) => (
-					<VStack spacing={ 1 }>
-						<Text weight={ 600 }>{ item.name }</Text>
-						<Text variant="muted" size={ 12 }>
+					<Stack direction="column" gap="xs">
+						<Text variant="body-md">
+							<strong>{ item.name }</strong>
+						</Text>
+						<Text variant="body-sm">
 							{ item.description.length > 160
 								? `${ item.description.slice( 0, 160 ) }…`
 								: item.description }
 						</Text>
-					</VStack>
+					</Stack>
 				),
 			},
 			{
@@ -163,7 +168,9 @@ export default function PluginsApp() {
 					( [ value, label ] ) => ( { value, label } )
 				),
 				render: ( { item } ) => (
-					<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+					<Text variant="body-sm">
+						{ STATUS_LABELS[ item.status ] || item.status }
+					</Text>
 				),
 				filterBy: { operators: [ 'isAny' ] },
 			},
@@ -171,13 +178,17 @@ export default function PluginsApp() {
 				id: 'version',
 				type: 'text',
 				label: __( 'Version', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.version }</Text>,
+				render: ( { item } ) => (
+					<Text variant="body-sm">{ item.version }</Text>
+				),
 			},
 			{
 				id: 'author',
 				type: 'text',
 				label: __( 'Author', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.author }</Text>,
+				render: ( { item } ) => (
+					<Text variant="body-sm">{ item.author }</Text>
+				),
 			},
 		],
 		[]
@@ -219,8 +230,12 @@ export default function PluginsApp() {
 				supportsBulk: true,
 				isEligible: ( item ) => item.status === 'inactive',
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
-						<Text>
+					<Stack
+						direction="column"
+						gap="lg"
+						style={ { padding: '16px' } }
+					>
+						<Text variant="body-md">
 							{ items.length === 1
 								? __(
 										'Permanently delete this plugin? This cannot be undone.',
@@ -231,11 +246,15 @@ export default function PluginsApp() {
 										'wp-admin-shell'
 								  ) }
 						</Text>
-						<HStack justify="right">
-							<Button variant="tertiary" onClick={ closeModal }>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button
+								tone="neutral"
+								variant="outline"
+								onClick={ closeModal }
+							>
 								{ __( 'Cancel', 'wp-admin-shell' ) }
 							</Button>
-							<Button
+							<DestructiveButton
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
@@ -245,9 +264,9 @@ export default function PluginsApp() {
 								} }
 							>
 								{ __( 'Delete', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
+							</DestructiveButton>
+						</Stack>
+					</Stack>
 				),
 			},
 		],
@@ -267,7 +286,9 @@ export default function PluginsApp() {
 	if ( error ) {
 		return (
 			<div className="wp-admin-shell-app-plugins__error">
-				<Text>{ error }</Text>
+				<Notice.Root intent="error">
+					<Notice.Description>{ error }</Notice.Description>
+				</Notice.Root>
 			</div>
 		);
 	}

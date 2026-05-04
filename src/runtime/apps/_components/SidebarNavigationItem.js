@@ -1,9 +1,8 @@
 import {
 	__experimentalItem as Item,
-	__experimentalHStack as HStack,
 	FlexBlock,
-	Icon,
 } from '@wordpress/components';
+import { Icon, Stack } from '@wordpress/ui';
 import { isRTL } from '@wordpress/i18n';
 import { chevronRightSmall, chevronLeftSmall } from '@wordpress/icons';
 
@@ -13,6 +12,10 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  * A single item in the sidebar navigation — modeled after the site editor's
  * SidebarNavigationItem. Renders as an interactive Item component with optional
  * icon, chevron drilldown indicator, and suffix.
+ *
+ * `Item` and `FlexBlock` are kept from `@wordpress/components` — neither
+ * has a WPDS port in 0.12. Layout is provided by `Stack`/`Icon` from
+ * `@wordpress/ui`.
  */
 export default function SidebarNavigationItem( {
 	className,
@@ -50,7 +53,7 @@ export default function SidebarNavigationItem( {
 			aria-current={ isActive ? 'true' : undefined }
 			{ ...props }
 		>
-			<HStack justify="flex-start">
+			<Stack direction="row" justify="flex-start">
 				{ icon && (
 					<Icon
 						style={ { fill: 'currentcolor' } }
@@ -69,7 +72,7 @@ export default function SidebarNavigationItem( {
 					/>
 				) }
 				{ ! withChevron && suffix }
-			</HStack>
+			</Stack>
 		</Item>
 	);
 }

@@ -5,6 +5,7 @@ import { store as noticesStore } from '@wordpress/notices';
 import {
 	Button,
 	InputControl,
+	Notice,
 	Stack,
 	Text,
 } from '@wordpress/ui';

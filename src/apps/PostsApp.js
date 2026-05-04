@@ -2,13 +2,9 @@ import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
-import { DataViews } from '@wordpress/dataviews';
-import {
-	Button,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { Button, Stack, Text } from '@wordpress/ui';
+import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { pencil, external, trash } from '@wordpress/icons';
 import { navigate } from '../runtime/routing/router';
@@ -34,6 +30,7 @@ export default function PostsApp( { app, config } ) {
 		perPage: 20,
 		sort: { field: 'date', direction: 'desc' },
 		fields: [ 'title', 'status', 'author', 'date' ],
+		titleField: 'title',
 		layout: {},
 	} );
 
@@ -105,7 +102,7 @@ export default function PostsApp( { app, config } ) {
 				// URL-encoding when wired to a canvas iframe.
 				render: ( { item } ) => (
 					<Button
-						variant="link"
+						variant="minimal"
 						onClick={ () =>
 							navigate( 'editor', postType, item.id )
 						}
@@ -174,7 +171,7 @@ export default function PostsApp( { app, config } ) {
 				supportsBulk: true,
 				icon: trash,
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
+					<Stack direction="column" gap="md" style={ { padding: '16px' } }>
 						<Text>
 							{ items.length === 1
 								? __(
@@ -186,14 +183,14 @@ export default function PostsApp( { app, config } ) {
 										'wp-admin-shell'
 								  ) }
 						</Text>
-						<HStack justify="right">
+						<Stack direction="row" justify="flex-end" gap="sm">
 							<Button
-								variant="tertiary"
+								variant="minimal"
 								onClick={ closeModal }
 							>
 								{ __( 'Cancel', 'wp-admin-shell' ) }
 							</Button>
-							<Button
+							<DestructiveButton
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
@@ -211,9 +208,9 @@ export default function PostsApp( { app, config } ) {
 								} }
 							>
 								{ __( 'Move to Trash', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
+							</DestructiveButton>
+						</Stack>
+					</Stack>
 				),
 			},
 			...slotActions,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
-import { Button, Spinner } from '@wordpress/components';
+import { Button } from '@wordpress/ui';
+import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
@@ -116,17 +117,11 @@ export default function SimpleEditorApp( { app, params } ) {
 				}
 			} catch ( err ) {
 				// eslint-disable-next-line no-console
-				console.error(
-					'SimpleEditorApp createDraft failed:',
-					JSON.stringify( err, null, 2 ),
-					err
-				);
+				console.error( 'SimpleEditorApp createDraft failed:', err );
 				if ( ! cancelled ) {
 					setError(
-						( err?.message ||
-							__( 'Failed to create draft.', 'wp-admin-shell' ) ) +
-							' — ' +
-							JSON.stringify( err )
+						err?.message ||
+							__( 'Failed to create draft.', 'wp-admin-shell' )
 					);
 					setIsCreating( false );
 				}
@@ -149,7 +144,7 @@ export default function SimpleEditorApp( { app, params } ) {
 					<Button
 						icon={ arrowLeft }
 						onClick={ () => navigate( backRoute ) }
-						variant="tertiary"
+						variant="minimal"
 					>
 						{ __( 'Back to list', 'wp-admin-shell' ) }
 					</Button>
@@ -238,19 +233,12 @@ function SimpleEditor( { postType, postId, backRoute } ) {
 
 	const bodyRef = useRef( null );
 
-	const titleValue =
-		typeof editedRecord.title === 'string'
-			? editedRecord.title
-			: editedRecord.title?.raw ?? record?.title?.raw ?? '';
-
 	const onTitleChange = useCallback(
 		( e ) => {
 			edit( { title: e.target.value } );
 		},
 		[ edit ]
 	);
-
-	const isPublished = record?.status === 'publish';
 
 	const handlePublish = useCallback( async () => {
 		if ( autoSaveTimerRef.current ) {
@@ -310,13 +298,22 @@ function SimpleEditor( { postType, postId, backRoute } ) {
 		);
 	}
 
+	// Safe to read editedRecord/record fields below — guard above ensures
+	// `record` is non-null and `hydrated` is true.
+	const titleValue =
+		typeof editedRecord.title === 'string'
+			? editedRecord.title
+			: editedRecord.title?.raw ?? record?.title?.raw ?? '';
+
+	const isPublished = record?.status === 'publish';
+
 	return (
 		<div className="wp-admin-shell-app-simple-editor">
 			<div className="wp-admin-shell-app-simple-editor__toolbar">
 				<Button
 					icon={ arrowLeft }
 					onClick={ () => navigate( backRoute ) }
-					variant="tertiary"
+					variant="minimal"
 					size="compact"
 				>
 					{ __( 'Back to list', 'wp-admin-shell' ) }
@@ -328,11 +325,12 @@ function SimpleEditor( { postType, postId, backRoute } ) {
 					error={ saveError }
 				/>
 				<Button
-					variant="primary"
+					tone="brand"
+					variant="solid"
 					size="compact"
 					onClick={ handlePublish }
 					disabled={ isSaving }
-					isBusy={ isSaving }
+					loading={ isSaving }
 				>
 					{ isPublished
 						? __( 'Update', 'wp-admin-shell' )
@@ -371,7 +369,7 @@ function SimpleEditor( { postType, postId, backRoute } ) {
 				name="core:editor.sidebar"
 				fillProps={ {
 					postId:   record?.id,
-					postType: 'post',
+					postType,
 					status:   record?.status,
 				} }
 			/>

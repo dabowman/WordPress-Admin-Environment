@@ -2,23 +2,21 @@ import { useMemo } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import {
 	Button,
+	Card,
 	Stack,
 	Text,
 } from '@wordpress/ui';
 import {
 	__experimentalGrid as Grid,
-	Card,
-	CardHeader,
-	CardBody,
 	Spinner,
 } from '@wordpress/components';
-import { __, sprintf, _n } from '@wordpress/i18n';
-import { navigate } from '../routing/router';
+import { __, sprintf } from '@wordpress/i18n';
+import { navigate } from '../runtime/routing/router';
 
 function StatCard( { label, value, isLoading } ) {
 	return (
-		<Card>
-			<CardBody>
+		<Card.Root>
+			<Card.Content>
 				<Stack direction="column" gap="xs">
 					<Text variant="body-sm">{ label }</Text>
 					{ isLoading ? (
@@ -29,21 +27,44 @@ function StatCard( { label, value, isLoading } ) {
 						</Text>
 					) }
 				</Stack>
-			</CardBody>
-		</Card>
+			</Card.Content>
+		</Card.Root>
 	);
 }
 
 export default function DashboardApp() {
 	const userId = window.wpAdminShell?.userId;
-	const { record: user } = useEntityRecord( 'root', 'user', userId );
+	// useEntityRecord is null-safe when given a falsy id — it short-circuits
+	// without attempting a request. Always-call so the hook order is stable.
+	const { record: user } = useEntityRecord( 'root', 'user', userId || 0 );
 
-	const postsQuery = { per_page: 1, status: 'publish', context: 'edit' };
-	const draftQuery = { per_page: 5, status: 'draft', context: 'edit', orderby: 'modified', order: 'desc' };
-	const pendingComments = { per_page: 5, status: 'hold', context: 'edit' };
-	const recentMedia = { per_page: 1 };
-	const pagesQuery = { per_page: 1, status: 'publish', context: 'edit' };
-	const usersQuery = { per_page: 1 };
+	const postsQuery = useMemo(
+		() => ( { per_page: 1, status: 'publish', context: 'edit', _fields: 'id' } ),
+		[]
+	);
+	const draftQuery = useMemo(
+		() => ( {
+			per_page: 5,
+			status: 'draft',
+			context: 'edit',
+			orderby: 'modified',
+			order: 'desc',
+		} ),
+		[]
+	);
+	const pendingComments = useMemo(
+		() => ( { per_page: 5, status: 'hold', context: 'edit' } ),
+		[]
+	);
+	const recentMedia = useMemo(
+		() => ( { per_page: 1, _fields: 'id' } ),
+		[]
+	);
+	const pagesQuery = useMemo(
+		() => ( { per_page: 1, status: 'publish', context: 'edit', _fields: 'id' } ),
+		[]
+	);
+	const usersQuery = useMemo( () => ( { per_page: 1, _fields: 'id' } ), [] );
 
 	const posts = useEntityRecords( 'postType', 'post', postsQuery );
 	const drafts = useEntityRecords( 'postType', 'post', draftQuery );
@@ -87,7 +108,7 @@ export default function DashboardApp() {
 					</Text>
 				</Stack>
 
-				<Stack direction="row" gap="sm" wrap>
+				<Stack direction="row" gap="sm" wrap="wrap">
 					<Button
 						tone="brand"
 						variant="solid"
@@ -96,12 +117,14 @@ export default function DashboardApp() {
 						{ __( 'Write a post', 'wp-admin-shell' ) }
 					</Button>
 					<Button
+						tone="neutral"
 						variant="outline"
 						onClick={ () => navigate( 'editor', 'page', 'new' ) }
 					>
 						{ __( 'Add a page', 'wp-admin-shell' ) }
 					</Button>
 					<Button
+						tone="neutral"
 						variant="outline"
 						onClick={ () => navigate( 'media' ) }
 					>
@@ -133,13 +156,15 @@ export default function DashboardApp() {
 				</Grid>
 
 				<Grid columns={ 2 } gap={ 4 }>
-					<Card>
-						<CardHeader>
-							<Text variant="heading-md" render={ <h2 /> }>
-								{ __( 'Recent drafts', 'wp-admin-shell' ) }
-							</Text>
-						</CardHeader>
-						<CardBody>
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>
+								<Text variant="heading-md" render={ <h2 /> }>
+									{ __( 'Recent drafts', 'wp-admin-shell' ) }
+								</Text>
+							</Card.Title>
+						</Card.Header>
+						<Card.Content>
 							{ drafts.isResolving && ! drafts.records ? (
 								<Spinner />
 							) : drafts.records?.length ? (
@@ -152,7 +177,8 @@ export default function DashboardApp() {
 											align="center"
 										>
 											<Button
-												variant="ghost"
+												tone="neutral"
+												variant="minimal"
 												onClick={ () =>
 													navigate(
 														'editor',
@@ -184,19 +210,21 @@ export default function DashboardApp() {
 									) }
 								</Text>
 							) }
-						</CardBody>
-					</Card>
+						</Card.Content>
+					</Card.Root>
 
-					<Card>
-						<CardHeader>
-							<Text variant="heading-md" render={ <h2 /> }>
-								{ __(
-									'Comments awaiting moderation',
-									'wp-admin-shell'
-								) }
-							</Text>
-						</CardHeader>
-						<CardBody>
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>
+								<Text variant="heading-md" render={ <h2 /> }>
+									{ __(
+										'Comments awaiting moderation',
+										'wp-admin-shell'
+									) }
+								</Text>
+							</Card.Title>
+						</Card.Header>
+						<Card.Content>
 							{ comments.isResolving && ! comments.records ? (
 								<Spinner />
 							) : comments.records?.length ? (
@@ -223,8 +251,9 @@ export default function DashboardApp() {
 										</Stack>
 									) ) }
 									<Button
+										tone="neutral"
 										variant="outline"
-										size="sm"
+										size="small"
 										onClick={ () =>
 											navigate( 'comments' )
 										}
@@ -243,8 +272,8 @@ export default function DashboardApp() {
 									) }
 								</Text>
 							) }
-						</CardBody>
-					</Card>
+						</Card.Content>
+					</Card.Root>
 				</Grid>
 			</Stack>
 		</div>

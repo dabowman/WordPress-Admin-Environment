@@ -1,15 +1,13 @@
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import {
+	Badge,
 	Button,
 	Card,
-	CardBody,
-	CardHeader,
-	Spinner,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
+	Stack,
+	Text,
+} from '@wordpress/ui';
+import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
 
@@ -34,26 +32,8 @@ function StatusPill( { status } ) {
 			recommended: __( 'Recommended', 'wp-admin-shell' ),
 			critical: __( 'Critical', 'wp-admin-shell' ),
 		}[ status ] || status;
-	const colors = {
-		good: { bg: '#d1fae5', fg: '#065f46' },
-		recommended: { bg: '#fef3c7', fg: '#92400e' },
-		critical: { bg: '#fee2e2', fg: '#991b1b' },
-	}[ status ] || { bg: '#e5e7eb', fg: '#111827' };
-	return (
-		<span
-			style={ {
-				display: 'inline-block',
-				background: colors.bg,
-				color: colors.fg,
-				padding: '2px 8px',
-				borderRadius: '4px',
-				fontSize: '12px',
-				fontWeight: 600,
-			} }
-		>
-			{ label }
-		</span>
-	);
+	const intent = STATUS_TO_INTENT[ status ] || 'neutral';
+	return <Badge intent={ intent }>{ label }</Badge>;
 }
 
 export default function SiteHealthApp() {
@@ -111,15 +91,17 @@ export default function SiteHealthApp() {
 
 	return (
 		<div className="wp-admin-shell-app-site-health">
-			<HStack
+			<Stack
+				direction="row"
+				align="center"
+				justify="space-between"
 				className="wp-admin-shell-app-site-health__toolbar"
-				alignment="center"
 			>
-				<VStack spacing={ 1 }>
-					<Text size={ 20 } weight={ 600 }>
+				<Stack direction="column" gap="xs">
+					<Text variant="heading-md" render={ <h2 /> }>
 						{ __( 'Site Health', 'wp-admin-shell' ) }
 					</Text>
-					<Text variant="muted" size={ 12 }>
+					<Text variant="body-sm">
 						{ counts.good }{ ' ' }
 						{ __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
 						{ counts.recommended }{ ' ' }
@@ -127,45 +109,47 @@ export default function SiteHealthApp() {
 						{ counts.critical }{ ' ' }
 						{ __( 'critical', 'wp-admin-shell' ) }
 					</Text>
-				</VStack>
+				</Stack>
 				<Button
-					variant="secondary"
+					tone="neutral"
+					variant="solid"
 					icon={ update }
 					onClick={ runTests }
 					disabled={ isRunning }
-					isBusy={ isRunning }
+					loading={ isRunning }
 					size="compact"
 				>
 					{ __( 'Re-run tests', 'wp-admin-shell' ) }
 				</Button>
-			</HStack>
+			</Stack>
 
-			{ error && (
-				<Text>{ error }</Text>
-			) }
+			{ error && <Text>{ error }</Text> }
 
-			<VStack spacing={ 3 }>
+			<Stack direction="column" gap="md">
 				{ ASYNC_TESTS.map( ( t ) => {
 					const res = results[ t.id ];
 					return (
-						<Card key={ t.id }>
-							<CardHeader>
-								<HStack
-									alignment="left"
+						<Card.Root key={ t.id }>
+							<Card.Header>
+								<Stack
+									direction="row"
 									justify="space-between"
+									align="center"
 								>
-									<Text weight={ 600 }>
-										{ res?.label || t.label }
+									<Text variant="body-md">
+										<strong>
+											{ res?.label || t.label }
+										</strong>
 									</Text>
 									{ res ? (
 										<StatusPill status={ res.status } />
 									) : (
 										<Spinner />
 									) }
-								</HStack>
-							</CardHeader>
+								</Stack>
+							</Card.Header>
 							{ res?.description && (
-								<CardBody>
+								<Card.Content>
 									<div
 										// site-health returns trusted HTML.
 										// eslint-disable-next-line react/no-danger
@@ -173,12 +157,12 @@ export default function SiteHealthApp() {
 											__html: res.description,
 										} }
 									/>
-								</CardBody>
+								</Card.Content>
 							) }
-						</Card>
+						</Card.Root>
 					);
 				} ) }
-			</VStack>
+			</Stack>
 		</div>
 	);
 }

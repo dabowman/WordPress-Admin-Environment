@@ -1,17 +1,18 @@
-import { useEffect, useState, useCallback } from '@wordpress/element';
+import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
 import {
 	Button,
-	__experimentalGrid as Grid,
 	Card,
-	CardBody,
-	CardFooter,
+	Stack,
+	Text,
+} from '@wordpress/ui';
+import {
+	__experimentalGrid as Grid,
 	CardMedia,
 	Spinner,
 	Modal,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { check, external } from '@wordpress/icons';
@@ -21,50 +22,25 @@ function stripTags( html ) {
 }
 
 export default function ThemesApp() {
-	const [ themes, setThemes ] = useState( null );
-	const [ isLoading, setIsLoading ] = useState( true );
-	const [ error, setError ] = useState( null );
-	const [ activeStylesheet, setActiveStylesheet ] = useState( null );
-	const [ details, setDetails ] = useState( null );
-	const [ refreshKey, setRefreshKey ] = useState( 0 );
+	const themesQuery = useMemo(
+		() => ( { context: 'edit', status: 'active,inactive' } ),
+		[]
+	);
+	const { records: themes, isResolving } = useEntityRecords(
+		'root',
+		'theme',
+		themesQuery
+	);
+	const { invalidateResolution } = useDispatch( coreStore );
 
-	useEffect( () => {
-		let cancelled = false;
-		setIsLoading( true );
-		Promise.all( [
-			apiFetch( { path: '/wp/v2/themes?context=edit&status=active,inactive' } ),
-			// stylesheet of the currently active theme; pulled from the
-			// shell's bootstrap data with a fallback fetch when missing.
-			Promise.resolve( window.wpAdminShell?.activeTheme ).then(
-				( v ) =>
-					v ??
-					apiFetch( { path: '/wp/v2/themes?status=active' } ).then(
-						( res ) => res?.[ 0 ]?.stylesheet
-					)
-			),
-		] )
-			.then( ( [ list, active ] ) => {
-				if ( cancelled ) {
-					return;
-				}
-				setThemes( list );
-				setActiveStylesheet( active );
-				setError( null );
-			} )
-			.catch( ( err ) => {
-				if ( ! cancelled ) {
-					setError( err.message || __( 'Failed to load themes.', 'wp-admin-shell' ) );
-				}
-			} )
-			.finally( () => {
-				if ( ! cancelled ) {
-					setIsLoading( false );
-				}
-			} );
-		return () => {
-			cancelled = true;
-		};
-	}, [ refreshKey ] );
+	const isLoading = isResolving;
+	const [ error, setError ] = useState( null );
+	const [ details, setDetails ] = useState( null );
+
+	const activeStylesheet =
+		themes?.find( ( t ) => t.status === 'active' )?.stylesheet ||
+		window.wpAdminShell?.activeTheme ||
+		null;
 
 	const activate = useCallback(
 		async ( theme ) => {
@@ -76,7 +52,11 @@ export default function ThemesApp() {
 					method: 'POST',
 					data: { stylesheet: theme.stylesheet },
 				} );
-				setRefreshKey( ( k ) => k + 1 );
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'theme',
+					themesQuery,
+				] );
 				setDetails( null );
 			} catch ( err ) {
 				const target =
@@ -87,13 +67,26 @@ export default function ThemesApp() {
 				window.location.href = target;
 			}
 		},
-		[]
+		[ invalidateResolution, themesQuery ]
 	);
+
+	const sorted = useMemo( () => {
+		if ( ! themes ) {
+			return [];
+		}
+		return [ ...themes ].sort( ( a, b ) => {
+			if ( a.stylesheet === activeStylesheet ) return -1;
+			if ( b.stylesheet === activeStylesheet ) return 1;
+			return ( a.name?.rendered || '' ).localeCompare(
+				b.name?.rendered || ''
+			);
+		} );
+	}, [ themes, activeStylesheet ] );
 
 	if ( error ) {
 		return (
 			<div className="wp-admin-shell-app-themes__error">
-				<Text>{ error }</Text>
+				<Text variant="body-md">{ error }</Text>
 			</div>
 		);
 	}
@@ -106,30 +99,29 @@ export default function ThemesApp() {
 		);
 	}
 
-	const sorted = [ ...themes ].sort( ( a, b ) => {
-		if ( a.stylesheet === activeStylesheet ) return -1;
-		if ( b.stylesheet === activeStylesheet ) return 1;
-		return ( a.name?.rendered || '' ).localeCompare( b.name?.rendered || '' );
-	} );
-
 	return (
 		<div className="wp-admin-shell-app-themes">
-			<HStack alignment="left" className="wp-admin-shell-app-themes__header">
-				<Text size={ 20 } weight={ 600 }>
+			<Stack
+				direction="row"
+				align="center"
+				gap="md"
+				className="wp-admin-shell-app-themes__header"
+			>
+				<Text variant="heading-md" render={ <h2 /> }>
 					{ __( 'Themes', 'wp-admin-shell' ) }
 				</Text>
-				<Text variant="muted">
+				<Text variant="body-sm">
 					{ themes.length }{ ' ' }
 					{ __( 'installed', 'wp-admin-shell' ) }
 				</Text>
-			</HStack>
+			</Stack>
 
 			<Grid columns={ 3 } gap={ 4 }>
 				{ sorted.map( ( theme ) => {
 					const isActive = theme.stylesheet === activeStylesheet;
 					const screenshot = theme.screenshot || '';
 					return (
-						<Card key={ theme.stylesheet }>
+						<Card.Root key={ theme.stylesheet }>
 							{ screenshot && (
 								<CardMedia>
 									<img
@@ -138,35 +130,43 @@ export default function ThemesApp() {
 									/>
 								</CardMedia>
 							) }
-							<CardBody>
-								<VStack spacing={ 2 }>
-									<HStack
-										alignment="left"
+							<Card.Content>
+								<Stack direction="column" gap="sm">
+									<Stack
+										direction="row"
+										align="center"
 										justify="space-between"
 									>
-										<Text weight={ 600 }>
-											{ theme.name?.rendered }
+										<Text variant="body-md">
+											<strong>
+												{ theme.name?.rendered }
+											</strong>
 										</Text>
 										{ isActive && (
-											<Text variant="muted" size={ 12 }>
+											<Text variant="body-sm">
 												{ __(
 													'Active',
 													'wp-admin-shell'
 												) }
 											</Text>
 										) }
-									</HStack>
-									<Text variant="muted" size={ 12 }>
+									</Stack>
+									<Text variant="body-sm">
 										{ stripTags(
 											theme.description?.rendered || ''
 										).slice( 0, 140 ) }
 									</Text>
-								</VStack>
-							</CardBody>
-							<CardFooter>
-								<HStack justify="space-between">
+								</Stack>
+							</Card.Content>
+							<Card.Content>
+								<Stack
+									direction="row"
+									justify="space-between"
+									align="center"
+								>
 									<Button
-										variant="tertiary"
+										tone="neutral"
+										variant="outline"
 										size="compact"
 										onClick={ () =>
 											setDetails( {
@@ -179,7 +179,8 @@ export default function ThemesApp() {
 									</Button>
 									{ ! isActive && (
 										<Button
-											variant="primary"
+											tone="brand"
+											variant="solid"
 											size="compact"
 											icon={ check }
 											onClick={ () => activate( theme ) }
@@ -190,9 +191,9 @@ export default function ThemesApp() {
 											) }
 										</Button>
 									) }
-								</HStack>
-							</CardFooter>
-						</Card>
+								</Stack>
+							</Card.Content>
+						</Card.Root>
 					);
 				} ) }
 			</Grid>
@@ -203,7 +204,7 @@ export default function ThemesApp() {
 					onRequestClose={ () => setDetails( null ) }
 					size="medium"
 				>
-					<VStack spacing={ 3 }>
+					<Stack direction="column" gap="md">
 						{ details.theme.screenshot && (
 							<img
 								src={ details.theme.screenshot }
@@ -211,22 +212,23 @@ export default function ThemesApp() {
 								style={ { maxWidth: '100%' } }
 							/>
 						) }
-						<Text>
+						<Text variant="body-md">
 							{ stripTags(
 								details.theme.description?.rendered || ''
 							) }
 						</Text>
-						<Text variant="muted" size={ 12 }>
+						<Text variant="body-sm">
 							{ __( 'Version', 'wp-admin-shell' ) }:{ ' ' }
 							{ details.theme.version } ·{ ' ' }
 							{ __( 'Author', 'wp-admin-shell' ) }:{ ' ' }
 							{ stripTags( details.theme.author?.rendered || '' ) }
 						</Text>
-						<HStack justify="right">
+						<Stack direction="row" justify="flex-end" gap="sm">
 							{ details.theme.theme_uri && (
 								<Button
+									tone="neutral"
+									variant="outline"
 									icon={ external }
-									variant="tertiary"
 									onClick={ () =>
 										window.open(
 											details.theme.theme_uri,
@@ -239,14 +241,15 @@ export default function ThemesApp() {
 							) }
 							{ ! details.isActive && (
 								<Button
-									variant="primary"
+									tone="brand"
+									variant="solid"
 									onClick={ () => activate( details.theme ) }
 								>
 									{ __( 'Activate', 'wp-admin-shell' ) }
 								</Button>
 							) }
-						</HStack>
-					</VStack>
+						</Stack>
+					</Stack>
 				</Modal>
 			) }
 		</div>
