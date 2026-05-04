@@ -84,6 +84,48 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
+
+/**
+ * V2.M1 — Public manifest registration API.
+ *
+ * Plugins call these to register an `app.json` or `engine.json`
+ * manifest, either as an associative array or by absolute path. The
+ * convention path (`apps/{name}/app.json`, `engines/{name}/engine.json`
+ * under the plugin root) is auto-scanned on `init` priority 8 — most
+ * plugins don't need to call these directly.
+ *
+ * @return string|WP_Error Manifest id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_app( $manifest_or_path ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_app( $manifest_or_path );
+}
+
+function wp_admin_shell_register_engine( $manifest_or_path ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_engine( $manifest_or_path );
+}
+
+/**
+ * Convention-path discovery — scan this plugin's own apps/ + engines/
+ * directories on init. Plugin-contributed manifests are picked up by
+ * extending this scan to each plugin's root via the
+ * `wp_admin_shell_manifest_discovery_paths` filter.
+ *
+ * Runs at priority 8 (before main shell init at 10) so manifests are
+ * available when the kernel's inline-script handoff is composed.
+ */
+add_action( 'init', function () {
+	$registry = WP_Admin_Shell_Manifest_Registry::instance();
+	$registry->discover( WP_ADMIN_SHELL_PATH );
+
+	$additional = apply_filters( 'wp_admin_shell_manifest_discovery_paths', array() );
+	foreach ( (array) $additional as $path ) {
+		if ( is_string( $path ) ) {
+			$registry->discover( $path );
+		}
+	}
+}, 8 );
 
 /**
  * Register the shell admin page and settings.

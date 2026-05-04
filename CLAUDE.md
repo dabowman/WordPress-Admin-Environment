@@ -10,7 +10,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **v1 architecture (current shipping baseline, being migrated).** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine + region sources from a registry, mounts apps inside regions via `MountedApp`, and emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload. Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability.
 
-**Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), `run-shape-tests.php` (75), all via `wp eval-file`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. `run-selection-tests.php` will be deleted as part of V2.M4 (selection bus removal). Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; v2 will evolve these in place.
+**Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), `run-shape-tests.php` (82), `run-manifest-tests.php` (27 — new in V2.M1), all via `wp eval-file`. `tests/schema/validate-shells.test.mjs` (26 — admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2) via `node`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. `run-selection-tests.php` will be deleted as part of V2.M4 (selection bus removal). Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; v2 will evolve these in place.
 
 **Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg` header). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without Gutenberg, the shell renders empty.
 
@@ -107,9 +107,10 @@ npm run test:parity      # 4  — WPDS slot-list drift detector
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php   # 27 — V2.M1 manifest validator + registry
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-selection-tests.php  # 5
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 75
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 82
 ```
 
 `run-shape-tests.php` walks every bundled shell through the resolver and asserts structural invariants (engine + regions + applications + defaultRoute resolves). Catches the v1-canonical-path-drift bug class. Runtime React-component smoke (JSDOM) tracked in issue #30.

@@ -1,0 +1,10 @@
+{
+  "id": "core:test-bad-platform",
+  "version": 1,
+  "title": "Bad Platform",
+  "role": "main",
+  "platform": {
+    "block-navigation-on-dirty": true
+  },
+  "script": "test"
+}
