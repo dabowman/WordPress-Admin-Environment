@@ -1,11 +1,11 @@
-import { useState } from '@wordpress/element';
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import {
 	Button,
 	InputControl,
 	Stack,
 	Text,
-	Notice,
 } from '@wordpress/ui';
 import {
 	SelectControl,
@@ -29,7 +29,8 @@ export default function SettingsReadingApp() {
 		context: 'edit',
 	} );
 
-	const [ notice, setNotice ] = useState( null );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	if ( ! record ) {
 		return (
@@ -42,17 +43,14 @@ export default function SettingsReadingApp() {
 	const handleSave = async () => {
 		try {
 			await save();
-			setNotice( {
-				intent: 'success',
-				message: __( 'Settings saved.', 'wp-admin-shell' ),
+			createSuccessNotice( __( 'Settings saved.', 'wp-admin-shell' ), {
+				type: 'snackbar',
 			} );
 		} catch ( err ) {
-			setNotice( {
-				intent: 'error',
-				message:
-					err.message ||
-					__( 'Failed to save settings.', 'wp-admin-shell' ),
-			} );
+			createErrorNotice(
+				err.message ||
+					__( 'Failed to save settings.', 'wp-admin-shell' )
+			);
 		}
 	};
 
@@ -74,19 +72,6 @@ export default function SettingsReadingApp() {
 				<Text variant="heading-xl" render={ <h2 /> }>
 					{ __( 'Reading', 'wp-admin-shell' ) }
 				</Text>
-
-				{ notice && (
-					<Notice.Root intent={ notice.intent }>
-						<Notice.Description>
-							{ notice.message }
-						</Notice.Description>
-						<Notice.Actions>
-							<Notice.CloseIcon
-								onClick={ () => setNotice( null ) }
-							/>
-						</Notice.Actions>
-					</Notice.Root>
-				) }
 
 				<RadioControl
 					label={ __( 'Your homepage displays', 'wp-admin-shell' ) }

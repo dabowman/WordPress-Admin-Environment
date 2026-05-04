@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from '@wordpress/element';
-import { Button, Spinner } from '@wordpress/components';
+import { Button } from '@wordpress/ui';
+import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
@@ -59,7 +60,7 @@ export default function EditorApp( { params } ) {
 				}
 			} catch ( err ) {
 				if ( ! cancelled ) {
-					setError( err.message || __( 'Failed to create draft.', 'wp-admin-shell' ) );
+					setError( err?.message || __( 'Failed to create draft.', 'wp-admin-shell' ) );
 					setIsCreating( false );
 				}
 			}
@@ -103,7 +104,7 @@ export default function EditorApp( { params } ) {
 					<Button
 						icon={ arrowLeft }
 						onClick={ () => navigate( backRoute ) }
-						variant="tertiary"
+						variant="minimal"
 					>
 						{ __( 'Back to list', 'wp-admin-shell' ) }
 					</Button>
@@ -125,7 +126,8 @@ export default function EditorApp( { params } ) {
 		);
 	}
 
-	const editorUrl = `${ window.wpAdminShell.adminUrl }post.php?post=${ postId }&action=edit`;
+	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const editorUrl = `${ adminUrl }post.php?post=${ postId }&action=edit`;
 
 	return (
 		<div className="wp-admin-shell-app-editor">
@@ -133,7 +135,7 @@ export default function EditorApp( { params } ) {
 				<Button
 					icon={ arrowLeft }
 					onClick={ () => navigate( backRoute ) }
-					variant="tertiary"
+					variant="minimal"
 					size="compact"
 				>
 					{ __( 'Back to list', 'wp-admin-shell' ) }

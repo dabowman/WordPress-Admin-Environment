@@ -3,21 +3,36 @@ import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import {
 	Button,
-	TextControl,
+	InputControl,
+	Stack,
+	Text,
+} from '@wordpress/ui';
+import {
 	TextareaControl,
 	SelectControl,
 	Spinner,
-	__experimentalVStack as VStack,
-	__experimentalHeading as Heading,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 export default function ProfileApp() {
-	const userId = window.wpAdminShell.userId;
+	const userId = window.wpAdminShell?.userId;
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
 	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+
+	if ( ! userId ) {
+		return (
+			<div className="wp-admin-shell-app-profile__error">
+				<Text>
+					{ __(
+						'Profile unavailable: missing user context.',
+						'wp-admin-shell'
+					) }
+				</Text>
+			</div>
+		);
+	}
 
 	if ( ! record ) {
 		return (
@@ -26,6 +41,8 @@ export default function ProfileApp() {
 			</div>
 		);
 	}
+
+	const eventValue = ( e ) => e.target.value;
 
 	const handleSave = async () => {
 		try {
@@ -60,28 +77,31 @@ export default function ProfileApp() {
 
 	return (
 		<div className="wp-admin-shell-app-profile">
-			<VStack spacing={ 5 }>
-				<Heading level={ 2 }>
+			<Stack direction="column" gap="xl">
+				<Text variant="heading-lg" render={ <h2 /> }>
 					{ __( 'Profile', 'wp-admin-shell' ) }
-				</Heading>
+				</Text>
 
-				<TextControl
+				<InputControl
 					label={ __( 'First Name', 'wp-admin-shell' ) }
 					value={ editedRecord.first_name || '' }
-					onChange={ ( val ) => edit( { first_name: val } ) }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) =>
+						edit( { first_name: eventValue( e ) } )
+					}
 				/>
-				<TextControl
+				<InputControl
 					label={ __( 'Last Name', 'wp-admin-shell' ) }
 					value={ editedRecord.last_name || '' }
-					onChange={ ( val ) => edit( { last_name: val } ) }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) =>
+						edit( { last_name: eventValue( e ) } )
+					}
 				/>
-				<TextControl
+				<InputControl
 					label={ __( 'Nickname', 'wp-admin-shell' ) }
 					value={ editedRecord.nickname || '' }
-					onChange={ ( val ) => edit( { nickname: val } ) }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) =>
+						edit( { nickname: eventValue( e ) } )
+					}
 				/>
 				<SelectControl
 					label={ __( 'Display Name', 'wp-admin-shell' ) }
@@ -90,19 +110,17 @@ export default function ProfileApp() {
 					onChange={ ( val ) => edit( { name: val } ) }
 					__nextHasNoMarginBottom
 				/>
-				<TextControl
+				<InputControl
 					label={ __( 'Email', 'wp-admin-shell' ) }
 					type="email"
 					value={ editedRecord.email || '' }
-					onChange={ ( val ) => edit( { email: val } ) }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) => edit( { email: eventValue( e ) } ) }
 				/>
-				<TextControl
+				<InputControl
 					label={ __( 'Website', 'wp-admin-shell' ) }
 					type="url"
 					value={ editedRecord.url || '' }
-					onChange={ ( val ) => edit( { url: val } ) }
-					__nextHasNoMarginBottom
+					onChange={ ( e ) => edit( { url: eventValue( e ) } ) }
 				/>
 				<TextareaControl
 					label={ __( 'Biographical Info', 'wp-admin-shell' ) }
@@ -112,15 +130,18 @@ export default function ProfileApp() {
 					__nextHasNoMarginBottom
 				/>
 
-				<Button
-					variant="primary"
-					onClick={ handleSave }
-					disabled={ ! hasEdits || isSaving }
-					isBusy={ isSaving }
-				>
-					{ __( 'Save Changes', 'wp-admin-shell' ) }
-				</Button>
-			</VStack>
+				<Stack direction="row" justify="flex-start">
+					<Button
+						tone="brand"
+						variant="solid"
+						onClick={ handleSave }
+						disabled={ ! hasEdits || isSaving }
+						loading={ isSaving }
+					>
+						{ __( 'Save Changes', 'wp-admin-shell' ) }
+					</Button>
+				</Stack>
+			</Stack>
 		</div>
 	);
 }

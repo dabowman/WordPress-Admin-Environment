@@ -3,13 +3,9 @@ import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataViews } from '@wordpress/dataviews';
-import {
-	Button,
-	__experimentalText as Text,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { Button, Stack, Text } from '@wordpress/ui';
+import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash } from '@wordpress/icons';
 import { useSlotItems } from '../runtime/slots/dataSlots';
@@ -68,7 +64,8 @@ export default function CommentsApp() {
 		queryArgs
 	);
 
-	const { saveEntityRecord, deleteEntityRecord } = useDispatch( coreStore );
+	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
@@ -94,10 +91,17 @@ export default function CommentsApp() {
 				label: __( 'Author', 'wp-admin-shell' ),
 				enableGlobalSearch: true,
 				render: ( { item } ) => (
-					<VStack spacing={ 0 }>
-						<Text weight={ 500 }>{ item.author }</Text>
-						<Text size={ 12 } variant="muted">{ item.authorEmail }</Text>
-					</VStack>
+					<Stack direction="column" gap="xs">
+						<Text className="wp-admin-shell-app-comments__name">
+							{ item.author }
+						</Text>
+						<Text
+							variant="body-sm"
+							className="wp-admin-shell-app-comments__muted"
+						>
+							{ item.authorEmail }
+						</Text>
+					</Stack>
 				),
 			},
 			{
@@ -152,6 +156,11 @@ export default function CommentsApp() {
 					} )
 				)
 			);
+			invalidateResolution( 'getEntityRecords', [
+				'root',
+				'comment',
+				queryArgs,
+			] );
 			createSuccessNotice( label, { type: 'snackbar' } );
 		} catch ( err ) {
 			createErrorNotice(
@@ -196,17 +205,25 @@ export default function CommentsApp() {
 				icon: trash,
 				isEligible: ( item ) => item.status !== 'trash',
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
+					<Stack
+						direction="column"
+						gap="lg"
+						style={ { padding: '16px' } }
+					>
 						<Text>
 							{ items.length === 1
 								? __( 'Move this comment to trash?', 'wp-admin-shell' )
 								: __( 'Move these comments to trash?', 'wp-admin-shell' ) }
 						</Text>
-						<HStack justify="right">
-							<Button variant="tertiary" onClick={ closeModal }>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button
+								tone="neutral"
+								variant="minimal"
+								onClick={ closeModal }
+							>
 								{ __( 'Cancel', 'wp-admin-shell' ) }
 							</Button>
-							<Button
+							<DestructiveButton
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
@@ -215,6 +232,10 @@ export default function CommentsApp() {
 											items.map( ( item ) =>
 												deleteEntityRecord( 'root', 'comment', item.id )
 											)
+										);
+										invalidateResolution(
+											'getEntityRecords',
+											[ 'root', 'comment', queryArgs ]
 										);
 										createSuccessNotice(
 											__( 'Moved to trash.', 'wp-admin-shell' ),
@@ -231,14 +252,22 @@ export default function CommentsApp() {
 								} }
 							>
 								{ __( 'Trash', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
+							</DestructiveButton>
+						</Stack>
+					</Stack>
 				),
 			},
 			...slotActions,
 		],
-		[ saveEntityRecord, deleteEntityRecord, createSuccessNotice, createErrorNotice, slotActions ]
+		[
+			saveEntityRecord,
+			deleteEntityRecord,
+			invalidateResolution,
+			queryArgs,
+			createSuccessNotice,
+			createErrorNotice,
+			slotActions,
+		]
 	);
 
 	const paginationInfo = useMemo(

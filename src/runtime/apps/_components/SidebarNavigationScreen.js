@@ -1,9 +1,5 @@
-import {
-	__experimentalHStack as HStack,
-	__experimentalHeading as Heading,
-	__experimentalVStack as VStack,
-	__experimentalItemGroup as ItemGroup,
-} from '@wordpress/components';
+import { Stack, Text } from '@wordpress/ui';
+import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { isRTL } from '@wordpress/i18n';
 import { chevronRight, chevronLeft } from '@wordpress/icons';
@@ -15,6 +11,12 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  * A navigation screen in the sidebar — modeled after the site editor's
  * SidebarNavigationScreen. Shows a back button (or dashboard link at root),
  * title, optional description, and content (usually an ItemGroup of nav items).
+ *
+ * The chrome-text color is driven by a CSS custom property
+ * (`--wp-admin-shell--chrome--text-secondary`) instead of a hardcoded hex,
+ * so dark/light chrome variants emitted from the cascade pick it up.
+ *
+ * `ItemGroup` stays from `@wordpress/components` — no WPDS port in 0.12.
  */
 export default function SidebarNavigationScreen( {
 	isRoot,
@@ -29,14 +31,15 @@ export default function SidebarNavigationScreen( {
 
 	return (
 		<>
-			<VStack
+			<Stack
 				className="wp-admin-shell-sidebar-screen__main"
-				spacing={ 0 }
+				direction="column"
 				justify="flex-start"
 			>
-				<HStack
-					spacing={ 3 }
-					alignment="flex-start"
+				<Stack
+					direction="row"
+					gap="md"
+					align="flex-start"
 					className="wp-admin-shell-sidebar-screen__title-bar"
 				>
 					{ ! isRoot && (
@@ -49,7 +52,6 @@ export default function SidebarNavigationScreen( {
 							} }
 							icon={ icon }
 							label={ __( 'Back', 'wp-admin-shell' ) }
-							showTooltip={ false }
 						/>
 					) }
 					{ isRoot && (
@@ -59,15 +61,18 @@ export default function SidebarNavigationScreen( {
 							href={ window.wpAdminShell?.dashboardUrl }
 						/>
 					) }
-					<Heading
+					<Text
+						variant="heading-lg"
+						render={ <h1 /> }
 						className="wp-admin-shell-sidebar-screen__title"
-						color="#e0e0e0"
-						level={ 1 }
-						size={ 20 }
+						style={ {
+							color:
+								'var(--wp-admin-shell--chrome--text-secondary, #e0e0e0)',
+						} }
 					>
 						{ title }
-					</Heading>
-				</HStack>
+					</Text>
+				</Stack>
 
 				<div className="wp-admin-shell-sidebar-screen__content">
 					{ description && (
@@ -77,7 +82,7 @@ export default function SidebarNavigationScreen( {
 					) }
 					{ content }
 				</div>
-			</VStack>
+			</Stack>
 
 			{ footer && (
 				<footer className="wp-admin-shell-sidebar-screen__footer">
@@ -87,3 +92,6 @@ export default function SidebarNavigationScreen( {
 		</>
 	);
 }
+
+// Re-export ItemGroup for callers that compose this screen with grouped items.
+export { ItemGroup };

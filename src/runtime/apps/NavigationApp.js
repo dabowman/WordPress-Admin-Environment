@@ -1,11 +1,12 @@
 import { useState } from '@wordpress/element';
+import { IconButton, Stack } from '@wordpress/ui';
 import {
-	Button,
 	Icon,
-	__experimentalVStack as VStack,
 	__experimentalItemGroup as ItemGroup,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { useEntityRecord } from '@wordpress/core-data';
+import { decodeEntities } from '@wordpress/html-entities';
 
 import { resolveIcon } from '../config/iconMap';
 import SidebarNavigationScreen from './_components/SidebarNavigationScreen';
@@ -81,11 +82,11 @@ function resolveDefaultApp( shellConfig, apps ) {
 
 function CollapsedNavigation( { items, apps, currentAppId } ) {
 	return (
-		<VStack spacing={ 1 } className="wp-admin-shell-nav__items">
+		<Stack direction="column" gap="xs" className="wp-admin-shell-nav__items">
 			{ items.map( ( item, idx ) =>
 				renderCollapsedItem( item, idx, apps, currentAppId )
 			) }
-		</VStack>
+		</Stack>
 	);
 }
 
@@ -122,15 +123,16 @@ function renderCollapsedItem( item, index, apps, currentAppId ) {
 			return null;
 		}
 		return (
-			<Button
+			<IconButton
 				key={ app.id }
+				tone="neutral"
+				variant="minimal"
 				className={ `wp-admin-shell-nav__item${
 					currentAppId === app.id ? ' is-active' : ''
 				}` }
 				icon={ resolveIcon( app.icon ) }
 				onClick={ () => navigate( app.id ) }
 				label={ app.title }
-				showTooltip
 			/>
 		);
 	}
@@ -140,6 +142,7 @@ function renderCollapsedItem( item, index, apps, currentAppId ) {
 function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
 	const [ activeScreen, setActiveScreen ] = useState( null );
 	const navState = useSidebarNavigation();
+	const { record: site } = useEntityRecord( 'root', 'site' );
 
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
@@ -163,7 +166,10 @@ function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
 	}
 
 	const rootTitle =
-		navConfig.title || window.wpAdminShell?.siteName || __( 'Admin', 'wp-admin-shell' );
+		navConfig.title ||
+		decodeEntities( site?.title || '' ) ||
+		window.wpAdminShell?.siteName ||
+		__( 'Admin', 'wp-admin-shell' );
 
 	return (
 		<SidebarContent screenKey="root">

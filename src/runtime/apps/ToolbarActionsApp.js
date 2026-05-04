@@ -1,8 +1,4 @@
-import {
-	Button,
-	__experimentalHStack as HStack,
-	__experimentalSpacer as Spacer,
-} from '@wordpress/components';
+import { IconButton, Stack } from '@wordpress/ui';
 
 import { resolveIcon } from '../config/iconMap';
 import { navigate } from '../routing/router';
@@ -15,6 +11,10 @@ import { navigate } from '../routing/router';
  *   - { app, icon, label }                  — internal nav
  *   - { command, icon, label }              — built-in command (new-post / new-page in v1)
  *   - { href, external, icon, label }       — external link
+ *
+ * Each rendered control is an icon-only `IconButton` (WPDS) — its `label` prop
+ * doubles as the assistive-tech label and the auto-generated tooltip text, so
+ * the MVP `icon`+`label`+`size="compact"` pattern carries straight over.
  */
 export default function ToolbarActionsApp( { config = {} } ) {
 	const left = Array.isArray( config.left ) ? config.left : [];
@@ -25,55 +25,66 @@ export default function ToolbarActionsApp( { config = {} } ) {
 	}
 
 	return (
-		<HStack alignment="center" spacing={ 2 } style={ { flex: 1 } }>
-			<HStack spacing={ 1 } expanded={ false }>
+		<Stack
+			direction="row"
+			gap="md"
+			align="center"
+			style={ { flex: 1 } }
+		>
+			<Stack direction="row" gap="xs">
 				{ left.map( ( action, i ) => renderAction( action, `left-${ i }` ) ) }
-			</HStack>
+			</Stack>
 
-			<Spacer />
+			<div style={ { flex: 1 } } />
 
-			<HStack spacing={ 1 } expanded={ false }>
+			<Stack direction="row" gap="xs">
 				{ right.map( ( action, i ) => renderAction( action, `right-${ i }` ) ) }
-			</HStack>
-		</HStack>
+			</Stack>
+		</Stack>
 	);
 }
 
 function renderAction( action, key ) {
 	if ( action.external && action.href ) {
 		return (
-			<Button
+			<IconButton
 				key={ key }
+				tone="neutral"
+				variant="minimal"
+				size="compact"
 				icon={ resolveIcon( action.icon ) }
 				label={ action.label }
 				href={ action.href }
 				target="_blank"
 				rel="noopener noreferrer"
-				size="compact"
 			/>
 		);
 	}
 
 	if ( action.app ) {
 		return (
-			<Button
+			<IconButton
 				key={ key }
+				tone="neutral"
+				variant="minimal"
+				size="compact"
 				icon={ resolveIcon( action.icon ) }
 				label={ action.label }
 				onClick={ () => navigate( action.app ) }
-				size="compact"
 			/>
 		);
 	}
 
 	if ( action.command ) {
 		return (
-			<Button
+			<IconButton
 				key={ key }
+				tone="neutral"
+				variant="minimal"
+				size="compact"
 				icon={ resolveIcon( action.icon ) }
 				label={ action.label }
 				onClick={ () => runBuiltinCommand( action.command ) }
-				size="compact"
 			/>
 		);
 	}

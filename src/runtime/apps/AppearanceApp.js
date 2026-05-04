@@ -198,7 +198,7 @@ export default function AppearanceApp() {
 
 				<Button
 					tone="neutral"
-					variant="ghost"
+					variant="minimal"
 					onClick={ reset }
 					disabled={ isSaving }
 					loading={ isSaving }

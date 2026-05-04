@@ -1,19 +1,21 @@
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
+import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
 import {
 	Button,
+	InputControl,
+	Stack,
+	Text,
+} from '@wordpress/ui';
+import {
+	Button as DestructiveButton,
 	Spinner,
 	SelectControl,
 	Modal,
-	TextControl,
 	TextareaControl,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-	__experimentalText as Text,
-	__experimentalHeading as Heading,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { upload, trash, copy } from '@wordpress/icons';
@@ -56,6 +58,7 @@ export default function MediaApp() {
 		saveEntityRecord,
 		invalidateResolution,
 	} = useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const handleUpload = useCallback(
 		async ( event ) => {
@@ -95,23 +98,48 @@ export default function MediaApp() {
 			await deleteEntityRecord( 'root', 'media', item.id, {
 				force: true,
 			} );
+			invalidateResolution( 'getEntityRecords', [
+				'root',
+				'media',
+				queryArgs,
+			] );
 			setSelectedItem( null );
 		},
-		[ deleteEntityRecord ]
+		[ deleteEntityRecord, invalidateResolution, queryArgs ]
 	);
 
-	const handleCopyUrl = useCallback( ( url ) => {
-		navigator.clipboard.writeText( url );
-	}, [] );
+	const handleCopyUrl = useCallback(
+		async ( url ) => {
+			try {
+				await navigator.clipboard.writeText( url );
+				createSuccessNotice(
+					__( 'URL copied to clipboard.', 'wp-admin-shell' ),
+					{ type: 'snackbar' }
+				);
+			} catch ( err ) {
+				createErrorNotice(
+					err?.message ||
+						__( 'Failed to copy URL.', 'wp-admin-shell' ),
+					{ isDismissible: true }
+				);
+			}
+		},
+		[ createSuccessNotice, createErrorNotice ]
+	);
 
 	return (
 		<div className="wp-admin-shell-app-media">
-			<HStack alignment="center" className="wp-admin-shell-app-media__toolbar">
-				<Heading level={ 2 } size={ 20 }>
+			<Stack
+				direction="row"
+				align="center"
+				justify="space-between"
+				className="wp-admin-shell-app-media__toolbar"
+			>
+				<Text variant="heading-lg" render={ <h2 /> }>
 					{ __( 'Media', 'wp-admin-shell' ) }
-				</Heading>
+				</Text>
 
-				<HStack spacing={ 3 } expanded={ false }>
+				<Stack direction="row" gap="md" align="center">
 					<SelectControl
 						value={ mediaType }
 						options={ MEDIA_TYPE_OPTIONS }
@@ -123,10 +151,11 @@ export default function MediaApp() {
 						size="compact"
 					/>
 					<Button
-						variant="primary"
+						tone="brand"
+						variant="solid"
 						icon={ upload }
 						onClick={ () => fileInputRef.current?.click() }
-						isBusy={ isUploading }
+						loading={ isUploading }
 						disabled={ isUploading }
 						size="compact"
 					>
@@ -139,8 +168,8 @@ export default function MediaApp() {
 						onChange={ handleUpload }
 						style={ { display: 'none' } }
 					/>
-				</HStack>
-			</HStack>
+				</Stack>
+			</Stack>
 
 			{ isResolving && ! records?.length ? (
 				<div className="wp-admin-shell-app-media__loading">
@@ -148,18 +177,22 @@ export default function MediaApp() {
 				</div>
 			) : ! records?.length ? (
 				<div className="wp-admin-shell-app-media__empty">
-					<VStack alignment="center" spacing={ 3 }>
-						<Text variant="muted">
+					<Stack direction="column" align="center" gap="md">
+						<Text
+							variant="body-sm"
+							className="wp-admin-shell-app-media__muted"
+						>
 							{ __( 'No media items found.', 'wp-admin-shell' ) }
 						</Text>
 						<Button
-							variant="secondary"
+							tone="neutral"
+							variant="outline"
 							icon={ upload }
 							onClick={ () => fileInputRef.current?.click() }
 						>
 							{ __( 'Upload your first file', 'wp-admin-shell' ) }
 						</Button>
-					</VStack>
+					</Stack>
 				</div>
 			) : (
 				<>
@@ -199,12 +232,16 @@ export default function MediaApp() {
 					</div>
 
 					{ totalPages > 1 && (
-						<HStack
+						<Stack
 							className="wp-admin-shell-app-media__pagination"
-							alignment="center"
+							direction="row"
+							align="center"
+							justify="center"
+							gap="md"
 						>
 							<Button
-								variant="secondary"
+								tone="neutral"
+								variant="outline"
 								disabled={ page <= 1 }
 								onClick={ () => setPage( page - 1 ) }
 								size="compact"
@@ -215,32 +252,45 @@ export default function MediaApp() {
 								{ page } / { totalPages }
 							</Text>
 							<Button
-								variant="secondary"
+								tone="neutral"
+								variant="outline"
 								disabled={ page >= totalPages }
 								onClick={ () => setPage( page + 1 ) }
 								size="compact"
 							>
 								{ __( 'Next', 'wp-admin-shell' ) }
 							</Button>
-						</HStack>
+						</Stack>
 					) }
 				</>
 			) }
 
 			{ selectedItem && (
 				<MediaDetailModal
+					key={ selectedItem.id }
 					item={ selectedItem }
 					onClose={ () => setSelectedItem( null ) }
 					onDelete={ handleDelete }
 					onCopyUrl={ handleCopyUrl }
 					onSave={ saveEntityRecord }
+					invalidateResolution={ invalidateResolution }
+					queryArgs={ queryArgs }
 				/>
 			) }
 		</div>
 	);
 }
 
-function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
+function MediaDetailModal( {
+	item,
+	onClose,
+	onDelete,
+	onCopyUrl,
+	onSave,
+	invalidateResolution,
+	queryArgs,
+} ) {
+	const eventValue = ( e ) => e.target.value;
 	const [ title, setTitle ] = useState( item.title?.raw || '' );
 	const [ altText, setAltText ] = useState( item.alt_text || '' );
 	const [ caption, setCaption ] = useState( item.caption?.raw || '' );
@@ -259,6 +309,11 @@ function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
 				caption,
 				description,
 			} );
+			invalidateResolution( 'getEntityRecords', [
+				'root',
+				'media',
+				queryArgs,
+			] );
 			onClose();
 		} finally {
 			setIsSaving( false );
@@ -271,7 +326,7 @@ function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<HStack alignment="top" spacing={ 6 }>
+			<Stack direction="row" align="flex-start" gap="xl">
 				<div className="wp-admin-shell-app-media__preview">
 					{ item.media_type === 'image' ? (
 						<img
@@ -286,19 +341,17 @@ function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
 					) }
 				</div>
 
-				<VStack spacing={ 3 } style={ { flex: 1 } }>
-					<TextControl
+				<Stack direction="column" gap="md" style={ { flex: 1 } }>
+					<InputControl
 						label={ __( 'Title', 'wp-admin-shell' ) }
 						value={ title }
-						onChange={ setTitle }
-						__nextHasNoMarginBottom
+						onChange={ ( e ) => setTitle( eventValue( e ) ) }
 					/>
 					{ item.media_type === 'image' && (
-						<TextControl
+						<InputControl
 							label={ __( 'Alt Text', 'wp-admin-shell' ) }
 							value={ altText }
-							onChange={ setAltText }
-							__nextHasNoMarginBottom
+							onChange={ ( e ) => setAltText( eventValue( e ) ) }
 						/>
 					) }
 					<TextareaControl
@@ -313,23 +366,31 @@ function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
 						onChange={ setDescription }
 						__nextHasNoMarginBottom
 					/>
-					<Text variant="muted" size={ 12 }>
+					<Text
+						variant="body-sm"
+						className="wp-admin-shell-app-media__muted"
+					>
 						{ item.source_url }
 					</Text>
-				</VStack>
-			</HStack>
+				</Stack>
+			</Stack>
 
-			<HStack justify="space-between" style={ { marginTop: '16px' } }>
-				<HStack spacing={ 2 } expanded={ false }>
+			<Stack
+				direction="row"
+				justify="space-between"
+				style={ { marginTop: '16px' } }
+			>
+				<Stack direction="row" gap="sm">
 					<Button
 						icon={ copy }
-						variant="tertiary"
+						tone="neutral"
+						variant="minimal"
 						onClick={ () => onCopyUrl( item.source_url ) }
 						size="compact"
 					>
 						{ __( 'Copy URL', 'wp-admin-shell' ) }
 					</Button>
-					<Button
+					<DestructiveButton
 						icon={ trash }
 						variant="tertiary"
 						isDestructive
@@ -337,22 +398,27 @@ function MediaDetailModal( { item, onClose, onDelete, onCopyUrl, onSave } ) {
 						size="compact"
 					>
 						{ __( 'Delete', 'wp-admin-shell' ) }
-					</Button>
-				</HStack>
-				<HStack spacing={ 2 } expanded={ false }>
-					<Button variant="tertiary" onClick={ onClose }>
+					</DestructiveButton>
+				</Stack>
+				<Stack direction="row" gap="sm">
+					<Button
+						tone="neutral"
+						variant="minimal"
+						onClick={ onClose }
+					>
 						{ __( 'Cancel', 'wp-admin-shell' ) }
 					</Button>
 					<Button
-						variant="primary"
+						tone="brand"
+						variant="solid"
 						onClick={ handleSave }
-						isBusy={ isSaving }
+						loading={ isSaving }
 						disabled={ isSaving }
 					>
 						{ __( 'Save', 'wp-admin-shell' ) }
 					</Button>
-				</HStack>
-			</HStack>
+				</Stack>
+			</Stack>
 		</Modal>
 	);
 }

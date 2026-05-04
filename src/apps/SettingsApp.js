@@ -2,15 +2,15 @@ import { useState, useMemo } from '@wordpress/element';
 import {
 	__experimentalItemGroup as ItemGroup,
 	__experimentalItem as Item,
-	__experimentalHStack as HStack,
 } from '@wordpress/components';
+import { Stack } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { useSlotItems } from '../runtime/slots/dataSlots';
 
 import SettingsGeneralApp from './SettingsGeneralApp';
-import SettingsWritingApp from './settings-panels/SettingsWritingApp';
-import SettingsReadingApp from './settings-panels/SettingsReadingApp';
-import SettingsDiscussionApp from './settings-panels/SettingsDiscussionApp';
+import SettingsWritingApp from './SettingsWritingApp';
+import SettingsReadingApp from './SettingsReadingApp';
+import SettingsDiscussionApp from './SettingsDiscussionApp';
 import IframeApp from './IframeApp';
 
 /**
@@ -156,7 +156,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 
 	return (
 		<div className="wp-admin-shell-app-settings">
-			<HStack alignment="flex-start" spacing={ 0 } style={ { height: '100%' } }>
+			<Stack direction="row" align="flex-start" gap="xs" style={ { height: '100%' } }>
 				<aside className="wp-admin-shell-app-settings__nav">
 					<ItemGroup isBordered={ false } isSeparated={ false }>
 						{ panels.map( ( panel ) => (
@@ -178,7 +178,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 						<IframeApp app={ { source: `iframe:${ iframeUrl }` } } config={ {} } />
 					) : null }
 				</section>
-			</HStack>
+			</Stack>
 		</div>
 	);
 }
