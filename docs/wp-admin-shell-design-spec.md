@@ -866,7 +866,7 @@ App-internal extensibility (`PluginSidebar`, `InspectorControls`, `BlockControls
 
 ## 14. Compatibility and migration
 
-**WordPress version floor.** WordPress 6.7+ for MVP. v1 requires 6.8+ for stable Block Bindings and speculative loading filters. v2 may require 6.9+ if `core:dashboard` adopts `core/post-data` bindings.
+**WordPress version floor.** WordPress 6.7+ for MVP. v1 requires 6.5+ for stable Block Bindings and `Requires Plugins:` plugin headers (both stabilized 6.5); 6.8+ recommended for speculative loading filters. v2 may require 6.9+ if `core:dashboard` adopts `core/post-data` or `core/term-data` bindings (both stabilized 6.9).
 
 **Browser support.** Evergreen. ES2020+, dynamic imports, CSS custom properties, CSS logical properties. Matches `@wordpress/scripts` defaults.
 

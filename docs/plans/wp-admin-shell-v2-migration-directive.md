@@ -98,13 +98,13 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
 
 **Tasks:**
 
-1. Drop the three v2 schemas into `docs/schemas/` (`admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json`). Wire up `npm run test:schema` to validate fixtures against them in addition to the current v1 schema. Keep the v1 schema valid for now — the existing bundled shells haven't migrated yet.
+1. Drop the three v2 schemas into `docs/schemas/` (`admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json`). Wire up `npm run test:schema` to validate fixtures against them in addition to the current legacy schema. Keep `docs/schemas/admin-v1.json` valid for now — the existing bundled shells haven't migrated yet. Its `$id` was rewritten to `/admin/v0.json` so both schemas can coexist in one Ajv instance without collision; bundled-shell `$schema` references stay pointing at `docs/schemas/admin-v1.json` (relative file path, not the `$id`).
 
 2. Add manifest registration APIs:
    - PHP: `wp_admin_shell_register_app( $manifest_array_or_path )`, `wp_admin_shell_register_engine( ... )`, alongside existing shell registration.
    - JS: equivalent functions in the runtime — but the primary registration is server-side discovery (manifest convention path scan).
 
-3. Convention path discovery: scan plugin directories for `apps/*/app.json` and `engines/*/engine.json`. Auto-register what's found.
+3. Convention path discovery: scan plugin directories for `apps/*/app.json` and `engines/*/engine.json`. Auto-register what's found. Manifest reads happen PHP-side at request time (matches the cascade resolver pattern); JS receives the validated, expanded manifest tree via the same `wp_add_inline_script` + `wp_json_encode` channel that already serves the resolved admin.json. No webpack copy step needed — manifests are not assets shipped to the browser, they are server-resolved data.
 
 4. Manifest validation at registration time: validate each manifest against its schema. Reject invalid manifests with clear error messages. Cache validation results by `(manifestPath, mtime)`.
 
@@ -181,6 +181,7 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
    - System apps: `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`
    - Each manifest declares `id`, `version: 1`, `title`, `role`, `platform` (services the app actually needs), `capabilities`, `config-schema` (move from `builtins.js`), `script`, `style`.
    - Place at `src/runtime/apps/{name}/app.json` for system apps and `src/apps/{name}/app.json` for user apps. Reorganize as needed — apps may need their own folders now.
+   - Apps that mount `@wordpress/core-data`-backed editors (`core:editor`, `core:simple-editor`, `core:posts`, `core:profile`, etc.) should declare REST routes the runtime feeds to the `block_editor_rest_api_preload_paths` filter on the shell page render. Cuts cold-mount fetches that currently arrive after first paint. Wire via a `preload-rest-routes: [...]` field on the manifest's `platform` block (engine-honored).
 
 5. **Add `dirty-state` and `block-navigation-on-dirty`** as platform services in the engine. The current EditorApp and SimpleEditorApp implement their own beforeunload-style guards; lift these to the platform-service mechanism. The engine intercepts navigation, queries the mounted app's dirty state via a runtime API, and shows confirm dialog if requested.
 
@@ -200,11 +201,11 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
 
 1. **Build `core:single-pane-layout` engine.** Smaller than floating-windows; validates the engine abstraction against a deliberately different layout idiom. Apps that work in `core:wp-default-layout` should work here without modification. Specializes for `main`, `dialog`, `navigation` (collapses sidebar to hamburger), `complementary` (collapses to overlay drawer). Honors most platform services. Default arrangement: `single-pane`. Demo-quality acceptable; not every WPDS chrome surface needs to look polished.
 
-2. **Build the DTCG `tokens.json` resolver.** Discovery (site root > theme root > plugin root > core baseline), DTCG curly-brace alias resolution with cycle detection, type coercion table for the 13 DTCG types → CSS string formats, integration with the existing token compiler. Add `tokens.json` schema (defer to W3C DTCG schema by reference; don't write our own). Update the worked example in the spec to be runnable.
+2. **Build the DTCG `tokens.json` resolver.** Discovery (site root > theme root > plugin root > core baseline), DTCG curly-brace alias resolution with cycle detection, type coercion table for the 13 DTCG types → CSS string formats, integration with the existing token compiler. Add `tokens.json` schema (defer to W3C DTCG schema by reference; don't write our own). DTCG is a W3C Community Group editor's draft (latest 2025-10), not a stable Recommendation — if the upstream URL drifts during beta, vendor a snapshot at `docs/schemas/tokens-v1.json` and reference locally. Update the worked example in the spec to be runnable.
 
 3. **Coordinate a `tokens.json` proposal with WordPress core.** This is a longer thread — the spec calls out that `theme.json` v3 may want to adopt the same model and a divergent path forks the ecosystem. Open the conversation with core; don't block v2 ship on the outcome.
 
-4. **JSON Schema hosting.** The three v2 schemas need real URLs at `schemas.wp.org/admin/v2.json` etc. (or wherever the team can host them). For the beta cycle, host from the plugin repo (`https://raw.githubusercontent.com/.../docs/schemas/admin-v2.json`) and reference via `$schema` for IDE validation. Fix once the canonical hosting lands.
+4. **JSON Schema hosting.** The three v2 schemas declare canonical `$id` values at `https://schemas.wp.org/admin/v1.json`, `/admin-app/v1.json`, `/admin-engine/v1.json` (matching spec §4.1, §4.2, §4.3 — the new schemas *are* v1 of the published manifest model; v2 is the local working filename only). The legacy beta-shipped schema at `docs/schemas/admin-v1.json` had its `$id` rewritten to `/admin/v0.json` in V2.M1 to free the `/v1.json` slot and avoid Ajv `$id` collision when both are registered. For the beta cycle, host from the plugin repo (`https://raw.githubusercontent.com/.../docs/schemas/admin-v2.json`) and reference via `$schema` for IDE validation. Fix once the canonical hosting lands.
 
 5. **Migration tooling.** `wp admin-shell upgrade-config <name>` should now upgrade v0 or v1 (current shipping) configs to v2 form. Read existing `wp_admin_shell_active_shell` option, normalize, write back.
 

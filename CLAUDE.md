@@ -251,7 +251,7 @@ Example: `{ "id": "pages", "source": "core:posts", "config": { "postType": "page
 
 ## Shell switching
 
-The active shell config is stored in `wp_admin_shell_active_config` option (registered with `show_in_rest`). Switchable via:
+The active shell config is stored in `wp_admin_shell_active_shell` option (registered with `show_in_rest`). The MVP wrote `wp_admin_shell_active_config`; the resolver reads the new key first and falls back to the legacy key. Switchable via:
 - Settings page (`wp-admin/admin.php?page=wp-admin-shell-settings`)
 - Toolbar dropdown (saves via `POST /wp/v2/settings`, then reloads)
 
