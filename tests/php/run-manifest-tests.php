@@ -209,6 +209,38 @@ rmdir( "$tmp/apps" );
 rmdir( "$tmp/engines" );
 rmdir( $tmp );
 
+echo "\n— Boot-time registration: shell-bundled core engine —\n";
+WP_Admin_Shell_Manifest_Registry::reset();
+$registry = WP_Admin_Shell_Manifest_Registry::instance();
+$registry->register_engine(
+	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-site-editor-layout/engine.json'
+);
+$engine = $registry->get_engine( 'core:site-editor-layout' );
+WPAS_Manifest_Test_Runner::assert_true(
+	'core:site-editor-layout engine.json registers',
+	null !== $engine
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'core:site-editor-layout has 5 templates',
+	count( $engine['templates'] ?? array() ),
+	5
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'core:sidebar template ships',
+	isset( $engine['templates']['core:sidebar'] )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'core:topbar template ships with start/center/end children',
+	isset( $engine['templates']['core:topbar']['regions']['start'] )
+		&& isset( $engine['templates']['core:topbar']['regions']['center'] )
+		&& isset( $engine['templates']['core:topbar']['regions']['end'] )
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'default-arrangement is wp-chrome',
+	$engine['default-arrangement'],
+	'wp-chrome'
+);
+
 echo "\n— Resolver: app + engine + template references —\n";
 WP_Admin_Shell_Manifest_Registry::reset();
 $registry = WP_Admin_Shell_Manifest_Registry::instance();

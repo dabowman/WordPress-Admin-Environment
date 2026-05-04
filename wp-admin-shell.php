@@ -108,16 +108,33 @@ function wp_admin_shell_register_engine( $manifest_or_path ) {
 }
 
 /**
- * Convention-path discovery — scan this plugin's own apps/ + engines/
- * directories on init. Plugin-contributed manifests are picked up by
- * extending this scan to each plugin's root via the
- * `wp_admin_shell_manifest_discovery_paths` filter.
+ * Manifest registration on init.
  *
- * Runs at priority 8 (before main shell init at 10) so manifests are
- * available when the kernel's inline-script handoff is composed.
+ * Two phases at priority 8 (before main shell init at 10) so manifests
+ * are available when the kernel's inline-script handoff is composed:
+ *
+ *  1. Shell-bundled core manifests — registered explicitly. These live
+ *     under `src/runtime/{apps,engines}/<name>/{app,engine}.json`,
+ *     co-located with their JS source rather than at the convention
+ *     plugin-root path. They're framework defaults, not pluggable.
+ *
+ *  2. Plugin-contributed manifests — auto-discovered at the convention
+ *     path `<plugin>/apps/<name>/app.json` and
+ *     `<plugin>/engines/<name>/engine.json`. Plugins can also extend
+ *     discovery by adding paths via the
+ *     `wp_admin_shell_manifest_discovery_paths` filter (useful for
+ *     plugins that ship manifests at a non-standard location).
  */
 add_action( 'init', function () {
 	$registry = WP_Admin_Shell_Manifest_Registry::instance();
+
+	// 1. Shell-bundled core engine.
+	$registry->register_engine(
+		WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-site-editor-layout/engine.json'
+	);
+
+	// 2. Convention-path discovery for the shell plugin itself + plugins
+	// extending the discovery surface.
 	$registry->discover( WP_ADMIN_SHELL_PATH );
 
 	$additional = apply_filters( 'wp_admin_shell_manifest_discovery_paths', array() );
