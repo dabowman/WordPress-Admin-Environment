@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../../../docs/schemas/admin-v2.json",
+  "version": 1,
+  "$wpds": "6.9",
+  "name": "minimal-v2",
+  "engine": "core:wp-default-layout",
+  "regions": {
+    "main": {
+      "template": "core:main",
+      "routing": { "route-key": "_self" }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "core:no-templates",
+  "version": 1,
+  "title": "No Templates Engine",
+  "specializes-roles": [ "main" ],
+  "honored-platform": [],
+  "default-arrangement": "single-pane",
+  "script": "core-no-templates"
+}

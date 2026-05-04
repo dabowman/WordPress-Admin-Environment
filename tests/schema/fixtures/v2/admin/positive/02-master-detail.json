@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../../../../docs/schemas/admin-v2.json",
+  "version": 1,
+  "$wpds": "6.9",
+  "name": "developer-admin-v2",
+  "title": "Developer Admin",
+  "engine": "core:wp-default-layout",
+  "regions": {
+    "sidebar": {
+      "template": "core:sidebar",
+      "app": "core:navigation"
+    },
+    "topbar": {
+      "template": "core:topbar"
+    },
+    "main": {
+      "template": "core:main",
+      "routing": { "route-key": "_self" }
+    },
+    "detail": {
+      "template": "core:detail",
+      "routing": { "route-key": "detail" }
+    }
+  },
+  "routes": {
+    "/posts":      { "app": "core:posts", "config": { "post-type": "post" } },
+    "/posts/{id}": { "app": "core:editor", "config": { "post-type": "post", "post-id": "{id}" } },
+    "/media":      { "app": "core:media" }
+  },
+  "default-route": "/posts",
+  "bindings": [
+    { "shortcut": "Mod+K", "invoke": "core:command-palette" }
+  ]
+}

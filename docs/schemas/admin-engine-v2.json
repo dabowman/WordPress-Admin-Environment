@@ -12,8 +12,8 @@
 
     "$schema": {
       "type": "string",
-      "format": "uri",
-      "description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine/v1.json`."
+      "format": "uri-reference",
+      "description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine/v1.json`. Relative paths are accepted (e.g., `../docs/schemas/admin-engine-v2.json` for in-repo authoring), matching the block.json convention."
     },
 
     "id": {

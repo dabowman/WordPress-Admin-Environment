@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "$wpds": "6.9",
+  "name": "broken-app-and-route-key",
+  "engine": "core:wp-default-layout",
+  "regions": {
+    "main": {
+      "template": "core:main",
+      "app": "core:posts",
+      "routing": { "route-key": "_self" }
+    }
+  }
+}

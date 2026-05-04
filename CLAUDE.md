@@ -102,7 +102,7 @@ npm run start    # dev build with watch
 
 ```bash
 # Node — schema + WPDS parity
-npm run test:schema      # 11 — Ajv against admin-v1.json (bundled shells + fixtures)
+npm run test:schema      # 26 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells + positive/negative fixtures)
 npm run test:parity      # 4  — WPDS slot-list drift detector
 
 # PHP — wp-env CLI container
