@@ -209,6 +209,141 @@ rmdir( "$tmp/apps" );
 rmdir( "$tmp/engines" );
 rmdir( $tmp );
 
+echo "\n— Resolver: app + engine + template references —\n";
+WP_Admin_Shell_Manifest_Registry::reset();
+$registry = WP_Admin_Shell_Manifest_Registry::instance();
+$registry->register_app( "$dir/apps/valid/01-minimal/app.json" );
+$registry->register_engine( "$dir/engines/valid/01-minimal/engine.json" );
+
+$resolver = new WP_Admin_Shell_Manifest_Resolver( $registry );
+
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_app() returns manifest for registered id',
+	$resolver->resolve_app( 'core:test-minimal-app' )['id'] ?? null,
+	'core:test-minimal-app'
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_app() returns null for unregistered id',
+	$resolver->resolve_app( 'core:not-registered' ),
+	null
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_engine() returns manifest for registered id',
+	$resolver->resolve_engine( 'core:test-minimal-engine' )['id'] ?? null,
+	'core:test-minimal-engine'
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_template() returns template definition',
+	$resolver->resolve_template( 'core:test-minimal-engine', 'core:main' )['role'] ?? null,
+	'main'
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_template() returns null for missing template',
+	$resolver->resolve_template( 'core:test-minimal-engine', 'core:nonexistent' ),
+	null
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_template() returns null when engine missing',
+	$resolver->resolve_template( 'core:no-engine', 'core:main' ),
+	null
+);
+
+echo "\n— Resolver: role resolution through template inheritance —\n";
+
+// 1. Explicit role on the region wins.
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_role() prefers region.role',
+	$resolver->resolve_role( array( 'role' => 'navigation' ), 'core:test-minimal-engine' ),
+	'navigation'
+);
+
+// 2. Template's role is inherited when region.role absent.
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_role() inherits from template when region.role absent',
+	$resolver->resolve_role(
+		array( 'template' => 'core:main' ),
+		'core:test-minimal-engine'
+	),
+	'main'
+);
+
+// 3. Nested child inherits from parent template's same-named child.
+$parent_template = array(
+	'role'    => 'banner',
+	'regions' => array(
+		'start' => array( 'role' => 'region' ),
+	),
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_role() inherits from parent-template child when region declared bare',
+	$resolver->resolve_role( array(), 'core:test-minimal-engine', $parent_template, 'start' ),
+	'region'
+);
+
+// 4. Unresolvable region returns null.
+WPAS_Manifest_Test_Runner::assert_eq(
+	'resolve_role() returns null when nothing resolves',
+	$resolver->resolve_role( array(), 'core:no-engine' ),
+	null
+);
+
+echo "\n— Resolver: route-key shape validation —\n";
+WPAS_Manifest_Test_Runner::assert_true( '_self is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '_self' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'detail is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'kebab-case is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'inspector-pane' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'CamelCase is invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'Detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'leading digit is invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '1detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( '_blank is invalid (no longer a routing concept)', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '_blank' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'empty string invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'non-string invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 42 ) );
+
+echo "\n— Resolver: route pattern matching —\n";
+$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{id}', '/posts/42' );
+WPAS_Manifest_Test_Runner::assert_eq( 'match_route captures id', $matched, array( 'id' => '42' ) );
+
+$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/new', '/posts/new' );
+WPAS_Manifest_Test_Runner::assert_eq( 'static segment matches exactly', $matched, array() );
+
+$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{id}', '/pages/42' );
+WPAS_Manifest_Test_Runner::assert_eq( 'mismatched static segment fails', $matched, null );
+
+$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{type}/{id}', '/posts/page/7' );
+WPAS_Manifest_Test_Runner::assert_eq( 'multi-param capture', $matched, array( 'type' => 'page', 'id' => '7' ) );
+
+$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/media/*', '/media/2025/05/foo.jpg' );
+WPAS_Manifest_Test_Runner::assert_eq( 'wildcard captures rest', $matched, array( '*' => '2025/05/foo.jpg' ) );
+
+WPAS_Manifest_Test_Runner::assert_true(
+	'is_valid_route_pattern accepts /posts',
+	WP_Admin_Shell_Manifest_Resolver::is_valid_route_pattern( '/posts' )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'is_valid_route_pattern rejects no-leading-slash',
+	! WP_Admin_Shell_Manifest_Resolver::is_valid_route_pattern( 'posts' )
+);
+
+echo "\n— Resolver: default-route matching —\n";
+$routes = array(
+	'/posts'      => array( 'app' => 'core:posts' ),
+	'/posts/{id}' => array( 'app' => 'core:editor' ),
+	'/media'      => array( 'app' => 'core:media' ),
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'default-route matches static pattern',
+	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/posts', $routes ),
+	'/posts'
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'default-route matches parameter pattern (most-specific not enforced — first match wins per source order)',
+	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/posts/42', $routes ),
+	'/posts/{id}'
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'default-route returns null for unknown path',
+	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/nonexistent', $routes ),
+	null
+);
+
 echo "\n— Summary —\n";
 echo 'PASS: ' . WPAS_Manifest_Test_Runner::$pass . '  FAIL: ' . WPAS_Manifest_Test_Runner::$fail . "\n";
 

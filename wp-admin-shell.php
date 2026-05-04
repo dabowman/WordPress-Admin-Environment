@@ -86,6 +86,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
 
 /**
  * V2.M1 — Public manifest registration API.
@@ -211,6 +212,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 
 	$current_user = wp_get_current_user();
 
+	$manifest_registry = WP_Admin_Shell_Manifest_Registry::instance();
+
 	wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
 		'config'        => $config,
 		'siteUrl'       => get_site_url(),
@@ -231,6 +234,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 			? wp_admin_shell_get_settings_general_data()
 			: null,
 		'capabilities'  => wp_admin_shell_resolve_capabilities( $config ),
+		// V2.M1 — manifest payload. Empty until plugins ship app.json /
+		// engine.json files; the kernel reads from this map alongside
+		// the imperative registry during the v1→v2 transition.
+		'manifests'     => array(
+			'apps'    => $manifest_registry->list_apps(),
+			'engines' => $manifest_registry->list_engines(),
+		),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
