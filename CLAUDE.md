@@ -32,18 +32,20 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 11. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source. Cross-version.
 12. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Per directive §2 #4: do **not** fix items proactively during the migration — clean migration first, triage on v2 baseline second.
 13. Consult `docs/screens/` — per-screen functional specs (42 files). Tier-2 functional specs covering every wp-admin screen. Source of truth when (re)building any `core:*` app or evaluating REST coverage.
+14. Read `docs/research/app-validation-2026-05-04.md` — WPDS / REST / core-data compliance audit of every `src/apps/*` and `src/runtime/apps/*` (validated 2026-05-04, remediation merged at `a29a32e`). Captures the destructive-button fallback pattern, DataViews `/wp` import path, and known WPDS 0.12.0 gaps (no `tone="critical"`, no `variant="ghost"`, no `Text weight/size/color`, no SnackbarList port).
 
 ## Key rules
 
-- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles with no extra config. Fall back to `@wordpress/components` for primitives `@wordpress/ui` doesn't ship yet: `RadioControl`, `CheckboxControl`, `SelectControl` (also needed for native `<optgroup>` support), `Spinner`, `Divider` as of `0.12.0`. No custom component libraries.
+- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles with no extra config. Fall back to `@wordpress/components` as of `0.12.0` for: `RadioControl`, `CheckboxControl`, `SelectControl` (also needed for native `<optgroup>` support), `Spinner`, `Divider` (`__experimentalDivider`), `TextareaControl`, `Modal`, `Item`/`ItemGroup`, `__experimentalGrid`, `FormToggle`, `KeyboardShortcuts`, and `Button as DestructiveButton` w/ `isDestructive` (no critical tone in WPDS 0.12). No custom component libraries.
 - **Gutenberg plugin is a hard runtime dependency.** Any `@wordpress/ui` overlay component (`Notice`, `Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `IconButton`, form `Select`/`Autocomplete`) transitively imports `@wordpress/theme`, which calls `__dangerousOptInToUnstableAPIsOnlyForCoreModules` against `wp.privateApis`. WP 6.9 core's allowlist excludes `@wordpress/theme`/`@wordpress/ui`/`@wordpress/dataviews`; the Gutenberg plugin overrides `wp-private-apis` with one that includes them. Without Gutenberg, those modules throw at load and the shell renders empty. Local dev: `gutenberg` is in `.wp-env.json`'s `plugins` array. Production: declare a `Requires Plugins: gutenberg` header (or detect-and-conditionally-render) before shipping.
-- Component-mapping cheat sheet (use `@wordpress/ui` left side when available):
-  - `Button` (`tone`, `variant`, `size`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `isBusy` → `loading`).
-  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — onChange takes a DOM event, not the raw value.
-  - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`) replaces `__experimentalVStack` / `__experimentalHStack`.
-  - `Text` (`variant="heading-xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`.
-  - `Notice.Root` (`intent="info|warning|success|error|neutral"`) + `Notice.Description` + `Notice.Actions` + `Notice.CloseIcon` replaces `Notice`.
-  - Other namespaced replacements when needed: `Card.*`, `Dialog.*`, `Drawer.*`, `Tabs.*`, `Tooltip.*`, `Popover.*`, `EmptyState.*`, `Collapsible.*`.
+- Component-mapping cheat sheet (use `@wordpress/ui` left side when available; verified against `@wordpress/ui` 0.12.0 source):
+  - `Button` (`tone="brand|neutral"`, `variant="solid|outline|minimal|unstyled"`, `size="default|compact|small"`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `variant="secondary"` → `tone="neutral" variant="solid"`; `variant="tertiary"` → `tone="neutral" variant="outline"`; `variant="link"` → `variant="minimal"`; `isBusy` → `loading`). **No `tone="critical"` and no `variant="ghost"` in 0.12** — for destructive actions keep legacy `Button as DestructiveButton` w/ `isDestructive`. **No `icon`/`label`/`showTooltip` props** — render `<Icon/>` as a child + `aria-label`, or use `IconButton` (has `tooltip`/`shortcut`).
+  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — onChange takes a DOM event, not the raw value (`e.target.value`).
+  - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`, `wrap` — CSS string `"wrap"`, not boolean) replaces `__experimentalVStack` / `__experimentalHStack`. `spacing={N}` legacy prop maps to `gap` token names; `flex` style props map to `align`/`justify` (CSS values, not legacy `alignment`).
+  - `Text` (`variant="heading-2xl|xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`. **No `weight`/`size`/`color` props** — use `<strong>` child or className for emphasis/muted.
+  - `Notice.Root` (`intent="info|warning|success|error|neutral"`) + `Notice.Description` + `Notice.Actions` + `Notice.CloseIcon` replaces `Notice`. No `NoticeList` aggregator — render `notices.map(<Notice.Root/>)`. `SnackbarList` has no WPDS port; keep legacy.
+  - `Badge` w/ `intent="success|warning|error|neutral"` replaces hand-rolled status pills.
+  - Other namespaced replacements when needed: `Card.*` (Root/Header/Title/Content), `Dialog.*`, `Drawer.*`, `Tabs.*`, `Tooltip.*`, `Popover.*`, `EmptyState.*`, `Collapsible.*`. `Modal` from `@wordpress/components` has no clean Dialog port for complex modals — keep legacy where migration would be risky.
 - All data fetching uses `@wordpress/core-data` (`useEntityRecords`, `useEntityRecord`). No raw `fetch()`.
 - Exception: `@wordpress/api-fetch` is used for non-entity operations (media upload, auto-draft creation).
 - Always pass `context: 'edit'` on entity queries that need raw field values. Without it, `view` context is used and `title`/`content`/`excerpt` return only `rendered`, not `raw` — edits silently break.
@@ -66,9 +68,25 @@ These three patterns drive most of the bugs caught in code review. Codified here
   ```
   `useEntityRecords` (plural) returns `{ records: null }` similarly — always check before iterating.
 
-- **Refresh state after mutations.** When you `deleteEntityRecord` / `saveEntityRecord` outside `useEntityRecord`'s built-in `save()`, the local `useEntityRecords` cache may not invalidate. Use `useDispatch( coreStore ).invalidateResolution()` or rely on `core-data`'s entity store to propagate. If you're maintaining shadow state (`useState` mirroring an entity field), reset it whenever the entity record updates.
+- **Refresh state after mutations.** When you `deleteEntityRecord` / `saveEntityRecord` outside `useEntityRecord`'s built-in `save()`, the local `useEntityRecords` cache may not invalidate. Pattern:
+  ```jsx
+  import { useDispatch } from '@wordpress/data';
+  import { store as coreStore } from '@wordpress/core-data';
+  const { invalidateResolution } = useDispatch( coreStore );
+  // After delete/save:
+  invalidateResolution( 'getEntityRecords', [ 'root', 'media', queryArgs ] );
+  ```
+  If you're maintaining shadow state (`useState` mirroring an entity field), reset it whenever the entity record updates. For modals that mutate one-of-many records, also pass `key={item.id}` so per-item state resets between openings.
 
 - **Icon names go through `iconMap`.** Strings like `"post"`, `"page"`, `"comment"` resolve via `src/runtime/config/iconMap.js`. `resolveIcon` falls back to the `wordpress` icon and emits a dev-mode console warning on misses (M5 #14). When adding a new icon name, add the mapping to `iconMap.js` first; the warn-on-miss surfaces typos in browser console without a dedicated lint pass.
+
+- **DataViews import path.** Use `import { DataViews } from '@wordpress/dataviews/wp';` — NOT bare `'@wordpress/dataviews'`. The bare path risks `Minified React error #130` in plugin contexts. Affected: PostsApp, TaxonomyApp, UsersApp, CommentsApp, PluginsApp.
+
+- **Site title source-of-truth.** Read site title via `useEntityRecord('root','site').record.title` (with `decodeEntities` from `@wordpress/html-entities`). Fall back to `window.wpAdminShell?.siteName` only as last resort.
+
+- **Self-delete guard on bulk user delete.** Filter out the acting user (`window.wpAdminShell?.userId`) before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight.
+
+- **DataViews uses `@wordpress/dataviews/wp` plus a CSS copy.** Webpack copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`; PHP enqueues `dataviews.css` separately. The `/wp` subpath is the runtime-private export that registers DataViews against `wp.privateApis` correctly.
 
 ## Build
 
@@ -186,11 +204,12 @@ wp-admin-shell/
 │   │       ├── SiteEditorApp.js      # core:site-editor iframe adapter (v2 native mount)
 │   │       └── _components/          # Sidebar* + SiteIcon presentational helpers
 │   └── apps/                # User-facing apps (registered via builtins.js)
-│       ├── PostsApp.js / SimpleEditorApp.js / EditorApp.js / MediaApp.js
-│       ├── ProfileApp.js / SettingsGeneralApp.js / IframeApp.js
+│       ├── PostsApp.js / SimpleEditorApp.js / EditorApp.js / MediaApp.js / TaxonomyApp.js
+│       ├── ProfileApp.js / IframeApp.js
 │       ├── UsersApp.js / CommentsApp.js
-│       ├── SettingsApp.js               # core:settings composable host
-│       └── settings-panels/             # writing / reading / discussion native panels
+│       ├── DashboardApp.js / PluginsApp.js / ThemesApp.js / ToolsApp.js / SiteHealthApp.js
+│       ├── SettingsApp.js                  # core:settings composable host
+│       └── SettingsGeneralApp.js / SettingsWritingApp.js / SettingsReadingApp.js / SettingsDiscussionApp.js
 ├── tests/
 │   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
 │   └── parity/              # node: WPDS slot-drift detector (4)
@@ -207,11 +226,17 @@ wp-admin-shell/
 | `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
 | `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. v2 native mount. |
 | `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
+| `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
-| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign |
+| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard |
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord |
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
+| `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
+| `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST |
+| `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
+| `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
+| `core:site-health` | SiteHealthApp | ✅ | — | `/wp-site-health/v1/tests/{id}` runner |
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter; v2 native mount |
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `userCustomizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
