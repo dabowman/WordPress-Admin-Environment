@@ -1,0 +1,355 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.wp.org/admin/v1.json",
+  "title": "WP Admin Shell — admin.json (v1)",
+  "description": "Declares install-specific decisions for a WP Admin Shell shell: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every entry should be a decision a site author plausibly makes — anything intrinsic to apps or engines belongs in their respective manifests, not here. Multiple admin.json files can coexist on a site (one per shell); selection of the active shell is per-site, per-role, or per-user via the cascade. See WP Admin Shell Design Spec §4.3.",
+
+  "type": "object",
+  "required": [ "version", "$wpds", "name", "engine", "regions" ],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin/v1.json`. Optional but strongly recommended — IDE tooling uses it for live validation."
+    },
+
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "admin.json schema version this document targets. v1 is the current shape. The runtime accepts higher versions with a warning and best-effort load. Earlier versions (v0 — the MVP flat shape with `branding`/`applications`/`navigation`/`toolbar` at root) are accepted and normalized to v1 internally."
+    },
+
+    "$wpds": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
+      "description": "Pinned WPDS slot matrix version, expressed as a WordPress release version (`6.9`, `7.0`, `7.1.2`). The resolver loads `wpds-defaults-{$wpds}.json` as the implicit `core` baseline so missing author values cannot break the runtime, and validates the `styles` tree against the WPDS slot list at this version. Bumping `$wpds` adopts new slots that may have appeared in later WordPress releases. CI parity tests in the shell plugin guard against drift between this pin and the underlying WordPress version. Required because the WPDS surface is the shell's contract with apps and engines; an unpinned `styles` tree cannot be validated."
+    },
+
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique kebab-case identifier for this shell on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-shell activate <name>`), and the URL when a shell-switcher exists. Must be unique within the install — registering a second shell with the same name fails. Examples: `developer-admin`, `content-author`, `client-portal`, `acme-corp`."
+    },
+
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable label for this shell. Shown in the shell-switcher UI (when enabled), admin-page metadata, plugin install screens. Translatable. Optional in v0; required-by-convention in v1 — schemas don't enforce it because absence falls back to `name`, but authors should provide it."
+    },
+
+    "description": {
+      "type": "string",
+      "description": "Optional human-readable description of what this shell is for. Translatable."
+    },
+
+    "user-switchable": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, individual users may select this shell as their personal default via the user prefs UI (overriding the site or role default). When false (default), only site admins and role configuration can select this shell. v1 builds the architecture but does not surface the user-prefs switcher UI; v2 ships the UI. Setting this true now is forward-compatible — the cascade respects user-origin shell selection regardless of UI availability."
+    },
+
+    "engine": {
+      "type": "string",
+      "pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+      "description": "Identifier of the engine that renders this shell. References an `id` from a registered engine manifest. The engine determines spatial arrangement, region-template catalog, and which platform services are honored. Switching engines requires editing this field (and probably reworking `regions` to use the new engine's templates) and reloads the shell — engines are not live-switchable. Common values: `core:wp-default-layout` (default), `core:floating-layout`, `core:single-pane-layout`."
+    },
+
+    "regions": {
+      "type": "object",
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/region" }
+      },
+      "additionalProperties": false,
+      "description": "The shell's region tree. Each entry is a region keyed by id (kebab-case slug, unique within this admin.json). Regions reference engine-shipped templates via `template`, declare from-scratch via the full vocabulary (role/layout/platform), or both (template-with-overrides). Each region holds either a fixed app (`app` field) or accepts routed apps (`routing.accepts-target`). Regions can declare nested child regions. See spec §5."
+    },
+
+    "routes": {
+      "type": "object",
+      "patternProperties": {
+        "^/[A-Za-z0-9_/{}\\-*]*$": { "$ref": "#/$defs/route" }
+      },
+      "additionalProperties": false,
+      "description": "URL pattern → app + target + config map. Patterns use leading-slash form (`/posts`, `/posts/{id}`, `/media/*`). Parameter segments use `{name}` curly braces and capture into the route's config via interpolation. Wildcard suffixes `/*` capture the remaining path. Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}`. The matched route's `target` selects which routable region (a region with `routing.accepts-target` matching) receives the mounted app. Distinct from the per-region `routing` field — see §5.4 vs §6.2."
+    },
+
+    "default-route": {
+      "type": "string",
+      "pattern": "^/[A-Za-z0-9_/{}\\-]*$",
+      "description": "Where the shell lands when no URL hash is present. Must match a pattern in `routes` (the runtime warns at validation time if not, though it doesn't reject — the user can still navigate). On capability denial of the default route, the shell falls through to the first permitted route in `routes`. Examples: `/posts`, `/dashboard`."
+    },
+
+    "bindings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/binding" },
+      "description": "Keyboard shortcut → app invocation map. Each entry binds a keystroke to an app id; the app's manifest must declare `platform.triggerable: true`. When the shortcut fires, the engine ensures the app's region is mounted (mounting it if ephemeral) and applies the app's platform requests. Conflict resolution: later entries override earlier ones (cascade-aware: user > role > site > plugin > core). Apps with internal shortcuts matching a binding win when focused; the binding wins otherwise. See spec §8."
+    },
+
+    "styles": {
+      "$ref": "#/$defs/styles",
+      "description": "WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-shell--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
+    }
+  },
+
+  "$defs": {
+
+    "namespacedId": {
+      "type": "string",
+      "pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+      "description": "A namespaced identifier referencing an app, engine, or region template. Format: `core:{name}` (shell-shipped) or `plugin:{slug}/{name}` (plugin-contributed)."
+    },
+
+    "ariaRole": {
+      "type": "string",
+      "pattern": "^[a-z][a-z]+$",
+      "description": "A WAI-ARIA 1.2 role name. See app manifest schema for the full description."
+    },
+
+    "wpCapability": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z_][a-z0-9_]*$",
+      "description": "A WordPress capability name."
+    },
+
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A region in the shell's region tree. Holds either a fixed app or accepts routed apps; never both. Can be instantiated from an engine-shipped template, declared from scratch, or appear as a nested child whose parent supplies template context. The schema does not enforce that every region has a resolvable `role` — that check is runtime-only, because the role may be inherited from the parent's template or from a template-shipped child of matching name, neither of which JSON Schema can reach across documents to validate. The runtime rejects regions whose role cannot be resolved at mount time.",
+      "properties": {
+
+        "template": {
+          "$ref": "#/$defs/namespacedId",
+          "description": "Engine-shipped template id to instantiate. Inherits role, platform, and default-style from the template. Locally declared role/platform/style override the template; locally declared `regions` merge with the template's nested regions. Optional — when absent, the region is declared from scratch (and `role` becomes required)."
+        },
+
+        "role": {
+          "$ref": "#/$defs/ariaRole",
+          "description": "ARIA role for the region. Required when no template is specified; optional override when a template is. See spec §5.1."
+        },
+
+        "layout": {
+          "$ref": "#/$defs/regionLayout",
+          "description": "CSS layout properties. Constrained to a layout-relevant subset (sizing, positioning, flexbox participation). Engines own layout context (`display`, grid templates) — the allowlist enforces this boundary. See spec §5.2."
+        },
+
+        "platform": {
+          "$ref": "#/$defs/regionPlatform",
+          "description": "Platform service requests at the region level. Combined with the mounted app's manifest platform requests; the strictest combined request wins. See spec §5.3."
+        },
+
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accepts-target": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^(_self|_blank|[a-z][a-z0-9-]*)$",
+              "description": "Target value this region accepts from navigation events. `_self` is the conventional name for the primary content region (typically only one region per shell uses `_self`). `_blank` is the conventional name for the engine's 'new context' behavior. Named targets (e.g., `detail`) match navigation `<a target=\"detail\">` and routes with `target: \"detail\"`."
+            }
+          },
+          "description": "URL participation declaration. A region with `accepts-target` is routable: matching navigations mount the routed app here. A region without `accepts-target` is non-routable (holds a fixed app or is purely chrome). See spec §5.4."
+        },
+
+        "position": {
+          "enum": [ "block-start", "block-end", "inline-start", "inline-end" ],
+          "description": "Arrangement hint for the engine. Used when declaring regions from scratch or overriding template arrangement. Engines decide how to honor the hint — an engine without a clear `block-end` (e.g., a floating engine) may interpret as initial placement or ignore. Regions instantiated from templates typically inherit the template's arrangement and omit this field."
+        },
+
+        "style": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Style override for this region. CSS properties (background, border, color, padding, etc.) plus any `layout`-vocabulary properties. Token aliases (`{styles.color.bg.surface.neutral.strong}`, `{spacing.16}`) resolve at compile time. Merges with the engine template's `default-style` (admin.json wins per-property)."
+        },
+
+        "capability": {
+          "$ref": "#/$defs/wpCapability",
+          "description": "Install-level capability gate. Adds to the floor declared in the mounted app's `capabilities[]`. When the user lacks this capability, the entire region subtree (including any nested child regions) is skipped before mount — the runtime fast-paths the gate. See spec §11."
+        },
+
+        "app": {
+          "$ref": "#/$defs/namespacedId",
+          "description": "App id to mount in this region for the life of the shell. Mutually exclusive with `routing.accepts-target` — a region either holds a fixed app or accepts routed apps, never both. See spec §5.4 and §7."
+        },
+
+        "config": {
+          "type": "object",
+          "description": "Configuration object passed to the mounted app at mount time. Validated against the app manifest's `config-schema` before mount; validation failure surfaces an authoring error and prevents mount. Only meaningful when `app` is set — apps mounted via routes receive their config from the matching route entry."
+        },
+
+        "regions": {
+          "type": "object",
+          "patternProperties": {
+            "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/region" }
+          },
+          "additionalProperties": false,
+          "description": "Nested child regions, addressable as `{parent-id}/{child-id}` in the region tree. Each child has the full region contract. When the parent uses `template`, locally declared children merge with the template's children: a child id present in both takes the local declaration; template children not redeclared carry through. See spec §5.5."
+        }
+      },
+
+      "allOf": [
+        {
+          "description": "Conditional rule: a region cannot have both a fixed `app` and `routing.accepts-target`. The two represent incompatible mount modes — the region either holds an app for the life of the shell or accepts routed apps.",
+          "not": {
+            "allOf": [
+              { "required": [ "app" ] },
+              {
+                "properties": {
+                  "routing": { "required": [ "accepts-target" ] }
+                },
+                "required": [ "routing" ]
+              }
+            ]
+          }
+        },
+        {
+          "description": "Conditional rule: `config` is only meaningful when `app` is also set. A region without a fixed app receives its config from the routes block, not from the region declaration. (This isn't strictly invalid — a region with `accepts-target` and `config` is just confusing — but the schema flags it to prevent a common authoring mistake.)",
+          "if": { "required": [ "config" ] },
+          "then": { "required": [ "app" ] }
+        }
+      ]
+    },
+
+    "regionLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CSS layout vocabulary allowlist. Engines own layout context (`display`, grid templates); authors declare only sizing, positioning, and flexbox participation. Properties accept literal CSS values or token aliases (resolved at compile time). Logical properties (`inline-size` / `block-size`) are preferred over physical (`width` / `height`) so layouts work in vertical writing modes.",
+      "properties": {
+        "inline-size":      { "type": [ "string", "number" ] },
+        "block-size":       { "type": [ "string", "number" ] },
+        "min-inline-size":  { "type": [ "string", "number" ] },
+        "min-block-size":   { "type": [ "string", "number" ] },
+        "max-inline-size":  { "type": [ "string", "number" ] },
+        "max-block-size":   { "type": [ "string", "number" ] },
+        "aspect-ratio":     { "type": [ "string", "number" ] },
+        "position":         { "enum": [ "static", "relative", "absolute", "fixed", "sticky" ] },
+        "inset":              { "type": [ "string", "number" ] },
+        "inset-block-start":  { "type": [ "string", "number" ] },
+        "inset-block-end":    { "type": [ "string", "number" ] },
+        "inset-inline-start": { "type": [ "string", "number" ] },
+        "inset-inline-end":   { "type": [ "string", "number" ] },
+        "translate":          { "type": "string" },
+        "flex-basis":   { "type": [ "string", "number" ] },
+        "flex-grow":    { "type": "number" },
+        "flex-shrink":  { "type": "number" },
+        "align-self":   { "enum": [ "auto", "flex-start", "flex-end", "center", "baseline", "stretch", "start", "end", "self-start", "self-end" ] },
+        "justify-self": { "enum": [ "auto", "flex-start", "flex-end", "center", "baseline", "stretch", "start", "end", "self-start", "self-end" ] },
+        "order":        { "type": "integer" }
+      }
+    },
+
+    "regionPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Platform service requests at the region level. Same vocabulary as the app manifest's `platform`; see app manifest schema for per-field description. Region-level requests combine with the mounted app's requests; strictest wins.",
+      "properties": {
+        "modal":                     { "type": "boolean" },
+        "dismiss-on": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": [ "Escape", "backdrop-click", "outside-click", "navigation" ] }
+        },
+        "autofocus-target":          { "type": "string", "minLength": 1 },
+        "triggerable":               { "type": "boolean" },
+        "persists-across-navigation":{ "type": "boolean" },
+        "dirty-state":               { "type": "boolean" },
+        "block-navigation-on-dirty": { "type": "boolean" },
+        "trigger": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "shortcut": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "description": "block-navigation-on-dirty requires dirty-state, same as in the app manifest.",
+          "if": {
+            "properties": { "block-navigation-on-dirty": { "const": true } },
+            "required":   [ "block-navigation-on-dirty" ]
+          },
+          "then": {
+            "properties": { "dirty-state": { "const": true } },
+            "required":   [ "dirty-state" ]
+          }
+        }
+      ]
+    },
+
+    "route": {
+      "type": "object",
+      "required": [ "app" ],
+      "additionalProperties": false,
+      "description": "A URL route entry. Maps a URL pattern to an app + target + config tuple.",
+      "properties": {
+        "app": {
+          "$ref": "#/$defs/namespacedId",
+          "description": "App id to mount when this route matches. The app must be discoverable via its manifest (registered with the runtime). The user must satisfy the app's `capabilities[]`; otherwise the route renders a 403 view."
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^(_self|_blank|[a-z][a-z0-9-]*)$",
+          "default": "_self",
+          "description": "Which region receives the mounted app. Resolves against `regions[*].routing.accepts-target` — the region with matching `accepts-target` is the destination. `_self` (default) targets the primary content region. Named targets enable master-detail layouts (`target: \"detail\"` mounts into the detail region)."
+        },
+        "config": {
+          "type": "object",
+          "description": "Configuration passed to the mounted app. Validated against the app manifest's `config-schema`. URL parameter substitution applies: `{paramname}` strings in values resolve against captured route params (e.g., `{id}` in `/posts/{id}` resolves to the captured id). Substitution is lexical; the app's config-schema handles type coercion."
+        }
+      }
+    },
+
+    "binding": {
+      "type": "object",
+      "required": [ "shortcut", "invoke" ],
+      "additionalProperties": false,
+      "description": "Keystroke → app invocation entry.",
+      "properties": {
+        "shortcut": {
+          "type": "string",
+          "pattern": "^([A-Za-z]+\\+)*[A-Za-z0-9]+$",
+          "description": "Keystroke specification, following @wordpress/keyboard-shortcuts syntax. `Mod+K` (Cmd on macOS, Ctrl elsewhere), `Shift+Mod+P`, `Alt+ArrowDown`, `Mod+/`. Modifier names: `Mod`, `Shift`, `Alt`, `Ctrl`. Key names: standard letters/digits/named keys (`ArrowUp`, `Escape`, `F1`, etc.)."
+        },
+        "invoke": {
+          "$ref": "#/$defs/namespacedId",
+          "description": "App id to invoke. The app's manifest must declare `platform.triggerable: true`. When the binding fires, the engine ensures the app's region is mounted (mounting if ephemeral) and applies the app's platform requests (focus trap, autofocus target, etc.)."
+        }
+      }
+    },
+
+    "styles": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (shell-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
+      "properties": {
+        "color":     { "type": "object", "additionalProperties": true },
+        "dimension": { "type": "object", "additionalProperties": true },
+        "border":    { "type": "object", "additionalProperties": true },
+        "elevation": { "type": "object", "additionalProperties": true },
+        "font":      { "type": "object", "additionalProperties": true },
+        "density":   { "enum": [ "default", "compact", "comfortable" ] },
+        "chrome":    {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Shell-only chrome extension slots — surfaces WPDS does not yet describe. Sub-namespaces include `sidebar`, `toolbar`, `siteHub`, `content`. Authors may add custom slugs; layout engines reading custom slugs declare them in their manifest's `requiredTokens` so the runtime validates at activation time."
+        },
+        "regions": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Per-region style overrides, keyed by region id. Same shape as the top-level `styles` tree. Overrides scope to `[data-region-id=\"...\"]` selectors and win for that region's container and descendants."
+        },
+        "applications": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Per-app style overrides, keyed by app id. Same shape as the top-level `styles` tree. Overrides scope to `[data-app-id=\"...\"]` selectors."
+        }
+      }
+    }
+  }
+}

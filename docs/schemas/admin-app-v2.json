@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.wp.org/admin-app/v1.json",
+  "title": "WP Admin Shell — App Manifest (v1)",
+  "description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, and the configuration schema it accepts when admin.json passes values. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in admin.json. See WP Admin Shell Design Spec §4.1.",
+
+  "type": "object",
+  "required": [ "id", "version", "title", "role", "script" ],
+  "additionalProperties": false,
+
+  "properties": {
+
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-app/v1.json`. Optional but strongly recommended — IDE tooling uses it for live validation."
+    },
+
+    "id": {
+      "type": "string",
+      "pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+      "description": "Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Shell plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case. Examples: `core:command-palette`, `core:posts`, `plugin:woocommerce/orders`. The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have admin.json route to their version."
+    },
+
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Manifest schema version this document conforms to. v1 is the current shape. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored."
+    },
+
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name of the app, shown in command palettes, navigation menus, error messages, and developer tooling. Translatable. Should be short — typically two or three words."
+    },
+
+    "description": {
+      "type": "string",
+      "description": "Optional human-readable description of what the app does. Used in admin.json authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph."
+    },
+
+    "role": {
+      "$ref": "#/$defs/ariaRole",
+      "description": "The app's primary ARIA role when mounted into a region. Drives engine specialization: engines that recognize the role apply specialized chrome (e.g., a `navigation` app gets sidebar treatment in the wp-default engine). Roles outside an engine's specializes-roles list fall through to the engine's default arrangement. Required because every mounted app must have a defined accessibility role for screen readers. Common values: `main`, `dialog`, `navigation`, `complementary`, `banner`, `contentinfo`, `region`, `search`. Any valid WAI-ARIA 1.2 role is accepted."
+    },
+
+    "platform": {
+      "$ref": "#/$defs/appPlatform",
+      "description": "Platform service requests. The app declares which engine-provided services it needs — modality, focus management, dismissal handling, dirty-state tracking, keyboard triggerability. Each field maps to a service the browser/OS would provide if this were a website running in a browser. Engines declare in their own manifest which services they implement; an app requesting a service the active engine does not honor still mounts, but the unhonored request is a no-op (with a logged warning in development). See spec §5.3."
+    },
+
+    "capabilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/wpCapability" },
+      "uniqueItems": true,
+      "description": "WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — admin.json cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`). Examples: `[\"edit_posts\"]`, `[\"manage_options\", \"upload_files\"]`."
+    },
+
+    "config-schema": {
+      "type": "object",
+      "description": "JSON Schema document describing the shape of the `config` object that admin.json passes to this app at mount time (either via a region's `config` field or via a routes entry's `config` field). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error. The schema is itself a JSON Schema document; recursive validation against the JSON Schema meta-schema is not enforced by the runtime but is recommended via author tooling.",
+      "examples": [
+        {
+          "type": "object",
+          "properties": {
+            "post-type": { "type": "string", "default": "post" },
+            "per-page":  { "type": "integer", "minimum": 5, "maximum": 100, "default": 20 }
+          },
+          "required": [ "post-type" ]
+        }
+      ]
+    },
+
+    "extension-points": {
+      "type": "object",
+      "description": "Documentary listing of slot/fill, filter hooks, and other React or PHP extension surfaces this app exposes to plugins. Not load-bearing: the runtime does not read or enforce this field. Included for IDE tooling, ecosystem documentation, and machine-readable discovery of app extensibility surfaces. Keys are extension-point identifiers (e.g., `PluginSidebar`, `PluginDocumentSettingPanel`); values are the WordPress package or hook namespace where the extension is registered (e.g., `@wordpress/editor`).",
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9_-]*$": {
+          "type": "string",
+          "description": "Package or hook namespace where consumers register extensions for this point."
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "script": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "WordPress script handle for this app's JavaScript bundle. Must already be registered with WordPress (via `wp_register_script`) before the manifest references it. The runtime enqueues this handle when the app mounts, supporting WordPress's standard dependency resolution and code-splitting. Same pattern as `block.json`'s `editorScript`."
+    },
+
+    "style": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Optional WordPress style handle for this app's CSS. Enqueued alongside the script when the app mounts. Apps with no dedicated styles (relying entirely on WPDS tokens for theming) may omit this field."
+    }
+  },
+
+  "allOf": [
+    {
+      "description": "Conditional rule: `platform.block-navigation-on-dirty` is meaningful only if `platform.dirty-state` is also true. Apps that don't track dirty state cannot block navigation on it.",
+      "if": {
+        "properties": {
+          "platform": {
+            "properties": { "block-navigation-on-dirty": { "const": true } },
+            "required":   [ "block-navigation-on-dirty" ]
+          }
+        },
+        "required": [ "platform" ]
+      },
+      "then": {
+        "properties": {
+          "platform": {
+            "properties": { "dirty-state": { "const": true } },
+            "required":   [ "dirty-state" ]
+          }
+        }
+      }
+    }
+  ],
+
+  "$defs": {
+
+    "ariaRole": {
+      "type": "string",
+      "pattern": "^[a-z][a-z]+$",
+      "description": "A WAI-ARIA 1.2 role name. Lowercase, alphabetic. The runtime does not enforce a closed list — any valid ARIA role is accepted — but engines specialize for a subset (typically the landmark roles plus `dialog`). Common values for shell apps: `main` (primary content), `dialog` (modal/non-modal dialogs), `navigation` (nav menus), `complementary` (side panels and inspectors), `banner` (top-of-page header), `contentinfo` (footer/status info), `search` (search interfaces), `region` (generic landmark). Avoid widget roles (`button`, `checkbox`, etc.) — those describe controls, not regions or apps. See https://www.w3.org/TR/wai-aria-1.2/#role_definitions."
+    },
+
+    "wpCapability": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z_][a-z0-9_]*$",
+      "description": "A WordPress capability name. Lowercase, alphanumeric and underscore, matching WordPress's capability naming conventions. Standard capabilities include `read`, `edit_posts`, `manage_options`, `upload_files`, `list_users`, `manage_woocommerce`, etc. Custom capabilities registered by plugins follow the same pattern."
+    },
+
+    "appPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Platform services this app requests from its hosting engine. Each field corresponds to a service with a clear browser/OS analog — services every region author would otherwise reimplement identically. The list is governed centrally and grows additively in minor spec versions; engines opt into honoring each service via their own `honored-platform` array.",
+      "properties": {
+
+        "modal": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, the app should be rendered with focus trapped inside its region, ARIA modal attributes applied, and (for engines that support it) a backdrop scrim rendered behind the region. Browser analog: HTML `<dialog>` with `showModal()`. Use for command palettes, confirmation dialogs, full-screen takeover apps. Implies that other regions cannot receive interaction while the app is mounted."
+        },
+
+        "dismiss-on": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [ "Escape", "backdrop-click", "outside-click", "navigation" ],
+            "description": "A trigger that dismisses (unmounts) this app's region. `Escape` = pressing Escape key; `backdrop-click` = clicking outside the region while a modal backdrop is shown; `outside-click` = clicking outside the region without a backdrop (e.g., for non-modal popovers); `navigation` = any URL navigation event."
+          },
+          "description": "Triggers that cause the engine to unmount this app's region. Browser analog: HTML `<dialog>` Escape-to-close behavior, popover dismissal. Use for ephemeral apps (modals, palettes, drawers). Apps mounted in persistent regions typically omit this field — they live for the life of the shell. Multiple triggers are honored simultaneously."
+        },
+
+        "autofocus-target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "CSS selector identifying which element should receive focus when this app mounts. Browser analog: HTML `autofocus` attribute. The selector is evaluated against the app's rendered DOM after mount. If the selector matches no element (or matches multiple — first wins), focus falls through to the engine's default — typically the region's container element. Use for apps where a specific input or button should receive focus immediately (search fields in a command palette, the title input in a new-post editor)."
+        },
+
+        "triggerable": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, this app can be invoked by a binding declared in admin.json's `bindings` block (e.g., `Mod+K` opens the command palette). Browser analog: HTML `commandfor` / `command` attributes. The app declares only that it accepts being invoked; the actual keystroke or invocation source is decided at install time in admin.json. Apps that should never be invoked by user shortcut (e.g., always-mounted persistent system apps) omit this field. Note: setting this to `true` does not register a binding — admin.json must explicitly bind a keystroke to the app's id."
+        },
+
+        "persists-across-navigation": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.accepts-target`) typically omit this field — they unmount when the route changes."
+        },
+
+        "dirty-state": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, this app may report unsaved-changes state via the runtime's dirty-state API. Engines honoring this field will query the app before unmounting and may delay or prevent navigation if state is dirty. Browser analog: `beforeunload` event. Use for editor-style apps where unsaved changes matter. Apps without unsaved-state semantics (read-only views, simple displays) omit this field. Setting this true is a prerequisite for `block-navigation-on-dirty`."
+        },
+
+        "block-navigation-on-dirty": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true (and `dirty-state` is also true), the engine shows a confirmation dialog before unmounting the app while it reports dirty state. Browser analog: the `beforeunload` confirmation dialog. Use for editors where data loss must be guarded against. Without this field, dirty state is reported but does not block navigation — the app is responsible for any other warning UX. Setting this without also setting `dirty-state: true` is a manifest error and rejected by the schema."
+        }
+      }
+    }
+  }
+}

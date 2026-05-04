@@ -73,7 +73,7 @@ The palette publishes `Go to {App}` and `New Post` / `New Page` commands scoped 
 
 ## `admin.json` schema
 
-The full v1 schema lives at [`docs/schemas/admin-v1.json`](docs/schemas/admin-v1.json). Bundled shells reference it via `$schema`. The spec at [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) is authoritative.
+The full v1 schema lives at [`docs/schemas/admin-v1.json`](docs/schemas/admin-v1.json) and is the active schema for v1.0.0-beta.x bundled shells, which reference it via `$schema`. The post-v1 architecture is described in the master spec at [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (2026-05-01); the three v2 manifest schemas (`admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json`) live alongside it. The 2026-04-29 architecture is preserved at [`docs/archive/wp-admin-shell-design-spec-2026-04-29.md`](docs/archive/wp-admin-shell-design-spec-2026-04-29.md). The v2 migration directive at [`docs/plans/wp-admin-shell-v2-migration-directive.md`](docs/plans/wp-admin-shell-v2-migration-directive.md) is the active plan on `feat/wp-admin-shell-v2`.
 
 v0 (MVP flat) admin.json files keep working indefinitely — the resolver normalizes them through the `core` origin loader. To rewrite a v0 file in place, run `wp admin-shell upgrade-config <name>` (the v0 file is preserved as `<name>.v0.json`).
 
@@ -127,12 +127,22 @@ wp-admin-shell/
 │   ├── php/                        # Cascade + selection runners (wp eval-file)
 │   └── parity/                     # WPDS slot-list parity (node)
 ├── docs/                           # Specs, schemas, readiness notes
-│   ├── wp-admin-shell-design-spec.md   # Master design (authoritative)
-│   ├── wp-admin-shell-v1-plan.md       # Implementation plan
+│   ├── wp-admin-shell-design-spec.md       # Master design (2026-05-01)
+│   ├── post-editor-sketch.md               # v2 worked example
+│   ├── plans/
+│   │   └── wp-admin-shell-v2-migration-directive.md  # Active v2 plan
+│   ├── schemas/
+│   │   ├── admin-v1.json                   # v1.0.0-beta.x schema (still load-bearing)
+│   │   ├── admin-v2.json                   # v2 admin.json schema
+│   │   ├── admin-app-v2.json               # v2 app manifest schema
+│   │   └── admin-engine-v2.json            # v2 engine manifest schema
+│   ├── research/schema-exercise-findings.md
 │   ├── v1-token-emission.md
 │   ├── v1-readiness.md
-│   ├── schemas/admin-v1.json
-│   └── archive/wp-admin-shell-mvp-spec.md
+│   └── archive/
+│       ├── wp-admin-shell-mvp-spec.md
+│       ├── wp-admin-shell-design-spec-2026-04-29.md
+│       └── wp-admin-shell-v1-plan.md
 ├── scripts/                        # snapshot-wpds.mjs
 └── build/                          # Compiled output (gitignored)
 ```
