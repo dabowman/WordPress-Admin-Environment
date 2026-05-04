@@ -34,11 +34,20 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-toolbar .components-button {
+/* @wordpress/ui Button / IconButton render with hashed CSS-module
+   classNames (e.g. _97b0fc33...__button) inside @layer wp-ui-components.
+   Selectors below use the `button` element selector or our own
+   .wp-admin-shell-* class instead of the legacy `.components-button`
+   chain (which no longer matches @wordpress/ui-rendered DOM).
+   Unlayered rules win over layered ones in the cascade regardless of
+   specificity, so these reach the right declarations. Components still
+   rendered via @wordpress/components (Item / ItemGroup) keep their
+   .components-item chain elsewhere in this file. */
+.wp-admin-shell-toolbar button {
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 }
 
-.wp-admin-shell-toolbar .components-button:hover {
+.wp-admin-shell-toolbar button:hover {
 	color: #fff;
 }
 
@@ -82,7 +91,7 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-site-hub__icon-button.components-button {
+.wp-admin-shell-site-hub__icon-button {
 	position: relative;
 	color: var(--wp-admin-shell--chrome--site-hub--foreground);
 	height: 64px;
@@ -96,12 +105,12 @@
 	border-radius: 0;
 }
 
-.wp-admin-shell-site-hub__icon-button.components-button:hover,
-.wp-admin-shell-site-hub__icon-button.components-button:active {
+.wp-admin-shell-site-hub__icon-button:hover,
+.wp-admin-shell-site-hub__icon-button:active {
 	color: #fff;
 }
 
-.wp-admin-shell-site-hub__icon-button.components-button:focus-visible {
+.wp-admin-shell-site-hub__icon-button:focus-visible {
 	box-shadow:
 		0 0 0 3px var(--wp-admin-shell--chrome--site-hub--background),
 		0 0 0 6px var(--wp-admin-theme-color);
@@ -124,7 +133,7 @@
 	align-items: center;
 }
 
-.wp-admin-shell-site-hub__title .components-button {
+.wp-admin-shell-site-hub__title button {
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 	display: block;
 	flex-grow: 1;
@@ -139,18 +148,18 @@
 	white-space: nowrap;
 }
 
-.wp-admin-shell-site-hub__title .components-button:hover,
-.wp-admin-shell-site-hub__title .components-button:focus,
-.wp-admin-shell-site-hub__title .components-button:active {
+.wp-admin-shell-site-hub__title button:hover,
+.wp-admin-shell-site-hub__title button:focus,
+.wp-admin-shell-site-hub__title button:active {
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 }
 
-.wp-admin-shell-site-hub__title .components-button:focus {
+.wp-admin-shell-site-hub__title button:focus {
 	box-shadow: none;
 	outline: none;
 }
 
-.wp-admin-shell-site-hub__title .components-button:focus-visible {
+.wp-admin-shell-site-hub__title button:focus-visible {
 	box-shadow:
 		0 0 0 var(--wp-admin-border-width-focus) var(--wp-admin-shell--chrome--site-hub--background),
 		0 0 0 calc(2 * var(--wp-admin-border-width-focus)) var(--wp-admin-theme-color);
@@ -158,7 +167,7 @@
 	outline-offset: 2px;
 }
 
-.wp-admin-shell-site-hub__title .components-button::after {
+.wp-admin-shell-site-hub__title button::after {
 	content: "\2197";
 	font-weight: 400;
 	opacity: 0;
@@ -167,9 +176,9 @@
 	transition: opacity 0.1s linear;
 }
 
-.wp-admin-shell-site-hub__title .components-button:hover::after,
-.wp-admin-shell-site-hub__title .components-button:focus::after,
-.wp-admin-shell-site-hub__title .components-button:active::after {
+.wp-admin-shell-site-hub__title button:hover::after,
+.wp-admin-shell-site-hub__title button:focus::after,
+.wp-admin-shell-site-hub__title button:active::after {
 	opacity: 1;
 }
 
@@ -177,12 +186,12 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-site-hub__command-toggle.components-button {
+.wp-admin-shell-site-hub__command-toggle {
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 }
 
-.wp-admin-shell-site-hub__command-toggle.components-button:hover,
-.wp-admin-shell-site-hub__command-toggle.components-button:active {
+.wp-admin-shell-site-hub__command-toggle:hover,
+.wp-admin-shell-site-hub__command-toggle:active {
 	color: #fff;
 }
 
@@ -298,12 +307,14 @@
    SidebarButton (back/dashboard button)
    ========================================================================== */
 
-.wp-admin-shell-sidebar-button.components-button {
+.wp-admin-shell-sidebar-button {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground);
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-sidebar-button.components-button:hover {
+.wp-admin-shell-sidebar-button:hover,
+.wp-admin-shell-sidebar-button:focus,
+.wp-admin-shell-sidebar-button:active {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active);
 }
 
@@ -358,7 +369,7 @@
 }
 
 /* Nav item buttons (collapsed mode) */
-.wp-admin-shell-nav__item.components-button {
+.wp-admin-shell-nav__item {
 	width: 100%;
 	justify-content: center;
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground);
@@ -369,13 +380,13 @@
 	border: none;
 }
 
-.wp-admin-shell-nav__item.components-button:hover,
-.wp-admin-shell-nav__item.components-button:focus {
+.wp-admin-shell-nav__item:hover,
+.wp-admin-shell-nav__item:focus {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active);
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover);
 }
 
-.wp-admin-shell-nav__item.components-button.is-active {
+.wp-admin-shell-nav__item.is-active {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active);
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active);
 	font-weight: 500;
@@ -385,7 +396,7 @@
 	padding: 0 6px;
 }
 
-.wp-admin-shell-nav__item.components-button:focus-visible {
+.wp-admin-shell-nav__item:focus-visible {
 	transform: translateZ(0);
 }
 
