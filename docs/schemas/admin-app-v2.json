@@ -172,7 +172,7 @@
         "persists-across-navigation": {
           "type": "boolean",
           "default": false,
-          "description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.accepts-target`) typically omit this field — they unmount when the route changes."
+          "description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.route-key`) typically omit this field — they unmount when the URL slot they read from changes."
         },
 
         "dirty-state": {

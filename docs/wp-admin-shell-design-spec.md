@@ -3,7 +3,7 @@
 > **Status:** Living design document. Authoritative source for the WP Admin Shell architecture beyond MVP.
 > **Last revised:** 2026-05-01
 > **Replaces:** Earlier drafts of this document (most recent: 2026-04-29). The MVP spec ([`wp-admin-shell-mvp-spec.md`](./wp-admin-shell-mvp-spec.md)) remains the record of the proof-of-concept implementation that validated the approach. The previous architecture draft is preserved at [`wp-admin-shell-design-spec-2026-04-29.md`](./wp-admin-shell-design-spec-2026-04-29.md) for reference; some sections from it (token system details, cascade resolver internals, capability gating layers) carry forward unchanged and are referenced rather than restated.
-> **Major changes from prior draft:** The architecture has been substantially simplified. Three artifact types (app manifest, engine manifest, `admin.json`) replace the prior single-file shape. Region "kinds" are replaced by a three-layer vocabulary (`role` / `layout` / `platform`). Slots are removed in favor of recursive nested regions. The selection event bus is removed; app coordination is data-layer only. Navigation intent uses HTML link semantics (`target`). The `tokens.json` layer moves from v2 to v1.
+> **Major changes from prior draft:** The architecture has been substantially simplified. Three artifact types (app manifest, engine manifest, `admin.json`) replace the prior single-file shape. Region "kinds" are replaced by a three-layer vocabulary (`role` / `layout` / `platform`). Slots are removed in favor of recursive nested regions. The selection event bus is removed; app coordination is data-layer only. Navigation is URL-driven: every navigable surface in the shell is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes. The `tokens.json` layer moves from v2 to v1.
 
 ---
 
@@ -70,7 +70,7 @@ The design rests on eight principles. When a decision is unclear, they are the t
 
 5. **The shell does not govern app internals.** Component composition inside an app is React's job, not the shell's. Plugins extend apps via existing WordPress patterns (`@wordpress/plugins`, slot/fill, filters); the shell sees one app and is unaware of intra-app extensions.
 
-6. **HTML/CSS/ARIA vocabulary first, shell-specific vocabulary as remainder.** Authors writing region declarations use ARIA roles, CSS layout properties, and HTML link semantics directly — vocabularies with W3C-stable specifications they already know. Shell-specific fields exist only for things HTML/CSS/ARIA do not model (persistence across navigation, app-to-engine routing, install-time bindings).
+6. **HTML/CSS/ARIA vocabulary first, shell-specific vocabulary as remainder.** Authors writing region declarations use ARIA roles, CSS layout properties, and URLs directly — vocabularies with W3C-stable specifications they already know. Navigation is plain `<a href>`; the URL is the full app state; `target` keeps native HTML meaning. Shell-specific fields exist only for things HTML/CSS/URLs do not model (persistence across navigation, install-time bindings, declarative platform-service requests). The shell never overloads an HTML attribute to mean something other than its standard.
 
 7. **REST API is the only system contract.** The shell never reaches into PHP-rendered admin internals. Every screen reads/writes through `/wp-json/`. If the API can't do it, the shell can't do it — or it lives in a thin app that internally iframes the legacy wp-admin screen until it can be ported.
 
@@ -354,12 +354,12 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
     "main": {
       "template": "core:main",
-      "routing": { "accepts-target": "_self" }
+      "routing": { "route-key": "_self" }
     },
 
     "detail": {
       "template": "core:detail",
-      "routing": { "accepts-target": "detail" },
+      "routing": { "route-key": "detail" },
       "style": { "inline-size": "40%" }
     },
 
@@ -378,12 +378,12 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
   },
 
   "routes": {
-    "/posts":          { "app": "core:posts",  "target": "_self",  "config": { "post-type": "post" } },
-    "/pages":          { "app": "core:posts",  "target": "_self",  "config": { "post-type": "page" } },
-    "/media":          { "app": "core:media",  "target": "_self" },
-    "/posts/{id}":     { "app": "core:editor", "target": "detail", "config": { "post-type": "post", "post-id": "{id}" } },
-    "/pages/{id}":     { "app": "core:editor", "target": "detail", "config": { "post-type": "page", "post-id": "{id}" } },
-    "/posts/new":      { "app": "core:editor", "target": "_self",  "config": { "post-type": "post" } }
+    "/posts":          { "app": "core:posts",  "config": { "post-type": "post" } },
+    "/pages":          { "app": "core:posts",  "config": { "post-type": "page" } },
+    "/media":          { "app": "core:media" },
+    "/posts/{id}":     { "app": "core:editor", "config": { "post-type": "post", "post-id": "{id}" } },
+    "/pages/{id}":     { "app": "core:editor", "config": { "post-type": "page", "post-id": "{id}" } },
+    "/posts/new":      { "app": "core:editor", "config": { "post-type": "post" } }
   },
 
   "default-route": "/posts",
@@ -405,7 +405,7 @@ Top-level fields:
 | `name`, `title` | Identifier and human-readable label for this shell. |
 | `engine` | The engine to use for this shell. References an engine `id`. |
 | `regions` | The region tree. Each entry references a template and/or declares a region from scratch. See §5. |
-| `routes` | URL pattern → app mapping. See §6.2. (Distinct from the `routing` field on individual regions, which declares each region's URL participation; see §5.4.) |
+| `routes` | URL pattern → app + config mapping. See §6.2. (Distinct from the `routing` field on individual regions, which declares which slot of the URL each region reads from; see §5.4.) |
 | `default-route` | Where the shell lands on first load. Falls through to first permitted route if not accessible. |
 | `bindings` | Keyboard shortcut → app invocation mapping. See §8. |
 | `styles` | WPDS-shaped style tree with token overrides. See §9. |
@@ -434,13 +434,13 @@ A region declaration has this shape:
   "role":     "navigation",                    // §5.1 — ARIA role
   "layout":   { /* CSS properties */ },        // §5.2 — geometry
   "platform": { /* service requests */ },      // §5.3 — engine services
-  "routing":  { /* URL participation */ },     // §5.4 — accepts-target
+  "routing":  { /* URL participation */ },     // §5.4 — route-key
 
   "position":   "block-end",                   // arrangement hint to the engine
   "style":      { /* style overrides */ },     // shorthand for overriding template's default-style
   "capability": "edit_posts",                  // optional cap gate; subtree skipped if user lacks
 
-  "app":        "app-id",                      // mount this app (mutually exclusive with routing.accepts-target)
+  "app":        "app-id",                      // mount this app (mutually exclusive with routing.route-key)
   "config":     { /* config for the mounted app */ },   // matches the app's config-schema
 
   "regions":  { /* nested child regions */ }   // §5.5
@@ -451,7 +451,7 @@ When `template` is set, the template's `role`, `platform`, and `default-style` a
 
 When `template` is absent, the region is declared from scratch. `role` is required in this case; everything else is optional.
 
-**`config` for the mounted app.** When a region declares `app: "app-id"`, the `config` field passes values to that app at mount time. The runtime validates the config against the app manifest's `config-schema`. This is how install-level decisions reach apps that take configuration — for example, passing the logo URL to `core:site-hub`, or the post type to `core:posts`. Apps mounted via the routes block (target-based) receive their config from the matching route entry instead.
+**`config` for the mounted app.** When a region declares `app: "app-id"`, the `config` field passes values to that app at mount time. The runtime validates the config against the app manifest's `config-schema`. This is how install-level decisions reach apps that take configuration — for example, passing the logo URL to `core:site-hub`, or the post type to `core:posts`. Apps mounted via the routes block (URL-driven) receive their config from the matching route entry instead.
 
 **`capability` is install-level gating.** It adds to the floor declared in the app manifest's `capabilities[]`. A region's capability gate is a fast-path check: if the user lacks the capability, the entire region subtree (including any nested child regions) is skipped before mount. See §11.
 
@@ -526,17 +526,21 @@ The list grows additively. New platform services join when real apps surface rea
 - Visual animation/transitions for app content. App responsibility.
 - Region mount/unmount transitions (entrance/exit animation). Engine responsibility, not declared.
 
-### 5.4 `routing` — navigation participation
+### 5.4 `routing` — URL participation
 
-`routing` describes how a region participates in URL-driven navigation. v1 has one field:
+`routing` declares which slot of the URL the region reads from. v1 has one field:
 
 | Field | Purpose |
 |---|---|
-| `accepts-target` | This region is the destination for navigations whose `target` matches. `_self` is the conventional name for the primary content region. |
+| `route-key` | The URL slot whose value resolves to a route, whose route's app mounts in this region. `_self` reads the URL's primary path. Any other value (e.g., `detail`) reads the URL query parameter of that name. |
 
-A region with `accepts-target` is *routable*: when a route maps to a `target` matching this region's value, the engine mounts the route's app into this region. Multiple regions may be routable (master-detail layouts); each accepts a different target.
+A region with `route-key` is *routable*: the runtime takes the URL value at that slot, looks it up in the routes block (§6.2), and mounts the matching app in this region. Regions without `route-key` are non-routable — they hold a fixed `app` for the life of the shell, or are pure chrome with nested children.
 
-**A region cannot have both a fixed `app` and `accepts-target`.** A region either holds a fixed app for the life of the shell (sidebar nav) or accepts routed apps (main content area). Mixing the two creates ambiguity about which app should be mounted at any given moment.
+Multiple regions may be routable. `route-key: "_self"` is conventionally used by exactly one region per shell (the primary content region); other routable regions use named keys (`detail`, `inspector`, etc.) that match query-parameter names in the URL grammar (§6.4).
+
+**A region cannot have both a fixed `app` and `route-key`.** Either it holds an app for the life of the shell or it reads its app from the URL — never both. Mixing the two creates ambiguity about which app should be mounted at any given moment.
+
+**No HTML-attribute overload.** `route-key` is a shell-specific declaration that names the URL slot a region reads from. It is *not* the HTML `<a target>` attribute, which keeps its native browsing-context meaning (`_self`, `_blank`, etc.). Authors who want a link to mount an app in the detail region write the URL itself (`<a href="?detail=/posts/42/edit">Edit</a>`); the URL is the full source of truth and the browser handles the click natively.
 
 ### 5.5 Nested regions
 
@@ -563,39 +567,34 @@ This is the multi-app composition mechanism. The toolbar isn't a region with thr
 
 ## 6. Navigation and routing
 
-Navigation in the shell uses HTML link semantics throughout. Authors writing nav configs, plugin developers wiring up custom buttons, and the URL hash router all speak the same vocabulary: `href`, `target`, `rel`. This means authors don't learn a new API; they emit links, and the engine honors them through whatever default algorithm fits its idiom.
+Navigation in the shell is URL-driven. The URL is the full source of truth: every navigable surface in the shell is addressable by a URL, and the URL alone determines what each region mounts. Authors emit plain `<a href>` links; the browser handles clicks natively; the router observes URL changes and recomputes which app each routable region renders. There is no shell-specific overload of HTML attributes.
 
-### 6.1 HTML link semantics
+### 6.1 Plain HTML links
 
-The shell honors three HTML `<a>` element attributes for navigation:
+The shell uses standard HTML link semantics — no overload, no interception of clicks the browser would handle differently.
 
-| Attribute | Shell meaning |
+| Attribute | Behavior |
 |---|---|
-| `href` | The route (URL hash) to navigate to. Format: `#/route/path`. |
-| `target` | Where to mount the resulting app. `_self` = the primary content region (the region with `accepts-target: "_self"`). `_blank` = the engine's "new context" behavior (split, floating window, push to stack). Named target (e.g., `detail`) = the region with `accepts-target` matching that name. |
-| `rel` | Relationship hint. `alternate` = side-by-side variant. `next` / `prev` = sequential. Engines may honor these for animation; not load-bearing. |
+| `href` | The destination URL. In-shell destinations use the hash form `#/path?key=value` so the browser stays on the shell page; full URLs navigate as the browser would normally. |
+| `target` | Standard HTML — `_self` (default, navigate in place), `_blank` (open in new tab/window), `_parent`, `_top`, or a named browsing context (existing iframe/window with that name). The shell does **not** redefine these. A link with `target="_blank"` opens a new browsing context; the new browsing context loads the same URL; the shell on that new context decomposes the URL and renders identical multi-region state. |
+| `rel` | Standard HTML, used as the user-agent does. The shell does not require or override any `rel` token. |
 
-Engines interpret `target` according to their idiom:
+Authors and plugins wire navigation by writing URLs into `href`. The router does not intercept link clicks at the document level — every standard browser interaction (left-click navigates in place; middle-click / Cmd-click / Ctrl-click opens in new tab; right-click → "Open in new tab"; drag-to-bookmark; copy link address) works because nothing is overloaded.
 
-- **wp-default engine.** `_self` mounts to main; named targets mount to the matching region (split layout). `_blank` is treated as `_self` (no new-window concept).
-- **Floating engine.** `_self` mounts to the active window; `_blank` opens a new window; named targets are window IDs that get reused.
-- **Single-pane engine.** `_self` swaps the visible app; `_blank` pushes onto a navigation stack with a back gesture.
+The router observes URL changes via the `hashchange` event (and the Navigation API's `navigate` event where supported) and decomposes the new URL into per-region routes (§6.2). No `event.preventDefault()` interception is required for `<a>` clicks targeting in-shell hash URLs — the browser navigates the hash, the URL updates, the router recomputes.
 
-The same vocabulary; engine-appropriate execution.
+**Programmatic navigation.** A `navigate(href)` API exists for apps that need to navigate without rendering an `<a>` (e.g., from a button click handler). It is a thin wrapper around `location.hash = ...` (or the Navigation API where available) — exactly equivalent to the user clicking an `<a href>` with that target.
 
-**Programmatic navigation** uses a `navigate(href, { target, rel })` API that mirrors the link attributes 1:1. Apps and the runtime call the same function; there is no distinct "programmatic" navigation vocabulary.
-
-**Browser back/forward** is honored by hash-based routing. Each navigation that changes the URL hash creates a history entry; browser back returns to the previous state.
+**Browser back/forward** is honored by URL-driven routing. Each navigation that changes the URL hash creates a history entry; browser back returns to the previous state and the router decomposes the previous URL.
 
 ### 6.2 Routes block
 
-`admin.json`'s `routes` block maps URL patterns to app + target + config tuples:
+`admin.json`'s `routes` block maps URL patterns to app + config tuples. There is no `target` or destination-region field — the *URL slot* the route is matched against (primary path, named query parameter) determines which region mounts the app, via each region's `route-key` declaration (§5.4).
 
 ```jsonc
 "routes": {
   "/posts/{id}": {
     "app": "core:editor",
-    "target": "detail",
     "config": {
       "post-type": "post",
       "post-id": "{id}"
@@ -604,23 +603,24 @@ The same vocabulary; engine-appropriate execution.
 }
 ```
 
-(Distinct from the `routing` field that may appear on individual regions, which declares only that a region accepts navigation events with a given `target` — see §5.4. The two never overlap: one is a top-level URL pattern table, the other is a per-region participation declaration.)
-
 Pattern syntax:
 
-- Static segments: `/posts/new` matches `#/posts/new` exactly.
-- Parameter segments: `/posts/{id}` matches `#/posts/42`, captures `id=42`.
-- Wildcard suffix: `/media/*` matches `#/media/anything/here`, captures the rest.
+- Static segments: `/posts/new` matches `/posts/new` exactly.
+- Parameter segments: `/posts/{id}` matches `/posts/42`, captures `id=42`.
+- Wildcard suffix: `/media/*` matches `/media/anything/here`, captures the rest.
 
-Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}` for `#/posts/new`.
+Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}` for `/posts/new`.
 
-When a pattern matches, the runtime:
-1. Resolves `{paramname}` placeholders in the route's `config` against captured params (§6.3).
-2. Looks up the region with `accepts-target` matching the route's `target`.
-3. Mounts the route's app into that region with the resolved config.
-4. Validates the user has the app's required `capabilities`; renders 403 view if not.
+When the URL changes, for each routable region (a region with `route-key`), the runtime:
+1. Reads the URL value at the region's `route-key` slot — the URL's primary path for `route-key: "_self"`, or the value of the URL query parameter named by the key for any other value.
+2. Matches that value against the routes block; selects the most-specific matching pattern.
+3. Resolves `{paramname}` placeholders in the route's `config` against captured params (§6.3).
+4. Mounts the route's app into the region with the resolved config.
+5. Validates the user has the app's required `capabilities`; renders 403 view if not.
 
-If no pattern matches, the runtime falls back to `default-route`. If `default-route` is also inaccessible (capability denial), it lands on the first permitted route in the routes block.
+A region whose `route-key` slot is empty (e.g., `route-key: "detail"` and the URL has no `?detail=` parameter) renders empty until a navigation populates it. A region whose slot value matches no route falls back to the engine's default empty/404 view for that region.
+
+If the primary path matches no route and the URL is the initial load, the runtime navigates to `default-route`. If `default-route` is inaccessible (capability denial), it lands on the first permitted route in the routes block.
 
 ### 6.3 URL parameter interpolation
 
@@ -644,15 +644,20 @@ The two namespaces never overlap because their containing fields never overlap. 
 
 ### 6.4 Multi-region URL state
 
-When multiple regions are routable (master-detail), the URL hash encodes state per region using query parameters. The default routable region (`accepts-target: "_self"`) owns the path; other routable regions appear as query parameters keyed by region id:
+The URL is the full app state — every routable region's currently-mounted app is encoded directly in the URL. The region with `route-key: "_self"` owns the URL's primary path; every other routable region's state lives in a URL query parameter named by its `route-key`:
 
 ```
-#/posts                       → main: posts list, detail: empty
-#/posts?detail=/posts/42      → main: posts list, detail: editor for post 42
-#/posts/new                   → main: editor for new post, detail: empty
+#/posts                                            → main: posts list, detail: empty
+#/posts?detail=/posts/42                           → main: posts list, detail: editor for post 42
+#/posts?detail=/posts/42&inspector=/users/3        → main: posts list, detail: editor, inspector: user profile
+#/posts/new                                        → main: editor for new post, detail: empty
 ```
 
-The router resolves each query parameter against the routes block as if it were a standalone route, then mounts the resulting apps into their respective regions. Each region's state is independently navigable: dismissing detail doesn't change main's URL; navigating main doesn't necessarily clear detail (regions persist their app until explicitly dismissed or until the route changes their state).
+Query-parameter values are URL-encoded route patterns (`/posts/42` becomes `%2Fposts%2F42` in the wire form; the router decodes before matching). The router resolves each query parameter against the routes block as if it were a standalone route, then mounts the resulting app into the region whose `route-key` matches the parameter name.
+
+Region state is independently navigable. Adding `?detail=/posts/42` to the URL mounts the detail region without changing main; clearing the `detail` parameter unmounts detail without disturbing main. The browser's URL bar always reflects the current shell state; the user can copy/share/bookmark the URL to capture the full multi-region view, and reloading or opening in a new tab reproduces it identically.
+
+**Why URL-only.** The earlier draft used an HTML-attribute overload (`<a target="detail">`) to signal which region a link should mount in. That mechanism was dropped because (a) HTML's `target` attribute names browsing contexts, not in-page DOM regions, so any non-special value would natively spawn a new tab/window unless every click were intercepted; (b) intercepting clicks must preserve middle-click / Cmd-click / right-click "Open in new tab" / drag-to-bookmark behaviors, all of which are easy to break; (c) overloading `target` makes shell-internal navigation visually indistinguishable from "open in new tab" in source code, harming readability. URL-only routing reduces shell-specific vocabulary, lets `target` keep its native HTML meaning (so `<a target="_blank">` opens a real new tab as expected), and makes the URL the single, copyable source of truth for app state.
 
 ---
 
@@ -815,8 +820,8 @@ The runtime resolves artifacts in this order:
 6. Validate user capabilities against each app's `capabilities[]` and each region's `capability`.
 7. Mount the engine.
 8. Engine instantiates regions per the merged region tree.
-9. Each region mounts its assigned app (or stays empty if `accepts-target` and no current route).
-10. Routing fires for the current URL; matched app mounts into its target region.
+9. Each region with a fixed `app` mounts it.
+10. The router decomposes the current URL; for each region with `route-key`, the URL slot value is matched against the routes block and the matching app mounts in that region.
 11. Bindings register with the engine's keyboard shortcut layer.
 
 ### 12.3 Data layer
@@ -891,7 +896,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 - [ ] Three-artifact configuration: app manifest, engine manifest, admin.json
 - [ ] Region vocabulary: role + layout + platform + routing
 - [ ] Nested regions; one-region-one-app rule
-- [ ] HTML link-semantic navigation; `target` resolution; multi-region URL state
+- [ ] URL-driven navigation; per-region `route-key` resolution; multi-region URL state via query parameters
 - [ ] URL parameter interpolation in routes config
 - [ ] Bindings block; app-internal-shortcut precedence
 - [ ] **`tokens.json` primitives layer** (DTCG loader, ref resolver, baseline `core:tokens.json`)
@@ -1006,7 +1011,7 @@ This appendix preserves decisions made across the design process so context is n
 
 **Region "kind" enum removed** (resolved 2026-05-01). The earlier draft's fixed taxonomy (`persistent | overlay | drawer | floating | tiled`) is replaced by `role` (ARIA) + `platform` (services) + `layout` (CSS) + `routing` (URL participation). Rationale: kinds were a contract written against imagined engine consumers; the new vocabulary anchors on existing W3C/WHATWG specifications and admits engine variation without enumerated kinds.
 
-**HTML link semantics for navigation intent** (resolved 2026-05-01). `target` (`_self`, `_blank`, named) and `rel` carry navigation intent. Rationale: 30 years of stable browser semantics; authors and accessibility tools already understand.
+**URL-only navigation; no HTML-attribute overload** (resolved 2026-05-04; supersedes the 2026-05-01 "HTML link semantics with `target`" decision). Earlier resolution proposed using `<a target>` to direct links to specific shell regions. Reversed because HTML's `target` names browsing contexts, not in-page DOM regions; using non-special target values would either spawn new tabs natively or require document-level click interception that's easy to break (middle-click, Cmd-click, drag-to-bookmark, "Open in new tab"). New resolution: navigation is URL-driven end-to-end. The URL is the full app state. Each routable region declares a `route-key` naming the URL slot it reads from (`_self` = primary path; any other value = same-named query parameter). Authors write plain `<a href>` links — `target` keeps native HTML meaning; the browser handles clicks; the router observes URL changes and recomputes per-region state. See §6.
 
 **Three-layer region vocabulary: role / layout / platform** (resolved 2026-05-01). Plus `routing` as a separate fourth concern. Rationale: each layer maps to an existing standardized vocabulary (ARIA, CSS, browser/OS platform services), with shell-specific fields only as a small remainder. `behavior` was renamed to `platform` to make the browser-analog test explicit.
 
@@ -1018,7 +1023,7 @@ This appendix preserves decisions made across the design process so context is n
 
 **`userCustomizable` renamed to `customizable`** (resolved 2026-05-01). The prior draft used `userCustomizable` because user prefs were the most common downstream override consumer. With per-role and per-user origins both in the cascade, the affordance applies to all downstream origins, not just user. Renamed for accuracy. Default value (`false`) and semantics (opt-in declaration of which fields downstream origins may modify) are unchanged.
 
-**Top-level `routes` (was `routing`)** (resolved 2026-05-01). The prior internal vocabulary used `routing` for both the URL-pattern table at admin.json's root *and* a region's URL participation declaration. Renamed the top-level table to `routes` (URL patterns → app + target tuples) so it doesn't collide with the per-region `routing.accepts-target` field (which declares only that this region receives navigations matching a target). Two distinct concepts, two distinct names.
+**Top-level `routes` (was `routing`)** (resolved 2026-05-01; refined 2026-05-04). The prior internal vocabulary used `routing` for both the URL-pattern table at admin.json's root *and* a region's URL participation declaration. Renamed the top-level table to `routes` (URL patterns → app + config tuples; no `target` field per the URL-only navigation decision) so it doesn't collide with the per-region `routing.route-key` field (which names the URL slot a region reads from). Two distinct concepts, two distinct names.
 
 **WPDS-native styles** (resolved 2026-04-29; carried forward). admin.json `styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-shell--chrome--*` (chrome) plus a fixed compat bridge. Rationale: `@wordpress/components` and `@wordpress/ui` converge on `--wpds-*`; setting shell theming on the WPDS surface means every component consumer inherits shell overrides automatically.
 

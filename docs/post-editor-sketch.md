@@ -143,46 +143,37 @@ But it's worth noting because it's the kind of thing a **plugin** version of the
 ```jsonc
 {
   "regions": {
-    "main":   { "template": "core:main",   "accepts-target": "_self" },
-    "detail": { "template": "core:detail", "accepts-target": "detail" }
+    "main":   { "template": "core:main",   "routing": { "route-key": "_self" } },
+    "detail": { "template": "core:detail", "routing": { "route-key": "detail" } }
   },
 
-  "routing": {
+  "routes": {
     "/posts/{id}": {
       "app": "core:editor",
-      "target": "detail",
-      "config": { "post-type": "post" }
+      "config": { "post-type": "post", "post-id": "{id}" }
     },
     "/pages/{id}": {
       "app": "core:editor",
-      "target": "detail",
-      "config": { "post-type": "page" }
+      "config": { "post-type": "page", "post-id": "{id}" }
     },
     "/posts/new": {
       "app": "core:editor",
-      "target": "_self",
       "config": { "post-type": "post" }
     }
   }
 }
 ```
 
-Note `/posts/new` targets `_self` — creating a new post takes the whole content area, no list-detail split — while `/posts/{id}` targets `detail`, opening alongside the posts list. Same app, two routing intents, distinguished by URL pattern. This works.
+There's no `target` field on routes. The route is a pure URL pattern → app + config mapping. *Where* the editor mounts is determined by *where in the URL the route matched*: against the URL's primary path (the region with `route-key: "_self"` — main) or against the value of a named query parameter (the region with `route-key: "detail"` — detail).
 
-The `{id}` placeholder needs to flow into the app's config. The editor needs `post-id` to be set from the route. The simplest version: the router resolves `{id}` against the URL and passes it as `config.post-id`. Worth being explicit in the routing schema:
+Authors signal the layout intent through the URL itself, not a hidden attribute:
 
-```jsonc
-"/posts/{id}": {
-  "app": "core:editor",
-  "target": "detail",
-  "config": {
-    "post-type": "post",
-    "post-id": "{id}"
-  }
-}
-```
+- `<a href="#/posts/new">` navigates the primary path to `/posts/new`. The main region's slot becomes `/posts/new`, which matches the editor route. The list region (if there's a sidebar) is unaffected. Full-screen editor.
+- `<a href="?detail=/posts/42">` sets the URL's `detail=` query parameter to `/posts/42`. The main region's slot is unchanged (it stays on whatever the user was looking at, e.g., the posts list); the detail region's slot becomes `/posts/42`, which matches the editor route. Master-detail layout.
 
-Curly-brace substitution in config values is a small addition to the spec. Consistent with the DTCG alias syntax we already have, but resolves against route params rather than tokens. Document the namespace separation.
+Same app, two presentations, distinguished by which URL slot the user navigates. The same `/posts/{id}` route is reused in both — the routes block doesn't need separate entries for "full-screen edit" and "open in detail." The URL is the source of truth; the regions read their respective slots.
+
+Curly-brace substitution in config values (`{id}`) is a small addition to the spec. Consistent with the DTCG alias syntax we already have, but resolves against route params rather than tokens. Document the namespace separation.
 
 ---
 

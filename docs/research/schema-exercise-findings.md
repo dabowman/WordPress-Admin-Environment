@@ -28,7 +28,7 @@ The app manifest enforces this conditional; the region's platform block should m
 
 ### 5. `config` outside an `app`-bearing region is meaningless
 
-A region with `accepts-target` (routable) receives its config from the matching route entry. A region with a fixed `app` receives its config from the region declaration's `config` field. A region with neither — pure chrome with no app — has no use for `config`. The schema enforces: `if config, then app required`. This catches a real authoring mistake (declaring config on a routable region thinking it'll pass through).
+A region with `route-key` (routable; reads its app from the URL slot named by the key) receives its config from the matching route entry. A region with a fixed `app` receives its config from the region declaration's `config` field. A region with neither — pure chrome with no app — has no use for `config`. The schema enforces: `if config, then app required`. This catches a real authoring mistake (declaring config on a routable region thinking it'll pass through).
 
 ---
 
@@ -76,7 +76,7 @@ These are the validation rules the runtime is responsible for, because they requ
 
 4. **`app` references a registered app.** Same as engine.
 
-5. **Route `target` resolves to an `accepts-target` region.** Schema validates target format; runtime checks at least one region has matching `accepts-target`.
+5. **Routable regions have a registered `route-key`.** Schema validates the key shape (`_self` or kebab-case slug); runtime checks at composition time that no two regions in the same shell declare the same `route-key` and that at most one declares `_self`. (Routes themselves no longer carry a destination-region field — the URL slot the pattern matched against determines which region mounts the route.)
 
 6. **Default route is a valid route pattern.** Schema doesn't cross-check `default-route` against `routes` patterns; runtime warns if no match (doesn't reject — falls back to first permitted route).
 
@@ -90,7 +90,7 @@ These are the validation rules the runtime is responsible for, because they requ
 
 11. **Binding `invoke` references a triggerable app.** Schema validates id format; runtime checks the app exists and has `platform.triggerable: true`.
 
-12. **One region per shell uses `_self` as accepts-target.** Convention, not strict requirement; runtime warns if multiple. (Schema can't enforce because it would require uniqueness across patternProperties values.)
+12. **One region per shell uses `_self` as route-key.** Convention, not strict requirement; runtime warns if multiple. (Schema can't enforce because it would require uniqueness across patternProperties values.)
 
 13. **Plugin extending an engine declares templates the engine renders correctly.** Out of schema scope entirely.
 

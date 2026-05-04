@@ -16,14 +16,14 @@ The current v1 codebase is built against the **2026-04-29 spec**, which was supe
 | Configuration shape | One `admin.json` with `settings` + `styles` partition. Apps and regions declared inline in `settings`. | **Three artifacts:** `app.json` per app (intrinsic declarations), `engine.json` per engine (templates + capabilities), `admin.json` per install (composition + decisions only). |
 | Region typing | Fixed `kind` enum: `persistent | overlay | drawer | floating | tiled`. | Three-layer vocabulary: `role` (ARIA), `layout` (CSS subset), `platform` (browser-analog services), plus `routing` for URL participation. No `kind` enum. |
 | Multi-app composition | Region's `contains: [appId, ...]` array. System apps have `__` prefix and `hidden: true`. | **One region, one app.** Multi-app patterns produced by region templates declaring **child regions** (each holding one app). Recursive: regions all the way down. |
-| App placement | Region's `contains[]` (pinned) or app's `route` field (routable). | Region has `app: "id"` (fixed) **xor** `routing.accepts-target: "name"` (routable). Mutually exclusive. Routes table at admin.json top level maps URL patterns to app + target tuples. |
-| Navigation intent | Hash-based; programmatic `navigate(hash)`. Single routable region. | **HTML link semantics:** `<a href target rel>`. `target="_self"` → primary content region. `target="detail"` → master-detail. Multi-region URL state via query params. |
+| App placement | Region's `contains[]` (pinned) or app's `route` field (routable). | Region has `app: "id"` (fixed) **xor** `routing.route-key: "name"` (routable). Mutually exclusive. Routes table at admin.json top level maps URL patterns to apps. |
+| Navigation intent | Hash-based; programmatic `navigate(hash)`. Single routable region. | **URL-driven; no HTML-attribute overload.** The URL is the full app state. Each routable region declares a `route-key` naming the URL slot it reads from (`_self` = primary path; any other value = same-named query parameter). Plain `<a href>` links navigate; `target` keeps native HTML meaning (`_blank` opens new tab as expected). Multi-region state via query params: `<a href="?detail=/posts/42/edit">` populates the detail region. |
 | App layout/geometry | Some apps assume container size; `core:posts` has `contentWidth`. | **Apps never declare layout.** Engines own all geometry. Apps must be intrinsically responsive. |
 | Inter-app coordination | `core/admin-shell/selection` Redux store + `useSelection` hook + `respondsTo` config + REST persistence endpoint. | **Removed entirely.** Apps coordinate through `core-data` entities, the existing data layer, or URL state. No event bus. |
 | App extensibility | Slot/Fill registry at the *shell* level (`core:editor.sidebar`, `core:posts.row-actions`, etc.). | Slot/Fill is **app-internal only.** The shell does not see or govern app-internal extensions. Apps use `@wordpress/plugins` against their own slot tree. |
 | Token system | Already implemented (WPDS-native styles + chrome extensions + compat bridge). `tokens.json` deferred to "v2" in the old plan. | Token system is **kept as-is**. The DTCG `tokens.json` primitives layer is now a v2 deliverable (was v3 in the prior plan — moved up because v1 without aliasing produces a worse author experience than current `theme.json settings.custom`). |
 | `userCustomizable` field | Used to declare which fields downstream origins may override. | **Renamed `customizable`** for accuracy (overrides apply to all downstream origins, not just user). |
-| Top-level `routing`/`routes` | One `defaultRoute`; routes implicit from app `route` field. | Top-level **`routes`** block: explicit URL pattern → app + target + config map. Distinct from per-region `routing.accepts-target`. URL parameter interpolation: `{id}` in route config resolves against captured params. |
+| Top-level `routing`/`routes` | One `defaultRoute`; routes implicit from app `route` field. | Top-level **`routes`** block: explicit URL pattern → app + config map. No `target` field — which region mounts a route is determined by which URL slot the pattern matched against, via per-region `routing.route-key`. URL parameter interpolation: `{id}` in route config resolves against captured params. |
 | Schema URL | `docs/schemas/admin-v1.json` (v0/v1 partitioned shape) | Three schemas at `docs/schemas/{admin,admin-app,admin-engine}-v2.json`. v2 is its own version because the shape is genuinely different — not a backwards-compatible extension. |
 
 The token system (M3), cascade resolver (M2), and capability gating (M5) carry forward **largely unchanged** — those layers are independent of the structural shifts above.
@@ -72,7 +72,7 @@ Before doing any migration work:
 
 - Three manifest artifacts and their registration mechanisms.
 - A region template catalog shipped with each engine.
-- HTML link-semantic navigation primitives (`target` resolution, multi-region URL state).
+- URL-driven navigation: per-region `route-key` resolution, multi-region URL state via query parameters, plain `<a href>` links with native HTML `target` semantics preserved.
 - `routes` block in admin.json (separate from per-region `routing` field).
 - URL parameter interpolation in route config.
 - New platform services: `dirty-state`, `block-navigation-on-dirty`.
@@ -111,7 +111,7 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
 5. Build the **runtime resolver** for the things JSON Schema can't validate (per the schema-exercise findings doc):
    - Role resolvability across template inheritance
    - ID references (engine, app, template) resolving to registered artifacts
-   - Route `target` matching some region's `accepts-target`
+   - For every routable region (region with `routing.route-key`), confirm the key shape is valid (`_self` or kebab-case slug)
    - Default route matching a route pattern
 
 **Exit criteria:** A test app with an `app.json` manifest can be discovered, validated, and registered. The kernel can list registered apps via the new path. None of the existing app components have migrated yet; they still register the v1 way.
@@ -134,7 +134,7 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
 
 4. Implement **nested regions**. A region's `regions: { ... }` map produces child regions addressable as `parent/child`. Each child has the full region contract recursively.
 
-5. Implement the `app` xor `routing.accepts-target` rule at runtime (the schema enforces it; runtime confirms during composition).
+5. Implement the `app` xor `routing.route-key` rule at runtime (the schema enforces it; runtime confirms during composition).
 
 6. Region rendering applies platform services from the merged declaration (region's `platform` block + mounted app's manifest `platform`, strictest wins). Replace existing kind-based dispatching (overlay → backdrop, drawer → slide-in, etc.) with platform-service-based logic.
 
@@ -142,27 +142,29 @@ Five milestones, sequential. Each is a complete commit-able state with passing t
 
 **Exit criteria:** All bundled shells render correctly. No region in any file references `kind` or `contains`. All regions either reference templates or declare `role` directly.
 
-### V2.M3 — Navigation, routing, and target resolution
+### V2.M3 — URL-driven navigation and routing
 
-**Goal:** HTML link semantics throughout. The `routes` block in admin.json supersedes the per-app `route` field. Multi-region URL state works.
+**Goal:** URL is the single source of truth for shell state. The `routes` block in admin.json supersedes the per-app `route` field. Multi-region URL state works via query parameters. Plain `<a href>` links navigate; `target` keeps native HTML meaning; the router observes URL changes rather than intercepting clicks.
 
 **Tasks:**
 
-1. Add the `routes` block to admin.json schema (already in `admin-v2.json`). Move route declarations out of app entries and into the top-level `routes` block.
+1. Add the `routes` block to admin.json schema (already in `admin-v2.json`). Move route declarations out of app entries and into the top-level `routes` block. Routes are pure URL pattern → app + config tuples — no `target` field, no destination-region field.
 
-2. Rewrite the router (`src/runtime/routing/router.js`) to honor `target` resolution: for each navigation, look up the matching route's `target`, find the region with matching `accepts-target`, mount the app there. Multiple routable regions are supported.
+2. Rewrite the router (`src/runtime/routing/router.js`) as a URL-decomposer: on every URL change, for each region with `routing.route-key`, read the URL slot value at that key (the URL's primary path for `_self`; the URL query parameter of the same name otherwise), match the value against the routes block, and mount the matching app in the region. Multiple routable regions are supported; each reads its own URL slot independently.
 
-3. URL hash encoding for multi-region state: primary region's app owns the path; secondary regions' apps appear as query parameters keyed by region id. `#/posts?detail=/posts/42` mounts the posts list in `_self` and the editor for post 42 in `detail`.
+3. URL change detection. Subscribe to `hashchange` for hash-based routing; subscribe to the Navigation API's `navigate` event where supported (evergreen browsers) for richer semantics (declarative interception of same-document navigations, abort signals, intent classification). Never intercept `<a>` clicks at the document level — the browser's native click handling already updates the hash, which fires `hashchange`, which drives the router.
 
-4. URL parameter interpolation: when a route pattern has `{name}` segments and the route's config references `{name}` in a string value, the runtime substitutes the captured value before passing config to the app.
+4. URL hash encoding for multi-region state: the URL's primary path is the value of the `_self` region's slot; every other routable region's value lives in a URL-encoded query parameter keyed by the region's `route-key`. Example: `#/posts?detail=%2Fposts%2F42` decomposes to `_self → /posts`, `detail → /posts/42`. The router URL-decodes the query value before matching.
 
-5. Update `NavigationApp.js` (and any app emitting links) to render real `<a href target>` elements for navigation. Programmatic navigation (`navigate()`) accepts the same `{ target, rel }` options.
+5. URL parameter interpolation: when a route pattern has `{name}` segments and the route's config references `{name}` in a string value, the runtime substitutes the captured value before passing config to the app.
 
-6. The `<a href target>` for `target="_blank"` falls back to `_self` in `core:wp-default-layout` (no new-window concept in chrome layout). The floating engine (V2.M5) interprets `_blank` as new window.
+6. Update `NavigationApp.js` (and any app emitting links) to render plain `<a href>` elements for navigation — no shell-specific attributes. Links targeting an in-shell destination use the hash form (`#/path?key=value`); the browser handles the click natively, the URL updates, the router recomputes. `target="_blank"` keeps native HTML meaning (open in new tab/window) — the new browsing context loads the same URL, the shell on that context decomposes the URL identically. `target="_self"` (default) navigates in place. The shell does not redefine either.
 
-7. Migrate bundled shells to use `routes` block.
+7. Programmatic navigation API: `navigate(href)` is a thin wrapper around `location.hash = ...` (or the Navigation API's `navigate(url)` where available). It is exactly equivalent to a user clicking an `<a href>` to that target. The function takes a single `href` argument; there is no `target` option because there is no overload. Apps that want to populate a specific routable region simply construct the right URL (e.g., `navigate('?detail=' + encodeURIComponent('/posts/42/edit'))`).
 
-**Exit criteria:** Bundled shells route correctly, including the `developer-admin` master-detail layout. Browser back/forward works across multi-region state. Links have proper HTML semantics for assistive tech.
+8. Migrate bundled shells to use `routes` block. Replace any pre-v2 `accepts-target` declarations with `route-key`; remove any `target` fields from route entries.
+
+**Exit criteria:** Bundled shells route correctly, including the `developer-admin` master-detail layout. Browser back/forward works across multi-region state. Middle-click / Cmd-click / Ctrl-click on any in-shell link opens that link's URL in a new tab and the new tab renders the same shell state. `target="_blank"` opens a real new tab. Links have full HTML semantics for assistive tech (no shell-specific attributes that AT cannot interpret).
 
 ### V2.M4 — Selection bus removal, slot consolidation, app manifests
 

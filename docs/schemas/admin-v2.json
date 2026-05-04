@@ -65,7 +65,7 @@
         "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/region" }
       },
       "additionalProperties": false,
-      "description": "The shell's region tree. Each entry is a region keyed by id (kebab-case slug, unique within this admin.json). Regions reference engine-shipped templates via `template`, declare from-scratch via the full vocabulary (role/layout/platform), or both (template-with-overrides). Each region holds either a fixed app (`app` field) or accepts routed apps (`routing.accepts-target`). Regions can declare nested child regions. See spec §5."
+      "description": "The shell's region tree. Each entry is a region keyed by id (kebab-case slug, unique within this admin.json). Regions reference engine-shipped templates via `template`, declare from-scratch via the full vocabulary (role/layout/platform), or both (template-with-overrides). Each region holds either a fixed app (`app` field) or reads its app from the URL via `routing.route-key`. Regions can declare nested child regions. See spec §5."
     },
 
     "routes": {
@@ -74,7 +74,7 @@
         "^/[A-Za-z0-9_/{}\\-*]*$": { "$ref": "#/$defs/route" }
       },
       "additionalProperties": false,
-      "description": "URL pattern → app + target + config map. Patterns use leading-slash form (`/posts`, `/posts/{id}`, `/media/*`). Parameter segments use `{name}` curly braces and capture into the route's config via interpolation. Wildcard suffixes `/*` capture the remaining path. Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}`. The matched route's `target` selects which routable region (a region with `routing.accepts-target` matching) receives the mounted app. Distinct from the per-region `routing` field — see §5.4 vs §6.2."
+      "description": "URL pattern → app + config map. Patterns use leading-slash form (`/posts`, `/posts/{id}`, `/media/*`). Parameter segments use `{name}` curly braces and capture into the route's config via interpolation. Wildcard suffixes `/*` capture the remaining path. Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}`. There is no destination-region (`target`) field on routes — routes are pure URL→app mappings, and which region mounts a route is determined by which URL slot the pattern matched against (primary path or named query parameter), via each region's `routing.route-key` declaration. Distinct from the per-region `routing` field — see §5.4 vs §6.2."
     },
 
     "default-route": {
@@ -146,14 +146,14 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "accepts-target": {
+            "route-key": {
               "type": "string",
               "minLength": 1,
-              "pattern": "^(_self|_blank|[a-z][a-z0-9-]*)$",
-              "description": "Target value this region accepts from navigation events. `_self` is the conventional name for the primary content region (typically only one region per shell uses `_self`). `_blank` is the conventional name for the engine's 'new context' behavior. Named targets (e.g., `detail`) match navigation `<a target=\"detail\">` and routes with `target: \"detail\"`."
+              "pattern": "^(_self|[a-z][a-z0-9-]*)$",
+              "description": "Names the URL slot whose value this region resolves to a route. `_self` reads the URL's primary path (typically only one region per shell uses `_self`). Any other value (e.g., `detail`, `inspector`) reads the same-named URL query parameter. `<a href=\"?detail=/posts/42/edit\">` populates the region with `route-key: \"detail\"`. See spec §5.4 and §6.4."
             }
           },
-          "description": "URL participation declaration. A region with `accepts-target` is routable: matching navigations mount the routed app here. A region without `accepts-target` is non-routable (holds a fixed app or is purely chrome). See spec §5.4."
+          "description": "URL participation declaration. A region with `route-key` is routable: the URL slot value at that key resolves to a route in the routes block, and the matching app mounts here. A region without `route-key` is non-routable (holds a fixed app or is purely chrome). See spec §5.4."
         },
 
         "position": {
@@ -174,7 +174,7 @@
 
         "app": {
           "$ref": "#/$defs/namespacedId",
-          "description": "App id to mount in this region for the life of the shell. Mutually exclusive with `routing.accepts-target` — a region either holds a fixed app or accepts routed apps, never both. See spec §5.4 and §7."
+          "description": "App id to mount in this region for the life of the shell. Mutually exclusive with `routing.route-key` — a region either holds a fixed app or reads its app from the URL, never both. See spec §5.4 and §7."
         },
 
         "config": {
@@ -194,13 +194,13 @@
 
       "allOf": [
         {
-          "description": "Conditional rule: a region cannot have both a fixed `app` and `routing.accepts-target`. The two represent incompatible mount modes — the region either holds an app for the life of the shell or accepts routed apps.",
+          "description": "Conditional rule: a region cannot have both a fixed `app` and `routing.route-key`. The two represent incompatible mount modes — the region either holds an app for the life of the shell or reads its app from the URL.",
           "not": {
             "allOf": [
               { "required": [ "app" ] },
               {
                 "properties": {
-                  "routing": { "required": [ "accepts-target" ] }
+                  "routing": { "required": [ "route-key" ] }
                 },
                 "required": [ "routing" ]
               }
@@ -208,7 +208,7 @@
           }
         },
         {
-          "description": "Conditional rule: `config` is only meaningful when `app` is also set. A region without a fixed app receives its config from the routes block, not from the region declaration. (This isn't strictly invalid — a region with `accepts-target` and `config` is just confusing — but the schema flags it to prevent a common authoring mistake.)",
+          "description": "Conditional rule: `config` is only meaningful when `app` is also set. A region without a fixed app receives its config from the routes block, not from the region declaration. (This isn't strictly invalid — a region with `route-key` and `config` is just confusing — but the schema flags it to prevent a common authoring mistake.)",
           "if": { "required": [ "config" ] },
           "then": { "required": [ "app" ] }
         }
@@ -286,17 +286,11 @@
       "type": "object",
       "required": [ "app" ],
       "additionalProperties": false,
-      "description": "A URL route entry. Maps a URL pattern to an app + target + config tuple.",
+      "description": "A URL route entry. Maps a URL pattern to an app + config tuple. There is no destination-region (`target`) field — the URL slot the pattern matched against (the URL's primary path or a named query parameter) is what determines which region mounts the route, via each region's `routing.route-key` declaration. The same route can be reused across multiple regions: `/posts/{id}` matched at `_self` mounts the editor in the primary region; the same route matched as the value of `?detail=` mounts the editor in the detail region.",
       "properties": {
         "app": {
           "$ref": "#/$defs/namespacedId",
           "description": "App id to mount when this route matches. The app must be discoverable via its manifest (registered with the runtime). The user must satisfy the app's `capabilities[]`; otherwise the route renders a 403 view."
-        },
-        "target": {
-          "type": "string",
-          "pattern": "^(_self|_blank|[a-z][a-z0-9-]*)$",
-          "default": "_self",
-          "description": "Which region receives the mounted app. Resolves against `regions[*].routing.accepts-target` — the region with matching `accepts-target` is the destination. `_self` (default) targets the primary content region. Named targets enable master-detail layouts (`target: \"detail\"` mounts into the detail region)."
         },
         "config": {
           "type": "object",
