@@ -1,4 +1,5 @@
 {
+  "$schema": "../docs/schemas/admin-v1.json",
   "name": "developer-admin",
   "title": "Developer Admin",
   "description": "Full admin shell with access to all WordPress features.",
@@ -36,10 +37,17 @@
       "icon": "media"
     },
     {
+      "id": "comments",
+      "source": "core:comments",
+      "title": "Comments",
+      "icon": "comment"
+    },
+    {
       "id": "design-styles",
-      "source": "iframe:site-editor.php?p=%2Fstyles&canvas=edit",
+      "source": "core:site-editor",
       "title": "Styles",
-      "icon": "styles"
+      "icon": "styles",
+      "config": { "url": "site-editor.php?p=%2Fstyles&canvas=edit" }
     },
     {
       "id": "design-navigation",
@@ -70,7 +78,7 @@
     },
     {
       "id": "users",
-      "source": "iframe:users.php",
+      "source": "core:users",
       "title": "Users",
       "icon": "people"
     },
@@ -81,17 +89,10 @@
       "icon": "wrench"
     },
     {
-      "id": "settings-general",
-      "source": "core:settings-general",
-      "title": "General Settings",
-      "icon": "settings"
-    },
-    {
       "id": "settings",
-      "source": "iframe:options-general.php",
-      "title": "Settings (legacy)",
-      "icon": "settings",
-      "hidden": true
+      "source": "core:settings",
+      "title": "Settings",
+      "icon": "settings"
     },
     {
       "id": "profile",
@@ -105,6 +106,7 @@
     { "app": "posts" },
     { "app": "pages" },
     { "app": "media" },
+    { "app": "comments" },
     { "separator": true },
     {
       "screen": "design",
@@ -128,7 +130,7 @@
         { "app": "plugins" },
         { "app": "users" },
         { "app": "tools" },
-        { "app": "settings-general" }
+        { "app": "settings" }
       ]
     },
     { "separator": true },

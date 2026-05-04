@@ -2,16 +2,88 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 0.1.0
+ * Version: 1.0.0-beta.1
  * Requires PHP: 7.4
  * Requires at least: 6.7
+ * Requires Plugins: gutenberg
  * Text Domain: wp-admin-shell
  */
 
 defined( 'ABSPATH' ) || exit;
 
+// Hard runtime dep: @wordpress/ui transitively imports @wordpress/theme,
+// which calls __dangerousOptInToUnstableAPIsOnlyForCoreModules against
+// wp.privateApis. WP core 6.9's allowlist excludes @wordpress/theme;
+// the Gutenberg plugin overrides wp-private-apis with one that includes
+// it. Without Gutenberg, every @wordpress/ui overlay component throws
+// at module-load and the shell renders empty. Surface a clear notice
+// instead of letting that happen silently.
+add_action( 'admin_notices', function () {
+	if ( ! function_exists( 'is_plugin_active' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	}
+	if ( ! is_plugin_active( 'gutenberg/gutenberg.php' ) ) {
+		echo '<div class="notice notice-error"><p>';
+		echo esc_html__( 'WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists.', 'wp-admin-shell' );
+		echo '</p></div>';
+	}
+} );
+
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
+define( 'WP_ADMIN_SHELL_DB_VERSION', 1 );
+
+/**
+ * Version-stamped migration. Plan §M2.9 + issue #6.
+ *
+ * The `wp_admin_shell_db_version` option stamps the highest migration
+ * step that has run for this install. Each step runs at most once per
+ * install lifetime; reactivation / downgrade-then-upgrade cycles
+ * cannot re-fire steps that already completed (which would otherwise
+ * clobber a user's later choice with the legacy MVP value).
+ *
+ * Step 1: copy legacy `wp_admin_shell_active_config` into v1's
+ *         `wp_admin_shell_active_shell` if the new key is empty AND
+ *         the legacy key has a non-default value. The legacy key
+ *         survives one minor cycle so MVP reads still work; reads in
+ *         v1 check the new key first.
+ *
+ * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
+ * disk), bump WP_ADMIN_SHELL_DB_VERSION and add a step here. Steps
+ * must be idempotent w.r.t. their own stamp — running twice is a bug,
+ * but a partially-failed migration that re-runs from a lower stamp
+ * should converge.
+ */
+add_action( 'init', function () {
+	$current_version = (int) get_option( 'wp_admin_shell_db_version', 0 );
+	if ( $current_version >= WP_ADMIN_SHELL_DB_VERSION ) {
+		return;
+	}
+
+	if ( $current_version < 1 ) {
+		// Step 1 — legacy active-config write-copy.
+		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
+			$legacy = get_option( 'wp_admin_shell_active_config', '' );
+			if ( $legacy !== '' ) {
+				update_option( 'wp_admin_shell_active_shell', $legacy );
+			}
+		}
+	}
+
+	update_option( 'wp_admin_shell_db_version', WP_ADMIN_SHELL_DB_VERSION );
+}, 5 );
+
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-can-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-prefs-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 
 /**
  * Register the shell admin page and settings.
@@ -116,6 +188,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
 			: null,
+		'capabilities'  => wp_admin_shell_resolve_capabilities( $config ),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -128,30 +201,93 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 } );
 
 /**
- * Read the active admin.json configuration.
+ * Read the active admin.json configuration through the M2 cascade resolver.
+ *
+ * Five origins (core / plugin / site / role / user) are loaded, filtered,
+ * and merged into a single resolved doc. The legacy single-file loader is
+ * gone — every shell file goes through the same pipeline so behavior is
+ * uniform whether the shell ships with the plugin, lives in DB options,
+ * or is contributed by a programmatic registration.
  */
 function wp_admin_shell_get_active_config() {
-	$active = sanitize_file_name( get_option( 'wp_admin_shell_active_config', 'developer-admin' ) );
-	$path   = WP_ADMIN_SHELL_PATH . 'shells/' . $active . '.json';
+	return WP_Admin_Shell_Resolver::resolve();
+}
 
-	if ( ! file_exists( $path ) ) {
-		$path = WP_ADMIN_SHELL_PATH . 'shells/developer-admin.json';
+/**
+ * Sanitize + validate the wp_admin_shell_active_shell option write.
+ *
+ * Returns the sanitized slug if a matching shell file exists; returns
+ * the previous option value (or empty string for the first write)
+ * when the slug is unknown. Empty string passes through so the
+ * resolver's fallback chain still resolves (legacy active_config →
+ * default).
+ */
+function wp_admin_shell_sanitize_active_shell( $value ) {
+	$sanitized = sanitize_file_name( (string) $value );
+	if ( $sanitized === '' ) {
+		return '';
+	}
+	$path = WP_ADMIN_SHELL_PATH . 'shells/' . $sanitized . '.json';
+	if ( file_exists( $path ) ) {
+		return $sanitized;
 	}
 
-	if ( ! file_exists( $path ) ) {
-		return array(
-			'name'  => 'default',
-			'title' => 'Default Shell',
-		);
-	}
-
-	$json   = file_get_contents( $path );
-	$config = json_decode( $json, true );
-
-	return is_array( $config ) ? $config : array(
-		'name'  => 'default',
-		'title' => 'Default Shell',
+	add_settings_error(
+		'wp_admin_shell_active_shell',
+		'wp_admin_shell_unknown_shell',
+		sprintf(
+			/* translators: %s: shell slug */
+			__( 'Unknown shell: "%s". The previous active shell was kept.', 'wp-admin-shell' ),
+			esc_html( $sanitized )
+		),
+		'error'
 	);
+
+	$previous = get_option( 'wp_admin_shell_active_shell', '' );
+	return $previous;
+}
+
+/**
+ * Pre-compute capability decisions for every cap declared in the resolved
+ * config. Walks regions[*].capability + applications[*].capability, plus
+ * built-in source capability floors. The runtime sees an absolute
+ * `{cap: bool}` map for everything that matters during initial render;
+ * the /wp-admin-shell/v1/can/{cap} endpoint covers anything plugin code
+ * looks up dynamically.
+ *
+ * Cost: each unique declared cap costs one `current_user_can()` call.
+ * A 50-app shell with 30 unique caps = 30 cap checks per page load on
+ * a cold resolver-cache miss. The M2.7 resolver cache memoizes the
+ * entire resolved config + cap precomputation across requests, so this
+ * cost only fires when origin signals (option / user-meta / file-mtime)
+ * change. Hot path = zero cap checks.
+ */
+function wp_admin_shell_resolve_capabilities( $config ) {
+	$declared = array();
+
+	foreach ( ( $config['settings']['regions'] ?? array() ) as $region ) {
+		if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
+			$declared[ $region['capability'] ] = true;
+		}
+	}
+	foreach ( ( $config['settings']['applications'] ?? array() ) as $app ) {
+		if ( isset( $app['capability'] ) && is_string( $app['capability'] ) ) {
+			$declared[ $app['capability'] ] = true;
+		}
+	}
+
+	// Built-in source capability floors (mirrors registry/builtins.js
+	// `capabilities` arrays). Kept tight to the surface authors actually
+	// declare — adding every WP cap here would inflate the inline script.
+	foreach ( array( 'list_users', 'moderate_comments', 'manage_options', 'edit_theme_options' ) as $cap ) {
+		$declared[ $cap ] = true;
+	}
+
+	$out = array();
+	foreach ( array_keys( $declared ) as $cap ) {
+		$out[ $cap ] = current_user_can( $cap );
+	}
+	return $out;
 }
 
 /**
@@ -163,11 +299,51 @@ function wp_admin_shell_get_active_config() {
  * users_can_register, default_role.
  */
 add_action( 'init', function () {
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_config', array(
+	// Active shell (canonical v1 key). Sole setting on the
+	// `wp_admin_shell_settings` page-form group so options.php doesn't
+	// NULL-out adjacent options when the form posts.
+	//
+	// Sanitize-and-validate: core's sanitize_file_name fatals on NULL
+	// since PHP 8.1 (see wp_is_valid_utf8 in /wp-includes/utf8.php), so
+	// the (string) coercion is required. Then verify the sanitized
+	// slug corresponds to a shell file on disk — unknown slugs return
+	// the previous value, preserving the working state instead of
+	// putting the admin in a "Shell configuration not found" state on
+	// the next load. WP-CLI `wp admin-shell activate <slug>` and the
+	// JS `switchShell()` both pre-validate, but this is the
+	// belt-and-suspenders against direct option writes (e.g. via
+	// `wp option update`).
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_shell', array(
 		'type'              => 'string',
-		'default'           => 'developer-admin',
-		'sanitize_callback' => 'sanitize_file_name',
+		'default'           => '',
+		'sanitize_callback' => 'wp_admin_shell_sanitize_active_shell',
 		'show_in_rest'      => true,
+	) );
+
+	// Cascade-origin options live in a separate group — REST-exposed but
+	// not edited by the settings page. Keeping them off the page-form
+	// group avoids the "form posts only one option, options.php NULLs the
+	// rest" failure mode the MVP migration hit on PHP 8.1+.
+	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_site_config', array(
+		'type'         => 'object',
+		'default'      => array(),
+		'show_in_rest' => array(
+			'schema' => array(
+				'type'                 => 'object',
+				'additionalProperties' => true,
+			),
+		),
+	) );
+
+	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_role_config', array(
+		'type'         => 'object',
+		'default'      => array(),
+		'show_in_rest' => array(
+			'schema' => array(
+				'type'                 => 'object',
+				'additionalProperties' => true,
+			),
+		),
 	) );
 
 	if ( ! is_multisite() ) {
@@ -332,7 +508,10 @@ function wp_admin_shell_render_settings() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$active = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
+	$active = get_option( 'wp_admin_shell_active_shell', '' );
+	if ( $active === '' ) {
+		$active = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
+	}
 	$shells = wp_admin_shell_get_available_shells();
 	?>
 	<div class="wrap">
@@ -341,9 +520,9 @@ function wp_admin_shell_render_settings() {
 			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Active Configuration', 'wp-admin-shell' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Active Shell', 'wp-admin-shell' ); ?></th>
 					<td>
-						<select name="wp_admin_shell_active_config">
+						<select name="wp_admin_shell_active_shell">
 							<?php foreach ( $shells as $shell ) : ?>
 								<option value="<?php echo esc_attr( $shell['slug'] ); ?>"
 									<?php selected( $active, $shell['slug'] ); ?>>
@@ -374,9 +553,10 @@ function wp_admin_shell_get_available_shells() {
 			continue;
 		}
 		$shells[] = array(
-			'slug'        => basename( $file, '.json' ),
-			'title'       => $data['title'] ?? basename( $file, '.json' ),
-			'description' => $data['description'] ?? '',
+			'slug'           => basename( $file, '.json' ),
+			'title'          => $data['title'] ?? basename( $file, '.json' ),
+			'description'    => $data['description'] ?? '',
+			'userSwitchable' => ! empty( $data['userSwitchable'] ),
 		);
 	}
 

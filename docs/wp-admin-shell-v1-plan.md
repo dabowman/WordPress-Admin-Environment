@@ -132,18 +132,21 @@ src/runtime/                        ← new kernel (replaces src/shell/*)
 
 **PHP architecture (mirrors `WP_Theme_JSON_Resolver`).**
 
+Shipped layout deviates slightly from the original sketch — `cascade/` and `origins/` subdirectories group related classes, only `core` got its own origin class (plugin/site/role/user inlined as private methods on the resolver since none needed extra surface), and per-origin filters live inside the resolver rather than a standalone `filters.php`. Functionally equivalent.
+
 ```
 includes/
-├── class-wp-admin-shell-resolver.php       ← merge orchestration, caching
-├── class-wp-admin-shell-config.php         ← single normalized config object
-├── origins/
-│   ├── core.php                            ← bundled defaults (admin.json baseline)
-│   ├── plugin.php                          ← active shell (from plugin/theme files)
-│   ├── site.php                            ← wp_admin_shell_site_config option
-│   ├── role.php                            ← wp_admin_shell_role_config option
-│   └── user.php                            ← wp_admin_shell_user_prefs user-meta
-├── filters.php                             ← wp_admin_shell_data_{origin} + final
-└── cache.php                               ← WP_Object_Cache + transient layer
+├── class-wp-admin-shell-config.php             ← read-only wrapper around merged tree
+├── class-wp-admin-shell-{can,prefs,selection}-rest.php ← REST endpoints
+├── class-wp-admin-shell-cli.php                ← `wp admin-shell …` commands
+├── cascade/
+│   ├── class-wp-admin-shell-resolver.php       ← merge orchestration + caching + load_origins
+│   ├── class-wp-admin-shell-merge.php          ← field-aware merge (authoritative + plain)
+│   ├── class-wp-admin-shell-customizable.php   ← userCustomizable filter
+│   ├── class-wp-admin-shell-cache.php          ← WP_Object_Cache + transient layer
+│   └── class-wp-admin-shell-config-validator.php ← per-source schema cache (M2.8 stub)
+└── origins/
+    └── class-wp-admin-shell-origin-core.php    ← v0 → v1 normalization + empty baseline
 ```
 
 **Tasks (ordered).**
@@ -200,13 +203,13 @@ tests/parity/
 **Tasks (ordered).**
 
 1. **WPDS slot tree parser.** A pure function that walks `styles` and emits a flat map keyed by `--wpds-{path-with-dashes}`. Path uses spec §4.3 syntax verbatim — no translation table.
-2. **Default baseline ship.** Snapshot WP 6.9's `wp-includes/css/dist/theme/style.css` into `wpds-defaults/6.9.json`. The resolver loads this as the implicit `core` origin baseline keyed off the top-level `$wpds` field.
+2. **Default baseline ship.** Snapshot WPDS 6.9 into `wpds-defaults/6.9.json` via `scripts/snapshot-wpds.mjs`. The script reads from `node_modules/@wordpress/theme/src/prebuilt/css/design-tokens.css` (the npm package's prebuilt CSS) rather than `wp-includes/css/dist/theme/style.css` — same content, more direct for CI and avoids requiring a pinned WordPress checkout. The resolver loads the snapshot as the implicit `core` origin baseline keyed off the top-level `$wpds` field.
 3. **Chrome extension namespace emission.** Slots under `styles.chrome.*` emit `--wp-admin-shell--chrome--{category}--{slug}` per the spec §4.3.1 table.
 4. **Compat bridge.** A static post-pass appends fixed aliases for `--wp-admin-theme-color`, `--wp-admin-theme-color-darker-10`, `--wp-admin-theme-color-darker-20`, `--wp-admin-theme-color--rgb`, `--wp-admin-border-width-focus`, `--wp-components-color-accent`, `--wp-components-color-background`, `--wp-components-color-foreground`. The bridge cannot be removed by author files. Numeric derivations: RGB triplet from the resolved hex (a small 3-line helper); `darker-20` from HSL lightness adjust (existing utility patterns suffice — no chroma dependency).
 5. **Density attribute writer.** `styles.density` writes `data-wpds-density="{value}"` on `#wp-admin-shell`. WPDS already ships density-keyed gap/padding overrides under that selector — no shell-side density CSS.
 6. **DTCG alias resolver — literal-only mode for v1.** v1 inlines literal CSS values in `admin.json.styles` (per spec §4.0.5 "v1 inlines literal values; tokens.json lands in v2"). The resolver still recognizes `"{path}"` strings — but in v1 they only resolve *within admin.json* via the `{styles.path}` form (§4.3 within-document references), not against an external tokens.json. v2 lifts that restriction.
 7. **Per-region and per-app overrides.** `styles.regions[id].*` and `styles.applications[id].*` emit scoped CSS under `[data-region-id="..."]` and `[data-app-id="..."]` selectors. Required for the spec §4.3 region/application override examples.
-8. **CI parity test.** A test that loads `wpds-defaults/{$wpds}.json`, parses the live `wp-includes/css/dist/theme/style.css` from the pinned WordPress, and diffs the slot lists. Added/renamed/removed slots fail the build. The test triggers on each WordPress release we want to support.
+8. **CI parity test.** A test that loads `wpds-defaults/{$wpds}.json`, parses the live `node_modules/@wordpress/theme/src/prebuilt/css/design-tokens.css` (same source as the snapshot above), and diffs the slot lists + values. Added/renamed/removed slots and value drift fail the build. Runs via `npm run test:parity`; the shared regex lives at `src/runtime/styles/wpds-defaults/_slot-pattern.mjs`.
 9. **Inline-style budget.** Audit the MVP `index.css` for hex values, raw px, and hardcoded durations. Replace with WPDS variable references. Engines and apps must consume tokens, not invent them.
 10. **Documentation.** Spec §4.3.1, §4.3.2, §4.3.3 are the authority. M3's deliverable doc is a one-pager `docs/v1-token-emission.md` showing the exact CSS that lands in `<style id="wp-admin-shell-tokens">` for each bundled shell, as a reference for app authors.
 

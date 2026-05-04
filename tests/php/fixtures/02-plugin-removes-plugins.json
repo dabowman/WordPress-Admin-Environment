@@ -1,0 +1,9 @@
+{
+  "settings": {
+    "applications": [
+      { "id": "posts",   "source": "core:posts",   "title": "Posts",   "icon": "post" },
+      { "id": "pages",   "source": "core:posts",   "title": "Pages",   "icon": "page", "config": { "postType": "page" } },
+      { "id": "media",   "source": "core:media",   "title": "Media",   "icon": "media" }
+    ]
+  }
+}

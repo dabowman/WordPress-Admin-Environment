@@ -14,7 +14,8 @@ import {
 	ObserveTyping,
 	BlockEditorKeyboardShortcuts,
 } from '@wordpress/block-editor';
-import { navigate } from '../routing/router';
+import { navigate } from '../runtime/routing/router';
+import { Slot } from '../runtime/slots/Slot';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;
@@ -366,6 +367,14 @@ function SimpleEditor( { postType, postId, backRoute } ) {
 					</BlockEditorProvider>
 				</div>
 			</div>
+			<Slot
+				name="core:editor.sidebar"
+				fillProps={ {
+					postId:   record?.id,
+					postType: 'post',
+					status:   record?.status,
+				} }
+			/>
 		</div>
 	);
 }

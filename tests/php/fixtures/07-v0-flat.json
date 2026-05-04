@@ -1,0 +1,13 @@
+{
+  "name": "v0-flat",
+  "title": "Legacy Flat",
+  "version": 1,
+  "branding": { "accentColor": "#00aa00" },
+  "layout": { "navigation": "left", "navigationCollapsed": false, "toolbar": true },
+  "applications": [
+    { "id": "posts", "source": "core:posts", "title": "Posts", "icon": "post" }
+  ],
+  "navigation": [ { "app": "posts" } ],
+  "toolbar": { "right": [ { "command": "core/new-post", "icon": "plus", "label": "New" } ] },
+  "defaultApp": "posts"
+}

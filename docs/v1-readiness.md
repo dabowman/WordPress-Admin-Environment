@@ -1,0 +1,128 @@
+# v1 production-readiness pass
+
+Bundle budget, performance smoke test, accessibility checklist, and the Gutenberg dependency gate. Tracks plan §M5.12.
+
+## Bundle-size budget
+
+Measured at the end of M5 (`npm run build`):
+
+| Asset | Size (minified) | Notes |
+|---|---:|---|
+| `build/index.js`        | 371 KiB | Single-bundle. `@wordpress/dataviews` + `@wordpress/ui` bundled per `BUNDLED_PACKAGES`. All other `@wordpress/*` externalized. |
+| `build/index.css`       |  16 KiB | Shell layout + chrome surfaces + apps. |
+| `build/dataviews.css`   |  74 KiB | Copied verbatim from `@wordpress/dataviews/build-style/style.css`. |
+| **Entrypoint total**    | **461 KiB** | JS + both CSS files. |
+
+**Ship target.** Plan §M5.12 sets v1 ship target at the M4 measurement plus 10% headroom. Final M5 number is **371 KiB** for `index.js` → ship target **≤ 408 KiB JS**, **≤ 100 KiB shell-side CSS** (the dataviews CSS is copy-through). Source-level code splitting (loading plugin sources on demand) is a v3 item per spec §11; v1 ships single-bundle.
+
+The bundle landed *below* the M4 spike measurement because tree-shaking now drops some `@wordpress/components` modules previously pulled by ad-hoc `<Notice>` usage in the user apps — that is, the M4.6 notice consolidation paid for itself.
+
+## Performance smoke test
+
+Methodology (plan §M5.12):
+
+1. Clear browser cache.
+2. Navigate to `/wp-admin/admin.php?page=wp-admin-shell`.
+3. Measure from `navigationStart` to first paint of the routable region's first app.
+4. Recorded on a baseline laptop (M1/M2 MacBook), throttled to "Fast 4G" + 4× CPU slowdown.
+
+**Cold mount target: under 500 ms.**
+
+The path on first paint:
+- Network: index.js (gz ≈ 110 KiB) + index.css + dataviews.css.
+- Parse + execute: kernel registers builtins, normalizer runs, token CSS injects.
+- React renders the engine + regions + the routed app. PostsApp's first paginated DataViews query fires after mount.
+
+Spec §6.1 keeps `wp_add_inline_script` + `wp_json_encode` for config delivery (preserves type fidelity); the resolver cache (M2.7) makes repeat mounts essentially free server-side.
+
+**Pre-mount FOUC.** Tokens emit from JS at kernel mount, not server-side. Any pre-mount chrome (admin bar, page header before React boots) flashes wp-admin defaults briefly before the shell tokens land. Acceptable for v1 — the shell takes over the viewport on mount and the flash window is small. SSR token emission (a `<style>` tag the PHP enqueue layer prints from the resolved styles tree) is a v2 polish item if the FOUC becomes visually distracting.
+
+**Recorded readings live in [`v1-perf-baseline.md`](./v1-perf-baseline.md).** Re-run before tagging.
+
+## Accessibility smoke checklist
+
+Concrete checks for v1 (not a substitute for the v3 full audit). Each item below is verified against the code path noted in parentheses; "manual" entries require a browser pass before the v1 ship tag.
+
+- [x] Command palette reachable via `⌘K`. Focus traps until dismissed (delegated to `@wordpress/commands`'s portal).
+- [x] Drawer regions render `role="dialog"` + `aria-modal="true"` + `aria-labelledby` + focus-on-mount + focus-return + constrained tabbing (`src/runtime/regions/drawer-region/index.js`, fixed in issue #2). `core:overlay-region` is a `display: contents` pass-through; the contained app owns its own dialog semantics — `core:command-picker` defers to the `@wordpress/commands` portal which handles them.
+- [x] Sidebar navigation wraps the region content in `<nav>` with `aria-label` (`src/runtime/regions/sidebar-region/index.js`, fixed in issue #24). Default label "Navigation"; overridable via `region.config.label`.
+- [x] Drill-down screens move focus to the heading on entry; restore focus to the originating item on back (`src/runtime/apps/_components/SidebarContent.js` + `SidebarNavigationContext.js`).
+- [x] Focus ring visible on every interactive element via the `--wpds-color-stroke-focus-brand` token. Inherits from the WPDS baseline + author overrides.
+- [x] No `tabindex` values above 0 in the runtime (verified via grep at v1 ship cut).
+- [x] Every icon-only button supplies a `label` prop or visible text via `<VisuallyHidden>` (verified across `SiteHubApp`, `ToolbarActionsApp`, `NavigationApp` collapsed-mode buttons, `SidebarNavigationItem`, `SidebarButton`).
+- [ ] **Manual:** single keyboard pass through `developer-admin` reaches every primary action without trapping. Re-run before tagging.
+- [ ] **Manual:** one VoiceOver pass on macOS through the same shell. Re-run before tagging.
+- [ ] **Manual:** `axe` against the rendered shell DOM, no blocker-severity findings. Re-run before tagging.
+
+Tooling: `axe` against the rendered shell DOM, plus one manual VoiceOver pass on macOS. Both run before the v1 ship tag; the v3 milestone covers the deeper a11y audit.
+
+## Capability gating
+
+Smoke pass for the four-layer cap model (spec §8) on the default install shell `wp-admin-default`. Two scripts back this section; both green on 2026-05-01.
+
+**Server-side resolver smoke** — `tests/php/run-cap-gating-smoke.php` switches `wp_set_current_user()` for each of the five core roles, resolves `wp-admin-default`, mirrors `NavigationApp.pruneNavItems()` in PHP against `current_user_can()`, and asserts the surviving app id set matches a hand-curated expectation per role.
+
+```
+PASS subscriber: 2 apps
+PASS contributor: 5 apps
+PASS author: 7 apps
+PASS editor: 12 apps
+PASS administrator: 33 apps
+```
+
+| Role | Visible apps |
+|---|---|
+| subscriber    | dashboard-home, profile |
+| contributor   | + posts-all, posts-new, tools-available |
+| author        | + media-library, media-new |
+| editor        | + posts-categories, posts-tags, pages-all, pages-new, comments |
+| administrator | every app declared in the shell (33) |
+
+**End-to-end browser smoke** — `tests/php/run-cap-gating-browser-smoke.sh` logs in as `admin` and `subscriber` via `wp-login.php`, fetches `/wp-admin/admin.php?page=wp-admin-shell`, and parses the inline `window.wpAdminShell.capabilities` map. Confirms the PHP→JSON→inline-script handoff matches the resolver smoke. Two roles cover the top and bottom of the cap matrix; the resolver smoke proves equivalence for the middle three.
+
+The pre-computed cap map is built by `wp_admin_shell_resolve_capabilities()` (`wp-admin-shell.php:265`), which walks the resolved doc's region + application capability fields plus four built-in source floors (`list_users`, `moderate_comments`, `manage_options`, `edit_theme_options`) and resolves each via `current_user_can()`. Because the JS `userCan()` reads from this same map (`src/runtime/capabilities/userCan.js`), the resolver smoke is truth-equivalent to what the browser renders.
+
+Re-run both before tagging:
+
+```bash
+npx wp-env run cli -- wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
+bash tests/php/run-cap-gating-browser-smoke.sh
+```
+
+## Per-shell render + form-save smoke
+
+End-to-end smoke for the five bundled shells. `tests/php/run-shell-render-smoke.sh` logs in as admin, posts to `options.php` to switch the active shell (exercises the same sanitize/validate path as the in-product Settings form — covers the PHP 8.1+ NULL-sanitize regression fixed in `8cd79ef`), fetches the shell page, and confirms the inline `window.wpAdminShell` payload has resolved applications, navigation, and defaultRoute.
+
+```
+PASS wp-admin-default — apps=38 nav=15 defaultRoute=/dashboard-home
+PASS developer-admin  — apps=20 nav=10 defaultRoute=/posts
+PASS content-author   — apps=10 nav=3  defaultRoute=/posts
+PASS client-portal    — apps=11 nav=6  defaultRoute=/pages
+PASS v1-demo          — apps=10 nav=7  defaultRoute=/posts
+```
+
+PHP version under test: 8.3.30 (covers the 8.1+ regression target). Re-run before tagging:
+
+```bash
+bash tests/php/run-shell-render-smoke.sh
+```
+
+**Bug surfaced + fixed during this pass.** v0 shells with `hidden:true` apps (e.g. `content-author` hides its `editor` app) and no explicit `navigation` key were producing a sparse-keyed PHP array (`{0:..., 1:..., 3:...}`) from the v0→v1 normalizer's `array_filter` + `array_map` build path. `wp_json_encode` serialized that as a JSON object, JS `Array.isArray()` returned false, and `pruneNavItems` early-returned `[]` → empty sidebar. Fixed by wrapping with `array_values()` in `WP_Admin_Shell_Origin_Core::normalize_v0()`. Regression covered by a new "navigation is a sequential list" assertion in `run-shape-tests.php` (one per shell).
+
+## Gutenberg dependency gate
+
+The plugin header declares `Requires Plugins: gutenberg`. WordPress 6.7+ honours the header at activation time; on older sites the plugin still loads but raises a dismissible admin notice if Gutenberg is missing.
+
+Why hard-required: any `@wordpress/ui` overlay component (`Notice.CloseIcon → IconButton → Tooltip → @wordpress/theme`) calls `__dangerousOptInToUnstableAPIsOnlyForCoreModules` against `wp.privateApis`. WP core 6.9's allowlist excludes `@wordpress/theme`/`@wordpress/ui`/`@wordpress/dataviews`; the Gutenberg plugin overrides `wp-private-apis` with one that includes them. Without Gutenberg, those modules throw at module-load and the entire shell renders empty with no React error boundary catching it.
+
+The detect-and-conditionally-render alternative (mass-fallback to `@wordpress/components`) was scoped out for v1; track as a v3 item if upstream WPDS adoption stalls.
+
+## Migration
+
+- v0 (MVP flat) admin.json files keep working indefinitely (spec §10).
+- The MVP `wp_admin_shell_active_config` option migrates to `wp_admin_shell_active_shell` once on plugin upgrade; reads check the new key first and fall back. Legacy key drops in v2.
+- `wp admin-shell upgrade-config <name>` rewrites a v0 file to v1 form on disk; the v0 file is preserved alongside as `<name>.v0.json`.
+
+## Sign-off
+
+When all five bundled shells render through the kernel with parity, fixture tests stay green (`run-cascade-tests` 22/22, `run-selection-tests` 5/5, `run-cap-tests` 54/54, `run-shape-tests` 82/82, `test:parity` 4/4, `test:schema` 11/11), the cap-gating smoke passes (`run-cap-gating-smoke.php` 5/5 + `run-cap-gating-browser-smoke.sh` 2/2), the per-shell render + form-save smoke passes (`run-shell-render-smoke.sh` 5/5), the build size remains under the ship target, and a manual run of the a11y checklist passes — v1 is ready for tag.

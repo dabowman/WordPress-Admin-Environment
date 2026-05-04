@@ -2,6 +2,7 @@ import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
+import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews';
 import {
 	Button,
@@ -10,41 +11,34 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { check, closeSmall, trash, external } from '@wordpress/icons';
+import { trash } from '@wordpress/icons';
+import { useSlotItems } from '../runtime/slots/dataSlots';
 
+/**
+ * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
+ *
+ * Status flow: hold → approved | spam | trash. The REST endpoint accepts
+ * `status` updates via PATCH; we issue them through saveEntityRecord with
+ * a partial payload so optimistic edits round-trip cleanly. Comment
+ * content arrives HTML-rendered; we lean on dangerouslySetInnerHTML
+ * because @wordpress/components' Text doesn't pass HTML through.
+ */
 const STATUS_LABELS = {
-	approved: __( 'Approved', 'wp-admin-shell' ),
-	hold: __( 'Pending', 'wp-admin-shell' ),
-	spam: __( 'Spam', 'wp-admin-shell' ),
-	trash: __( 'Trash', 'wp-admin-shell' ),
+	approved: __( 'Approved',  'wp-admin-shell' ),
+	hold:     __( 'Pending',   'wp-admin-shell' ),
+	spam:     __( 'Spam',      'wp-admin-shell' ),
+	trash:    __( 'Trash',     'wp-admin-shell' ),
 };
 
-const STATUS_OPTIONS = Object.entries( STATUS_LABELS ).map(
-	( [ value, label ] ) => ( { value, label } )
-);
-
-function stripTags( html ) {
-	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
-}
-
-export default function CommentsApp( { config = {} } ) {
+export default function CommentsApp() {
 	const [ view, setView ] = useState( {
 		type: 'table',
 		search: '',
-		filters:
-			config.status && config.status !== 'all'
-				? [
-						{
-							field: 'status',
-							operator: 'is',
-							value: config.status,
-						},
-				  ]
-				: [],
+		filters: [],
 		page: 1,
 		perPage: 20,
 		sort: { field: 'date', direction: 'desc' },
-		fields: [ 'author', 'content', 'status', 'post', 'date' ],
+		fields: [ 'author', 'content', 'status', 'date' ],
 		layout: {},
 	} );
 
@@ -53,20 +47,16 @@ export default function CommentsApp( { config = {} } ) {
 			per_page: view.perPage,
 			page: view.page,
 			order: view.sort?.direction || 'desc',
-			orderby: view.sort?.field || 'date',
+			orderby: view.sort?.field || 'date_gmt',
 			context: 'edit',
-			status: 'all',
+			status: 'any',
 		};
 		if ( view.search ) {
 			args.search = view.search;
 		}
 		for ( const filter of view.filters ) {
-			if ( filter.field === 'status' ) {
-				if ( filter.operator === 'isAny' && Array.isArray( filter.value ) ) {
-					args.status = filter.value.join( ',' );
-				} else if ( filter.operator === 'is' ) {
-					args.status = filter.value;
-				}
+			if ( filter.field === 'status' && filter.operator === 'is' ) {
+				args.status = filter.value;
 			}
 		}
 		return args;
@@ -79,22 +69,20 @@ export default function CommentsApp( { config = {} } ) {
 	);
 
 	const { saveEntityRecord, deleteEntityRecord } = useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
 			return [];
 		}
-		return records.map( ( c ) => ( {
-			id: c.id,
-			author: c.author_name || __( '(unknown)', 'wp-admin-shell' ),
-			authorEmail: c.author_email || '',
-			authorUrl: c.author_url || '',
-			content: stripTags( c.content?.rendered || '' ),
-			status: c.status,
-			post: c.post,
-			date: c.date,
-			link: c.link,
-			rawRecord: c,
+		return records.map( ( record ) => ( {
+			id: record.id,
+			author: record.author_name || '',
+			authorEmail: record.author_email || '',
+			content: record.content?.rendered || '',
+			status: record.status,
+			date: record.date,
+			rawRecord: record,
 		} ) );
 	}, [ records ] );
 
@@ -106,13 +94,9 @@ export default function CommentsApp( { config = {} } ) {
 				label: __( 'Author', 'wp-admin-shell' ),
 				enableGlobalSearch: true,
 				render: ( { item } ) => (
-					<VStack spacing={ 1 }>
-						<Text weight={ 600 }>{ item.author }</Text>
-						{ item.authorEmail && (
-							<Text variant="muted" size={ 12 }>
-								{ item.authorEmail }
-							</Text>
-						) }
+					<VStack spacing={ 0 }>
+						<Text weight={ 500 }>{ item.author }</Text>
+						<Text size={ 12 } variant="muted">{ item.authorEmail }</Text>
 					</VStack>
 				),
 			},
@@ -121,49 +105,60 @@ export default function CommentsApp( { config = {} } ) {
 				type: 'text',
 				label: __( 'Comment', 'wp-admin-shell' ),
 				enableGlobalSearch: true,
+				// Trust boundary: `item.content` comes from
+				// `record.content.rendered`, which WordPress core filters
+				// server-side via `wp_filter_comment_content` (kses + the
+				// comment-text filter chain). Author-supplied raw HTML
+				// has already been sanitized before it reaches the REST
+				// response. Rendering as HTML preserves the formatted
+				// view comment moderators expect.
 				render: ( { item } ) => (
-					<Text>
-						{ item.content.length > 200
-							? `${ item.content.slice( 0, 200 ) }…`
-							: item.content }
-					</Text>
+					<div
+						className="wp-admin-shell-app-comments__excerpt"
+						dangerouslySetInnerHTML={ { __html: item.content } }
+					/>
 				),
 			},
 			{
 				id: 'status',
 				type: 'text',
 				label: __( 'Status', 'wp-admin-shell' ),
-				elements: STATUS_OPTIONS,
+				elements: Object.entries( STATUS_LABELS ).map(
+					( [ value, label ] ) => ( { value, label } )
+				),
 				render: ( { item } ) => (
 					<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
 				),
-				filterBy: { operators: [ 'is', 'isAny' ] },
-			},
-			{
-				id: 'post',
-				type: 'integer',
-				label: __( 'In response to', 'wp-admin-shell' ),
-				render: ( { item } ) =>
-					item.post ? <Text>#{ item.post }</Text> : null,
+				filterBy: { operators: [ 'isAny' ] },
 			},
 			{
 				id: 'date',
 				type: 'datetime',
-				label: __( 'Submitted on', 'wp-admin-shell' ),
+				label: __( 'Date', 'wp-admin-shell' ),
 			},
 		],
 		[]
 	);
 
-	const setStatus = async ( items, status ) => {
-		await Promise.all(
-			items.map( ( item ) =>
-				saveEntityRecord( 'root', 'comment', {
-					id: item.id,
-					status,
-				} )
-			)
-		);
+	const slotActions = useSlotItems( 'core:comments.row-actions' );
+
+	const setCommentsStatus = async ( items, targetStatus, label ) => {
+		try {
+			await Promise.all(
+				items.map( ( item ) =>
+					saveEntityRecord( 'root', 'comment', {
+						id: item.id,
+						status: targetStatus,
+					} )
+				)
+			);
+			createSuccessNotice( label, { type: 'snackbar' } );
+		} catch ( err ) {
+			createErrorNotice(
+				err?.message || __( 'Action failed.', 'wp-admin-shell' ),
+				{ isDismissible: true }
+			);
+		}
 	};
 
 	const actions = useMemo(
@@ -171,54 +166,41 @@ export default function CommentsApp( { config = {} } ) {
 			{
 				id: 'approve',
 				label: __( 'Approve', 'wp-admin-shell' ),
-				icon: check,
-				isPrimary: true,
 				supportsBulk: true,
 				isEligible: ( item ) => item.status !== 'approved',
-				callback: ( items ) => setStatus( items, 'approved' ),
+				callback: ( items ) =>
+					setCommentsStatus( items, 'approved', __( 'Approved.', 'wp-admin-shell' ) ),
 			},
 			{
 				id: 'unapprove',
 				label: __( 'Unapprove', 'wp-admin-shell' ),
-				icon: closeSmall,
 				supportsBulk: true,
 				isEligible: ( item ) => item.status === 'approved',
-				callback: ( items ) => setStatus( items, 'hold' ),
+				callback: ( items ) =>
+					setCommentsStatus( items, 'hold', __( 'Set to pending.', 'wp-admin-shell' ) ),
 			},
 			{
 				id: 'spam',
 				label: __( 'Mark as spam', 'wp-admin-shell' ),
+				isDestructive: true,
 				supportsBulk: true,
 				isEligible: ( item ) => item.status !== 'spam',
-				callback: ( items ) => setStatus( items, 'spam' ),
-			},
-			{
-				id: 'view',
-				label: __( 'View', 'wp-admin-shell' ),
-				icon: external,
-				isEligible: ( item ) => !! item.link,
 				callback: ( items ) =>
-					window.open( items[ 0 ].link, '_blank' ),
+					setCommentsStatus( items, 'spam', __( 'Marked as spam.', 'wp-admin-shell' ) ),
 			},
 			{
 				id: 'trash',
-				label: __( 'Move to Trash', 'wp-admin-shell' ),
-				icon: trash,
+				label: __( 'Move to trash', 'wp-admin-shell' ),
 				isDestructive: true,
 				supportsBulk: true,
+				icon: trash,
 				isEligible: ( item ) => item.status !== 'trash',
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
 					<VStack spacing={ 4 } style={ { padding: '16px' } }>
 						<Text>
 							{ items.length === 1
-								? __(
-										'Move this comment to the trash?',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Move these comments to the trash?',
-										'wp-admin-shell'
-								  ) }
+								? __( 'Move this comment to trash?', 'wp-admin-shell' )
+								: __( 'Move these comments to trash?', 'wp-admin-shell' ) }
 						</Text>
 						<HStack justify="right">
 							<Button variant="tertiary" onClick={ closeModal }>
@@ -228,70 +210,35 @@ export default function CommentsApp( { config = {} } ) {
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'root',
-												'comment',
-												item.id
+									try {
+										await Promise.all(
+											items.map( ( item ) =>
+												deleteEntityRecord( 'root', 'comment', item.id )
 											)
-										)
-									);
-									onActionPerformed?.( items );
+										);
+										createSuccessNotice(
+											__( 'Moved to trash.', 'wp-admin-shell' ),
+											{ type: 'snackbar' }
+										);
+										onActionPerformed?.( items );
+									} catch ( err ) {
+										createErrorNotice(
+											err?.message || __( 'Failed to trash.', 'wp-admin-shell' ),
+											{ isDismissible: true }
+										);
+									}
 									closeModal();
 								} }
 							>
-								{ __( 'Move to Trash', 'wp-admin-shell' ) }
+								{ __( 'Trash', 'wp-admin-shell' ) }
 							</Button>
 						</HStack>
 					</VStack>
 				),
 			},
-			{
-				id: 'delete-permanently',
-				label: __( 'Delete permanently', 'wp-admin-shell' ),
-				icon: trash,
-				isDestructive: true,
-				supportsBulk: true,
-				isEligible: ( item ) => item.status === 'trash',
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<VStack spacing={ 4 } style={ { padding: '16px' } }>
-						<Text>
-							{ __(
-								'This cannot be undone. Continue?',
-								'wp-admin-shell'
-							) }
-						</Text>
-						<HStack justify="right">
-							<Button variant="tertiary" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<Button
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'root',
-												'comment',
-												item.id,
-												{ force: true }
-											)
-										)
-									);
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Delete forever', 'wp-admin-shell' ) }
-							</Button>
-						</HStack>
-					</VStack>
-				),
-			},
+			...slotActions,
 		],
-		[ deleteEntityRecord, saveEntityRecord ]
+		[ saveEntityRecord, deleteEntityRecord, createSuccessNotice, createErrorNotice, slotActions ]
 	);
 
 	const paginationInfo = useMemo(
@@ -314,7 +261,7 @@ export default function CommentsApp( { config = {} } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ { table: {} } }
+				defaultLayouts={ { table: {}, grid: {} } }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

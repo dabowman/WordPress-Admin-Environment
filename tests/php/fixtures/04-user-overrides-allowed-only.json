@@ -1,0 +1,10 @@
+{
+  "styles": {
+    "branding": { "accentColor": "#ff0000" }
+  },
+  "settings": {
+    "applications": [
+      { "id": "posts", "config": { "postType": "post" } }
+    ]
+  }
+}

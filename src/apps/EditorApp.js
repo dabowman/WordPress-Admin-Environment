@@ -3,7 +3,7 @@ import { Button, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
-import { navigate } from '../routing/router';
+import { navigate } from '../runtime/routing/router';
 
 /**
  * Block editor via iframe. Handles existing posts and new post (auto-draft) flow.
@@ -38,6 +38,12 @@ export default function EditorApp( { params } ) {
 					data: {
 						status: 'draft',
 						title: '',
+						// REST rejects fully-empty posts with
+						// "Content, title, and excerpt are empty". Seed a
+						// blank paragraph block so the auto-draft saves
+						// even before the user types a title. SimpleEditorApp
+						// uses the same placeholder.
+						content: '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
 					},
 				} );
 

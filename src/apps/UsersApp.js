@@ -2,6 +2,7 @@ import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as coreStore } from '@wordpress/core-data';
+import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews';
 import {
 	Button,
@@ -10,26 +11,29 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { trash, pencil, external } from '@wordpress/icons';
-import { navigate } from '../routing/router';
+import { trash } from '@wordpress/icons';
+import { useSlotItems } from '../runtime/slots/dataSlots';
 
-const ROLE_LABELS = {
-	administrator: __( 'Administrator', 'wp-admin-shell' ),
-	editor: __( 'Editor', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	contributor: __( 'Contributor', 'wp-admin-shell' ),
-	subscriber: __( 'Subscriber', 'wp-admin-shell' ),
-};
-
-export default function UsersApp( { config = {} } ) {
+/**
+ * core:users — DataViews list of WordPress users.
+ *
+ * Reads via useEntityRecords('root', 'user') with `context: 'edit'` so
+ * email + roles come back in the response. Bulk delete supported via
+ * the deleteEntityRecord( 'root', 'user', id, { reassign, force: true } )
+ * — users have no trash, so deletion is permanent.
+ *
+ * Plugin-contributed actions land via the core:users.row-actions data
+ * slot (M4.5).
+ */
+export default function UsersApp() {
 	const [ view, setView ] = useState( {
 		type: 'table',
 		search: '',
 		filters: [],
 		page: 1,
 		perPage: 20,
-		sort: { field: 'registered_date', direction: 'desc' },
-		fields: [ 'name', 'email', 'roles', 'posts' ],
+		sort: { field: 'name', direction: 'asc' },
+		fields: [ 'name', 'email', 'roles', 'registered' ],
 		layout: {},
 	} );
 
@@ -37,27 +41,20 @@ export default function UsersApp( { config = {} } ) {
 		const args = {
 			per_page: view.perPage,
 			page: view.page,
-			order: view.sort?.direction || 'desc',
-			orderby: view.sort?.field || 'registered_date',
+			order: view.sort?.direction || 'asc',
+			orderby: view.sort?.field || 'name',
 			context: 'edit',
 		};
 		if ( view.search ) {
 			args.search = view.search;
 		}
 		for ( const filter of view.filters ) {
-			if ( filter.field === 'roles' ) {
-				if ( filter.operator === 'isAny' && Array.isArray( filter.value ) ) {
-					args.roles = filter.value.join( ',' );
-				} else if ( filter.operator === 'is' ) {
-					args.roles = filter.value;
-				}
+			if ( filter.field === 'roles' && filter.operator === 'is' ) {
+				args.roles = filter.value;
 			}
 		}
-		if ( config.role ) {
-			args.roles = config.role;
-		}
 		return args;
-	}, [ view, config.role ] );
+	}, [ view ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
 		'root',
@@ -66,20 +63,20 @@ export default function UsersApp( { config = {} } ) {
 	);
 
 	const { deleteEntityRecord } = useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
 			return [];
 		}
-		return records.map( ( u ) => ( {
-			id: u.id,
-			name: u.name,
-			username: u.username,
-			email: u.email,
-			roles: u.roles || [],
-			posts: u.post_count ?? 0,
-			avatar: u.avatar_urls?.[ 48 ] || u.avatar_urls?.[ 96 ] || '',
-			rawRecord: u,
+		return records.map( ( record ) => ( {
+			id: record.id,
+			name: record.name,
+			email: record.email || '',
+			username: record.username,
+			roles: ( record.roles || [] ).join( ', ' ),
+			registered: record.registered_date,
+			rawRecord: record,
 		} ) );
 	}, [ records ] );
 
@@ -92,25 +89,10 @@ export default function UsersApp( { config = {} } ) {
 				enableGlobalSearch: true,
 				enableHiding: false,
 				render: ( { item } ) => (
-					<HStack spacing={ 2 } expanded={ false } alignment="left">
-						{ item.avatar && (
-							<img
-								src={ item.avatar }
-								alt=""
-								width={ 28 }
-								height={ 28 }
-								style={ { borderRadius: '50%' } }
-							/>
-						) }
-						<VStack spacing={ 0 }>
-							<Text weight={ 600 }>{ item.name }</Text>
-							{ item.username && item.username !== item.name && (
-								<Text variant="muted" size={ 12 }>
-									@{ item.username }
-								</Text>
-							) }
-						</VStack>
-					</HStack>
+					<VStack spacing={ 0 }>
+						<Text weight={ 500 }>{ item.name }</Text>
+						<Text size={ 12 } variant="muted">{ item.username }</Text>
+					</VStack>
 				),
 			},
 			{
@@ -123,67 +105,34 @@ export default function UsersApp( { config = {} } ) {
 			{
 				id: 'roles',
 				type: 'text',
-				label: __( 'Role', 'wp-admin-shell' ),
-				elements: Object.entries( ROLE_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				),
-				render: ( { item } ) => (
-					<Text>
-						{ item.roles
-							.map( ( r ) => ROLE_LABELS[ r ] || r )
-							.join( ', ' ) }
-					</Text>
-				),
-				filterBy: { operators: [ 'isAny' ] },
+				label: __( 'Roles', 'wp-admin-shell' ),
+				render: ( { item } ) => <Text>{ item.roles }</Text>,
 			},
 			{
-				id: 'posts',
-				type: 'integer',
-				label: __( 'Posts', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.posts }</Text>,
+				id: 'registered',
+				type: 'datetime',
+				label: __( 'Registered', 'wp-admin-shell' ),
 			},
 		],
 		[]
 	);
 
+	const slotActions = useSlotItems( 'core:users.row-actions' );
+
 	const actions = useMemo(
 		() => [
 			{
-				id: 'edit',
-				label: __( 'Edit', 'wp-admin-shell' ),
-				icon: pencil,
-				isPrimary: true,
-				callback: ( items ) => {
-					navigate( 'user-edit', items[ 0 ].id );
-				},
-			},
-			{
-				id: 'view-posts',
-				label: __( 'View posts', 'wp-admin-shell' ),
-				icon: external,
-				isEligible: ( item ) => item.posts > 0,
-				callback: ( items ) => {
-					navigate( 'posts', { author: items[ 0 ].id } );
-				},
-			},
-			{
 				id: 'delete',
 				label: __( 'Delete', 'wp-admin-shell' ),
-				icon: trash,
 				isDestructive: true,
 				supportsBulk: true,
+				icon: trash,
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
 					<VStack spacing={ 4 } style={ { padding: '16px' } }>
 						<Text>
 							{ items.length === 1
-								? __(
-										'Delete this user? Their content will be reassigned to the network admin or removed depending on site policy.',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Delete these users? Their content will be reassigned or removed.',
-										'wp-admin-shell'
-								  ) }
+								? __( 'Delete this user permanently? Their content will be reassigned to you.', 'wp-admin-shell' )
+								: __( 'Delete these users permanently? Their content will be reassigned to you.', 'wp-admin-shell' ) }
 						</Text>
 						<HStack justify="right">
 							<Button variant="tertiary" onClick={ closeModal }>
@@ -193,17 +142,31 @@ export default function UsersApp( { config = {} } ) {
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'root',
-												'user',
-												item.id,
-												{ force: true, reassign: 0 }
+									try {
+										await Promise.all(
+											items.map( ( item ) =>
+												deleteEntityRecord(
+													'root',
+													'user',
+													item.id,
+													{
+														force: true,
+														reassign: window.wpAdminShell?.userId,
+													}
+												)
 											)
-										)
-									);
-									onActionPerformed?.( items );
+										);
+										createSuccessNotice(
+											__( 'User(s) deleted.', 'wp-admin-shell' ),
+											{ type: 'snackbar' }
+										);
+										onActionPerformed?.( items );
+									} catch ( err ) {
+										createErrorNotice(
+											err?.message || __( 'Failed to delete user(s).', 'wp-admin-shell' ),
+											{ isDismissible: true }
+										);
+									}
 									closeModal();
 								} }
 							>
@@ -213,8 +176,9 @@ export default function UsersApp( { config = {} } ) {
 					</VStack>
 				),
 			},
+			...slotActions,
 		],
-		[ deleteEntityRecord ]
+		[ deleteEntityRecord, createSuccessNotice, createErrorNotice, slotActions ]
 	);
 
 	const paginationInfo = useMemo(
