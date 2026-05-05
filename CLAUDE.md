@@ -86,6 +86,11 @@ These three patterns drive most of the bugs caught in code review. Codified here
 
 - **Self-delete guard on bulk user delete.** Filter out the acting user (`window.wpAdminShell?.userId`) before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight.
 
+- **`@wordpress/ui` layered CSS gotcha.** Component CSS is injected at module-load via `document.head.appendChild`, wrapped in `@layer wp-ui-utilities, wp-ui-components, wp-ui-compositions, wp-ui-overrides`. Per the cascade-layer spec, **unlayered rules win against any layered rule regardless of specificity** — and WP-admin loads many unlayered stylesheets (common.css, forms.css, dashboard.css, theme resets) that can stomp `@wordpress/ui` defaults. Two consequences:
+  - Custom CSS that targets `@wordpress/ui`-rendered DOM should NOT use the legacy `.components-button` / `.components-item` chains (those are `@wordpress/components` classes that don't appear on `@wordpress/ui` output). Use the `wp-admin-shell-*` class alone, or the `button` element selector inside a chrome wrapper.
+  - When a layered rule like `Stack`'s `display: flex` gets stomped, the component falls back to `display: block` and children flow vertically regardless of the inline `flex-direction: row` style. The shell ships a defensive unlayered rule in `src/index.css`: `.wp-admin-shell [class*="__stack"] { display: flex }`. Do not remove it without first verifying the cascade layer applies in every shell DOM context (especially inside `<button>` content models).
+  - Pass explicit `align="center"` to `<Stack direction="row">` calls that contain icon + text. The browser default `align-items: stretch` can render SVGs at unexpected heights inside flex containers.
+
 - **DataViews uses `@wordpress/dataviews/wp` plus a CSS copy.** Webpack copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`; PHP enqueues `dataviews.css` separately. The `/wp` subpath is the runtime-private export that registers DataViews against `wp.privateApis` correctly.
 
 ## Build
