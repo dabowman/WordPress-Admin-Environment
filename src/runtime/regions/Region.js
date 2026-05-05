@@ -1,5 +1,5 @@
 /**
- * Generic, declaration-driven region renderer (V2.M2 task 2).
+ * Generic, declaration-driven region renderer (V2.M2 task 2 + task 4).
  *
  * Replaces the six per-source region modules
  * (`{sidebar,toolbar,content,preview,overlay,drawer}-region/`). The
@@ -7,11 +7,17 @@
  * declarations, dispatched here by their resolved shape.
  *
  * v1 admin.json shells still ship `region.source: "core:sidebar-region"`
- * (etc.); this module dispatches behavior off that legacy id. V2.M3+
- * will route through engine templates, V2.M6 will move dispatch onto
- * platform services, and V2.M7 will migrate the bundled shells off the
- * legacy source ids entirely. Until then, the behaviors below preserve
- * v1 DOM, classes, and a11y so existing shells render unchanged.
+ * (etc.); this module dispatches behavior off that legacy id. v2-shape
+ * declarations (no `source`, declared via `template` + `role` +
+ * platform/style/regions/app) fall through to a generic container
+ * renderer that honors `role` and recurses through `regions`. Task 6
+ * will move dispatch onto platform services; task 7 will retire the
+ * legacy source ids.
+ *
+ * Capability gate runs at every Region level so nested children share
+ * the same fast-path the kernel uses for top-level regions (spec §8
+ * layer 1, recursive). Children are addressed as `parent/child` ids
+ * per spec §5.5.
  */
 
 import { useState, useCallback, useEffect, useMemo, useId } from '@wordpress/element';
@@ -30,6 +36,12 @@ import { useSelection } from '../selection/useSelection';
 import { userCan } from '../capabilities/userCan';
 
 export function Region( { region } ) {
+	if ( ! region ) {
+		return null;
+	}
+	if ( region.capability && ! userCan( region.capability ) ) {
+		return null;
+	}
 	switch ( region.source ) {
 		case 'core:sidebar-region':
 			return <SidebarRegion region={ region } />;
@@ -44,7 +56,7 @@ export function Region( { region } ) {
 		case 'core:drawer-region':
 			return <DrawerRegion region={ region } />;
 		default:
-			return null;
+			return <GenericRegion region={ region } />;
 	}
 }
 
@@ -56,6 +68,33 @@ function renderContains( region ) {
 			regionId={ region.id }
 		/>
 	) );
+}
+
+/**
+ * Spec §5.5: nested children are addressable as `{parent}/{child}`. This
+ * helper materializes each child as a `<Region>` whose `id` is the
+ * parent's id joined with the child's key. Children pass through the
+ * same dispatcher recursively, so further nesting + per-child cap
+ * gating work without coordination.
+ */
+function renderChildren( region ) {
+	const children = region.regions;
+	if ( ! children || typeof children !== 'object' ) {
+		return null;
+	}
+	return Object.entries( children ).map( ( [ key, child ] ) => (
+		<Region
+			key={ key }
+			region={ { id: childId( region.id, key ), ...child } }
+		/>
+	) );
+}
+
+function childId( parentId, key ) {
+	if ( ! parentId ) {
+		return key;
+	}
+	return `${ parentId }/${ key }`;
 }
 
 /* ─────────────────────── sidebar ─────────────────────── */
@@ -73,6 +112,7 @@ function SidebarRegion( { region } ) {
 			style={ { '--wp-admin-shell-nav-width': `${ width }px` } }
 		>
 			{ renderContains( region ) }
+			{ renderChildren( region ) }
 		</nav>
 	);
 }
@@ -86,6 +126,7 @@ function ToolbarRegion( { region } ) {
 			data-region-id={ region.id }
 		>
 			{ renderContains( region ) }
+			{ renderChildren( region ) }
 		</div>
 	);
 }
@@ -105,6 +146,7 @@ function ContentRegion( { region } ) {
 				data-region-id={ region.id }
 			>
 				{ renderContains( region ) }
+				{ renderChildren( region ) }
 			</main>
 		);
 	}
@@ -176,6 +218,7 @@ function ContentRegion( { region } ) {
 					segments={ route.segments }
 				/>
 			</div>
+			{ renderChildren( region ) }
 		</main>
 	);
 }
@@ -216,6 +259,7 @@ function PreviewRegion( { region } ) {
 					/>
 				</div>
 			) ) }
+			{ renderChildren( region ) }
 		</div>
 	);
 }
@@ -235,6 +279,7 @@ function OverlayRegion( { region } ) {
 			style={ { display: 'contents' } }
 		>
 			{ renderContains( region ) }
+			{ renderChildren( region ) }
 		</div>
 	);
 }
@@ -302,6 +347,7 @@ function DrawerRegion( { region } ) {
 					{ accessibleLabel }
 				</span>
 				{ renderContains( region ) }
+				{ renderChildren( region ) }
 			</aside>
 		</>
 	);
@@ -317,4 +363,36 @@ function normalizeDismiss( value ) {
 	return String( value )
 		.split( /\s*\|\s*/ )
 		.filter( Boolean );
+}
+
+/* ─────────────────────── generic (v2 declarations) ─────── */
+
+/**
+ * Fallback renderer for v2-shape declarations (no legacy `source`).
+ * Produces a generic container with the declared `role` so screen
+ * readers see the right landmark, mounts a fixed app when present, and
+ * recurses through nested regions. Task 6 will replace this with
+ * platform-service-based dispatch (modal → backdrop, persistent →
+ * stable mount lifetime, dismiss-on → keybinding wiring); for now it
+ * renders enough to make a v2 shell visible without legacy source ids.
+ */
+function GenericRegion( { region } ) {
+	const role = region.role || 'region';
+	const className = `wp-admin-shell-region${ region.id ? ` wp-admin-shell-region--${ String( region.id ).replace( /\//g, '__' ) }` : '' }`;
+	return (
+		<div
+			role={ role }
+			className={ className }
+			data-region-id={ region.id }
+		>
+			{ region.app ? (
+				<MountedApp
+					appRef={ { id: region.app, source: region.app, config: region.config } }
+					regionId={ region.id }
+				/>
+			) : null }
+			{ renderContains( region ) }
+			{ renderChildren( region ) }
+		</div>
+	);
 }

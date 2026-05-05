@@ -108,13 +108,13 @@ npm run start    # dev build with watch
 
 ## Testing
 
-273 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+278 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
 
 ```bash
 # Node — schema + WPDS parity + runtime
 npm run test:schema      # 26 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells + positive/negative fixtures)
 npm run test:parity      # 4  — WPDS slot-list drift detector
-npm run test:runtime     # 20 — V2.M2 task 3 resolveRegion merge: passthrough, role/platform/style precedence, nested children, map iteration
+npm run test:runtime     # 25 — V2.M2 task 3+4 resolveRegion: passthrough, role/platform/style precedence, nested children merged + recursively resolved, deep grandchild merge
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
@@ -188,9 +188,9 @@ wp-admin-shell/
 │   │   │       ├── index.js        # EngineSource definition
 │   │   │       └── Layout.js       # Arranges regions: dark chrome + elevated cards
 │   │   ├── regions/                # V2.M2 task 2: single declaration-driven renderer
-│   │   │   ├── Region.js           # Generic <Region>: dispatches sidebar/toolbar/content/preview/overlay/drawer behaviors off region.source until v1 shells retire (V2.M2 task 7)
+│   │   │   ├── Region.js           # Generic <Region>: dispatches sidebar/toolbar/content/preview/overlay/drawer behaviors off region.source for v1 shells; GenericRegion fallback for v2 declarations (role + nested regions). Top-level cap fast-path applies recursively. Renders `region.regions` children as `<Region>` with id `parent/child` (spec §5.5).
 │   │   │   ├── regionKind.js       # getRegionKind(region) → persistent | overlay | drawer; replaces RegionSource.regionKind for engine bucketing
-│   │   │   ├── resolveRegion.mjs   # V2.M2 task 3: pure-JS template merge (declaration, engine) → resolved region. Imported by kernel + tests/runtime/. Pure ESM (`.mjs`) so node test harness can import without bundling.
+│   │   │   ├── resolveRegion.mjs   # V2.M2 task 3+4: pure-JS template merge (declaration, engine) → resolved region. Recursively resolves children so deep nesting + per-child templates compose without kernel coordination. Imported by kernel + tests/runtime/. Pure ESM (`.mjs`) so node test harness can import without bundling.
 │   │   │   └── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
 │   │   ├── routing/
 │   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute

@@ -203,6 +203,59 @@ ok(
 	)
 );
 
+console.log( '\n— resolveRegion: recursive child resolution (task 4) —\n' );
+
+ok(
+	'recursion: child with own template gets merged',
+	resolveRegion(
+		{
+			template: 'core:topbar',
+			regions: { center: { template: 'core:sidebar' } },
+		},
+		ENGINE
+	).regions.center.role === 'navigation'
+);
+
+ok(
+	'recursion: child platform inherits its own template defaults',
+	resolveRegion(
+		{ regions: { drawer: { template: 'core:overlay' } } },
+		ENGINE
+	).regions.drawer.platform.modal === true
+);
+
+ok(
+	'recursion: grandchild template merges through two levels',
+	resolveRegion(
+		{
+			regions: {
+				wrapper: {
+					regions: {
+						deep: { template: 'core:sidebar', role: 'complementary' },
+					},
+				},
+			},
+		},
+		ENGINE
+	).regions.wrapper.regions.deep.role === 'complementary'
+);
+
+ok(
+	'recursion: child without template still passes through (no crash)',
+	resolveRegion(
+		{ regions: { plain: { app: 'core:posts' } } },
+		ENGINE
+	).regions.plain.app === 'core:posts'
+);
+
+ok(
+	'recursion: declaration-only top-level region with templated child resolves',
+	resolveRegion(
+		{ regions: { side: { template: 'core:sidebar' } } },
+		ENGINE
+	).regions.side.style.background === '{styles.chrome.sidebar.background}'
+);
+
 console.log( '\n— resolveRegions: map iteration —\n' );
 
 const resolvedMap = resolveRegions(
