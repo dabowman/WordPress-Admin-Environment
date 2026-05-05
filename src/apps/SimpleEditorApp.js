@@ -16,7 +16,7 @@ import {
 	BlockEditorKeyboardShortcuts,
 } from '@wordpress/block-editor';
 import { navigate } from '../runtime/routing/router';
-import { Slot } from '../runtime/slots/Slot';
+import { Slot } from '@wordpress/components';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;

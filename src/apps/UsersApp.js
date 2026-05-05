@@ -8,7 +8,6 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash } from '@wordpress/icons';
-import { useSlotItems } from '../runtime/slots/dataSlots';
 
 /**
  * core:users — DataViews list of WordPress users.
@@ -124,7 +123,6 @@ export default function UsersApp() {
 		[]
 	);
 
-	const slotActions = useSlotItems( 'core:users.row-actions' );
 
 	const actions = useMemo(
 		() => [
@@ -240,7 +238,7 @@ export default function UsersApp() {
 					);
 				},
 			},
-			...slotActions,
+			
 		],
 		[
 			deleteEntityRecord,
@@ -248,7 +246,6 @@ export default function UsersApp() {
 			queryArgs,
 			createSuccessNotice,
 			createErrorNotice,
-			slotActions,
 		]
 	);
 

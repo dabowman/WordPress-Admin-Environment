@@ -155,7 +155,7 @@
 
 		"density": "default",
 
-		"userCustomizable": [
+		"customizable": [
 			"density",
 			"branding.accentColor",
 			"color.bg.interactive.brand.strong"

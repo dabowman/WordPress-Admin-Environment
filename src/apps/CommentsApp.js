@@ -8,7 +8,6 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash } from '@wordpress/icons';
-import { useSlotItems } from '../runtime/slots/dataSlots';
 
 /**
  * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
@@ -144,7 +143,6 @@ export default function CommentsApp() {
 		[]
 	);
 
-	const slotActions = useSlotItems( 'core:comments.row-actions' );
 
 	const setCommentsStatus = async ( items, targetStatus, label ) => {
 		try {
@@ -257,7 +255,7 @@ export default function CommentsApp() {
 					</Stack>
 				),
 			},
-			...slotActions,
+			
 		],
 		[
 			saveEntityRecord,
@@ -266,7 +264,6 @@ export default function CommentsApp() {
 			queryArgs,
 			createSuccessNotice,
 			createErrorNotice,
-			slotActions,
 		]
 	);
 

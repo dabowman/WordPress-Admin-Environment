@@ -36,7 +36,7 @@
  * their normal token consumption — no per-component overrides needed.
  */
 
-const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'userCustomizable' ] );
+const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable', 'userCustomizable' ] );
 
 /**
  * Chrome surface → WPDS token bindings. Each entry maps a chrome surface

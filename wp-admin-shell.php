@@ -73,7 +73,6 @@ add_action( 'init', function () {
 	update_option( 'wp_admin_shell_db_version', WP_ADMIN_SHELL_DB_VERSION );
 }, 5 );
 
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-can-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-prefs-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';

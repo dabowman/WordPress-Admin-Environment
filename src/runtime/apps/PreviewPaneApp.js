@@ -1,35 +1,88 @@
 import { __ } from '@wordpress/i18n';
-import { useSelection } from '../selection/useSelection';
+import { useEntityRecord } from '@wordpress/core-data';
+import { Spinner } from '@wordpress/components';
+
+import { useRoute } from '../routing/router';
+import { matchRoute } from '../routing/matchRoute.mjs';
+import { useKernel } from '../kernel-context';
 
 /**
- * core:preview-pane — placeholder preview app.
+ * core:preview-pane — preview the entity matched by another routable
+ * region's URL slot.
  *
- * Reads the configured `follow` selection scope and displays whatever is
- * there. For M1 this is a debug stub; M4 will replace it with real preview
- * content for posts/pages/templates.
+ * Spec §6.4 + V2.M4 task 2: regions coordinate via URL state, not via
+ * a shell-level selection bus. PreviewPaneApp reads the routes block
+ * + the URL slot value at `config.follow` (default `_self`) and maps
+ * the matched route's `config` to a `core-data` entity, then renders
+ * a JSON preview. Designed for shells whose `detail` region (or any
+ * routable region) holds an editor-style app and whose `preview`
+ * region wants to mirror what the editor is editing.
  *
- * The default `follow` value (`'content.selection'`) is intentionally
- * single-region — v1 ships with one routable region, so the only
- * publishing scope worth following by default is the content region's.
- * v2 multi-routable regions need explicit `config.follow` per consumer;
- * the resolver does not auto-pick when more than one publisher exists.
+ * Config:
+ *   - `follow`: route-key to follow. Defaults to `_self` (primary
+ *     path). Use `'detail'` to mirror a detail region.
+ *
+ * Routes whose config carries `post-type` + `post-id` are interpreted
+ * as `core-data` posts — `useEntityRecord('postType', post-type, id)`.
+ * Other shapes render their config object as JSON for now.
  */
 export default function PreviewPaneApp( { config = {} } ) {
-	const follow = config.follow || 'content.selection';
-	const scope = follow.replace( /\.selection$/, '' );
-	const [ value ] = useSelection( scope );
+	const follow = config.follow || '_self';
+	const route = useRoute();
+	const { config: shellConfig } = useKernel();
+	const routesBlock = shellConfig?.routes || {};
 
-	if ( value === undefined || value === null ) {
+	const slotValue =
+		follow === '_self' ? route.primary : route.params?.[ follow ] || '';
+	const matched = slotValue ? matchRoute( routesBlock, slotValue ) : null;
+
+	if ( ! matched ) {
 		return (
-			<div className="wp-admin-shell-content__empty">
+			<div className="wp-admin-shell-region__empty">
 				{ __( 'Select an item to preview.', 'wp-admin-shell' ) }
 			</div>
 		);
 	}
 
+	const postType = matched.config?.[ 'post-type' ] || matched.config?.postType;
+	const postIdRaw = matched.config?.[ 'post-id' ] || matched.config?.postId;
+	const postId = postIdRaw && /^\d+$/.test( String( postIdRaw ) )
+		? Number( postIdRaw )
+		: null;
+
+	if ( postType && postId ) {
+		return <PreviewEntity kind="postType" name={ postType } id={ postId } />;
+	}
+
 	return (
 		<pre style={ { padding: 16, fontSize: 12 } }>
-			{ JSON.stringify( value, null, 2 ) }
+			{ JSON.stringify( { app: matched.app, config: matched.config }, null, 2 ) }
+		</pre>
+	);
+}
+
+function PreviewEntity( { kind, name, id } ) {
+	const { record, isResolving } = useEntityRecord( kind, name, id, {
+		enabled: !! id,
+	} );
+
+	if ( isResolving ) {
+		return (
+			<div className="wp-admin-shell-region__empty">
+				<Spinner />
+			</div>
+		);
+	}
+	if ( ! record ) {
+		return (
+			<div className="wp-admin-shell-region__empty">
+				{ __( 'Item not found.', 'wp-admin-shell' ) }
+			</div>
+		);
+	}
+	return (
+		<pre style={ { padding: 16, fontSize: 12 } }>
+			{ JSON.stringify( record, null, 2 ) }
 		</pre>
 	);
 }

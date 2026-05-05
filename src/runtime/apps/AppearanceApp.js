@@ -84,7 +84,8 @@ export default function AppearanceApp() {
 		);
 	}
 
-	const stylesDecl = config.styles?.userCustomizable;
+	const stylesDecl =
+		config.styles?.customizable ?? config.styles?.userCustomizable;
 
 	const allowDensity     = isCustomizable( stylesDecl, 'density' );
 	const allowAccent      = isCustomizable( stylesDecl, 'color.bg.interactive.brand.strong' )

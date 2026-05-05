@@ -8,7 +8,6 @@ import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { pencil, external, trash } from '@wordpress/icons';
 import { navigate } from '../runtime/routing/router';
-import { useSlotItems } from '../runtime/slots/dataSlots';
 
 const STATUS_LABELS = {
 	publish: __( 'Published', 'wp-admin-shell' ),
@@ -140,7 +139,6 @@ export default function PostsApp( { app, config } ) {
 		[ postType ]
 	);
 
-	const slotActions = useSlotItems( 'core:posts.row-actions' );
 
 	const actions = useMemo(
 		() => [
@@ -213,9 +211,9 @@ export default function PostsApp( { app, config } ) {
 					</Stack>
 				),
 			},
-			...slotActions,
+			
 		],
-		[ postType, deleteEntityRecord, slotActions ]
+		[ postType, deleteEntityRecord ]
 	);
 
 	const paginationInfo = useMemo(

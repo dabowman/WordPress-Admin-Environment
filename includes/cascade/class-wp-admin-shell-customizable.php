@@ -23,11 +23,31 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Shell_Customizable {
 
-	const FIELD = 'userCustomizable';
+	const FIELD        = 'customizable';
+	const LEGACY_FIELD = 'userCustomizable';
+
+	/**
+	 * Read the customizable declaration from an entry. Prefers the v2
+	 * canonical field (`customizable`); falls back to the legacy
+	 * `userCustomizable` for one cycle so existing per-shell configs
+	 * still work after the rename.
+	 */
+	private static function read_decl( $entry ) {
+		if ( ! is_array( $entry ) ) {
+			return null;
+		}
+		if ( array_key_exists( self::FIELD, $entry ) ) {
+			return $entry[ self::FIELD ];
+		}
+		if ( array_key_exists( self::LEGACY_FIELD, $entry ) ) {
+			return $entry[ self::LEGACY_FIELD ];
+		}
+		return null;
+	}
 
 	/**
 	 * Filter a downstream-origin patch against an upstream entry's
-	 * `userCustomizable` declaration. Returns only the writable subset.
+	 * `customizable` declaration. Returns only the writable subset.
 	 */
 	public static function filter_writes( $upstream_entry, $downstream_patch ) {
 		if ( ! is_array( $downstream_patch ) ) {
@@ -37,7 +57,7 @@ class WP_Admin_Shell_Customizable {
 			return $downstream_patch;
 		}
 
-		$decl = $upstream_entry[ self::FIELD ] ?? null;
+		$decl = self::read_decl( $upstream_entry );
 
 		if ( $decl === true ) {
 			return $downstream_patch;
@@ -83,7 +103,7 @@ class WP_Admin_Shell_Customizable {
 		}
 
 		if ( isset( $downstream['styles'] ) && is_array( $downstream['styles'] ) ) {
-			$styles_decl = $upstream['styles'][ self::FIELD ] ?? null;
+			$styles_decl = self::read_decl( $upstream['styles'] ?? array() );
 			$out['styles'] = self::filter_subtree(
 				$upstream['styles'] ?? array(),
 				$downstream['styles'],

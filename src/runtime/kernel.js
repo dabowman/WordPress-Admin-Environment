@@ -4,9 +4,7 @@ import { createRegistry } from './registry/createRegistry';
 import { registerBuiltins } from './registry/builtins';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
-import { SlotFillProvider } from './slots/Slot';
-import { ensureSelectionStore } from './selection/store';
-import { bootstrapSelections } from './selection/persist';
+import { SlotFillProvider } from '@wordpress/components';
 import { injectTokens } from './styles/emitTokens';
 import { resolveDensity, applyDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
@@ -54,9 +52,6 @@ export function kernel( config ) {
 		applyDensity( root, resolveDensity( config.styles || {} ) );
 	}
 
-	ensureSelectionStore();
-	// Fire-and-forget; UI never blocks on persisted-selection hydration.
-	bootstrapSelections();
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
