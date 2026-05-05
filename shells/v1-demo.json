@@ -38,13 +38,13 @@
 					"config": {
 						"title": "v2 demo navigation",
 						"items": [
-							{ "app": "core:posts" },
-							{ "app": "core:media" },
+							{ "label": "Posts",      "icon": "post",  "href": "#/posts" },
+							{ "label": "Media",      "icon": "media", "href": "#/media" },
 							{ "separator": true },
-							{ "app": "core:appearance" },
-							{ "app": "core:profile" },
+							{ "label": "Appearance", "icon": "brush", "href": "#/appearance" },
+							{ "label": "Profile",    "icon": "user",  "href": "#/profile" },
 							{ "separator": true },
-							{ "label": "View site", "icon": "external", "href": "/", "external": true }
+							{ "label": "View site",  "icon": "external", "href": "/", "external": true }
 						]
 					}
 				}

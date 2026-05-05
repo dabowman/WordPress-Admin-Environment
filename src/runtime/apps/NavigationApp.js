@@ -18,87 +18,98 @@ import {
 } from './_components/SidebarNavigationContext';
 
 import { useRoute } from '../routing/router';
-import { useKernel } from '../kernel-context';
-import { getApplications } from '../regions/mountApp';
 import { userCan } from '../capabilities/userCan';
 
 /**
  * core:navigation — sidebar nav app.
  *
- * Reads its tree from `props.config.items` (the navigation array).
- * Resolves application targets through the kernel config so labels and
- * icons live with the application definition, not duplicated in the nav.
- *
- * Drill-down screens, separators, groups, and external links from the
- * MVP nav format are all preserved (the v0 normalizer keeps the nav
- * structure intact and just lifts it into the `core:navigation` config).
+ * Reads its tree from `props.config.items` (the navigation array). Each
+ * item self-describes inline via `{ label, icon, href, capability }`
+ * for app links, `{ separator: true }` for dividers,
+ * `{ group, items }` for inline grouping, and `{ screen, items }` for
+ * drill-down sub-screens. External links carry `external: true`. The
+ * v2 admin.json has no applications array, so nav items can't reuse a
+ * shared app catalog — each item carries its own metadata.
  */
 export default function NavigationApp( { config: navConfig = {} } ) {
-	const { config: shellConfig } = useKernel();
 	const collapsed = !! navConfig.collapsed;
 
-	const apps = getApplications( shellConfig );
-	const { appId: routeAppId } = useRoute();
-	const currentAppId = routeAppId || resolveDefaultApp( shellConfig, apps );
+	const route = useRoute();
+	const currentPrimary = route.primary || '';
 
-	// Spec §8 — recursive prune of items the user cannot reach. App items
-	// gated out by capability disappear; screens whose entire items[]
-	// prune to empty disappear too (recursive).
+	// Spec §8 — recursive prune of items the user cannot reach.
 	const rawItems = Array.isArray( navConfig.items ) ? navConfig.items : [];
-	const items = pruneNavItems( rawItems, apps );
+	const items = pruneNavItems( rawItems );
 
 	if ( collapsed ) {
-		return <CollapsedNavigation items={ items } apps={ apps } currentAppId={ currentAppId } />;
+		return <CollapsedNavigation items={ items } currentPrimary={ currentPrimary } />;
 	}
 
 	return (
 		<SidebarNavigationProvider>
 			<ExpandedNavigation
 				items={ items }
-				apps={ apps }
-				currentAppId={ currentAppId }
+				currentPrimary={ currentPrimary }
 				navConfig={ navConfig }
 			/>
 		</SidebarNavigationProvider>
 	);
 }
 
-function resolveDefaultApp( shellConfig, apps ) {
-	// v1 canonical: settings.defaultRoute. v0 mirrors at top-level
-	// (defaultApp + defaultRoute). Check all three so both shapes
-	// work without the v1 author having to also write the v0 mirrors.
-	const route =
-		shellConfig.settings?.defaultRoute ||
-		shellConfig.defaultRoute ||
-		null;
-	if ( route ) {
-		return String( route ).replace( /^#?\/?/, '' ).split( '/' )[ 0 ];
+/**
+ * Resolve a nav item to { key, href, label, icon, isActive(currentPrimary) }.
+ * v2 inline-only — items self-describe.
+ */
+function resolveNavTarget( item ) {
+	if ( ! item.href ) {
+		return null;
 	}
-	if ( shellConfig.defaultApp ) {
-		return shellConfig.defaultApp;
-	}
-	return apps.find( ( a ) => ! a.hidden )?.id || null;
+	const href = item.href;
+	const target = hashPrimary( href );
+	return {
+		key:      href,
+		href,
+		label:    item.label,
+		icon:     item.icon,
+		isActive: ( currentPrimary ) =>
+			!! target && currentPrimary === target,
+	};
 }
 
-function CollapsedNavigation( { items, apps, currentAppId } ) {
+/**
+ * Extract the primary path from an in-shell hash href (`#/posts/foo` →
+ * `/posts/foo`). External / non-hash hrefs return null so they never
+ * match the active state.
+ */
+function hashPrimary( href ) {
+	if ( typeof href !== 'string' || ! href.startsWith( '#' ) ) {
+		return null;
+	}
+	const stripped = href.slice( 1 );
+	const queryIdx = stripped.indexOf( '?' );
+	const path = queryIdx === -1 ? stripped : stripped.slice( 0, queryIdx );
+	return path.startsWith( '/' ) ? path : '/' + path;
+}
+
+function CollapsedNavigation( { items, currentPrimary } ) {
 	return (
 		<Stack direction="column" gap="xs" className="wp-admin-shell-nav__items">
 			{ items.map( ( item, idx ) =>
-				renderCollapsedItem( item, idx, apps, currentAppId )
+				renderCollapsedItem( item, idx, currentPrimary )
 			) }
 		</Stack>
 	);
 }
 
-function renderCollapsedItem( item, index, apps, currentAppId ) {
+function renderCollapsedItem( item, index, currentPrimary ) {
 	if ( item.screen ) {
 		return ( item.items || [] ).map( ( child, ci ) =>
-			renderCollapsedItem( child, `${ index }-${ ci }`, apps, currentAppId )
+			renderCollapsedItem( child, `${ index }-${ ci }`, currentPrimary )
 		);
 	}
 	if ( item.group ) {
 		return ( item.items || [] ).map( ( child, ci ) =>
-			renderCollapsedItem( child, `${ index }-${ ci }`, apps, currentAppId )
+			renderCollapsedItem( child, `${ index }-${ ci }`, currentPrimary )
 		);
 	}
 	if ( item.separator ) {
@@ -117,100 +128,26 @@ function renderCollapsedItem( item, index, apps, currentAppId ) {
 			</a>
 		);
 	}
-	if ( item.app || item.href ) {
-		const resolved = resolveNavTarget( item, apps );
-		if ( ! resolved ) {
-			return null;
-		}
-		return (
-			<IconButton
-				key={ resolved.key }
-				tone="neutral"
-				variant="minimal"
-				className={ `wp-admin-shell-nav__item${
-					resolved.isActive( currentAppId ) ? ' is-active' : ''
-				}` }
-				icon={ resolveIcon( resolved.icon ) }
-				render={ <a href={ resolved.href } /> }
-				label={ resolved.label }
-			/>
-		);
-	}
-	return null;
-}
-
-/**
- * Build an in-shell hash link for an app. Used by NavigationApp's
- * `<a href>`-based items (V2.M3 task 6). Apps with an explicit `route`
- * field use it (legacy v1 routing); otherwise fall back to `#/<appId>`
- * which the legacy parseHash treats as the routable app.
- */
-function appHref( app ) {
-	if ( app.route ) {
-		const trimmed = String( app.route ).replace( /^#?\/?/, '' );
-		return '#/' + trimmed;
-	}
-	return '#/' + app.id;
-}
-
-/**
- * Resolve a nav item to { key, href, label, icon, isActive(currentAppId) }.
- *
- * v1 shells: nav items carry `app: 'local-id'`; the apps array (from
- * `settings.applications`) provides title/icon/route. We resolve via
- * `apps.find` and use `appHref(app)`.
- *
- * v2 shells: nav items can carry inline `{app: 'core:posts', label,
- * icon, href}`. The apps array is empty (v2 admin.json has no
- * applications partition), so we read label/icon/href off the item.
- * `app` field is optional but lets the renderer compare against
- * currentAppId (URL primary path's first segment) for active-state
- * styling.
- */
-function resolveNavTarget( item, apps ) {
-	if ( item.app ) {
-		const matched = apps.find( ( a ) => a.id === item.app );
-		if ( matched ) {
-			return {
-				key:      matched.id,
-				href:     appHref( matched ),
-				label:    item.label || matched.title,
-				icon:     item.icon || matched.icon,
-				isActive: ( current ) => current === matched.id,
-			};
-		}
-		// v2: no entry in apps array. The item must self-describe.
-		const href = item.href || '#/' + item.app;
-		return {
-			key:      String( item.app ),
-			href,
-			label:    item.label,
-			icon:     item.icon,
-			isActive: ( current ) => current === hashFirstSegment( href ),
-		};
-	}
-	if ( item.href ) {
-		return {
-			key:      item.href,
-			href:     item.href,
-			label:    item.label,
-			icon:     item.icon,
-			isActive: ( current ) => current === hashFirstSegment( item.href ),
-		};
-	}
-	return null;
-}
-
-function hashFirstSegment( href ) {
-	if ( typeof href !== 'string' ) {
+	const resolved = resolveNavTarget( item );
+	if ( ! resolved ) {
 		return null;
 	}
-	const trimmed = href.replace( /^#?\/?/, '' );
-	const seg = trimmed.split( /[/?]/ )[ 0 ];
-	return seg || null;
+	return (
+		<IconButton
+			key={ resolved.key }
+			tone="neutral"
+			variant="minimal"
+			className={ `wp-admin-shell-nav__item${
+				resolved.isActive( currentPrimary ) ? ' is-active' : ''
+			}` }
+			icon={ resolveIcon( resolved.icon ) }
+			render={ <a href={ resolved.href } /> }
+			label={ resolved.label }
+		/>
+	);
 }
 
-function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
+function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 	const [ activeScreen, setActiveScreen ] = useState( null );
 	const navState = useSidebarNavigation();
 	const { record: site } = useEntityRecord( 'root', 'site' );
@@ -227,7 +164,7 @@ function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
 					content={
 						<ItemGroup className="wp-admin-shell-sidebar-screen__items">
 							{ ( screenDef.items || [] ).map( ( child, i ) =>
-								renderScreenItem( child, i, apps, currentAppId )
+								renderScreenItem( child, i, currentPrimary )
 							) }
 						</ItemGroup>
 					}
@@ -251,7 +188,7 @@ function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
 				content={
 					<ItemGroup className="wp-admin-shell-sidebar-screen__items">
 						{ items.map( ( item, idx ) =>
-							renderRootItem( item, idx, apps, currentAppId, setActiveScreen, navState )
+							renderRootItem( item, idx, currentPrimary, setActiveScreen, navState )
 						) }
 					</ItemGroup>
 				}
@@ -260,15 +197,16 @@ function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
 	);
 }
 
-function renderRootItem( item, index, apps, currentAppId, setActiveScreen, navState ) {
+function renderRootItem( item, index, currentPrimary, setActiveScreen, navState ) {
 	if ( item.separator ) {
 		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
 	}
 
 	if ( item.screen ) {
-		const hasActiveChild = ( item.items || [] ).some( ( child ) =>
-			child.app ? child.app === currentAppId : false
-		);
+		const hasActiveChild = ( item.items || [] ).some( ( child ) => {
+			const resolved = resolveNavTarget( child );
+			return resolved ? resolved.isActive( currentPrimary ) : false;
+		} );
 
 		return (
 			<SidebarNavigationItem
@@ -294,16 +232,16 @@ function renderRootItem( item, index, apps, currentAppId, setActiveScreen, navSt
 			<div key={ `group-${ index }` } className="wp-admin-shell-nav__group">
 				<span className="wp-admin-shell-nav__group-label">{ item.group }</span>
 				{ ( item.items || [] ).map( ( child, ci ) =>
-					renderScreenItem( child, `${ index }-${ ci }`, apps, currentAppId )
+					renderScreenItem( child, `${ index }-${ ci }`, currentPrimary )
 				) }
 			</div>
 		);
 	}
 
-	return renderScreenItem( item, index, apps, currentAppId );
+	return renderScreenItem( item, index, currentPrimary );
 }
 
-function renderScreenItem( item, index, apps, currentAppId ) {
+function renderScreenItem( item, index, currentPrimary ) {
 	if ( item.separator ) {
 		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
 	}
@@ -321,24 +259,21 @@ function renderScreenItem( item, index, apps, currentAppId ) {
 			</SidebarNavigationItem>
 		);
 	}
-	if ( item.app || item.href ) {
-		const resolved = resolveNavTarget( item, apps );
-		if ( ! resolved ) {
-			return null;
-		}
-		return (
-			<SidebarNavigationItem
-				key={ resolved.key }
-				uid={ `nav-${ resolved.key }` }
-				icon={ resolveIcon( resolved.icon ) }
-				isActive={ resolved.isActive( currentAppId ) }
-				href={ resolved.href }
-			>
-				{ resolved.label }
-			</SidebarNavigationItem>
-		);
+	const resolved = resolveNavTarget( item );
+	if ( ! resolved ) {
+		return null;
 	}
-	return null;
+	return (
+		<SidebarNavigationItem
+			key={ resolved.key }
+			uid={ `nav-${ resolved.key }` }
+			icon={ resolveIcon( resolved.icon ) }
+			isActive={ resolved.isActive( currentPrimary ) }
+			href={ resolved.href }
+		>
+			{ resolved.label }
+		</SidebarNavigationItem>
+	);
 }
 
 function findScreen( items, screenId ) {
@@ -351,15 +286,12 @@ function findScreen( items, screenId ) {
 }
 
 /**
- * Recursive navigation prune. An app/screen/group is dropped when:
- *   - the linked app has a capability the user lacks, or
- *   - the source declares a capability floor the user lacks, or
- *   - it's a screen whose pruned children are empty, or
- *   - it's a group whose pruned children are empty.
- * Separators that would orphan at the top/bottom are preserved as-is —
- * the renderer handles them.
+ * Recursive navigation prune. An item is dropped when:
+ *   - it declares a `capability` the user lacks,
+ *   - it's a screen/group whose pruned children are empty.
+ * Separators that orphan at the top/bottom are stripped.
  */
-function pruneNavItems( items, apps ) {
+function pruneNavItems( items ) {
 	if ( ! Array.isArray( items ) ) {
 		return [];
 	}
@@ -373,35 +305,18 @@ function pruneNavItems( items, apps ) {
 			continue;
 		}
 		if ( item.screen || item.group ) {
-			const children = pruneNavItems( item.items, apps );
+			const children = pruneNavItems( item.items );
 			if ( children.length === 0 ) {
 				continue;
 			}
 			out.push( { ...item, items: children } );
 			continue;
 		}
-		if ( item.app ) {
-			const app = apps.find( ( a ) => a.id === item.app );
-			if ( app ) {
-				if ( app.capability && ! userCan( app.capability ) ) {
-					continue;
-				}
-				out.push( item );
-				continue;
-			}
-			// v2: no entry in apps array (admin.json has no applications
-			// partition in v2). The item self-describes via href/label/icon
-			// + an optional `capability`. Cap gate applies if declared.
-			if ( item.capability && ! userCan( item.capability ) ) {
-				continue;
-			}
-			out.push( item );
+		if ( item.capability && ! userCan( item.capability ) ) {
 			continue;
 		}
-		// Plain external link or other — pass through.
 		out.push( item );
 	}
-	// Drop leading/trailing separator runs.
 	while ( out.length && out[ 0 ].separator ) {
 		out.shift();
 	}

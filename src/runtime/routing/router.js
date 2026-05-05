@@ -44,7 +44,7 @@ const RouteContext = createContext( {
 	segments: [],
 } );
 
-export function RouterProvider( { children } ) {
+export function RouterProvider( { children, defaultRoute } ) {
 	const [ hash, setHash ] = useState(
 		typeof window !== 'undefined' ? window.location.hash : ''
 	);
@@ -72,6 +72,30 @@ export function RouterProvider( { children } ) {
 				nav.removeEventListener( 'navigatesuccess', handler );
 			}
 		};
+	}, [] );
+
+	// Spec §6.2: when the primary path matches no route and the URL is
+	// the initial load, the runtime navigates to `default-route`.
+	// Replace the history entry so the empty hash doesn't sit in the
+	// back-button stack.
+	useEffect( () => {
+		if ( typeof window === 'undefined' || ! defaultRoute ) {
+			return;
+		}
+		const current = parseHash( window.location.hash );
+		if ( current.primary ) {
+			return;
+		}
+		const trimmed = String( defaultRoute ).replace( /^#?\/?/, '' );
+		const next = '#/' + trimmed;
+		if ( typeof window.history?.replaceState === 'function' ) {
+			window.history.replaceState( null, '', next );
+			setHash( next );
+		} else {
+			window.location.hash = next;
+		}
+		// Run once on mount; ignore subsequent default-route changes.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [] );
 
 	const value = useMemo( () => decompose( hash ), [ hash ] );

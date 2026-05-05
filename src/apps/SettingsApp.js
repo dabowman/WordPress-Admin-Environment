@@ -175,7 +175,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 					{ PanelComponent ? (
 						<PanelComponent app={ app } config={ activePanel.config || {} } />
 					) : iframeUrl ? (
-						<IframeApp app={ { source: `iframe:${ iframeUrl }` } } config={ {} } />
+						<IframeApp app={ app } config={ { url: iframeUrl } } />
 					) : null }
 				</section>
 			</Stack>

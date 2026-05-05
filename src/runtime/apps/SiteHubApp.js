@@ -26,7 +26,7 @@ import { useKernel } from '../kernel-context';
  */
 export default function SiteHubApp() {
 	const { config } = useKernel();
-	const branding = config.styles?.branding || config.branding || {};
+	const branding = config.styles?.branding || {};
 	const { open: openCommandCenter } = useDispatch( commandsStore );
 	const { record: site } = useEntityRecord( 'root', 'site' );
 

@@ -28,5 +28,5 @@ import IframeApp from '../../apps/IframeApp';
  */
 export default function SiteEditorApp( props ) {
 	const url = props.config?.url || 'site-editor.php';
-	return <IframeApp app={ { source: `iframe:${ url }` } } config={ {} } />;
+	return <IframeApp app={ props.app } config={ { url } } />;
 }

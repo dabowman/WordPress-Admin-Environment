@@ -30,10 +30,10 @@ body {
 }
 
 /* ==========================================================================
-   Toolbar
+   Toolbar (region with id="toolbar", typically template: core:topbar)
    ========================================================================== */
 
-.wp-admin-shell-toolbar {
+.wp-admin-shell-region--toolbar {
 	display: flex;
 	align-items: center;
 	height: var(--wp-admin-shell--chrome--toolbar--height);
@@ -42,6 +42,17 @@ body {
 	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border);
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 	flex-shrink: 0;
+}
+
+/* Toolbar's start/center/end children (from core:topbar template) flow
+   horizontally; end pushes to the right via margin-left:auto. */
+.wp-admin-shell-region--toolbar > .wp-admin-shell-region {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.wp-admin-shell-region--toolbar__end {
+	margin-left: auto;
 }
 
 /* @wordpress/ui ships its component CSS inside `@layer wp-ui-components`
@@ -95,18 +106,18 @@ body {
  *     color unlayered. SVG icons inside the anchor use `currentColor`
  *     so they inherit the corrected color without per-icon overrides.
  */
-.wp-admin-shell-nav a,
-.wp-admin-shell-toolbar a,
+.wp-admin-shell-region--sidebar a,
+.wp-admin-shell-region--toolbar a,
 .wp-admin-shell-site-hub a {
 	color: var(--wpds-color-fg-interactive-neutral);
 }
 
-.wp-admin-shell-nav a:hover,
-.wp-admin-shell-nav a:focus,
-.wp-admin-shell-nav a:active,
-.wp-admin-shell-toolbar a:hover,
-.wp-admin-shell-toolbar a:focus,
-.wp-admin-shell-toolbar a:active,
+.wp-admin-shell-region--sidebar a:hover,
+.wp-admin-shell-region--sidebar a:focus,
+.wp-admin-shell-region--sidebar a:active,
+.wp-admin-shell-region--toolbar a:hover,
+.wp-admin-shell-region--toolbar a:focus,
+.wp-admin-shell-region--toolbar a:active,
 .wp-admin-shell-site-hub a:hover,
 .wp-admin-shell-site-hub a:focus,
 .wp-admin-shell-site-hub a:active {
@@ -123,18 +134,18 @@ body {
  * a chrome surface — both @wordpress/ui- and @wordpress/icons-
  * rendered SVGs then inherit the chrome anchor / button color via
  * the parent text color. */
-.wp-admin-shell-nav svg,
-.wp-admin-shell-toolbar svg,
+.wp-admin-shell-region--sidebar svg,
+.wp-admin-shell-region--toolbar svg,
 .wp-admin-shell-site-hub svg {
 	fill: currentColor;
 }
 
 /* ==========================================================================
-   Navigation Sidebar
+   Navigation Sidebar (region with id="sidebar", typically template: core:sidebar)
    ========================================================================== */
 
-.wp-admin-shell-nav {
-	width: var(--wp-admin-shell-nav-width, var(--wp-admin-shell--chrome--sidebar--width));
+.wp-admin-shell-region--sidebar {
+	width: var(--wp-admin-shell--chrome--sidebar--width);
 	background: var(--wp-admin-shell--chrome--sidebar--background);
 	color: var(--wp-admin-shell--chrome--sidebar--foreground);
 	display: flex;
@@ -144,9 +155,16 @@ body {
 	overflow-x: hidden;
 }
 
-.wp-admin-shell-nav.is-collapsed {
-	width: 60px;
-	align-items: center;
+/* Sidebar's nested child regions (e.g. `hub` + `nav` from v2 shells)
+   stack vertically inside the sidebar; the navigation child grows to
+   consume remaining space so its own internal scroll container works. */
+.wp-admin-shell-region--sidebar > .wp-admin-shell-region {
+	display: flex;
+	flex-direction: column;
+}
+.wp-admin-shell-region--sidebar > .wp-admin-shell-region[role="navigation"] {
+	flex: 1;
+	min-height: 0;
 }
 
 /* ==========================================================================
@@ -513,10 +531,10 @@ body {
 }
 
 /* ==========================================================================
-   Content Region (primary card)
+   Content Region (primary card; region with id="content")
    ========================================================================== */
 
-.wp-admin-shell-content {
+.wp-admin-shell-region--content {
 	flex: 1;
 	min-width: 0;
 	overflow-y: auto;
@@ -525,43 +543,45 @@ body {
 	border-radius: 8px;
 	box-shadow: 0 0.7px 1px rgba(0, 0, 0, 0.1), 0 1.2px 1.7px -0.7px rgba(0, 0, 0, 0.1), 0 3px 4.3px -1.4px rgba(0, 0, 0, 0.1);
 	margin: 16px 16px 16px 0;
+	display: flex;
+	flex-direction: column;
 }
 
-/* Fullscreen content (iframe/editor) removes the card styling */
-.wp-admin-shell-content.is-fullscreen {
-	border-radius: 8px;
-	margin: 16px 16px 16px 0;
-}
-
-.wp-admin-shell-content__app {
+/* Content app wrapper. The wrapper is a flex column inside the
+   `--content` region so apps (DataViews especially) can flex against
+   a known-height ancestor. Outside the content region the `__app`
+   wrapper is a transparent passthrough — the toolbar / sidebar nest
+   their own apps directly without inheriting these structural rules. */
+.wp-admin-shell-region--content .wp-admin-shell-region__app {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
 	padding: 24px;
-	height: 100%;
 	box-sizing: border-box;
 }
 
-.wp-admin-shell-content__app.is-iframe {
+.wp-admin-shell-region--content .wp-admin-shell-region__app.is-fullscreen {
 	padding: 0;
 }
 
-/* Iframes need to respect the rounded corners */
-.wp-admin-shell-content__app.is-iframe iframe {
+.wp-admin-shell-region--content .wp-admin-shell-region__app.is-fullscreen iframe {
 	border-radius: 8px;
+	border: 0;
+	width: 100%;
+	height: 100%;
 }
 
-.wp-admin-shell-content__empty {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	color: #757575;
-	font-size: 14px;
+.wp-admin-shell-region--content .wp-admin-shell-region__app > * {
+	flex: 1;
+	min-height: 0;
 }
 
 /* ==========================================================================
-   Preview Region (secondary card, shown in multi-area mode)
+   Preview Region (secondary card; region with id="preview")
    ========================================================================== */
 
-.wp-admin-shell-preview {
+.wp-admin-shell-region--preview {
 	flex: 1;
 	min-width: 0;
 	overflow-y: auto;
@@ -890,18 +910,18 @@ body {
    Cap-gated 403
    ========================================================================== */
 
-.wp-admin-shell-content__forbidden {
+.wp-admin-shell-region__forbidden {
 	padding: 64px 24px;
 	text-align: center;
 	color: var(--wpds-color-fg-content-neutral-default);
 }
 
-.wp-admin-shell-content__forbidden h2 {
+.wp-admin-shell-region__forbidden h2 {
 	margin: 0 0 8px;
 	font-size: 20px;
 }
 
-.wp-admin-shell-content__forbidden p {
+.wp-admin-shell-region__forbidden p {
 	margin: 0;
 	color: var(--wpds-color-fg-content-neutral-weak);
 }

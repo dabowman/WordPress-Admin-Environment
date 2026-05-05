@@ -24,11 +24,14 @@ const CHROME_HIDE_CSS = `
 `;
 
 /**
- * Renders a wp-admin page inside an iframe with the default chrome hidden.
- * The iframe URL resolves relative to the WordPress admin URL.
+ * Renders a wp-admin page inside an iframe with the default chrome
+ * hidden. The iframe URL resolves relative to the WordPress admin URL.
+ *
+ * Source: `config.url` (the v2-canonical placement). Absolute URLs
+ * pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`.
  */
-export default function IframeApp( { app } ) {
-	const rawUrl = app.source.replace( /^iframe:/, '' );
+export default function IframeApp( { app, config = {} } ) {
+	const rawUrl = config.url || '';
 	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
 	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 
@@ -49,6 +52,10 @@ export default function IframeApp( { app } ) {
 		}
 	}, [] );
 
+	if ( ! rawUrl ) {
+		return null;
+	}
+
 	return (
 		<div className="wp-admin-shell-app-iframe">
 			{ isLoading && (
@@ -58,7 +65,7 @@ export default function IframeApp( { app } ) {
 			) }
 			<iframe
 				src={ src }
-				title={ app.title }
+				title={ app?.title }
 				className="wp-admin-shell-app-iframe__frame"
 				onLoad={ onIframeLoad }
 			/>

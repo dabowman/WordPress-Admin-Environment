@@ -85,18 +85,17 @@ export default function AppearanceApp() {
 	}
 
 	const stylesDecl = config.styles?.userCustomizable;
-	const settingsDecl = config.settings?.userCustomizable;
 
-	const allowDensity     = isCustomizable( stylesDecl,   'density' );
-	const allowAccent      = isCustomizable( stylesDecl,   'color.bg.interactive.brand.strong' )
+	const allowDensity     = isCustomizable( stylesDecl, 'density' );
+	const allowAccent      = isCustomizable( stylesDecl, 'color.bg.interactive.brand.strong' )
 		|| isCustomizable( stylesDecl, 'branding.accentColor' );
-	const allowDefaultRoute = isCustomizable( settingsDecl, 'defaultRoute' );
+	const allowDefaultRoute = isCustomizable( stylesDecl, 'default-route' );
 
 	const density = prefs.styles?.density || config.styles?.density || 'default';
 	const accent  = prefs.styles?.color?.bg?.interactive?.brand?.strong
 		|| config.styles?.color?.bg?.interactive?.brand?.strong
 		|| '#3858e9';
-	const defaultRoute = prefs.settings?.defaultRoute || config.settings?.defaultRoute || '';
+	const defaultRoute = prefs[ 'default-route' ] || config[ 'default-route' ] || '';
 
 	const save = async ( patch ) => {
 		setSaving( true );
@@ -192,7 +191,7 @@ export default function AppearanceApp() {
 							'wp-admin-shell'
 						) }
 						value={ defaultRoute }
-						onChange={ ( e ) => save( { settings: { defaultRoute: e.target.value } } ) }
+						onChange={ ( e ) => save( { 'default-route': e.target.value } ) }
 					/>
 				) }
 

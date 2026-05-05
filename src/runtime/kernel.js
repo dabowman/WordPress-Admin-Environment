@@ -60,12 +60,7 @@ export function kernel( config ) {
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
-	// V2 admin.json puts engine + regions + routes at the top level;
-	// v1 partitioned shape nests them under `settings.*`. Read v2 first.
-	const engineId =
-		config.engine ||
-		config.settings?.shell?.layoutEngine ||
-		'core:site-editor-layout';
+	const engineId = config.engine || 'core:site-editor-layout';
 	const engineSource = registry.get( engineId, 'engine' );
 
 	if ( ! engineSource ) {
@@ -77,21 +72,14 @@ export function kernel( config ) {
 		);
 	}
 
-	// V2.M2 tasks 3+4: regions can declare a `template` referencing a
-	// shape shipped by the active engine's manifest. The kernel merges
-	// the template's defaults (role, platform, default-style, nested
-	// children) with per-region overrides; `resolveRegion` recurses into
-	// nested children. v1-shape shells without `template` pass through
-	// unchanged.
-	//
-	// V2.M2 task 5: `app` xor `routing.route-key` is enforced post-merge.
-	// Schema enforces it for hand-authored docs; runtime confirms because
-	// merge can introduce a violation (template ships `app`, declaration
-	// adds `routing.route-key`) and programmatic registration can bypass
-	// schema validation. Violations log a `console.warn`; sanitization
-	// drops `app` so URL routing wins.
+	// Regions may declare `template` referencing a shape shipped by the
+	// active engine's manifest. `resolveRegion` merges defaults (role,
+	// platform, default-style, nested children) with per-region
+	// overrides and recurses into nested children. `app` xor
+	// `routing.route-key` is enforced post-merge: violations log a
+	// `console.warn`; sanitization drops `app` so URL routing wins.
 	const engineManifest = getEngineManifest( engineId );
-	const regionsMap = config.regions || config.settings?.regions || {};
+	const regionsMap = config.regions || {};
 	const regions = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
@@ -117,7 +105,7 @@ export function kernel( config ) {
 	return (
 		<KernelProvider value={ { registry, config } }>
 			<SlotFillProvider>
-				<RouterProvider>
+				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
 					<Engine
 						config={ config }
 						regions={ regions }

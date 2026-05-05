@@ -1,10 +1,14 @@
 /**
  * Shared region helper: render a single contained app instance.
  *
- * `appRef` may be either:
- *   - a string app id (resolved against `config.applications` and the registry),
- *   - or a fully-formed app instance object (the runtime path the kernel
- *     uses when it pre-resolves contained apps before mounting regions).
+ * `appRef` is either:
+ *   - a namespaced id string (`core:posts`, `plugin:foo/bar`) — the
+ *     v2-canonical reference. The id is the source; the registry
+ *     resolves it. Optional inline config is supplied by the caller.
+ *   - a fully-formed app instance object (`{ id, source, config?,
+ *     capability? }`) — the runtime path the kernel uses when it
+ *     pre-resolves regions, and the path region renderers use to mount
+ *     route-matched apps with interpolated config.
  *
  * Regions delegate to this helper to keep the resolution path uniform.
  */
@@ -13,9 +17,9 @@ import { Slot } from '../slots/Slot';
 import { userCan } from '../capabilities/userCan';
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
-	const { registry, config } = useKernel();
+	const { registry } = useKernel();
 
-	const appInstance = resolveAppInstance( appRef, config );
+	const appInstance = resolveAppInstance( appRef );
 	if ( ! appInstance ) {
 		return null;
 	}
@@ -25,10 +29,10 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 		return fallback;
 	}
 
-	const sourceDef = resolveAppSource( appInstance.source, registry );
+	const sourceDef = registry.get( appInstance.source, 'app' );
 	if ( ! sourceDef ) {
 		return (
-			<div className="wp-admin-shell-content__empty">
+			<div className="wp-admin-shell-region__empty">
 				Unknown source: { appInstance.source }
 			</div>
 		);
@@ -67,62 +71,17 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	);
 }
 
-function resolveAppInstance( appRef, config ) {
+function resolveAppInstance( appRef ) {
 	if ( ! appRef ) {
 		return null;
 	}
 	if ( typeof appRef === 'string' ) {
-		const apps = getApplications( config );
-		const direct = apps.find( ( a ) => a.id === appRef );
-		if ( direct ) {
-			return direct;
-		}
-		// V2 admin.json has no `applications` array — apps are referenced
-		// inline from regions and the routes block by their namespaced id.
-		// Synthesize an instance from the id; the source equals the id.
+		// Namespaced ids (core:* / plugin:*) are self-identifying — the id
+		// is the source. Anything else is invalid in v2.
 		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
 			return { id: appRef, source: appRef };
 		}
 		return null;
 	}
 	return appRef;
-}
-
-function resolveAppSource( source, registry ) {
-	if ( ! source ) {
-		return null;
-	}
-	const direct = registry.get( source, 'app' );
-	if ( direct ) {
-		return direct;
-	}
-	if ( source.startsWith( 'iframe:' ) ) {
-		return registry.get( 'core:iframe-fallback', 'app' );
-	}
-	return null;
-}
-
-export function toApplicationList( applications ) {
-	if ( ! applications ) {
-		return [];
-	}
-	if ( Array.isArray( applications ) ) {
-		return applications;
-	}
-	// v1 spec uses { id: { source, ... } } map form.
-	return Object.entries( applications ).map( ( [ id, body ] ) => ( {
-		id,
-		...body,
-	} ) );
-}
-
-/**
- * Pull the applications list off a resolved config. v1 canonical path
- * is `settings.applications`; v0 mirrors at top-level. Read the v1 path
- * first so v1-shape shells work without depending on the v0 mirrors.
- */
-export function getApplications( config ) {
-	return toApplicationList(
-		config?.settings?.applications || config?.applications
-	);
 }

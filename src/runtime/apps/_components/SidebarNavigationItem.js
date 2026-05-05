@@ -40,6 +40,18 @@ export default function SidebarNavigationItem( {
 		}
 	}
 
+	// `@wordpress/components` Item renders as `<button>` whenever its
+	// `onClick` prop is defined — `as = onClick !== undefined ? 'button' : 'div'`
+	// in build-module/item-group/item/hook.mjs. That ignores href and
+	// breaks anchor-style navigation. Force `as="a"` when href is set
+	// so the element renders as a real anchor (browser-native click,
+	// middle-click new tab, right-click "Copy link"). Pass onClick only
+	// when the caller actually supplied one.
+	const isLink = !! href;
+	const itemProps = isLink
+		? { as: 'a', href, onClick: onClick ? handleClick : undefined }
+		: { onClick: handleClick };
+
 	return (
 		<Item
 			className={ `wp-admin-shell-sidebar-nav-item ${
@@ -48,9 +60,8 @@ export default function SidebarNavigationItem( {
 				className || ''
 			}`.trim() }
 			id={ uid }
-			onClick={ handleClick }
-			href={ href }
 			aria-current={ isActive ? 'true' : undefined }
+			{ ...itemProps }
 			{ ...props }
 		>
 			<Stack direction="row" justify="flex-start" align="center" gap="sm">

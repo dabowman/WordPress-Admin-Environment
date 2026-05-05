@@ -1,71 +1,65 @@
 import { useCallback, useMemo } from '@wordpress/element';
 import { useCommandLoader } from '@wordpress/commands';
 import { __, sprintf } from '@wordpress/i18n';
-import { plus } from '@wordpress/icons';
 
 import { resolveIcon } from '../config/iconMap';
-import { navigate } from '../routing/router';
 import { useKernel } from '../kernel-context';
-import { getApplications } from '../regions/mountApp';
 
 /**
- * core:command-picker — overlay-region content app.
+ * core:command-picker — registers shell-aware commands with
+ * `@wordpress/commands` so the package's portal palette (Mod+K) can
+ * surface them. The palette UI itself is owned by the commands
+ * package; this app contributes the command set + does not render UI.
  *
- * Publishes shell-aware commands to `@wordpress/commands` via the public
- * `useCommandLoader` hook. The actual command palette UI is a portal owned
- * by the commands package; this app is the integration point that feeds it.
- *
- * Migrated 2026-05 from the manual `registerCommand` / `unregisterCommand`
- * dispatch pattern (which thrashed the store on every cascade re-resolve)
- * to the supported hooks. The loader's `commands` array is memoized over
- * the resolved app list, so unchanged cascades produce a referentially
- * stable command set.
- *
- * Renders nothing — the palette UI is mounted by the commands package.
+ * v2: commands are derived from the routes block (`config.routes`).
+ * Each route entry becomes a "Go to <pattern>" command. Authors who
+ * want richer labels can attach `title` / `icon` to a route entry —
+ * those fields aren't in the schema today, but the runtime reads them
+ * if present so a future v2.x schema bump can add them without a
+ * separate migration. App manifests (V2.M4) will replace the
+ * pattern-as-label fallback with manifest titles.
  */
 export default function CommandPickerApp() {
 	const { config } = useKernel();
-	const apps = useMemo( () => getApplications( config ), [ config ] );
+	const routes = config?.routes && typeof config.routes === 'object' ? config.routes : null;
 
 	const commands = useMemo( () => {
+		if ( ! routes ) {
+			return [];
+		}
 		const out = [];
-
-		apps
-			.filter( ( app ) => ! app.hidden )
-			.forEach( ( app ) => {
-				out.push( {
-					name: `core/admin-shell/goto-${ app.id }`,
-					/* translators: %s: application title */
-					label: sprintf( __( 'Go to %s', 'wp-admin-shell' ), app.title ),
-					icon: resolveIcon( app.icon ),
-					callback: ( { close } ) => {
-						navigate( app.id );
-						close();
-					},
-				} );
+		for ( const [ pattern, entry ] of Object.entries( routes ) ) {
+			if ( ! entry || typeof entry.app !== 'string' ) {
+				continue;
+			}
+			// Skip patterns with parameter or wildcard segments —
+			// "Go to /posts/{id}" isn't a valid invocation; the user
+			// can't pick the captured value from a command list.
+			if ( pattern.includes( '{' ) || pattern.endsWith( '/*' ) ) {
+				continue;
+			}
+			const slug = pattern.replace( /^\//, '' ) || 'home';
+			const label = entry.title
+				? entry.title
+				: sprintf(
+					/* translators: %s: route pattern (e.g. /posts) */
+					__( 'Go to %s', 'wp-admin-shell' ),
+					pattern
+				);
+			out.push( {
+				name: `core/admin-shell/goto-${ slug.replace( /[^a-z0-9]+/gi, '-' ) }`,
+				label,
+				icon: resolveIcon( entry.icon ),
+				callback: ( { close } ) => {
+					if ( typeof window !== 'undefined' ) {
+						window.location.hash = '#' + pattern;
+					}
+					close();
+				},
 			} );
-
-		apps
-			.filter( ( app ) => app.source === 'core:posts' )
-			.forEach( ( app ) => {
-				const postType = app.config?.postType || 'post';
-				const label =
-					postType === 'page'
-						? __( 'New Page', 'wp-admin-shell' )
-						: __( 'New Post', 'wp-admin-shell' );
-				out.push( {
-					name: `core/admin-shell/new-${ postType }`,
-					label,
-					icon: resolveIcon( 'plus' ) || plus,
-					callback: ( { close } ) => {
-						navigate( 'editor', postType, 'new' );
-						close();
-					},
-				} );
-			} );
-
+		}
 		return out;
-	}, [ apps ] );
+	}, [ routes ] );
 
 	const hook = useCallback(
 		() => ( { commands, isLoading: false } ),

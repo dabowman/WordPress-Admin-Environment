@@ -1,21 +1,28 @@
 import { IconButton, Stack } from '@wordpress/ui';
 
 import { resolveIcon } from '../config/iconMap';
-import { navigate } from '../routing/router';
 
 /**
- * core:toolbar-actions — renders the toolbar's left and right action clusters.
+ * core:toolbar-actions — renders left + right action clusters in a
+ * toolbar region. Each action is one of:
  *
- * Config shape mirrors the v0 toolbar object (left[], right[]). Each action is
- * one of:
- *   - { app, icon, label }                  — internal nav
- *   - { command, icon, label }              — built-in command (new-post / new-page in v1)
- *   - { href, external, icon, label }       — external link
+ *   - { href, icon, label, external? } — link (in-shell when href
+ *     starts with `#`; external when `external: true` opens in a new
+ *     tab via target="_blank")
+ *   - { command, icon, label }         — built-in command (currently
+ *     `core/new-post` / `core/new-page`); resolved via a known-href map
  *
- * Each rendered control is an icon-only `IconButton` (WPDS) — its `label` prop
- * doubles as the assistive-tech label and the auto-generated tooltip text, so
- * the MVP `icon`+`label`+`size="compact"` pattern carries straight over.
+ * IconButton's `label` prop doubles as the assistive-tech label and
+ * the tooltip. `render={<a/>}` swaps the underlying element for an
+ * anchor so middle-click / Cmd-click / right-click → "Copy link"
+ * work natively.
  */
+
+const COMMAND_HREFS = {
+	'core/new-post': '#/posts/new',
+	'core/new-page': '#/pages/new',
+};
+
 export default function ToolbarActionsApp( { config = {} } ) {
 	const left = Array.isArray( config.left ) ? config.left : [];
 	const right = Array.isArray( config.right ) ? config.right : [];
@@ -45,57 +52,26 @@ export default function ToolbarActionsApp( { config = {} } ) {
 }
 
 function renderAction( action, key ) {
-	if ( action.external && action.href ) {
-		return (
-			<IconButton
-				key={ key }
-				tone="neutral"
-				variant="minimal"
-				size="compact"
-				icon={ resolveIcon( action.icon ) }
-				label={ action.label }
-				href={ action.href }
-				target="_blank"
-				rel="noopener noreferrer"
-			/>
-		);
+	const href = action.href || COMMAND_HREFS[ action.command ];
+	if ( ! href ) {
+		return null;
 	}
-
-	if ( action.app ) {
-		return (
-			<IconButton
-				key={ key }
-				tone="neutral"
-				variant="minimal"
-				size="compact"
-				icon={ resolveIcon( action.icon ) }
-				label={ action.label }
-				onClick={ () => navigate( action.app ) }
-			/>
-		);
-	}
-
-	if ( action.command ) {
-		return (
-			<IconButton
-				key={ key }
-				tone="neutral"
-				variant="minimal"
-				size="compact"
-				icon={ resolveIcon( action.icon ) }
-				label={ action.label }
-				onClick={ () => runBuiltinCommand( action.command ) }
-			/>
-		);
-	}
-
-	return null;
-}
-
-function runBuiltinCommand( command ) {
-	if ( command === 'core/new-post' ) {
-		navigate( 'editor', 'post', 'new' );
-	} else if ( command === 'core/new-page' ) {
-		navigate( 'editor', 'page', 'new' );
-	}
+	const isExternal = !! action.external;
+	return (
+		<IconButton
+			key={ key }
+			tone="neutral"
+			variant="minimal"
+			size="compact"
+			icon={ resolveIcon( action.icon ) }
+			label={ action.label }
+			render={
+				<a
+					href={ href }
+					target={ isExternal ? '_blank' : undefined }
+					rel={ isExternal ? 'noopener noreferrer' : undefined }
+				/>
+			}
+		/>
+	);
 }

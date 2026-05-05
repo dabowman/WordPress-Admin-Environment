@@ -117,75 +117,6 @@ ok(
 	isModal( { role: 'dialog', platform: { modal: false } } ) === false
 );
 
-console.log( '\n— platformServices: v1 legacy bridges —\n' );
-
-ok(
-	'overlay-region: isModal true',
-	isModal( { source: 'core:overlay-region' } ) === true
-);
-ok(
-	'overlay-region: dismissTriggers Escape + backdrop-click',
-	eq( dismissTriggers( { source: 'core:overlay-region' } ), [ 'Escape', 'backdrop-click' ] )
-);
-ok(
-	'overlay-region: placement overlay',
-	placement( { source: 'core:overlay-region' } ) === 'overlay'
-);
-
-ok(
-	'drawer-region: not modal',
-	isModal( { source: 'core:drawer-region' } ) === false
-);
-ok(
-	'drawer-region: placement drawer',
-	placement( { source: 'core:drawer-region' } ) === 'drawer'
-);
-ok(
-	'drawer-region: legacy config.dismissOn pipe-string normalized',
-	eq(
-		dismissTriggers( {
-			source: 'core:drawer-region',
-			config: { dismissOn: 'escape | overlay-click' },
-		} ),
-		[ 'Escape', 'backdrop-click' ]
-	)
-);
-ok(
-	'drawer-region: array config preserved + tokenized',
-	eq(
-		dismissTriggers( {
-			source: 'core:drawer-region',
-			config: { dismissOn: [ 'escape' ] },
-		} ),
-		[ 'Escape' ]
-	)
-);
-ok(
-	'drawer-region: autofocus selector default',
-	autofocusSelector( { source: 'core:drawer-region' } ) === '[data-autofocus]'
-);
-
-ok(
-	'sidebar-region: persists',
-	persistsAcrossNavigation( { source: 'core:sidebar-region' } ) === true
-);
-ok(
-	'toolbar-region: persists',
-	persistsAcrossNavigation( { source: 'core:toolbar-region' } ) === true
-);
-ok(
-	'content-region: placement persistent',
-	placement( { source: 'core:content-region' } ) === 'persistent'
-);
-ok(
-	'content-region: not modal',
-	isModal( { source: 'core:content-region' } ) === false
-);
-ok(
-	'content-region: does not persist by default',
-	persistsAcrossNavigation( { source: 'core:content-region' } ) === false
-);
-
 console.log( '\n— platformServices: drawer pattern (role=complementary + dismiss) —\n' );
 
 ok(
@@ -203,11 +134,11 @@ ok(
 console.log( '\n— platformServices: defaults / empties —\n' );
 
 ok(
-	'no platform, no source: placement persistent',
+	'no platform: placement persistent',
 	placement( {} ) === 'persistent'
 );
 ok(
-	'no platform, no source: dismissTriggers empty array',
+	'no platform: dismissTriggers empty array',
 	eq( dismissTriggers( {} ), [] )
 );
 ok(
