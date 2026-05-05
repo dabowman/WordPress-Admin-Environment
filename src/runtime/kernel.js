@@ -13,6 +13,7 @@ import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
+import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -72,12 +73,19 @@ export function kernel( config ) {
 		);
 	}
 
-	// V2.M2 task 3: regions can declare a `template` referencing a
+	// V2.M2 tasks 3+4: regions can declare a `template` referencing a
 	// shape shipped by the active engine's manifest. The kernel merges
 	// the template's defaults (role, platform, default-style, nested
-	// children) with per-region overrides before handing the resolved
-	// declaration to the engine. v1-shape shells without `template` pass
-	// through unchanged.
+	// children) with per-region overrides; `resolveRegion` recurses into
+	// nested children. v1-shape shells without `template` pass through
+	// unchanged.
+	//
+	// V2.M2 task 5: `app` xor `routing.route-key` is enforced post-merge.
+	// Schema enforces it for hand-authored docs; runtime confirms because
+	// merge can introduce a violation (template ships `app`, declaration
+	// adds `routing.route-key`) and programmatic registration can bypass
+	// schema validation. Violations log a `console.warn`; sanitization
+	// drops `app` so URL routing wins.
 	const engineManifest = getEngineManifest( engineId );
 	const regionsMap = config.settings?.regions || {};
 	const regions = {};
@@ -89,7 +97,15 @@ export function kernel( config ) {
 			return;
 		}
 		const resolved = resolveRegion( regionInstance, engineManifest );
-		regions[ id ] = { id, ...resolved };
+		const decorated = { id, ...resolved };
+		const violations = validateRegion( decorated, id );
+		if ( violations.length && typeof console !== 'undefined' ) {
+			for ( const v of violations ) {
+				// eslint-disable-next-line no-console
+				console.warn( `[wp-admin-shell] ${ v.message }` );
+			}
+		}
+		regions[ id ] = sanitizeRegion( decorated );
 	} );
 
 	const Engine = engineSource.Component;
