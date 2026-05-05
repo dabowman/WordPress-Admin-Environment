@@ -334,6 +334,38 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
 function wp_admin_shell_resolve_capabilities( $config ) {
 	$declared = array();
 
+	// v2: regions live at the root, recursively. Walk the tree and
+	// collect both `region.capability` and any caps declared on nav
+	// items inside `region.config.items` (the navigation app's config —
+	// inline labels + capability gates per item, the v2 way to express
+	// per-screen caps now that there's no `settings.applications` array).
+	$collect_from_regions = function ( $regions ) use ( &$declared, &$collect_from_regions ) {
+		if ( ! is_array( $regions ) ) {
+			return;
+		}
+		foreach ( $regions as $region ) {
+			if ( ! is_array( $region ) ) {
+				continue;
+			}
+			if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
+				$declared[ $region['capability'] ] = true;
+			}
+			$items = $region['config']['items'] ?? null;
+			if ( is_array( $items ) ) {
+				wpas_collect_nav_item_caps( $items, $declared );
+			}
+			if ( ! empty( $region['regions'] ) && is_array( $region['regions'] ) ) {
+				$collect_from_regions( $region['regions'] );
+			}
+		}
+	};
+
+	if ( isset( $config['regions'] ) && is_array( $config['regions'] ) ) {
+		$collect_from_regions( $config['regions'] );
+	}
+
+	// v1: regions + applications under settings.*. Walk the legacy paths
+	// for unmigrated shells.
 	foreach ( ( $config['settings']['regions'] ?? array() ) as $region ) {
 		if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
 			$declared[ $region['capability'] ] = true;
@@ -357,6 +389,29 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		$out[ $cap ] = current_user_can( $cap );
 	}
 	return $out;
+}
+
+/**
+ * Walk a navigation items[] tree (the v2 navigation app's `config.items`
+ * shape — same as v1's `navigation` array but inline-described per item)
+ * and collect every `capability` declaration. Recurses into `screen`/
+ * `group` children.
+ */
+function wpas_collect_nav_item_caps( $items, &$declared ) {
+	if ( ! is_array( $items ) ) {
+		return;
+	}
+	foreach ( $items as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		if ( isset( $item['capability'] ) && is_string( $item['capability'] ) ) {
+			$declared[ $item['capability'] ] = true;
+		}
+		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
+			wpas_collect_nav_item_caps( $item['items'], $declared );
+		}
+	}
 }
 
 /**

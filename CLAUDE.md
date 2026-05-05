@@ -8,9 +8,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **v2 migration in flight on `feat/wp-admin-shell-v2`.** v2 architecture is a substantial refinement of v1 — three artifacts (`app.json` + `engine.json` + `admin.json`) replace the single-file shape; region typing moves from `kind` enum to `role` + `layout` + `platform` + `routing`; one-region-one-app with nested regions replaces `contains[]`; selection event bus removed; shell-level slot/fill removed; navigation is URL-driven (the URL is the full app state; routable regions declare `routing.route-key` naming the URL slot they read from; plain `<a href>` links navigate; `target` keeps native HTML meaning — no shell-specific overload, decided 2026-05-04 superseding the prior 2026-05-01 `<a target>`-as-region-selector idea). Cascade, token system, and capability gating carry forward largely unchanged. The migration directive at `docs/plans/wp-admin-shell-v2-migration-directive.md` is the active plan; master spec at `docs/wp-admin-shell-design-spec.md` (2026-05-01, refined 2026-05-04) is authoritative. v1 prior-state spec preserved at `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`; v1 plan at `docs/archive/wp-admin-shell-v1-plan.md`.
 
-**V2.M2 progress: tasks 1-6 done; task 7 (migrate bundled shells to v2 form) deferred to a joint step after V2.M3 lands.** `admin-v2.json` sets `additionalProperties: false` at root, so a v1.5 hybrid (v2 region vocabulary + v1 `settings.applications`/`defaultRoute`) wouldn't validate against either schema. URL-driven routing (`routes` block reading, URL decomposer) is V2.M3 work; V2.M3 task 8 also migrates bundled shells. Both shell-shape migrations therefore land jointly *after* V2.M3 routing infrastructure is in place — bundled shells remain in v1 partitioned shape until then, and the legacy `region.source` dispatch path in `Region.js` plus the bridge tables in `platformServices.mjs` / `regionKind.js` keep running.
-
-**V2.M3 progress: tasks 1-7 done; task 8 (migrate bundled shells to use the routes block) deferred to the joint step with V2.M2 task 7.** URL-driven router rewrite landed: `src/runtime/routing/matchRoute.mjs` (pure ESM) provides URL pattern matching with `{name}` capture + `/*` wildcard + most-specific-wins specificity scoring, plus `interpolate(config, params)` for `{name}` substitution and `parseHash`/`readSlot` for URL decomposition. `RouterProvider` subscribes to `hashchange` and the Navigation API's `navigatesuccess` event where supported. `useRoute()` exposes both v2 fields (`primary`, `params`) and legacy v1 fields (`appId`, `segments`) so v1 shells keep working. New `useRouteForRegion(region, routesBlock)` resolves a region's `routing.route-key` slot against the routes block and returns the matched route entry with interpolated config. `navigate(href)` accepts a single href string (`'#/posts'`, `'?detail=...'`, `'/posts'`) per spec §6; the deprecated multi-arg form (`navigate(appId, ...segments)`) is preserved transitionally. `NavigationApp.js` emits plain `<a href="#/{appId}">` links via `IconButton render={<a/>}` and `SidebarNavigationItem href` so the browser's native click behaviors (middle-click new tab, Cmd-click, right-click "Copy link") all work.
+**V2.M2 + V2.M3 complete.** All 5 bundled shells (`shells/*.json`) now ship in canonical v2 admin.json shape — top-level `engine`/`regions`/`routes`/`default-route`, no `settings.*` partition, no `region.kind`/`source`/`contains`. Each region either references an engine template (`core:sidebar`/`core:topbar`/`core:main`/`core:overlay`) or declares `role` directly; nested children are addressable as `parent/child` (spec §5.5); the `routes` block maps URL patterns to app + config tuples; the URL is the single source of truth for shell state. `core:iframe-fallback` replaces the legacy `iframe:{url}` magic id format. The kernel reads top-level v2 paths first (with v1 `settings.*` fallback during the transition), `mountApp.resolveAppInstance` synthesizes app instances from namespaced ids when no `applications` array exists (v2 mode), `wp_admin_shell_resolve_capabilities` walks the v2 region tree recursively + collects per-nav-item caps, and the v0 normalizer + cascade resolver pass v2-shape docs through unchanged (the resolver also skips the v1-shape `empty_doc` baseline when the plugin origin has already declared an engine, so the merge doesn't pollute v2 with v1 phantom keys). The legacy `region.source` dispatch + bridges in `Region.js` / `platformServices.mjs` / `regionKind.js` are no longer exercised by bundled shells but remain in place for any consumer-origin overrides that still ship v1 shape. **V2.M4 next** (selection bus removal, slot consolidation, app manifests, v0 normalizer rewrite to emit v2 shape).
 
 **v1 architecture (current shipping baseline, being migrated).** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine from a registry, renders each declared region through the generic `<Region>` renderer (V2.M2 task 2), and mounts apps inside regions via `MountedApp`, plus emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload. Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability.
 
@@ -112,11 +110,11 @@ npm run start    # dev build with watch
 
 ## Testing
 
-381 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+386 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
 
 ```bash
 # Node — schema + WPDS parity + runtime
-npm run test:schema      # 26 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells + positive/negative fixtures)
+npm run test:schema      # 30 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells now sweep under admin-v2.json + positive/negative fixtures)
 npm run test:parity      # 4  — WPDS slot-list drift detector
 npm run test:runtime     # 128 — chains resolveRegion (25 — V2.M2 task 3+4 merge + recursion) + validateRegion (24 — V2.M2 task 5 `app` xor `routing.route-key`) + platformServices (39 — V2.M2 task 6 service accessors + legacy bridges) + matchRoute (40 — V2.M3 task 2+5 URL pattern matching, specificity, param interpolation, hash decomposition)
 
@@ -125,7 +123,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php   # 60 — V2.M1 manifest validator + registry + resolver, V2.M2 boot-time engine load
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-selection-tests.php  # 5
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 82
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 83 — dual-shape (v1 + v2) per-shell assertions
 ```
 
 **Pure-JS runtime modules go in `.mjs` files** so node test scripts (`tests/runtime/*`) can `import()` them directly without a webpack/jest harness. Webpack's default extension list (`['.wasm', '.js', ...]`) does **not** include `.mjs`, so importing a `.mjs` module from app code requires the explicit extension at the import site (e.g. `import { resolveRegion } from './regions/resolveRegion.mjs'`). The convention applies only to side-effect-free utility modules; React components stay `.js`.
@@ -156,11 +154,12 @@ Without Gutenberg, overlay components throw at module-load time — the throw fi
 wp-admin-shell/
 ├── wp-admin-shell.php       # Plugin entry point (admin page, assets, settings, config loading)
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
-├── shells/                  # Bundled admin.json configurations
-│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated apps
-│   ├── developer-admin.json   # Demo: native v1 apps (users / comments / settings / site-editor)
+├── shells/                  # Bundled admin.json configurations (all in v2 shape — no settings.*, no kind/contains/source)
+│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated nav items + iframe-fallback routes
+│   ├── developer-admin.json   # Demo: native v2 apps (users / comments / settings / site-editor) + drill-down design nav
 │   ├── content-author.json    # Demo: minimal writer shell (collapsed nav)
-│   └── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
+│   ├── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
+│   └── v1-demo.json           # Canonical-shape demo (renamed in spirit only — file kept v1-demo for cascade-test compat)
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
 ├── includes/                # PHP

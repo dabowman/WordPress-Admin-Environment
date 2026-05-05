@@ -117,22 +117,22 @@ function renderCollapsedItem( item, index, apps, currentAppId ) {
 			</a>
 		);
 	}
-	if ( item.app ) {
-		const app = apps.find( ( a ) => a.id === item.app );
-		if ( ! app ) {
+	if ( item.app || item.href ) {
+		const resolved = resolveNavTarget( item, apps );
+		if ( ! resolved ) {
 			return null;
 		}
 		return (
 			<IconButton
-				key={ app.id }
+				key={ resolved.key }
 				tone="neutral"
 				variant="minimal"
 				className={ `wp-admin-shell-nav__item${
-					currentAppId === app.id ? ' is-active' : ''
+					resolved.isActive( currentAppId ) ? ' is-active' : ''
 				}` }
-				icon={ resolveIcon( app.icon ) }
-				render={ <a href={ appHref( app ) } /> }
-				label={ app.title }
+				icon={ resolveIcon( resolved.icon ) }
+				render={ <a href={ resolved.href } /> }
+				label={ resolved.label }
 			/>
 		);
 	}
@@ -151,6 +151,63 @@ function appHref( app ) {
 		return '#/' + trimmed;
 	}
 	return '#/' + app.id;
+}
+
+/**
+ * Resolve a nav item to { key, href, label, icon, isActive(currentAppId) }.
+ *
+ * v1 shells: nav items carry `app: 'local-id'`; the apps array (from
+ * `settings.applications`) provides title/icon/route. We resolve via
+ * `apps.find` and use `appHref(app)`.
+ *
+ * v2 shells: nav items can carry inline `{app: 'core:posts', label,
+ * icon, href}`. The apps array is empty (v2 admin.json has no
+ * applications partition), so we read label/icon/href off the item.
+ * `app` field is optional but lets the renderer compare against
+ * currentAppId (URL primary path's first segment) for active-state
+ * styling.
+ */
+function resolveNavTarget( item, apps ) {
+	if ( item.app ) {
+		const matched = apps.find( ( a ) => a.id === item.app );
+		if ( matched ) {
+			return {
+				key:      matched.id,
+				href:     appHref( matched ),
+				label:    item.label || matched.title,
+				icon:     item.icon || matched.icon,
+				isActive: ( current ) => current === matched.id,
+			};
+		}
+		// v2: no entry in apps array. The item must self-describe.
+		const href = item.href || '#/' + item.app;
+		return {
+			key:      String( item.app ),
+			href,
+			label:    item.label,
+			icon:     item.icon,
+			isActive: ( current ) => current === hashFirstSegment( href ),
+		};
+	}
+	if ( item.href ) {
+		return {
+			key:      item.href,
+			href:     item.href,
+			label:    item.label,
+			icon:     item.icon,
+			isActive: ( current ) => current === hashFirstSegment( item.href ),
+		};
+	}
+	return null;
+}
+
+function hashFirstSegment( href ) {
+	if ( typeof href !== 'string' ) {
+		return null;
+	}
+	const trimmed = href.replace( /^#?\/?/, '' );
+	const seg = trimmed.split( /[/?]/ )[ 0 ];
+	return seg || null;
 }
 
 function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
@@ -264,20 +321,20 @@ function renderScreenItem( item, index, apps, currentAppId ) {
 			</SidebarNavigationItem>
 		);
 	}
-	if ( item.app ) {
-		const app = apps.find( ( a ) => a.id === item.app );
-		if ( ! app ) {
+	if ( item.app || item.href ) {
+		const resolved = resolveNavTarget( item, apps );
+		if ( ! resolved ) {
 			return null;
 		}
 		return (
 			<SidebarNavigationItem
-				key={ app.id }
-				uid={ `nav-${ app.id }` }
-				icon={ resolveIcon( app.icon ) }
-				isActive={ currentAppId === app.id }
-				href={ appHref( app ) }
+				key={ resolved.key }
+				uid={ `nav-${ resolved.key }` }
+				icon={ resolveIcon( resolved.icon ) }
+				isActive={ resolved.isActive( currentAppId ) }
+				href={ resolved.href }
 			>
-				{ app.title }
+				{ resolved.label }
 			</SidebarNavigationItem>
 		);
 	}
@@ -325,10 +382,17 @@ function pruneNavItems( items, apps ) {
 		}
 		if ( item.app ) {
 			const app = apps.find( ( a ) => a.id === item.app );
-			if ( ! app ) {
+			if ( app ) {
+				if ( app.capability && ! userCan( app.capability ) ) {
+					continue;
+				}
+				out.push( item );
 				continue;
 			}
-			if ( app.capability && ! userCan( app.capability ) ) {
+			// v2: no entry in apps array (admin.json has no applications
+			// partition in v2). The item self-describes via href/label/icon
+			// + an optional `capability`. Cap gate applies if declared.
+			if ( item.capability && ! userCan( item.capability ) ) {
 				continue;
 			}
 			out.push( item );

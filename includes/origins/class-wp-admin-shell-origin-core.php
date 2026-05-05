@@ -51,6 +51,20 @@ class WP_Admin_Shell_Origin_Core {
 			return $raw;
 		}
 
+		// v2-shaped admin.json: top-level `engine` + `regions` (no
+		// `settings` partition). Pass through unchanged. The kernel +
+		// runtime read both paths during the V2.M2/M3 transition; the
+		// PHP cascade resolver merges v2 docs as opaque trees. V2.M4
+		// task 8 will rewrite this normalizer to emit v2 shape from v0
+		// inputs as well, retiring the v1 partitioned form entirely.
+		if (
+			isset( $raw['engine'] ) &&
+			isset( $raw['regions'] ) &&
+			! isset( $raw['settings'] )
+		) {
+			return $raw;
+		}
+
 		$branding = array_merge(
 			array(
 				'logo'        => null,

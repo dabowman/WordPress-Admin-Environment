@@ -141,8 +141,24 @@ class WP_Admin_Shell_Resolver {
 		$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
 		$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
 
+		// Core origin is the empty baseline that guards against missing
+		// shells. When the plugin origin is a real shell with an engine
+		// declaration (v2 root `engine` or v1 `settings.shell.layoutEngine`),
+		// merging the v1-shaped empty_doc on top would inject conflicting
+		// keys. v2 shells in particular gain a phantom `settings.*` partition
+		// from the baseline. Skip the baseline whenever the plugin doc has
+		// already declared an engine.
+		$has_plugin_engine =
+			( is_array( $plugin_doc ) && (
+				isset( $plugin_doc['engine'] ) ||
+				isset( $plugin_doc['settings']['shell']['layoutEngine'] )
+			) );
+		$core_doc = $has_plugin_engine
+			? array()
+			: WP_Admin_Shell_Origin_Core::empty_doc();
+
 		return array(
-			'core'   => WP_Admin_Shell_Origin_Core::empty_doc(),
+			'core'   => $core_doc,
 			'plugin' => $plugin_doc,
 			'site'   => is_array( get_option( 'wp_admin_shell_site_config', array() ) ) ? get_option( 'wp_admin_shell_site_config', array() ) : array(),
 			'role'   => self::role_origin(),

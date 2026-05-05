@@ -73,7 +73,17 @@ function resolveAppInstance( appRef, config ) {
 	}
 	if ( typeof appRef === 'string' ) {
 		const apps = getApplications( config );
-		return apps.find( ( a ) => a.id === appRef ) || null;
+		const direct = apps.find( ( a ) => a.id === appRef );
+		if ( direct ) {
+			return direct;
+		}
+		// V2 admin.json has no `applications` array — apps are referenced
+		// inline from regions and the routes block by their namespaced id.
+		// Synthesize an instance from the id; the source equals the id.
+		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
+			return { id: appRef, source: appRef };
+		}
+		return null;
 	}
 	return appRef;
 }

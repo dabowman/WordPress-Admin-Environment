@@ -1,155 +1,93 @@
 {
-	"$schema": "../docs/schemas/admin-v1.json",
-	"name": "v1-demo",
-	"title": "v1 Demo (partitioned shape)",
-	"description": "Authored in the v1 partitioned shape (settings + styles + userCustomizable) instead of the v0 flat form the other bundled shells use. Demonstrates the canonical author surface mirrored on theme.json.",
+	"$schema": "../docs/schemas/admin-v2.json",
 	"version": 1,
 	"$wpds": "6.9",
-	"userSwitchable": true,
+	"name": "v1-demo",
+	"title": "v2 Demo (canonical v2 admin.json shape)",
+	"description": "Authored against admin-v2.json. Demonstrates engine templates, nested child regions, the routes block, default-route, per-region routing.route-key, and platform.trigger keystroke binding. First bundled shell migrated to v2 in the joint V2.M2 task 7 + V2.M3 task 8 step.",
+	"user-switchable": true,
 
-	"settings": {
-		"shell": {
-			"layoutEngine": "core:site-editor-layout",
-			"config": {
-				"regions": [ "toolbar", "sidebar", "content", "command-palette", "notices" ]
+	"engine": "core:site-editor-layout",
+
+	"regions": {
+		"toolbar": {
+			"template": "core:topbar",
+			"regions": {
+				"end": {
+					"role": "region",
+					"app": "core:toolbar-actions",
+					"config": {
+						"right": [
+							{ "command": "core/new-post", "icon": "plus", "label": "New post" }
+						]
+					}
+				}
 			}
 		},
 
-		"regions": {
-			"toolbar": {
-				"id": "toolbar",
-				"source": "core:toolbar-region",
-				"kind": "persistent",
-				"config": { "height": 48 },
-				"contains": [ "__toolbar-actions" ]
-			},
-			"sidebar": {
-				"id": "sidebar",
-				"source": "core:sidebar-region",
-				"kind": "persistent",
-				"config": {
-					"position": "left",
-					"width": 280,
-					"label": "v1 demo navigation"
+		"sidebar": {
+			"template": "core:sidebar",
+			"regions": {
+				"hub": {
+					"role": "region",
+					"app": "core:site-hub"
 				},
-				"contains": [ "__site-hub", "__nav" ]
-			},
-			"content": {
-				"id": "content",
-				"source": "core:content-region",
-				"kind": "persistent",
-				"config": { "router": true, "selectionScope": "content" },
-				"contains": []
-			},
-			"command-palette": {
-				"id": "command-palette",
-				"source": "core:overlay-region",
-				"kind": "overlay",
-				"config": {},
-				"contains": [ "__command-picker" ]
-			},
-			"notices": {
-				"id": "notices",
-				"source": "core:overlay-region",
-				"kind": "overlay",
-				"config": {},
-				"contains": [ "__notices-banner", "__notices-snackbar" ]
+				"nav": {
+					"role": "navigation",
+					"app": "core:navigation",
+					"config": {
+						"title": "v2 demo navigation",
+						"items": [
+							{ "app": "core:posts" },
+							{ "app": "core:media" },
+							{ "separator": true },
+							{ "app": "core:appearance" },
+							{ "app": "core:profile" },
+							{ "separator": true },
+							{ "label": "View site", "icon": "external", "href": "/", "external": true }
+						]
+					}
+				}
 			}
 		},
 
-		"applications": [
-			{
-				"id": "__site-hub",
-				"source": "core:site-hub",
-				"hidden": true,
-				"config": {}
-			},
-			{
-				"id": "__nav",
-				"source": "core:navigation",
-				"hidden": true,
-				"config": {
-					"items": [
-						{ "app": "posts" },
-						{ "app": "media" },
-						{ "separator": true },
-						{ "app": "appearance" },
-						{ "app": "profile" },
-						{ "separator": true },
-						{ "label": "View site", "icon": "external", "href": "/", "external": true }
-					]
-				}
-			},
-			{
-				"id": "__toolbar-actions",
-				"source": "core:toolbar-actions",
-				"hidden": true,
-				"config": {
-					"right": [
-						{ "command": "core/new-post", "icon": "plus", "label": "New post" }
-					]
-				}
-			},
-			{
-				"id": "__command-picker",
-				"source": "core:command-picker",
-				"hidden": true,
-				"config": {}
-			},
-			{
-				"id": "__notices-banner",
-				"source": "core:notices-banner",
-				"hidden": true,
-				"config": {}
-			},
-			{
-				"id": "__notices-snackbar",
-				"source": "core:notices-snackbar",
-				"hidden": true,
-				"config": {}
-			},
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		},
 
-			{
-				"id": "posts",
-				"source": "core:posts",
-				"title": "Posts",
-				"icon": "post",
-				"capability": "edit_posts",
-				"route": "/posts",
-				"config": { "postType": "post" }
-			},
-			{
-				"id": "media",
-				"source": "core:media",
-				"title": "Media",
-				"icon": "media",
-				"capability": "upload_files",
-				"route": "/media"
-			},
-			{
-				"id": "profile",
-				"source": "core:profile",
-				"title": "Profile",
-				"icon": "user",
-				"capability": "read",
-				"route": "/profile"
-			},
-			{
-				"id": "appearance",
-				"source": "core:appearance",
-				"title": "Appearance",
-				"icon": "brush",
-				"capability": "read",
-				"route": "/appearance"
+		"command-palette": {
+			"template": "core:overlay",
+			"app": "core:command-picker",
+			"platform": {
+				"triggerable": true,
+				"trigger": { "shortcut": "Mod+K" }
 			}
-		],
+		},
 
-		"defaultRoute": "/posts"
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
 	},
+
+	"routes": {
+		"/posts":      { "app": "core:posts",      "config": { "postType": "post" } },
+		"/media":      { "app": "core:media" },
+		"/profile":    { "app": "core:profile" },
+		"/appearance": { "app": "core:appearance" }
+	},
+
+	"default-route": "/posts",
 
 	"styles": {
 		"branding": {
-			"title": "v1 Demo",
+			"title": "v2 Demo",
 			"accentColor": "#7c3aed"
 		},
 

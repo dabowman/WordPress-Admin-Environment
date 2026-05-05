@@ -60,8 +60,12 @@ export function kernel( config ) {
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
+	// V2 admin.json puts engine + regions + routes at the top level;
+	// v1 partitioned shape nests them under `settings.*`. Read v2 first.
 	const engineId =
-		config.settings?.shell?.layoutEngine || 'core:site-editor-layout';
+		config.engine ||
+		config.settings?.shell?.layoutEngine ||
+		'core:site-editor-layout';
 	const engineSource = registry.get( engineId, 'engine' );
 
 	if ( ! engineSource ) {
@@ -87,7 +91,7 @@ export function kernel( config ) {
 	// schema validation. Violations log a `console.warn`; sanitization
 	// drops `app` so URL routing wins.
 	const engineManifest = getEngineManifest( engineId );
-	const regionsMap = config.settings?.regions || {};
+	const regionsMap = config.regions || config.settings?.regions || {};
 	const regions = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the

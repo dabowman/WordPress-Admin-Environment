@@ -79,6 +79,11 @@ function isV1ShellShape( doc ) {
 	return Boolean( doc?.settings?.shell?.layoutEngine );
 }
 
+function isV2ShellShape( doc ) {
+	// v2 puts engine + regions at root with no `settings` partition.
+	return typeof doc?.engine === 'string' && ! doc?.settings;
+}
+
 // ── Schema 1: legacy admin-v1.json ─────────────────────────────────
 
 console.log( '\n— admin-v1.json (legacy beta) —' );
@@ -89,6 +94,10 @@ console.log( '\n— admin-v1.json (legacy beta) —' );
 	for ( const file of listJson( SHELLS_DIR ) ) {
 		const path  = join( SHELLS_DIR, file );
 		const doc   = readJson( path );
+		if ( isV2ShellShape( doc ) ) {
+			console.log( `SKIP  shells/${ file } (v2 shape; validated under admin-v2.json)` );
+			continue;
+		}
 		if ( ! isV1ShellShape( doc ) ) {
 			console.log( `SKIP  shells/${ file } (v0 flat shape; PHP normalizer transforms at load)` );
 			continue;
@@ -151,6 +160,18 @@ const v2Schemas = [
 for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 	console.log( `\n— ${ schemaFile } —` );
 	const validate = compileSchema( schemaFile );
+
+	if ( key === 'admin' ) {
+		console.log( '\n  Bundled shells (v2 shape):' );
+		for ( const file of listJson( SHELLS_DIR ) ) {
+			const doc = readJson( join( SHELLS_DIR, file ) );
+			if ( ! isV2ShellShape( doc ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
 
 	const positiveDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'positive' );
 	const negativeDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'negative' );
