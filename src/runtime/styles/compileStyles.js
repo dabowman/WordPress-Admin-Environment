@@ -11,6 +11,10 @@
  *   {
  *     wpds:   { '--wpds-color-bg-interactive-brand-strong': '#3858e9', ... },
  *     chrome: { '--wp-admin-shell--chrome--sidebar--background': '#0a0a0a', ... },
+ *     chromeScopedWpds: [                            // V2 chrome→WPDS bridge
+ *       { selector: '.wp-admin-shell-nav', vars: { '--wpds-color-fg-interactive-neutral': '#e0e0e0', ... } },
+ *       ...
+ *     ],
  *     scoped: {                                      // §M3.7
  *       'region:sidebar': { '--wpds-...': '...' },
  *       'app:posts':      { '--wpds-...': '...' },
@@ -22,9 +26,62 @@
  *   - `"{tokens.path}"` (any non-styles prefix) is a tokens.json alias —
  *     deferred to v2. v1 leaves unresolved aliases as literal `var(...)`-style
  *     fallbacks where possible, otherwise emits the original string.
+ *
+ * **Chrome → WPDS bridge.** v2 architecture pivot: instead of overriding
+ * @wordpress/ui component output via per-component CSS rules (a losing
+ * fight against cascade layers + WP-admin unlayered pollution), the chrome
+ * design intent maps to `--wpds-*` token overrides scoped to each chrome
+ * surface's container class. @wordpress/ui Buttons / IconButtons / Stacks
+ * inside that scope automatically pick up the dark-chrome palette through
+ * their normal token consumption — no per-component overrides needed.
  */
 
 const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'userCustomizable' ] );
+
+/**
+ * Chrome surface → WPDS token bindings. Each entry maps a chrome surface
+ * (sidebar / toolbar / site-hub) to its container CSS selector plus the
+ * `chrome.<surface>.<slot>` → `--wpds-<token>` mappings the runtime emits
+ * inside that scope. When a binding's source slot has a value in the
+ * resolved chrome tree, the corresponding WPDS variable is set under the
+ * surface's selector — turning chrome-authoring into automatic
+ * @wordpress/ui re-theming.
+ *
+ * Surface selectors target the React-rendered chrome containers
+ * (`SidebarRegion`, `ToolbarRegion`, `SiteHubApp`); they are stable.
+ *
+ * Binding paths use `.` as separator and reach into the chrome surface
+ * subtree (e.g. `item.foreground` reaches `chrome.sidebar.item.foreground`).
+ *
+ * The dark-chrome palette is the typical case: chrome surfaces invert
+ * @wordpress/ui's neutral interactive matrix so components rendered on
+ * dark backgrounds stay legible. Authors can override the bindings by
+ * setting different chrome slot values; the bridge re-theming follows.
+ */
+const CHROME_WPDS_BINDINGS = {
+	sidebar: {
+		selector: '.wp-admin-shell-nav, .wp-admin-shell-site-hub',
+		bindings: {
+			'foreground':              '--wpds-color-fg-content-neutral',
+			'item.foreground':         '--wpds-color-fg-interactive-neutral',
+			'item.foreground-active':  '--wpds-color-fg-interactive-neutral-active',
+			'item.background-hover':   '--wpds-color-bg-interactive-neutral-weak-active',
+		},
+	},
+	toolbar: {
+		selector: '.wp-admin-shell-toolbar',
+		bindings: {
+			'foreground':              '--wpds-color-fg-interactive-neutral',
+			'foreground-active':       '--wpds-color-fg-interactive-neutral-active',
+		},
+	},
+	'site-hub': {
+		selector: '.wp-admin-shell-site-hub',
+		bindings: {
+			'foreground':              '--wpds-color-fg-interactive-neutral',
+		},
+	},
+};
 
 const IS_DEV =
 	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
@@ -51,13 +108,18 @@ function emitTo( map, name, value, sourcePath ) {
 
 export function compileStyles( styles ) {
 	if ( ! styles || typeof styles !== 'object' ) {
-		return { wpds: {}, chrome: {}, scoped: {} };
+		return { wpds: {}, chrome: {}, chromeScopedWpds: [], scoped: {} };
 	}
 
 	// Top-level: emit into separate wpds + chrome maps so the engine
 	// can lay them out in the documented order (WPDS surface first,
 	// chrome extensions second).
 	const { wpds, chrome } = compileTree( styles, styles, { splitChrome: true } );
+
+	// Chrome → WPDS bridge. For each chrome surface that has bindings
+	// defined in CHROME_WPDS_BINDINGS, walk the resolved chrome subtree
+	// and emit `--wpds-*` overrides under the surface's selector.
+	const chromeScopedWpds = compileChromeScopedWpds( styles );
 
 	const scoped = {};
 	if ( styles.regions && typeof styles.regions === 'object' ) {
@@ -71,7 +133,35 @@ export function compileStyles( styles ) {
 		}
 	}
 
-	return { wpds, chrome, scoped };
+	return { wpds, chrome, chromeScopedWpds, scoped };
+}
+
+function compileChromeScopedWpds( styles ) {
+	const result = [];
+	const chromeTree = styles.chrome;
+	if ( ! chromeTree || typeof chromeTree !== 'object' ) {
+		return result;
+	}
+
+	for ( const [ surfaceKey, config ] of Object.entries( CHROME_WPDS_BINDINGS ) ) {
+		const surfaceTree = chromeTree[ surfaceKey ];
+		if ( ! surfaceTree || typeof surfaceTree !== 'object' ) {
+			continue;
+		}
+		const vars = {};
+		for ( const [ bindingPath, wpdsName ] of Object.entries( config.bindings ) ) {
+			const value = resolveByPath( surfaceTree, bindingPath.split( '.' ) );
+			if ( value === undefined || value === null ) {
+				continue;
+			}
+			const resolved = resolveValue( String( value ), styles );
+			vars[ wpdsName ] = resolved;
+		}
+		if ( Object.keys( vars ).length > 0 ) {
+			result.push( { selector: config.selector, vars } );
+		}
+	}
+	return result;
 }
 
 /**

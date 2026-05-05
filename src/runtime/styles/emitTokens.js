@@ -54,6 +54,19 @@ export function emitTokensCss( styles ) {
 	}
 	lines.push( '}' );
 
+	// Chrome → WPDS bridge. Per chrome surface, override `--wpds-*`
+	// interactive tokens scoped to the surface's container class so
+	// @wordpress/ui components rendered inside automatically pick up
+	// the chrome palette through their normal token consumption — no
+	// per-component CSS overrides needed.
+	for ( const { selector, vars } of compiled.chromeScopedWpds || [] ) {
+		lines.push( `${ selector } {` );
+		for ( const [ name, value ] of Object.entries( vars ) ) {
+			lines.push( `\t${ name }: ${ value };` );
+		}
+		lines.push( '}' );
+	}
+
 	// Per-region / per-app scoped overrides — narrower selectors win
 	// for descendants of those regions/apps without leaking outside.
 	for ( const [ scopeKey, vars ] of Object.entries( compiled.scoped ) ) {

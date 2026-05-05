@@ -2,7 +2,17 @@
    Shell Layout
    ========================================================================== */
 
+/* Per @wordpress/ui README "Setup → Elsewhere" guidance: portaled
+ * popovers/dialogs need an isolation context to render correctly, and
+ * overlay elements need `body { position: relative }` to cover the
+ * scrolled viewport. The shell mounts at one admin page so we apply
+ * both the layout root + body here. */
+body {
+	position: relative;
+}
+
 .wp-admin-shell-layout {
+	isolation: isolate;
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
@@ -52,22 +62,29 @@
 	display: flex;
 }
 
-/* @wordpress/ui Button / IconButton render with hashed CSS-module
-   classNames (e.g. _97b0fc33...__button) inside @layer wp-ui-components.
-   Selectors below use the `button` element selector or our own
-   .wp-admin-shell-* class instead of the legacy `.components-button`
-   chain (which no longer matches @wordpress/ui-rendered DOM).
-   Unlayered rules win over layered ones in the cascade regardless of
-   specificity, so these reach the right declarations. Components still
-   rendered via @wordpress/components (Item / ItemGroup) keep their
-   .components-item chain elsewhere in this file. */
-.wp-admin-shell-toolbar button {
-	color: var(--wp-admin-shell--chrome--toolbar--foreground);
-}
-
-.wp-admin-shell-toolbar button:hover {
-	color: #fff;
-}
+/* @wordpress/ui component theming.
+ *
+ * v2 architectural pivot: instead of overriding rendered colors per
+ * component (the previous fight against cascade layers + WP-admin
+ * unlayered pollution), the runtime emits `--wpds-*` interactive
+ * token overrides scoped to each chrome surface's container class
+ * (.wp-admin-shell-nav, .wp-admin-shell-toolbar, .wp-admin-shell-site-hub).
+ * @wordpress/ui Buttons / IconButtons / Stacks / Notices / etc. inside
+ * those scopes pick up the chrome palette automatically through their
+ * normal token consumption — no per-component CSS color overrides
+ * needed. See compileStyles.js CHROME_WPDS_BINDINGS for the mapping.
+ *
+ * Color rules below this line are limited to:
+ *   - chrome SURFACE backgrounds (chrome.<surface>.background → CSS
+ *     `background:` on the container) — these aren't WPDS tokens, they
+ *     style the container itself.
+ *   - active/selected nav-item state — no clean WPDS slot for "current
+ *     route", so the accent (--wp-admin-shell--chrome--sidebar--item--background-active)
+ *     stays as a direct chrome-token consumer.
+ *   - @wordpress/components (Item / ItemGroup) consumers, which use
+ *     emotion CSS and don't inherit WPDS interactive tokens — for
+ *     those, keep the .components-item class chain.
+ */
 
 /* ==========================================================================
    Navigation Sidebar
@@ -111,7 +128,6 @@
 
 .wp-admin-shell-site-hub__icon-button {
 	position: relative;
-	color: var(--wp-admin-shell--chrome--site-hub--foreground);
 	height: 64px;
 	width: 64px;
 	overflow: hidden;
@@ -121,11 +137,6 @@
 	justify-content: center;
 	background: var(--wp-admin-shell--chrome--site-hub--background);
 	border-radius: 0;
-}
-
-.wp-admin-shell-site-hub__icon-button:hover,
-.wp-admin-shell-site-hub__icon-button:active {
-	color: #fff;
 }
 
 .wp-admin-shell-site-hub__icon-button:focus-visible {
@@ -152,7 +163,6 @@
 }
 
 .wp-admin-shell-site-hub__title button {
-	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 	flex-grow: 1;
 	font-size: 15px;
 	font-weight: 500;
@@ -163,12 +173,6 @@
 	text-decoration: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-.wp-admin-shell-site-hub__title button:hover,
-.wp-admin-shell-site-hub__title button:focus,
-.wp-admin-shell-site-hub__title button:active {
-	color: var(--wp-admin-shell--chrome--toolbar--foreground);
 }
 
 .wp-admin-shell-site-hub__title button:focus {
@@ -201,15 +205,6 @@
 
 .wp-admin-shell-site-hub__actions {
 	flex-shrink: 0;
-}
-
-.wp-admin-shell-site-hub__command-toggle {
-	color: var(--wp-admin-shell--chrome--toolbar--foreground);
-}
-
-.wp-admin-shell-site-hub__command-toggle:hover,
-.wp-admin-shell-site-hub__command-toggle:active {
-	color: #fff;
 }
 
 /* ==========================================================================
@@ -325,14 +320,7 @@
    ========================================================================== */
 
 .wp-admin-shell-sidebar-button {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground);
 	flex-shrink: 0;
-}
-
-.wp-admin-shell-sidebar-button:hover,
-.wp-admin-shell-sidebar-button:focus,
-.wp-admin-shell-sidebar-button:active {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active);
 }
 
 /* ==========================================================================
@@ -385,22 +373,19 @@
 	padding: 0 12px;
 }
 
-/* Nav item buttons (collapsed mode) */
+/* Nav item buttons (collapsed mode).
+ * Default + hover colors come from the chrome → WPDS bridge scoped to
+ * .wp-admin-shell-nav. The active/selected state has no clean WPDS slot
+ * (current-route is shell semantics, not interactive emphasis) so it
+ * keeps the chrome accent token directly. */
 .wp-admin-shell-nav__item {
 	width: 100%;
 	justify-content: center;
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground);
 	padding: 8px;
 	border-radius: 4px;
 	gap: 10px;
 	min-height: 40px;
 	border: none;
-}
-
-.wp-admin-shell-nav__item:hover,
-.wp-admin-shell-nav__item:focus {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active);
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover);
 }
 
 .wp-admin-shell-nav__item.is-active {
