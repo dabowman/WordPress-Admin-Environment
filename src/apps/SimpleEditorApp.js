@@ -17,6 +17,7 @@ import {
 } from '@wordpress/block-editor';
 import { navigate } from '../runtime/routing/router';
 import { Slot } from '@wordpress/components';
+import { useDirtyState } from '../runtime/dirty-state/useDirtyState';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;
@@ -78,7 +79,7 @@ function ensureBlocksRegistered() {
  * MVP scope: title + content only. Featured image, taxonomy, excerpt, etc.
  * are deferred to a future post settings panel.
  */
-export default function SimpleEditorApp( { app, params } ) {
+export default function SimpleEditorApp( { app, params, regionId } ) {
 	const appId = app?.id || 'simple-editor';
 	const postType = params[ 0 ] || 'post';
 	const postIdParam = params[ 1 ];
@@ -164,16 +165,25 @@ export default function SimpleEditorApp( { app, params } ) {
 		);
 	}
 
-	return <SimpleEditor postType={ postType } postId={ postId } backRoute={ backRoute } />;
+	return (
+		<SimpleEditor
+			postType={ postType }
+			postId={ postId }
+			backRoute={ backRoute }
+			regionId={ regionId }
+		/>
+	);
 }
 
-function SimpleEditor( { postType, postId, backRoute } ) {
+function SimpleEditor( { postType, postId, backRoute, regionId } ) {
 	useEffect( () => {
 		ensureBlocksRegistered();
 	}, [] );
 
 	const { record, editedRecord, edit, save, hasEdits, isSaving, isResolving } =
 		useEntityRecord( 'postType', postType, postId );
+
+	useDirtyState( regionId, hasEdits, { blocksNavigation: true } );
 
 	const [ saveStatus, setSaveStatus ] = useState( 'idle' );
 	const [ saveError, setSaveError ] = useState( null );

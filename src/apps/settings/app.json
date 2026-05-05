@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../docs/schemas/admin-app-v2.json",
+  "id": "core:settings",
+  "version": 1,
+  "title": "Settings",
+  "description": "Composable settings host. Native general / writing / reading / discussion plus iframed permalinks / media / privacy.",
+  "role": "main",
+  "capabilities": [ "manage_options" ],
+  "platform": {
+    "dirty-state": true
+  },
+  "config-schema": {
+    "type": "object",
+    "properties": {
+      "panels": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "additionalProperties": false
+  },
+  "script": "wp-admin-shell"
+}

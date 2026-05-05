@@ -1,16 +1,21 @@
 /**
- * Imperatively register every built-in source against a fresh registry.
+ * Manifest-driven registration of every shell-bundled app and engine.
  *
- * Apps, regions, and engines all enter through `registry.register()`. The
- * shared identity envelope ({ kind, id, Component, ... }) lets the kernel
- * route consumers to the right look-up family.
+ * V2.M4 task 6: imperative `register({ ... configSchema ... })` calls
+ * are gone. The single source of truth is each app's `app.json` /
+ * engine's `engine.json`, validated PHP-side at boot and shipped to
+ * the browser via `window.wpAdminShell.manifests`. This bootstrap
+ * pairs each manifest id with its imported React component and folds
+ * the manifest's intrinsic fields (`title`, `role`, `capabilities`,
+ * `config-schema`, `platform`) onto the registry entry the kernel
+ * already consumes.
  *
- * MVP user apps (`PostsApp`, `MediaApp`, etc.) register here as adapted
- * `AppSource` definitions. Component code is unchanged — these definitions
- * are pure registration shims.
+ * Adding a new shell-bundled app: drop the JSX in `src/apps/{name}/`
+ * (or `src/runtime/apps/{name}/`), drop an `app.json` next to it, add
+ * the id → Component pair to `APP_COMPONENTS` below. Discovery scans
+ * the convention path and the manifest registry handles the rest.
  */
 
-// MVP user apps (component code unchanged; registration shim only).
 import PostsApp from '../../apps/PostsApp';
 import EditorApp from '../../apps/EditorApp';
 import SimpleEditorApp from '../../apps/SimpleEditorApp';
@@ -23,7 +28,6 @@ import CommentsApp from '../../apps/CommentsApp';
 import SettingsApp from '../../apps/SettingsApp';
 import SiteEditorApp from '../apps/SiteEditorApp';
 
-// v1 system apps (sidebar / toolbar / overlay content).
 import NavigationApp from '../apps/NavigationApp';
 import SiteHubApp from '../apps/SiteHubApp';
 import ToolbarActionsApp from '../apps/ToolbarActionsApp';
@@ -32,228 +36,74 @@ import PreviewPaneApp from '../apps/PreviewPaneApp';
 import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 import AppearanceApp from '../apps/AppearanceApp';
 
-// v1 engine. Region sources retired in V2.M2 — regions are rendered by
-// the generic `src/runtime/regions/Region.js` directly off region
-// declarations.
 import coreSiteEditorLayout from '../engines/core-site-editor-layout';
 
+const APP_COMPONENTS = {
+	'core:posts':            PostsApp,
+	'core:editor':           EditorApp,
+	'core:simple-editor':    SimpleEditorApp,
+	'core:media':            MediaApp,
+	'core:profile':          ProfileApp,
+	'core:settings-general': SettingsGeneralApp,
+	'core:iframe-fallback':  IframeApp,
+	'core:users':            UsersApp,
+	'core:comments':         CommentsApp,
+	'core:settings':         SettingsApp,
+	'core:site-editor':      SiteEditorApp,
+	'core:navigation':       NavigationApp,
+	'core:site-hub':         SiteHubApp,
+	'core:toolbar-actions':  ToolbarActionsApp,
+	'core:command-picker':   CommandPickerApp,
+	'core:preview-pane':     PreviewPaneApp,
+	'core:notices-banner':   NoticesBannerApp,
+	'core:notices-snackbar': NoticesSnackbarApp,
+	'core:appearance':       AppearanceApp,
+};
+
+const NON_ROUTABLE_APPS = new Set( [
+	'core:navigation',
+	'core:site-hub',
+	'core:toolbar-actions',
+	'core:command-picker',
+	'core:preview-pane',
+	'core:notices-banner',
+	'core:notices-snackbar',
+] );
+
 export function registerBuiltins( registry ) {
-	// Engines.
 	registry.register( coreSiteEditorLayout );
 
-	// MVP user apps. configSchemas describe the per-instance config; the
-	// M2 validator cache (WP_Admin_Shell_Config_Validator) memoizes against
-	// (sourceId, sha1(configJson)) once a real validator runtime lands.
-	registry.register( {
-		kind: 'app',
-		id: 'core:posts',
-		title: 'Posts',
-		routable: true,
-		Component: PostsApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				postType:     { type: 'string', default: 'post' },
-				status:       { type: 'string' },
-				contentWidth: { type: [ 'number', 'string' ] },
-				preview:      { type: 'string' },
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:editor',
-		title: 'Editor (post)',
-		routable: true,
-		Component: EditorApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				postType: { type: 'string', default: 'post' },
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:simple-editor',
-		title: 'Simple editor',
-		routable: true,
-		Component: SimpleEditorApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				postType: { type: 'string', default: 'post' },
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:media',
-		title: 'Media',
-		routable: true,
-		Component: MediaApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:profile',
-		title: 'Profile',
-		routable: true,
-		Component: ProfileApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:settings-general',
-		title: 'Settings — General',
-		routable: true,
-		Component: SettingsGeneralApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:iframe-fallback',
-		title: 'Iframe fallback',
-		routable: true,
-		Component: IframeApp,
-		configSchema: { type: 'object', additionalProperties: true },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:users',
-		title: 'Users',
-		routable: true,
-		Component: UsersApp,
-		capabilities: [ 'list_users' ],
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:comments',
-		title: 'Comments',
-		routable: true,
-		Component: CommentsApp,
-		capabilities: [ 'moderate_comments' ],
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:settings',
-		title: 'Settings',
-		routable: true,
-		Component: SettingsApp,
-		capabilities: [ 'manage_options' ],
-		configSchema: {
-			type: 'object',
-			properties: {
-				panels: {
-					type: 'array',
-					items: { type: 'string' },
-				},
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:site-editor',
-		title: 'Site editor',
-		routable: true,
-		Component: SiteEditorApp,
-		capabilities: [ 'edit_theme_options' ],
-		configSchema: {
-			type: 'object',
-			properties: {
-				url: { type: 'string', default: 'site-editor.php' },
-			},
-			additionalProperties: false,
-		},
-	} );
+	const manifests = window.wpAdminShell?.manifests?.apps || {};
+	const seen      = new Set();
 
-	// v1 system apps.
-	registry.register( {
-		kind: 'app',
-		id: 'core:navigation',
-		title: 'Navigation',
-		Component: NavigationApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				items:     { type: 'array' },
-				collapsed: { type: 'boolean' },
-				title:     { type: 'string' },
-				description: { type: 'string' },
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:site-hub',
-		title: 'Site hub',
-		Component: SiteHubApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:toolbar-actions',
-		title: 'Toolbar actions',
-		Component: ToolbarActionsApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				left:  { type: 'array' },
-				right: { type: 'array' },
-			},
-			additionalProperties: false,
-		},
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:command-picker',
-		title: 'Command picker',
-		Component: CommandPickerApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:preview-pane',
-		title: 'Preview pane',
-		Component: PreviewPaneApp,
-		configSchema: {
-			type: 'object',
-			properties: {
-				follow: { type: 'string', default: 'content.selection' },
-			},
-			additionalProperties: false,
-		},
-	} );
+	for ( const [ id, manifest ] of Object.entries( manifests ) ) {
+		const Component = APP_COMPONENTS[ id ];
+		if ( ! Component ) {
+			continue;
+		}
+		registry.register( {
+			kind:         'app',
+			id,
+			title:        manifest.title,
+			role:         manifest.role,
+			Component,
+			routable:     ! NON_ROUTABLE_APPS.has( id ),
+			capabilities: Array.isArray( manifest.capabilities ) ? manifest.capabilities : [],
+			configSchema: manifest[ 'config-schema' ] || { type: 'object', additionalProperties: false },
+			platform:     manifest.platform || {},
+		} );
+		seen.add( id );
+	}
 
-	registry.register( {
-		kind: 'app',
-		id: 'core:notices-banner',
-		title: 'Notices (banner)',
-		Component: NoticesBannerApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:notices-snackbar',
-		title: 'Notices (snackbar)',
-		Component: NoticesSnackbarApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
-	registry.register( {
-		kind: 'app',
-		id: 'core:appearance',
-		title: 'Appearance',
-		routable: true,
-		Component: AppearanceApp,
-		configSchema: { type: 'object', additionalProperties: false },
-	} );
+	const expected = Object.keys( APP_COMPONENTS );
+	const missing  = expected.filter( ( id ) => ! seen.has( id ) );
+	if ( missing.length && process.env.NODE_ENV !== 'production' ) {
+		// eslint-disable-next-line no-console
+		console.warn(
+			'[wp-admin-shell] expected app manifests not found in window.wpAdminShell.manifests:',
+			missing
+		);
+	}
 
 	return registry;
 }

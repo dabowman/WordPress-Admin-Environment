@@ -29,6 +29,32 @@ const projectRoot  = resolve( __dirname, '..', '..' );
 const SCHEMAS_DIR  = resolve( projectRoot, 'docs/schemas' );
 const SHELLS_DIR   = resolve( projectRoot, 'shells' );
 const FIXTURES_DIR = resolve( __dirname, 'fixtures' );
+const APP_MANIFEST_DIRS = [
+	resolve( projectRoot, 'src/apps' ),
+	resolve( projectRoot, 'src/runtime/apps' ),
+];
+const ENGINE_MANIFEST_DIRS = [
+	resolve( projectRoot, 'src/runtime/engines' ),
+];
+
+function listManifests( bases, filename ) {
+	const out = [];
+	for ( const base of bases ) {
+		if ( ! existsSync( base ) ) {
+			continue;
+		}
+		for ( const entry of readdirSync( base, { withFileTypes: true } ) ) {
+			if ( ! entry.isDirectory() ) {
+				continue;
+			}
+			const candidate = join( base, entry.name, filename );
+			if ( existsSync( candidate ) ) {
+				out.push( candidate );
+			}
+		}
+	}
+	return out.sort();
+}
 
 let pass = 0;
 let fail = 0;
@@ -170,6 +196,26 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 			}
 			const valid = validate( doc );
 			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( key === 'app' ) {
+		console.log( '\n  Bundled app manifests:' );
+		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
+			const doc   = readJson( path );
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( key === 'engine' ) {
+		console.log( '\n  Bundled engine manifests:' );
+		for ( const path of listManifests( ENGINE_MANIFEST_DIRS, 'engine.json' ) ) {
+			const doc   = readJson( path );
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 

@@ -127,10 +127,13 @@ function wp_admin_shell_register_engine( $manifest_or_path ) {
 add_action( 'init', function () {
 	$registry = WP_Admin_Shell_Manifest_Registry::instance();
 
-	// 1. Shell-bundled core engine.
-	$registry->register_engine(
-		WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-site-editor-layout/engine.json'
-	);
+	// 1. Shell-bundled core manifests. Co-located with their JS source
+	// rather than at the plugin-root convention path. `discover()`
+	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`,
+	// so two scans cover the user-app and runtime-app trees plus the
+	// engine.
+	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/' );
+	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/runtime/' );
 
 	// 2. Convention-path discovery for the shell plugin itself + plugins
 	// extending the discovery surface.

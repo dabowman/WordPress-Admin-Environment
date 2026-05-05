@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../../docs/schemas/admin-app-v2.json",
+  "id": "core:site-editor",
+  "version": 1,
+  "title": "Site editor",
+  "description": "Site-editor adapter: iframes `site-editor.php` with chrome hidden. v2 native mount in flight.",
+  "role": "main",
+  "capabilities": [ "edit_theme_options" ],
+  "config-schema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string", "default": "site-editor.php" }
+    },
+    "additionalProperties": false
+  },
+  "script": "wp-admin-shell"
+}

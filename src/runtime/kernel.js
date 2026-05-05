@@ -12,6 +12,7 @@ import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
 import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
+import { NavigationGuard } from './dirty-state/NavigationGuard';
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -101,6 +102,7 @@ export function kernel( config ) {
 		<KernelProvider value={ { registry, config } }>
 			<SlotFillProvider>
 				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
+					<NavigationGuard />
 					<Engine
 						config={ config }
 						regions={ regions }

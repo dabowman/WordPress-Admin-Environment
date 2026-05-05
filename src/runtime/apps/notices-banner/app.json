@@ -1,0 +1,13 @@
+{
+  "$schema": "../../../../docs/schemas/admin-app-v2.json",
+  "id": "core:notices-banner",
+  "version": 1,
+  "title": "Notices (banner)",
+  "description": "Persistent banner notices sourced from `@wordpress/notices` (default context). Rendered with `Notice.Root` from `@wordpress/ui`.",
+  "role": "region",
+  "platform": {
+    "persists-across-navigation": true
+  },
+  "config-schema": { "type": "object", "additionalProperties": false },
+  "script": "wp-admin-shell"
+}
