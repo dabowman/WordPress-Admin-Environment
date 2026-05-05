@@ -47,7 +47,10 @@ export function kernel( config ) {
 	// with the WPDS surface, chrome extensions, compat bridge, and any
 	// per-region/per-app scoped overrides. Density is an attribute, not
 	// a CSS variable — applied to #wp-admin-shell directly.
-	injectTokens( config.styles || {} );
+	injectTokens(
+		config.styles || {},
+		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {}
+	);
 	if ( typeof document !== 'undefined' ) {
 		const root = document.getElementById( 'wp-admin-shell' );
 		applyDensity( root, resolveDensity( config.styles || {} ) );

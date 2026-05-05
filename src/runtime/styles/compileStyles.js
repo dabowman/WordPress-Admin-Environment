@@ -36,6 +36,8 @@
  * their normal token consumption — no per-component overrides needed.
  */
 
+import { flattenTokens } from '../tokens/tokensResolver.mjs';
+
 const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable', 'userCustomizable' ] );
 
 /**
@@ -106,37 +108,51 @@ function emitTo( map, name, value, sourcePath ) {
 	map[ name ] = value;
 }
 
-export function compileStyles( styles ) {
+export function compileStyles( styles, tokens ) {
 	if ( ! styles || typeof styles !== 'object' ) {
 		return { wpds: {}, chrome: {}, chromeScopedWpds: [], scoped: {} };
 	}
 
+	const tokensFlat = flattenTokensSafe( tokens );
+
 	// Top-level: emit into separate wpds + chrome maps so the engine
 	// can lay them out in the documented order (WPDS surface first,
 	// chrome extensions second).
-	const { wpds, chrome } = compileTree( styles, styles, { splitChrome: true } );
+	const { wpds, chrome } = compileTree( styles, styles, tokensFlat, { splitChrome: true } );
 
 	// Chrome → WPDS bridge. For each chrome surface that has bindings
 	// defined in CHROME_WPDS_BINDINGS, walk the resolved chrome subtree
 	// and emit `--wpds-*` overrides under the surface's selector.
-	const chromeScopedWpds = compileChromeScopedWpds( styles );
+	const chromeScopedWpds = compileChromeScopedWpds( styles, tokensFlat );
 
 	const scoped = {};
 	if ( styles.regions && typeof styles.regions === 'object' ) {
 		for ( const [ regionId, regionStyles ] of Object.entries( styles.regions ) ) {
-			scoped[ `region:${ regionId }` ] = compileTree( regionStyles, styles ).wpds;
+			scoped[ `region:${ regionId }` ] = compileTree( regionStyles, styles, tokensFlat ).wpds;
 		}
 	}
 	if ( styles.applications && typeof styles.applications === 'object' ) {
 		for ( const [ appId, appStyles ] of Object.entries( styles.applications ) ) {
-			scoped[ `app:${ appId }` ] = compileTree( appStyles, styles ).wpds;
+			scoped[ `app:${ appId }` ] = compileTree( appStyles, styles, tokensFlat ).wpds;
 		}
 	}
 
 	return { wpds, chrome, chromeScopedWpds, scoped };
 }
 
-function compileChromeScopedWpds( styles ) {
+function flattenTokensSafe( tokens ) {
+	if ( ! tokens || typeof tokens !== 'object' ) {
+		return {};
+	}
+	try {
+		return flattenTokens( tokens );
+	} catch ( e ) {
+		devWarn( `tokens.json flatten failed: ${ e.message || e }` );
+		return {};
+	}
+}
+
+function compileChromeScopedWpds( styles, tokensFlat ) {
 	const result = [];
 	const chromeTree = styles.chrome;
 	if ( ! chromeTree || typeof chromeTree !== 'object' ) {
@@ -154,7 +170,7 @@ function compileChromeScopedWpds( styles ) {
 			if ( value === undefined || value === null ) {
 				continue;
 			}
-			const resolved = resolveValue( String( value ), styles );
+			const resolved = resolveValue( String( value ), styles, tokensFlat );
 			vars[ wpdsName ] = resolved;
 		}
 		if ( Object.keys( vars ).length > 0 ) {
@@ -176,7 +192,7 @@ function compileChromeScopedWpds( styles ) {
  * `[data-region-id]` / `[data-app-id]` selector and don't need the
  * top-level split.
  */
-function compileTree( tree, rootStyles, { splitChrome = false } = {} ) {
+function compileTree( tree, rootStyles, tokensFlat = {}, { splitChrome = false } = {} ) {
 	const wpds = {};
 	const chrome = splitChrome ? {} : wpds;
 
@@ -192,7 +208,7 @@ function compileTree( tree, rootStyles, { splitChrome = false } = {} ) {
 			emitTo(
 				chrome,
 				pathToChrome( path ),
-				resolveValue( leaf, rootStyles ),
+				resolveValue( leaf, rootStyles, tokensFlat ),
 				path.join( '.' )
 			);
 		} );
@@ -206,7 +222,7 @@ function compileTree( tree, rootStyles, { splitChrome = false } = {} ) {
 			emitTo(
 				wpds,
 				pathToWpds( path ),
-				resolveValue( leaf, rootStyles ),
+				resolveValue( leaf, rootStyles, tokensFlat ),
 				path.join( '.' )
 			);
 		} );
@@ -251,7 +267,7 @@ function pathToChrome( path ) {
 
 const MAX_ALIAS_DEPTH = 16;
 
-function resolveValue( raw, rootStyles, visited, depth = 0 ) {
+function resolveValue( raw, rootStyles, tokensFlat, visited, depth = 0 ) {
 	if ( typeof raw !== 'string' ) {
 		return String( raw );
 	}
@@ -281,13 +297,22 @@ function resolveValue( raw, rootStyles, visited, depth = 0 ) {
 		const resolved = resolveByPath( rootStyles, segments );
 		if ( resolved !== undefined ) {
 			seen.add( aliasPath );
-			return resolveValue( resolved, rootStyles, seen, depth + 1 );
+			return resolveValue( resolved, rootStyles, tokensFlat, seen, depth + 1 );
 		}
 	}
 
-	// tokens.json alias — v1 has no tokens.json. Best-effort fallback: emit a
-	// CSS `var(...)` referencing the same slot, so a later resolver (or v2's
-	// tokens.json layer) can supply it. Path with dots becomes a kebab-case var.
+	// tokens.json alias (V2.M5). Look up the path in the resolved
+	// DTCG flat map; the resolver has already followed alias chains and
+	// applied type coercion, so the value here is ready for emission.
+	if ( tokensFlat && aliasPath in tokensFlat ) {
+		const value = tokensFlat[ aliasPath ];
+		seen.add( aliasPath );
+		return resolveValue( value, rootStyles, tokensFlat, seen, depth + 1 );
+	}
+
+	// Unresolved alias — emit a CSS `var(...)` referencing the same slot,
+	// so a future override (or a downstream cascade origin) can still
+	// supply it via the same name.
 	const guessed = `--token-${ aliasPath.replace( /\./g, '-' ) }`;
 	return `var(${ guessed })`;
 }

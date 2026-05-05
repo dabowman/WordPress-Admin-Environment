@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.wp.org/tokens/v1.json",
+  "title": "WP Admin Shell — tokens.json (DTCG 2025.10)",
+  "description": "Minimal local schema for the DTCG primitives layer the WP Admin Shell consumes (W3C Design Tokens Community Group editor's draft, 2025.10). The full DTCG spec governs token authoring; this schema is a compatible subset that validates the structural invariants the shell's resolver relies on. When the upstream DTCG schema stabilizes, this file may be retired in favor of the canonical `$ref`. See spec §9 of `docs/wp-admin-shell-design-spec.md` for context.",
+
+  "type": "object",
+  "additionalProperties": true,
+
+  "properties": {
+    "$schema":      { "type": "string" },
+    "$type":        { "type": "string" },
+    "description":  { "type": "string" }
+  }
+}

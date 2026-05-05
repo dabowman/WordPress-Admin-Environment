@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 1.0.0-beta.1
+ * Version: 2.0.0-beta.1
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Requires Plugins: gutenberg
@@ -86,6 +86,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
 
 /**
  * V2.M1 — Public manifest registration API.
@@ -260,6 +261,11 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 			'apps'    => $manifest_registry->list_apps(),
 			'engines' => $manifest_registry->list_engines(),
 		),
+		// V2.M5 — DTCG primitives layer. Site → theme → plugin → core
+		// origins merged here. Empty object when no origin contributes.
+		// `compileStyles` consumes this when resolving non-`styles.*`
+		// curly-brace aliases in admin.json `styles`.
+		'tokens'        => WP_Admin_Shell_Tokens::resolve(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '

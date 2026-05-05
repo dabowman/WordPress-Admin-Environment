@@ -37,6 +37,7 @@ import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 import AppearanceApp from '../apps/AppearanceApp';
 
 import coreSiteEditorLayout from '../engines/core-site-editor-layout';
+import coreSinglePaneLayout from '../engines/core-single-pane-layout';
 
 const APP_COMPONENTS = {
 	'core:posts':            PostsApp,
@@ -72,6 +73,7 @@ const NON_ROUTABLE_APPS = new Set( [
 
 export function registerBuiltins( registry ) {
 	registry.register( coreSiteEditorLayout );
+	registry.register( coreSinglePaneLayout );
 
 	const manifests = window.wpAdminShell?.manifests?.apps || {};
 	const seen      = new Set();

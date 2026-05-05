@@ -132,11 +132,20 @@ class WP_Admin_Shell_CLI {
 	}
 
 	/**
-	 * Normalize a v0 (MVP flat) shell to v1 partitioned form on disk.
+	 * Diagnose a shell's v2 readiness.
 	 *
-	 * Reads shells/<name>.json, runs it through the v0 → v1 normalizer,
-	 * and writes the result back. The v0 file is preserved as
-	 * shells/<name>.v0.json.
+	 * Reports whether the shell is in canonical v2 shape (top-level
+	 * `engine` + `regions` + `routes`, no `settings.*` partition) and
+	 * lists the legacy fields that block v2 validation if the shell is
+	 * still on the v0 (MVP flat) or v1 (partitioned) shape.
+	 *
+	 * The MVP `upgrade-config` command — which used the old v0 → v1
+	 * normalizer — is gone in v2. The normalizer body was retired in
+	 * `10e87d1` (V2.M4 task 8); v0/v1 → v2 transformation is intentionally
+	 * not automated because the v2 shape requires authoring decisions
+	 * (region templates, routes block, route-key per routable region)
+	 * that no mechanical rewrite can make. Use this command to inspect
+	 * the gap; rewrite the shell by hand against the v2 design spec.
 	 *
 	 * ## OPTIONS
 	 *
@@ -145,11 +154,11 @@ class WP_Admin_Shell_CLI {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-shell upgrade-config content-author
+	 *     wp admin-shell check-config wp-admin-default
 	 *
 	 * @when after_wp_load
 	 */
-	public function upgrade_config( $args, $assoc_args ) {
+	public function check_config( $args, $assoc_args ) {
 		list( $name ) = $args;
 		$name = sanitize_file_name( $name );
 
@@ -158,40 +167,62 @@ class WP_Admin_Shell_CLI {
 			WP_CLI::error( "Shell not found: $name" );
 		}
 
-		$raw = json_decode( file_get_contents( $path ), true );
-		if ( ! is_array( $raw ) ) {
+		$doc = json_decode( file_get_contents( $path ), true );
+		if ( ! is_array( $doc ) ) {
 			WP_CLI::error( 'Shell file is not valid JSON.' );
 		}
 
-		if ( isset( $raw['settings']['shell']['layoutEngine'] ) ) {
-			WP_CLI::warning( "Shell already in v1 form: $name" );
+		$is_v2 = isset( $doc['engine'] ) && ! isset( $doc['settings'] );
+		$has_regions  = isset( $doc['regions'] ) && is_array( $doc['regions'] );
+		$has_routes   = isset( $doc['routes'] ) && is_array( $doc['routes'] );
+		$has_settings = isset( $doc['settings'] );
+
+		$legacy_fields = array();
+		if ( $has_settings ) {
+			$legacy_fields[] = 'settings.* partition';
+		}
+		if ( isset( $doc['settings']['shell']['layoutEngine'] ) ) {
+			$legacy_fields[] = 'settings.shell.layoutEngine';
+		}
+		if ( isset( $doc['settings']['regions'] ) ) {
+			$legacy_fields[] = 'settings.regions';
+		}
+		if ( isset( $doc['settings']['applications'] ) ) {
+			$legacy_fields[] = 'settings.applications';
+		}
+		foreach ( ( $doc['settings']['regions'] ?? array() ) as $region ) {
+			if ( isset( $region['kind'] ) ) {
+				$legacy_fields[] = 'region.kind (legacy enum; v2 uses role/layout/platform)';
+				break;
+			}
+		}
+		foreach ( ( $doc['regions'] ?? array() ) as $region ) {
+			if ( isset( $region['kind'] ) ) {
+				$legacy_fields[] = 'region.kind under v2 root (drop; v2 uses role/template)';
+				break;
+			}
+			if ( isset( $region['contains'] ) ) {
+				$legacy_fields[] = 'region.contains[] (v2: one app + nested regions)';
+				break;
+			}
+		}
+
+		WP_CLI::log( 'Shell:        ' . $name );
+		WP_CLI::log( 'Path:         ' . $path );
+		WP_CLI::log( 'Shape:        ' . ( $is_v2 ? 'v2 (canonical)' : ( $has_settings ? 'v1 (partitioned)' : 'v0 (flat)' ) ) );
+		WP_CLI::log( 'Has regions:  ' . ( $has_regions ? 'yes' : 'no' ) );
+		WP_CLI::log( 'Has routes:   ' . ( $has_routes ? 'yes' : 'no' ) );
+
+		if ( ! empty( $legacy_fields ) ) {
+			WP_CLI::log( 'Legacy fields:' );
+			foreach ( array_unique( $legacy_fields ) as $field ) {
+				WP_CLI::log( '  - ' . $field );
+			}
+			WP_CLI::warning( 'Shell needs hand-rewrite to v2. See docs/wp-admin-shell-design-spec.md §4.3.' );
 			return;
 		}
 
-		$shells_dir = WP_ADMIN_SHELL_PATH . 'shells/';
-		if ( ! is_writable( $shells_dir ) ) {
-			WP_CLI::error( "shells/ is not writable; cannot back up before upgrade." );
-		}
-
-		// Write the backup BEFORE touching the original. Bail loudly if
-		// the backup write fails — overwriting the original without a
-		// preserved v0 copy would lose author intent.
-		$backup       = $shells_dir . $name . '.v0.json';
-		$backup_bytes = file_put_contents( $backup, file_get_contents( $path ) );
-		if ( $backup_bytes === false ) {
-			WP_CLI::error( "Backup write failed: $backup" );
-		}
-
-		$v1 = WP_Admin_Shell_Origin_Core::normalize_v0( $raw );
-		$write_bytes = file_put_contents(
-			$path,
-			wp_json_encode( $v1, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) . "\n"
-		);
-		if ( $write_bytes === false ) {
-			WP_CLI::error( "Upgrade write failed; backup preserved at $backup" );
-		}
-
-		WP_CLI::success( "Upgraded $name to v1. v0 backup: shells/$name.v0.json" );
+		WP_CLI::success( 'Shell is v2-canonical.' );
 	}
 }
 

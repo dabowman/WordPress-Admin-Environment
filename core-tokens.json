@@ -1,0 +1,73 @@
+{
+	"$schema": "./docs/schemas/tokens-v1.json",
+	"description": "WP Admin Shell core tokens.json baseline. Authors override at theme or site origin (DTCG W3C 2025.10).",
+
+	"color": {
+		"$type": "color",
+
+		"brand": {
+			"500": { "$value": "#3858e9" },
+			"600": { "$value": "#1d35b4" }
+		},
+
+		"neutral": {
+			"0":   { "$value": "#ffffff" },
+			"50":  { "$value": "#f6f7f7" },
+			"100": { "$value": "#e9ebee" },
+			"300": { "$value": "#a7aaad" },
+			"600": { "$value": "#50575e" },
+			"800": { "$value": "#2c3338" },
+			"900": { "$value": "#1d2327" },
+			"1000": { "$value": "#0a0a0a" }
+		},
+
+		"feedback": {
+			"info":    { "$value": "#3582c4" },
+			"success": { "$value": "#1c8a4f" },
+			"warning": { "$value": "#dba617" },
+			"error":   { "$value": "#cc1818" }
+		}
+	},
+
+	"size": {
+		"$type": "dimension",
+		"xs":  { "$value": { "value": 4,  "unit": "px" } },
+		"sm":  { "$value": { "value": 8,  "unit": "px" } },
+		"md":  { "$value": { "value": 12, "unit": "px" } },
+		"lg":  { "$value": { "value": 16, "unit": "px" } },
+		"xl":  { "$value": { "value": 24, "unit": "px" } },
+		"2xl": { "$value": { "value": 32, "unit": "px" } }
+	},
+
+	"radius": {
+		"$type": "dimension",
+		"sm": { "$value": { "value": 2, "unit": "px" } },
+		"md": { "$value": { "value": 4, "unit": "px" } },
+		"lg": { "$value": { "value": 8, "unit": "px" } }
+	},
+
+	"font": {
+		"family": {
+			"$type": "fontFamily",
+			"system": {
+				"$value": [
+					"-apple-system",
+					"BlinkMacSystemFont",
+					"Segoe UI",
+					"Roboto",
+					"Oxygen-Sans",
+					"Ubuntu",
+					"Cantarell",
+					"Helvetica Neue",
+					"sans-serif"
+				]
+			}
+		}
+	},
+
+	"duration": {
+		"$type": "duration",
+		"fast":   { "$value": { "value": 100, "unit": "ms" } },
+		"normal": { "$value": { "value": 200, "unit": "ms" } }
+	}
+}

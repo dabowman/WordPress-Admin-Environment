@@ -31,8 +31,8 @@ const STYLE_ID = 'wp-admin-shell-tokens';
  * between mounts; `clearTokens()` is the entry point for that path.
  */
 
-export function emitTokensCss( styles ) {
-	const compiled = compileStyles( styles );
+export function emitTokensCss( styles, tokens ) {
+	const compiled = compileStyles( styles, tokens );
 	const compat   = buildCompatBridge( compiled.wpds );
 
 	const lines = [];
@@ -84,8 +84,8 @@ export function emitTokensCss( styles ) {
 	return lines.join( '\n' );
 }
 
-export function injectTokens( styles ) {
-	const css = emitTokensCss( styles );
+export function injectTokens( styles, tokens ) {
+	const css = emitTokensCss( styles, tokens );
 	if ( typeof document === 'undefined' ) {
 		return css;
 	}

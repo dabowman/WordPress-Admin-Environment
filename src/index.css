@@ -1020,3 +1020,102 @@ body {
 	background: #fff;
 	z-index: 1;
 }
+
+/* ==========================================================================
+   core:single-pane-layout engine
+   ========================================================================== */
+
+.wp-admin-shell-layout--single-pane {
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__appbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: var(--wp-admin-shell--chrome--toolbar--height, 56px);
+	padding: 0 12px;
+	background: var(--wp-admin-shell--chrome--toolbar--background);
+	color: var(--wp-admin-shell--chrome--toolbar--foreground);
+	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border);
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__appbar > .wp-admin-shell-region {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle {
+	background: transparent;
+	color: inherit;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 20px;
+	line-height: 1;
+	padding: 6px 10px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle:hover,
+.wp-admin-shell-single-pane__nav-toggle:focus-visible {
+	background: rgba(255, 255, 255, 0.08);
+	outline: none;
+}
+
+.wp-admin-shell-single-pane__body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__body > .wp-admin-shell-region {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+.wp-admin-shell-single-pane__nav-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open {
+	pointer-events: auto;
+	visibility: visible;
+}
+
+.wp-admin-shell-single-pane__nav-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transition: opacity 0.16s ease;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-backdrop {
+	opacity: 1;
+}
+
+.wp-admin-shell-single-pane__nav-pane {
+	position: relative;
+	height: 100%;
+	width: min(320px, 85vw);
+	background: var(--wp-admin-shell--chrome--sidebar--background);
+	color: var(--wp-admin-shell--chrome--sidebar--foreground);
+	transform: translateX(-100%);
+	transition: transform 0.16s ease;
+	overflow: auto;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-pane {
+	transform: translateX(0);
+}
