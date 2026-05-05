@@ -388,7 +388,15 @@ function GenericRegion( { region } ) {
 	const services = getPlatformServices( region );
 	const { config } = useKernel();
 	const routesBlock = config?.routes || null;
-	const matched = useRouteForRegion( region, routesBlock );
+	// Only routable regions need to subscribe to the router. A region
+	// without `routing.route-key` will never have a matched route, so
+	// running `useRouteForRegion` per-region per-URL-change wastes work
+	// at scale. Gate the hook on the route-key declaration.
+	const isRoutable = !! region?.routing?.[ 'route-key' ];
+	const matched = useRouteForRegion(
+		isRoutable ? region : null,
+		routesBlock
+	);
 
 	if ( services.isModal ) {
 		return (
@@ -437,7 +445,17 @@ function ModalRegion( { region, services, matched } ) {
 
 	const closeOnEscape = services.dismissTriggers.includes( 'Escape' );
 	const closeOnBackdrop = services.dismissTriggers.includes( 'backdrop-click' );
-	const [ isOpen, setOpen ] = useState( true );
+
+	// Triggerable regions (spec §5.3 `platform.triggerable: true`) sit
+	// closed-by-default until invoked by a binding. Non-triggerable
+	// modal regions render their dialog chrome immediately — the
+	// classic "show this dialog now" pattern. The bundled command
+	// palette region is triggerable: starting closed avoids the
+	// always-visible backdrop, and the @wordpress/commands package
+	// owns its own portal palette so Mod+K still works without a
+	// shell-level binding consumer (V2.M5 will wire `trigger.shortcut`
+	// to a per-region open store).
+	const [ isOpen, setOpen ] = useState( ! services.isTriggerable );
 	const close = useCallback( () => setOpen( false ), [] );
 
 	useEffect( () => {
@@ -457,22 +475,43 @@ function ModalRegion( { region, services, matched } ) {
 		if ( ! isOpen || ! services.autofocusSelector ) {
 			return;
 		}
-		// Defer one tick so refs are attached.
+		// Defer one tick so refs attach + dialog mounts. Scope the
+		// query to the dialog container so a stray selector match in a
+		// sibling region can't steal focus.
 		const id = window.setTimeout( () => {
-			const el = document.querySelector( services.autofocusSelector );
+			const root = dialogRef.current || document;
+			const el = root.querySelector( services.autofocusSelector );
 			if ( el && typeof el.focus === 'function' ) {
 				el.focus();
 			}
 		}, 0 );
 		return () => window.clearTimeout( id );
+		// dialogRef is a stable merged ref — no need to depend on it.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ isOpen, services.autofocusSelector ] );
-
-	if ( ! isOpen ) {
-		return null;
-	}
 
 	const role = region.role || 'dialog';
 	const className = regionClassName( region );
+
+	if ( ! isOpen ) {
+		// Render an inert subtree so children that need to mount for
+		// side-effects (e.g. `core:command-picker`'s `useCommandLoader`)
+		// keep firing while the visible dialog chrome stays hidden. The
+		// container is `display: none` + `aria-hidden` so AT and the
+		// browser's focus trap leave it alone.
+		return (
+			<div
+				className={ `${ className } is-modal-closed` }
+				data-region-id={ region.id }
+				aria-hidden="true"
+				style={ { display: 'none' } }
+			>
+				{ renderRegionApp( region, matched ) }
+				{ renderContains( region ) }
+				{ renderChildren( region ) }
+			</div>
+		);
+	}
 
 	return (
 		<>
