@@ -6,7 +6,7 @@
  * references through `get()` (kind-checked) or the looser `find()`.
  */
 
-const VALID_KINDS = new Set( [ 'app', 'region', 'engine' ] );
+const VALID_KINDS = new Set( [ 'app', 'engine' ] );
 
 export function createRegistry() {
 	const sources = new Map();

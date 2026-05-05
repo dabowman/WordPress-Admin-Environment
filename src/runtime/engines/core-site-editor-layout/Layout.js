@@ -18,10 +18,14 @@
  *   drawer regions   → slide in from left/right
  *
  * Region kind drives bucket placement; well-known region ids drive slot
- * assignment within the persistent bucket. Unknown persistent regions
- * render as stragglers below the body. `floating` and `tiled` collapse to
- * `persistent` for v1.
+ * assignment within the persistent bucket. V2.M2 rewrote region rendering
+ * onto the generic `<Region>` renderer; bucketing now uses `getRegionKind`
+ * (legacy source-id mapping plus per-region override). V2.M6 will swap
+ * kind-based dispatch for platform-service dispatch.
  */
+
+import { Region } from '../../regions/Region';
+import { getRegionKind } from '../../regions/regionKind';
 
 const SLOT_IDS = {
 	toolbar: 'toolbar',
@@ -30,34 +34,28 @@ const SLOT_IDS = {
 	preview: 'preview',
 };
 
-function classifyRegions( regions, regionSources ) {
+function classifyRegions( regions ) {
 	const buckets = {
 		persistent: [],
 		overlay: [],
 		drawer: [],
 	};
 	Object.values( regions ).forEach( ( region ) => {
-		const sourceDef = regionSources[ region.source ];
-		if ( ! sourceDef ) {
+		const kind = getRegionKind( region );
+		if ( ! buckets[ kind ] ) {
 			return;
 		}
-		// Per-source default kind. Region instance can override via
-		// `region.kind`, but the default comes from the source.
-		let kind = region.kind || sourceDef.regionKind || 'persistent';
-		if ( kind === 'floating' || kind === 'tiled' ) {
-			kind = 'persistent';
-		}
-		buckets[ kind ].push( { region, sourceDef } );
+		buckets[ kind ].push( region );
 	} );
 	return buckets;
 }
 
 function findById( bucket, id ) {
-	return bucket.find( ( { region } ) => region.id === id );
+	return bucket.find( ( region ) => region.id === id );
 }
 
-export default function CoreSiteEditorLayout( { config, regions, regionSources } ) {
-	const buckets = classifyRegions( regions, regionSources );
+export default function CoreSiteEditorLayout( { config, regions } ) {
+	const buckets = classifyRegions( regions );
 
 	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
 	const sidebar = findById( buckets.persistent, SLOT_IDS.sidebar );
@@ -67,10 +65,10 @@ export default function CoreSiteEditorLayout( { config, regions, regionSources }
 	const claimed = new Set(
 		[ toolbar, sidebar, content, preview ]
 			.filter( Boolean )
-			.map( ( { region } ) => region.id )
+			.map( ( region ) => region.id )
 	);
 	const stragglers = buckets.persistent.filter(
-		( { region } ) => ! claimed.has( region.id )
+		( region ) => ! claimed.has( region.id )
 	);
 
 	const accent =
@@ -84,35 +82,31 @@ export default function CoreSiteEditorLayout( { config, regions, regionSources }
 			data-engine="core:site-editor-layout"
 			style={ { '--wp-admin-shell-accent': accent } }
 		>
-			{ toolbar && renderRegion( toolbar ) }
+			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
 			<div className="wp-admin-shell-layout__body">
-				{ sidebar && renderRegion( sidebar ) }
+				{ sidebar && <Region key={ sidebar.id } region={ sidebar } /> }
 
 				<div
 					className={ `wp-admin-shell-areas${
 						preview ? ' has-preview' : ''
 					}` }
 				>
-					{ content && renderRegion( content ) }
-					{ preview && renderRegion( preview ) }
+					{ content && <Region key={ content.id } region={ content } /> }
+					{ preview && <Region key={ preview.id } region={ preview } /> }
 				</div>
 			</div>
 
-			{ stragglers.map( ( entry ) => renderRegion( entry ) ) }
+			{ stragglers.map( ( region ) => (
+				<Region key={ region.id } region={ region } />
+			) ) }
 
-			{ buckets.drawer.map( ( entry ) => renderRegion( entry ) ) }
-			{ buckets.overlay.map( ( entry ) => renderRegion( entry ) ) }
+			{ buckets.drawer.map( ( region ) => (
+				<Region key={ region.id } region={ region } />
+			) ) }
+			{ buckets.overlay.map( ( region ) => (
+				<Region key={ region.id } region={ region } />
+			) ) }
 		</div>
-	);
-}
-
-function renderRegion( { region, sourceDef } ) {
-	const Component = sourceDef.Component;
-	return (
-		<Component
-			key={ region.id }
-			region={ region }
-		/>
 	);
 }

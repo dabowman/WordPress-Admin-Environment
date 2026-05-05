@@ -114,7 +114,7 @@ wp-admin-shell/
 │   │   ├── kernel.js, kernel-context.js
 │   │   ├── registry/               # Source registry + builtins
 │   │   ├── engines/                # core:site-editor-layout
-│   │   ├── regions/                # 6 built-in region sources
+│   │   ├── regions/                # Generic Region renderer + regionKind helper + mountApp
 │   │   ├── routing/                # Hash router
 │   │   ├── selection/              # Cross-region selection bus
 │   │   ├── slots/                  # Render + data slots

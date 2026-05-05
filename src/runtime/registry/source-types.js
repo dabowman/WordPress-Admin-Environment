@@ -10,7 +10,11 @@
  */
 
 /**
- * @typedef {'app' | 'region' | 'engine'} SourceKind
+ * @typedef {'app' | 'engine'} SourceKind
+ *
+ * Region sources were retired in V2.M2. Regions are now rendered by the
+ * generic `src/runtime/regions/Region.js` directly off declarations; the
+ * registry only holds apps and engines.
  */
 
 /**
@@ -50,41 +54,6 @@
  * }} AppSource
  */
 
-/* ──────────────────────── Region sources ──────────────────── */
-
-/**
- * Region kinds — control how an engine arranges the region.
- *
- * `persistent` regions render in a fixed slot. `overlay` regions float over
- * persistent regions (e.g. command palette). `drawer` regions slide in from a
- * configurable side and persist until dismissed.
- *
- * `floating` and `tiled` are reserved for v2 — engines may collapse them to
- * `persistent` for v1.
- *
- * @typedef {'persistent' | 'overlay' | 'drawer' | 'floating' | 'tiled'} RegionKind
- */
-
-/**
- * Props delivered to a `RegionSource.Component` when an engine mounts it.
- *
- * @typedef {Object} RegionSourceProps
- * @property {Object}   region            - Region instance from the resolved config.
- * @property {string}   region.id         - Region id (e.g. `nav`, `main`, `commands`).
- * @property {string}   region.source     - Region source string (e.g. `core:sidebar-region`).
- * @property {Object}   [region.config]   - Region-instance config.
- * @property {Object[]} [region.contains] - Resolved app instances assigned to this region.
- */
-
-/**
- * @typedef {SourceBase & {
- *   kind: 'region',
- *   regionKind: RegionKind,
- *   Component: (props: RegionSourceProps) => any,
- *   routable?: boolean
- * }} RegionSource
- */
-
 /* ──────────────────────── Engine sources ──────────────────── */
 
 /**
@@ -92,12 +61,12 @@
  * arranges all regions for a shell.
  *
  * `regions` is keyed by region id; each value is a fully-resolved region
- * instance ready to mount (the engine renders the region's `Component`).
+ * declaration. Engines render regions by passing them to the generic
+ * `<Region>` renderer (see `src/runtime/regions/Region.js`).
  *
  * @typedef {Object} EngineSourceProps
  * @property {Object} config                       - The full resolved shell config.
- * @property {Object<string, Object>} regions      - Region instances keyed by region id.
- * @property {Object<string, Object>} regionSources - Region source defs keyed by source id.
+ * @property {Object<string, Object>} regions      - Region declarations keyed by region id.
  */
 
 /**
@@ -110,7 +79,7 @@
 /**
  * Union of every source kind the registry can hold.
  *
- * @typedef {AppSource | RegionSource | EngineSource} Source
+ * @typedef {AppSource | EngineSource} Source
  */
 
 export {};

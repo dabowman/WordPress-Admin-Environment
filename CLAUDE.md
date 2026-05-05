@@ -8,7 +8,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **v2 migration in flight on `feat/wp-admin-shell-v2`.** v2 architecture is a substantial refinement of v1 — three artifacts (`app.json` + `engine.json` + `admin.json`) replace the single-file shape; region typing moves from `kind` enum to `role` + `layout` + `platform` + `routing`; one-region-one-app with nested regions replaces `contains[]`; selection event bus removed; shell-level slot/fill removed; navigation is URL-driven (the URL is the full app state; routable regions declare `routing.route-key` naming the URL slot they read from; plain `<a href>` links navigate; `target` keeps native HTML meaning — no shell-specific overload, decided 2026-05-04 superseding the prior 2026-05-01 `<a target>`-as-region-selector idea). Cascade, token system, and capability gating carry forward largely unchanged. The migration directive at `docs/plans/wp-admin-shell-v2-migration-directive.md` is the active plan; master spec at `docs/wp-admin-shell-design-spec.md` (2026-05-01, refined 2026-05-04) is authoritative. v1 prior-state spec preserved at `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`; v1 plan at `docs/archive/wp-admin-shell-v1-plan.md`.
 
-**v1 architecture (current shipping baseline, being migrated).** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine + region sources from a registry, mounts apps inside regions via `MountedApp`, and emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload. Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability.
+**v1 architecture (current shipping baseline, being migrated).** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine from a registry, renders each declared region through the generic `<Region>` renderer (V2.M2 task 2), and mounts apps inside regions via `MountedApp`, plus emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload. Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability.
 
 **Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), `run-shape-tests.php` (82), `run-manifest-tests.php` (60 — V2.M1 + V2.M2 task 1 boot-time engine load), all via `wp eval-file`. `tests/schema/validate-shells.test.mjs` (26 — admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2) via `node`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. `run-selection-tests.php` will be deleted as part of V2.M4 (selection bus removal). Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; v2 will evolve these in place.
 
@@ -177,21 +177,17 @@ wp-admin-shell/
 │   │   ├── kernel.js        # Top-level mount: registry + normalizer + engine + region resolution
 │   │   ├── kernel-context.js  # KernelProvider exposing { registry, config } to all sources
 │   │   ├── registry/
-│   │   │   ├── createRegistry.js   # Kind-checked registry (app | region | engine), dup-rejection
+│   │   │   ├── createRegistry.js   # Kind-checked registry (app | engine — region kind retired in V2.M2 task 2), dup-rejection
 │   │   │   ├── builtins.js         # Imperative registration of every core:* source
 │   │   │   └── source-types.js     # JSDoc typedefs for SourceProps (no runtime)
 │   │   ├── engines/
 │   │   │   └── core-site-editor-layout/
 │   │   │       ├── index.js        # EngineSource definition
 │   │   │       └── Layout.js       # Arranges regions: dark chrome + elevated cards
-│   │   ├── regions/                # Six built-in region sources, thin contains[] wrappers
-│   │   │   ├── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
-│   │   │   ├── sidebar-region/index.js
-│   │   │   ├── toolbar-region/index.js
-│   │   │   ├── content-region/index.js   # router:true honored; routable single-region
-│   │   │   ├── preview-region/index.js   # subscribes to selection scope via useSelection
-│   │   │   ├── overlay-region/index.js   # display:contents pass-through (command palette host)
-│   │   │   └── drawer-region/index.js    # slides L/R, dismissOn: escape | overlay-click
+│   │   ├── regions/                # V2.M2 task 2: single declaration-driven renderer
+│   │   │   ├── Region.js           # Generic <Region>: dispatches sidebar/toolbar/content/preview/overlay/drawer behaviors off region.source until v1 shells retire (V2.M2 task 7)
+│   │   │   ├── regionKind.js       # getRegionKind(region) → persistent | overlay | drawer; replaces RegionSource.regionKind for engine bucketing
+│   │   │   └── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
 │   │   ├── routing/
 │   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute
 │   │   │   └── useRoute.js         # Re-export

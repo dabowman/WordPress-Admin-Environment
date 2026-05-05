@@ -32,26 +32,14 @@ import PreviewPaneApp from '../apps/PreviewPaneApp';
 import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 import AppearanceApp from '../apps/AppearanceApp';
 
-// v1 engine + regions.
+// v1 engine. Region sources retired in V2.M2 — regions are rendered by
+// the generic `src/runtime/regions/Region.js` directly off region
+// declarations.
 import coreSiteEditorLayout from '../engines/core-site-editor-layout';
-import sidebarRegion from '../regions/sidebar-region';
-import toolbarRegion from '../regions/toolbar-region';
-import contentRegion from '../regions/content-region';
-import previewRegion from '../regions/preview-region';
-import overlayRegion from '../regions/overlay-region';
-import drawerRegion from '../regions/drawer-region';
 
 export function registerBuiltins( registry ) {
 	// Engines.
 	registry.register( coreSiteEditorLayout );
-
-	// Regions.
-	registry.register( sidebarRegion );
-	registry.register( toolbarRegion );
-	registry.register( contentRegion );
-	registry.register( previewRegion );
-	registry.register( overlayRegion );
-	registry.register( drawerRegion );
 
 	// MVP user apps. configSchemas describe the per-instance config; the
 	// M2 validator cache (WP_Admin_Shell_Config_Validator) memoizes against

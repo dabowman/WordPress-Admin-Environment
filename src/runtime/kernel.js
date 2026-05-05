@@ -72,20 +72,14 @@ export function kernel( config ) {
 
 	const regionsMap = config.settings?.regions || {};
 	const regions = {};
-	const regionSources = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
-		// user lacks capability for is dropped before its source is
-		// looked up, so contains[] never evaluates.
+		// user lacks capability for is dropped before mounting, so
+		// contains[] never evaluates.
 		if ( regionInstance.capability && ! userCan( regionInstance.capability ) ) {
 			return;
 		}
-		const sourceDef = registry.get( regionInstance.source, 'region' );
-		if ( ! sourceDef ) {
-			return;
-		}
 		regions[ id ] = { id, ...regionInstance };
-		regionSources[ regionInstance.source ] = sourceDef;
 	} );
 
 	const Engine = engineSource.Component;
@@ -97,7 +91,6 @@ export function kernel( config ) {
 					<Engine
 						config={ config }
 						regions={ regions }
-						regionSources={ regionSources }
 					/>
 				</RouterProvider>
 			</SlotFillProvider>
