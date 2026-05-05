@@ -226,19 +226,22 @@ $T::assert_true( 'doc: pages locked entirely',
 
 echo "\n— Origin loaders + full pipeline —\n";
 
-$flat       = $T::load( '07-v0-flat.json' );
-$normalized = WP_Admin_Shell_Origin_Core::normalize_v0( $flat );
-$T::assert_eq( 'core origin: v0 → v1 emits layoutEngine',
-	$normalized['settings']['shell']['layoutEngine'] ?? null,
+// V2.M4 task 8: the v0 → v1 normalizer is gone. v0 inputs are no
+// longer supported. The loader passes docs through as-is + falls back
+// to `empty_doc()` for missing/malformed JSON. The empty doc carries
+// an `engine` field and a single content region so the kernel can
+// render a valid (empty) shell.
+$empty = WP_Admin_Shell_Origin_Core::empty_doc();
+$T::assert_eq( 'core origin: empty_doc carries engine',
+	$empty['engine'] ?? null,
 	'core:site-editor-layout'
 );
-$T::assert_true( 'core origin: v0 → v1 emits regions',
-	isset( $normalized['settings']['regions']['content'] ),
-	'regions: ' . json_encode( array_keys( $normalized['settings']['regions'] ?? array() ) )
+$T::assert_true( 'core origin: empty_doc carries content region',
+	isset( $empty['regions']['content'] ),
+	'regions: ' . json_encode( array_keys( $empty['regions'] ?? array() ) )
 );
-$T::assert_true( 'core origin: preserves user applications',
-	in_array( 'posts', array_column( $normalized['settings']['applications'], 'id' ), true ),
-	'apps: ' . json_encode( array_column( $normalized['settings']['applications'], 'id' ) )
+$T::assert_true( 'core origin: malformed doc falls back to empty_doc',
+	is_array( WP_Admin_Shell_Origin_Core::normalize_v0( null ) )
 );
 
 $injected = array(
