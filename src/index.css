@@ -205,8 +205,24 @@ body {
 	align-items: center;
 }
 
+/* Title wrapper is a flex item of the inner site-hub Stack. Default
+ * flex-item `min-width: auto` prevents shrinking below intrinsic
+ * content width, so a long site title overflows the sidebar. Force
+ * `min-width: 0` so the wrapper can shrink, and `display: flex` so
+ * the anchor child's `flex-grow: 1` actually stretches it (the anchor
+ * is inline-flex by @wordpress/ui Button default; flex-grow only
+ * applies when its parent is itself a flex container). With both,
+ * the anchor's overflow:hidden + text-overflow:ellipsis + white-
+ * space:nowrap activate and the title truncates with an ellipsis. */
+.wp-admin-shell-site-hub__title {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+}
+
 .wp-admin-shell-site-hub__title :is(button, a) {
 	flex-grow: 1;
+	min-width: 0;
 	font-size: 15px;
 	font-weight: 500;
 	overflow: hidden;
