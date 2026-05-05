@@ -39,7 +39,7 @@ export default function SidebarNavigationScreen( {
 				<Stack
 					direction="row"
 					gap="md"
-					align="flex-start"
+					align="center"
 					className="wp-admin-shell-sidebar-screen__title-bar"
 				>
 					{ ! isRoot && (

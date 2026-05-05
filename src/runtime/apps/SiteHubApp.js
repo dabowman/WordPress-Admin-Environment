@@ -38,12 +38,12 @@ export default function SiteHubApp() {
 
 	return (
 		<div className="wp-admin-shell-site-hub">
-			<Stack direction="row" gap="xs" justify="flex-start" align="center">
+			<Stack direction="row" gap="xs" justify="flex-start" align="center" style={ { minWidth: 0, flex: 1 } }>
 				<div className="wp-admin-shell-site-hub__icon-container">
 					<Button
 						tone="neutral"
 						variant="minimal"
-						href={ dashboardUrl }
+						render={ <a href={ dashboardUrl } /> }
 						aria-label={ __( 'Go to the Dashboard', 'wp-admin-shell' ) }
 						className="wp-admin-shell-site-hub__icon-button"
 					>
@@ -51,13 +51,12 @@ export default function SiteHubApp() {
 					</Button>
 				</div>
 
-				<Stack direction="row" gap="xs" align="center">
+				<Stack direction="row" gap="xs" align="center" style={ { minWidth: 0, flex: 1 } }>
 					<div className="wp-admin-shell-site-hub__title">
 						<Button
 							tone="neutral"
 							variant="minimal"
-							href={ homeUrl }
-							target="_blank"
+							render={ <a href={ homeUrl } target="_blank" rel="noopener noreferrer" /> }
 						>
 							{ siteTitle }
 							<VisuallyHidden as="span">

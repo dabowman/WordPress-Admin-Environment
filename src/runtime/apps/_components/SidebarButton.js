@@ -13,6 +13,12 @@ import { Button, IconButton } from '@wordpress/ui';
  *   - icon + label  → renders an `IconButton` (label drives tooltip + a11y)
  *   - children      → renders a regular `Button`
  *
+ * **href + render prop.** `@wordpress/ui` Button is built on `@base-ui/react`
+ * Button which always renders a native `<button>` and silently drops `href`.
+ * To get an actual link, the underlying element must be replaced via the
+ * `render` prop. When an `href` prop is passed, swap the rendered element
+ * for `<a href=...>` so clicks navigate.
+ *
  * `showTooltip` from the legacy API is silently dropped — `IconButton`
  * always shows a tooltip from `label`, so the prop is no longer needed.
  */
@@ -23,9 +29,16 @@ export default function SidebarButton( {
 	showTooltip,
 	className,
 	children,
+	href,
+	target,
+	rel,
 	...props
 } ) {
 	const mergedClass = `wp-admin-shell-sidebar-button ${ className || '' }`.trim();
+
+	const renderAs = href
+		? <a href={ href } target={ target } rel={ rel } />
+		: undefined;
 
 	if ( icon ) {
 		return (
@@ -36,6 +49,7 @@ export default function SidebarButton( {
 				icon={ icon }
 				label={ label || '' }
 				className={ mergedClass }
+				{ ...( renderAs ? { render: renderAs } : {} ) }
 				{ ...props }
 			/>
 		);
@@ -48,6 +62,7 @@ export default function SidebarButton( {
 			size="compact"
 			className={ mergedClass }
 			aria-label={ label }
+			{ ...( renderAs ? { render: renderAs } : {} ) }
 			{ ...props }
 		>
 			{ children }
