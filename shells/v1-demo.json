@@ -77,7 +77,9 @@
 	},
 
 	"routes": {
-		"/posts":      { "app": "core:posts",      "config": { "postType": "post" } },
+		"/posts":           { "app": "core:posts",         "config": { "postType": "post" } },
+		"/posts/new":       { "app": "core:simple-editor", "config": { "postType": "post" } },
+		"/posts/{id}/edit": { "app": "core:simple-editor", "config": { "postType": "post", "id": "{id}" } },
 		"/media":      { "app": "core:media" },
 		"/profile":    { "app": "core:profile" },
 		"/appearance": { "app": "core:appearance" }

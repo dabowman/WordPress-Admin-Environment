@@ -139,3 +139,14 @@ class WP_Admin_Shell_Tokens {
 		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
 	}
 }
+
+// Defensive cache invalidation. Mirrors WP_Admin_Shell_Cache hook list:
+// origin-changing writes (site option, theme switch, plugin
+// activation/deactivation) drop the merged-tokens cache so the next
+// resolve() picks up the new origin contents.
+add_action( 'update_option_' . WP_Admin_Shell_Tokens::SITE_OPTION, array( 'WP_Admin_Shell_Tokens', 'flush' ) );
+add_action( 'add_option_' . WP_Admin_Shell_Tokens::SITE_OPTION,    array( 'WP_Admin_Shell_Tokens', 'flush' ) );
+add_action( 'delete_option_' . WP_Admin_Shell_Tokens::SITE_OPTION, array( 'WP_Admin_Shell_Tokens', 'flush' ) );
+add_action( 'switch_theme',                                        array( 'WP_Admin_Shell_Tokens', 'flush' ) );
+add_action( 'activated_plugin',                                    array( 'WP_Admin_Shell_Tokens', 'flush' ) );
+add_action( 'deactivated_plugin',                                  array( 'WP_Admin_Shell_Tokens', 'flush' ) );

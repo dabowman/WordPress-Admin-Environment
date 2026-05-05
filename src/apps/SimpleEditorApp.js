@@ -79,15 +79,22 @@ function ensureBlocksRegistered() {
  * MVP scope: title + content only. Featured image, taxonomy, excerpt, etc.
  * are deferred to a future post settings panel.
  */
-export default function SimpleEditorApp( { app, params, regionId } ) {
-	const appId = app?.id || 'simple-editor';
-	const postType = params[ 0 ] || 'post';
-	const postIdParam = params[ 1 ];
-	const isNew = postIdParam === 'new';
+export default function SimpleEditorApp( { config = {}, regionId } ) {
+	// V2 routing: postType comes from the route's config block; the
+	// `{id}` placeholder is interpolated by the route matcher into
+	// `config.id` when the URL pattern captures an id (e.g.
+	// `/posts/{id}/edit`). The `/posts/new` pattern omits `{id}` —
+	// `config.id` is undefined and the app creates a draft.
+	const postType = config.postType || 'post';
+	const postIdRaw = config.id;
+	const isNew = postIdRaw === undefined || postIdRaw === '' || postIdRaw === 'new';
 
-	const [ postId, setPostId ] = useState( isNew ? null : Number( postIdParam ) );
+	const [ postId, setPostId ] = useState( isNew ? null : Number( postIdRaw ) );
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
+
+	const segment = postType === 'page' ? 'pages' : 'posts';
+	const backHref = `#/${ segment }`;
 
 	useEffect( () => {
 		if ( ! isNew ) {
@@ -113,7 +120,7 @@ export default function SimpleEditorApp( { app, params, regionId } ) {
 					window.history.replaceState(
 						null,
 						'',
-						`#/${ appId }/${ postType }/${ result.id }`
+						`#/${ segment }/${ result.id }/edit`
 					);
 				}
 			} catch ( err ) {
@@ -134,9 +141,7 @@ export default function SimpleEditorApp( { app, params, regionId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ isNew, postType, appId ] );
-
-	const backRoute = postType === 'page' ? 'pages' : 'posts';
+	}, [ isNew, postType, segment ] );
 
 	if ( error ) {
 		return (
@@ -144,7 +149,7 @@ export default function SimpleEditorApp( { app, params, regionId } ) {
 				<div className="wp-admin-shell-app-simple-editor__toolbar">
 					<Button
 						icon={ arrowLeft }
-						onClick={ () => navigate( backRoute ) }
+						onClick={ () => navigate( backHref ) }
 						variant="minimal"
 					>
 						{ __( 'Back to list', 'wp-admin-shell' ) }
@@ -169,13 +174,13 @@ export default function SimpleEditorApp( { app, params, regionId } ) {
 		<SimpleEditor
 			postType={ postType }
 			postId={ postId }
-			backRoute={ backRoute }
+			backHref={ backHref }
 			regionId={ regionId }
 		/>
 	);
 }
 
-function SimpleEditor( { postType, postId, backRoute, regionId } ) {
+function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	useEffect( () => {
 		ensureBlocksRegistered();
 	}, [] );
@@ -322,7 +327,7 @@ function SimpleEditor( { postType, postId, backRoute, regionId } ) {
 			<div className="wp-admin-shell-app-simple-editor__toolbar">
 				<Button
 					icon={ arrowLeft }
-					onClick={ () => navigate( backRoute ) }
+					onClick={ () => navigate( backHref ) }
 					variant="minimal"
 					size="compact"
 				>

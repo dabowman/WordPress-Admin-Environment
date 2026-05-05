@@ -68,7 +68,7 @@ function walk( node, path, inheritedType, flat ) {
 }
 
 function isDtcgToken( node ) {
-	return node && typeof node === 'object' && '$value' in node;
+	return node && typeof node === 'object' && node.$value !== undefined;
 }
 
 /**
@@ -177,8 +177,9 @@ export function coerce( value, type ) {
 			}
 			break;
 		case 'border':
-			if ( value.width && value.style && value.color ) {
-				return `${ resolveSubValue( value.width ) } ${ value.style } ${ value.color }`;
+			if ( value.width && value.color ) {
+				const style = value.style || 'solid';
+				return `${ resolveSubValue( value.width ) } ${ style } ${ value.color }`;
 			}
 			break;
 		case 'shadow':
@@ -193,7 +194,15 @@ export function coerce( value, type ) {
 	if ( Array.isArray( value ) ) {
 		return value.join( ', ' );
 	}
-	return JSON.stringify( value );
+	// DTCG-typed-but-unhandled object (composite token whose `$type`
+	// this resolver does not coerce). JSON-stringifying it would emit a
+	// literal object dump as the CSS value — silent garbage. Warn and
+	// emit empty so the slot falls through to its var() fallback.
+	const printable = type ? `(type "${ type }")` : '(no $type declared)';
+	warn(
+		`tokens.json value cannot be coerced to a CSS string ${ printable }; emitting empty fallback`
+	);
+	return '';
 }
 
 function shadowOne( s ) {

@@ -63,8 +63,12 @@
 	},
 
 	"routes": {
-		"/pages":   { "app": "core:posts",           "config": { "postType": "page" } },
-		"/posts":   { "app": "core:posts",           "config": { "postType": "post" } },
+		"/pages":           { "app": "core:posts",           "config": { "postType": "page" } },
+		"/pages/new":       { "app": "core:simple-editor",   "config": { "postType": "page" } },
+		"/pages/{id}/edit": { "app": "core:simple-editor",   "config": { "postType": "page", "id": "{id}" } },
+		"/posts":           { "app": "core:posts",           "config": { "postType": "post" } },
+		"/posts/new":       { "app": "core:simple-editor",   "config": { "postType": "post" } },
+		"/posts/{id}/edit": { "app": "core:simple-editor",   "config": { "postType": "post", "id": "{id}" } },
 		"/media":   { "app": "core:iframe-fallback", "config": { "url": "upload.php" } },
 		"/profile": { "app": "core:profile" }
 	},

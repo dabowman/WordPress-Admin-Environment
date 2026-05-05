@@ -279,5 +279,43 @@ ok(
 		resolvedMap.legacy.role === undefined
 );
 
+// ── Depth + cycle guards (V2.M5 hardening) ────────────────────────
+
+console.log( '\n— depth + cycle guards —' );
+
+const origWarn = console.warn;
+console.warn = () => {}; // silence guard warnings during these cases.
+
+{
+	// Self-referential chain via deeply nested literal regions. Must
+	// terminate without stack overflow.
+	let deep = { role: 'region' };
+	for ( let i = 0; i < 50; i++ ) {
+		deep = { role: 'region', regions: { child: deep } };
+	}
+	const resolved = resolveRegion( deep, ENGINE );
+	ok( 'deeply nested literal chain returns without throwing', !! resolved );
+}
+
+{
+	// Cyclic template chain — engine has template A pointing at B and
+	// B pointing back at A. Cycle guard should bail without stack
+	// overflow.
+	const cyclicEngine = {
+		templates: {
+			A: { role: 'main', regions: { c: { template: 'B' } } },
+			B: { role: 'region', regions: { c: { template: 'A' } } },
+		},
+	};
+	const resolved = resolveRegion( { template: 'A' }, cyclicEngine );
+	ok( 'cyclic template chain bails without throwing', !! resolved );
+	ok(
+		'cyclic template chain still merges first level',
+		resolved.role === 'main'
+	);
+}
+
+console.warn = origWarn;
+
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );

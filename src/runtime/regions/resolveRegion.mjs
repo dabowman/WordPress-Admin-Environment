@@ -36,16 +36,41 @@
  * — `role`, `platform`, `default-style`, optional nested `regions`.
  */
 
-export function resolveRegion( declaration, engineManifest ) {
+const MAX_REGION_DEPTH = 10;
+
+export function resolveRegion( declaration, engineManifest, depth = 0, visitedTemplates = null ) {
 	if ( ! declaration || typeof declaration !== 'object' ) {
 		return declaration;
 	}
 
+	if ( depth >= MAX_REGION_DEPTH ) {
+		if ( typeof console !== 'undefined' ) {
+			// eslint-disable-next-line no-console
+			console.warn(
+				`[wp-admin-shell] resolveRegion: max depth ${ MAX_REGION_DEPTH } exceeded; returning declaration unresolved (likely a self-referential template chain).`
+			);
+		}
+		return declaration;
+	}
+
 	const templateId = declaration.template;
+	const seen = visitedTemplates || new Set();
+	if ( templateId && seen.has( templateId ) ) {
+		if ( typeof console !== 'undefined' ) {
+			// eslint-disable-next-line no-console
+			console.warn(
+				`[wp-admin-shell] resolveRegion: template cycle detected on "${ templateId }"; returning declaration unresolved.`
+			);
+		}
+		return declaration;
+	}
 	const template =
 		templateId && engineManifest?.templates
 			? engineManifest.templates[ templateId ] || null
 			: null;
+	if ( template && templateId ) {
+		seen.add( templateId );
+	}
 
 	const resolved = { ...declaration };
 
@@ -74,7 +99,9 @@ export function resolveRegion( declaration, engineManifest ) {
 	const mergedChildren = mergeNestedRegions(
 		template?.regions,
 		declaration.regions,
-		engineManifest
+		engineManifest,
+		depth + 1,
+		seen
 	);
 	if ( mergedChildren ) {
 		resolved.regions = mergedChildren;
@@ -95,7 +122,7 @@ export function resolveRegion( declaration, engineManifest ) {
  * engine manifest. Recursion is unbounded — spec §5.5 permits arbitrary
  * nesting; convention discourages going more than two levels deep.
  */
-function mergeNestedRegions( templateChildren, declarationChildren, engineManifest ) {
+function mergeNestedRegions( templateChildren, declarationChildren, engineManifest, depth = 0, visitedTemplates = null ) {
 	const t = templateChildren && typeof templateChildren === 'object' ? templateChildren : null;
 	const d = declarationChildren && typeof declarationChildren === 'object' ? declarationChildren : null;
 	if ( ! t && ! d ) {
@@ -107,7 +134,10 @@ function mergeNestedRegions( templateChildren, declarationChildren, engineManife
 	}
 	const resolvedChildren = {};
 	for ( const [ key, child ] of Object.entries( merged ) ) {
-		resolvedChildren[ key ] = resolveRegion( child, engineManifest );
+		// Each child gets a fresh visited-templates set so siblings can
+		// reuse the same template id; the cycle guard only fires inside
+		// a single chain.
+		resolvedChildren[ key ] = resolveRegion( child, engineManifest, depth, new Set( visitedTemplates ) );
 	}
 	return resolvedChildren;
 }

@@ -68,23 +68,22 @@ function classify( regions ) {
 	return buckets;
 }
 
-export default function CoreSinglePaneLayout( { config, regions } ) {
+export default function CoreSinglePaneLayout( { regions } ) {
 	const buckets = classify( regions );
 	const [ navOpen, setNavOpen ] = useState( false );
 	const toggleNav = useCallback( () => setNavOpen( ( v ) => ! v ), [] );
 
-	const accent =
-		config?.styles?.color?.accent?.brand ||
-		config?.branding?.accentColor ||
-		'#3858e9';
-
 	const hasNav = buckets.navigation.length > 0;
+
+	// Brand/accent color flows through the WPDS chrome→token bridge in
+	// `compileStyles.CHROME_WPDS_BINDINGS`; engines no longer read
+	// admin.json `branding.accentColor` (v0 legacy) or fabricate a
+	// `--wp-admin-shell-accent` custom property.
 
 	return (
 		<div
 			className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
 			data-engine="core:single-pane-layout"
-			style={ { '--wp-admin-shell-accent': accent } }
 		>
 			<div className="wp-admin-shell-single-pane__appbar">
 				{ hasNav && (

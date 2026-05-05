@@ -126,6 +126,26 @@ console.log( '\n— DTCG type coercion —' );
 	eq( 'shadow composite',             coerce( { offsetX: '0', offsetY: '2px', blur: '4px', spread: '0', color: 'rgba(0,0,0,0.1)' }, 'shadow' ), '0 2px 4px 0 rgba(0,0,0,0.1)' );
 }
 
+console.log( '\n— hardening (V2.M5 review) —' );
+{
+	// $value: undefined no longer treated as a DTCG leaf.
+	const tree = { color: { ghost: { $value: undefined } } };
+	const flat = flattenTokens( tree );
+	ok( 'undefined $value not flattened as DTCG token', ! ( 'color.ghost' in flat ) );
+}
+{
+	// Untyped object falls through to warn+empty-string fallback.
+	eq( 'untyped composite emits empty', coerce( { width: '1px' }, undefined ), '' );
+}
+{
+	// border without explicit style defaults to solid.
+	eq(
+		'border missing style defaults to solid',
+		coerce( { width: '1px', color: '#ccc' }, 'border' ),
+		'1px solid #ccc'
+	);
+}
+
 console.log( '\n— inline DTCG in subtree —' );
 {
 	const tree = {

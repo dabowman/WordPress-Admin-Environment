@@ -92,7 +92,11 @@
 
 	"routes": {
 		"/posts":              { "app": "core:posts",            "config": { "postType": "post" } },
+		"/posts/new":          { "app": "core:simple-editor",    "config": { "postType": "post" } },
+		"/posts/{id}/edit":    { "app": "core:simple-editor",    "config": { "postType": "post", "id": "{id}" } },
 		"/pages":              { "app": "core:posts",            "config": { "postType": "page" } },
+		"/pages/new":          { "app": "core:simple-editor",    "config": { "postType": "page" } },
+		"/pages/{id}/edit":    { "app": "core:simple-editor",    "config": { "postType": "page", "id": "{id}" } },
 		"/media":              { "app": "core:iframe-fallback",  "config": { "url": "upload.php" } },
 		"/comments":           { "app": "core:comments" },
 		"/design/styles":      { "app": "core:site-editor",      "config": { "url": "site-editor.php?p=%2Fstyles&canvas=edit" } },
