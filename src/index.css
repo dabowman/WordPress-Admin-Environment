@@ -84,7 +84,34 @@ body {
  *   - @wordpress/components (Item / ItemGroup) consumers, which use
  *     emotion CSS and don't inherit WPDS interactive tokens — for
  *     those, keep the .components-item class chain.
+ *   - <a> elements rendered by @wordpress/ui Button via render={<a/>}
+ *     when href is provided. WP-admin's `colors/<scheme>/colors.css`
+ *     ships an unlayered `a { color: #3858e9 }` rule (the wp-admin
+ *     theme color) that beats @wordpress/ui's layered Button color
+ *     rule per the cascade-layer spec (unlayered > layered). The
+ *     scoped --wpds-color-fg-interactive-neutral above doesn't
+ *     reach the <a> color because the consumption (`color: var(...)`)
+ *     happens inside @layer wp-ui-components. Force the chrome anchor
+ *     color unlayered. SVG icons inside the anchor use `currentColor`
+ *     so they inherit the corrected color without per-icon overrides.
  */
+.wp-admin-shell-nav a,
+.wp-admin-shell-toolbar a,
+.wp-admin-shell-site-hub a {
+	color: var(--wpds-color-fg-interactive-neutral);
+}
+
+.wp-admin-shell-nav a:hover,
+.wp-admin-shell-nav a:focus,
+.wp-admin-shell-nav a:active,
+.wp-admin-shell-toolbar a:hover,
+.wp-admin-shell-toolbar a:focus,
+.wp-admin-shell-toolbar a:active,
+.wp-admin-shell-site-hub a:hover,
+.wp-admin-shell-site-hub a:focus,
+.wp-admin-shell-site-hub a:active {
+	color: var(--wpds-color-fg-interactive-neutral-active);
+}
 
 /* ==========================================================================
    Navigation Sidebar
@@ -162,7 +189,7 @@ body {
 	align-items: center;
 }
 
-.wp-admin-shell-site-hub__title button {
+.wp-admin-shell-site-hub__title :is(button, a) {
 	flex-grow: 1;
 	font-size: 15px;
 	font-weight: 500;
@@ -175,12 +202,12 @@ body {
 	white-space: nowrap;
 }
 
-.wp-admin-shell-site-hub__title button:focus {
+.wp-admin-shell-site-hub__title :is(button, a):focus {
 	box-shadow: none;
 	outline: none;
 }
 
-.wp-admin-shell-site-hub__title button:focus-visible {
+.wp-admin-shell-site-hub__title :is(button, a):focus-visible {
 	box-shadow:
 		0 0 0 var(--wp-admin-border-width-focus) var(--wp-admin-shell--chrome--site-hub--background),
 		0 0 0 calc(2 * var(--wp-admin-border-width-focus)) var(--wp-admin-theme-color);
@@ -188,7 +215,7 @@ body {
 	outline-offset: 2px;
 }
 
-.wp-admin-shell-site-hub__title button::after {
+.wp-admin-shell-site-hub__title :is(button, a)::after {
 	content: "\2197";
 	font-weight: 400;
 	opacity: 0;
@@ -197,9 +224,9 @@ body {
 	transition: opacity 0.1s linear;
 }
 
-.wp-admin-shell-site-hub__title button:hover::after,
-.wp-admin-shell-site-hub__title button:focus::after,
-.wp-admin-shell-site-hub__title button:active::after {
+.wp-admin-shell-site-hub__title :is(button, a):hover::after,
+.wp-admin-shell-site-hub__title :is(button, a):focus::after,
+.wp-admin-shell-site-hub__title :is(button, a):active::after {
 	opacity: 1;
 }
 
