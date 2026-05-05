@@ -34,6 +34,7 @@ import { useRoute } from '../routing/useRoute';
 import { useKernel } from '../kernel-context';
 import { useSelection } from '../selection/useSelection';
 import { userCan } from '../capabilities/userCan';
+import { getPlatformServices } from './platformServices.mjs';
 
 export function Region( { region } ) {
 	if ( ! region ) {
@@ -368,31 +369,139 @@ function normalizeDismiss( value ) {
 /* ─────────────────────── generic (v2 declarations) ─────── */
 
 /**
- * Fallback renderer for v2-shape declarations (no legacy `source`).
- * Produces a generic container with the declared `role` so screen
- * readers see the right landmark, mounts a fixed app when present, and
- * recurses through nested regions. Task 6 will replace this with
- * platform-service-based dispatch (modal → backdrop, persistent →
- * stable mount lifetime, dismiss-on → keybinding wiring); for now it
- * renders enough to make a v2 shell visible without legacy source ids.
+ * Renderer for v2-shape declarations (no legacy `source`). Composes
+ * the region's behavior from platform-service requests (spec §5.3) via
+ * `getPlatformServices`:
+ *   - `isModal`           → ARIA modal + focus trap + constrained tabbing
+ *   - `dismissTriggers`   → Escape / backdrop-click handlers
+ *   - `autofocusSelector` → focus on mount (else useFocusOnMount default)
+ *   - placement: 'overlay' → backdrop wrapper
+ *
+ * Persistent regions render as a plain landmark container; modal
+ * regions wrap with backdrop + focus trap. Children + app + contains[]
+ * render inside the resolved container.
+ *
+ * V2.M7 will retire the legacy switch above; once bundled shells
+ * migrate to v2, every region flows through this path.
  */
 function GenericRegion( { region } ) {
+	const services = getPlatformServices( region );
+	if ( services.isModal ) {
+		return <ModalRegion region={ region } services={ services } />;
+	}
+	return <PersistentRegion region={ region } services={ services } />;
+}
+
+function PersistentRegion( { region } ) {
 	const role = region.role || 'region';
-	const className = `wp-admin-shell-region${ region.id ? ` wp-admin-shell-region--${ String( region.id ).replace( /\//g, '__' ) }` : '' }`;
+	const className = regionClassName( region );
 	return (
 		<div
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
 		>
-			{ region.app ? (
-				<MountedApp
-					appRef={ { id: region.app, source: region.app, config: region.config } }
-					regionId={ region.id }
-				/>
-			) : null }
+			{ renderRegionApp( region ) }
 			{ renderContains( region ) }
 			{ renderChildren( region ) }
 		</div>
+	);
+}
+
+function ModalRegion( { region, services } ) {
+	const labelId = useId();
+	const focusOnMountRef     = useFocusOnMount();
+	const focusReturnRef      = useFocusReturn();
+	const constrainTabbingRef = useConstrainedTabbing();
+	const dialogRef = useMergeRefs( [
+		focusOnMountRef,
+		focusReturnRef,
+		constrainTabbingRef,
+	] );
+
+	const closeOnEscape = services.dismissTriggers.includes( 'Escape' );
+	const closeOnBackdrop = services.dismissTriggers.includes( 'backdrop-click' );
+	const [ isOpen, setOpen ] = useState( true );
+	const close = useCallback( () => setOpen( false ), [] );
+
+	useEffect( () => {
+		if ( ! isOpen || ! closeOnEscape ) {
+			return;
+		}
+		const onKey = ( e ) => {
+			if ( e.key === 'Escape' ) {
+				close();
+			}
+		};
+		document.addEventListener( 'keydown', onKey );
+		return () => document.removeEventListener( 'keydown', onKey );
+	}, [ isOpen, closeOnEscape, close ] );
+
+	useEffect( () => {
+		if ( ! isOpen || ! services.autofocusSelector ) {
+			return;
+		}
+		// Defer one tick so refs are attached.
+		const id = window.setTimeout( () => {
+			const el = document.querySelector( services.autofocusSelector );
+			if ( el && typeof el.focus === 'function' ) {
+				el.focus();
+			}
+		}, 0 );
+		return () => window.clearTimeout( id );
+	}, [ isOpen, services.autofocusSelector ] );
+
+	if ( ! isOpen ) {
+		return null;
+	}
+
+	const role = region.role || 'dialog';
+	const className = regionClassName( region );
+
+	return (
+		<>
+			<div
+				className="wp-admin-shell-region__backdrop"
+				data-region-id={ region.id }
+				onClick={ closeOnBackdrop ? close : undefined }
+			/>
+			<div
+				ref={ dialogRef }
+				role={ role }
+				aria-modal="true"
+				aria-labelledby={ region.id ? labelId : undefined }
+				className={ `${ className } is-modal` }
+				data-region-id={ region.id }
+			>
+				{ region.id ? (
+					<span id={ labelId } className="screen-reader-text">
+						{ region.id }
+					</span>
+				) : null }
+				{ renderRegionApp( region ) }
+				{ renderContains( region ) }
+				{ renderChildren( region ) }
+			</div>
+		</>
+	);
+}
+
+function regionClassName( region ) {
+	if ( ! region.id ) {
+		return 'wp-admin-shell-region';
+	}
+	const slug = String( region.id ).replace( /\//g, '__' );
+	return `wp-admin-shell-region wp-admin-shell-region--${ slug }`;
+}
+
+function renderRegionApp( region ) {
+	if ( ! region.app ) {
+		return null;
+	}
+	return (
+		<MountedApp
+			appRef={ { id: region.app, source: region.app, config: region.config } }
+			regionId={ region.id }
+		/>
 	);
 }
