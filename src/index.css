@@ -135,7 +135,6 @@
 
 .wp-admin-shell-site-hub__title button {
 	color: var(--wp-admin-shell--chrome--toolbar--foreground);
-	display: block;
 	flex-grow: 1;
 	font-size: 15px;
 	font-weight: 500;
