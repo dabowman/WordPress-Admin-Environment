@@ -113,6 +113,22 @@ body {
 	color: var(--wpds-color-fg-interactive-neutral-active);
 }
 
+/* @wordpress/icons Icon clones the SVG element and sets width/height
+ * but does NOT add `fill="currentColor"` (verified
+ * node_modules/@wordpress/icons/build-module/icon/index.mjs). The
+ * library SVGs (e.g. `wordpress`) ship with no fill attribute, so
+ * the browser default `fill: black` applies. @wordpress/ui's Icon
+ * does set fill via inline style, which is why those icons inherit
+ * correctly. To unify, force `fill: currentColor` on any SVG inside
+ * a chrome surface — both @wordpress/ui- and @wordpress/icons-
+ * rendered SVGs then inherit the chrome anchor / button color via
+ * the parent text color. */
+.wp-admin-shell-nav svg,
+.wp-admin-shell-toolbar svg,
+.wp-admin-shell-site-hub svg {
+	fill: currentColor;
+}
+
 /* ==========================================================================
    Navigation Sidebar
    ========================================================================== */
