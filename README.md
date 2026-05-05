@@ -124,7 +124,9 @@ wp-admin-shell/
 │   │   └── apps/                   # System apps (NavigationApp, SiteHubApp, etc.)
 │   └── apps/                       # User apps (PostsApp, MediaApp, …)
 ├── tests/
-│   ├── php/                        # Cascade + selection runners (wp eval-file)
+│   ├── php/                        # Cascade + manifest + cap + shape + selection runners (wp eval-file)
+│   ├── schema/                     # Ajv 2020-12 against admin-v1/v2/app-v2/engine-v2 (node)
+│   ├── runtime/                    # Pure-JS runtime helpers (node) — resolveRegion merge, etc.
 │   └── parity/                     # WPDS slot-list parity (node)
 ├── docs/                           # Specs, schemas, readiness notes
 │   ├── wp-admin-shell-design-spec.md       # Master design (2026-05-01)

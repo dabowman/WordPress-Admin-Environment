@@ -11,6 +11,8 @@ import { injectTokens } from './styles/emitTokens';
 import { resolveDensity, applyDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
+import { getEngine as getEngineManifest } from './manifests';
+import { resolveRegion } from './regions/resolveRegion.mjs';
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -70,6 +72,13 @@ export function kernel( config ) {
 		);
 	}
 
+	// V2.M2 task 3: regions can declare a `template` referencing a
+	// shape shipped by the active engine's manifest. The kernel merges
+	// the template's defaults (role, platform, default-style, nested
+	// children) with per-region overrides before handing the resolved
+	// declaration to the engine. v1-shape shells without `template` pass
+	// through unchanged.
+	const engineManifest = getEngineManifest( engineId );
 	const regionsMap = config.settings?.regions || {};
 	const regions = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
@@ -79,7 +88,8 @@ export function kernel( config ) {
 		if ( regionInstance.capability && ! userCan( regionInstance.capability ) ) {
 			return;
 		}
-		regions[ id ] = { id, ...regionInstance };
+		const resolved = resolveRegion( regionInstance, engineManifest );
+		regions[ id ] = { id, ...resolved };
 	} );
 
 	const Engine = engineSource.Component;

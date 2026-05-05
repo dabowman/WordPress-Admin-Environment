@@ -108,12 +108,13 @@ npm run start    # dev build with watch
 
 ## Testing
 
-171 assertions across six suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+273 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
 
 ```bash
-# Node — schema + WPDS parity
+# Node — schema + WPDS parity + runtime
 npm run test:schema      # 26 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells + positive/negative fixtures)
 npm run test:parity      # 4  — WPDS slot-list drift detector
+npm run test:runtime     # 20 — V2.M2 task 3 resolveRegion merge: passthrough, role/platform/style precedence, nested children, map iteration
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
@@ -122,6 +123,8 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 82
 ```
+
+**Pure-JS runtime modules go in `.mjs` files** so node test scripts (`tests/runtime/*`) can `import()` them directly without a webpack/jest harness. Webpack's default extension list (`['.wasm', '.js', ...]`) does **not** include `.mjs`, so importing a `.mjs` module from app code requires the explicit extension at the import site (e.g. `import { resolveRegion } from './regions/resolveRegion.mjs'`). The convention applies only to side-effect-free utility modules; React components stay `.js`.
 
 `run-shape-tests.php` walks every bundled shell through the resolver and asserts structural invariants (engine + regions + applications + defaultRoute resolves). Catches the v1-canonical-path-drift bug class. Runtime React-component smoke (JSDOM) tracked in issue #30.
 
@@ -187,6 +190,7 @@ wp-admin-shell/
 │   │   ├── regions/                # V2.M2 task 2: single declaration-driven renderer
 │   │   │   ├── Region.js           # Generic <Region>: dispatches sidebar/toolbar/content/preview/overlay/drawer behaviors off region.source until v1 shells retire (V2.M2 task 7)
 │   │   │   ├── regionKind.js       # getRegionKind(region) → persistent | overlay | drawer; replaces RegionSource.regionKind for engine bucketing
+│   │   │   ├── resolveRegion.mjs   # V2.M2 task 3: pure-JS template merge (declaration, engine) → resolved region. Imported by kernel + tests/runtime/. Pure ESM (`.mjs`) so node test harness can import without bundling.
 │   │   │   └── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
 │   │   ├── routing/
 │   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute
