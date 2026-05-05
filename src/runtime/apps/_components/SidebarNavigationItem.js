@@ -53,7 +53,7 @@ export default function SidebarNavigationItem( {
 			aria-current={ isActive ? 'true' : undefined }
 			{ ...props }
 		>
-			<Stack direction="row" justify="flex-start">
+			<Stack direction="row" justify="flex-start" align="center" gap="sm">
 				{ icon && (
 					<Icon
 						style={ { fill: 'currentcolor' } }

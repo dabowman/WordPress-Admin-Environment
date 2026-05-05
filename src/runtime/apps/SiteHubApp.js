@@ -38,7 +38,7 @@ export default function SiteHubApp() {
 
 	return (
 		<div className="wp-admin-shell-site-hub">
-			<Stack direction="row" gap="xs" justify="flex-start">
+			<Stack direction="row" gap="xs" justify="flex-start" align="center">
 				<div className="wp-admin-shell-site-hub__icon-container">
 					<Button
 						tone="neutral"
@@ -51,7 +51,7 @@ export default function SiteHubApp() {
 					</Button>
 				</div>
 
-				<Stack direction="row" gap="xs">
+				<Stack direction="row" gap="xs" align="center">
 					<div className="wp-admin-shell-site-hub__title">
 						<Button
 							tone="neutral"

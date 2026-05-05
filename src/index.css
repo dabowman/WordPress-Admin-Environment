@@ -34,6 +34,24 @@
 	flex-shrink: 0;
 }
 
+/* @wordpress/ui ships its component CSS inside `@layer wp-ui-components`
+   (wp-ui-utilities < wp-ui-components < wp-ui-compositions < wp-ui-overrides).
+   Per the cascade-layer spec unlayered rules win over any layered rule, so
+   a wide range of unlayered admin / theme / shell CSS can override
+   @wordpress/ui's defaults — including the Stack's `display: flex`. When
+   that happens, Stack falls back to `display: block` and its children
+   stack vertically regardless of the inline `flex-direction: row` style.
+
+   Force the Stack default unlayered for any Stack rendered inside the
+   shell. Targets the hashed CSS-module class @wordpress/ui assigns
+   to the Stack root. Hash matches the regex pattern `[hash]__stack`
+   so a class*= selector tracks the convention without binding to a
+   specific build hash. align-items:center matches the @wordpress/ui
+   default centering intent for icon + text layouts. */
+.wp-admin-shell [class*="__stack"] {
+	display: flex;
+}
+
 /* @wordpress/ui Button / IconButton render with hashed CSS-module
    classNames (e.g. _97b0fc33...__button) inside @layer wp-ui-components.
    Selectors below use the `button` element selector or our own
