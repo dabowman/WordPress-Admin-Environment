@@ -30,7 +30,7 @@ import {
 import { __ } from '@wordpress/i18n';
 
 import { MountedApp, getApplications } from './mountApp';
-import { useRoute } from '../routing/useRoute';
+import { useRoute, useRouteForRegion } from '../routing/useRoute';
 import { useKernel } from '../kernel-context';
 import { useSelection } from '../selection/useSelection';
 import { userCan } from '../capabilities/userCan';
@@ -386,13 +386,29 @@ function normalizeDismiss( value ) {
  */
 function GenericRegion( { region } ) {
 	const services = getPlatformServices( region );
+	const { config } = useKernel();
+	const routesBlock = config?.routes || null;
+	const matched = useRouteForRegion( region, routesBlock );
+
 	if ( services.isModal ) {
-		return <ModalRegion region={ region } services={ services } />;
+		return (
+			<ModalRegion
+				region={ region }
+				services={ services }
+				matched={ matched }
+			/>
+		);
 	}
-	return <PersistentRegion region={ region } services={ services } />;
+	return (
+		<PersistentRegion
+			region={ region }
+			services={ services }
+			matched={ matched }
+		/>
+	);
 }
 
-function PersistentRegion( { region } ) {
+function PersistentRegion( { region, matched } ) {
 	const role = region.role || 'region';
 	const className = regionClassName( region );
 	return (
@@ -401,14 +417,14 @@ function PersistentRegion( { region } ) {
 			className={ className }
 			data-region-id={ region.id }
 		>
-			{ renderRegionApp( region ) }
+			{ renderRegionApp( region, matched ) }
 			{ renderContains( region ) }
 			{ renderChildren( region ) }
 		</div>
 	);
 }
 
-function ModalRegion( { region, services } ) {
+function ModalRegion( { region, services, matched } ) {
 	const labelId = useId();
 	const focusOnMountRef     = useFocusOnMount();
 	const focusReturnRef      = useFocusReturn();
@@ -478,7 +494,7 @@ function ModalRegion( { region, services } ) {
 						{ region.id }
 					</span>
 				) : null }
-				{ renderRegionApp( region ) }
+				{ renderRegionApp( region, matched ) }
 				{ renderContains( region ) }
 				{ renderChildren( region ) }
 			</div>
@@ -494,7 +510,28 @@ function regionClassName( region ) {
 	return `wp-admin-shell-region wp-admin-shell-region--${ slug }`;
 }
 
-function renderRegionApp( region ) {
+/**
+ * Decide which app to mount in a v2 region:
+ *
+ *   - If the region has `routing.route-key` and the URL slot resolved
+ *     to a route entry, mount that route's app with its (interpolated)
+ *     config.
+ *   - Otherwise, if the region has a fixed `app`, mount it with the
+ *     region's `config`.
+ *   - Otherwise, render nothing.
+ *
+ * `app` and `routing.route-key` are mutually exclusive (spec §5.4 +
+ * V2.M2 task 5 sanitization), so the two branches don't overlap.
+ */
+function renderRegionApp( region, matched ) {
+	if ( matched && matched.app ) {
+		return (
+			<MountedApp
+				appRef={ { id: matched.app, source: matched.app, config: matched.config } }
+				regionId={ region.id }
+			/>
+		);
+	}
 	if ( ! region.app ) {
 		return null;
 	}

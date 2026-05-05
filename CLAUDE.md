@@ -10,6 +10,8 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **V2.M2 progress: tasks 1-6 done; task 7 (migrate bundled shells to v2 form) deferred to a joint step after V2.M3 lands.** `admin-v2.json` sets `additionalProperties: false` at root, so a v1.5 hybrid (v2 region vocabulary + v1 `settings.applications`/`defaultRoute`) wouldn't validate against either schema. URL-driven routing (`routes` block reading, URL decomposer) is V2.M3 work; V2.M3 task 8 also migrates bundled shells. Both shell-shape migrations therefore land jointly *after* V2.M3 routing infrastructure is in place — bundled shells remain in v1 partitioned shape until then, and the legacy `region.source` dispatch path in `Region.js` plus the bridge tables in `platformServices.mjs` / `regionKind.js` keep running.
 
+**V2.M3 progress: tasks 1-7 done; task 8 (migrate bundled shells to use the routes block) deferred to the joint step with V2.M2 task 7.** URL-driven router rewrite landed: `src/runtime/routing/matchRoute.mjs` (pure ESM) provides URL pattern matching with `{name}` capture + `/*` wildcard + most-specific-wins specificity scoring, plus `interpolate(config, params)` for `{name}` substitution and `parseHash`/`readSlot` for URL decomposition. `RouterProvider` subscribes to `hashchange` and the Navigation API's `navigatesuccess` event where supported. `useRoute()` exposes both v2 fields (`primary`, `params`) and legacy v1 fields (`appId`, `segments`) so v1 shells keep working. New `useRouteForRegion(region, routesBlock)` resolves a region's `routing.route-key` slot against the routes block and returns the matched route entry with interpolated config. `navigate(href)` accepts a single href string (`'#/posts'`, `'?detail=...'`, `'/posts'`) per spec §6; the deprecated multi-arg form (`navigate(appId, ...segments)`) is preserved transitionally. `NavigationApp.js` emits plain `<a href="#/{appId}">` links via `IconButton render={<a/>}` and `SidebarNavigationItem href` so the browser's native click behaviors (middle-click new tab, Cmd-click, right-click "Copy link") all work.
+
 **v1 architecture (current shipping baseline, being migrated).** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine from a registry, renders each declared region through the generic `<Region>` renderer (V2.M2 task 2), and mounts apps inside regions via `MountedApp`, plus emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload. Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability.
 
 **Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), `run-shape-tests.php` (82), `run-manifest-tests.php` (60 — V2.M1 + V2.M2 task 1 boot-time engine load), all via `wp eval-file`. `tests/schema/validate-shells.test.mjs` (26 — admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2) via `node`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. `run-selection-tests.php` will be deleted as part of V2.M4 (selection bus removal). Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; v2 will evolve these in place.
@@ -110,13 +112,13 @@ npm run start    # dev build with watch
 
 ## Testing
 
-341 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+381 assertions across seven suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
 
 ```bash
 # Node — schema + WPDS parity + runtime
 npm run test:schema      # 26 — Ajv against admin-v1.json (legacy beta) + admin-v2.json + admin-app-v2.json + admin-engine-v2.json (bundled shells + positive/negative fixtures)
 npm run test:parity      # 4  — WPDS slot-list drift detector
-npm run test:runtime     # 88 — chains resolveRegion (25 — task 3+4 merge + recursion) + validateRegion (24 — task 5 `app` xor `routing.route-key`) + platformServices (39 — task 6 service accessors + legacy bridges)
+npm run test:runtime     # 128 — chains resolveRegion (25 — V2.M2 task 3+4 merge + recursion) + validateRegion (24 — V2.M2 task 5 `app` xor `routing.route-key`) + platformServices (39 — V2.M2 task 6 service accessors + legacy bridges) + matchRoute (40 — V2.M3 task 2+5 URL pattern matching, specificity, param interpolation, hash decomposition)
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
@@ -196,8 +198,9 @@ wp-admin-shell/
 │   │   │   ├── resolveRegion.mjs   # V2.M2 task 3+4: pure-JS template merge (declaration, engine) → resolved region. Recursively resolves children so deep nesting + per-child templates compose without kernel coordination. Imported by kernel + tests/runtime/. Pure ESM (`.mjs`) so node test harness can import without bundling.
 │   │   │   ├── validateRegion.mjs  # V2.M2 task 5: validateRegion + sanitizeRegion enforce `app` xor `routing.route-key` (spec §5.4). Kernel logs each violation via console.warn then drops `app` so URL routing wins. Recursive over children with `parent/child` paths.
 │   │   │   └── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
-│   │   ├── routing/
-│   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute
+│   │   ├── routing/                # V2.M3: URL-decomposer router, routes-block matcher, per-region routing
+│   │   │   ├── router.js           # RouterProvider (hashchange + Navigation API navigatesuccess), useRoute (v2 primary/params + legacy appId/segments), useRouteForRegion(region, routesBlock), navigate(href) single-arg + deprecated multi-arg compat, navigateRoute
+│   │   │   ├── matchRoute.mjs      # Pure ESM: matchPattern, matchRoute (most-specific-wins), interpolate, parseHash, readSlot, isValidRoutePattern. Imported by router + tests/runtime/.
 │   │   │   └── useRoute.js         # Re-export
 │   │   ├── selection/              # Cross-region selection event bus
 │   │   │   ├── store.js            # core/admin-shell/selection Redux store

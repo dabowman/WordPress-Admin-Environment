@@ -17,7 +17,7 @@ import {
 	useSidebarNavigation,
 } from './_components/SidebarNavigationContext';
 
-import { navigate, useRoute } from '../routing/router';
+import { useRoute } from '../routing/router';
 import { useKernel } from '../kernel-context';
 import { getApplications } from '../regions/mountApp';
 import { userCan } from '../capabilities/userCan';
@@ -131,12 +131,26 @@ function renderCollapsedItem( item, index, apps, currentAppId ) {
 					currentAppId === app.id ? ' is-active' : ''
 				}` }
 				icon={ resolveIcon( app.icon ) }
-				onClick={ () => navigate( app.id ) }
+				render={ <a href={ appHref( app ) } /> }
 				label={ app.title }
 			/>
 		);
 	}
 	return null;
+}
+
+/**
+ * Build an in-shell hash link for an app. Used by NavigationApp's
+ * `<a href>`-based items (V2.M3 task 6). Apps with an explicit `route`
+ * field use it (legacy v1 routing); otherwise fall back to `#/<appId>`
+ * which the legacy parseHash treats as the routable app.
+ */
+function appHref( app ) {
+	if ( app.route ) {
+		const trimmed = String( app.route ).replace( /^#?\/?/, '' );
+		return '#/' + trimmed;
+	}
+	return '#/' + app.id;
 }
 
 function ExpandedNavigation( { items, apps, currentAppId, navConfig } ) {
@@ -261,7 +275,7 @@ function renderScreenItem( item, index, apps, currentAppId ) {
 				uid={ `nav-${ app.id }` }
 				icon={ resolveIcon( app.icon ) }
 				isActive={ currentAppId === app.id }
-				onClick={ () => navigate( app.id ) }
+				href={ appHref( app ) }
 			>
 				{ app.title }
 			</SidebarNavigationItem>
