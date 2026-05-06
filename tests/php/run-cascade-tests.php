@@ -146,13 +146,13 @@ $T::assert_true( 'restrict-only: surviving apps preserved',
 	'ids: ' . implode( ',', $ids )
 );
 
-// ── userCustomizable ────────────────────────────────────────────────
+// ── customizable ────────────────────────────────────────────────────
 
-echo "\n— userCustomizable enforcement —\n";
+echo "\n— customizable enforcement —\n";
 
 $T::assert_eq( 'customizable=true: all fields allowed',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => true ),
+		array( 'id' => 'x', 'customizable' => true ),
 		array( 'title' => 'B', 'icon' => 'j' )
 	),
 	array( 'title' => 'B', 'icon' => 'j' )
@@ -160,7 +160,7 @@ $T::assert_eq( 'customizable=true: all fields allowed',
 
 $T::assert_eq( 'customizable=false: all fields blocked',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => false ),
+		array( 'id' => 'x', 'customizable' => false ),
 		array( 'title' => 'X' )
 	),
 	array()
@@ -168,7 +168,7 @@ $T::assert_eq( 'customizable=false: all fields blocked',
 
 $T::assert_eq( 'customizable=[title]: only title allowed',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => array( 'title' ) ),
+		array( 'id' => 'x', 'customizable' => array( 'title' ) ),
 		array( 'title' => 'OK', 'icon' => 'NO' )
 	),
 	array( 'title' => 'OK' )

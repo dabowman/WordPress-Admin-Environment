@@ -10,14 +10,14 @@
         "source": "core:posts",
         "title": "Posts",
         "icon": "post",
-        "userCustomizable": [ "title", "icon" ]
+        "customizable": [ "title", "icon" ]
       },
       {
         "id": "pages",
         "source": "core:posts",
         "title": "Pages",
         "icon": "page",
-        "userCustomizable": false
+        "customizable": false
       }
     ]
   },
@@ -26,6 +26,6 @@
       "accentColor": "#3858e9",
       "title": null
     },
-    "userCustomizable": [ "branding.accentColor" ]
+    "customizable": [ "branding.accentColor" ]
   }
 }

@@ -11,7 +11,7 @@
  *   core   — empty baseline (and v0→v1 normalization)
  *
  * Each origin is loaded into a normalized doc, optionally filtered with
- * `wp_admin_shell_data_{origin}`, run through `userCustomizable` filtering
+ * `wp_admin_shell_data_{origin}`, run through `customizable` filtering
  * against the upstream merged tree, and merged with restrict-only
  * semantics. After all origins fold in, `wp_admin_shell_data` runs as
  * the final filter.

@@ -38,7 +38,7 @@
 
 import { flattenTokens } from '../tokens/tokensResolver.mjs';
 
-const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable', 'userCustomizable' ] );
+const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable' ] );
 
 /**
  * Chrome surface → WPDS token bindings. Each entry maps a chrome surface

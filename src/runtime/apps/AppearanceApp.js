@@ -19,16 +19,16 @@ import { useKernel } from '../kernel-context';
 /**
  * core:appearance — user-prefs UI.
  *
- * Reads the active shell's `userCustomizable` declarations off the
- * resolved config and renders only the controls that shell allows.
- * MVP control set: density, accent override, default-route override.
+ * Reads the active shell's `customizable` declarations off the resolved
+ * config and renders only the controls that shell allows. MVP control
+ * set: density, accent override, default-route override.
  *
  * Saves go through POST /wp-admin-shell/v1/user-prefs (server deep-merges
  * onto the existing prefs object). The resolver re-runs on the next
  * mount; the cache flush hook on `wp_admin_shell_user_prefs` user-meta
  * updates picks up the change automatically.
  *
- * userCustomizable enforcement is server-authoritative — controls hidden
+ * `customizable` enforcement is server-authoritative — controls hidden
  * here is a UX nicety, not a security boundary.
  */
 
@@ -56,7 +56,7 @@ function isCustomizable( declaration, path ) {
 		warnedDeclarations.add( declaration );
 		// eslint-disable-next-line no-console
 		console.warn(
-			'wp-admin-shell AppearanceApp: malformed userCustomizable declaration; expected boolean | string[]. Got:',
+			'wp-admin-shell AppearanceApp: malformed customizable declaration; expected boolean | string[]. Got:',
 			declaration
 		);
 	}
@@ -84,8 +84,7 @@ export default function AppearanceApp() {
 		);
 	}
 
-	const stylesDecl =
-		config.styles?.customizable ?? config.styles?.userCustomizable;
+	const stylesDecl = config.styles?.customizable;
 
 	const allowDensity     = isCustomizable( stylesDecl, 'density' );
 	const allowAccent      = isCustomizable( stylesDecl, 'color.bg.interactive.brand.strong' )
