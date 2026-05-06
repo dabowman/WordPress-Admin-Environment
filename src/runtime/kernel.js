@@ -5,8 +5,8 @@ import { registerBuiltins } from './registry/builtins';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from '@wordpress/components';
-import { injectTokens } from './styles/emitTokens';
-import { resolveDensity, applyDensity } from './styles/density';
+import { ShellThemeProvider } from './styles/ShellThemeProvider';
+import { resolveDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
@@ -44,18 +44,16 @@ export function kernel( config ) {
 	const registry = createRegistry();
 	registerBuiltins( registry );
 
-	// Token emission (§4.3.2): write `<style id="wp-admin-shell-tokens">`
-	// with the WPDS surface, chrome extensions, compat bridge, and any
-	// per-region/per-app scoped overrides. Density is an attribute, not
-	// a CSS variable — applied to #wp-admin-shell directly.
-	injectTokens(
-		config.styles || {},
-		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {}
-	);
-	if ( typeof document !== 'undefined' ) {
-		const root = document.getElementById( 'wp-admin-shell' );
-		applyDensity( root, resolveDensity( config.styles || {} ) );
-	}
+	// Token cascade: `<ShellThemeProvider>` renders a scoped `<style>`
+	// + wrapper `<div data-wpds-theme-provider-id>` so shell tokens
+	// override `:root` defaults via DOM-tree cascade rather than via
+	// global pollution. `<@wordpress/theme>`'s ThemeProvider is the
+	// canonical implementation; we mirror its public contract because
+	// the package gates the component behind a private API allowlist.
+	const shellStyles = config.styles || {};
+	const shellTokens =
+		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {};
+	const density = resolveDensity( shellStyles );
 
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
@@ -106,12 +104,19 @@ export function kernel( config ) {
 		<KernelProvider value={ { registry, config } }>
 			<SlotFillProvider>
 				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
-					<NavigationGuard />
-					<BindingsConsumer />
-					<Engine
-						config={ config }
-						regions={ regions }
-					/>
+					<ShellThemeProvider
+						isRoot
+						styles={ shellStyles }
+						tokens={ shellTokens }
+						density={ density }
+					>
+						<NavigationGuard />
+						<BindingsConsumer />
+						<Engine
+							config={ config }
+							regions={ regions }
+						/>
+					</ShellThemeProvider>
 				</RouterProvider>
 			</SlotFillProvider>
 		</KernelProvider>

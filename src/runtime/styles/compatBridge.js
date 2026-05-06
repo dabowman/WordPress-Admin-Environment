@@ -21,9 +21,20 @@
  * adjacent case).
  */
 
+// Upstream WPDS defaults shipped by @wordpress/theme/design-tokens.css.
+// Used as the derivation fallback when the shell doesn't author its own
+// brand slots — keeps `--wp-admin-theme-color--rgb` and `-darker-20`
+// populated for `wp-admin-default` and any other "inherit core" shell.
+const WPDS_DEFAULT_BRAND_STRONG = '#3858e9';
+const WPDS_DEFAULT_BRAND_STRONG_ACTIVE = '#2e49d9';
+
 export function buildCompatBridge( wpdsMap ) {
-	const brandStrong = wpdsMap[ '--wpds-color-bg-interactive-brand-strong' ];
-	const brandStrongActive = wpdsMap[ '--wpds-color-bg-interactive-brand-strong-active' ];
+	const brandStrong =
+		wpdsMap[ '--wpds-color-bg-interactive-brand-strong' ] ||
+		WPDS_DEFAULT_BRAND_STRONG;
+	const brandStrongActive =
+		wpdsMap[ '--wpds-color-bg-interactive-brand-strong-active' ] ||
+		WPDS_DEFAULT_BRAND_STRONG_ACTIVE;
 
 	const out = {
 		'--wp-admin-theme-color': 'var(--wpds-color-bg-interactive-brand-strong)',
@@ -31,7 +42,7 @@ export function buildCompatBridge( wpdsMap ) {
 		'--wp-admin-border-width-focus': 'var(--wpds-border-width-focus)',
 		'--wp-components-color-accent': 'var(--wpds-color-bg-interactive-brand-strong)',
 		'--wp-components-color-background': 'var(--wpds-color-bg-surface-neutral-strong)',
-		'--wp-components-color-foreground': 'var(--wpds-color-fg-content-neutral-default)',
+		'--wp-components-color-foreground': 'var(--wpds-color-fg-content-neutral)',
 	};
 
 	const rgb = parseColorToRgb( brandStrong );

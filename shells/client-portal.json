@@ -78,8 +78,10 @@
 	"styles": {
 		"branding": {
 			"logo": "./assets/acme-logo.svg",
-			"title": "Acme Corp",
-			"accentColor": "#e63946"
+			"title": "Acme Corp"
+		},
+		"theme": {
+			"color": { "primary": "#e63946" }
 		}
 	}
 }

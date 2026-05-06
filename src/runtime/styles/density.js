@@ -17,7 +17,12 @@ export const ALLOWED_DENSITIES = [ 'default', 'compact', 'comfortable' ];
  * previous shell's value attached).
  */
 export function resolveDensity( styles ) {
-	const raw = styles?.density;
+	// Tier 1 (preferred): styles.theme.density — ThemeProvider seed shape.
+	// Tier 4 (legacy): styles.density — kept for one cycle, dropped later.
+	const raw =
+		typeof styles?.theme?.density === 'string'
+			? styles.theme.density
+			: styles?.density;
 	if ( typeof raw !== 'string' ) {
 		return 'default';
 	}

@@ -65,10 +65,6 @@ export default function SidebarNavigationScreen( {
 						variant="heading-lg"
 						render={ <h1 /> }
 						className="wp-admin-shell-sidebar-screen__title"
-						style={ {
-							color:
-								'var(--wp-admin-shell--chrome--text-secondary, #e0e0e0)',
-						} }
 					>
 						{ title }
 					</Text>

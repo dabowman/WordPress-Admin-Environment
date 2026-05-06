@@ -33,10 +33,10 @@
       "default-style": {
         "inline-size":   "280px",
         "block-size":    "100%",
-        "background":    "{styles.chrome.sidebar.background}",
-        "color":         "{styles.chrome.sidebar.foreground}",
-        "padding-block": "{styles.chrome.sidebar.padding-block}",
-        "padding-inline": "{styles.chrome.sidebar.padding-inline}"
+        "background":    "var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
+        "color":         "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))",
+        "padding-block": "var(--wp-admin-shell--chrome--sidebar--padding-block, var(--wpds-dimension-padding-md))",
+        "padding-inline": "var(--wp-admin-shell--chrome--sidebar--padding-inline, var(--wpds-dimension-padding-md))"
       }
     },
 
@@ -46,9 +46,9 @@
       "default-style": {
         "block-size":    "48px",
         "inline-size":   "100%",
-        "background":    "{styles.chrome.toolbar.background}",
-        "color":         "{styles.chrome.toolbar.foreground}",
-        "padding-inline": "{styles.chrome.toolbar.padding-inline}"
+        "background":    "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong))",
+        "color":         "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
+        "padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-md))"
       },
       "regions": {
         "start":  { "role": "region" },
@@ -62,8 +62,8 @@
       "default-style": {
         "inline-size":     "100%",
         "min-inline-size": "0",
-        "background":      "{styles.chrome.canvas.background}",
-        "padding":         "{styles.chrome.canvas.padding}"
+        "background":      "var(--wp-admin-shell--chrome--canvas--background, var(--wpds-color-bg-surface-neutral-strong))",
+        "padding":         "var(--wp-admin-shell--chrome--canvas--padding, var(--wpds-dimension-padding-2xl))"
       }
     },
 
@@ -74,8 +74,8 @@
         "inline-size":         "min(720px, 50%)",
         "min-inline-size":     "320px",
         "block-size":          "100%",
-        "border-inline-start": "1px solid {styles.color.stroke.surface.neutral.weak}",
-        "background":          "{styles.chrome.canvas.background}"
+        "border-inline-start": "1px solid var(--wpds-color-stroke-surface-neutral)",
+        "background":          "var(--wp-admin-shell--chrome--canvas--background, var(--wpds-color-bg-surface-neutral-strong))"
       }
     },
 

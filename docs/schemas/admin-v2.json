@@ -322,12 +322,35 @@
       "additionalProperties": true,
       "description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (shell-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
       "properties": {
-        "color":     { "type": "object", "additionalProperties": true },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Seeds for `@wordpress/theme.ThemeProvider`. Primary customization path: pass seed values; the provider derives the full WPDS token matrix (color ramps, density-tuned dimensions). Maps 1:1 to ThemeProvider props. Allowed alongside `styles.regions[id].theme` and `styles.applications[id].theme` for nested provider overrides on a subtree.",
+          "properties": {
+            "color": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary": { "type": "string", "description": "Primary/accent seed (default: `#3858e9`). Any valid CSS color. ThemeProvider derives `--wpds-color-{bg,fg,stroke}-interactive-brand-*` and the `--wp-admin-theme-color*` compat aliases from this." },
+                "bg":      { "type": "string", "description": "Background seed (default: `#f8f8f8`). ThemeProvider derives the neutral surface ramp + fg-content-neutral from this and switches light/dark mode based on luminance." }
+              }
+            },
+            "cursor": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "control": { "enum": [ "default", "pointer" ], "description": "Cursor for non-link interactive controls (buttons, checkboxes, toggles). Default `pointer`." }
+              }
+            },
+            "density": { "enum": [ "default", "compact", "comfortable" ], "description": "Spacing scale. `compact` for data-dense surfaces; `comfortable` for focused panels. Equivalent to top-level `styles.density` (legacy)." }
+          }
+        },
+        "color":     { "type": "object", "additionalProperties": true, "description": "Direct slot overrides (escape hatch). Authors emit specific `--wpds-color-*` slots when seeds can't express the desired override. Layers OVER ThemeProvider's seed-derived defaults via inner-scope CSS specificity." },
         "dimension": { "type": "object", "additionalProperties": true },
         "border":    { "type": "object", "additionalProperties": true },
         "elevation": { "type": "object", "additionalProperties": true },
         "font":      { "type": "object", "additionalProperties": true },
-        "density":   { "enum": [ "default", "compact", "comfortable" ] },
+        "density":   { "enum": [ "default", "compact", "comfortable" ], "description": "Legacy. Prefer `styles.theme.density`. Read as fallback." },
         "chrome":    {
           "type": "object",
           "additionalProperties": true,

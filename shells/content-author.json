@@ -70,5 +70,12 @@
 		"/media":           { "app": "core:iframe-fallback", "config": { "url": "upload.php" } }
 	},
 
-	"default-route": "/posts"
+	"default-route": "/posts",
+
+	"styles": {
+		"theme": {
+			"density": "comfortable",
+			"cursor":  { "control": "pointer" }
+		}
+	}
 }

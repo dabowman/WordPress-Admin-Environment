@@ -14,14 +14,20 @@
  */
 import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
+import { ScopedThemeProvider } from '../styles/ShellThemeProvider';
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
-	const { registry } = useKernel();
+	const { registry, config } = useKernel();
 
 	const appInstance = resolveAppInstance( appRef );
 	if ( ! appInstance ) {
 		return null;
 	}
+	// Per-app theme override. `styles.applications[appId]` may declare
+	// `theme` seeds (Tier 1) or direct slot overrides (Tier 3); when
+	// present, wrap the app in a nested provider so its subtree carries
+	// the override. Zero-cost when no overrides authored.
+	const appStyles = config?.styles?.applications?.[ appInstance.id ];
 
 	// Spec §8 layer 2 — apps with `capability` are hidden from rendering.
 	if ( appInstance.capability && ! userCan( appInstance.capability ) ) {
@@ -51,18 +57,20 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const mergedConfig = { ...( sourceDef.defaults || {} ), ...( appInstance.config || {} ) };
 
 	return (
-		<div
-			data-app-id={ appInstance.id }
-			data-app-source={ appInstance.source }
-			style={ { display: 'contents' } }
-		>
-			<Component
-				app={ appInstance }
-				config={ mergedConfig }
-				regionId={ regionId }
-				segments={ segments || [] }
-			/>
-		</div>
+		<ScopedThemeProvider styles={ appStyles }>
+			<div
+				data-app-id={ appInstance.id }
+				data-app-source={ appInstance.source }
+				style={ { display: 'contents' } }
+			>
+				<Component
+					app={ appInstance }
+					config={ mergedConfig }
+					regionId={ regionId }
+					segments={ segments || [] }
+				/>
+			</div>
+		</ScopedThemeProvider>
 	);
 }
 

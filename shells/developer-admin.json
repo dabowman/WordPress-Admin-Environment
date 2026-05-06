@@ -130,5 +130,17 @@
 
 	"bindings": [
 		{ "shortcut": "Mod+K", "invoke": "core:command-palette" }
-	]
+	],
+
+	"styles": {
+		"theme": {
+			"color":   { "primary": "#fff000" },
+			"density": "compact"
+		},
+		"regions": {
+			"sidebar": {
+				"theme": { "color": { "bg": "#ffffff" } }
+			}
+		}
+	}
 }

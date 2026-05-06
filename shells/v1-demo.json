@@ -88,79 +88,11 @@
 	"default-route": "/posts",
 
 	"styles": {
-		"branding": {
-			"title": "v2 Demo",
-			"accentColor": "#7c3aed"
-		},
-
-		"color": {
-			"bg": {
-				"interactive": {
-					"brand": {
-						"strong": "#7c3aed",
-						"strong-active": "#6d28d9"
-					}
-				},
-				"surface": {
-					"neutral": { "strong": "#ffffff" }
-				}
-			},
-			"fg": {
-				"content": {
-					"neutral": { "default": "#1e1e1e" }
-				}
-			},
-			"stroke": {
-				"focus": { "brand": "#7c3aed" }
+		"theme": {
+			"color": {
+				"primary": "#7c3aed",
+				"bg": "#fefefe"
 			}
-		},
-
-		"border": {
-			"width": { "focus": "2px" }
-		},
-
-		"chrome": {
-			"sidebar": {
-				"background": "#0f172a",
-				"foreground": "#94a3b8",
-				"foreground-active": "#e2e8f0",
-				"border": "#1e293b",
-				"item": {
-					"background": "transparent",
-					"background-hover": "#1e293b",
-					"background-active": "{styles.color.bg.interactive.brand.strong}",
-					"foreground": "#e2e8f0",
-					"foreground-active": "#ffffff"
-				},
-				"width": "280px"
-			},
-			"toolbar": {
-				"background": "#0f172a",
-				"foreground": "#e2e8f0",
-				"border": "#1e293b",
-				"height": "48px"
-			},
-			"site-hub": {
-				"background": "#0f172a",
-				"foreground": "#ffffff",
-				"icon-size": "32px",
-				"padding": "12px"
-			},
-			"content": {
-				"background": "#0f172a",
-				"card-background": "#ffffff",
-				"card-radius": "8px",
-				"card-padding": "16px",
-				"card-max-width": "1200px"
-			}
-		},
-
-		"density": "default",
-
-		"customizable": [
-			"density",
-			"branding.accentColor",
-			"color.bg.interactive.brand.strong"
-		]
+		}
 	}
 }

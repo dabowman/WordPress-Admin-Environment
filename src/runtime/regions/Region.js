@@ -33,6 +33,7 @@ import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { getPlatformServices } from './platformServices.mjs';
 import { registerTrigger } from '../bindings/triggerStore.mjs';
+import { ScopedThemeProvider } from '../styles/ShellThemeProvider';
 
 export function Region( { region } ) {
 	if ( ! region ) {
@@ -41,7 +42,27 @@ export function Region( { region } ) {
 	if ( region.capability && ! userCan( region.capability ) ) {
 		return null;
 	}
-	return <GenericRegion region={ region } />;
+	return (
+		<ScopedRegionTheme regionId={ region.id }>
+			<GenericRegion region={ region } />
+		</ScopedRegionTheme>
+	);
+}
+
+/**
+ * Wraps a region in a nested `<ShellThemeProvider>` when the resolved
+ * admin.json declares `styles.regions[regionId]` (theme seeds OR direct
+ * slot overrides). Zero-cost when the region has no styles authored —
+ * just renders children.
+ */
+function ScopedRegionTheme( { regionId, children } ) {
+	const { config } = useKernel();
+	const regionStyles = config?.styles?.regions?.[ regionId ];
+	return (
+		<ScopedThemeProvider styles={ regionStyles }>
+			{ children }
+		</ScopedThemeProvider>
+	);
 }
 
 /**
@@ -124,11 +145,13 @@ function GenericRegion( { region } ) {
 function PersistentRegion( { region, matched } ) {
 	const role = region.role || 'region';
 	const className = regionClassName( region );
+	const style = toReactStyle( region.style );
 	return (
 		<div
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
+			style={ style }
 		>
 			{ renderRegionApp( region, matched ) }
 			{ renderChildren( region ) }
@@ -226,6 +249,8 @@ function ModalRegion( { region, services, matched } ) {
 		);
 	}
 
+	const dialogStyle = toReactStyle( region.style );
+
 	return (
 		<>
 			<div
@@ -240,6 +265,7 @@ function ModalRegion( { region, services, matched } ) {
 				aria-labelledby={ region.id ? labelId : undefined }
 				className={ `${ className } is-modal` }
 				data-region-id={ region.id }
+				style={ dialogStyle }
 			>
 				{ region.id ? (
 					<span id={ labelId } className="screen-reader-text">
@@ -251,6 +277,34 @@ function ModalRegion( { region, services, matched } ) {
 			</div>
 		</>
 	);
+}
+
+/**
+ * Convert engine-template `default-style` (kebab-case CSS property keys
+ * matching the underlying CSS property names) to React's camelCase
+ * `style` shape. CSS variable values + `var(--…)` strings pass through
+ * unchanged so the cascade still resolves them at consume time. Returns
+ * `undefined` when there's nothing to apply, so React skips emitting a
+ * `style` attribute entirely.
+ */
+function toReactStyle( style ) {
+	if ( ! style || typeof style !== 'object' ) {
+		return undefined;
+	}
+	const out = {};
+	let any = false;
+	for ( const [ key, value ] of Object.entries( style ) ) {
+		if ( value === undefined || value === null || value === '' ) {
+			continue;
+		}
+		any = true;
+		out[ kebabToCamel( key ) ] = value;
+	}
+	return any ? out : undefined;
+}
+
+function kebabToCamel( key ) {
+	return String( key ).replace( /-([a-z])/g, ( _, c ) => c.toUpperCase() );
 }
 
 function regionClassName( region ) {

@@ -38,7 +38,7 @@
 
 import { flattenTokens } from '../tokens/tokensResolver.mjs';
 
-const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable' ] );
+const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable', 'theme' ] );
 
 /**
  * Chrome surface → WPDS token bindings. Each entry maps a chrome surface
@@ -128,12 +128,18 @@ export function compileStyles( styles, tokens ) {
 	const scoped = {};
 	if ( styles.regions && typeof styles.regions === 'object' ) {
 		for ( const [ regionId, regionStyles ] of Object.entries( styles.regions ) ) {
-			scoped[ `region:${ regionId }` ] = compileTree( regionStyles, styles, tokensFlat ).wpds;
+			const out = compileTree( regionStyles, styles, tokensFlat ).wpds;
+			if ( Object.keys( out ).length > 0 ) {
+				scoped[ `region:${ regionId }` ] = out;
+			}
 		}
 	}
 	if ( styles.applications && typeof styles.applications === 'object' ) {
 		for ( const [ appId, appStyles ] of Object.entries( styles.applications ) ) {
-			scoped[ `app:${ appId }` ] = compileTree( appStyles, styles, tokensFlat ).wpds;
+			const out = compileTree( appStyles, styles, tokensFlat ).wpds;
+			if ( Object.keys( out ).length > 0 ) {
+				scoped[ `app:${ appId }` ] = out;
+			}
 		}
 	}
 
