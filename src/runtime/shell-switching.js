@@ -20,7 +20,7 @@ import apiFetch from '@wordpress/api-fetch';
  * region tree without a hard reload.
  *
  * Exposed on `window.wpAdminShell.switchShell` so custom shell code
- * (and the `core:command-picker` integration) can call it.
+ * (and the `core:command-palette` integration) can call it.
  */
 
 export async function switchShell( slug ) {

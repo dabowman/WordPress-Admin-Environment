@@ -1,8 +1,8 @@
 {
   "$schema": "../../../../docs/schemas/admin-engine-v2.json",
-  "id": "core:site-editor-layout",
+  "id": "core:default",
   "version": 1,
-  "title": "Site Editor Layout",
+  "title": "Default",
   "description": "Default WP Admin Shell engine. Mirrors the site-editor visual idiom: dark chrome with elevated cards. Ships templates for sidebar, topbar (with start/center/end child regions), main, detail, and overlay; applies a dark chrome background and floats main + detail as elevated white cards.",
 
   "specializes-roles": [

@@ -22,8 +22,8 @@ invalidated; v2 evolves several measurements and adds a second engine
 - URL-driven navigation: routable regions declare `routing.route-key`
   naming the URL slot they read from; plain `<a href>` links navigate;
   HTML `target` keeps native meaning.
-- Two engines ship: `core:site-editor-layout` (default) +
-  `core:single-pane-layout` (mobile-first; demo-quality).
+- Two engines ship: `core:default` (flagship) + `core:single-pane`
+  (mobile-first; demo-quality).
 - DTCG `tokens.json` primitives layer: PHP-side discovery + deep merge
   across site → theme → plugin → core; JS-side flatten + alias
   resolution + 8-type CSS coercion.
@@ -101,12 +101,12 @@ Bundled shells (5 + single-pane-demo = 6):
 
 | Shell | Engine | Notes |
 |---|---|---|
-| `wp-admin-default`  | site-editor-layout | wp-admin mirror via iframe routes |
-| `developer-admin`   | site-editor-layout | Native v2 apps + drill-down design |
-| `content-author`    | site-editor-layout | Minimal writer shell |
-| `client-portal`     | site-editor-layout | Branded shell |
-| `v1-demo`           | site-editor-layout | Canonical-shape demo |
-| `single-pane-demo`  | single-pane-layout | Mobile-first; validates engine boundary |
+| `wp-admin-default`  | default     | wp-admin mirror via iframe routes |
+| `developer-admin`   | default     | Native v2 apps + drill-down design |
+| `content-author`    | default     | Minimal writer shell |
+| `client-portal`     | default     | Branded shell |
+| `v1-demo`           | default     | Canonical-shape demo |
+| `single-pane-demo`  | single-pane | Mobile-first; validates engine boundary |
 
 `tests/php/run-shape-tests.php` walks every shell through the resolver
 + asserts structural invariants (engine + regions + applications +

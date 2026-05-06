@@ -5,7 +5,7 @@
 	"name": "content-author",
 	"title": "Writer",
 	"description": "A focused writing environment with a collapsed navigation.",
-	"engine": "core:site-editor-layout",
+	"engine": "core:default",
 
 	"regions": {
 		"toolbar": {
@@ -49,7 +49,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

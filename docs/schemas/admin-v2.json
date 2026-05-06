@@ -55,7 +55,7 @@
     "engine": {
       "type": "string",
       "pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
-      "description": "Identifier of the engine that renders this shell. References an `id` from a registered engine manifest. The engine determines spatial arrangement, region-template catalog, and which platform services are honored. Switching engines requires editing this field (and probably reworking `regions` to use the new engine's templates) and reloads the shell — engines are not live-switchable. Common values: `core:wp-default-layout` (default), `core:floating-layout`, `core:single-pane-layout`."
+      "description": "Identifier of the engine that renders this shell. References an `id` from a registered engine manifest. The engine determines spatial arrangement, region-template catalog, and which platform services are honored. Switching engines requires editing this field (and probably reworking `regions` to use the new engine's templates) and reloads the shell — engines are not live-switchable. Common values: `core:default` (flagship), `core:single-pane`."
     },
 
     "regions": {

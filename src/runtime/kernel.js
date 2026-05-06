@@ -59,7 +59,7 @@ export function kernel( config ) {
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
-	const engineId = config.engine || 'core:site-editor-layout';
+	const engineId = config.engine || 'core:default';
 	const engineSource = registry.get( engineId, 'engine' );
 
 	if ( ! engineSource ) {

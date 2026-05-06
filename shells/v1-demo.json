@@ -7,7 +7,7 @@
 	"description": "Authored against admin-v2.json. Demonstrates engine templates, nested child regions, the routes block, default-route, per-region routing.route-key, and platform.trigger keystroke binding. First bundled shell migrated to v2 in the joint V2.M2 task 7 + V2.M3 task 8 step.",
 	"user-switchable": true,
 
-	"engine": "core:site-editor-layout",
+	"engine": "core:default",
 
 	"regions": {
 		"toolbar": {
@@ -58,7 +58,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

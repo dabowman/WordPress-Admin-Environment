@@ -1,7 +1,7 @@
 /**
- * core:single-pane-layout — second engine, validates engine boundary.
+ * core:single-pane — second engine, validates engine boundary.
  *
- * Idiom is deliberately different from `core:site-editor-layout`:
+ * Idiom is deliberately different from `core:default`:
  *
  *   ┌─────────────────────────────────────────────┐
  *   │ banner region(s) — persistent, top, stacked │
@@ -18,7 +18,7 @@
  *                          to main.
  *   dialog regions        → centered modal over main.
  *
- * Apps that work in `core:site-editor-layout` work here because both
+ * Apps that work in `core:default` work here because both
  * engines honor the same platform-service set; only the geometry
  * differs. Demo-quality polish — not every WPDS chrome surface needs
  * to look perfect.
@@ -83,7 +83,7 @@ export default function CoreSinglePaneLayout( { regions } ) {
 	return (
 		<div
 			className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
-			data-engine="core:single-pane-layout"
+			data-engine="core:single-pane"
 		>
 			<div className="wp-admin-shell-single-pane__appbar">
 				{ hasNav && (

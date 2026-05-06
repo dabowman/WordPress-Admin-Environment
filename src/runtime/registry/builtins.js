@@ -31,13 +31,13 @@ import SiteEditorApp from '../apps/SiteEditorApp';
 import NavigationApp from '../apps/NavigationApp';
 import SiteHubApp from '../apps/SiteHubApp';
 import ToolbarActionsApp from '../apps/ToolbarActionsApp';
-import CommandPickerApp from '../apps/CommandPickerApp';
+import CommandPaletteApp from '../apps/CommandPaletteApp';
 import PreviewPaneApp from '../apps/PreviewPaneApp';
 import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 import AppearanceApp from '../apps/AppearanceApp';
 
-import coreSiteEditorLayout from '../engines/core-site-editor-layout';
-import coreSinglePaneLayout from '../engines/core-single-pane-layout';
+import coreDefault from '../engines/core-default';
+import coreSinglePane from '../engines/core-single-pane';
 
 const APP_COMPONENTS = {
 	'core:posts':            PostsApp,
@@ -54,7 +54,7 @@ const APP_COMPONENTS = {
 	'core:navigation':       NavigationApp,
 	'core:site-hub':         SiteHubApp,
 	'core:toolbar-actions':  ToolbarActionsApp,
-	'core:command-picker':   CommandPickerApp,
+	'core:command-palette':  CommandPaletteApp,
 	'core:preview-pane':     PreviewPaneApp,
 	'core:notices-banner':   NoticesBannerApp,
 	'core:notices-snackbar': NoticesSnackbarApp,
@@ -65,15 +65,15 @@ const NON_ROUTABLE_APPS = new Set( [
 	'core:navigation',
 	'core:site-hub',
 	'core:toolbar-actions',
-	'core:command-picker',
+	'core:command-palette',
 	'core:preview-pane',
 	'core:notices-banner',
 	'core:notices-snackbar',
 ] );
 
 export function registerBuiltins( registry ) {
-	registry.register( coreSiteEditorLayout );
-	registry.register( coreSinglePaneLayout );
+	registry.register( coreDefault );
+	registry.register( coreSinglePane );
 
 	const manifests = window.wpAdminShell?.manifests?.apps || {};
 	const seen      = new Set();

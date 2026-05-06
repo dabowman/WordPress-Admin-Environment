@@ -4,8 +4,8 @@
 	"$wpds": "6.9",
 	"name": "single-pane-demo",
 	"title": "Single Pane Demo",
-	"description": "Demo shell exercising the core:single-pane-layout engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
-	"engine": "core:single-pane-layout",
+	"description": "Demo shell exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
+	"engine": "core:single-pane",
 
 	"regions": {
 		"appbar": {
@@ -43,7 +43,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

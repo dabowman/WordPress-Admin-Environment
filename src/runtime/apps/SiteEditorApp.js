@@ -10,7 +10,7 @@ import IframeApp from '../../apps/IframeApp';
  *      (lands as `core:appearance` in M5).
  *   2. Command-palette double-registration — `@wordpress/edit-site`
  *      ships its own command set that re-uses the `core/commands`
- *      store the shell's `core:command-picker` already populates.
+ *      store the shell's `core:command-palette` already populates.
  *   3. Full-screen-mode CSS — edit-site applies `body.is-fullscreen-mode`
  *      styles that fight any embedding container.
  *   4. Hash-router conflicts — edit-site's internal hash routing

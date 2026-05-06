@@ -234,7 +234,7 @@ echo "\n— Origin loaders + full pipeline —\n";
 $empty = WP_Admin_Shell_Origin_Core::empty_doc();
 $T::assert_eq( 'core origin: empty_doc carries engine',
 	$empty['engine'] ?? null,
-	'core:site-editor-layout'
+	'core:default'
 );
 $T::assert_true( 'core origin: empty_doc carries content region',
 	isset( $empty['regions']['content'] ),

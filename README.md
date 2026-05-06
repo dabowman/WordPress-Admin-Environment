@@ -93,7 +93,7 @@ v0 (MVP flat) admin.json files keep working indefinitely — the resolver normal
 | `core:appearance` | ✅ | User-prefs UI driven by `userCustomizable` declarations. |
 | `iframe:{url}` | iframe | Any wp-admin URL with chrome hidden. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`) are pinned by the v0 normalizer and don't appear in shell author files unless overridden.
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`) are pinned by the v0 normalizer and don't appear in shell author files unless overridden.
 
 ## Project structure
 
@@ -113,7 +113,7 @@ wp-admin-shell/
 │   ├── runtime/                    # v1 kernel
 │   │   ├── kernel.js, kernel-context.js
 │   │   ├── registry/               # Source registry + builtins
-│   │   ├── engines/                # core:site-editor-layout
+│   │   ├── engines/                # core:default + core:single-pane
 │   │   ├── regions/                # Generic Region renderer + regionKind helper + mountApp
 │   │   ├── routing/                # Hash router
 │   │   ├── selection/              # Cross-region selection bus

@@ -7,7 +7,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 - **v1.0.0-beta.1** tagged at `df5fcb5` on `main` (PR #32). v1 milestones M1–M5 landed.
 - **v2.0.0-beta.1** tagged at `6e4dc61` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done is met.
 
-**v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:site-editor-layout` + `core:single-pane-layout`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
+**v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:default` + `core:single-pane`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
 
 **Pipeline (PHP → JS).** `WP_Admin_Shell_Resolver` merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement + `customizable` filtering (legacy `userCustomizable` read one cycle). Resolved tree feeds `src/runtime/kernel.js` which picks engine from registry, renders regions through generic `<Region>` (→ `ModalRegion` | `PersistentRegion` from platform services), mounts apps via `MountedApp`, and emits `<style id="wp-admin-shell-tokens">` at `:root`. Capability gating is four layers: region fast-path → app gate → source-cap floor → REST observation; nav prunes recursively. Shell switching is option-write + reload. Default install shell `wp-admin-default` mirrors wp-admin via capability-gated iframe routes.
 
@@ -193,7 +193,7 @@ wp-admin-shell/
 │   │       ├── NavigationApp.js      # core:navigation — recursive cap-prune
 │   │       ├── SiteHubApp.js         # core:site-hub
 │   │       ├── ToolbarActionsApp.js  # core:toolbar-actions
-│   │       ├── CommandPickerApp.js   # core:command-picker (signs into @wordpress/commands)
+│   │       ├── CommandPaletteApp.js  # core:command-palette (signs into @wordpress/commands)
 │   │       ├── PreviewPaneApp.js     # core:preview-pane
 │   │       ├── NoticesApp.js         # core:notices-banner + core:notices-snackbar
 │   │       ├── AppearanceApp.js      # core:appearance — `customizable`-driven prefs UI
@@ -236,7 +236,7 @@ wp-admin-shell/
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter; v2 native mount |
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
-| System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar` — pinned by the v0 normalizer |
+| System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar` — pinned by the v0 normalizer |
 
 ### `core:simple-editor` notes
 

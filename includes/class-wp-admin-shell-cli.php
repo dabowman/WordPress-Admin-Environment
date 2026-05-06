@@ -156,6 +156,7 @@ class WP_Admin_Shell_CLI {
 	 *
 	 *     wp admin-shell check-config wp-admin-default
 	 *
+	 * @subcommand check-config
 	 * @when after_wp_load
 	 */
 	public function check_config( $args, $assoc_args ) {

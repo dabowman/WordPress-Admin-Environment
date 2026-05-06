@@ -198,7 +198,7 @@ function ModalRegion( { region, services, matched } ) {
 
 	if ( ! isOpen ) {
 		// Render an inert subtree so children that need to mount for
-		// side-effects (e.g. `core:command-picker`'s `useCommandLoader`)
+		// side-effects (e.g. `core:command-palette`'s `useCommandLoader`)
 		// keep firing while the visible dialog chrome stays hidden. The
 		// container is `display: none` + `aria-hidden` so AT and the
 		// browser's focus trap leave it alone.

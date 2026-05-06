@@ -5,7 +5,7 @@
 	"name": "developer-admin",
 	"title": "Developer Admin",
 	"description": "Full admin shell with access to all WordPress features. Drill-down nav for design (templates / patterns / navigation / styles); iframe fallbacks for plugins / tools.",
-	"engine": "core:site-editor-layout",
+	"engine": "core:default",
 
 	"regions": {
 		"toolbar": {
@@ -79,7 +79,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

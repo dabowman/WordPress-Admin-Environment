@@ -5,7 +5,7 @@
 	"name": "wp-admin-default",
 	"title": "WordPress",
 	"description": "Default shell. Mirrors stock wp-admin: every screen rendered as an iframe of its wp-admin counterpart, with capability gates so each user sees exactly what they would see in core.",
-	"engine": "core:site-editor-layout",
+	"engine": "core:default",
 
 	"regions": {
 		"sidebar": {
@@ -139,7 +139,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

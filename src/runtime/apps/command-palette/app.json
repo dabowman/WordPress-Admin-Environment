@@ -1,8 +1,8 @@
 {
   "$schema": "../../../../docs/schemas/admin-app-v2.json",
-  "id": "core:command-picker",
+  "id": "core:command-palette",
   "version": 1,
-  "title": "Command picker",
+  "title": "Command palette",
   "description": "Cmd+K command palette. Signs commands into `@wordpress/commands`; derives palette entries from the routes block.",
   "role": "dialog",
   "platform": {

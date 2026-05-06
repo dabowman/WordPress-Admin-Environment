@@ -6,20 +6,19 @@ import { resolveIcon } from '../config/iconMap';
 import { useKernel } from '../kernel-context';
 
 /**
- * core:command-picker — registers shell-aware commands with
+ * core:command-palette — registers shell-aware commands with
  * `@wordpress/commands` so the package's portal palette (Mod+K) can
  * surface them. The palette UI itself is owned by the commands
  * package; this app contributes the command set + does not render UI.
  *
- * v2: commands are derived from the routes block (`config.routes`).
- * Each route entry becomes a "Go to <pattern>" command. Authors who
- * want richer labels can attach `title` / `icon` to a route entry —
- * those fields aren't in the schema today, but the runtime reads them
- * if present so a future v2.x schema bump can add them without a
- * separate migration. App manifests (V2.M4) will replace the
- * pattern-as-label fallback with manifest titles.
+ * Commands are derived from the routes block (`config.routes`). Each
+ * route entry becomes a "Go to <pattern>" command. Authors who want
+ * richer labels can attach `title` / `icon` to a route entry — those
+ * fields aren't in the schema today, but the runtime reads them if
+ * present so a future v2.x schema bump can add them without a
+ * separate migration.
  */
-export default function CommandPickerApp() {
+export default function CommandPaletteApp() {
 	const { config } = useKernel();
 	const routes = config?.routes && typeof config.routes === 'object' ? config.routes : null;
 

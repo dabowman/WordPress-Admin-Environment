@@ -5,7 +5,7 @@
 	"name": "acme-client-portal",
 	"title": "Acme Corp Portal",
 	"description": "Client portal for Acme Corp website management. Branded shell — logo, red accent, scoped navigation.",
-	"engine": "core:site-editor-layout",
+	"engine": "core:default",
 
 	"regions": {
 		"toolbar": {
@@ -51,7 +51,7 @@
 
 		"command-palette": {
 			"template": "core:overlay",
-			"app": "core:command-picker",
+			"app": "core:command-palette",
 			"platform": {
 				"triggerable": true,
 				"trigger": { "shortcut": "Mod+K" }

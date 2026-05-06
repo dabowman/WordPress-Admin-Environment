@@ -92,7 +92,7 @@ The shell layer is composed of three runtime primitives:
 
 - **Apps** — addressable mountable units. Declared by app manifests shipped with their code. Render whatever they want internally, including any React component composition (slot/fill, hooks, etc.) the app's author chooses.
 - **Regions** — typed containers, each holding one app. Declared in `admin.json` either by referencing an engine-shipped template or from scratch. Regions can declare child regions; nesting is the multi-app composition mechanism.
-- **Engines** — pluggable components that arrange regions into DOM. Default `core:wp-default-layout`. Each engine ships region templates and a default arrangement algorithm. Swappable for floating-window, single-pane, or custom (§4.2).
+- **Engines** — pluggable components that arrange regions into DOM. Default `core:default`. Each engine ships region templates and a default arrangement algorithm. Swappable for floating-window, single-pane, or custom (§4.2).
 
 The runtime kernel does not know what a sidebar is; it knows how to ask the active engine to render a region tree, and how to ask each region to render its assigned app.
 
@@ -115,7 +115,7 @@ The runtime kernel does not know what a sidebar is; it knows how to ask the acti
 │                                    │                              │
 │   ┌────────────────────────────────▼───────────────────────────┐ │
 │   │                Active engine                                │ │
-│   │  core:wp-default-layout  |  core:floating-layout  |  ...   │ │
+│   │  core:default  |  core:floating  |  ...   │ │
 │   │  Default arrangement algorithm + region templates           │ │
 │   └────────────────────────────────┬───────────────────────────┘ │
 │                                    │                              │
@@ -218,7 +218,7 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
 ```jsonc
 {
   "$schema": "https://schemas.wp.org/admin-engine/v1.json",
-  "id": "core:wp-default-layout",
+  "id": "core:default",
   "version": 1,
   "title": "WordPress Default Layout",
   "description": "Default WP admin shell — sidebar, topbar, content, optional detail pane.",
@@ -331,7 +331,7 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
   "name":  "developer-admin",
   "title": "Developer Admin",
 
-  "engine": "core:wp-default-layout",
+  "engine": "core:default",
 
   "regions": {
 
@@ -906,8 +906,8 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 - [ ] Per-role and per-user shell selection (architecture in place; UI exposed v2)
 - [ ] WPDS-native styles + chrome extension namespace + compat bridge
 - [ ] **Two engines:**
-  - `core:wp-default-layout` (sidebar/topbar/main/detail/overlay)
-  - `core:floating-layout` (proves the engine boundary; demo-quality acceptable)
+  - `core:default` (sidebar/topbar/main/detail/overlay)
+  - `core:floating` (proves the engine boundary; demo-quality acceptable)
 - [ ] Built-in apps:
   - `core:posts` (used for both posts and pages — `post-type` is config), `core:media`, `core:profile`, `core:editor`
   - `core:simple-editor`, `core:command-palette`, `core:user-menu`, `core:site-hub`, `core:primary-nav`
@@ -923,7 +923,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 ### v2 — Extension ecosystem (target: ~6-8 months post-MVP)
 
 - [ ] `tokens-json-spec.md` published as standalone spec; coordinated WordPress core proposal
-- [ ] Third engine: `core:tiling-layout` or `core:single-pane-layout` (engine API stress-test)
+- [ ] Third engine: `core:tiling` or `core:single-pane` (engine API stress-test)
 - [ ] Shell switcher exposed in user prefs UI
 - [ ] `core:dashboard` composable widget host
 - [ ] `core:plugins` plugins management app
@@ -971,7 +971,7 @@ These are explicitly out of scope. Listing them prevents scope creep arguments l
 
 Real unknowns. Each needs resolution before its dependent roadmap item ships.
 
-1. **Engine API stabilization timeline.** v1 ships engines as provisional. When does the API freeze? Lean: v2 stabilizes once at least one third-party engine has built against it and surfaced friction. Track via the `core:floating-layout` and `core:tiling-layout` implementations.
+1. **Engine API stabilization timeline.** v1 ships engines as provisional. When does the API freeze? Lean: v2 stabilizes once at least one third-party engine has built against it and surfaced friction. Track via the `core:floating` and `core:tiling` implementations.
 
 2. **Platform-services vocabulary growth.** v1 ships ~8 services. Sketching real apps surfaces 1-2 more per app. How does the spec accept additions without breaking compatibility? Lean: minor-version field additions; engines may opt to honor; unhonored fields are no-ops with logged warning.
 

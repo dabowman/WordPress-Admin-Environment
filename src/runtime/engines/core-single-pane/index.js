@@ -1,11 +1,11 @@
 import Layout from './Layout';
 
 /** @type {import('../../registry/source-types.js').EngineSource} */
-const coreSinglePaneLayout = {
+const coreSinglePane = {
 	kind: 'engine',
-	id: 'core:single-pane-layout',
-	title: 'Single-pane layout',
+	id: 'core:single-pane',
+	title: 'Single pane',
 	Component: Layout,
 };
 
-export default coreSinglePaneLayout;
+export default coreSinglePane;

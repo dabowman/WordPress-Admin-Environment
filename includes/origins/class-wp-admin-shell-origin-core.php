@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Shell_Origin_Core {
 
-	const ENGINE_ID = 'core:site-editor-layout';
+	const ENGINE_ID = 'core:default';
 
 	public static function load( $shell_path ) {
 		if ( ! file_exists( $shell_path ) ) {

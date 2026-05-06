@@ -213,15 +213,15 @@ echo "\n— Boot-time registration: shell-bundled core engine —\n";
 WP_Admin_Shell_Manifest_Registry::reset();
 $registry = WP_Admin_Shell_Manifest_Registry::instance();
 $registry->register_engine(
-	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-site-editor-layout/engine.json'
+	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-default/engine.json'
 );
-$engine = $registry->get_engine( 'core:site-editor-layout' );
+$engine = $registry->get_engine( 'core:default' );
 WPAS_Manifest_Test_Runner::assert_true(
-	'core:site-editor-layout engine.json registers',
+	'core:default engine.json registers',
 	null !== $engine
 );
 WPAS_Manifest_Test_Runner::assert_eq(
-	'core:site-editor-layout has 5 templates',
+	'core:default has 5 templates',
 	count( $engine['templates'] ?? array() ),
 	5
 );

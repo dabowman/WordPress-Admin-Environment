@@ -1,11 +1,11 @@
 import Layout from './Layout';
 
 /** @type {import('../../registry/source-types.js').EngineSource} */
-const coreSiteEditorLayout = {
+const coreDefault = {
 	kind: 'engine',
-	id: 'core:site-editor-layout',
-	title: 'Site editor layout',
+	id: 'core:default',
+	title: 'Default',
 	Component: Layout,
 };
 
-export default coreSiteEditorLayout;
+export default coreDefault;

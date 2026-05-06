@@ -3,7 +3,7 @@
   "title": "Test Shell",
   "version": 1,
   "settings": {
-    "shell": { "layoutEngine": "core:site-editor-layout" },
+    "shell": { "layoutEngine": "core:default" },
     "applications": [
       {
         "id": "posts",

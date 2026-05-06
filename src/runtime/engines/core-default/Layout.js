@@ -1,5 +1,5 @@
 /**
- * core:site-editor-layout — v1's only engine.
+ * core:default — flagship engine.
  *
  * Arranges regions into the dark-chrome / elevated-card visual pattern the
  * MVP shipped (see `src/shell/ShellLayout.js`):
@@ -79,7 +79,7 @@ export default function CoreSiteEditorLayout( { config, regions } ) {
 	return (
 		<div
 			className="wp-admin-shell-layout"
-			data-engine="core:site-editor-layout"
+			data-engine="core:default"
 			style={ { '--wp-admin-shell-accent': accent } }
 		>
 			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
