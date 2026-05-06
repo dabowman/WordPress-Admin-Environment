@@ -99,6 +99,14 @@ These three patterns drive most of the bugs caught in code review. Codified here
 
 - **DataViews uses `@wordpress/dataviews/wp` plus a CSS copy.** Webpack copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`; PHP enqueues `dataviews.css` separately. The `/wp` subpath is the runtime-private export that registers DataViews against `wp.privateApis` correctly.
 
+- **Apps don't add their own ARIA landmark element.** Region wrappers already render `<div role={region.role}>` (e.g. `core:sidebar` declares `role: "navigation"` in `engine.json`). An app component nesting its own `<nav>`, `<main>`, `<aside>`, etc. inside doubles the landmark in the a11y tree. NavigationApp dropped its outer `<nav class="wp-admin-shell-nav__landmark">` for this reason.
+
+- **`[aria-current="true"]` is the sole authority for the active state.** Don't also emit a `.is-active` className when an item is the current route. CSS targets `[aria-current="true"]`; the redundant class causes drift when the two get out of sync. SidebarNavigationItem only sets the attribute now.
+
+- **Sidebar drill-down state belongs in the URL.** Sub-screens (the `{ screen, items }` shape in nav config) are URL-addressable via the `?screen=<id>` query slot, NOT `useState`. NavigationApp reads `useRoute().params.screen` and writes via a small `navigateScreen(id|null)` helper that preserves the current primary path. Deep-links and refresh-survives. Multiple sidebars in one shell would collide on the slot — namespace later (`?nav-{regionId}-screen=…`) if needed. Corollary of the URL-as-state principle (spec §6 / §18).
+
+- **Sidebar internals mirror `@wordpress/edit-site/src/components/sidebar*` class naming, swapping the top-level prefix `edit-site` → `wp-admin-shell`.** That maps `edit-site-sidebar-navigation-{screen,item}` → `wp-admin-shell-sidebar-navigation-{screen,item}`, drilldown indicator class is `__drilldown-indicator` (not `__chevron`), description is a `<div>` not `<p>`. When porting more elements from edit-site, keep the names (and BEM modifiers like `.has-footer` on `__main`) one-for-one — that lets the Gutenberg sidebar source serve as the structural reference.
+
 ## Build
 
 ```bash

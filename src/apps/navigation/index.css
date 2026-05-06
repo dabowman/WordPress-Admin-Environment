@@ -1,7 +1,9 @@
 /* NavigationApp — drill-down + flat sidebar nav.
-   Includes the SidebarNavigationScreen + SidebarNavigationItem +
-   SidebarButton presentational helpers (shared internals) plus the
-   collapsed/icon-only mode classes. */
+   Class naming mirrors @wordpress/edit-site sidebar* (sidebar /
+   sidebar-navigation-screen / sidebar-navigation-item / sidebar-button)
+   with the top-level prefix swapped from `edit-site` to `wp-admin-shell`.
+   Color/dimension values come from the chrome→WPDS bridge so the same
+   structure themes against any chrome surface. */
 
 /* ==========================================================================
    Sidebar Content & Slide Animations (drill-down screen frame)
@@ -38,14 +40,59 @@
 
 .wp-admin-shell-sidebar__screen-wrapper {
 	overflow-x: auto;
+	scrollbar-gutter: stable;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
 	max-height: 100%;
-	padding: 0 12px;
+	padding: 0 var(--wpds-dimension-padding-sm);
 	animation-duration: 0.14s;
 	animation-timing-function: ease-in-out;
 	will-change: transform, opacity;
+}
+
+/* Custom scrollbars on hover — ported from
+   @wordpress/base-styles/_mixins.scss `custom-scrollbars-on-hover`.
+   Resting handle is transparent; the chrome border var (with WPDS stroke
+   fallback) shows on hover/focus so the bar matches whatever chrome the
+   sidebar surface paints. */
+.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar {
+	width: 12px;
+	height: 12px;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar-track {
+	background-color: transparent;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar-thumb {
+	background-color: transparent;
+	border-radius: var(--wpds-border-radius-lg);
+	border: 3px solid transparent;
+	background-clip: padding-box;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper:hover::-webkit-scrollbar-thumb,
+.wp-admin-shell-sidebar__screen-wrapper:focus::-webkit-scrollbar-thumb,
+.wp-admin-shell-sidebar__screen-wrapper:focus-within::-webkit-scrollbar-thumb {
+	background-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+}
+
+.wp-admin-shell-sidebar__screen-wrapper {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper:hover,
+.wp-admin-shell-sidebar__screen-wrapper:focus,
+.wp-admin-shell-sidebar__screen-wrapper:focus-within {
+	scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
+}
+
+@media (hover: none) {
+	.wp-admin-shell-sidebar__screen-wrapper {
+		scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
+	}
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -66,53 +113,63 @@
    SidebarNavigationScreen (per-screen header + body + sticky footer)
    ========================================================================== */
 
-.wp-admin-shell-sidebar-screen__main {
+.wp-admin-shell-sidebar-navigation-screen__main {
 	flex-grow: 1;
-	margin-bottom: 16px;
+	margin-bottom: var(--wpds-dimension-gap-lg);
 }
 
-.wp-admin-shell-sidebar-screen__title-bar {
+.wp-admin-shell-sidebar-navigation-screen__main.has-footer {
+	margin-bottom: 0;
+}
+
+.wp-admin-shell-sidebar-navigation-screen__title-icon {
 	position: sticky;
 	top: 0;
 	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
 	padding-top: 48px;
-	margin-bottom: 8px;
-	padding-bottom: 8px;
+	margin-bottom: var(--wpds-dimension-gap-sm);
+	padding-bottom: var(--wpds-dimension-padding-sm);
 	z-index: 1;
 }
 
-.wp-admin-shell-sidebar-screen__title {
+/* Doubled selector raises specificity to match the site editor's
+   &#{&} pattern — keeps the line-height stable when the Heading
+   component or descendants override it. */
+.wp-admin-shell-sidebar-navigation-screen__title.wp-admin-shell-sidebar-navigation-screen__title,
+.wp-admin-shell-sidebar-navigation-screen__title.wp-admin-shell-sidebar-navigation-screen__title .wp-admin-shell-sidebar-navigation-screen__title {
 	flex-grow: 1;
 	overflow-wrap: break-word;
-	line-height: 1.4;
+	line-height: var(--wpds-font-line-height-xl);
 }
 
-.wp-admin-shell-sidebar-screen__content {
-	padding: 0 16px;
+.wp-admin-shell-sidebar-navigation-screen__content {
+	padding: 0 var(--wpds-dimension-padding-lg);
 }
 
-.wp-admin-shell-sidebar-screen__description {
+.wp-admin-shell-sidebar-navigation-screen__description {
 	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
-	font-size: 13px;
-	line-height: 1.5;
-	margin: 0 0 12px;
+	font-size: var(--wpds-font-size-md);
+	line-height: var(--wpds-font-line-height-sm);
+	margin: 0 0 var(--wpds-dimension-gap-md);
 }
 
-.wp-admin-shell-sidebar-screen__items {
+.wp-admin-shell-sidebar-navigation-screen__items {
 	border: none !important;
 }
 
-.wp-admin-shell-sidebar-screen__footer {
+.wp-admin-shell-sidebar-navigation-screen__footer {
 	position: sticky;
 	bottom: 0;
 	background-color: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
-	padding: 8px 16px;
-	margin-top: 16px;
-	border-top: 1px solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+	gap: 0;
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	margin: var(--wpds-dimension-gap-lg) 0 0;
+	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 }
 
 /* ==========================================================================
    SidebarButton (back/dashboard button)
+   Focus / hover behavior is delegated to @wordpress/ui Button.
    ========================================================================== */
 
 .wp-admin-shell-sidebar-button {
@@ -121,52 +178,55 @@
 
 /* ==========================================================================
    SidebarNavigationItem (drill-down @wordpress/components Item)
+   Hover/focus only changes color — background reserved for aria-current,
+   matching the site editor pattern.
    ========================================================================== */
 
-.wp-admin-shell-sidebar-nav-item.components-item {
+.wp-admin-shell-sidebar-navigation-item.components-item {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
-	padding: 8px 6px 8px 16px;
+	padding: var(--wpds-dimension-padding-sm) 6px var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
 	border: none;
 	min-height: 40px;
 }
 
-.wp-admin-shell-sidebar-nav-item.components-item:hover,
-.wp-admin-shell-sidebar-nav-item.components-item:focus {
+.wp-admin-shell-sidebar-navigation-item.components-item:hover,
+.wp-admin-shell-sidebar-navigation-item.components-item:focus,
+.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover, var(--wpds-color-bg-interactive-neutral-weak-active));
 }
 
-.wp-admin-shell-sidebar-nav-item.components-item:hover .wp-admin-shell-sidebar-nav-item__chevron,
-.wp-admin-shell-sidebar-nav-item.components-item:focus .wp-admin-shell-sidebar-nav-item__chevron {
+.wp-admin-shell-sidebar-navigation-item.components-item:hover .wp-admin-shell-sidebar-navigation-item__drilldown-indicator,
+.wp-admin-shell-sidebar-navigation-item.components-item:focus .wp-admin-shell-sidebar-navigation-item__drilldown-indicator,
+.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] .wp-admin-shell-sidebar-navigation-item__drilldown-indicator {
 	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }
 
-.wp-admin-shell-sidebar-nav-item.components-item.is-active,
-.wp-admin-shell-sidebar-nav-item.components-item[aria-current="true"] {
+.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] {
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
-	font-weight: 500;
+	font-weight: var(--wpds-font-weight-medium);
 }
 
-.wp-admin-shell-sidebar-nav-item.components-item:focus-visible {
+/* Keep the focus ring drawn on top of the active background. */
+.wp-admin-shell-sidebar-navigation-item.components-item:focus-visible {
 	transform: translateZ(0);
 }
 
-.wp-admin-shell-sidebar-nav-item__chevron {
+.wp-admin-shell-sidebar-navigation-item__drilldown-indicator {
 	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 }
 
-.wp-admin-shell-sidebar-nav-item.with-suffix {
-	padding-right: 16px;
+.wp-admin-shell-sidebar-navigation-item.with-suffix {
+	padding-right: var(--wpds-dimension-padding-lg);
 }
 
 /* ==========================================================================
-   Collapsed Nav (icon-only mode)
+   Collapsed Nav (icon-only mode) — no site-editor equivalent.
    ========================================================================== */
 
 .wp-admin-shell-nav__items {
 	flex: 1;
-	padding: 0 12px;
+	padding: 0 var(--wpds-dimension-padding-md);
 }
 
 /* Nav item buttons (collapsed mode).
@@ -177,8 +237,8 @@
 .wp-admin-shell-nav__item {
 	width: 100%;
 	justify-content: center;
-	padding: 8px;
-	border-radius: 4px;
+	padding: var(--wpds-dimension-padding-sm);
+	border-radius: var(--wpds-border-radius-md);
 	gap: 10px;
 	min-height: 40px;
 	border: none;
@@ -187,7 +247,7 @@
 .wp-admin-shell-nav__item.is-active {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
-	font-weight: 500;
+	font-weight: var(--wpds-font-weight-medium);
 }
 
 .is-collapsed .wp-admin-shell-nav__items {
@@ -201,23 +261,23 @@
 /* Separator */
 .wp-admin-shell-nav__separator {
 	border: none;
-	border-top: 1px solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
-	margin: 8px 0;
+	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+	margin: var(--wpds-dimension-gap-sm) 0;
 }
 
 /* Group */
 .wp-admin-shell-nav__group {
-	margin-top: 4px;
+	margin-top: var(--wpds-dimension-gap-xs);
 }
 
 .wp-admin-shell-nav__group-label {
 	display: block;
-	font-size: 11px;
+	font-size: var(--wpds-font-size-xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
-	padding: 8px 16px 4px;
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-xs);
 }
 
 /* External links (collapsed mode) */
@@ -225,15 +285,14 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	padding: 8px 6px 8px 16px;
+	padding: var(--wpds-dimension-padding-sm) 6px var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 	text-decoration: none;
-	border-radius: 4px;
-	font-size: 13px;
+	border-radius: var(--wpds-border-radius-md);
+	font-size: var(--wpds-font-size-md);
 	min-height: 40px;
 }
 
 .wp-admin-shell-nav__link:hover {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover, var(--wpds-color-bg-interactive-neutral-weak-active));
 }

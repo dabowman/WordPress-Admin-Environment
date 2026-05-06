@@ -1,5 +1,4 @@
 import './navigation/index.css';
-import { useState } from '@wordpress/element';
 import { IconButton, Stack } from '@wordpress/ui';
 import {
 	Icon,
@@ -18,7 +17,7 @@ import {
 	useSidebarNavigation,
 } from './_components/SidebarNavigationContext';
 
-import { useRoute } from '../runtime/routing/router';
+import { useRoute, navigate } from '../runtime/routing/router';
 import { userCan } from '../runtime/capabilities/userCan';
 
 /**
@@ -42,24 +41,23 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 	const rawItems = Array.isArray( navConfig.items ) ? navConfig.items : [];
 	const items = pruneNavItems( rawItems );
 
-	const ariaLabel = navConfig[ 'aria-label' ] || __( 'Main', 'wp-admin-shell' );
-
-	const inner = collapsed ? (
-		<CollapsedNavigation items={ items } currentPrimary={ currentPrimary } />
-	) : (
-		<SidebarNavigationProvider>
-			<ExpandedNavigation
-				items={ items }
-				currentPrimary={ currentPrimary }
-				navConfig={ navConfig }
-			/>
-		</SidebarNavigationProvider>
-	);
-
+	// Provider hoisted to wrap collapsed mode too, so any future
+	// drill-down inside the icon rail picks up the same nav-state.
 	return (
-		<nav aria-label={ ariaLabel } className="wp-admin-shell-nav__landmark">
-			{ inner }
-		</nav>
+		<SidebarNavigationProvider>
+			{ collapsed ? (
+				<CollapsedNavigation
+					items={ items }
+					currentPrimary={ currentPrimary }
+				/>
+			) : (
+				<ExpandedNavigation
+					items={ items }
+					currentPrimary={ currentPrimary }
+					navConfig={ navConfig }
+				/>
+			) }
+		</SidebarNavigationProvider>
 	);
 }
 
@@ -155,10 +153,13 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 }
 
 function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
-	const [ activeScreen, setActiveScreen ] = useState( null );
+	const route = useRoute();
 	const navState = useSidebarNavigation();
 	const { record: site } = useEntityRecord( 'root', 'site' );
 
+	// Sub-screen state lives in the URL slot `?screen=<id>` so it
+	// deep-links and survives refresh. Primary path stays content-only.
+	const activeScreen = route.params?.screen || null;
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
 	if ( screenDef ) {
@@ -167,9 +168,9 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 				<SidebarNavigationScreen
 					title={ screenDef.label }
 					description={ screenDef.description }
-					onBack={ () => setActiveScreen( null ) }
+					onBack={ () => navigateScreen( null ) }
 					content={
-						<ItemGroup className="wp-admin-shell-sidebar-screen__items">
+						<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
 							{ ( screenDef.items || [] ).map( ( child, i ) =>
 								renderScreenItem( child, i, currentPrimary )
 							) }
@@ -193,9 +194,9 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 				title={ rootTitle }
 				description={ navConfig.description }
 				content={
-					<ItemGroup className="wp-admin-shell-sidebar-screen__items">
+					<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
 						{ items.map( ( item, idx ) =>
-							renderRootItem( item, idx, currentPrimary, setActiveScreen, navState )
+							renderRootItem( item, idx, currentPrimary, navState )
 						) }
 					</ItemGroup>
 				}
@@ -204,7 +205,30 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 	);
 }
 
-function renderRootItem( item, index, currentPrimary, setActiveScreen, navState ) {
+/**
+ * Write `?screen=<id>` (or clear when null) on top of the current
+ * primary path. Preserves any other URL params.
+ */
+function navigateScreen( screenId ) {
+	if ( typeof window === 'undefined' ) {
+		return;
+	}
+	const hash = window.location.hash || '';
+	const queryIdx = hash.indexOf( '?' );
+	const primary = queryIdx === -1 ? hash : hash.slice( 0, queryIdx );
+	const search = queryIdx === -1 ? '' : hash.slice( queryIdx + 1 );
+	const params = new URLSearchParams( search );
+	if ( screenId ) {
+		params.set( 'screen', screenId );
+	} else {
+		params.delete( 'screen' );
+	}
+	const next = params.toString();
+	const target = next ? `${ primary || '#' }?${ next }` : primary || '#';
+	navigate( target );
+}
+
+function renderRootItem( item, index, currentPrimary, navState ) {
 	if ( item.separator ) {
 		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
 	}
@@ -226,7 +250,7 @@ function renderRootItem( item, index, currentPrimary, setActiveScreen, navState 
 					if ( navState ) {
 						navState.navigate( 'forward', `[id="screen-${ item.screen }"]` );
 					}
-					setActiveScreen( item.screen );
+					navigateScreen( item.screen );
 				} }
 			>
 				{ item.label }

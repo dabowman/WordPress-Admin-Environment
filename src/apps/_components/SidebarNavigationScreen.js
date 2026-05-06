@@ -23,6 +23,7 @@ export default function SidebarNavigationScreen( {
 	title,
 	description,
 	content,
+	actions,
 	footer,
 	onBack,
 } ) {
@@ -32,15 +33,18 @@ export default function SidebarNavigationScreen( {
 	return (
 		<>
 			<Stack
-				className="wp-admin-shell-sidebar-screen__main"
+				className={
+					'wp-admin-shell-sidebar-navigation-screen__main' +
+					( footer ? ' has-footer' : '' )
+				}
 				direction="column"
 				justify="flex-start"
 			>
 				<Stack
 					direction="row"
 					gap="md"
-					align="center"
-					className="wp-admin-shell-sidebar-screen__title-bar"
+					align="flex-start"
+					className="wp-admin-shell-sidebar-navigation-screen__title-icon"
 				>
 					{ ! isRoot && (
 						<SidebarButton
@@ -64,24 +68,29 @@ export default function SidebarNavigationScreen( {
 					<Text
 						variant="heading-lg"
 						render={ <h1 /> }
-						className="wp-admin-shell-sidebar-screen__title"
+						className="wp-admin-shell-sidebar-navigation-screen__title"
 					>
 						{ title }
 					</Text>
+					{ actions && (
+						<div className="wp-admin-shell-sidebar-navigation-screen__actions">
+							{ actions }
+						</div>
+					) }
 				</Stack>
 
-				<div className="wp-admin-shell-sidebar-screen__content">
+				<div className="wp-admin-shell-sidebar-navigation-screen__content">
 					{ description && (
-						<p className="wp-admin-shell-sidebar-screen__description">
+						<div className="wp-admin-shell-sidebar-navigation-screen__description">
 							{ description }
-						</p>
+						</div>
 					) }
 					{ content }
 				</div>
 			</Stack>
 
 			{ footer && (
-				<footer className="wp-admin-shell-sidebar-screen__footer">
+				<footer className="wp-admin-shell-sidebar-navigation-screen__footer">
 					{ footer }
 				</footer>
 			) }

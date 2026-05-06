@@ -54,11 +54,9 @@ export default function SidebarNavigationItem( {
 
 	return (
 		<Item
-			className={ `wp-admin-shell-sidebar-nav-item ${
-				isActive ? 'is-active' : ''
-			} ${ ! withChevron && suffix ? 'with-suffix' : '' } ${
-				className || ''
-			}`.trim() }
+			className={ `wp-admin-shell-sidebar-navigation-item ${
+				! withChevron && suffix ? 'with-suffix' : ''
+			} ${ className || '' }`.trim() }
 			id={ uid }
 			aria-current={ isActive ? 'true' : undefined }
 			{ ...itemProps }
@@ -78,7 +76,7 @@ export default function SidebarNavigationItem( {
 						icon={
 							isRTL() ? chevronLeftSmall : chevronRightSmall
 						}
-						className="wp-admin-shell-sidebar-nav-item__chevron"
+						className="wp-admin-shell-sidebar-navigation-item__drilldown-indicator"
 						size={ 24 }
 					/>
 				) }
