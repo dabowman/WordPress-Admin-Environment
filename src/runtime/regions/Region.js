@@ -32,6 +32,7 @@ import { useRouteForRegion } from '../routing/useRoute';
 import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { getPlatformServices } from './platformServices.mjs';
+import { registerTrigger } from '../bindings/triggerStore.mjs';
 
 export function Region( { region } ) {
 	if ( ! region ) {
@@ -154,12 +155,22 @@ function ModalRegion( { region, services, matched } ) {
 	// modal regions render their dialog chrome immediately — the
 	// classic "show this dialog now" pattern. The bundled command
 	// palette region is triggerable: starting closed avoids the
-	// always-visible backdrop, and the @wordpress/commands package
-	// owns its own portal palette so Mod+K still works without a
-	// shell-level binding consumer (V2.M5 will wire `trigger.shortcut`
-	// to a per-region open store).
+	// always-visible backdrop. When admin.json's `bindings` block
+	// declares a keystroke for this app, BindingsConsumer dispatches
+	// to the open handler we register below via triggerStore.
 	const [ isOpen, setOpen ] = useState( ! services.isTriggerable );
 	const close = useCallback( () => setOpen( false ), [] );
+
+	// Register an open handler so `bindings` invocations can flip the
+	// region open. Only triggerable regions register; non-triggerable
+	// modals are always-open and have nothing to wire.
+	const appId = region?.app || null;
+	useEffect( () => {
+		if ( ! services.isTriggerable || ! appId ) {
+			return undefined;
+		}
+		return registerTrigger( appId, () => setOpen( true ) );
+	}, [ services.isTriggerable, appId ] );
 
 	useEffect( () => {
 		if ( ! isOpen || ! closeOnEscape ) {

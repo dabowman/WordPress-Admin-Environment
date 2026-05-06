@@ -115,5 +115,9 @@
 		"/profile":            { "app": "core:profile" }
 	},
 
-	"default-route": "/posts"
+	"default-route": "/posts",
+
+	"bindings": [
+		{ "shortcut": "Mod+K", "invoke": "core:command-palette" }
+	]
 }

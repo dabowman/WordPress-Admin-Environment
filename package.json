@@ -10,7 +10,7 @@
     "snapshot:wpds": "node scripts/snapshot-wpds.mjs",
     "test:parity": "node tests/parity/wpds-snapshot.test.mjs",
     "test:schema": "node tests/schema/validate-shells.test.mjs",
-    "test:runtime": "node tests/runtime/resolve-region.test.mjs && node tests/runtime/validate-region.test.mjs && node tests/runtime/platform-services.test.mjs && node tests/runtime/match-route.test.mjs && node tests/runtime/dirty-state.test.mjs && node tests/runtime/tokens-resolver.test.mjs && node tests/runtime/compile-styles-tokens.test.mjs"
+    "test:runtime": "node tests/runtime/resolve-region.test.mjs && node tests/runtime/validate-region.test.mjs && node tests/runtime/platform-services.test.mjs && node tests/runtime/match-route.test.mjs && node tests/runtime/dirty-state.test.mjs && node tests/runtime/tokens-resolver.test.mjs && node tests/runtime/compile-styles-tokens.test.mjs && node tests/runtime/bindings.test.mjs"
   },
   "devDependencies": {
     "@base-ui/react": "^1.4.0",
