@@ -184,6 +184,32 @@ post-tag triage item.
   placeholder; W3C DTCG editor's draft 2025.10 not yet stable for
   `$ref`).
 
+### Schema hosting
+
+Each schema declares its canonical `$id` at `schemas.wp.org`:
+
+| File | Canonical `$id` |
+|---|---|
+| `admin-v2.json`        | `https://schemas.wp.org/admin/v1.json` |
+| `admin-app-v2.json`    | `https://schemas.wp.org/admin-app/v1.json` |
+| `admin-engine-v2.json` | `https://schemas.wp.org/admin-engine/v1.json` |
+| `tokens-v1.json`       | `https://schemas.wp.org/tokens/v1.json` |
+| `admin-v1.json`        | `https://schemas.wp.org/admin/v0.json` (legacy) |
+
+**Beta cycle hosting.** `schemas.wp.org` is not live yet. In-repo
+files (bundled shells + fixtures) reference schemas via relative path
+(`../docs/schemas/admin-v2.json`) so IDE validation works without a
+network round-trip. Plugin authors writing admin.json files outside
+this repo can pin to the raw GitHub URL during the beta cycle:
+
+```json
+"$schema": "https://raw.githubusercontent.com/dvdbwmn/WordPress-Admin-Environment/feat/wp-admin-shell-v2/docs/schemas/admin-v2.json"
+```
+
+When `schemas.wp.org` goes live, references switch to the canonical
+URL. The `$id` already matches, so consumers using the canonical URL
+require no schema-side change.
+
 `tests/schema/validate-shells.test.mjs` sweeps:
 - 6 bundled shells under `admin-v2.json`.
 - 19 bundled `app.json` manifests under `admin-app-v2.json`.
