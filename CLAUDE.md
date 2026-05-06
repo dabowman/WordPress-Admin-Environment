@@ -5,7 +5,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 ## Status
 
 - **v1.0.0-beta.1** tagged at `df5fcb5` on `main` (PR #32). v1 milestones M1–M5 landed.
-- **v2.0.0-beta.1** tagged at `6e4dc61` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done is met.
+- **v2.0.0-beta.1** tagged at `01cc512` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done met. Post-tag spec-§15 polish (bindings runtime, six orphan apps registered, `wp_admin_shell_register_template`, `wp_admin_shell_register_shell`, schema-hosting note, spec §9.1 worked-example test) lands on the branch ahead of the next beta cut. Native `@wordpress/edit-{post,site}` mount deferred to v2.x — see `SiteEditorApp.js` for blockers.
 
 **v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:default` + `core:single-pane`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
 
@@ -220,7 +220,7 @@ wp-admin-shell/
 |---|---|---|---|---|
 | `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType` |
 | `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
-| `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. v2 native mount. |
+| `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. Native `@wordpress/edit-post` mount deferred to v2.x — see `SiteEditorApp.js` for blockers. |
 | `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
 | `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
@@ -233,7 +233,7 @@ wp-admin-shell/
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
 | `core:site-health` | SiteHealthApp | ✅ | — | `/wp-site-health/v1/tests/{id}` runner |
-| `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter; v2 native mount |
+| `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount deferred to v2.x; five blockers (preferences-store / commands / full-screen CSS / hash-router collisions, edit-site not in BUNDLED_PACKAGES) documented in `SiteEditorApp.js`. |
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
 | System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu` — pinned by the v0 normalizer |
@@ -275,6 +275,22 @@ Example: `{ "id": "pages", "source": "core:posts", "config": { "postType": "page
 The active shell config is stored in `wp_admin_shell_active_shell` option (registered with `show_in_rest`). The MVP wrote `wp_admin_shell_active_config`; the resolver reads the new key first and falls back to the legacy key. Switchable via:
 - Settings page (`wp-admin/admin.php?page=wp-admin-shell-settings`)
 - Toolbar dropdown (saves via `POST /wp/v2/settings`, then reloads)
+
+## Extension points (spec §13)
+
+Six extension surfaces, all in place:
+
+1. **Filter merged config.** PHP `apply_filters( 'wp_admin_shell_data', $config )` runs after the cascade resolves; per-origin `wp_admin_shell_data_{origin}` runs during the merge.
+2. **Filter per-origin configs.** `wp_admin_shell_data_core` / `_plugin` / `_site` / `_role` / `_user`.
+3. **Register a `plugin:*` app.** PHP `wp_admin_shell_register_app( $manifest_or_path )` or convention-path discovery (`{plugin}/apps/{name}/app.json`).
+4. **Register a region template.** PHP `wp_admin_shell_register_template( $engine_id, $template_id, $template )` — extends an existing engine's template catalog at runtime. Validates engine exists, template id matches the namespaced pattern, body has a string `role`.
+5. **Register an engine.** PHP `wp_admin_shell_register_engine( $manifest_or_path )` or convention-path discovery (`{plugin}/engines/{name}/engine.json`).
+6. **Register a complete shell.** PHP `wp_admin_shell_register_shell( $slug, $admin_json )` for runtime-computed shells. Programmatic registrations win over file-based shells of the same slug; site/role/user origins still merge on top via the same cascade.
+
+JS-side surfaces:
+
+- `useDirtyState( regionId, isDirty, { blocksNavigation } )` — reports unsaved-changes status; `<NavigationGuard>` honors it across `beforeunload` + Navigation API + hashchange-revert.
+- `bindings` block in admin.json — declares `[{shortcut, invoke}]`. `<BindingsConsumer>` wires keystrokes to triggerable apps via the `triggerStore`. Only triggerable regions register their open handlers.
 
 ## Manual smoke before tagging
 
