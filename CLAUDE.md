@@ -25,7 +25,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 6. Read `docs/research/schema-exercise-findings.md` — what schema can't validate, runtime must.
 7. Read `docs/admin-json-api-validation.md` — REST API coverage per app source.
 8. Consult `docs/screens/` — 42 tier-2 functional specs covering every wp-admin screen. Source of truth when (re)building any `core:*` app. Gaps section = REST rebuild tickets.
-9. Read `docs/research/app-validation-2026-05-04.md` — WPDS / REST / core-data audit of every `src/apps/*` + `src/runtime/apps/*`. Remediation merged at `a29a32e`. Captures destructive-button fallback, DataViews `/wp` import path, WPDS 0.12 gaps (no `tone="critical"`, no `variant="ghost"`, no `Text weight/size/color`, no SnackbarList port).
+9. Read `docs/research/app-validation-2026-05-04.md` — WPDS / REST / core-data audit of every `src/apps/*` (chrome + content apps; the V2.M5 `src/runtime/apps/` directory was consolidated into `src/apps/`). Remediation merged at `a29a32e`. Captures destructive-button fallback, DataViews `/wp` import path, WPDS 0.12 gaps (no `tone="critical"`, no `variant="ghost"`, no `Text weight/size/color`, no SnackbarList port).
 10. Skim `docs/feedback.md` — Inbox/Triaged/In-progress/Done triage log. Per directive §2 #4: don't fix items proactively during migration — clean migration first, triage on v2 baseline second.
 11. Archived for reference (skim only when needed): `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`, `docs/archive/wp-admin-shell-v1-plan.md`, `docs/schemas/admin-v1.json`, `docs/admin-json-schema.md` (v0 flat).
 
@@ -188,24 +188,25 @@ wp-admin-shell/
 │   │   ├── styles/                 # Token compiler + compat bridge + density + WPDS baseline
 │   │   ├── capabilities/userCan.js # userCan() sync + checkCan() async via /can REST
 │   │   ├── config/iconMap.js       # icon name → @wordpress/icons (dev-warn on miss)
-│   │   ├── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
-│   │   └── apps/                   # System apps (sidebar / toolbar / overlay / appearance)
-│   │       ├── NavigationApp.js      # core:navigation — recursive cap-prune
-│   │       ├── SiteHubApp.js         # core:site-hub
-│   │       ├── ToolbarActionsApp.js  # core:toolbar-actions
-│   │       ├── CommandPaletteApp.js  # core:command-palette (signs into @wordpress/commands)
-│   │       ├── PreviewPaneApp.js     # core:preview-pane
-│   │       ├── NoticesApp.js         # core:notices-banner + core:notices-snackbar
-│   │       ├── AppearanceApp.js      # core:appearance — `customizable`-driven prefs UI
-│   │       ├── SiteEditorApp.js      # core:site-editor iframe adapter (v2 native mount)
-│   │       └── _components/          # Sidebar* + SiteIcon presentational helpers
-│   └── apps/                # User-facing apps (registered via builtins.js)
+│   │   └── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
+│   └── apps/                # All shell-bundled apps (registered via builtins.js)
 │       ├── PostsApp.js / SimpleEditorApp.js / EditorApp.js / MediaApp.js / TaxonomyApp.js
 │       ├── ProfileApp.js / IframeApp.js
 │       ├── UsersApp.js / CommentsApp.js
 │       ├── DashboardApp.js / PluginsApp.js / ThemesApp.js / ToolsApp.js / SiteHealthApp.js
 │       ├── SettingsApp.js                  # core:settings composable host
-│       └── SettingsGeneralApp.js / SettingsWritingApp.js / SettingsReadingApp.js / SettingsDiscussionApp.js
+│       ├── SettingsGeneralApp.js / SettingsWritingApp.js / SettingsReadingApp.js / SettingsDiscussionApp.js
+│       ├── NavigationApp.js                # core:navigation — recursive cap-prune
+│       ├── SiteHubApp.js                   # core:site-hub
+│       ├── ToolbarActionsApp.js            # core:toolbar-actions
+│       ├── CommandPaletteApp.js            # core:command-palette (signs into @wordpress/commands)
+│       ├── PreviewPaneApp.js               # core:preview-pane
+│       ├── NoticesApp.js                   # core:notices-banner + core:notices-snackbar
+│       ├── AppearanceApp.js                # core:appearance — `customizable`-driven prefs UI
+│       ├── SiteEditorApp.js                # core:site-editor iframe adapter (v2 native mount)
+│       ├── UserMenuApp.js                  # core:user-menu
+│       ├── _components/                    # Sidebar* + SiteIcon presentational helpers
+│       └── <name>/app.json                 # one manifest dir per id (co-located w/ JS source)
 ├── tests/
 │   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
 │   └── parity/              # node: WPDS slot-drift detector (4)

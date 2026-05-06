@@ -1,4 +1,4 @@
-import IframeApp from '../../apps/IframeApp';
+import IframeApp from './IframeApp';
 
 /**
  * core:site-editor — iframe-backed adapter pointing at `site-editor.php`.

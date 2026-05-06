@@ -10,10 +10,10 @@
  * `config-schema`, `platform`) onto the registry entry the kernel
  * already consumes.
  *
- * Adding a new shell-bundled app: drop the JSX in `src/apps/{name}/`
- * (or `src/runtime/apps/{name}/`), drop an `app.json` next to it, add
- * the id → Component pair to `APP_COMPONENTS` below. Discovery scans
- * the convention path and the manifest registry handles the rest.
+ * Adding a new shell-bundled app: drop the JSX in `src/apps/{name}/`,
+ * drop an `app.json` next to it, add the id → Component pair to
+ * `APP_COMPONENTS` below. Discovery scans the convention path and the
+ * manifest registry handles the rest.
  */
 
 import PostsApp from '../../apps/PostsApp';
@@ -26,7 +26,7 @@ import IframeApp from '../../apps/IframeApp';
 import UsersApp from '../../apps/UsersApp';
 import CommentsApp from '../../apps/CommentsApp';
 import SettingsApp from '../../apps/SettingsApp';
-import SiteEditorApp from '../apps/SiteEditorApp';
+import SiteEditorApp from '../../apps/SiteEditorApp';
 import DashboardApp from '../../apps/DashboardApp';
 import PluginsApp from '../../apps/PluginsApp';
 import ThemesApp from '../../apps/ThemesApp';
@@ -34,14 +34,14 @@ import ToolsApp from '../../apps/ToolsApp';
 import SiteHealthApp from '../../apps/SiteHealthApp';
 import TaxonomyApp from '../../apps/TaxonomyApp';
 
-import NavigationApp from '../apps/NavigationApp';
-import SiteHubApp from '../apps/SiteHubApp';
-import ToolbarActionsApp from '../apps/ToolbarActionsApp';
-import CommandPaletteApp from '../apps/CommandPaletteApp';
-import PreviewPaneApp from '../apps/PreviewPaneApp';
-import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
-import AppearanceApp from '../apps/AppearanceApp';
-import UserMenuApp from '../apps/UserMenuApp';
+import NavigationApp from '../../apps/NavigationApp';
+import SiteHubApp from '../../apps/SiteHubApp';
+import ToolbarActionsApp from '../../apps/ToolbarActionsApp';
+import CommandPaletteApp from '../../apps/CommandPaletteApp';
+import PreviewPaneApp from '../../apps/PreviewPaneApp';
+import { NoticesBannerApp, NoticesSnackbarApp } from '../../apps/NoticesApp';
+import AppearanceApp from '../../apps/AppearanceApp';
+import UserMenuApp from '../../apps/UserMenuApp';
 
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';

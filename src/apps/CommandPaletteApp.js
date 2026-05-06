@@ -2,8 +2,8 @@ import { useCallback, useMemo } from '@wordpress/element';
 import { useCommandLoader } from '@wordpress/commands';
 import { __, sprintf } from '@wordpress/i18n';
 
-import { resolveIcon } from '../config/iconMap';
-import { useKernel } from '../kernel-context';
+import { resolveIcon } from '../runtime/config/iconMap';
+import { useKernel } from '../runtime/kernel-context';
 
 /**
  * core:command-palette — registers shell-aware commands with
@@ -37,7 +37,6 @@ export default function CommandPaletteApp() {
 			if ( pattern.includes( '{' ) || pattern.endsWith( '/*' ) ) {
 				continue;
 			}
-			const slug = pattern.replace( /^\//, '' ) || 'home';
 			const label = entry.title
 				? entry.title
 				: sprintf(
@@ -45,8 +44,12 @@ export default function CommandPaletteApp() {
 					__( 'Go to %s', 'wp-admin-shell' ),
 					pattern
 				);
+			// URL-encode the literal pattern so distinct routes (e.g. `/foo-bar`
+			// vs `/foo/bar`) produce distinct command names. A naive
+			// alphanumeric-only collapse would map both to `foo-bar` and trip
+			// `@wordpress/commands` duplicate-name registration.
 			out.push( {
-				name: `core/admin-shell/goto-${ slug.replace( /[^a-z0-9]+/gi, '-' ) }`,
+				name: `core/admin-shell/goto-${ encodeURIComponent( pattern ) }`,
 				label,
 				icon: resolveIcon( entry.icon ),
 				callback: ( { close } ) => {

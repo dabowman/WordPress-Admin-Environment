@@ -151,8 +151,9 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
  * Two phases at priority 8 (before main shell init at 10) so manifests
  * are available when the kernel's inline-script handoff is composed:
  *
- *  1. Shell-bundled core manifests — registered explicitly. These live
- *     under `src/runtime/{apps,engines}/<name>/{app,engine}.json`,
+ *  1. Shell-bundled core manifests — registered explicitly. App
+ *     manifests live under `src/apps/<name>/app.json`, engine
+ *     manifests under `src/runtime/engines/<name>/engine.json` —
  *     co-located with their JS source rather than at the convention
  *     plugin-root path. They're framework defaults, not pluggable.
  *
@@ -168,9 +169,9 @@ add_action( 'init', function () {
 
 	// 1. Shell-bundled core manifests. Co-located with their JS source
 	// rather than at the plugin-root convention path. `discover()`
-	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`,
-	// so two scans cover the user-app and runtime-app trees plus the
-	// engine.
+	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`;
+	// `src/` covers all bundled apps, `src/runtime/` covers the engines
+	// (still co-located with their layout JS).
 	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/' );
 	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/runtime/' );
 

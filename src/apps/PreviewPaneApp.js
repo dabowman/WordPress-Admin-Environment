@@ -2,9 +2,9 @@ import { __ } from '@wordpress/i18n';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Spinner } from '@wordpress/components';
 
-import { useRoute } from '../routing/router';
-import { matchRoute } from '../routing/matchRoute.mjs';
-import { useKernel } from '../kernel-context';
+import { useRoute } from '../runtime/routing/router';
+import { matchRoute } from '../runtime/routing/matchRoute.mjs';
+import { useKernel } from '../runtime/kernel-context';
 
 /**
  * core:preview-pane — preview the entity matched by another routable

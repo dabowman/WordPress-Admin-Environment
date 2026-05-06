@@ -1,6 +1,6 @@
 import { IconButton, Stack } from '@wordpress/ui';
 
-import { resolveIcon } from '../config/iconMap';
+import { resolveIcon } from '../runtime/config/iconMap';
 
 /**
  * core:toolbar-actions — renders left + right action clusters in a

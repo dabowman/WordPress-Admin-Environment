@@ -14,7 +14,7 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { useKernel } from '../kernel-context';
+import { useKernel } from '../runtime/kernel-context';
 
 /**
  * core:appearance — user-prefs UI.

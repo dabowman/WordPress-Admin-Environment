@@ -8,7 +8,7 @@ import { __ } from '@wordpress/i18n';
 import { useEntityRecord } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 
-import { resolveIcon } from '../config/iconMap';
+import { resolveIcon } from '../runtime/config/iconMap';
 import SidebarNavigationScreen from './_components/SidebarNavigationScreen';
 import SidebarNavigationItem from './_components/SidebarNavigationItem';
 import SidebarContent from './_components/SidebarContent';
@@ -17,8 +17,8 @@ import {
 	useSidebarNavigation,
 } from './_components/SidebarNavigationContext';
 
-import { useRoute } from '../routing/router';
-import { userCan } from '../capabilities/userCan';
+import { useRoute } from '../runtime/routing/router';
+import { userCan } from '../runtime/capabilities/userCan';
 
 /**
  * core:navigation — sidebar nav app.
@@ -41,11 +41,11 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 	const rawItems = Array.isArray( navConfig.items ) ? navConfig.items : [];
 	const items = pruneNavItems( rawItems );
 
-	if ( collapsed ) {
-		return <CollapsedNavigation items={ items } currentPrimary={ currentPrimary } />;
-	}
+	const ariaLabel = navConfig[ 'aria-label' ] || __( 'Main', 'wp-admin-shell' );
 
-	return (
+	const inner = collapsed ? (
+		<CollapsedNavigation items={ items } currentPrimary={ currentPrimary } />
+	) : (
 		<SidebarNavigationProvider>
 			<ExpandedNavigation
 				items={ items }
@@ -53,6 +53,12 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 				navConfig={ navConfig }
 			/>
 		</SidebarNavigationProvider>
+	);
+
+	return (
+		<nav aria-label={ ariaLabel } className="wp-admin-shell-nav__landmark">
+			{ inner }
+		</nav>
 	);
 }
 

@@ -31,7 +31,11 @@ import IframeApp from './IframeApp';
  *   media       — iframed (image-size + uploads-org-by-month not REST-exposed)
  *   privacy     — iframed (privacy page not REST-exposed)
  *
- * Plugin panels register via the core:settings.panels data slot.
+ * Shells narrow the panel set via `config.panels[]` (allowlist by id).
+ * Plugin-registered panels are not currently supported — the slot/fill
+ * extension was retired in V2.M4 in favor of programmatic engine /
+ * shell registration; v2.x may re-introduce a panel registry once the
+ * surface stabilizes.
  */
 
 const BUILTIN_PANELS = [

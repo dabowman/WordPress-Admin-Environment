@@ -9,7 +9,7 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { useEntityRecord } from '@wordpress/core-data';
 
 import SiteIcon from './_components/SiteIcon';
-import { useKernel } from '../kernel-context';
+import { useKernel } from '../runtime/kernel-context';
 
 /**
  * core:site-hub — sidebar header app.

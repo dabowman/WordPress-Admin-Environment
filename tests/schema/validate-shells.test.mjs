@@ -31,7 +31,6 @@ const SHELLS_DIR   = resolve( projectRoot, 'shells' );
 const FIXTURES_DIR = resolve( __dirname, 'fixtures' );
 const APP_MANIFEST_DIRS = [
 	resolve( projectRoot, 'src/apps' ),
-	resolve( projectRoot, 'src/runtime/apps' ),
 ];
 const ENGINE_MANIFEST_DIRS = [
 	resolve( projectRoot, 'src/runtime/engines' ),
