@@ -21,6 +21,8 @@ import {
 	comment,
 	brush,
 	home,
+	tag,
+	update,
 } from '@wordpress/icons';
 
 const iconMap = {
@@ -52,6 +54,8 @@ const iconMap = {
 	brush,
 	appearance: brush,
 	home,
+	tag,
+	update,
 };
 
 const IS_DEV =

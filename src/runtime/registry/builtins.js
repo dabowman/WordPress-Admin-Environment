@@ -27,6 +27,12 @@ import UsersApp from '../../apps/UsersApp';
 import CommentsApp from '../../apps/CommentsApp';
 import SettingsApp from '../../apps/SettingsApp';
 import SiteEditorApp from '../apps/SiteEditorApp';
+import DashboardApp from '../../apps/DashboardApp';
+import PluginsApp from '../../apps/PluginsApp';
+import ThemesApp from '../../apps/ThemesApp';
+import ToolsApp from '../../apps/ToolsApp';
+import SiteHealthApp from '../../apps/SiteHealthApp';
+import TaxonomyApp from '../../apps/TaxonomyApp';
 
 import NavigationApp from '../apps/NavigationApp';
 import SiteHubApp from '../apps/SiteHubApp';
@@ -52,6 +58,12 @@ const APP_COMPONENTS = {
 	'core:comments':         CommentsApp,
 	'core:settings':         SettingsApp,
 	'core:site-editor':      SiteEditorApp,
+	'core:dashboard':        DashboardApp,
+	'core:plugins':          PluginsApp,
+	'core:themes':           ThemesApp,
+	'core:tools':            ToolsApp,
+	'core:site-health':      SiteHealthApp,
+	'core:taxonomy':         TaxonomyApp,
 	'core:navigation':       NavigationApp,
 	'core:site-hub':         SiteHubApp,
 	'core:toolbar-actions':  ToolbarActionsApp,

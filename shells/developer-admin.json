@@ -39,10 +39,14 @@
 					"app": "core:navigation",
 					"config": {
 						"items": [
-							{ "app": "posts",    "label": "Posts",    "icon": "post",     "href": "#/posts" },
-							{ "app": "pages",    "label": "Pages",    "icon": "page",     "href": "#/pages" },
-							{ "app": "media",    "label": "Media",    "icon": "media",    "href": "#/media" },
-							{ "app": "comments", "label": "Comments", "icon": "comment",  "href": "#/comments" },
+							{ "label": "Dashboard", "icon": "wordpress", "href": "#/dashboard" },
+							{ "separator": true },
+							{ "label": "Posts",      "icon": "post",     "href": "#/posts" },
+							{ "label": "Pages",      "icon": "page",     "href": "#/pages" },
+							{ "label": "Media",      "icon": "media",    "href": "#/media" },
+							{ "label": "Comments",   "icon": "comment",  "href": "#/comments" },
+							{ "label": "Categories", "icon": "category", "href": "#/categories" },
+							{ "label": "Tags",       "icon": "tag",      "href": "#/tags" },
 							{ "separator": true },
 							{
 								"screen": "design",
@@ -63,10 +67,12 @@
 								"icon": "settings",
 								"description": "Manage plugins, users, tools, and site settings.",
 								"items": [
-									{ "app": "plugins",  "label": "Plugins",  "icon": "plugins", "href": "#/plugins" },
-									{ "app": "users",    "label": "Users",    "icon": "people",  "href": "#/users" },
-									{ "app": "tools",    "label": "Tools",    "icon": "wrench",  "href": "#/tools" },
-									{ "app": "settings", "label": "Settings", "icon": "settings", "href": "#/settings" }
+									{ "label": "Plugins",     "icon": "plugins",  "href": "#/plugins" },
+									{ "label": "Themes",      "icon": "styles",   "href": "#/themes" },
+									{ "label": "Users",       "icon": "people",   "href": "#/users" },
+									{ "label": "Tools",       "icon": "wrench",   "href": "#/tools" },
+									{ "label": "Site Health", "icon": "update",   "href": "#/site-health" },
+									{ "label": "Settings",    "icon": "settings", "href": "#/settings" }
 								]
 							},
 							{ "separator": true },
@@ -108,9 +114,14 @@
 		"/design/navigation":  { "app": "core:posts",            "config": { "postType": "wp_navigation" } },
 		"/design/templates":   { "app": "core:posts",            "config": { "postType": "wp_template" } },
 		"/design/patterns":    { "app": "core:posts",            "config": { "postType": "wp_block" } },
-		"/plugins":            { "app": "core:iframe-fallback",  "config": { "url": "plugins.php" } },
+		"/dashboard":          { "app": "core:dashboard" },
+		"/plugins":            { "app": "core:plugins" },
+		"/themes":             { "app": "core:themes" },
 		"/users":              { "app": "core:users" },
-		"/tools":               { "app": "core:iframe-fallback", "config": { "url": "tools.php" } },
+		"/tools":              { "app": "core:tools" },
+		"/site-health":        { "app": "core:site-health" },
+		"/categories":         { "app": "core:taxonomy",         "config": { "taxonomy": "category" } },
+		"/tags":               { "app": "core:taxonomy",         "config": { "taxonomy": "post_tag" } },
 		"/settings":           { "app": "core:settings" },
 		"/profile":            { "app": "core:profile" }
 	},

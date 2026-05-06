@@ -112,21 +112,21 @@ export default function DashboardApp() {
 					<Button
 						tone="brand"
 						variant="solid"
-						onClick={ () => navigate( 'editor', 'post', 'new' ) }
+						onClick={ () => navigate( '#/posts/new' ) }
 					>
 						{ __( 'Write a post', 'wp-admin-shell' ) }
 					</Button>
 					<Button
 						tone="neutral"
 						variant="outline"
-						onClick={ () => navigate( 'editor', 'page', 'new' ) }
+						onClick={ () => navigate( '#/pages/new' ) }
 					>
 						{ __( 'Add a page', 'wp-admin-shell' ) }
 					</Button>
 					<Button
 						tone="neutral"
 						variant="outline"
-						onClick={ () => navigate( 'media' ) }
+						onClick={ () => navigate( '#/media' ) }
 					>
 						{ __( 'Upload media', 'wp-admin-shell' ) }
 					</Button>
@@ -180,11 +180,7 @@ export default function DashboardApp() {
 												tone="neutral"
 												variant="minimal"
 												onClick={ () =>
-													navigate(
-														'editor',
-														'post',
-														draft.id
-													)
+													navigate( `#/posts/${ draft.id }/edit` )
 												}
 											>
 												{ draft.title?.raw ||
@@ -255,7 +251,7 @@ export default function DashboardApp() {
 										variant="outline"
 										size="small"
 										onClick={ () =>
-											navigate( 'comments' )
+											navigate( '#/comments' )
 										}
 									>
 										{ __(
