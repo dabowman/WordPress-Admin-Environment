@@ -166,14 +166,15 @@ cap), coerces 8 leaf/composite types (color / dimension / number /
 fontFamily / fontWeight / duration / cubicBezier / border / shadow).
 
 Tests:
-- `tests/runtime/tokens-resolver.test.mjs` 24/24 (resolver alone).
-- `tests/runtime/compile-styles-tokens.test.mjs` 4/4 (end-to-end:
-  alias resolves to literal, unresolved falls through to `var()`,
+- `tests/runtime/tokens-resolver.test.mjs` (resolver alone, incl.
+  DTCG canonical color $value coercion).
+- `tests/runtime/compile-styles-tokens.test.mjs` (end-to-end: alias
+  resolves to literal, unresolved falls through to `var()`,
   within-doc `{styles.X}` wins, missing-tokens-arg keeps fallback).
-- `tests/php/run-tokens-tests.php` 13/13 (PHP discovery + merge).
-
-Worked example in spec §9 not yet verified runnable — track as a
-post-tag triage item.
+- `tests/runtime/spec-worked-example.test.mjs` — pins the spec §9.1
+  worked example as runnable: tokens.json brand → admin.json `styles`
+  fans out, single-edit re-brand propagates to all consumer slots.
+- `tests/php/run-tokens-tests.php` (PHP discovery + merge).
 
 ## Schemas + manifests
 
