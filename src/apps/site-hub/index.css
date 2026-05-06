@@ -16,6 +16,10 @@
 	flex-shrink: 0;
 }
 
+.wp-admin-shell-site-hub__icon-container.has-transparent-background .wp-admin-shell-site-hub__icon-button {
+	background: transparent;
+}
+
 .wp-admin-shell-site-hub__icon-button {
 	position: relative;
 	height: 64px;
@@ -100,7 +104,12 @@
 	opacity: 0;
 	position: absolute;
 	right: 0;
-	transition: opacity 0.1s linear;
+}
+
+@media not (prefers-reduced-motion) {
+	.wp-admin-shell-site-hub__title :is(button, a)::after {
+		transition: opacity 0.1s linear;
+	}
 }
 
 .wp-admin-shell-site-hub__title :is(button, a):hover::after,
