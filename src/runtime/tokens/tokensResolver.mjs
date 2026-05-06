@@ -132,7 +132,10 @@ export function resolveAlias( flat, aliasPath ) {
  * DTCG 2025.10 — covers the leaf and lightly-composite types apps
  * commonly consume):
  *
- *   color      — pass through (string)
+ *   color      — { colorSpace, components, alpha? } → "#rrggbb" /
+ *                "rgb(r g b / a)" for sRGB, "color(<space> c1 c2 c3)"
+ *                otherwise. Bare strings ("#3858e9", "rgb(...)") still
+ *                pass through for theme/site overrides not yet migrated.
  *   dimension  — { value, unit } → "1px"
  *   number     — as-is, stringified
  *   fontWeight — 400 / "bold" / "regular" → "400"
@@ -160,6 +163,11 @@ export function coerce( value, type ) {
 	}
 
 	switch ( type ) {
+		case 'color':
+			if ( Array.isArray( value.components ) ) {
+				return colorToCss( value );
+			}
+			break;
 		case 'dimension':
 		case 'duration':
 			if ( 'value' in value && 'unit' in value ) {
@@ -179,7 +187,7 @@ export function coerce( value, type ) {
 		case 'border':
 			if ( value.width && value.color ) {
 				const style = value.style || 'solid';
-				return `${ resolveSubValue( value.width ) } ${ style } ${ value.color }`;
+				return `${ resolveSubValue( value.width ) } ${ style } ${ resolveSubValue( value.color ) }`;
 			}
 			break;
 		case 'shadow':
@@ -225,7 +233,48 @@ function resolveSubValue( v ) {
 	if ( v && typeof v === 'object' && 'value' in v && 'unit' in v ) {
 		return `${ v.value }${ v.unit }`;
 	}
+	if ( v && typeof v === 'object' && Array.isArray( v.components ) ) {
+		return colorToCss( v );
+	}
 	return String( v );
+}
+
+/**
+ * DTCG color $value → CSS string. sRGB with alpha=1 emits hex (compact,
+ * matches authoring habits); sRGB with alpha<1 uses modern `rgb(r g b / a)`
+ * syntax; non-sRGB color spaces fall through to CSS Color 4 `color()`
+ * (browser support: 2023+).
+ *
+ * Components are 0–1 floats per spec. `alpha` defaults to 1.
+ */
+function colorToCss( value ) {
+	const space      = value.colorSpace || 'srgb';
+	const components = value.components;
+	const alpha      = typeof value.alpha === 'number' ? value.alpha : 1;
+
+	if ( space === 'srgb' && components.length === 3 ) {
+		const [ r, g, b ] = components.map( ( c ) => Math.round( clamp01( c ) * 255 ) );
+		if ( alpha >= 1 ) {
+			return `#${ hex2( r ) }${ hex2( g ) }${ hex2( b ) }`;
+		}
+		return `rgb(${ r } ${ g } ${ b } / ${ +alpha.toFixed( 4 ) })`;
+	}
+
+	const channels = components.map( ( c ) => +Number( c ).toFixed( 4 ) ).join( ' ' );
+	if ( alpha >= 1 ) {
+		return `color(${ space } ${ channels })`;
+	}
+	return `color(${ space } ${ channels } / ${ +alpha.toFixed( 4 ) })`;
+}
+
+function clamp01( n ) {
+	if ( n < 0 ) return 0;
+	if ( n > 1 ) return 1;
+	return n;
+}
+
+function hex2( n ) {
+	return n.toString( 16 ).padStart( 2, '0' );
 }
 
 function quoteFamily( name ) {

@@ -51,7 +51,7 @@ a baseline laptop with throttling. Re-run before tagging.
 Token compilation gains a tokens.json layer: `flattenTokens` walks the
 DTCG tree once at mount, the result feeds `compileStyles.resolveValue`
 through a flat map. Cost is bounded by the size of the merged tokens
-tree (~150 leaves in the bundled `core-tokens.json`).
+tree (~150 leaves in the bundled `core.tokens.json`).
 
 **Pre-mount FOUC.** Same as v1 — tokens emit from JS at kernel mount.
 SSR token emission remains a future polish item.
@@ -156,7 +156,7 @@ both via in-shell link + browser back-button. Re-run before tagging.
 
 PHP `WP_Admin_Shell_Tokens` discovers four origins (site option > theme
 `tokens.json` > `wp_admin_shell_plugin_tokens` filter > shell
-`core-tokens.json`). Defensive flush hooks wired:
+`core.tokens.json`). Defensive flush hooks wired:
 `update_option_wp_admin_shell_site_tokens`, `switch_theme`,
 `activated_plugin`, `deactivated_plugin`.
 
@@ -188,7 +188,7 @@ post-tag triage item.
 - 6 bundled shells under `admin-v2.json`.
 - 19 bundled `app.json` manifests under `admin-app-v2.json`.
 - 2 bundled `engine.json` manifests under `admin-engine-v2.json`.
-- `core-tokens.json` under `tokens-v1.json`.
+- `core.tokens.json` under `tokens-v1.json`.
 - Plus positive + negative fixtures under each.
 
 53/53.

@@ -5,7 +5,7 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php`
  *
  * Coverage:
- *   - Core baseline (`core-tokens.json`) loads
+ *   - Core baseline (`core.tokens.json`) loads
  *   - `wp_admin_shell_plugin_tokens` filter contributes plugin tokens
  *   - `wp_admin_shell_site_tokens` option contributes site tokens
  *   - Theme `tokens.json` contributes theme tokens (skipped if no theme)
@@ -52,7 +52,7 @@ function wpas_tokens_reset() {
 	WP_Admin_Shell_Tokens::flush();
 }
 
-echo "\n— core-tokens.json baseline —\n";
+echo "\n— core.tokens.json baseline —\n";
 {
 	wpas_tokens_reset();
 	$tokens = WP_Admin_Shell_Tokens::resolve();

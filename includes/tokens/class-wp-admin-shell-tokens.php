@@ -9,7 +9,7 @@
  *   1. Site origin    — `wp_admin_shell_site_tokens` option (highest)
  *   2. Theme origin   — `<stylesheet>/tokens.json`
  *   3. Plugin origin  — `wp_admin_shell_plugin_tokens` filter (extension point)
- *   4. Core baseline  — `core-tokens.json` shipped with this plugin (lowest)
+ *   4. Core baseline  — `core.tokens.json` shipped with this plugin (lowest)
  *
  * Merge semantics match the admin.json cascade (`WP_Admin_Shell_Merge`):
  * scalar replace, object deep-merge. The DTCG `$value` / `$type`
@@ -72,7 +72,7 @@ class WP_Admin_Shell_Tokens {
 	/* ───────────── origin loaders ───────────── */
 
 	private static function load_core() {
-		$path = WP_ADMIN_SHELL_PATH . 'core-tokens.json';
+		$path = WP_ADMIN_SHELL_PATH . 'core.tokens.json';
 		return self::read_json_file( $path );
 	}
 

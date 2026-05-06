@@ -8,8 +8,8 @@
   "additionalProperties": true,
 
   "properties": {
-    "$schema":      { "type": "string" },
-    "$type":        { "type": "string" },
-    "description":  { "type": "string" }
+    "$schema":       { "type": "string" },
+    "$type":         { "type": "string" },
+    "$description":  { "type": "string" }
   }
 }

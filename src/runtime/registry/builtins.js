@@ -35,6 +35,7 @@ import CommandPaletteApp from '../apps/CommandPaletteApp';
 import PreviewPaneApp from '../apps/PreviewPaneApp';
 import { NoticesBannerApp, NoticesSnackbarApp } from '../apps/NoticesApp';
 import AppearanceApp from '../apps/AppearanceApp';
+import UserMenuApp from '../apps/UserMenuApp';
 
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
@@ -59,6 +60,7 @@ const APP_COMPONENTS = {
 	'core:notices-banner':   NoticesBannerApp,
 	'core:notices-snackbar': NoticesSnackbarApp,
 	'core:appearance':       AppearanceApp,
+	'core:user-menu':        UserMenuApp,
 };
 
 const NON_ROUTABLE_APPS = new Set( [
@@ -69,6 +71,7 @@ const NON_ROUTABLE_APPS = new Set( [
 	'core:preview-pane',
 	'core:notices-banner',
 	'core:notices-snackbar',
+	'core:user-menu',
 ] );
 
 export function registerBuiltins( registry ) {

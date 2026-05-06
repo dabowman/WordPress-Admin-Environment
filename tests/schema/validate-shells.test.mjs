@@ -36,7 +36,7 @@ const APP_MANIFEST_DIRS = [
 const ENGINE_MANIFEST_DIRS = [
 	resolve( projectRoot, 'src/runtime/engines' ),
 ];
-const CORE_TOKENS_PATH = resolve( projectRoot, 'core-tokens.json' );
+const CORE_TOKENS_PATH = resolve( projectRoot, 'core.tokens.json' );
 
 function listManifests( bases, filename ) {
 	const out = [];
@@ -248,12 +248,12 @@ console.log( '\n— tokens-v1.json —' );
 {
 	const validate = compileSchema( 'tokens-v1.json' );
 
-	console.log( '\n  Bundled core-tokens.json:' );
+	console.log( '\n  Bundled core.tokens.json:' );
 	if ( existsSync( CORE_TOKENS_PATH ) ) {
 		const doc   = readJson( CORE_TOKENS_PATH );
 		const valid = validate( doc );
 		ok(
-			'core-tokens.json',
+			'core.tokens.json',
 			valid,
 			valid ? '' : formatErrors( validate.errors )
 		);

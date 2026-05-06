@@ -1022,6 +1022,44 @@ body {
 }
 
 /* ==========================================================================
+   core:user-menu
+   ========================================================================== */
+
+.wp-admin-shell-user-menu {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-user-menu .components-dropdown {
+	display: inline-flex;
+}
+
+.wp-admin-shell-user-menu__toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+}
+
+.wp-admin-shell-user-menu__toggle:hover,
+.wp-admin-shell-user-menu__toggle:focus-visible {
+	background: rgba(255, 255, 255, 0.08);
+	outline: none;
+}
+
+.wp-admin-shell-user-menu__avatar {
+	display: block;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+
+/* ==========================================================================
    core:single-pane engine
    ========================================================================== */
 

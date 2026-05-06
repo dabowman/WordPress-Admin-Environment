@@ -249,6 +249,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'user'          => array(
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
+			'profileUrl'  => '#/profile',
+			'logoutUrl'   => wp_logout_url( admin_url( 'admin.php?page=wp-admin-shell' ) ),
 		),
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()

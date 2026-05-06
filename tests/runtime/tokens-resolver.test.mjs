@@ -126,6 +126,55 @@ console.log( '\n— DTCG type coercion —' );
 	eq( 'shadow composite',             coerce( { offsetX: '0', offsetY: '2px', blur: '4px', spread: '0', color: 'rgba(0,0,0,0.1)' }, 'shadow' ), '0 2px 4px 0 rgba(0,0,0,0.1)' );
 }
 
+console.log( '\n— DTCG canonical color $value —' );
+{
+	eq(
+		'sRGB components → hex (alpha implicit)',
+		coerce( { colorSpace: 'srgb', components: [ 0.2196, 0.3451, 0.9137 ] }, 'color' ),
+		'#3858e9'
+	);
+	eq(
+		'sRGB components → hex (white)',
+		coerce( { colorSpace: 'srgb', components: [ 1, 1, 1 ] }, 'color' ),
+		'#ffffff'
+	);
+	eq(
+		'sRGB out-of-gamut clamps to 0..1',
+		coerce( { colorSpace: 'srgb', components: [ -0.5, 1.5, 0.5 ] }, 'color' ),
+		'#00ff80'
+	);
+	eq(
+		'sRGB w/ alpha < 1 → rgb() modern syntax',
+		coerce( { colorSpace: 'srgb', components: [ 0.2196, 0.3451, 0.9137 ], alpha: 0.5 }, 'color' ),
+		'rgb(56 88 233 / 0.5)'
+	);
+	eq(
+		'non-sRGB → color() function',
+		coerce( { colorSpace: 'display-p3', components: [ 1, 0, 0 ] }, 'color' ),
+		'color(display-p3 1 0 0)'
+	);
+	eq(
+		'border w/ canonical color sub-value',
+		coerce(
+			{ width: '1px', style: 'solid', color: { colorSpace: 'srgb', components: [ 0.8, 0.094, 0.094 ] } },
+			'border'
+		),
+		'1px solid #cc1818'
+	);
+}
+
+console.log( '\n— canonical color flattens through tree —' );
+{
+	const tree = {
+		color: {
+			$type: 'color',
+			brand: { 500: { $value: { colorSpace: 'srgb', components: [ 0.2196, 0.3451, 0.9137 ] } } },
+		},
+	};
+	const flat = flattenTokens( tree );
+	eq( 'flatten emits hex from canonical color', flat[ 'color.brand.500' ], '#3858e9' );
+}
+
 console.log( '\n— hardening (V2.M5 review) —' );
 {
 	// $value: undefined no longer treated as a DTCG leaf.

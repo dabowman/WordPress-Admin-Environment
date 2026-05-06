@@ -13,13 +13,18 @@
 			"regions": {
 				"end": {
 					"role": "region",
-					"app": "core:toolbar-actions",
-					"config": {
-						"right": [
-							{ "command": "core/new-post", "icon": "plus", "label": "New" },
-							{ "href": "#/profile", "icon": "user", "label": "Profile" },
-							{ "href": "/", "icon": "external", "label": "View Site", "external": true }
-						]
+					"regions": {
+						"actions": {
+							"role": "region",
+							"app": "core:toolbar-actions",
+							"config": {
+								"right": [
+									{ "command": "core/new-post", "icon": "plus", "label": "New" },
+									{ "href": "/", "icon": "external", "label": "View Site", "external": true }
+								]
+							}
+						},
+						"user-menu": { "role": "region", "app": "core:user-menu" }
 					}
 				}
 			}
