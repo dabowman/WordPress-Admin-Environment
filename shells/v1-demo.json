@@ -90,8 +90,7 @@
 	"styles": {
 		"theme": {
 			"color": {
-				"primary": "#7c3aed",
-				"bg": "#fefefe"
+				"primary": "#7c3aed"
 			}
 		}
 	}

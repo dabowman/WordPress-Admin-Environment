@@ -70,9 +70,35 @@
  */
 
 /**
+ * Optional ThemeProvider supplied by an engine. When present, the kernel
+ * mounts this provider around the engine's render tree instead of the
+ * platform-default (WPDS-backed) provider. Engines can use this to ship
+ * an entirely different design system (Material, Tailwind tokens, brand-
+ * locked palette, etc.) without touching kernel code.
+ *
+ * Contract:
+ *   - Children must be rendered inside a wrapper carrying
+ *     `data-wpds-theme-provider-id={id}` (or an equivalent attribute the
+ *     engine declares) so shell-level scoped detail CSS can target them.
+ *   - The `density` prop must be honored — typically by setting
+ *     `data-wpds-density={density}` on the wrapper.
+ *   - Tier-3 slot overrides + chrome → WPDS bridge + region/app scoped
+ *     overrides are emitted as a sibling `<style>` block by the kernel,
+ *     scoped to the wrapper id. Engines do NOT need to reimplement them.
+ *
+ * @typedef {Object} EngineThemeProviderProps
+ * @property {boolean} isRoot
+ * @property {Object}  styles
+ * @property {Object}  tokens
+ * @property {string}  [density]
+ * @property {*}       children
+ */
+
+/**
  * @typedef {SourceBase & {
  *   kind: 'engine',
- *   Component: (props: EngineSourceProps) => any
+ *   Component: (props: EngineSourceProps) => any,
+ *   ThemeProvider?: (props: EngineThemeProviderProps) => any
  * }} EngineSource
  */
 

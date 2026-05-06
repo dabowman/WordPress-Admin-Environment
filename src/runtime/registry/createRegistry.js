@@ -28,6 +28,15 @@ export function createRegistry() {
 				`createRegistry: duplicate source id "${ source.id }"`
 			);
 		}
+		if (
+			source.kind === 'engine' &&
+			source.ThemeProvider !== undefined &&
+			typeof source.ThemeProvider !== 'function'
+		) {
+			throw new Error(
+				`createRegistry: engine "${ source.id }" ThemeProvider must be a React component`
+			);
+		}
 		sources.set( source.id, source );
 		return source;
 	}

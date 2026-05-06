@@ -44,11 +44,11 @@
       "role": "banner",
       "platform": { "persists-across-navigation": true },
       "default-style": {
-        "block-size":    "48px",
         "inline-size":   "100%",
         "background":    "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong))",
         "color":         "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
-        "padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-md))"
+        "padding-block":  "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm))",
+        "padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
       },
       "regions": {
         "start":  { "role": "region" },
@@ -96,5 +96,11 @@
   "default-arrangement": "wp-chrome",
 
   "script": "wp-admin-shell",
-  "style":  "wp-admin-shell"
+  "style":  "wp-admin-shell",
+
+  "default-styles": {
+    "theme": {
+      "density": "default"
+    }
+  }
 }

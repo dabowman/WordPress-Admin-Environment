@@ -30,10 +30,9 @@ export function resolveDensity( styles ) {
 }
 
 /**
- * Strip the data-wpds-density attribute. Companion to `clearTokens()`
- * for the v2 in-process shell re-mount path. v1 page-reload makes
- * this redundant; v2 (issue #28) needs it before applying the next
- * shell's density.
+ * Strip the data-wpds-density attribute. For the v2 in-process shell
+ * re-mount path. v1 page-reload makes this redundant; v2 (issue #28)
+ * needs it before applying the next shell's density.
  */
 export function clearDensity( element ) {
 	if ( ! element ) {

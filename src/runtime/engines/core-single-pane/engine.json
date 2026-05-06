@@ -100,5 +100,11 @@
   "default-arrangement": "single-pane",
 
   "script": "wp-admin-shell",
-  "style":  "wp-admin-shell"
+  "style":  "wp-admin-shell",
+
+  "default-styles": {
+    "theme": {
+      "density": "compact"
+    }
+  }
 }

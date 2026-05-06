@@ -5,7 +5,7 @@ import { registerBuiltins } from './registry/builtins';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from '@wordpress/components';
-import { ShellThemeProvider } from './styles/ShellThemeProvider';
+import { ThemeProviderHost } from './styles/ThemeProviderHost';
 import { resolveDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
@@ -14,6 +14,37 @@ import { resolveRegion } from './regions/resolveRegion.mjs';
 import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
 import { NavigationGuard } from './dirty-state/NavigationGuard';
 import { BindingsConsumer } from './bindings/BindingsConsumer';
+
+/**
+ * Deep-merge plain-object trees with `over` winning on overlapping keys.
+ * Used to fold engine `default-styles` UNDER admin.json `styles` when
+ * the kernel is mounted with raw config (tests, Storybook). The PHP
+ * resolver normally does this server-side; the JS path is defensive.
+ *
+ * Arrays are replaced wholesale (no positional merge) — matches the
+ * PHP merge's behavior for indexed arrays.
+ */
+function deepMergeUnder( over, under ) {
+	if ( under === null || under === undefined ) {
+		return over;
+	}
+	if ( over === null || over === undefined ) {
+		return under;
+	}
+	if (
+		typeof over !== 'object' ||
+		typeof under !== 'object' ||
+		Array.isArray( over ) ||
+		Array.isArray( under )
+	) {
+		return over;
+	}
+	const out = { ...under };
+	for ( const [ key, value ] of Object.entries( over ) ) {
+		out[ key ] = deepMergeUnder( value, under[ key ] );
+	}
+	return out;
+}
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -44,22 +75,33 @@ export function kernel( config ) {
 	const registry = createRegistry();
 	registerBuiltins( registry );
 
-	// Token cascade: `<ShellThemeProvider>` renders a scoped `<style>`
-	// + wrapper `<div data-wpds-theme-provider-id>` so shell tokens
-	// override `:root` defaults via DOM-tree cascade rather than via
-	// global pollution. `<@wordpress/theme>`'s ThemeProvider is the
-	// canonical implementation; we mirror its public contract because
-	// the package gates the component behind a private API allowlist.
-	const shellStyles = config.styles || {};
+	// Token cascade: `<ThemeProviderHost>` mounts the active engine's
+	// `ThemeProvider` (or the WPDS-backed default when the engine
+	// declines to ship one), wraps children in a scoped
+	// `<div data-wpds-theme-provider-id>`, and emits tier-3 slot
+	// overrides + chrome → WPDS bridge + region/app scoped overrides as
+	// a sibling `<style>` block. Engines pluggable here; kernel agnostic.
 	const shellTokens =
 		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {};
-	const density = resolveDensity( shellStyles );
 
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
 	const engineId = config.engine || 'core:default';
 	const engineSource = registry.get( engineId, 'engine' );
+
+	// Engine `default-styles` deep-merged UNDER admin.json `styles`.
+	// PHP resolver already does this in `WP_Admin_Shell_Resolver::engine_origin`,
+	// so the kernel is normally a no-op. Defensive: covers tests and
+	// Storybook stories that mount the kernel with raw fixture config
+	// bypassing the PHP resolver.
+	const engineManifest = getEngineManifest( engineId );
+	const engineDefaults =
+		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
+	const shellStyles = engineDefaults
+		? deepMergeUnder( config.styles || {}, engineDefaults )
+		: ( config.styles || {} );
+	const density = resolveDensity( shellStyles );
 
 	if ( ! engineSource ) {
 		return (
@@ -76,7 +118,6 @@ export function kernel( config ) {
 	// overrides and recurses into nested children. `app` xor
 	// `routing.route-key` is enforced post-merge: violations log a
 	// `console.warn`; sanitization drops `app` so URL routing wins.
-	const engineManifest = getEngineManifest( engineId );
 	const regionsMap = config.regions || {};
 	const regions = {};
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
@@ -101,10 +142,11 @@ export function kernel( config ) {
 	const Engine = engineSource.Component;
 
 	return (
-		<KernelProvider value={ { registry, config } }>
+		<KernelProvider value={ { registry, config, engineSource } }>
 			<SlotFillProvider>
 				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
-					<ShellThemeProvider
+					<ThemeProviderHost
+						engineSource={ engineSource }
 						isRoot
 						styles={ shellStyles }
 						tokens={ shellTokens }
@@ -116,7 +158,7 @@ export function kernel( config ) {
 							config={ config }
 							regions={ regions }
 						/>
-					</ShellThemeProvider>
+					</ThemeProviderHost>
 				</RouterProvider>
 			</SlotFillProvider>
 		</KernelProvider>

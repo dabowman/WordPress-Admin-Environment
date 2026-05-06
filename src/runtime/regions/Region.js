@@ -33,7 +33,7 @@ import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { getPlatformServices } from './platformServices.mjs';
 import { registerTrigger } from '../bindings/triggerStore.mjs';
-import { ScopedThemeProvider } from '../styles/ShellThemeProvider';
+import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
 
 export function Region( { region } ) {
 	if ( ! region ) {
@@ -50,7 +50,7 @@ export function Region( { region } ) {
 }
 
 /**
- * Wraps a region in a nested `<ShellThemeProvider>` when the resolved
+ * Wraps a region in a nested `<ScopedThemeProvider>` when the resolved
  * admin.json declares `styles.regions[regionId]` (theme seeds OR direct
  * slot overrides). Zero-cost when the region has no styles authored —
  * just renders children.

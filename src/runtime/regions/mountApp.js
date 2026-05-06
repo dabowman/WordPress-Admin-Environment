@@ -14,7 +14,7 @@
  */
 import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
-import { ScopedThemeProvider } from '../styles/ShellThemeProvider';
+import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const { registry, config } = useKernel();

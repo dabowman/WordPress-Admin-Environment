@@ -12,9 +12,8 @@
 .wp-admin-shell-single-pane__appbar {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	height: var(--wp-admin-shell--chrome--toolbar--height, 48px);
-	padding: 0 12px;
+	gap: var(--wpds-dimension-gap-sm);
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
 	background: var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong));
 	color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
 	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));

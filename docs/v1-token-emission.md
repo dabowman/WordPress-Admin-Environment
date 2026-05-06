@@ -1,6 +1,15 @@
 # v1 token emission reference
 
-What lands in `<style id="wp-admin-shell-tokens">` at kernel mount, and how authors target it.
+> **STATUS: SUPERSEDED (2026-05-06).** v1 emitted into a single
+> `<style id="wp-admin-shell-tokens">` tag via `emitTokens.js` +
+> `compatBridge.js`. Both files were deleted in the v2 ThemeProvider
+> overhaul. v2 emission is via `<ThemeProviderHost>` (real
+> `@wordpress/theme.ThemeProvider` + sibling `<style data-wpds-shell-detail>`
+> for tier-3 / chrome-bridge / region-app scoped overrides). The
+> compat-alias family is now emitted by `@wordpress/theme` itself
+> (`use-theme-provider-styles.ts:120-129`). For the current model see
+> `docs/wp-admin-shell-design-spec.md` §9 + the "Theming model" section
+> of `CLAUDE.md`. This file is retained for archaeology only.
 
 ## Pipeline
 
@@ -55,7 +64,8 @@ Slot path joined by `--`, prefixed `--wp-admin-shell--chrome--`. Covers shell-on
 | `toolbar.background`           | `--wp-admin-shell--chrome--toolbar--background` |
 | `toolbar.foreground`           | `--wp-admin-shell--chrome--toolbar--foreground` |
 | `toolbar.border`               | `--wp-admin-shell--chrome--toolbar--border` |
-| `toolbar.height`               | `--wp-admin-shell--chrome--toolbar--height` |
+| `toolbar.padding-block`        | `--wp-admin-shell--chrome--toolbar--padding-block` |
+| `toolbar.padding-inline`       | `--wp-admin-shell--chrome--toolbar--padding-inline` |
 | `site-hub.background`          | `--wp-admin-shell--chrome--site-hub--background` |
 | `site-hub.foreground`          | `--wp-admin-shell--chrome--site-hub--foreground` |
 | `site-hub.icon-size`           | `--wp-admin-shell--chrome--site-hub--icon-size` |
@@ -153,7 +163,8 @@ With `styles.branding.accentColor = '#3858e9'` (no further overrides), the v0 no
 	--wp-admin-shell--chrome--toolbar--background:        #1e1e1e;
 	--wp-admin-shell--chrome--toolbar--foreground:        #e0e0e0;
 	--wp-admin-shell--chrome--toolbar--border:            #2f2f2f;
-	--wp-admin-shell--chrome--toolbar--height:            48px;
+	--wp-admin-shell--chrome--toolbar--padding-block:     8px;
+	--wp-admin-shell--chrome--toolbar--padding-inline:    16px;
 	--wp-admin-shell--chrome--site-hub--background:       #1e1e1e;
 	--wp-admin-shell--chrome--site-hub--foreground:       #ffffff;
 	--wp-admin-shell--chrome--site-hub--icon-size:        32px;

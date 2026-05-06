@@ -38,7 +38,7 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Shell_Resolver {
 
-	const ORIGINS_ORDER = array( 'core', 'plugin', 'site', 'role', 'user' );
+	const ORIGINS_ORDER = array( 'core', 'engine', 'plugin', 'site', 'role', 'user' );
 
 	/** @var array Per-request resolved-doc memo, keyed by cache key. */
 	private static $request_memo = array();
@@ -90,7 +90,7 @@ class WP_Admin_Shell_Resolver {
 	 *
 	 * @param array $origins  [ 'core' => array, 'plugin' => array, ... ]
 	 */
-	const TRUSTED_ORIGINS  = array( 'core', 'plugin' );
+	const TRUSTED_ORIGINS  = array( 'core', 'engine', 'plugin' );
 	const CONSUMER_ORIGINS = array( 'site', 'role', 'user' );
 
 	public static function resolve_with( $origins ) {
@@ -166,11 +166,51 @@ class WP_Admin_Shell_Resolver {
 
 		return array(
 			'core'   => $core_doc,
+			'engine' => self::engine_origin( $plugin_doc ),
 			'plugin' => $plugin_doc,
 			'site'   => is_array( get_option( 'wp_admin_shell_site_config', array() ) ) ? get_option( 'wp_admin_shell_site_config', array() ) : array(),
 			'role'   => self::role_origin(),
 			'user'   => self::user_origin(),
 		);
+	}
+
+	/**
+	 * Engine origin — synthetic doc carrying the active engine's
+	 * `default-styles` manifest block. Sits between `core` (empty
+	 * baseline) and `plugin` (admin.json) in the cascade so the engine's
+	 * visual identity ships with the engine but admin.json wins on every
+	 * overlapping key.
+	 *
+	 * Returns an empty array when:
+	 *   - The plugin doc declares no engine (legacy v0 shells default to
+	 *     `core:default` at the JS layer; PHP doesn't infer here).
+	 *   - The engine manifest registry is unavailable (e.g. tests calling
+	 *     `resolve_with` directly with hand-rolled origin arrays).
+	 *   - The engine manifest declares no `default-styles`.
+	 *
+	 * @param array $plugin_doc  The active shell admin.json (post-load).
+	 * @return array
+	 */
+	private static function engine_origin( $plugin_doc ) {
+		if ( ! is_array( $plugin_doc ) ) {
+			return array();
+		}
+		$engine_id = $plugin_doc['engine'] ?? null;
+		if ( ! is_string( $engine_id ) || $engine_id === '' ) {
+			return array();
+		}
+		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+			return array();
+		}
+		$manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $engine_id );
+		if ( ! is_array( $manifest ) ) {
+			return array();
+		}
+		$defaults = $manifest['default-styles'] ?? null;
+		if ( ! is_array( $defaults ) || empty( $defaults ) ) {
+			return array();
+		}
+		return array( 'styles' => $defaults );
 	}
 
 	private static function role_origin() {

@@ -84,6 +84,11 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]*$",
       "description": "Optional WordPress style handle for this engine's CSS. Engines may rely entirely on WPDS tokens and the chrome extension namespace for styling, in which case this is omitted. Engines with their own structural CSS (grid templates, animation, layout-specific pseudo-elements) declare a style handle here."
+    },
+
+    "default-styles": {
+      "$ref": "#/$defs/defaultStyles",
+      "description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
     }
   },
 
@@ -160,6 +165,49 @@
           },
           "additionalProperties": false,
           "description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When admin.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. admin.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
+        }
+      }
+    },
+
+    "defaultStyles": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Engine-supplied seed defaults for the shell `styles` tree. Same shape as the admin.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER admin.json so individual shells override anything they care to customize.",
+      "properties": {
+        "theme": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after admin.json overrides apply."
+        },
+        "chrome": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as admin.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
+        },
+        "color": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Direct WPDS slot overrides — top-level color tokens. Layered onto the seed-derived ThemeProvider output via the host's sibling `<style>` block."
+        },
+        "border": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Direct WPDS slot overrides — border tokens."
+        },
+        "dimension": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Direct WPDS slot overrides — dimension tokens."
+        },
+        "elevation": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Direct WPDS slot overrides — elevation tokens."
+        },
+        "font": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Direct WPDS slot overrides — font tokens."
         }
       }
     },

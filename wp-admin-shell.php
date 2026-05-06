@@ -248,6 +248,17 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		true
 	);
 
+	// WPDS baseline tokens — `:root { --wpds-*: ... }` for all 140 slots.
+	// Copied from `@wordpress/theme/src/prebuilt/css/design-tokens.css` by
+	// webpack's CopyPlugin. Loaded first so engine + app CSS rules find a
+	// defined value when they reference any `--wpds-*` slot.
+	wp_enqueue_style(
+		'wp-admin-shell-wpds-tokens',
+		WP_ADMIN_SHELL_URL . 'build/wpds-tokens.css',
+		array(),
+		$asset['version']
+	);
+
 	wp_enqueue_style(
 		'wp-admin-shell-dataviews',
 		WP_ADMIN_SHELL_URL . 'build/dataviews.css',
@@ -263,7 +274,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',
-		array( 'wp-components', 'wp-admin-shell-dataviews' ),
+		array( 'wp-admin-shell-wpds-tokens', 'wp-components', 'wp-admin-shell-dataviews' ),
 		$asset['version']
 	);
 

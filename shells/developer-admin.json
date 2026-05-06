@@ -134,11 +134,13 @@
 
 	"styles": {
 		"theme": {
-			"color":   { "primary": "#fff000" },
+			"color": {
+				"bg": "#1e1e1e"
+			},
 			"density": "compact"
 		},
 		"regions": {
-			"sidebar": {
+			"content": {
 				"theme": { "color": { "bg": "#ffffff" } }
 			}
 		}
