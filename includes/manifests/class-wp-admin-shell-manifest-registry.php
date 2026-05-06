@@ -110,6 +110,66 @@ class WP_Admin_Shell_Manifest_Registry {
 	}
 
 	/**
+	 * Register a region template against an already-registered engine.
+	 *
+	 * Plugin extension point per spec §13 #4: extends an existing
+	 * engine's template catalog without forking the engine. The
+	 * template body matches the structure shipped inside an engine
+	 * manifest's `templates[]` map (`role`, `platform`, `default-style`,
+	 * optional nested `regions`).
+	 *
+	 * Template ids are namespaced: `core:*` is reserved for shell-shipped
+	 * templates, plugins use `plugin:{slug}/{name}`. The shell does not
+	 * enforce that constraint here — the engine's renderer is what
+	 * resolves a template id, so id conflicts surface as "template not
+	 * found" rather than registration errors. Authors should namespace
+	 * to avoid clashes with future core templates.
+	 *
+	 * @param string $engine_id  Engine to extend.
+	 * @param string $template_id Template id (e.g. `plugin:foo/popover`).
+	 * @param array  $template   Template body — at minimum `role`.
+	 *
+	 * @return string|WP_Error template id on success, WP_Error otherwise.
+	 */
+	public function register_template( $engine_id, $template_id, $template ) {
+		if ( ! is_string( $engine_id ) || ! isset( $this->engines[ $engine_id ] ) ) {
+			$msg = "register_template: unknown engine '$engine_id'";
+			$this->dev_warn( $msg );
+			return new WP_Error( 'wp_admin_shell_unknown_engine', $msg );
+		}
+		if (
+			! is_string( $template_id )
+			|| ! preg_match( '#^[a-z][a-z0-9]*(?:[:/-][a-z][a-z0-9-]*)*$#', $template_id )
+		) {
+			$msg = "register_template: invalid template id '$template_id'";
+			$this->dev_warn( $msg );
+			return new WP_Error( 'wp_admin_shell_invalid_template_id', $msg );
+		}
+		if ( ! is_array( $template ) ) {
+			$msg = "register_template: template body must be an array for '$template_id'";
+			$this->dev_warn( $msg );
+			return new WP_Error( 'wp_admin_shell_invalid_template_body', $msg );
+		}
+		if ( ! is_string( $template['role'] ?? null ) || $template['role'] === '' ) {
+			$msg = "register_template: template '$template_id' missing required `role`";
+			$this->dev_warn( $msg );
+			return new WP_Error( 'wp_admin_shell_invalid_template_body', $msg );
+		}
+
+		if ( ! isset( $this->engines[ $engine_id ]['templates'] ) ) {
+			$this->engines[ $engine_id ]['templates'] = array();
+		}
+		if ( isset( $this->engines[ $engine_id ]['templates'][ $template_id ] ) ) {
+			$msg = "register_template: duplicate id '$template_id' on engine '$engine_id' (first registration wins)";
+			$this->dev_warn( $msg );
+			return new WP_Error( 'wp_admin_shell_duplicate_template', $msg );
+		}
+
+		$this->engines[ $engine_id ]['templates'][ $template_id ] = $template;
+		return $template_id;
+	}
+
+	/**
 	 * @return array<string, array> Map of id => manifest.
 	 */
 	public function list_apps() {

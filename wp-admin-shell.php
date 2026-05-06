@@ -108,6 +108,26 @@ function wp_admin_shell_register_engine( $manifest_or_path ) {
 }
 
 /**
+ * Register a region template against an existing engine. Plugin
+ * extension point per spec §13 #4 — adds a `templates[$template_id]`
+ * entry to the engine's manifest at runtime so admin.json regions can
+ * reference it via `template`. The engine must already be registered.
+ *
+ * @param string $engine_id  Engine id to extend.
+ * @param string $template_id Template id (use `plugin:{slug}/{name}`).
+ * @param array  $template   Template body; must declare at least `role`.
+ *
+ * @return string|WP_Error template id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_template( $engine_id, $template_id, $template ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_template(
+		$engine_id,
+		$template_id,
+		$template
+	);
+}
+
+/**
  * Manifest registration on init.
  *
  * Two phases at priority 8 (before main shell init at 10) so manifests

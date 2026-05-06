@@ -241,6 +241,71 @@ WPAS_Manifest_Test_Runner::assert_eq(
 	'wp-chrome'
 );
 
+echo "\n— register_template: plugin extension point (spec §13 #4) —\n";
+WP_Admin_Shell_Manifest_Registry::reset();
+$registry = WP_Admin_Shell_Manifest_Registry::instance();
+$registry->register_engine(
+	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-default/engine.json'
+);
+
+$ok = $registry->register_template(
+	'core:default',
+	'plugin:foo/popover',
+	array(
+		'role'          => 'dialog',
+		'platform'      => array( 'modal' => true, 'dismiss-on' => array( 'Escape' ) ),
+		'default-style' => array( 'inline-size' => '320px' ),
+	)
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'register_template returns the id on success',
+	$ok,
+	'plugin:foo/popover'
+);
+$engine = $registry->get_engine( 'core:default' );
+WPAS_Manifest_Test_Runner::assert_true(
+	'engine.templates now contains the new template',
+	isset( $engine['templates']['plugin:foo/popover'] )
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'plugin template body merged with role intact',
+	$engine['templates']['plugin:foo/popover']['role'] ?? null,
+	'dialog'
+);
+
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_template: unknown engine → WP_Error',
+	is_wp_error( $registry->register_template(
+		'core:not-an-engine',
+		'plugin:foo/x',
+		array( 'role' => 'region' )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_template: missing role → WP_Error',
+	is_wp_error( $registry->register_template(
+		'core:default',
+		'plugin:foo/no-role',
+		array( 'platform' => array() )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_template: invalid id → WP_Error',
+	is_wp_error( $registry->register_template(
+		'core:default',
+		'BadId!',
+		array( 'role' => 'region' )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_template: duplicate id → WP_Error (first wins)',
+	is_wp_error( $registry->register_template(
+		'core:default',
+		'plugin:foo/popover',
+		array( 'role' => 'region' )
+	) )
+);
+
 echo "\n— Resolver: app + engine + template references —\n";
 WP_Admin_Shell_Manifest_Registry::reset();
 $registry = WP_Admin_Shell_Manifest_Registry::instance();
