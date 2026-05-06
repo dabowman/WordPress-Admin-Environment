@@ -138,8 +138,15 @@ class WP_Admin_Shell_Resolver {
 		$shell_slug = $context['shell'] ?? self::active_shell_slug();
 		$plugin_dir = trailingslashit( WP_ADMIN_SHELL_PATH );
 
-		$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
-		$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
+		// Programmatic registrations win over file-based shells of the
+		// same slug (spec §13 #6). Falls through to disk when the slug
+		// is not registered programmatically.
+		if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $shell_slug ) ) {
+			$plugin_doc = WP_Admin_Shell_Shells::get( $shell_slug );
+		} else {
+			$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
+			$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
+		}
 
 		// Core origin is the empty baseline that guards against missing
 		// shells. When the plugin origin is a real shell with an engine

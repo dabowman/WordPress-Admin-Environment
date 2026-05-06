@@ -87,6 +87,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-mani
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-shells.php';
 
 /**
  * V2.M1 — Public manifest registration API.
@@ -125,6 +126,23 @@ function wp_admin_shell_register_template( $engine_id, $template_id, $template )
 		$template_id,
 		$template
 	);
+}
+
+/**
+ * Register a complete shell programmatically (spec §13 #6). Use when
+ * a shell's shape is computed at runtime (per role, per feature flag,
+ * etc.) rather than stored on disk under `shells/`.
+ *
+ * The registered shell participates in the same cascade as file
+ * shells: site/role/user origins still merge on top.
+ *
+ * @param string $slug      Unique slug.
+ * @param array  $admin_json Full admin.json document.
+ *
+ * @return string|WP_Error slug on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_shell( $slug, $admin_json ) {
+	return WP_Admin_Shell_Shells::register( $slug, $admin_json );
 }
 
 /**
@@ -328,6 +346,9 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
 	}
 	$path = WP_ADMIN_SHELL_PATH . 'shells/' . $sanitized . '.json';
 	if ( file_exists( $path ) ) {
+		return $sanitized;
+	}
+	if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $sanitized ) ) {
 		return $sanitized;
 	}
 
@@ -695,24 +716,39 @@ function wp_admin_shell_render_settings() {
 }
 
 /**
- * List available shell configurations from the shells/ directory.
+ * List available shell configurations from the shells/ directory plus
+ * any shells contributed via `wp_admin_shell_register_shell()`. When a
+ * programmatic registration shares a slug with a file-based shell, the
+ * programmatic version wins (mirrors resolver precedence).
  */
 function wp_admin_shell_get_available_shells() {
-	$shells = array();
-	$dir    = WP_ADMIN_SHELL_PATH . 'shells/';
+	$by_slug = array();
+	$dir     = WP_ADMIN_SHELL_PATH . 'shells/';
 
 	foreach ( glob( $dir . '*.json' ) ?: array() as $file ) {
 		$data = json_decode( file_get_contents( $file ), true );
 		if ( ! is_array( $data ) ) {
 			continue;
 		}
-		$shells[] = array(
-			'slug'           => basename( $file, '.json' ),
-			'title'          => $data['title'] ?? basename( $file, '.json' ),
+		$slug             = basename( $file, '.json' );
+		$by_slug[ $slug ] = array(
+			'slug'           => $slug,
+			'title'          => $data['title'] ?? $slug,
 			'description'    => $data['description'] ?? '',
-			'userSwitchable' => ! empty( $data['userSwitchable'] ),
+			'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
 		);
 	}
 
-	return $shells;
+	if ( class_exists( 'WP_Admin_Shell_Shells' ) ) {
+		foreach ( WP_Admin_Shell_Shells::all() as $slug => $data ) {
+			$by_slug[ $slug ] = array(
+				'slug'           => $slug,
+				'title'          => $data['title'] ?? $slug,
+				'description'    => $data['description'] ?? '',
+				'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+			);
+		}
+	}
+
+	return array_values( $by_slug );
 }

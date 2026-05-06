@@ -272,6 +272,69 @@ $T::assert_true( 'resolver: origin tags stripped',
 	json_encode( array_keys( $resolved ) )
 );
 
+// ── Programmatic shell registration (spec §13 #6) ──────────────────
+
+echo "\n— Programmatic shell registration —\n";
+
+require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-shell-shells.php';
+
+WP_Admin_Shell_Shells::reset();
+$slug = WP_Admin_Shell_Shells::register( 'computed-shell', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'title'   => 'Computed',
+	'regions' => array(
+		'content' => array( 'role' => 'main' ),
+	),
+) );
+$T::assert_eq( 'register_shell returns slug', $slug, 'computed-shell' );
+$T::assert_true( 'has() finds registered slug', WP_Admin_Shell_Shells::has( 'computed-shell' ) );
+$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Shell_Shells::all()['computed-shell'] ) );
+
+$bad = WP_Admin_Shell_Shells::register( '', array() );
+$T::assert_true( 'empty slug → WP_Error', is_wp_error( $bad ) );
+
+$bad = WP_Admin_Shell_Shells::register( 'no-doc', 'not an array' );
+$T::assert_true( 'non-array doc → WP_Error', is_wp_error( $bad ) );
+
+// Registration without a `name` field stamps the slug in.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Shells::register( 'auto-name', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'regions' => array( 'content' => array( 'role' => 'main' ) ),
+) );
+$T::assert_eq(
+	'register stamps slug into doc when name missing',
+	WP_Admin_Shell_Shells::get( 'auto-name' )['name'] ?? null,
+	'auto-name'
+);
+
+// Resolver picks programmatic over file-based when slug exists.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Shells::register( 'wp-admin-default', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'title'   => 'Programmatic Override',
+	'regions' => array( 'content' => array( 'role' => 'main' ) ),
+) );
+
+WP_Admin_Shell_Cache::flush();
+WP_Admin_Shell_Resolver::reset_request_memo();
+update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+$resolved = WP_Admin_Shell_Resolver::resolve();
+$T::assert_eq(
+	'resolver: programmatic shell wins over file-based same slug',
+	$resolved['title'] ?? null,
+	'Programmatic Override'
+);
+
+// Cleanup so subsequent tests get a clean slate.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Cache::flush();
+WP_Admin_Shell_Resolver::reset_request_memo();
+delete_option( 'wp_admin_shell_active_shell' );
+
 // ── Summary ─────────────────────────────────────────────────────────
 
 echo "\n— Summary —\n";
