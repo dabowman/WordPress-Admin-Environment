@@ -1,30 +1,32 @@
 import IframeApp from '../../apps/IframeApp';
 
 /**
- * core:site-editor — v1 ships an iframe-backed adapter pointing at
- * `site-editor.php`. Native mount of `@wordpress/edit-site` is a
- * defined v2 cut per plan §M4 risk mitigation. The four blocking
- * collisions are:
+ * core:site-editor — iframe-backed adapter pointing at `site-editor.php`.
  *
- *   1. Preferences-store namespace conflicts with the shell's prefs UI
- *      (lands as `core:appearance` in M5).
+ * Spec §15 names native `@wordpress/edit-site` mount as a v1 deliverable.
+ * v2.0.0-beta.1 ships iframe; native mount is deferred to a v2.x cut
+ * for these reasons:
+ *
+ *   1. Preferences-store collision with `core:appearance` — both write
+ *      `wp.data.dispatch('core/preferences')` namespaced state and need
+ *      a routing rule for which one owns which keys.
  *   2. Command-palette double-registration — `@wordpress/edit-site`
- *      ships its own command set that re-uses the `core/commands`
- *      store the shell's `core:command-palette` already populates.
+ *      ships its own command set that registers against the
+ *      `core/commands` store our `core:command-palette` already
+ *      populates. Both sets need to coexist without duplicate ids.
  *   3. Full-screen-mode CSS — edit-site applies `body.is-fullscreen-mode`
- *      styles that fight any embedding container.
- *   4. Hash-router conflicts — edit-site's internal hash routing
- *      mutates `window.location.hash`, which collides with the shell's
- *      hash router.
+ *      styles that fight any embedding container's chrome.
+ *   4. Hash-router collision — edit-site's internal hash routing
+ *      mutates `window.location.hash`, conflicting with the shell's
+ *      v2 router.
+ *   5. `@wordpress/edit-site` is not in the dep-extraction
+ *      `BUNDLED_PACKAGES` list and isn't a default external; setting
+ *      up the global properly + building the editor settings PHP-side
+ *      is itself a milestone-sized task.
  *
- * Embedding within a region is feasible (Gutenberg's own admin page
- * does it), but resolving the four collisions inflates M4 past the v1
- * timeline. The iframe path keeps every site-editor surface available
- * (templates, parts, navigation, styles) at the cost of a separate
- * document boundary — the same trade-off `core:editor` already makes.
- *
- * Shell authors target `core:site-editor` rather than `iframe:site-editor.php`
- * so v2's native mount lands without touching their admin.json.
+ * Authors target `core:site-editor` rather than wiring iframe paths
+ * directly, so the native-mount path can land in a v2.x release
+ * without admin.json changes.
  */
 export default function SiteEditorApp( props ) {
 	const url = props.config?.url || 'site-editor.php';

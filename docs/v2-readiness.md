@@ -241,6 +241,21 @@ All green on `feat/wp-admin-shell-v2`.
 Unchanged from v1. `Requires Plugins: gutenberg` declared at the plugin
 header.
 
+## Known gaps deferred to v2.x
+
+- **`core:site-editor` native mount.** Spec §15 v1 names native
+  `@wordpress/edit-site` mount; v2.0.0-beta.1 ships an iframe adapter
+  pointing at `site-editor.php`. Five blockers documented in
+  `src/runtime/apps/SiteEditorApp.js`: preferences-store collision
+  with `core:appearance`, command-palette double-registration,
+  full-screen CSS bleed, hash-router collision, and the fact that
+  `@wordpress/edit-site` is not in the dep-extraction
+  `BUNDLED_PACKAGES` list. Native mount lands in a v2.x cut without
+  admin.json changes (authors target `core:site-editor` either way).
+- **`core:editor` native mount.** Same iframe-vs-native trade-off as
+  site-editor. The simple-editor (`core:simple-editor`) covers the
+  common write path natively today.
+
 ## Sign-off
 
 **Signed off 2026-05-06.** All manual smoke items verified:
