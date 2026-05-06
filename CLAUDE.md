@@ -5,7 +5,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 ## Status
 
 - **v1.0.0-beta.1** tagged at `df5fcb5` on `main` (PR #32). v1 milestones M1–M5 landed.
-- **v2.0.0-beta.1** tagged at `6e4dc61` on `feat/wp-admin-shell-v2`. V2.M1–M5 done. Manual smoke pass before GA tracked in `docs/v2-readiness.md`.
+- **v2.0.0-beta.1** tagged at `6e4dc61` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done is met.
 
 **v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:site-editor-layout` + `core:single-pane-layout`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
 

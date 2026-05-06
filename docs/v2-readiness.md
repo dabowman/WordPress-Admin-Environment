@@ -73,11 +73,13 @@ SSR token emission remains a future polish item.
 - [x] No `tabindex` values above 0 in the runtime.
 - [x] Every icon-only button supplies a `label` prop or visible text
   via `<VisuallyHidden>`.
-- [ ] **Manual:** single keyboard pass through `developer-admin` plus
+- [x] **Manual:** single keyboard pass through `developer-admin` plus
   `single-pane-demo` reaches every primary action without trapping.
-- [ ] **Manual:** one VoiceOver pass on macOS through both shells.
-- [ ] **Manual:** `axe` against the rendered shell DOM, no
-  blocker-severity findings.
+  (passed 2026-05-06)
+- [x] **Manual:** one VoiceOver pass on macOS through both shells.
+  (passed 2026-05-06)
+- [x] **Manual:** `axe` against the rendered shell DOM, no
+  blocker-severity findings. (passed 2026-05-06)
 
 ## Capability gating
 
@@ -214,8 +216,19 @@ header.
 
 ## Sign-off
 
-When all six bundled shells render through both engines (where
-applicable), the automated suites stay green (467/467), the editor
-flow + dirty-state guard + Cmd+K palette + shell-switching all work in
-a browser smoke pass, and the manual a11y checklist passes — v2 is
-ready for tag.
+**Signed off 2026-05-06.** All manual smoke items verified:
+
+- Both engines render every applicable shell (six bundled).
+- Editor flow exercises (`#/posts/new` createDraft → `#/posts/{id}/edit`,
+  row-action edit, title-click) all save successfully.
+- Dirty-state guard fires on in-shell nav, browser back, and
+  beforeunload while edits are unsaved.
+- Cmd+K palette opens, filters, navigates, dismisses on Escape.
+- Shell-switching via Settings page reloads cleanly.
+- Cap-gating role fixtures (subscriber → administrator) match the
+  expected visible-app set on `wp-admin-default`.
+- Keyboard / VoiceOver / axe checks clear on `developer-admin` plus
+  `single-pane-demo`.
+
+Automated suites: 467/467. Tag: `v2.0.0-beta.1` at `6e4dc61` on
+`feat/wp-admin-shell-v2`.
