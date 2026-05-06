@@ -1,0 +1,100 @@
+/* ==========================================================================
+   core:single-pane engine — full-viewport content w/ collapsible nav drawer.
+   Mobile-first arrangement: appbar across the top, body fills remainder,
+   navigation slides in from the left as an overlay drawer.
+   ========================================================================== */
+
+.wp-admin-shell-layout--single-pane {
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__appbar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: var(--wp-admin-shell--chrome--toolbar--height, 48px);
+	padding: 0 12px;
+	background: var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong));
+	color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
+	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__appbar > .wp-admin-shell-region {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle {
+	background: transparent;
+	color: inherit;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 20px;
+	line-height: 1;
+	padding: 6px 10px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle:hover,
+.wp-admin-shell-single-pane__nav-toggle:focus-visible {
+	background: var(--wpds-color-bg-interactive-neutral-weak-active);
+	outline: none;
+}
+
+.wp-admin-shell-single-pane__body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__body > .wp-admin-shell-region {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+}
+
+.wp-admin-shell-single-pane__nav-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open {
+	pointer-events: auto;
+	visibility: visible;
+}
+
+.wp-admin-shell-single-pane__nav-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transition: opacity 0.16s ease;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-backdrop {
+	opacity: 1;
+}
+
+.wp-admin-shell-single-pane__nav-pane {
+	position: relative;
+	height: 100%;
+	width: min(320px, 85vw);
+	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
+	transform: translateX(-100%);
+	transition: transform 0.16s ease;
+	overflow: auto;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-pane {
+	transform: translateX(0);
+}

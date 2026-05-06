@@ -1,3 +1,4 @@
+import './settings-general/index.css';
 import { useState } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';

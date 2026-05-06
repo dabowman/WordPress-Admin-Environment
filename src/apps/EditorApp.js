@@ -1,3 +1,4 @@
+import './editor/index.css';
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { Button } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';

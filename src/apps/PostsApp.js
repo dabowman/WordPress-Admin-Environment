@@ -1,3 +1,4 @@
+import './posts/index.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';

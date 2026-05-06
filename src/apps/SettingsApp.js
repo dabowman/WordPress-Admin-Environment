@@ -1,3 +1,4 @@
+import './settings/index.css';
 import { useState, useMemo } from '@wordpress/element';
 import {
 	__experimentalItemGroup as ItemGroup,

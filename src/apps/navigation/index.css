@@ -1,0 +1,239 @@
+/* NavigationApp — drill-down + flat sidebar nav.
+   Includes the SidebarNavigationScreen + SidebarNavigationItem +
+   SidebarButton presentational helpers (shared internals) plus the
+   collapsed/icon-only mode classes. */
+
+/* ==========================================================================
+   Sidebar Content & Slide Animations (drill-down screen frame)
+   ========================================================================== */
+
+.wp-admin-shell-sidebar__content {
+	flex-grow: 1;
+	overflow-y: auto;
+	overflow-x: hidden;
+	contain: content;
+}
+
+@keyframes wp-admin-shell--slide-from-right {
+	from {
+		transform: translateX(50px);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
+@keyframes wp-admin-shell--slide-from-left {
+	from {
+		transform: translateX(-50px);
+		opacity: 0;
+	}
+	to {
+		transform: none;
+		opacity: 1;
+	}
+}
+
+.wp-admin-shell-sidebar__screen-wrapper {
+	overflow-x: auto;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	max-height: 100%;
+	padding: 0 12px;
+	animation-duration: 0.14s;
+	animation-timing-function: ease-in-out;
+	will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-admin-shell-sidebar__screen-wrapper {
+		animation-duration: 0s;
+	}
+}
+
+.wp-admin-shell-sidebar__screen-wrapper.slide-from-left {
+	animation-name: wp-admin-shell--slide-from-left;
+}
+
+.wp-admin-shell-sidebar__screen-wrapper.slide-from-right {
+	animation-name: wp-admin-shell--slide-from-right;
+}
+
+/* ==========================================================================
+   SidebarNavigationScreen (per-screen header + body + sticky footer)
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-screen__main {
+	flex-grow: 1;
+	margin-bottom: 16px;
+}
+
+.wp-admin-shell-sidebar-screen__title-bar {
+	position: sticky;
+	top: 0;
+	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	padding-top: 48px;
+	margin-bottom: 8px;
+	padding-bottom: 8px;
+	z-index: 1;
+}
+
+.wp-admin-shell-sidebar-screen__title {
+	flex-grow: 1;
+	overflow-wrap: break-word;
+	line-height: 1.4;
+}
+
+.wp-admin-shell-sidebar-screen__content {
+	padding: 0 16px;
+}
+
+.wp-admin-shell-sidebar-screen__description {
+	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0 0 12px;
+}
+
+.wp-admin-shell-sidebar-screen__items {
+	border: none !important;
+}
+
+.wp-admin-shell-sidebar-screen__footer {
+	position: sticky;
+	bottom: 0;
+	background-color: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	padding: 8px 16px;
+	margin-top: 16px;
+	border-top: 1px solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+}
+
+/* ==========================================================================
+   SidebarButton (back/dashboard button)
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-button {
+	flex-shrink: 0;
+}
+
+/* ==========================================================================
+   SidebarNavigationItem (drill-down @wordpress/components Item)
+   ========================================================================== */
+
+.wp-admin-shell-sidebar-nav-item.components-item {
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	padding: 8px 6px 8px 16px;
+	border: none;
+	min-height: 40px;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:hover,
+.wp-admin-shell-sidebar-nav-item.components-item:focus {
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover, var(--wpds-color-bg-interactive-neutral-weak-active));
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:hover .wp-admin-shell-sidebar-nav-item__chevron,
+.wp-admin-shell-sidebar-nav-item.components-item:focus .wp-admin-shell-sidebar-nav-item__chevron {
+	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item.is-active,
+.wp-admin-shell-sidebar-nav-item.components-item[aria-current="true"] {
+	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+	font-weight: 500;
+}
+
+.wp-admin-shell-sidebar-nav-item.components-item:focus-visible {
+	transform: translateZ(0);
+}
+
+.wp-admin-shell-sidebar-nav-item__chevron {
+	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+}
+
+.wp-admin-shell-sidebar-nav-item.with-suffix {
+	padding-right: 16px;
+}
+
+/* ==========================================================================
+   Collapsed Nav (icon-only mode)
+   ========================================================================== */
+
+.wp-admin-shell-nav__items {
+	flex: 1;
+	padding: 0 12px;
+}
+
+/* Nav item buttons (collapsed mode).
+ * Default + hover colors come from the chrome → WPDS bridge scoped to
+ * .wp-admin-shell-nav. The active/selected state has no clean WPDS slot
+ * (current-route is shell semantics, not interactive emphasis) so it
+ * keeps the chrome accent token directly. */
+.wp-admin-shell-nav__item {
+	width: 100%;
+	justify-content: center;
+	padding: 8px;
+	border-radius: 4px;
+	gap: 10px;
+	min-height: 40px;
+	border: none;
+}
+
+.wp-admin-shell-nav__item.is-active {
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
+	font-weight: 500;
+}
+
+.is-collapsed .wp-admin-shell-nav__items {
+	padding: 0 6px;
+}
+
+.wp-admin-shell-nav__item:focus-visible {
+	transform: translateZ(0);
+}
+
+/* Separator */
+.wp-admin-shell-nav__separator {
+	border: none;
+	border-top: 1px solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+	margin: 8px 0;
+}
+
+/* Group */
+.wp-admin-shell-nav__group {
+	margin-top: 4px;
+}
+
+.wp-admin-shell-nav__group-label {
+	display: block;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	padding: 8px 16px 4px;
+}
+
+/* External links (collapsed mode) */
+.wp-admin-shell-nav__link {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 6px 8px 16px;
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	text-decoration: none;
+	border-radius: 4px;
+	font-size: 13px;
+	min-height: 40px;
+}
+
+.wp-admin-shell-nav__link:hover {
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+	background: var(--wp-admin-shell--chrome--sidebar--item--background-hover, var(--wpds-color-bg-interactive-neutral-weak-active));
+}

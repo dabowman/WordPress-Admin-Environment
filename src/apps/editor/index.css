@@ -1,0 +1,32 @@
+.wp-admin-shell-app-editor {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	position: relative;
+}
+
+.wp-admin-shell-app-editor__toolbar {
+	display: flex;
+	align-items: center;
+	padding: 4px 8px;
+	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	background: var(--wpds-color-bg-surface-neutral);
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-app-editor__frame {
+	flex: 1;
+	width: 100%;
+	border: none;
+	display: block;
+}
+
+.wp-admin-shell-app-editor__loading {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wpds-color-bg-surface-neutral-strong);
+	z-index: 1;
+}

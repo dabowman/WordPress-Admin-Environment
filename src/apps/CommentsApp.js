@@ -1,3 +1,4 @@
+import './comments/index.css';
 import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';

@@ -1,3 +1,5 @@
+import './notices-banner/index.css';
+import './notices-snackbar/index.css';
 import { Notice } from '@wordpress/ui';
 import { SnackbarList } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';

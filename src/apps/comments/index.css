@@ -1,0 +1,10 @@
+.wp-admin-shell-app-comments__excerpt {
+	max-height: 120px;
+	overflow: hidden;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.wp-admin-shell-app-comments__excerpt p {
+	margin: 0 0 0.5em;
+}

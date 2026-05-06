@@ -1,3 +1,4 @@
+import './site-hub/index.css';
 import { Button, IconButton, Stack } from '@wordpress/ui';
 import { VisuallyHidden } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';

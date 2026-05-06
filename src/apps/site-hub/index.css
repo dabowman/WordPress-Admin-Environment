@@ -1,0 +1,114 @@
+/* SiteHubApp — sidebar header w/ site icon + title link + actions slot. */
+
+.wp-admin-shell-site-hub {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-right: 12px;
+	height: 64px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-site-hub__icon-container {
+	height: 64px;
+	width: 64px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-site-hub__icon-button {
+	position: relative;
+	height: 64px;
+	width: 64px;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral));
+	border-radius: 0;
+}
+
+.wp-admin-shell-site-hub__icon-button:focus-visible {
+	box-shadow:
+		0 0 0 3px var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
+		0 0 0 6px var(--wp-admin-theme-color);
+	outline: 4px solid transparent;
+	outline-offset: 4px;
+}
+
+.wp-admin-shell-site-icon__image {
+	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 36px);
+	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 36px);
+	object-fit: contain;
+	border-radius: 4px;
+}
+
+.wp-admin-shell-site-icon__default {
+	display: flex;
+	height: 64px;
+	width: 64px;
+	justify-content: center;
+	align-items: center;
+}
+
+/* Title wrapper is a flex item of the inner site-hub Stack. Default
+ * flex-item `min-width: auto` prevents shrinking below intrinsic
+ * content width, so a long site title overflows the sidebar. Force
+ * `min-width: 0` so the wrapper can shrink, and `display: flex` so
+ * the anchor child's `flex-grow: 1` actually stretches it (the anchor
+ * is inline-flex by @wordpress/ui Button default; flex-grow only
+ * applies when its parent is itself a flex container). With both,
+ * the anchor's overflow:hidden + text-overflow:ellipsis + white-
+ * space:nowrap activate and the title truncates with an ellipsis. */
+.wp-admin-shell-site-hub__title {
+	display: flex;
+	min-width: 0;
+	flex: 1;
+}
+
+.wp-admin-shell-site-hub__title :is(button, a) {
+	flex-grow: 1;
+	min-width: 0;
+	font-size: 15px;
+	font-weight: 500;
+	overflow: hidden;
+	padding-right: 16px;
+	margin-left: -4px;
+	position: relative;
+	text-decoration: none;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wp-admin-shell-site-hub__title :is(button, a):focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.wp-admin-shell-site-hub__title :is(button, a):focus-visible {
+	box-shadow:
+		0 0 0 var(--wp-admin-border-width-focus) var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
+		0 0 0 calc(2 * var(--wp-admin-border-width-focus)) var(--wp-admin-theme-color);
+	outline: 2px solid transparent;
+	outline-offset: 2px;
+}
+
+.wp-admin-shell-site-hub__title :is(button, a)::after {
+	content: "\2197";
+	font-weight: 400;
+	opacity: 0;
+	position: absolute;
+	right: 0;
+	transition: opacity 0.1s linear;
+}
+
+.wp-admin-shell-site-hub__title :is(button, a):hover::after,
+.wp-admin-shell-site-hub__title :is(button, a):focus::after,
+.wp-admin-shell-site-hub__title :is(button, a):active::after {
+	opacity: 1;
+}
+
+.wp-admin-shell-site-hub__actions {
+	flex-shrink: 0;
+}

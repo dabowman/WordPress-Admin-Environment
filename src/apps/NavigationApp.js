@@ -1,3 +1,4 @@
+import './navigation/index.css';
 import { useState } from '@wordpress/element';
 import { IconButton, Stack } from '@wordpress/ui';
 import {

@@ -1,4 +1,5 @@
 import Layout from './Layout';
+import './index.css';
 
 /** @type {import('../../registry/source-types.js').EngineSource} */
 const coreSinglePane = {

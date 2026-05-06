@@ -1,3 +1,4 @@
+import './simple-editor/index.css';
 import { useState, useEffect, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button } from '@wordpress/ui';
