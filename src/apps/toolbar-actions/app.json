@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../../docs/schemas/admin-app-v2.json",
+  "$schema": "../../../docs/schemas/admin-app-v2.json",
   "id": "core:toolbar-actions",
   "version": 1,
   "title": "Toolbar actions",
