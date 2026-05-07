@@ -27,6 +27,7 @@ import IframeApp from '../iframe-fallback';
  * Authors target `core:site-editor` rather than wiring iframe paths
  * directly, so the native-mount path can land in a v2.x release
  * without admin.json changes.
+ * @param {*} props
  */
 export default function SiteEditorApp( props ) {
 	const url = props.config?.url || 'site-editor.php';

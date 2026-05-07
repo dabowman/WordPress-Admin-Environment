@@ -26,6 +26,7 @@ import {
 	useConstrainedTabbing,
 	useMergeRefs,
 } from '@wordpress/compose';
+import { __ } from '@wordpress/i18n';
 
 import { MountedApp } from './mountApp';
 import { useRouteForRegion } from '../routing/useRoute';
@@ -54,6 +55,9 @@ export function Region( { region } ) {
  * admin.json declares `styles.regions[regionId]` (theme seeds OR direct
  * slot overrides). Zero-cost when the region has no styles authored —
  * just renders children.
+ * @param {Object} root0
+ * @param {*}      root0.regionId
+ * @param {*}      root0.children
  */
 function ScopedRegionTheme( { regionId, children } ) {
 	const { config } = useKernel();
@@ -71,6 +75,7 @@ function ScopedRegionTheme( { regionId, children } ) {
  * parent's id joined with the child's key. Children pass through the
  * same dispatcher recursively, so further nesting + per-child cap
  * gating work without coordination.
+ * @param {*} region
  */
 function renderChildren( region ) {
 	const children = region.regions;
@@ -109,6 +114,8 @@ function childId( parentId, key ) {
  *
  * V2.M7 will retire the legacy switch above; once bundled shells
  * migrate to v2, every region flows through this path.
+ * @param {Object} root0
+ * @param {*}      root0.region
  */
 function GenericRegion( { region } ) {
 	const services = getPlatformServices( region );
@@ -161,8 +168,8 @@ function PersistentRegion( { region, matched } ) {
 
 function ModalRegion( { region, services, matched } ) {
 	const labelId = useId();
-	const focusOnMountRef     = useFocusOnMount();
-	const focusReturnRef      = useFocusReturn();
+	const focusOnMountRef = useFocusOnMount();
+	const focusReturnRef = useFocusReturn();
 	const constrainTabbingRef = useConstrainedTabbing();
 	const dialogRef = useMergeRefs( [
 		focusOnMountRef,
@@ -171,7 +178,8 @@ function ModalRegion( { region, services, matched } ) {
 	] );
 
 	const closeOnEscape = services.dismissTriggers.includes( 'Escape' );
-	const closeOnBackdrop = services.dismissTriggers.includes( 'backdrop-click' );
+	const closeOnBackdrop =
+		services.dismissTriggers.includes( 'backdrop-click' );
 
 	// Triggerable regions (spec §5.3 `platform.triggerable: true`) sit
 	// closed-by-default until invoked by a binding. Non-triggerable
@@ -253,7 +261,10 @@ function ModalRegion( { region, services, matched } ) {
 
 	return (
 		<>
-			<div
+			<button
+				type="button"
+				tabIndex={ -1 }
+				aria-label={ __( 'Close', 'wp-admin-shell' ) }
 				className="wp-admin-shell-region__backdrop"
 				data-region-id={ region.id }
 				onClick={ closeOnBackdrop ? close : undefined }
@@ -286,6 +297,7 @@ function ModalRegion( { region, services, matched } ) {
  * unchanged so the cascade still resolves them at consume time. Returns
  * `undefined` when there's nothing to apply, so React skips emitting a
  * `style` attribute entirely.
+ * @param {*} style
  */
 function toReactStyle( style ) {
 	if ( ! style || typeof style !== 'object' ) {
@@ -327,13 +339,16 @@ function regionClassName( region ) {
  *
  * `app` and `routing.route-key` are mutually exclusive (spec §5.4 +
  * V2.M2 task 5 sanitization), so the two branches don't overlap.
+ * @param {*} region
+ * @param {*} matched
  */
 function renderRegionApp( region, matched ) {
-	const ref = matched?.app
-		? { id: matched.app, source: matched.app, config: matched.config }
-		: ( region.app
-			? { id: region.app, source: region.app, config: region.config }
-			: null );
+	let ref = null;
+	if ( matched?.app ) {
+		ref = { id: matched.app, source: matched.app, config: matched.config };
+	} else if ( region.app ) {
+		ref = { id: region.app, source: region.app, config: region.config };
+	}
 	if ( ! ref ) {
 		return null;
 	}

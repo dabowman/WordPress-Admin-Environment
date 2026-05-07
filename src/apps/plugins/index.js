@@ -3,12 +3,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import {
-	Button,
-	Notice,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, Notice, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { trash, external, check, closeSmall } from '@wordpress/icons';
@@ -21,10 +16,11 @@ const STATUS_LABELS = {
 
 export default function PluginsApp() {
 	const pluginsQuery = useMemo( () => ( { context: 'edit' } ), [] );
-	const {
-		records,
-		isResolving,
-	} = useEntityRecords( 'root', 'plugin', pluginsQuery );
+	const { records, isResolving } = useEntityRecords(
+		'root',
+		'plugin',
+		pluginsQuery
+	);
 	const { invalidateResolution } = useDispatch( coreStore );
 
 	const isLoading = isResolving;
@@ -56,7 +52,10 @@ export default function PluginsApp() {
 			} catch ( err ) {
 				setError(
 					err.message ||
-						__( 'Failed to update plugin status.', 'wp-admin-shell' )
+						__(
+							'Failed to update plugin status.',
+							'wp-admin-shell'
+						)
 				);
 			}
 		},
@@ -220,7 +219,8 @@ export default function PluginsApp() {
 				label: __( 'Visit plugin site', 'wp-admin-shell' ),
 				icon: external,
 				isEligible: ( item ) => !! item.pluginUri,
-				callback: ( items ) => window.open( items[ 0 ].pluginUri, '_blank' ),
+				callback: ( items ) =>
+					window.open( items[ 0 ].pluginUri, '_blank' ),
 			},
 			{
 				id: 'delete',

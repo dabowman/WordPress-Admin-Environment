@@ -1,9 +1,19 @@
-/* ==========================================================================
-   core:default engine — flagship layout idiom.
-   Dark-chrome / elevated-card visual pattern: persistent toolbar (top),
-   persistent sidebar (left), main content + optional preview as elevated
-   white cards.
-   ========================================================================== */
+/* core:default engine — engine-internal layout infrastructure only.
+ *
+ * Author-overridable region styling (background, color, border, padding,
+ * margin, border-radius, box-shadow, decoration) lives in engine.json
+ * template `default-style` blocks so admin.json regions can override
+ * via `regions[id].style`. CSS here is reserved for:
+ *   - engine root layout shape (.wp-admin-shell-layout)
+ *   - engine-internal helper containers (.wp-admin-shell-areas)
+ *   - the `__app` mount-point inside a region (not addressable from
+ *     templates — apps mount inside this wrapper, not the region itself)
+ *   - the `is-fullscreen` opt-in for iframe apps
+ *
+ * Don't add visual properties here. If a property would be overridden
+ * by a template default-style or by an admin.json region.style, it
+ * belongs in the template.
+ */
 
 .wp-admin-shell-layout {
 	isolation: isolate;
@@ -12,8 +22,6 @@
 	height: 100vh;
 	width: 100vw;
 	overflow: hidden;
-	background: var(--wp-admin-shell--chrome--content--background, var(--wpds-color-bg-surface-neutral));
-	color: var(--wpds-color-fg-content-neutral);
 	font-family: var(--wpds-font-family-body);
 }
 
@@ -23,62 +31,6 @@
 	min-height: 0;
 }
 
-/* ==========================================================================
-   Toolbar (region with id="toolbar", typically template: core:topbar)
-   ========================================================================== */
-
-.wp-admin-shell-region--toolbar {
-	display: flex;
-	align-items: center;
-	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
-	background: var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral));
-	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
-	/* color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral)); */
-	flex-shrink: 0;
-}
-
-/* Toolbar's start/center/end children (from core:topbar template) flow
-   horizontally; end pushes to the right via margin-left:auto. */
-.wp-admin-shell-region--toolbar > .wp-admin-shell-region {
-	display: flex;
-	align-items: center;
-	gap: var(--wpds-dimension-gap-sm);
-}
-.wp-admin-shell-region--toolbar__end {
-	margin-left: auto;
-}
-
-/* ==========================================================================
-   Sidebar (region with id="sidebar", typically template: core:sidebar)
-   ========================================================================== */
-
-.wp-admin-shell-region--sidebar {
-	width: var(--wp-admin-shell--chrome--sidebar--width, 280px);
-	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
-	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
-	display: flex;
-	flex-direction: column;
-	flex-shrink: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-}
-
-/* Sidebar's nested child regions (e.g. `hub` + `nav` from v2 shells)
-   stack vertically inside the sidebar; the navigation child grows to
-   consume remaining space so its own internal scroll container works. */
-.wp-admin-shell-region--sidebar > .wp-admin-shell-region {
-	display: flex;
-	flex-direction: column;
-}
-.wp-admin-shell-region--sidebar > .wp-admin-shell-region[role="navigation"] {
-	flex: 1;
-	min-height: 0;
-}
-
-/* ==========================================================================
-   Content Areas Container
-   ========================================================================== */
-
 .wp-admin-shell-areas {
 	flex: 1;
 	min-width: 0;
@@ -86,29 +38,20 @@
 	gap: 0;
 }
 
-/* ==========================================================================
-   Content Region (primary card; region with id="content")
-   ========================================================================== */
-
-.wp-admin-shell-region--content {
-	flex: 1;
-	min-width: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-	background: var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong));
-	border-radius: var(--wpds-border-radius-lg);
-	box-shadow: var(--wpds-elevation-sm);
-	margin: var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0;
-	display: flex;
-	flex-direction: column;
-}
-
-/* Content app wrapper. The wrapper is a flex column inside the
-   `--content` region so apps (DataViews especially) can flex against
-   a known-height ancestor. Outside the content region the `__app`
-   wrapper is a transparent passthrough — the toolbar / sidebar nest
-   their own apps directly without inheriting these structural rules. */
-.wp-admin-shell-region--content .wp-admin-shell-region__app {
+/* Inner app mount-point — engine-internal, not a region, has no
+ * template hook. When the parent region carries `role="main"` or
+ * `role="complementary"` (the content-card roles), the mount becomes
+ * a flex column so apps like DataViews can flex against a known-height
+ * ancestor. The mount also carries the visual padding because
+ * `is-fullscreen` overrides need a stable target (template default-style
+ * applies to the region wrapper as inline style and would beat any CSS
+ * rule trying to zero it out for iframe apps). */
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="main"]
+	> .wp-admin-shell-region__app,
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="complementary"]
+	> .wp-admin-shell-region__app {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
@@ -117,33 +60,25 @@
 	box-sizing: border-box;
 }
 
-.wp-admin-shell-region--content .wp-admin-shell-region__app.is-fullscreen {
-	padding: 0;
-}
-
-.wp-admin-shell-region--content .wp-admin-shell-region__app.is-fullscreen iframe {
-	border-radius: var(--wpds-border-radius-lg);
-	border: 0;
-	width: 100%;
-	height: 100%;
-}
-
-.wp-admin-shell-region--content .wp-admin-shell-region__app > * {
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="main"]
+	> .wp-admin-shell-region__app
+	> *,
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="complementary"]
+	> .wp-admin-shell-region__app
+	> * {
 	flex: 1;
 	min-height: 0;
 }
 
-/* ==========================================================================
-   Preview Region (secondary card; region with id="preview")
-   ========================================================================== */
+.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen {
+	padding: 0;
+}
 
-.wp-admin-shell-region--preview {
-	flex: 1;
-	min-width: 0;
-	overflow-y: auto;
-	overflow-x: hidden;
-	background: var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong));
+.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen iframe {
 	border-radius: var(--wpds-border-radius-lg);
-	box-shadow: var(--wpds-elevation-sm);
-	margin: var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0;
+	border: 0;
+	width: 100%;
+	height: 100%;
 }

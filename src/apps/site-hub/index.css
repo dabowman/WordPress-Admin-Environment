@@ -5,7 +5,6 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
-	margin-right: 12px;
 	height: 64px;
 	flex-shrink: 0;
 }
@@ -77,8 +76,8 @@
 	font-size: 15px;
 	font-weight: 500;
 	overflow: hidden;
-	padding-right: 16px;
-	margin-left: -4px;
+	/* padding-right: 16px; */
+	/* margin-left: -4px; */
 	position: relative;
 	text-decoration: none;
 	text-overflow: ellipsis;

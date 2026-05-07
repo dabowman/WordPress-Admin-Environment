@@ -1,8 +1,17 @@
-/* ==========================================================================
-   core:single-pane engine — full-viewport content w/ collapsible nav drawer.
-   Mobile-first arrangement: appbar across the top, body fills remainder,
-   navigation slides in from the left as an overlay drawer.
-   ========================================================================== */
+/* core:single-pane engine — engine-internal layout infrastructure only.
+ *
+ * Region-level styling (background/color/padding/border for the main /
+ * detail / dialog regions) lives in engine.json template `default-style`
+ * blocks so admin.json regions can override via `regions[id].style`.
+ *
+ * The `__appbar`, `__body`, `__nav-drawer`, `__nav-pane`, `__nav-toggle`,
+ * and `__nav-backdrop` classes are engine wrappers (NOT regions). They
+ * render around regions for the appbar / hamburger drawer chrome, so
+ * their visual styling stays here — there is no template hook for them.
+ * The hamburger row, drawer pane, and backdrop pull their colors from
+ * the chrome → WPDS bridge so admin.json `styles.chrome.toolbar.*`
+ * / `styles.chrome.sidebar.*` overrides still flow through.
+ */
 
 .wp-admin-shell-layout--single-pane {
 	display: flex;
@@ -18,13 +27,6 @@
 	color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
 	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
 	flex-shrink: 0;
-}
-
-.wp-admin-shell-single-pane__appbar > .wp-admin-shell-region {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	min-width: 0;
 }
 
 .wp-admin-shell-single-pane__nav-toggle {
@@ -50,12 +52,6 @@
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-}
-
-.wp-admin-shell-single-pane__body > .wp-admin-shell-region {
-	flex: 1;
-	min-height: 0;
-	overflow: auto;
 }
 
 .wp-admin-shell-single-pane__nav-drawer {

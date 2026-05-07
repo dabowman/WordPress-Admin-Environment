@@ -23,8 +23,18 @@
 								"icon": "dashboard",
 								"description": "Site overview and core updates.",
 								"items": [
-									{ "label": "Home",    "icon": "home",      "href": "#/dashboard/home",    "capability": "read" },
-									{ "label": "Updates", "icon": "dashboard", "href": "#/dashboard/updates", "capability": "update_core" }
+									{
+										"label": "Home",
+										"icon": "home",
+										"href": "#/dashboard/home",
+										"capability": "read"
+									},
+									{
+										"label": "Updates",
+										"icon": "dashboard",
+										"href": "#/dashboard/updates",
+										"capability": "update_core"
+									}
 								]
 							},
 							{ "separator": true },
@@ -34,10 +44,30 @@
 								"icon": "post",
 								"description": "Manage posts, categories, and tags.",
 								"items": [
-									{ "label": "All Posts",     "icon": "post",     "href": "#/posts",          "capability": "edit_posts" },
-									{ "label": "Add New Post",  "icon": "plus",     "href": "#/posts/new",      "capability": "edit_posts" },
-									{ "label": "Categories",    "icon": "category", "href": "#/posts/categories","capability": "manage_categories" },
-									{ "label": "Tags",          "icon": "category", "href": "#/posts/tags",     "capability": "manage_categories" }
+									{
+										"label": "All Posts",
+										"icon": "post",
+										"href": "#/posts",
+										"capability": "edit_posts"
+									},
+									{
+										"label": "Add New Post",
+										"icon": "plus",
+										"href": "#/posts/new",
+										"capability": "edit_posts"
+									},
+									{
+										"label": "Categories",
+										"icon": "category",
+										"href": "#/posts/categories",
+										"capability": "manage_categories"
+									},
+									{
+										"label": "Tags",
+										"icon": "category",
+										"href": "#/posts/tags",
+										"capability": "manage_categories"
+									}
 								]
 							},
 							{
@@ -46,8 +76,18 @@
 								"icon": "media",
 								"description": "Manage uploads.",
 								"items": [
-									{ "label": "Library",        "icon": "media", "href": "#/media",     "capability": "upload_files" },
-									{ "label": "Add New Media",  "icon": "plus",  "href": "#/media/new", "capability": "upload_files" }
+									{
+										"label": "Library",
+										"icon": "media",
+										"href": "#/media",
+										"capability": "upload_files"
+									},
+									{
+										"label": "Add New Media",
+										"icon": "plus",
+										"href": "#/media/new",
+										"capability": "upload_files"
+									}
 								]
 							},
 							{
@@ -56,11 +96,26 @@
 								"icon": "page",
 								"description": "Manage pages.",
 								"items": [
-									{ "label": "All Pages",     "icon": "page", "href": "#/pages",     "capability": "edit_pages" },
-									{ "label": "Add New Page",  "icon": "plus", "href": "#/pages/new", "capability": "edit_pages" }
+									{
+										"label": "All Pages",
+										"icon": "page",
+										"href": "#/pages",
+										"capability": "edit_pages"
+									},
+									{
+										"label": "Add New Page",
+										"icon": "plus",
+										"href": "#/pages/new",
+										"capability": "edit_pages"
+									}
 								]
 							},
-							{ "label": "Comments", "icon": "comment", "href": "#/comments", "capability": "moderate_comments" },
+							{
+								"label": "Comments",
+								"icon": "comment",
+								"href": "#/comments",
+								"capability": "moderate_comments"
+							},
 							{ "separator": true },
 							{
 								"screen": "appearance",
@@ -68,9 +123,24 @@
 								"icon": "brush",
 								"description": "Themes, Site Editor, and Customizer.",
 								"items": [
-									{ "label": "Themes",     "icon": "brush",  "href": "#/appearance/themes",    "capability": "switch_themes" },
-									{ "label": "Editor",     "icon": "styles", "href": "#/appearance/editor",    "capability": "edit_theme_options" },
-									{ "label": "Customize",  "icon": "styles", "href": "#/appearance/customize", "capability": "edit_theme_options" }
+									{
+										"label": "Themes",
+										"icon": "brush",
+										"href": "#/appearance/themes",
+										"capability": "switch_themes"
+									},
+									{
+										"label": "Editor",
+										"icon": "styles",
+										"href": "#/appearance/editor",
+										"capability": "edit_theme_options"
+									},
+									{
+										"label": "Customize",
+										"icon": "styles",
+										"href": "#/appearance/customize",
+										"capability": "edit_theme_options"
+									}
 								]
 							},
 							{
@@ -79,9 +149,24 @@
 								"icon": "plugins",
 								"description": "Install, activate, and edit plugins.",
 								"items": [
-									{ "label": "Installed Plugins",  "icon": "plugins", "href": "#/plugins",        "capability": "activate_plugins" },
-									{ "label": "Add New Plugin",     "icon": "plus",    "href": "#/plugins/new",    "capability": "install_plugins" },
-									{ "label": "Plugin File Editor", "icon": "edit",    "href": "#/plugins/editor", "capability": "edit_plugins" }
+									{
+										"label": "Installed Plugins",
+										"icon": "plugins",
+										"href": "#/plugins",
+										"capability": "activate_plugins"
+									},
+									{
+										"label": "Add New Plugin",
+										"icon": "plus",
+										"href": "#/plugins/new",
+										"capability": "install_plugins"
+									},
+									{
+										"label": "Plugin File Editor",
+										"icon": "edit",
+										"href": "#/plugins/editor",
+										"capability": "edit_plugins"
+									}
 								]
 							},
 							{
@@ -90,8 +175,18 @@
 								"icon": "people",
 								"description": "Manage site users.",
 								"items": [
-									{ "label": "All Users",    "icon": "people", "href": "#/users",     "capability": "list_users" },
-									{ "label": "Add New User", "icon": "plus",   "href": "#/users/new", "capability": "create_users" }
+									{
+										"label": "All Users",
+										"icon": "people",
+										"href": "#/users",
+										"capability": "list_users"
+									},
+									{
+										"label": "Add New User",
+										"icon": "plus",
+										"href": "#/users/new",
+										"capability": "create_users"
+									}
 								]
 							},
 							{
@@ -100,12 +195,42 @@
 								"icon": "wrench",
 								"description": "Import, export, site health, and personal data tools.",
 								"items": [
-									{ "label": "Available Tools",       "icon": "wrench",   "href": "#/tools",                 "capability": "edit_posts" },
-									{ "label": "Import",                "icon": "wrench",   "href": "#/tools/import",          "capability": "import" },
-									{ "label": "Export",                "icon": "external", "href": "#/tools/export",          "capability": "export" },
-									{ "label": "Site Health",           "icon": "wrench",   "href": "#/tools/site-health",     "capability": "view_site_health_checks" },
-									{ "label": "Export Personal Data",  "icon": "external", "href": "#/tools/export-data",     "capability": "export_others_personal_data" },
-									{ "label": "Erase Personal Data",   "icon": "wrench",   "href": "#/tools/erase-data",      "capability": "erase_others_personal_data" }
+									{
+										"label": "Available Tools",
+										"icon": "wrench",
+										"href": "#/tools",
+										"capability": "edit_posts"
+									},
+									{
+										"label": "Import",
+										"icon": "wrench",
+										"href": "#/tools/import",
+										"capability": "import"
+									},
+									{
+										"label": "Export",
+										"icon": "external",
+										"href": "#/tools/export",
+										"capability": "export"
+									},
+									{
+										"label": "Site Health",
+										"icon": "wrench",
+										"href": "#/tools/site-health",
+										"capability": "view_site_health_checks"
+									},
+									{
+										"label": "Export Personal Data",
+										"icon": "external",
+										"href": "#/tools/export-data",
+										"capability": "export_others_personal_data"
+									},
+									{
+										"label": "Erase Personal Data",
+										"icon": "wrench",
+										"href": "#/tools/erase-data",
+										"capability": "erase_others_personal_data"
+									}
 								]
 							},
 							{
@@ -114,18 +239,63 @@
 								"icon": "settings",
 								"description": "Site configuration.",
 								"items": [
-									{ "label": "General",     "icon": "settings", "href": "#/settings/general",     "capability": "manage_options" },
-									{ "label": "Writing",     "icon": "edit",     "href": "#/settings/writing",     "capability": "manage_options" },
-									{ "label": "Reading",     "icon": "settings", "href": "#/settings/reading",     "capability": "manage_options" },
-									{ "label": "Discussion",  "icon": "comment",  "href": "#/settings/discussion",  "capability": "manage_options" },
-									{ "label": "Media",       "icon": "media",    "href": "#/settings/media",       "capability": "manage_options" },
-									{ "label": "Permalinks",  "icon": "settings", "href": "#/settings/permalinks",  "capability": "manage_options" },
-									{ "label": "Privacy",     "icon": "settings", "href": "#/settings/privacy",     "capability": "manage_privacy_options" }
+									{
+										"label": "General",
+										"icon": "settings",
+										"href": "#/settings/general",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Writing",
+										"icon": "edit",
+										"href": "#/settings/writing",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Reading",
+										"icon": "settings",
+										"href": "#/settings/reading",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Discussion",
+										"icon": "comment",
+										"href": "#/settings/discussion",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Media",
+										"icon": "media",
+										"href": "#/settings/media",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Permalinks",
+										"icon": "settings",
+										"href": "#/settings/permalinks",
+										"capability": "manage_options"
+									},
+									{
+										"label": "Privacy",
+										"icon": "settings",
+										"href": "#/settings/privacy",
+										"capability": "manage_privacy_options"
+									}
 								]
 							},
 							{ "separator": true },
-							{ "label": "Profile",   "icon": "user",     "href": "#/profile",  "capability": "read" },
-							{ "label": "View Site", "icon": "external", "href": "/",          "external": true }
+							{
+								"label": "Profile",
+								"icon": "user",
+								"href": "#/profile",
+								"capability": "read"
+							},
+							{
+								"label": "View Site",
+								"icon": "external",
+								"href": "/",
+								"external": true
+							}
 						]
 					}
 				}
@@ -146,54 +316,153 @@
 			}
 		},
 
-		"notices-banner":   { "role": "region", "app": "core:notices-banner" },
+		"notices-banner": { "role": "region", "app": "core:notices-banner" },
 		"notices-snackbar": { "role": "region", "app": "core:notices-snackbar" }
 	},
 
 	"routes": {
-		"/dashboard/home":          { "app": "core:iframe-fallback", "config": { "url": "index.php" } },
-		"/dashboard/updates":       { "app": "core:iframe-fallback", "config": { "url": "update-core.php" } },
+		"/dashboard/home": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "index.php" }
+		},
+		"/dashboard/updates": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "update-core.php" }
+		},
 
-		"/posts":                   { "app": "core:iframe-fallback", "config": { "url": "edit.php" } },
-		"/posts/new":               { "app": "core:iframe-fallback", "config": { "url": "post-new.php" } },
-		"/posts/categories":        { "app": "core:iframe-fallback", "config": { "url": "edit-tags.php?taxonomy=category" } },
-		"/posts/tags":              { "app": "core:iframe-fallback", "config": { "url": "edit-tags.php?taxonomy=post_tag" } },
+		"/posts": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "edit.php" }
+		},
+		"/posts/new": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "post-new.php" }
+		},
+		"/posts/categories": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "edit-tags.php?taxonomy=category" }
+		},
+		"/posts/tags": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "edit-tags.php?taxonomy=post_tag" }
+		},
 
-		"/media":                   { "app": "core:iframe-fallback", "config": { "url": "upload.php" } },
-		"/media/new":               { "app": "core:iframe-fallback", "config": { "url": "media-new.php" } },
+		"/media": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "upload.php" }
+		},
+		"/media/new": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "media-new.php" }
+		},
 
-		"/pages":                   { "app": "core:iframe-fallback", "config": { "url": "edit.php?post_type=page" } },
-		"/pages/new":               { "app": "core:iframe-fallback", "config": { "url": "post-new.php?post_type=page" } },
+		"/pages": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "edit.php?post_type=page" }
+		},
+		"/pages/new": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "post-new.php?post_type=page" }
+		},
 
-		"/comments":                { "app": "core:iframe-fallback", "config": { "url": "edit-comments.php" } },
+		"/comments": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "edit-comments.php" }
+		},
 
-		"/appearance/themes":       { "app": "core:iframe-fallback", "config": { "url": "themes.php" } },
-		"/appearance/editor":       { "app": "core:iframe-fallback", "config": { "url": "site-editor.php" } },
-		"/appearance/customize":    { "app": "core:iframe-fallback", "config": { "url": "customize.php" } },
+		"/appearance/themes": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "themes.php" }
+		},
+		"/appearance/editor": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "site-editor.php" }
+		},
+		"/appearance/customize": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "customize.php" }
+		},
 
-		"/plugins":                 { "app": "core:iframe-fallback", "config": { "url": "plugins.php" } },
-		"/plugins/new":             { "app": "core:iframe-fallback", "config": { "url": "plugin-install.php" } },
-		"/plugins/editor":          { "app": "core:iframe-fallback", "config": { "url": "plugin-editor.php" } },
+		"/plugins": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "plugins.php" }
+		},
+		"/plugins/new": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "plugin-install.php" }
+		},
+		"/plugins/editor": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "plugin-editor.php" }
+		},
 
-		"/users":                   { "app": "core:iframe-fallback", "config": { "url": "users.php" } },
-		"/users/new":               { "app": "core:iframe-fallback", "config": { "url": "user-new.php" } },
+		"/users": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "users.php" }
+		},
+		"/users/new": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "user-new.php" }
+		},
 
-		"/profile":                 { "app": "core:iframe-fallback", "config": { "url": "profile.php" } },
+		"/profile": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "profile.php" }
+		},
 
-		"/tools":                   { "app": "core:iframe-fallback", "config": { "url": "tools.php" } },
-		"/tools/import":            { "app": "core:iframe-fallback", "config": { "url": "import.php" } },
-		"/tools/export":            { "app": "core:iframe-fallback", "config": { "url": "export.php" } },
-		"/tools/site-health":       { "app": "core:iframe-fallback", "config": { "url": "site-health.php" } },
-		"/tools/export-data":       { "app": "core:iframe-fallback", "config": { "url": "export-personal-data.php" } },
-		"/tools/erase-data":        { "app": "core:iframe-fallback", "config": { "url": "erase-personal-data.php" } },
+		"/tools": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "tools.php" }
+		},
+		"/tools/import": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "import.php" }
+		},
+		"/tools/export": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "export.php" }
+		},
+		"/tools/site-health": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "site-health.php" }
+		},
+		"/tools/export-data": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "export-personal-data.php" }
+		},
+		"/tools/erase-data": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "erase-personal-data.php" }
+		},
 
-		"/settings/general":        { "app": "core:iframe-fallback", "config": { "url": "options-general.php" } },
-		"/settings/writing":        { "app": "core:iframe-fallback", "config": { "url": "options-writing.php" } },
-		"/settings/reading":        { "app": "core:iframe-fallback", "config": { "url": "options-reading.php" } },
-		"/settings/discussion":     { "app": "core:iframe-fallback", "config": { "url": "options-discussion.php" } },
-		"/settings/media":          { "app": "core:iframe-fallback", "config": { "url": "options-media.php" } },
-		"/settings/permalinks":     { "app": "core:iframe-fallback", "config": { "url": "options-permalink.php" } },
-		"/settings/privacy":        { "app": "core:iframe-fallback", "config": { "url": "options-privacy.php" } }
+		"/settings/general": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-general.php" }
+		},
+		"/settings/writing": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-writing.php" }
+		},
+		"/settings/reading": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-reading.php" }
+		},
+		"/settings/discussion": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-discussion.php" }
+		},
+		"/settings/media": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-media.php" }
+		},
+		"/settings/permalinks": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-permalink.php" }
+		},
+		"/settings/privacy": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "options-privacy.php" }
+		}
 	},
 
 	"default-route": "/dashboard/home"

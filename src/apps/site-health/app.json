@@ -1,11 +1,11 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:site-health",
-  "version": 1,
-  "title": "Site Health",
-  "description": "Runs WordPress's `/wp-site-health/v1/tests/{id}` async checks and reports results.",
-  "role": "main",
-  "capabilities": [ "view_site_health_checks" ],
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:site-health",
+	"version": 1,
+	"title": "Site Health",
+	"description": "Runs WordPress's `/wp-site-health/v1/tests/{id}` async checks and reports results.",
+	"role": "main",
+	"capabilities": [ "view_site_health_checks" ],
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

@@ -30,6 +30,9 @@ const CHROME_HIDE_CSS = `
  *
  * Source: `config.url` (the v2-canonical placement). Absolute URLs
  * pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`.
+ * @param {Object} root0
+ * @param {*}      root0.app
+ * @param {*}      root0.config
  */
 export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';

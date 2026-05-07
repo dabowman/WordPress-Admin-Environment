@@ -48,15 +48,20 @@ export function listEngines() {
  * Resolve a region's role through template inheritance — JS mirror of
  * `WP_Admin_Shell_Manifest_Resolver::resolve_role()`.
  *
- * @param {object} region          Region declaration from admin.json.
- * @param {string} engineId        Active engine id.
- * @param {object} [parentTemplate] Parent region's template definition,
+ * @param {Object} region           Region declaration from admin.json.
+ * @param {string} engineId         Active engine id.
+ * @param {Object} [parentTemplate] Parent region's template definition,
  *                                  when this is a nested child region.
  * @param {string} [childName]      Child key under the parent's `regions`
  *                                  map.
  * @return {string|null} Resolved role, or null if unresolvable.
  */
-export function resolveRole( region, engineId, parentTemplate = null, childName = null ) {
+export function resolveRole(
+	region,
+	engineId,
+	parentTemplate = null,
+	childName = null
+) {
 	if ( ! region || typeof region !== 'object' ) {
 		return null;
 	}
@@ -65,7 +70,7 @@ export function resolveRole( region, engineId, parentTemplate = null, childName 
 	}
 	if ( region.template ) {
 		const engine = getEngine( engineId );
-		const tmpl   = engine?.templates?.[ region.template ];
+		const tmpl = engine?.templates?.[ region.template ];
 		if ( tmpl?.role ) {
 			return tmpl.role;
 		}

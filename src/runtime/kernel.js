@@ -23,6 +23,8 @@ import { BindingsConsumer } from './bindings/BindingsConsumer';
  *
  * Arrays are replaced wholesale (no positional merge) — matches the
  * PHP merge's behavior for indexed arrays.
+ * @param {*} over
+ * @param {*} under
  */
 function deepMergeUnder( over, under ) {
 	if ( under === null || under === undefined ) {
@@ -62,6 +64,7 @@ function deepMergeUnder( over, under ) {
  * bypasses PHP, restore it.
  *
  * Returns a React element that the entry script renders into the DOM.
+ * @param {*} config
  */
 export function kernel( config ) {
 	if ( ! config ) {
@@ -100,13 +103,13 @@ export function kernel( config ) {
 		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
 	const shellStyles = engineDefaults
 		? deepMergeUnder( config.styles || {}, engineDefaults )
-		: ( config.styles || {} );
+		: config.styles || {};
 	const density = resolveDensity( shellStyles );
 
 	if ( ! engineSource ) {
 		return (
 			<div style={ { padding: 32 } }>
-				{ __( 'Unknown layout engine: ', 'wp-admin-shell' ) }
+				{ __( 'Unknown layout engine:', 'wp-admin-shell' ) }
 				{ engineId }
 			</div>
 		);
@@ -124,7 +127,10 @@ export function kernel( config ) {
 		// Spec §8 layer 1 — region capability fast-path. A region the
 		// user lacks capability for is dropped before mounting, so
 		// contains[] never evaluates.
-		if ( regionInstance.capability && ! userCan( regionInstance.capability ) ) {
+		if (
+			regionInstance.capability &&
+			! userCan( regionInstance.capability )
+		) {
 			return;
 		}
 		const resolved = resolveRegion( regionInstance, engineManifest );
@@ -154,10 +160,7 @@ export function kernel( config ) {
 					>
 						<NavigationGuard />
 						<BindingsConsumer />
-						<Engine
-							config={ config }
-							regions={ regions }
-						/>
+						<Engine config={ config } regions={ regions } />
 					</ThemeProviderHost>
 				</RouterProvider>
 			</SlotFillProvider>

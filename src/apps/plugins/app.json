@@ -1,11 +1,11 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:plugins",
-  "version": 1,
-  "title": "Plugins",
-  "description": "DataViews plugin manager: list, activate, deactivate. Reads via `core-data` `'root','plugin'` entity.",
-  "role": "main",
-  "capabilities": [ "activate_plugins" ],
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:plugins",
+	"version": 1,
+	"title": "Plugins",
+	"description": "DataViews plugin manager: list, activate, deactivate. Reads via `core-data` `'root','plugin'` entity.",
+	"role": "main",
+	"capabilities": [ "activate_plugins" ],
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

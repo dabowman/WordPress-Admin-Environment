@@ -1,16 +1,16 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:command-palette",
-  "version": 1,
-  "title": "Command palette",
-  "description": "Cmd+K command palette. Signs commands into `@wordpress/commands`; derives palette entries from the routes block.",
-  "role": "dialog",
-  "platform": {
-    "modal": true,
-    "triggerable": true,
-    "dismiss-on": [ "Escape", "backdrop-click" ],
-    "autofocus-target": "input[type=\"search\"], input[type=\"text\"]"
-  },
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:command-palette",
+	"version": 1,
+	"title": "Command palette",
+	"description": "Cmd+K command palette. Signs commands into `@wordpress/commands`; derives palette entries from the routes block.",
+	"role": "dialog",
+	"platform": {
+		"modal": true,
+		"triggerable": true,
+		"dismiss-on": [ "Escape", "backdrop-click" ],
+		"autofocus-target": "input[type=\"search\"], input[type=\"text\"]"
+	},
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

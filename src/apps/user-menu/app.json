@@ -1,13 +1,13 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:user-menu",
-  "version": 1,
-  "title": "User menu",
-  "description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a shell switcher. Reads `window.wpAdminShell.user`.",
-  "role": "region",
-  "platform": {
-    "persists-across-navigation": true
-  },
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:user-menu",
+	"version": 1,
+	"title": "User menu",
+	"description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a shell switcher. Reads `window.wpAdminShell.user`.",
+	"role": "region",
+	"platform": {
+		"persists-across-navigation": true
+	},
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

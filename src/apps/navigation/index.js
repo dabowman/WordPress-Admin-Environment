@@ -1,3 +1,4 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalItemGroup has no @wordpress/ui 0.12 port. */
 import './index.css';
 import { IconButton, Stack } from '@wordpress/ui';
 import {
@@ -30,6 +31,8 @@ import { userCan } from '../../runtime/capabilities/userCan';
  * drill-down sub-screens. External links carry `external: true`. The
  * v2 admin.json has no applications array, so nav items can't reuse a
  * shared app catalog — each item carries its own metadata.
+ * @param {Object} root0
+ * @param {*}      root0.config
  */
 export default function NavigationApp( { config: navConfig = {} } ) {
 	const collapsed = !! navConfig.collapsed;
@@ -64,6 +67,7 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 /**
  * Resolve a nav item to { key, href, label, icon, isActive(currentPrimary) }.
  * v2 inline-only — items self-describe.
+ * @param {*} item
  */
 function resolveNavTarget( item ) {
 	if ( ! item.href ) {
@@ -72,12 +76,11 @@ function resolveNavTarget( item ) {
 	const href = item.href;
 	const target = hashPrimary( href );
 	return {
-		key:      href,
+		key: href,
 		href,
-		label:    item.label,
-		icon:     item.icon,
-		isActive: ( currentPrimary ) =>
-			!! target && currentPrimary === target,
+		label: item.label,
+		icon: item.icon,
+		isActive: ( currentPrimary ) => !! target && currentPrimary === target,
 	};
 }
 
@@ -85,6 +88,7 @@ function resolveNavTarget( item ) {
  * Extract the primary path from an in-shell hash href (`#/posts/foo` →
  * `/posts/foo`). External / non-hash hrefs return null so they never
  * match the active state.
+ * @param {*} href
  */
 function hashPrimary( href ) {
 	if ( typeof href !== 'string' || ! href.startsWith( '#' ) ) {
@@ -98,7 +102,11 @@ function hashPrimary( href ) {
 
 function CollapsedNavigation( { items, currentPrimary } ) {
 	return (
-		<Stack direction="column" gap="xs" className="wp-admin-shell-nav__items">
+		<Stack
+			direction="column"
+			gap="xs"
+			className="wp-admin-shell-nav__items"
+		>
 			{ items.map( ( item, idx ) =>
 				renderCollapsedItem( item, idx, currentPrimary )
 			) }
@@ -118,7 +126,12 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 		);
 	}
 	if ( item.separator ) {
-		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
+		return (
+			<hr
+				key={ `sep-${ index }` }
+				className="wp-admin-shell-nav__separator"
+			/>
+		);
 	}
 	if ( item.external && item.href ) {
 		return (
@@ -137,16 +150,20 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 	if ( ! resolved ) {
 		return null;
 	}
+	const isActive = resolved.isActive( currentPrimary );
 	return (
 		<IconButton
 			key={ resolved.key }
 			tone="neutral"
 			variant="minimal"
-			className={ `wp-admin-shell-nav__item${
-				resolved.isActive( currentPrimary ) ? ' is-active' : ''
-			}` }
+			className="wp-admin-shell-nav__item"
 			icon={ resolveIcon( resolved.icon ) }
-			render={ <a href={ resolved.href } /> }
+			render={
+				<a
+					href={ resolved.href }
+					aria-current={ isActive ? 'true' : undefined }
+				/>
+			}
 			label={ resolved.label }
 		/>
 	);
@@ -196,7 +213,12 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 				content={
 					<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
 						{ items.map( ( item, idx ) =>
-							renderRootItem( item, idx, currentPrimary, navState )
+							renderRootItem(
+								item,
+								idx,
+								currentPrimary,
+								navState
+							)
 						) }
 					</ItemGroup>
 				}
@@ -208,6 +230,7 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 /**
  * Write `?screen=<id>` (or clear when null) on top of the current
  * primary path. Preserves any other URL params.
+ * @param {*} screenId
  */
 function navigateScreen( screenId ) {
 	if ( typeof window === 'undefined' ) {
@@ -230,7 +253,12 @@ function navigateScreen( screenId ) {
 
 function renderRootItem( item, index, currentPrimary, navState ) {
 	if ( item.separator ) {
-		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
+		return (
+			<hr
+				key={ `sep-${ index }` }
+				className="wp-admin-shell-nav__separator"
+			/>
+		);
 	}
 
 	if ( item.screen ) {
@@ -248,7 +276,10 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 				isActive={ hasActiveChild }
 				onClick={ () => {
 					if ( navState ) {
-						navState.navigate( 'forward', `[id="screen-${ item.screen }"]` );
+						navState.navigate(
+							'forward',
+							`[id="screen-${ item.screen }"]`
+						);
 					}
 					navigateScreen( item.screen );
 				} }
@@ -260,10 +291,19 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 
 	if ( item.group ) {
 		return (
-			<div key={ `group-${ index }` } className="wp-admin-shell-nav__group">
-				<span className="wp-admin-shell-nav__group-label">{ item.group }</span>
+			<div
+				key={ `group-${ index }` }
+				className="wp-admin-shell-nav__group"
+			>
+				<span className="wp-admin-shell-nav__group-label">
+					{ item.group }
+				</span>
 				{ ( item.items || [] ).map( ( child, ci ) =>
-					renderScreenItem( child, `${ index }-${ ci }`, currentPrimary )
+					renderScreenItem(
+						child,
+						`${ index }-${ ci }`,
+						currentPrimary
+					)
 				) }
 			</div>
 		);
@@ -274,7 +314,12 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 
 function renderScreenItem( item, index, currentPrimary ) {
 	if ( item.separator ) {
-		return <hr key={ `sep-${ index }` } className="wp-admin-shell-nav__separator" />;
+		return (
+			<hr
+				key={ `sep-${ index }` }
+				className="wp-admin-shell-nav__separator"
+			/>
+		);
 	}
 	if ( item.external && item.href ) {
 		return (
@@ -321,6 +366,7 @@ function findScreen( items, screenId ) {
  *   - it declares a `capability` the user lacks,
  *   - it's a screen/group whose pruned children are empty.
  * Separators that orphan at the top/bottom are stripped.
+ * @param {*} items
  */
 function pruneNavItems( items ) {
 	if ( ! Array.isArray( items ) ) {

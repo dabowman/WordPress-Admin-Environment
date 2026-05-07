@@ -14,8 +14,16 @@ import { setDirty, clearDirty } from './dirtyState.mjs';
  * `regionId` is the prop the kernel passes to every mounted app
  * (`MountedApp` provides it). On unmount the entry is cleared so a
  * stale flag from a previously mounted app cannot block navigation.
+ * @param {*}      regionId
+ * @param {*}      isDirty
+ * @param {Object} root0
+ * @param {*}      root0.blocksNavigation
  */
-export function useDirtyState( regionId, isDirty, { blocksNavigation = false } = {} ) {
+export function useDirtyState(
+	regionId,
+	isDirty,
+	{ blocksNavigation = false } = {}
+) {
 	useEffect( () => {
 		if ( ! regionId ) {
 			return undefined;

@@ -5,13 +5,22 @@
 	"description": "Schema for the v1.0.0-beta.x admin.json configuration consumed by the WP Admin Shell cascade resolver in the shipping beta. The MVP flat shape is also accepted at runtime via the core origin loader's normalize_v0 path; this schema describes the partitioned shape that authors targeted under v1. Superseded by the three v2 manifest schemas (admin-v2.json, admin-app-v2.json, admin-engine-v2.json) which become the canonical /admin/v1.json /admin-app/v1.json /admin-engine/v1.json once V2.M5 ships. The $id was changed from /admin/v1.json to /admin/v0.json to free the v1 URL slot for the new schemas without colliding inside Ajv when both are registered (V2.M1 task 1).",
 	"type": "object",
 	"properties": {
-		"$schema":        { "type": "string" },
-		"name":           { "type": "string", "description": "Stable identifier; used as cache key + WP-CLI argument." },
-		"title":          { "type": "string" },
-		"description":    { "type": "string" },
-		"version":        { "type": "integer", "const": 1 },
-		"$wpds":          { "type": "string", "description": "Pinned WPDS version (e.g. '6.9'). Resolver loads wpds-defaults-{version}.json as the implicit core baseline." },
-		"userSwitchable": { "type": "boolean", "description": "Whether end users can opt into this shell via wp_admin_shell_user_prefs.shell. Default false." },
+		"$schema": { "type": "string" },
+		"name": {
+			"type": "string",
+			"description": "Stable identifier; used as cache key + WP-CLI argument."
+		},
+		"title": { "type": "string" },
+		"description": { "type": "string" },
+		"version": { "type": "integer", "const": 1 },
+		"$wpds": {
+			"type": "string",
+			"description": "Pinned WPDS version (e.g. '6.9'). Resolver loads wpds-defaults-{version}.json as the implicit core baseline."
+		},
+		"userSwitchable": {
+			"type": "boolean",
+			"description": "Whether end users can opt into this shell via wp_admin_shell_user_prefs.shell. Default false."
+		},
 
 		"settings": {
 			"type": "object",
@@ -20,12 +29,18 @@
 				"shell": {
 					"type": "object",
 					"properties": {
-						"layoutEngine": { "type": "string", "examples": [ "core:site-editor-layout" ] },
+						"layoutEngine": {
+							"type": "string",
+							"examples": [ "core:site-editor-layout" ]
+						},
 						"config": {
 							"type": "object",
 							"properties": {
 								"arrangement": { "type": "string" },
-								"regions":     { "type": "array", "items": { "type": "string" } }
+								"regions": {
+									"type": "array",
+									"items": { "type": "string" }
+								}
 							},
 							"additionalProperties": true
 						}
@@ -40,12 +55,23 @@
 				},
 				"applications": {
 					"oneOf": [
-						{ "type": "object", "additionalProperties": { "$ref": "#/$defs/application" } },
-						{ "type": "array",  "items": { "$ref": "#/$defs/application" } }
+						{
+							"type": "object",
+							"additionalProperties": {
+								"$ref": "#/$defs/application"
+							}
+						},
+						{
+							"type": "array",
+							"items": { "$ref": "#/$defs/application" }
+						}
 					]
 				},
 				"defaultRoute": { "type": [ "string", "null" ] },
-				"commands":     { "type": "array", "items": { "$ref": "#/$defs/command" } },
+				"commands": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/command" }
+				},
 				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
 			},
 			"required": [ "shell" ],
@@ -59,9 +85,9 @@
 				"branding": {
 					"type": "object",
 					"properties": {
-						"logo":        { "type": "string" },
-						"icon":        { "type": "string" },
-						"title":       { "type": "string" },
+						"logo": { "type": "string" },
+						"icon": { "type": "string" },
+						"title": { "type": "string" },
 						"accentColor": { "type": "string" }
 					},
 					"additionalProperties": false
@@ -70,14 +96,23 @@
 					"type": "string",
 					"enum": [ "default", "compact", "comfortable" ]
 				},
-				"chrome":       { "type": "object", "description": "Shell-only surfaces emitting --wp-admin-shell--chrome--* variables." },
-				"color":        { "type": "object" },
-				"dimension":    { "type": "object" },
-				"border":       { "type": "object" },
-				"elevation":    { "type": "object" },
-				"font":         { "type": "object" },
-				"regions":      { "type": "object", "description": "Per-region scoped overrides (same shape as styles, restricted to leaves)." },
-				"applications": { "type": "object", "description": "Per-app scoped overrides (same shape as styles, restricted to leaves)." },
+				"chrome": {
+					"type": "object",
+					"description": "Shell-only surfaces emitting --wp-admin-shell--chrome--* variables."
+				},
+				"color": { "type": "object" },
+				"dimension": { "type": "object" },
+				"border": { "type": "object" },
+				"elevation": { "type": "object" },
+				"font": { "type": "object" },
+				"regions": {
+					"type": "object",
+					"description": "Per-region scoped overrides (same shape as styles, restricted to leaves)."
+				},
+				"applications": {
+					"type": "object",
+					"description": "Per-app scoped overrides (same shape as styles, restricted to leaves)."
+				},
 				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
 			},
 			"additionalProperties": true
@@ -90,15 +125,21 @@
 		"region": {
 			"type": "object",
 			"properties": {
-				"id":         { "type": "string" },
-				"source":     { "type": "string" },
+				"id": { "type": "string" },
+				"source": { "type": "string" },
 				"kind": {
 					"type": "string",
-					"enum": [ "persistent", "overlay", "drawer", "floating", "tiled" ]
+					"enum": [
+						"persistent",
+						"overlay",
+						"drawer",
+						"floating",
+						"tiled"
+					]
 				},
 				"capability": { "type": "string" },
-				"config":     { "type": "object", "additionalProperties": true },
-				"contains":   { "type": "array", "items": { "type": "string" } },
+				"config": { "type": "object", "additionalProperties": true },
+				"contains": { "type": "array", "items": { "type": "string" } },
 				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
 			},
 			"required": [ "source" ],
@@ -107,14 +148,17 @@
 		"application": {
 			"type": "object",
 			"properties": {
-				"id":         { "type": "string" },
-				"source":     { "type": "string", "description": "Registered source id (e.g. core:posts) or iframe:{url}." },
-				"title":      { "type": "string" },
-				"icon":       { "type": "string" },
-				"hidden":     { "type": "boolean" },
+				"id": { "type": "string" },
+				"source": {
+					"type": "string",
+					"description": "Registered source id (e.g. core:posts) or iframe:{url}."
+				},
+				"title": { "type": "string" },
+				"icon": { "type": "string" },
+				"hidden": { "type": "boolean" },
 				"capability": { "type": "string" },
-				"route":      { "type": "string" },
-				"config":     { "type": "object", "additionalProperties": true },
+				"route": { "type": "string" },
+				"config": { "type": "object", "additionalProperties": true },
 				"userCustomizable": { "$ref": "#/$defs/userCustomizable" }
 			},
 			"required": [ "source" ],
@@ -123,9 +167,9 @@
 		"command": {
 			"type": "object",
 			"properties": {
-				"id":     { "type": "string" },
-				"label":  { "type": "string" },
-				"icon":   { "type": "string" },
+				"id": { "type": "string" },
+				"label": { "type": "string" },
+				"icon": { "type": "string" },
 				"action": { "type": "object" }
 			},
 			"required": [ "id", "label" ]

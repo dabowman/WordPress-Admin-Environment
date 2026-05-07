@@ -1,20 +1,20 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:editor",
-  "version": 1,
-  "title": "Editor",
-  "description": "Full block editor for posts and pages. Currently mounts via iframe adapter on post.php; v2 native mount in flight.",
-  "role": "main",
-  "platform": {
-    "dirty-state": true,
-    "block-navigation-on-dirty": true
-  },
-  "config-schema": {
-    "type": "object",
-    "properties": {
-      "postType": { "type": "string", "default": "post" }
-    },
-    "additionalProperties": false
-  },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:editor",
+	"version": 1,
+	"title": "Editor",
+	"description": "Full block editor for posts and pages. Currently mounts via iframe adapter on post.php; v2 native mount in flight.",
+	"role": "main",
+	"platform": {
+		"dirty-state": true,
+		"block-navigation-on-dirty": true
+	},
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"postType": { "type": "string", "default": "post" }
+		},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
 }

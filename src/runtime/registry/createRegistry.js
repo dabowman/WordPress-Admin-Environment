@@ -13,10 +13,14 @@ export function createRegistry() {
 
 	function register( source ) {
 		if ( ! source || typeof source !== 'object' ) {
-			throw new Error( 'createRegistry: register() requires a source object' );
+			throw new Error(
+				'createRegistry: register() requires a source object'
+			);
 		}
 		if ( ! source.id || typeof source.id !== 'string' ) {
-			throw new Error( 'createRegistry: source.id must be a non-empty string' );
+			throw new Error(
+				'createRegistry: source.id must be a non-empty string'
+			);
 		}
 		if ( ! VALID_KINDS.has( source.kind ) ) {
 			throw new Error(

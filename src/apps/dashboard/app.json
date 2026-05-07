@@ -1,10 +1,10 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:dashboard",
-  "version": 1,
-  "title": "Dashboard",
-  "description": "Site overview cards: recent posts, drafts, comments, quick links.",
-  "role": "main",
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:dashboard",
+	"version": 1,
+	"title": "Dashboard",
+	"description": "Site overview cards: recent posts, drafts, comments, quick links.",
+	"role": "main",
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

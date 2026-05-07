@@ -46,7 +46,9 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	// Spec §8 layer 3 — source-declared capability floor. Even if the
 	// shell config omits `capability`, the source's required caps still
 	// apply.
-	const sourceCaps = Array.isArray( sourceDef.capabilities ) ? sourceDef.capabilities : [];
+	const sourceCaps = Array.isArray( sourceDef.capabilities )
+		? sourceDef.capabilities
+		: [];
 	for ( const cap of sourceCaps ) {
 		if ( ! userCan( cap ) ) {
 			return fallback;
@@ -54,7 +56,10 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	}
 
 	const Component = sourceDef.Component;
-	const mergedConfig = { ...( sourceDef.defaults || {} ), ...( appInstance.config || {} ) };
+	const mergedConfig = {
+		...( sourceDef.defaults || {} ),
+		...( appInstance.config || {} ),
+	};
 
 	return (
 		<ScopedThemeProvider styles={ appStyles }>

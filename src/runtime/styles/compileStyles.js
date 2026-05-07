@@ -28,17 +28,25 @@
  *     fallbacks where possible, otherwise emits the original string.
  *
  * **Chrome → WPDS bridge.** v2 architecture pivot: instead of overriding
- * @wordpress/ui component output via per-component CSS rules (a losing
+ * `@wordpress/ui` component output via per-component CSS rules (a losing
  * fight against cascade layers + WP-admin unlayered pollution), the chrome
  * design intent maps to `--wpds-*` token overrides scoped to each chrome
- * surface's container class. @wordpress/ui Buttons / IconButtons / Stacks
+ * surface's container class. `@wordpress/ui` Buttons / IconButtons / Stacks
  * inside that scope automatically pick up the dark-chrome palette through
  * their normal token consumption — no per-component overrides needed.
  */
 
 import { flattenTokens } from '../tokens/tokensResolver.mjs';
 
-const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'applications', 'customizable', 'theme' ] );
+const NON_TOKEN_KEYS = new Set( [
+	'branding',
+	'density',
+	'chrome',
+	'regions',
+	'applications',
+	'customizable',
+	'theme',
+] );
 
 /**
  * Chrome surface → WPDS token bindings. Each entry maps a chrome surface
@@ -47,7 +55,7 @@ const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'a
  * inside that scope. When a binding's source slot has a value in the
  * resolved chrome tree, the corresponding WPDS variable is set under the
  * surface's selector — turning chrome-authoring into automatic
- * @wordpress/ui re-theming.
+ * `@wordpress/ui` re-theming.
  *
  * Surface selectors target the React-rendered chrome containers
  * (`SidebarRegion`, `ToolbarRegion`, `SiteHubApp`); they are stable.
@@ -56,7 +64,7 @@ const NON_TOKEN_KEYS = new Set( [ 'branding', 'density', 'chrome', 'regions', 'a
  * subtree (e.g. `item.foreground` reaches `chrome.sidebar.item.foreground`).
  *
  * The dark-chrome palette is the typical case: chrome surfaces invert
- * @wordpress/ui's neutral interactive matrix so components rendered on
+ * `@wordpress/ui`'s neutral interactive matrix so components rendered on
  * dark backgrounds stay legible. Authors can override the bindings by
  * setting different chrome slot values; the bridge re-theming follows.
  */
@@ -64,23 +72,25 @@ const CHROME_WPDS_BINDINGS = {
 	sidebar: {
 		selector: '.wp-admin-shell-nav, .wp-admin-shell-site-hub',
 		bindings: {
-			'foreground':              '--wpds-color-fg-content-neutral',
-			'item.foreground':         '--wpds-color-fg-interactive-neutral',
-			'item.foreground-active':  '--wpds-color-fg-interactive-neutral-active',
-			'item.background-hover':   '--wpds-color-bg-interactive-neutral-weak-active',
+			foreground: '--wpds-color-fg-content-neutral',
+			'item.foreground': '--wpds-color-fg-interactive-neutral',
+			'item.foreground-active':
+				'--wpds-color-fg-interactive-neutral-active',
+			'item.background-hover':
+				'--wpds-color-bg-interactive-neutral-weak-active',
 		},
 	},
 	toolbar: {
 		selector: '.wp-admin-shell-toolbar',
 		bindings: {
-			'foreground':              '--wpds-color-fg-interactive-neutral',
-			'foreground-active':       '--wpds-color-fg-interactive-neutral-active',
+			foreground: '--wpds-color-fg-interactive-neutral',
+			'foreground-active': '--wpds-color-fg-interactive-neutral-active',
 		},
 	},
 	'site-hub': {
 		selector: '.wp-admin-shell-site-hub',
 		bindings: {
-			'foreground':              '--wpds-color-fg-interactive-neutral',
+			foreground: '--wpds-color-fg-interactive-neutral',
 		},
 	},
 };
@@ -118,7 +128,9 @@ export function compileStyles( styles, tokens ) {
 	// Top-level: emit into separate wpds + chrome maps so the engine
 	// can lay them out in the documented order (WPDS surface first,
 	// chrome extensions second).
-	const { wpds, chrome } = compileTree( styles, styles, tokensFlat, { splitChrome: true } );
+	const { wpds, chrome } = compileTree( styles, styles, tokensFlat, {
+		splitChrome: true,
+	} );
 
 	// Chrome → WPDS bridge. For each chrome surface that has bindings
 	// defined in CHROME_WPDS_BINDINGS, walk the resolved chrome subtree
@@ -127,7 +139,9 @@ export function compileStyles( styles, tokens ) {
 
 	const scoped = {};
 	if ( styles.regions && typeof styles.regions === 'object' ) {
-		for ( const [ regionId, regionStyles ] of Object.entries( styles.regions ) ) {
+		for ( const [ regionId, regionStyles ] of Object.entries(
+			styles.regions
+		) ) {
 			const out = compileTree( regionStyles, styles, tokensFlat ).wpds;
 			if ( Object.keys( out ).length > 0 ) {
 				scoped[ `region:${ regionId }` ] = out;
@@ -135,7 +149,9 @@ export function compileStyles( styles, tokens ) {
 		}
 	}
 	if ( styles.applications && typeof styles.applications === 'object' ) {
-		for ( const [ appId, appStyles ] of Object.entries( styles.applications ) ) {
+		for ( const [ appId, appStyles ] of Object.entries(
+			styles.applications
+		) ) {
 			const out = compileTree( appStyles, styles, tokensFlat ).wpds;
 			if ( Object.keys( out ).length > 0 ) {
 				scoped[ `app:${ appId }` ] = out;
@@ -165,18 +181,29 @@ function compileChromeScopedWpds( styles, tokensFlat ) {
 		return result;
 	}
 
-	for ( const [ surfaceKey, config ] of Object.entries( CHROME_WPDS_BINDINGS ) ) {
+	for ( const [ surfaceKey, config ] of Object.entries(
+		CHROME_WPDS_BINDINGS
+	) ) {
 		const surfaceTree = chromeTree[ surfaceKey ];
 		if ( ! surfaceTree || typeof surfaceTree !== 'object' ) {
 			continue;
 		}
 		const vars = {};
-		for ( const [ bindingPath, wpdsName ] of Object.entries( config.bindings ) ) {
-			const value = resolveByPath( surfaceTree, bindingPath.split( '.' ) );
+		for ( const [ bindingPath, wpdsName ] of Object.entries(
+			config.bindings
+		) ) {
+			const value = resolveByPath(
+				surfaceTree,
+				bindingPath.split( '.' )
+			);
 			if ( value === undefined || value === null ) {
 				continue;
 			}
-			const resolved = resolveValue( String( value ), styles, tokensFlat );
+			const resolved = resolveValue(
+				String( value ),
+				styles,
+				tokensFlat
+			);
 			vars[ wpdsName ] = resolved;
 		}
 		if ( Object.keys( vars ).length > 0 ) {
@@ -197,8 +224,18 @@ function compileChromeScopedWpds( styles, tokensFlat ) {
  * region/app overrides emit into a single output keyed by their
  * `[data-region-id]` / `[data-app-id]` selector and don't need the
  * top-level split.
+ * @param {*}      tree
+ * @param {*}      rootStyles
+ * @param {*}      tokensFlat
+ * @param {Object} root0
+ * @param {*}      root0.splitChrome
  */
-function compileTree( tree, rootStyles, tokensFlat = {}, { splitChrome = false } = {} ) {
+function compileTree(
+	tree,
+	rootStyles,
+	tokensFlat = {},
+	{ splitChrome = false } = {}
+) {
 	const wpds = {};
 	const chrome = splitChrome ? {} : wpds;
 
@@ -288,11 +325,15 @@ function resolveValue( raw, rootStyles, tokensFlat, visited, depth = 0 ) {
 	// somehow misses a self-reference.
 	const seen = visited || new Set();
 	if ( seen.has( aliasPath ) ) {
-		devWarn( `alias cycle detected on "${ aliasPath }"; emitting raw string` );
+		devWarn(
+			`alias cycle detected on "${ aliasPath }"; emitting raw string`
+		);
 		return raw;
 	}
 	if ( depth >= MAX_ALIAS_DEPTH ) {
-		devWarn( `alias chain exceeded ${ MAX_ALIAS_DEPTH } levels at "${ aliasPath }"; emitting raw string` );
+		devWarn(
+			`alias chain exceeded ${ MAX_ALIAS_DEPTH } levels at "${ aliasPath }"; emitting raw string`
+		);
 		return raw;
 	}
 
@@ -303,7 +344,13 @@ function resolveValue( raw, rootStyles, tokensFlat, visited, depth = 0 ) {
 		const resolved = resolveByPath( rootStyles, segments );
 		if ( resolved !== undefined ) {
 			seen.add( aliasPath );
-			return resolveValue( resolved, rootStyles, tokensFlat, seen, depth + 1 );
+			return resolveValue(
+				resolved,
+				rootStyles,
+				tokensFlat,
+				seen,
+				depth + 1
+			);
 		}
 	}
 

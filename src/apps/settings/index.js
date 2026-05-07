@@ -1,3 +1,4 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalItemGroup/Item have no @wordpress/ui 0.12 ports. */
 import './index.css';
 import { useState, useMemo } from '@wordpress/element';
 import {
@@ -101,7 +102,8 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 	// back to the first available panel rather than 404-ing. Acceptable
 	// v1 behavior — the panel list is shallow and the user lands on
 	// something sensible. v2 may surface a "panel not found" notice.
-	const activePanel = panels.find( ( p ) => p.id === activeId ) || panels[ 0 ];
+	const activePanel =
+		panels.find( ( p ) => p.id === activeId ) || panels[ 0 ];
 
 	if ( ! activePanel ) {
 		return (
@@ -116,7 +118,12 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 
 	return (
 		<div className="wp-admin-shell-app-settings">
-			<Stack direction="row" align="flex-start" gap="xs" style={ { height: '100%' } }>
+			<Stack
+				direction="row"
+				align="flex-start"
+				gap="xs"
+				style={ { height: '100%' } }
+			>
 				<aside className="wp-admin-shell-app-settings__nav">
 					<ItemGroup isBordered={ false } isSeparated={ false }>
 						{ panels.map( ( panel ) => (
@@ -124,7 +131,11 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 								key={ panel.id }
 								onClick={ () => setActive( panel.id ) }
 								isSelected={ panel.id === activePanel.id }
-								className={ panel.id === activePanel.id ? 'is-selected' : '' }
+								className={
+									panel.id === activePanel.id
+										? 'is-selected'
+										: ''
+								}
 							>
 								{ panel.label }
 							</Item>
@@ -132,11 +143,25 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 					</ItemGroup>
 				</aside>
 				<section className="wp-admin-shell-app-settings__panel">
-					{ PanelComponent ? (
-						<PanelComponent app={ app } config={ activePanel.config || {} } />
-					) : iframeUrl ? (
-						<IframeApp app={ app } config={ { url: iframeUrl } } />
-					) : null }
+					{ ( () => {
+						if ( PanelComponent ) {
+							return (
+								<PanelComponent
+									app={ app }
+									config={ activePanel.config || {} }
+								/>
+							);
+						}
+						if ( iframeUrl ) {
+							return (
+								<IframeApp
+									app={ app }
+									config={ { url: iframeUrl } }
+								/>
+							);
+						}
+						return null;
+					} )() }
 				</section>
 			</Stack>
 		</div>

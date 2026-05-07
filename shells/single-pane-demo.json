@@ -11,13 +11,17 @@
 		"appbar": {
 			"template": "core:appbar",
 			"regions": {
-				"start":  { "role": "region", "app": "core:site-hub" },
-				"end":    {
+				"start": { "role": "region", "app": "core:site-hub" },
+				"end": {
 					"role": "region",
 					"app": "core:toolbar-actions",
 					"config": {
 						"right": [
-							{ "command": "core/new-post", "icon": "plus", "label": "New Post" }
+							{
+								"command": "core/new-post",
+								"icon": "plus",
+								"label": "New Post"
+							}
 						]
 					}
 				}
@@ -29,8 +33,8 @@
 			"app": "core:navigation",
 			"config": {
 				"items": [
-					{ "label": "Posts", "icon": "post",  "href": "#/posts" },
-					{ "label": "Pages", "icon": "page",  "href": "#/pages" },
+					{ "label": "Posts", "icon": "post", "href": "#/posts" },
+					{ "label": "Pages", "icon": "page", "href": "#/pages" },
 					{ "label": "Media", "icon": "media", "href": "#/media" }
 				]
 			}
@@ -50,18 +54,33 @@
 			}
 		},
 
-		"notices-banner":   { "role": "region", "app": "core:notices-banner" },
+		"notices-banner": { "role": "region", "app": "core:notices-banner" },
 		"notices-snackbar": { "role": "region", "app": "core:notices-snackbar" }
 	},
 
 	"routes": {
-		"/posts":           { "app": "core:posts",           "config": { "postType": "post" } },
-		"/posts/new":       { "app": "core:simple-editor",   "config": { "postType": "post" } },
-		"/posts/{id}/edit": { "app": "core:simple-editor",   "config": { "postType": "post", "id": "{id}" } },
-		"/pages":           { "app": "core:posts",           "config": { "postType": "page" } },
-		"/pages/new":       { "app": "core:simple-editor",   "config": { "postType": "page" } },
-		"/pages/{id}/edit": { "app": "core:simple-editor",   "config": { "postType": "page", "id": "{id}" } },
-		"/media":           { "app": "core:iframe-fallback", "config": { "url": "upload.php" } }
+		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/posts/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post" }
+		},
+		"/posts/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post", "id": "{id}" }
+		},
+		"/pages": { "app": "core:posts", "config": { "postType": "page" } },
+		"/pages/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "page" }
+		},
+		"/pages/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "page", "id": "{id}" }
+		},
+		"/media": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "upload.php" }
+		}
 	},
 
 	"default-route": "/posts"

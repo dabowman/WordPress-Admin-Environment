@@ -5,8 +5,16 @@
 	"settings": {
 		"shell": { "layoutEngine": "core:site-editor-layout" },
 		"applications": {
-			"posts":  { "source": "core:posts",  "title": "Posts",  "route": "/posts" },
-			"media":  { "source": "core:media",  "title": "Media",  "route": "/media" }
+			"posts": {
+				"source": "core:posts",
+				"title": "Posts",
+				"route": "/posts"
+			},
+			"media": {
+				"source": "core:media",
+				"title": "Media",
+				"route": "/media"
+			}
 		},
 		"defaultRoute": "/posts"
 	}

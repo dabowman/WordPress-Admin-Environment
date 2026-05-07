@@ -13,13 +13,17 @@ import { navigate } from '../../runtime/routing/router';
  * Routes:
  *   #/editor/{postType}/{postId}  — edit existing post
  *   #/editor/{postType}/new       — create auto-draft, then edit
+ * @param {Object} root0
+ * @param {*}      root0.params
  */
 export default function EditorApp( { params } ) {
 	const postType = params[ 0 ] || 'post';
 	const postIdParam = params[ 1 ];
 	const isNew = postIdParam === 'new';
 
-	const [ postId, setPostId ] = useState( isNew ? null : Number( postIdParam ) );
+	const [ postId, setPostId ] = useState(
+		isNew ? null : Number( postIdParam )
+	);
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 	const [ iframeLoading, setIframeLoading ] = useState( true );
@@ -45,7 +49,8 @@ export default function EditorApp( { params } ) {
 						// blank paragraph block so the auto-draft saves
 						// even before the user types a title. SimpleEditorApp
 						// uses the same placeholder.
-						content: '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
+						content:
+							'<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
 					},
 				} );
 
@@ -61,7 +66,10 @@ export default function EditorApp( { params } ) {
 				}
 			} catch ( err ) {
 				if ( ! cancelled ) {
-					setError( err?.message || __( 'Failed to create draft.', 'wp-admin-shell' ) );
+					setError(
+						err?.message ||
+							__( 'Failed to create draft.', 'wp-admin-shell' )
+					);
 					setIsCreating( false );
 				}
 			}
@@ -110,9 +118,7 @@ export default function EditorApp( { params } ) {
 						{ __( 'Back to list', 'wp-admin-shell' ) }
 					</Button>
 				</div>
-				<div className="wp-admin-shell-content__empty">
-					{ error }
-				</div>
+				<div className="wp-admin-shell-content__empty">{ error }</div>
 			</div>
 		);
 	}

@@ -1,7 +1,6 @@
 import { useMemo, useState } from '@wordpress/element';
-import { useEntityRecords } from '@wordpress/core-data';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
@@ -61,8 +60,10 @@ export default function UsersApp() {
 		queryArgs
 	);
 
-	const { deleteEntityRecord, invalidateResolution } = useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { deleteEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -123,7 +124,6 @@ export default function UsersApp() {
 		[]
 	);
 
-
 	const actions = useMemo(
 		() => [
 			{
@@ -145,20 +145,24 @@ export default function UsersApp() {
 							style={ { padding: '16px' } }
 						>
 							<Text>
-								{ targets.length === 0
-									? __(
+								{ ( () => {
+									if ( targets.length === 0 ) {
+										return __(
 											'You cannot delete your own account.',
 											'wp-admin-shell'
-									  )
-									: targets.length === 1
-									? __(
+										);
+									}
+									if ( targets.length === 1 ) {
+										return __(
 											'Delete this user permanently? Their content will be reassigned to you.',
 											'wp-admin-shell'
-									  )
-									: __(
-											'Delete these users permanently? Their content will be reassigned to you.',
-											'wp-admin-shell'
-									  ) }
+										);
+									}
+									return __(
+										'Delete these users permanently? Their content will be reassigned to you.',
+										'wp-admin-shell'
+									);
+								} )() }
 								{ skipped > 0 && targets.length > 0 && (
 									<>
 										{ ' ' }
@@ -201,7 +205,8 @@ export default function UsersApp() {
 														item.id,
 														{
 															force: true,
-															reassign: currentUserId,
+															reassign:
+																currentUserId,
 														}
 													)
 												)
@@ -238,7 +243,6 @@ export default function UsersApp() {
 					);
 				},
 			},
-			
 		],
 		[
 			deleteEntityRecord,

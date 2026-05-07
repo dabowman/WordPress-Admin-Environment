@@ -11,8 +11,7 @@
 
 .wp-admin-shell-sidebar__content {
 	flex-grow: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
+	overflow: auto;
 	contain: content;
 }
 
@@ -45,17 +44,18 @@
 	flex-direction: column;
 	height: 100%;
 	max-height: 100%;
-	padding: 0 var(--wpds-dimension-padding-sm);
 	animation-duration: 0.14s;
 	animation-timing-function: ease-in-out;
 	will-change: transform, opacity;
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
 }
 
 /* Custom scrollbars on hover — ported from
    @wordpress/base-styles/_mixins.scss `custom-scrollbars-on-hover`.
    Resting handle is transparent; the chrome border var (with WPDS stroke
-   fallback) shows on hover/focus so the bar matches whatever chrome the
-   sidebar surface paints. */
+   fallback) shows on hover/focus-within so the bar matches whatever chrome
+   the sidebar surface paints. */
 .wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar {
 	width: 12px;
 	height: 12px;
@@ -73,22 +73,16 @@
 }
 
 .wp-admin-shell-sidebar__screen-wrapper:hover::-webkit-scrollbar-thumb,
-.wp-admin-shell-sidebar__screen-wrapper:focus::-webkit-scrollbar-thumb,
 .wp-admin-shell-sidebar__screen-wrapper:focus-within::-webkit-scrollbar-thumb {
 	background-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 }
 
-.wp-admin-shell-sidebar__screen-wrapper {
-	scrollbar-width: thin;
-	scrollbar-color: transparent transparent;
-}
-
 .wp-admin-shell-sidebar__screen-wrapper:hover,
-.wp-admin-shell-sidebar__screen-wrapper:focus,
 .wp-admin-shell-sidebar__screen-wrapper:focus-within {
 	scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
 }
 
+/* Touch devices have no hover — show scrollbar unconditionally. */
 @media (hover: none) {
 	.wp-admin-shell-sidebar__screen-wrapper {
 		scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
@@ -115,7 +109,6 @@
 
 .wp-admin-shell-sidebar-navigation-screen__main {
 	flex-grow: 1;
-	margin-bottom: var(--wpds-dimension-gap-lg);
 }
 
 .wp-admin-shell-sidebar-navigation-screen__main.has-footer {
@@ -126,9 +119,6 @@
 	position: sticky;
 	top: 0;
 	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
-	padding-top: 48px;
-	margin-bottom: var(--wpds-dimension-gap-sm);
-	padding-bottom: var(--wpds-dimension-padding-sm);
 	z-index: 1;
 }
 
@@ -142,17 +132,14 @@
 	line-height: var(--wpds-font-line-height-xl);
 }
 
-.wp-admin-shell-sidebar-navigation-screen__content {
-	padding: 0 var(--wpds-dimension-padding-lg);
-}
-
 .wp-admin-shell-sidebar-navigation-screen__description {
 	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
 	font-size: var(--wpds-font-size-md);
 	line-height: var(--wpds-font-line-height-sm);
-	margin: 0 0 var(--wpds-dimension-gap-md);
 }
 
+/* `!important` overrides the default border ItemGroup paints around its
+   children — no other way to drop it without forking the component. */
 .wp-admin-shell-sidebar-navigation-screen__items {
 	border: none !important;
 }
@@ -162,8 +149,6 @@
 	bottom: 0;
 	background-color: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
 	gap: 0;
-	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
-	margin: var(--wpds-dimension-gap-lg) 0 0;
 	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 }
 
@@ -183,8 +168,7 @@
    ========================================================================== */
 
 .wp-admin-shell-sidebar-navigation-item.components-item {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
-	padding: var(--wpds-dimension-padding-sm) 6px var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral-weak));
 	border: none;
 	min-height: 40px;
 }
@@ -244,7 +228,7 @@
 	border: none;
 }
 
-.wp-admin-shell-nav__item.is-active {
+.wp-admin-shell-nav__item[aria-current="true"] {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
 	font-weight: var(--wpds-font-weight-medium);

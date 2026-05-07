@@ -63,6 +63,7 @@ export const wpdsThemeProviderAvailable = !! RealThemeProvider;
  * its shape is identical to `<ThemeProvider>`'s prop interface, so the
  * mapping is direct. Legacy `styles.branding.accentColor` is read as a
  * one-cycle fallback for `theme.color.primary`.
+ * @param {*} styles
  */
 function pickColor( styles ) {
 	const primary =

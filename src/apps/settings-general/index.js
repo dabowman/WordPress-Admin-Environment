@@ -1,15 +1,10 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
 import './index.css';
 import { useState } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import {
-	Button,
-	InputControl,
-	Notice,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
 import {
 	SelectControl,
 	CheckboxControl,
@@ -26,7 +21,8 @@ export default function SettingsGeneralApp() {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'site' );
 
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 	const [ dateFormatCustom, setDateFormatCustom ] = useState(
 		editedRecord?.date_format || ''
 	);
@@ -52,7 +48,8 @@ export default function SettingsGeneralApp() {
 			} );
 		} catch ( err ) {
 			createErrorNotice(
-				err.message || __( 'Failed to save settings.', 'wp-admin-shell' ),
+				err.message ||
+					__( 'Failed to save settings.', 'wp-admin-shell' ),
 				{ isDismissible: true }
 			);
 		}
@@ -191,12 +188,10 @@ export default function SettingsGeneralApp() {
 								<Notice.Root intent="info">
 									<Notice.Description>
 										{ __(
-											'There is a pending admin email change to: ',
+											'There is a pending admin email change to:',
 											'wp-admin-shell'
 										) }
-										<code>
-											{ data.pendingAdminEmail }
-										</code>
+										<code>{ data.pendingAdminEmail }</code>
 									</Notice.Description>
 								</Notice.Root>
 							) }
@@ -318,10 +313,7 @@ export default function SettingsGeneralApp() {
 				/>
 				{ dateFormatRadioValue === CUSTOM_RADIO_VALUE && (
 					<InputControl
-						label={ __(
-							'Custom date format',
-							'wp-admin-shell'
-						) }
+						label={ __( 'Custom date format', 'wp-admin-shell' ) }
 						value={ editedRecord.date_format || '' }
 						onChange={ ( e ) => {
 							const v = eventValue( e );
@@ -348,10 +340,7 @@ export default function SettingsGeneralApp() {
 				/>
 				{ timeFormatRadioValue === CUSTOM_RADIO_VALUE && (
 					<InputControl
-						label={ __(
-							'Custom time format',
-							'wp-admin-shell'
-						) }
+						label={ __( 'Custom time format', 'wp-admin-shell' ) }
 						value={ editedRecord.time_format || '' }
 						onChange={ ( e ) => {
 							const v = eventValue( e );

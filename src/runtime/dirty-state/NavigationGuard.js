@@ -36,7 +36,8 @@ export function NavigationGuard() {
 
 		window.addEventListener( 'beforeunload', onBeforeUnload );
 
-		const nav = typeof window.navigation === 'object' ? window.navigation : null;
+		const nav =
+			typeof window.navigation === 'object' ? window.navigation : null;
 		let onNavigate;
 		if ( nav && typeof nav.addEventListener === 'function' ) {
 			onNavigate = ( event ) => {
@@ -46,6 +47,7 @@ export function NavigationGuard() {
 				if ( ! event.canIntercept || event.hashChange === false ) {
 					return;
 				}
+				// eslint-disable-next-line no-alert
 				if ( ! window.confirm( CONFIRM_MESSAGE ) ) {
 					event.preventDefault();
 				}
@@ -75,6 +77,7 @@ export function NavigationGuard() {
 				lastHash = window.location.hash;
 				return;
 			}
+			// eslint-disable-next-line no-alert
 			if ( window.confirm( CONFIRM_MESSAGE ) ) {
 				lastHash = window.location.hash;
 				return;

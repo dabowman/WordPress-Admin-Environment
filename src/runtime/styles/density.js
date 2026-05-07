@@ -15,6 +15,7 @@ export const ALLOWED_DENSITIES = [ 'default', 'compact', 'comfortable' ];
  * `compact` to a shell that omits density correctly overwrites the
  * stale attribute on `#wp-admin-shell` (rather than leaving the
  * previous shell's value attached).
+ * @param {*} styles
  */
 export function resolveDensity( styles ) {
 	// Tier 1 (preferred): styles.theme.density — ThemeProvider seed shape.
@@ -33,6 +34,7 @@ export function resolveDensity( styles ) {
  * Strip the data-wpds-density attribute. For the v2 in-process shell
  * re-mount path. v1 page-reload makes this redundant; v2 (issue #28)
  * needs it before applying the next shell's density.
+ * @param {*} element
  */
 export function clearDensity( element ) {
 	if ( ! element ) {

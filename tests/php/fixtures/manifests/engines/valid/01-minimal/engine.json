@@ -1,14 +1,14 @@
 {
-  "id": "core:test-minimal-engine",
-  "version": 1,
-  "title": "Test Minimal Engine",
-  "specializes-roles": [ "main" ],
-  "honored-platform": [ "modal" ],
-  "templates": {
-    "core:main": {
-      "role": "main"
-    }
-  },
-  "default-arrangement": "single-pane",
-  "script": "test-minimal-engine"
+	"id": "core:test-minimal-engine",
+	"version": 1,
+	"title": "Test Minimal Engine",
+	"specializes-roles": [ "main" ],
+	"honored-platform": [ "modal" ],
+	"templates": {
+		"core:main": {
+			"role": "main"
+		}
+	},
+	"default-arrangement": "single-pane",
+	"script": "test-minimal-engine"
 }

@@ -1,8 +1,14 @@
 import './index.css';
-import { useState, useEffect, useMemo, useCallback, useRef } from '@wordpress/element';
+import {
+	useState,
+	useEffect,
+	useMemo,
+	useCallback,
+	useRef,
+} from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button } from '@wordpress/ui';
-import { Spinner } from '@wordpress/components';
+import { Spinner, Slot } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
@@ -17,7 +23,6 @@ import {
 	BlockEditorKeyboardShortcuts,
 } from '@wordpress/block-editor';
 import { navigate } from '../../runtime/routing/router';
-import { Slot } from '@wordpress/components';
 import { useDirtyState } from '../../runtime/dirty-state/useDirtyState';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
@@ -79,6 +84,9 @@ function ensureBlocksRegistered() {
  *
  * MVP scope: title + content only. Featured image, taxonomy, excerpt, etc.
  * are deferred to a future post settings panel.
+ * @param {Object} root0
+ * @param {*}      root0.config
+ * @param {*}      root0.regionId
  */
 export default function SimpleEditorApp( { config = {}, regionId } ) {
 	// V2 routing: postType comes from the route's config block; the
@@ -88,9 +96,12 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	// `config.id` is undefined and the app creates a draft.
 	const postType = config.postType || 'post';
 	const postIdRaw = config.id;
-	const isNew = postIdRaw === undefined || postIdRaw === '' || postIdRaw === 'new';
+	const isNew =
+		postIdRaw === undefined || postIdRaw === '' || postIdRaw === 'new';
 
-	const [ postId, setPostId ] = useState( isNew ? null : Number( postIdRaw ) );
+	const [ postId, setPostId ] = useState(
+		isNew ? null : Number( postIdRaw )
+	);
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 
@@ -111,7 +122,8 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 					method: 'POST',
 					data: {
 						status: 'draft',
-						content: '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
+						content:
+							'<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
 					},
 				} );
 
@@ -186,8 +198,15 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 		ensureBlocksRegistered();
 	}, [] );
 
-	const { record, editedRecord, edit, save, hasEdits, isSaving, isResolving } =
-		useEntityRecord( 'postType', postType, postId );
+	const {
+		record,
+		editedRecord,
+		edit,
+		save,
+		hasEdits,
+		isSaving,
+		isResolving,
+	} = useEntityRecord( 'postType', postType, postId );
 
 	useDirtyState( regionId, hasEdits, { blocksNavigation: true } );
 
@@ -241,8 +260,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 		if ( hydrated || ! record?.id ) {
 			return;
 		}
-		const raw =
-			editedRecord?.content?.raw ?? record?.content?.raw ?? '';
+		const raw = editedRecord?.content?.raw ?? record?.content?.raw ?? '';
 		setBlocks( parse( raw ) );
 		setHydrated( true );
 	}, [ record?.id, hydrated, record, editedRecord ] );
@@ -353,7 +371,10 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 						: __( 'Publish', 'wp-admin-shell' ) }
 				</Button>
 			</div>
-			<div className="wp-admin-shell-app-simple-editor__body" ref={ bodyRef }>
+			<div
+				className="wp-admin-shell-app-simple-editor__body"
+				ref={ bodyRef }
+			>
 				<div className="wp-admin-shell-app-simple-editor__column">
 					<input
 						type="text"
@@ -384,9 +405,9 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 			<Slot
 				name="core:editor.sidebar"
 				fillProps={ {
-					postId:   record?.id,
+					postId: record?.id,
 					postType,
-					status:   record?.status,
+					status: record?.status,
 				} }
 			/>
 		</div>

@@ -1,10 +1,10 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:media",
-  "version": 1,
-  "title": "Media",
-  "description": "Media library grid with upload and detail modal. Reads via `core-data` `media` entity.",
-  "role": "main",
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:media",
+	"version": 1,
+	"title": "Media",
+	"description": "Media library grid with upload and detail modal. Reads via `core-data` `media` entity.",
+	"role": "main",
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

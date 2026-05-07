@@ -2,16 +2,8 @@ import { useState, useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
-import {
-	Button,
-	Stack,
-	Text,
-	InputControl,
-} from '@wordpress/ui';
-import {
-	RadioControl,
-	Spinner,
-} from '@wordpress/components';
+import { Button, Stack, Text, InputControl } from '@wordpress/ui';
+import { RadioControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { useKernel } from '../../runtime/kernel-context';
@@ -42,7 +34,11 @@ function isCustomizable( declaration, path ) {
 	if ( declaration === true ) {
 		return true;
 	}
-	if ( declaration === false || declaration === null || declaration === undefined ) {
+	if (
+		declaration === false ||
+		declaration === null ||
+		declaration === undefined
+	) {
 		return false;
 	}
 	if ( Array.isArray( declaration ) ) {
@@ -52,7 +48,11 @@ function isCustomizable( declaration, path ) {
 	// the server-side default-deny posture. Surface a dev-mode warn so
 	// the author sees the typo instead of wondering why their controls
 	// don't render. Production silent.
-	if ( IS_DEV && typeof declaration === 'object' && ! warnedDeclarations.has( declaration ) ) {
+	if (
+		IS_DEV &&
+		typeof declaration === 'object' &&
+		! warnedDeclarations.has( declaration )
+	) {
 		warnedDeclarations.add( declaration );
 		// eslint-disable-next-line no-console
 		console.warn(
@@ -65,7 +65,8 @@ function isCustomizable( declaration, path ) {
 
 export default function AppearanceApp() {
 	const { config } = useKernel();
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	const [ prefs, setPrefs ] = useState( null );
 	const [ isSaving, setSaving ] = useState( false );
@@ -86,16 +87,20 @@ export default function AppearanceApp() {
 
 	const stylesDecl = config.styles?.customizable;
 
-	const allowDensity     = isCustomizable( stylesDecl, 'density' );
-	const allowAccent      = isCustomizable( stylesDecl, 'color.bg.interactive.brand.strong' )
-		|| isCustomizable( stylesDecl, 'branding.accentColor' );
+	const allowDensity = isCustomizable( stylesDecl, 'density' );
+	const allowAccent =
+		isCustomizable( stylesDecl, 'color.bg.interactive.brand.strong' ) ||
+		isCustomizable( stylesDecl, 'branding.accentColor' );
 	const allowDefaultRoute = isCustomizable( stylesDecl, 'default-route' );
 
-	const density = prefs.styles?.density || config.styles?.density || 'default';
-	const accent  = prefs.styles?.color?.bg?.interactive?.brand?.strong
-		|| config.styles?.color?.bg?.interactive?.brand?.strong
-		|| '#3858e9';
-	const defaultRoute = prefs[ 'default-route' ] || config[ 'default-route' ] || '';
+	const density =
+		prefs.styles?.density || config.styles?.density || 'default';
+	const accent =
+		prefs.styles?.color?.bg?.interactive?.brand?.strong ||
+		config.styles?.color?.bg?.interactive?.brand?.strong ||
+		'#3858e9';
+	const defaultRoute =
+		prefs[ 'default-route' ] || config[ 'default-route' ] || '';
 
 	const save = async ( patch ) => {
 		setSaving( true );
@@ -106,7 +111,9 @@ export default function AppearanceApp() {
 				data: patch,
 			} );
 			setPrefs( next );
-			createSuccessNotice( __( 'Appearance saved.', 'wp-admin-shell' ), { type: 'snackbar' } );
+			createSuccessNotice( __( 'Appearance saved.', 'wp-admin-shell' ), {
+				type: 'snackbar',
+			} );
 		} catch ( err ) {
 			createErrorNotice(
 				err?.message || __( 'Save failed.', 'wp-admin-shell' ),
@@ -121,7 +128,9 @@ export default function AppearanceApp() {
 		try {
 			await apiFetch( { path: PREFS_PATH, method: 'DELETE' } );
 			setPrefs( {} );
-			createSuccessNotice( __( 'Appearance reset.', 'wp-admin-shell' ), { type: 'snackbar' } );
+			createSuccessNotice( __( 'Appearance reset.', 'wp-admin-shell' ), {
+				type: 'snackbar',
+			} );
 		} catch ( err ) {
 			createErrorNotice(
 				err?.message || __( 'Reset failed.', 'wp-admin-shell' ),
@@ -154,11 +163,22 @@ export default function AppearanceApp() {
 						label={ __( 'Density', 'wp-admin-shell' ) }
 						selected={ density }
 						options={ [
-							{ label: __( 'Default', 'wp-admin-shell' ),     value: 'default' },
-							{ label: __( 'Compact', 'wp-admin-shell' ),     value: 'compact' },
-							{ label: __( 'Comfortable', 'wp-admin-shell' ), value: 'comfortable' },
+							{
+								label: __( 'Default', 'wp-admin-shell' ),
+								value: 'default',
+							},
+							{
+								label: __( 'Compact', 'wp-admin-shell' ),
+								value: 'compact',
+							},
+							{
+								label: __( 'Comfortable', 'wp-admin-shell' ),
+								value: 'comfortable',
+							},
 						] }
-						onChange={ ( val ) => save( { styles: { density: val } } ) }
+						onChange={ ( val ) =>
+							save( { styles: { density: val } } )
+						}
 					/>
 				) }
 
@@ -175,7 +195,16 @@ export default function AppearanceApp() {
 							if ( /^#[0-9a-fA-F]{6}$/.test( val ) ) {
 								save( {
 									styles: {
-										color: { bg: { interactive: { brand: { strong: val, 'strong-active': val } } } },
+										color: {
+											bg: {
+												interactive: {
+													brand: {
+														strong: val,
+														'strong-active': val,
+													},
+												},
+											},
+										},
 									},
 								} );
 							}
@@ -191,7 +220,9 @@ export default function AppearanceApp() {
 							'wp-admin-shell'
 						) }
 						value={ defaultRoute }
-						onChange={ ( e ) => save( { 'default-route': e.target.value } ) }
+						onChange={ ( e ) =>
+							save( { 'default-route': e.target.value } )
+						}
 					/>
 				) }
 

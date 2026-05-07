@@ -22,7 +22,11 @@ export function BindingsConsumer() {
 	const bindings = Array.isArray( config?.bindings ) ? config.bindings : null;
 
 	useEffect( () => {
-		if ( ! bindings || bindings.length === 0 || typeof window === 'undefined' ) {
+		if (
+			! bindings ||
+			bindings.length === 0 ||
+			typeof window === 'undefined'
+		) {
 			return undefined;
 		}
 

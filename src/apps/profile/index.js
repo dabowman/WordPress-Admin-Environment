@@ -2,17 +2,8 @@ import './index.css';
 import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import {
-	Button,
-	InputControl,
-	Stack,
-	Text,
-} from '@wordpress/ui';
-import {
-	TextareaControl,
-	SelectControl,
-	Spinner,
-} from '@wordpress/components';
+import { Button, InputControl, Stack, Text } from '@wordpress/ui';
+import { TextareaControl, SelectControl, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 export default function ProfileApp() {
@@ -20,7 +11,8 @@ export default function ProfileApp() {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	if ( ! userId ) {
 		return (
@@ -53,7 +45,8 @@ export default function ProfileApp() {
 			} );
 		} catch ( err ) {
 			createErrorNotice(
-				err.message || __( 'Failed to save profile.', 'wp-admin-shell' ),
+				err.message ||
+					__( 'Failed to save profile.', 'wp-admin-shell' ),
 				{ isDismissible: true }
 			);
 		}
@@ -93,16 +86,12 @@ export default function ProfileApp() {
 				<InputControl
 					label={ __( 'Last Name', 'wp-admin-shell' ) }
 					value={ editedRecord.last_name || '' }
-					onChange={ ( e ) =>
-						edit( { last_name: eventValue( e ) } )
-					}
+					onChange={ ( e ) => edit( { last_name: eventValue( e ) } ) }
 				/>
 				<InputControl
 					label={ __( 'Nickname', 'wp-admin-shell' ) }
 					value={ editedRecord.nickname || '' }
-					onChange={ ( e ) =>
-						edit( { nickname: eventValue( e ) } )
-					}
+					onChange={ ( e ) => edit( { nickname: eventValue( e ) } ) }
 				/>
 				<SelectControl
 					label={ __( 'Display Name', 'wp-admin-shell' ) }

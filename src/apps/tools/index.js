@@ -1,12 +1,6 @@
-import {
-	Button,
-	Card,
-	Stack,
-	Text,
-} from '@wordpress/ui';
-import {
-	__experimentalGrid as Grid,
-} from '@wordpress/components';
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalGrid has no @wordpress/ui 0.12 port. */
+import { Button, Card, Stack, Text } from '@wordpress/ui';
+import { __experimentalGrid as Grid } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
 
@@ -84,7 +78,10 @@ export default function ToolsApp() {
 						<Card.Root key={ tool.id }>
 							<Card.Header>
 								<Card.Title>
-									<Text variant="heading-md" render={ <h2 /> }>
+									<Text
+										variant="heading-md"
+										render={ <h2 /> }
+									>
 										{ tool.title }
 									</Text>
 								</Card.Title>
@@ -102,10 +99,7 @@ export default function ToolsApp() {
 												navigate( tool.appId )
 											}
 										>
-											{ __(
-												'Open',
-												'wp-admin-shell'
-											) }
+											{ __( 'Open', 'wp-admin-shell' ) }
 										</Button>
 									) : (
 										<Button
@@ -116,10 +110,7 @@ export default function ToolsApp() {
 													adminUrl( tool.legacy ) )
 											}
 										>
-											{ __(
-												'Open',
-												'wp-admin-shell'
-											) }
+											{ __( 'Open', 'wp-admin-shell' ) }
 										</Button>
 									) }
 								</Stack>

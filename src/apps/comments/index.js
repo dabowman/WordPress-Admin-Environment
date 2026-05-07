@@ -1,8 +1,7 @@
 import './index.css';
-import { useMemo, useState } from '@wordpress/element';
-import { useEntityRecords } from '@wordpress/core-data';
+import { useCallback, useMemo, useState } from '@wordpress/element';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
@@ -20,10 +19,10 @@ import { trash } from '@wordpress/icons';
  * because @wordpress/components' Text doesn't pass HTML through.
  */
 const STATUS_LABELS = {
-	approved: __( 'Approved',  'wp-admin-shell' ),
-	hold:     __( 'Pending',   'wp-admin-shell' ),
-	spam:     __( 'Spam',      'wp-admin-shell' ),
-	trash:    __( 'Trash',     'wp-admin-shell' ),
+	approved: __( 'Approved', 'wp-admin-shell' ),
+	hold: __( 'Pending', 'wp-admin-shell' ),
+	spam: __( 'Spam', 'wp-admin-shell' ),
+	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
 export default function CommentsApp() {
@@ -66,7 +65,8 @@ export default function CommentsApp() {
 
 	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -144,30 +144,38 @@ export default function CommentsApp() {
 		[]
 	);
 
-
-	const setCommentsStatus = async ( items, targetStatus, label ) => {
-		try {
-			await Promise.all(
-				items.map( ( item ) =>
-					saveEntityRecord( 'root', 'comment', {
-						id: item.id,
-						status: targetStatus,
-					} )
-				)
-			);
-			invalidateResolution( 'getEntityRecords', [
-				'root',
-				'comment',
-				queryArgs,
-			] );
-			createSuccessNotice( label, { type: 'snackbar' } );
-		} catch ( err ) {
-			createErrorNotice(
-				err?.message || __( 'Action failed.', 'wp-admin-shell' ),
-				{ isDismissible: true }
-			);
-		}
-	};
+	const setCommentsStatus = useCallback(
+		async ( items, targetStatus, label ) => {
+			try {
+				await Promise.all(
+					items.map( ( item ) =>
+						saveEntityRecord( 'root', 'comment', {
+							id: item.id,
+							status: targetStatus,
+						} )
+					)
+				);
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'comment',
+					queryArgs,
+				] );
+				createSuccessNotice( label, { type: 'snackbar' } );
+			} catch ( err ) {
+				createErrorNotice(
+					err?.message || __( 'Action failed.', 'wp-admin-shell' ),
+					{ isDismissible: true }
+				);
+			}
+		},
+		[
+			saveEntityRecord,
+			invalidateResolution,
+			queryArgs,
+			createSuccessNotice,
+			createErrorNotice,
+		]
+	);
 
 	const actions = useMemo(
 		() => [
@@ -177,7 +185,11 @@ export default function CommentsApp() {
 				supportsBulk: true,
 				isEligible: ( item ) => item.status !== 'approved',
 				callback: ( items ) =>
-					setCommentsStatus( items, 'approved', __( 'Approved.', 'wp-admin-shell' ) ),
+					setCommentsStatus(
+						items,
+						'approved',
+						__( 'Approved.', 'wp-admin-shell' )
+					),
 			},
 			{
 				id: 'unapprove',
@@ -185,7 +197,11 @@ export default function CommentsApp() {
 				supportsBulk: true,
 				isEligible: ( item ) => item.status === 'approved',
 				callback: ( items ) =>
-					setCommentsStatus( items, 'hold', __( 'Set to pending.', 'wp-admin-shell' ) ),
+					setCommentsStatus(
+						items,
+						'hold',
+						__( 'Set to pending.', 'wp-admin-shell' )
+					),
 			},
 			{
 				id: 'spam',
@@ -194,7 +210,11 @@ export default function CommentsApp() {
 				supportsBulk: true,
 				isEligible: ( item ) => item.status !== 'spam',
 				callback: ( items ) =>
-					setCommentsStatus( items, 'spam', __( 'Marked as spam.', 'wp-admin-shell' ) ),
+					setCommentsStatus(
+						items,
+						'spam',
+						__( 'Marked as spam.', 'wp-admin-shell' )
+					),
 			},
 			{
 				id: 'trash',
@@ -211,8 +231,14 @@ export default function CommentsApp() {
 					>
 						<Text>
 							{ items.length === 1
-								? __( 'Move this comment to trash?', 'wp-admin-shell' )
-								: __( 'Move these comments to trash?', 'wp-admin-shell' ) }
+								? __(
+										'Move this comment to trash?',
+										'wp-admin-shell'
+								  )
+								: __(
+										'Move these comments to trash?',
+										'wp-admin-shell'
+								  ) }
 						</Text>
 						<Stack direction="row" justify="flex-end" gap="sm">
 							<Button
@@ -229,7 +255,11 @@ export default function CommentsApp() {
 									try {
 										await Promise.all(
 											items.map( ( item ) =>
-												deleteEntityRecord( 'root', 'comment', item.id )
+												deleteEntityRecord(
+													'root',
+													'comment',
+													item.id
+												)
 											)
 										);
 										invalidateResolution(
@@ -237,13 +267,20 @@ export default function CommentsApp() {
 											[ 'root', 'comment', queryArgs ]
 										);
 										createSuccessNotice(
-											__( 'Moved to trash.', 'wp-admin-shell' ),
+											__(
+												'Moved to trash.',
+												'wp-admin-shell'
+											),
 											{ type: 'snackbar' }
 										);
 										onActionPerformed?.( items );
 									} catch ( err ) {
 										createErrorNotice(
-											err?.message || __( 'Failed to trash.', 'wp-admin-shell' ),
+											err?.message ||
+												__(
+													'Failed to trash.',
+													'wp-admin-shell'
+												),
 											{ isDismissible: true }
 										);
 									}
@@ -256,10 +293,9 @@ export default function CommentsApp() {
 					</Stack>
 				),
 			},
-			
 		],
 		[
-			saveEntityRecord,
+			setCommentsStatus,
 			deleteEntityRecord,
 			invalidateResolution,
 			queryArgs,

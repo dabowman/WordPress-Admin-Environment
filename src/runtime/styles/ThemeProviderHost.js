@@ -23,13 +23,7 @@
  *     overrides to a region or application subtree.
  */
 
-import {
-	useId,
-	useMemo,
-	useState,
-	createElement,
-	Component,
-} from '@wordpress/element';
+import { useId, useMemo, createElement, Component } from '@wordpress/element';
 
 import { compileStyles } from './compileStyles';
 import { WpdsThemeProvider } from './WpdsThemeProvider';
@@ -40,14 +34,14 @@ const EMPTY_TOKENS = Object.freeze( {} );
 /**
  * Top-level host. Mounted by the kernel.
  *
- * @param {Object}   props
- * @param {Object}   [props.engineSource]  Active engine source. When absent
- *                                         (e.g. tests), falls back to WPDS.
- * @param {Object}   props.styles
- * @param {Object}   props.tokens
- * @param {string}   [props.density]
- * @param {boolean}  [props.isRoot]
- * @param {*}        props.children
+ * @param {Object}  props
+ * @param {Object}  [props.engineSource] Active engine source. When absent
+ *                                       (e.g. tests), falls back to WPDS.
+ * @param {Object}  props.styles
+ * @param {Object}  props.tokens
+ * @param {string}  [props.density]
+ * @param {boolean} [props.isRoot]
+ * @param {*}       props.children
  */
 export function ThemeProviderHost( props ) {
 	return createElement( ProviderShell, props );
@@ -61,17 +55,25 @@ export function ThemeProviderHost( props ) {
  * Subtree styles share the top-level `styles` shape (color / border /
  * dimension / etc., plus `theme`), minus the `regions` / `applications` /
  * `chrome` blocks which only make sense at shell scope.
+ * @param {Object} root0
+ * @param {*}      root0.styles
+ * @param {*}      root0.children
  */
 export function ScopedThemeProvider( { styles, children } ) {
 	const { engineSource } = useKernel();
-	if ( ! styles || typeof styles !== 'object' || ! hasThemeContent( styles ) ) {
+	if (
+		! styles ||
+		typeof styles !== 'object' ||
+		! hasThemeContent( styles )
+	) {
 		return children;
 	}
 	const tokens =
 		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) ||
 		EMPTY_TOKENS;
 	const density =
-		( typeof styles?.theme?.density === 'string' && styles.theme.density ) ||
+		( typeof styles?.theme?.density === 'string' &&
+			styles.theme.density ) ||
 		( typeof styles?.density === 'string' && styles.density ) ||
 		undefined;
 	return createElement(
@@ -90,6 +92,13 @@ export function ScopedThemeProvider( { styles, children } ) {
 /**
  * Shared internal renderer. Picks inner provider, emits scoped detail
  * `<style>`, wraps in error boundary.
+ * @param {Object} root0
+ * @param {*}      root0.engineSource
+ * @param {*}      root0.styles
+ * @param {*}      root0.tokens
+ * @param {*}      root0.density
+ * @param {*}      root0.isRoot
+ * @param {*}      root0.children
  */
 function ProviderShell( {
 	engineSource,
@@ -128,11 +137,7 @@ function ProviderShell( {
 	};
 
 	const detailStyleNode = detailCss
-		? createElement(
-				'style',
-				{ 'data-wpds-shell-detail': id },
-				detailCss
-		  )
+		? createElement( 'style', { 'data-wpds-shell-detail': id }, detailCss )
 		: null;
 
 	return createElement(
@@ -178,12 +183,7 @@ class ThemeProviderErrorBoundary extends Component {
 			! this.state.failed && engineSource?.ThemeProvider
 				? engineSource.ThemeProvider
 				: WpdsThemeProvider;
-		return createElement(
-			Provider,
-			innerProps,
-			detailStyleNode,
-			wrapper
-		);
+		return createElement( Provider, innerProps, detailStyleNode, wrapper );
 	}
 }
 
@@ -194,6 +194,10 @@ class ThemeProviderErrorBoundary extends Component {
  * `--wp-components-color-*` compat aliases). Shell-level + chrome +
  * region/app overrides emit scoped to the provider id we attach to our
  * wrapping `<div>`.
+ * @param {Object} root0
+ * @param {*}      root0.styles
+ * @param {*}      root0.tokens
+ * @param {*}      root0.providerId
  */
 function buildScopedDetailCss( { styles, tokens, providerId } ) {
 	const compiled = compileStyles( styles, tokens );
@@ -246,18 +250,16 @@ function hasThemeContent( styles ) {
 	if ( styles.theme && typeof styles.theme === 'object' ) {
 		return true;
 	}
-	for ( const key of [ 'color', 'border', 'dimension', 'elevation', 'font' ] ) {
+	for ( const key of [
+		'color',
+		'border',
+		'dimension',
+		'elevation',
+		'font',
+	] ) {
 		if ( styles[ key ] && typeof styles[ key ] === 'object' ) {
 			return true;
 		}
 	}
 	return false;
 }
-
-// Test-visible utilities ---------------------------------------------------
-
-/**
- * Pure helper exposed for unit tests. Builds the same scoped detail CSS
- * that `<ProviderShell>` emits, without React.
- */
-export const __test_buildScopedDetailCss = buildScopedDetailCss;

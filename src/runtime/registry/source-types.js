@@ -21,13 +21,13 @@
  * Common identity envelope for any source registered with the runtime.
  *
  * @typedef {Object} SourceBase
- * @property {SourceKind}     kind          - Discriminant.
- * @property {string}         id            - Globally unique identifier (e.g. `core:posts`).
- * @property {string}         [title]       - Human-readable title (used in registries / pickers).
- * @property {Object}         [configSchema] - Optional JSON Schema for the source's instance config.
- * @property {string[]}       [capabilities] - Capability floor (spec §8 layer 3). Every cap listed
- *                                            must be held by the current user for the source to
- *                                            mount. Enforced at registry lookup time.
+ * @property {SourceKind} kind           - Discriminant.
+ * @property {string}     id             - Globally unique identifier (e.g. `core:posts`).
+ * @property {string}     [title]        - Human-readable title (used in registries / pickers).
+ * @property {Object}     [configSchema] - Optional JSON Schema for the source's instance config.
+ * @property {string[]}   [capabilities] - Capability floor (spec §8 layer 3). Every cap listed
+ *                                       must be held by the current user for the source to
+ *                                       mount. Enforced at registry lookup time.
  */
 
 /* ──────────────────────── App sources ─────────────────────── */
@@ -36,14 +36,14 @@
  * Props delivered to an `AppSource.Component` when it mounts inside a region.
  *
  * @typedef {Object} AppSourceProps
- * @property {Object} app           - The application instance from the resolved config.
- * @property {string} app.id        - The application id from admin.json.
- * @property {string} app.source    - The source string (e.g. `core:posts`).
- * @property {string} [app.title]   - Display title.
- * @property {string} [app.icon]    - Icon name (resolved via iconMap).
- * @property {Object} [config]      - Per-instance config validated against `configSchema`.
+ * @property {Object}   app         - The application instance from the resolved config.
+ * @property {string}   app.id      - The application id from admin.json.
+ * @property {string}   app.source  - The source string (e.g. `core:posts`).
+ * @property {string}   [app.title] - Display title.
+ * @property {string}   [app.icon]  - Icon name (resolved via iconMap).
+ * @property {Object}   [config]    - Per-instance config validated against `configSchema`.
  * @property {string[]} [segments]  - Sub-route segments (single routable region only in v1).
- * @property {string} regionId      - The id of the region currently mounting this app.
+ * @property {string}   regionId    - The id of the region currently mounting this app.
  */
 
 /**
@@ -65,8 +65,8 @@
  * `<Region>` renderer (see `src/runtime/regions/Region.js`).
  *
  * @typedef {Object} EngineSourceProps
- * @property {Object} config                       - The full resolved shell config.
- * @property {Object<string, Object>} regions      - Region declarations keyed by region id.
+ * @property {Object}                 config  - The full resolved shell config.
+ * @property {Object<string, Object>} regions - Region declarations keyed by region id.
  */
 
 /**
@@ -87,11 +87,11 @@
  *     scoped to the wrapper id. Engines do NOT need to reimplement them.
  *
  * @typedef {Object} EngineThemeProviderProps
- * @property {boolean} isRoot
- * @property {Object}  styles
- * @property {Object}  tokens
- * @property {string}  [density]
- * @property {*}       children
+ * @property {boolean} isRoot    True when mounted at the kernel root.
+ * @property {Object}  styles    Resolved admin.json `styles` block.
+ * @property {Object}  tokens    Flattened DTCG tokens from `tokens.json`.
+ * @property {string}  [density] Active density preset, if declared.
+ * @property {*}       children  Tree to render inside the provider.
  */
 
 /**

@@ -13,9 +13,9 @@ import { createContext, useContext } from '@wordpress/element';
  * wraps its tree in this provider once at mount.
  *
  * @typedef {Object} KernelContextValue
- * @property {Object} registry        - The source registry instance.
- * @property {Object} config          - The resolved (post-cascade in M2) shell config.
- * @property {Object} [engineSource]  - The active engine source from the registry.
+ * @property {Object} registry       - The source registry instance.
+ * @property {Object} config         - The resolved (post-cascade in M2) shell config.
+ * @property {Object} [engineSource] - The active engine source from the registry.
  */
 
 const KernelContext = createContext( null );

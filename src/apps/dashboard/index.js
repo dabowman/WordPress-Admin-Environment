@@ -1,15 +1,8 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalGrid has no @wordpress/ui 0.12 port. */
 import { useMemo } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
-import {
-	Button,
-	Card,
-	Stack,
-	Text,
-} from '@wordpress/ui';
-import {
-	__experimentalGrid as Grid,
-	Spinner,
-} from '@wordpress/components';
+import { Button, Card, Stack, Text } from '@wordpress/ui';
+import { __experimentalGrid as Grid, Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
 
@@ -39,7 +32,12 @@ export default function DashboardApp() {
 	const { record: user } = useEntityRecord( 'root', 'user', userId || 0 );
 
 	const postsQuery = useMemo(
-		() => ( { per_page: 1, status: 'publish', context: 'edit', _fields: 'id' } ),
+		() => ( {
+			per_page: 1,
+			status: 'publish',
+			context: 'edit',
+			_fields: 'id',
+		} ),
 		[]
 	);
 	const draftQuery = useMemo(
@@ -56,12 +54,13 @@ export default function DashboardApp() {
 		() => ( { per_page: 5, status: 'hold', context: 'edit' } ),
 		[]
 	);
-	const recentMedia = useMemo(
-		() => ( { per_page: 1, _fields: 'id' } ),
-		[]
-	);
 	const pagesQuery = useMemo(
-		() => ( { per_page: 1, status: 'publish', context: 'edit', _fields: 'id' } ),
+		() => ( {
+			per_page: 1,
+			status: 'publish',
+			context: 'edit',
+			_fields: 'id',
+		} ),
 		[]
 	);
 	const usersQuery = useMemo( () => ( { per_page: 1, _fields: 'id' } ), [] );
@@ -70,7 +69,6 @@ export default function DashboardApp() {
 	const drafts = useEntityRecords( 'postType', 'post', draftQuery );
 	const pages = useEntityRecords( 'postType', 'page', pagesQuery );
 	const comments = useEntityRecords( 'root', 'comment', pendingComments );
-	const media = useEntityRecords( 'root', 'media', recentMedia );
 	const users = useEntityRecords( 'root', 'user', usersQuery );
 
 	const greeting = useMemo( () => {
@@ -165,47 +163,55 @@ export default function DashboardApp() {
 							</Card.Title>
 						</Card.Header>
 						<Card.Content>
-							{ drafts.isResolving && ! drafts.records ? (
-								<Spinner />
-							) : drafts.records?.length ? (
-								<Stack direction="column" gap="sm">
-									{ drafts.records.map( ( draft ) => (
-										<Stack
-											key={ draft.id }
-											direction="row"
-											justify="space-between"
-											align="center"
-										>
-											<Button
-												tone="neutral"
-												variant="minimal"
-												onClick={ () =>
-													navigate( `#/posts/${ draft.id }/edit` )
-												}
+							{ ( () => {
+								if ( drafts.isResolving && ! drafts.records ) {
+									return <Spinner />;
+								}
+								if ( ! drafts.records?.length ) {
+									return (
+										<Text variant="body-sm">
+											{ __(
+												'No drafts yet. Start writing!',
+												'wp-admin-shell'
+											) }
+										</Text>
+									);
+								}
+								return (
+									<Stack direction="column" gap="sm">
+										{ drafts.records.map( ( draft ) => (
+											<Stack
+												key={ draft.id }
+												direction="row"
+												justify="space-between"
+												align="center"
 											>
-												{ draft.title?.raw ||
-													draft.title?.rendered ||
-													__(
-														'(no title)',
-														'wp-admin-shell'
-													) }
-											</Button>
-											<Text variant="body-sm">
-												{ new Date(
-													draft.modified
-												).toLocaleDateString() }
-											</Text>
-										</Stack>
-									) ) }
-								</Stack>
-							) : (
-								<Text variant="body-sm">
-									{ __(
-										'No drafts yet. Start writing!',
-										'wp-admin-shell'
-									) }
-								</Text>
-							) }
+												<Button
+													tone="neutral"
+													variant="minimal"
+													onClick={ () =>
+														navigate(
+															`#/posts/${ draft.id }/edit`
+														)
+													}
+												>
+													{ draft.title?.raw ||
+														draft.title?.rendered ||
+														__(
+															'(no title)',
+															'wp-admin-shell'
+														) }
+												</Button>
+												<Text variant="body-sm">
+													{ new Date(
+														draft.modified
+													).toLocaleDateString() }
+												</Text>
+											</Stack>
+										) ) }
+									</Stack>
+								);
+							} )() }
 						</Card.Content>
 					</Card.Root>
 
@@ -221,53 +227,63 @@ export default function DashboardApp() {
 							</Card.Title>
 						</Card.Header>
 						<Card.Content>
-							{ comments.isResolving && ! comments.records ? (
-								<Spinner />
-							) : comments.records?.length ? (
-								<Stack direction="column" gap="sm">
-									{ comments.records.map( ( c ) => (
-										<Stack
-											key={ c.id }
-											direction="column"
-											gap="xs"
-										>
-											<Text variant="body-sm">
-												<strong>
-													{ c.author_name }
-												</strong>
-											</Text>
-											<Text
-												variant="body-sm"
-												render={ <span /> }
+							{ ( () => {
+								if (
+									comments.isResolving &&
+									! comments.records
+								) {
+									return <Spinner />;
+								}
+								if ( ! comments.records?.length ) {
+									return (
+										<Text variant="body-sm">
+											{ __(
+												'Inbox zero. Nothing pending.',
+												'wp-admin-shell'
+											) }
+										</Text>
+									);
+								}
+								return (
+									<Stack direction="column" gap="sm">
+										{ comments.records.map( ( c ) => (
+											<Stack
+												key={ c.id }
+												direction="column"
+												gap="xs"
 											>
-												{ stripTags(
-													c.content?.rendered || ''
-												).slice( 0, 120 ) }
-											</Text>
-										</Stack>
-									) ) }
-									<Button
-										tone="neutral"
-										variant="outline"
-										size="small"
-										onClick={ () =>
-											navigate( '#/comments' )
-										}
-									>
-										{ __(
-											'Moderate all',
-											'wp-admin-shell'
-										) }
-									</Button>
-								</Stack>
-							) : (
-								<Text variant="body-sm">
-									{ __(
-										'Inbox zero. Nothing pending.',
-										'wp-admin-shell'
-									) }
-								</Text>
-							) }
+												<Text variant="body-sm">
+													<strong>
+														{ c.author_name }
+													</strong>
+												</Text>
+												<Text
+													variant="body-sm"
+													render={ <span /> }
+												>
+													{ stripTags(
+														c.content?.rendered ||
+															''
+													).slice( 0, 120 ) }
+												</Text>
+											</Stack>
+										) ) }
+										<Button
+											tone="neutral"
+											variant="outline"
+											size="small"
+											onClick={ () =>
+												navigate( '#/comments' )
+											}
+										>
+											{ __(
+												'Moderate all',
+												'wp-admin-shell'
+											) }
+										</Button>
+									</Stack>
+								);
+							} )() }
 						</Card.Content>
 					</Card.Root>
 				</Grid>

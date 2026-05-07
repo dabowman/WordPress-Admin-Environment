@@ -1,12 +1,8 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
 import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import {
-	Button,
-	InputControl,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, InputControl, Stack, Text } from '@wordpress/ui';
 import {
 	SelectControl,
 	RadioControl,
@@ -79,17 +75,11 @@ export default function SettingsReadingApp() {
 					options={ [
 						{
 							value: 'posts',
-							label: __(
-								'Your latest posts',
-								'wp-admin-shell'
-							),
+							label: __( 'Your latest posts', 'wp-admin-shell' ),
 						},
 						{
 							value: 'page',
-							label: __(
-								'A static page',
-								'wp-admin-shell'
-							),
+							label: __( 'A static page', 'wp-admin-shell' ),
 						},
 					] }
 					onChange={ ( val ) => edit( { show_on_front: val } ) }
@@ -121,10 +111,7 @@ export default function SettingsReadingApp() {
 				<Divider />
 
 				<InputControl
-					label={ __(
-						'Blog pages show at most',
-						'wp-admin-shell'
-					) }
+					label={ __( 'Blog pages show at most', 'wp-admin-shell' ) }
 					type="number"
 					value={ String( editedRecord.posts_per_page ?? 10 ) }
 					onChange={ ( e ) =>
@@ -151,7 +138,10 @@ export default function SettingsReadingApp() {
 				/>
 
 				<RadioControl
-					label={ __( 'For each post in a feed, include', 'wp-admin-shell' ) }
+					label={ __(
+						'For each post in a feed, include',
+						'wp-admin-shell'
+					) }
 					selected={ editedRecord.rss_use_excerpt ? '1' : '0' }
 					options={ [
 						{

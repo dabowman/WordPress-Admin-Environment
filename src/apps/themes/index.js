@@ -1,13 +1,9 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalGrid has no @wordpress/ui 0.12 port. */
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import {
-	Button,
-	Card,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, Card, Stack, Text } from '@wordpress/ui';
 import {
 	__experimentalGrid as Grid,
 	CardMedia,
@@ -34,7 +30,6 @@ export default function ThemesApp() {
 	const { invalidateResolution } = useDispatch( coreStore );
 
 	const isLoading = isResolving;
-	const [ error, setError ] = useState( null );
 	const [ details, setDetails ] = useState( null );
 
 	const activeStylesheet =
@@ -75,21 +70,17 @@ export default function ThemesApp() {
 			return [];
 		}
 		return [ ...themes ].sort( ( a, b ) => {
-			if ( a.stylesheet === activeStylesheet ) return -1;
-			if ( b.stylesheet === activeStylesheet ) return 1;
+			if ( a.stylesheet === activeStylesheet ) {
+				return -1;
+			}
+			if ( b.stylesheet === activeStylesheet ) {
+				return 1;
+			}
 			return ( a.name?.rendered || '' ).localeCompare(
 				b.name?.rendered || ''
 			);
 		} );
 	}, [ themes, activeStylesheet ] );
-
-	if ( error ) {
-		return (
-			<div className="wp-admin-shell-app-themes__error">
-				<Text variant="body-md">{ error }</Text>
-			</div>
-		);
-	}
 
 	if ( isLoading || ! themes ) {
 		return (
@@ -111,8 +102,7 @@ export default function ThemesApp() {
 					{ __( 'Themes', 'wp-admin-shell' ) }
 				</Text>
 				<Text variant="body-sm">
-					{ themes.length }{ ' ' }
-					{ __( 'installed', 'wp-admin-shell' ) }
+					{ themes.length } { __( 'installed', 'wp-admin-shell' ) }
 				</Text>
 			</Stack>
 
@@ -221,7 +211,9 @@ export default function ThemesApp() {
 							{ __( 'Version', 'wp-admin-shell' ) }:{ ' ' }
 							{ details.theme.version } ·{ ' ' }
 							{ __( 'Author', 'wp-admin-shell' ) }:{ ' ' }
-							{ stripTags( details.theme.author?.rendered || '' ) }
+							{ stripTags(
+								details.theme.author?.rendered || ''
+							) }
 						</Text>
 						<Stack direction="row" justify="flex-end" gap="sm">
 							{ details.theme.theme_uri && (

@@ -6,7 +6,12 @@
 	"settings": {
 		"shell": { "layoutEngine": "core:site-editor-layout" },
 		"applications": [
-			{ "id": "posts", "source": "core:posts", "title": "Posts", "route": "/posts" }
+			{
+				"id": "posts",
+				"source": "core:posts",
+				"title": "Posts",
+				"route": "/posts"
+			}
 		],
 		"defaultRoute": "/posts"
 	}

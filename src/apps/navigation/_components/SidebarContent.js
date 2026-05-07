@@ -9,6 +9,9 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  *
  * The `screenKey` prop triggers a re-mount when the screen changes,
  * which resets the animation class.
+ * @param {Object} root0
+ * @param {*}      root0.screenKey
+ * @param {*}      root0.children
  */
 export default function SidebarContent( { screenKey, children } ) {
 	return (
@@ -55,6 +58,9 @@ function SidebarContentWrapper( { children } ) {
  * Focus a sidebar element after navigation. On back navigation,
  * tries to focus the element that triggered the forward navigation.
  * Otherwise focuses the first tabbable element (usually the Back button).
+ * @param {*} el
+ * @param {*} direction
+ * @param {*} focusSelector
  */
 function focusSidebarElement( el, direction, focusSelector ) {
 	if ( ! el || direction === null ) {

@@ -1,31 +1,31 @@
 {
-  "name": "test-shell",
-  "title": "Test Shell",
-  "version": 1,
-  "settings": {
-    "shell": { "layoutEngine": "core:default" },
-    "applications": [
-      {
-        "id": "posts",
-        "source": "core:posts",
-        "title": "Posts",
-        "icon": "post",
-        "customizable": [ "title", "icon" ]
-      },
-      {
-        "id": "pages",
-        "source": "core:posts",
-        "title": "Pages",
-        "icon": "page",
-        "customizable": false
-      }
-    ]
-  },
-  "styles": {
-    "branding": {
-      "accentColor": "#3858e9",
-      "title": null
-    },
-    "customizable": [ "branding.accentColor" ]
-  }
+	"name": "test-shell",
+	"title": "Test Shell",
+	"version": 1,
+	"settings": {
+		"shell": { "layoutEngine": "core:default" },
+		"applications": [
+			{
+				"id": "posts",
+				"source": "core:posts",
+				"title": "Posts",
+				"icon": "post",
+				"customizable": [ "title", "icon" ]
+			},
+			{
+				"id": "pages",
+				"source": "core:posts",
+				"title": "Pages",
+				"icon": "page",
+				"customizable": false
+			}
+		]
+	},
+	"styles": {
+		"branding": {
+			"accentColor": "#3858e9",
+			"title": null
+		},
+		"customizable": [ "branding.accentColor" ]
+	}
 }

@@ -1,7 +1,5 @@
-import {
-	__experimentalItem as Item,
-	FlexBlock,
-} from '@wordpress/components';
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalItem has no @wordpress/ui 0.12 port. */
+import { __experimentalItem as Item, FlexBlock } from '@wordpress/components';
 import { Icon, Stack } from '@wordpress/ui';
 import { isRTL } from '@wordpress/i18n';
 import { chevronRightSmall, chevronLeftSmall } from '@wordpress/icons';
@@ -16,6 +14,16 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  * `Item` and `FlexBlock` are kept from `@wordpress/components` — neither
  * has a WPDS port in 0.12. Layout is provided by `Stack`/`Icon` from
  * `@wordpress/ui`.
+ * @param {Object} root0
+ * @param {*}      root0.className
+ * @param {*}      root0.icon
+ * @param {*}      root0.withChevron
+ * @param {*}      root0.suffix
+ * @param {*}      root0.uid
+ * @param {*}      root0.onClick
+ * @param {*}      root0.href
+ * @param {*}      root0.isActive
+ * @param {*}      root0.children
  */
 export default function SidebarNavigationItem( {
 	className,
@@ -73,9 +81,7 @@ export default function SidebarNavigationItem( {
 				<FlexBlock>{ children }</FlexBlock>
 				{ withChevron && (
 					<Icon
-						icon={
-							isRTL() ? chevronLeftSmall : chevronRightSmall
-						}
+						icon={ isRTL() ? chevronLeftSmall : chevronRightSmall }
 						className="wp-admin-shell-sidebar-navigation-item__drilldown-indicator"
 						size={ 24 }
 					/>

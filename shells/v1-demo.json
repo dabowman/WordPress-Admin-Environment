@@ -18,7 +18,11 @@
 					"app": "core:toolbar-actions",
 					"config": {
 						"right": [
-							{ "command": "core/new-post", "icon": "plus", "label": "New post" }
+							{
+								"command": "core/new-post",
+								"icon": "plus",
+								"label": "New post"
+							}
 						]
 					}
 				}
@@ -38,13 +42,34 @@
 					"config": {
 						"title": "v2 demo navigation",
 						"items": [
-							{ "label": "Posts",      "icon": "post",  "href": "#/posts" },
-							{ "label": "Media",      "icon": "media", "href": "#/media" },
+							{
+								"label": "Posts",
+								"icon": "post",
+								"href": "#/posts"
+							},
+							{
+								"label": "Media",
+								"icon": "media",
+								"href": "#/media"
+							},
 							{ "separator": true },
-							{ "label": "Appearance", "icon": "brush", "href": "#/appearance" },
-							{ "label": "Profile",    "icon": "user",  "href": "#/profile" },
+							{
+								"label": "Appearance",
+								"icon": "brush",
+								"href": "#/appearance"
+							},
+							{
+								"label": "Profile",
+								"icon": "user",
+								"href": "#/profile"
+							},
 							{ "separator": true },
-							{ "label": "View site",  "icon": "external", "href": "/", "external": true }
+							{
+								"label": "View site",
+								"icon": "external",
+								"href": "/",
+								"external": true
+							}
 						]
 					}
 				}
@@ -77,11 +102,17 @@
 	},
 
 	"routes": {
-		"/posts":           { "app": "core:posts",         "config": { "postType": "post" } },
-		"/posts/new":       { "app": "core:simple-editor", "config": { "postType": "post" } },
-		"/posts/{id}/edit": { "app": "core:simple-editor", "config": { "postType": "post", "id": "{id}" } },
-		"/media":      { "app": "core:media" },
-		"/profile":    { "app": "core:profile" },
+		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/posts/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post" }
+		},
+		"/posts/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post", "id": "{id}" }
+		},
+		"/media": { "app": "core:media" },
+		"/profile": { "app": "core:profile" },
 		"/appearance": { "app": "core:appearance" }
 	},
 

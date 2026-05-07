@@ -1,22 +1,28 @@
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import {
-	Badge,
-	Button,
-	Card,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Badge, Button, Card, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
 
 const ASYNC_TESTS = [
-	{ id: 'dotorg-communication', label: __( 'WordPress.org communication', 'wp-admin-shell' ) },
-	{ id: 'background-updates', label: __( 'Background updates', 'wp-admin-shell' ) },
-	{ id: 'loopback-requests', label: __( 'Loopback requests', 'wp-admin-shell' ) },
+	{
+		id: 'dotorg-communication',
+		label: __( 'WordPress.org communication', 'wp-admin-shell' ),
+	},
+	{
+		id: 'background-updates',
+		label: __( 'Background updates', 'wp-admin-shell' ),
+	},
+	{
+		id: 'loopback-requests',
+		label: __( 'Loopback requests', 'wp-admin-shell' ),
+	},
 	{ id: 'https-status', label: __( 'HTTPS status', 'wp-admin-shell' ) },
-	{ id: 'authorization-header', label: __( 'Authorization header', 'wp-admin-shell' ) },
+	{
+		id: 'authorization-header',
+		label: __( 'Authorization header', 'wp-admin-shell' ),
+	},
 ];
 
 const STATUS_TO_INTENT = {
@@ -102,8 +108,7 @@ export default function SiteHealthApp() {
 						{ __( 'Site Health', 'wp-admin-shell' ) }
 					</Text>
 					<Text variant="body-sm">
-						{ counts.good }{ ' ' }
-						{ __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
+						{ counts.good } { __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
 						{ counts.recommended }{ ' ' }
 						{ __( 'recommended', 'wp-admin-shell' ) } ·{ ' ' }
 						{ counts.critical }{ ' ' }

@@ -34,10 +34,13 @@ export async function switchShell( slug ) {
 	// sanitize_callback (registered in wp-admin-shell.php) is the
 	// second line of defense — rejects unknown slugs with the option's
 	// previous value preserved.
-	const shells = ( typeof window !== 'undefined' && window.wpAdminShell?.shells ) || [];
+	const shells =
+		( typeof window !== 'undefined' && window.wpAdminShell?.shells ) || [];
 	if ( shells.length > 0 && ! shells.some( ( s ) => s.slug === slug ) ) {
 		throw new Error(
-			`switchShell: unknown shell "${ slug }". Known: ${ shells.map( ( s ) => s.slug ).join( ', ' ) }`
+			`switchShell: unknown shell "${ slug }". Known: ${ shells
+				.map( ( s ) => s.slug )
+				.join( ', ' ) }`
 		);
 	}
 

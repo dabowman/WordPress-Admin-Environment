@@ -1,21 +1,21 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:simple-editor",
-  "version": 1,
-  "title": "Simple editor",
-  "description": "Substack-style minimal block editor: title plus nine allowed blocks. Auto-save with 2s debounce.",
-  "role": "main",
-  "platform": {
-    "dirty-state": true,
-    "block-navigation-on-dirty": true,
-    "autofocus-target": "input[name=\"post-title\"]"
-  },
-  "config-schema": {
-    "type": "object",
-    "properties": {
-      "postType": { "type": "string", "default": "post" }
-    },
-    "additionalProperties": false
-  },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:simple-editor",
+	"version": 1,
+	"title": "Simple editor",
+	"description": "Substack-style minimal block editor: title plus nine allowed blocks. Auto-save with 2s debounce.",
+	"role": "main",
+	"platform": {
+		"dirty-state": true,
+		"block-navigation-on-dirty": true,
+		"autofocus-target": "input[name=\"post-title\"]"
+	},
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"postType": { "type": "string", "default": "post" }
+		},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
 }

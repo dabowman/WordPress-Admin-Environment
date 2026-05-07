@@ -40,16 +40,25 @@ const SiteHubApp = memo(
 				? filterURLForDisplay( site.url )
 				: site?.title || window.wpAdminShell?.siteName || '';
 		const siteTitle = decodeEntities( resolvedTitle );
-		const homeUrl = window.wpAdminShell?.homeUrl || window.wpAdminShell?.siteUrl;
+		const homeUrl =
+			window.wpAdminShell?.homeUrl || window.wpAdminShell?.siteUrl;
 		const dashboardUrl = window.wpAdminShell?.dashboardUrl;
 
 		return (
 			<div className="wp-admin-shell-site-hub">
-				<Stack direction="row" gap="xs" justify="flex-start" align="center" style={ { minWidth: 0, flex: 1 } }>
+				<Stack
+					direction="row"
+					gap="xs"
+					justify="flex-start"
+					align="center"
+					style={ { minWidth: 0, flex: 1 } }
+				>
 					<div
 						className={
 							'wp-admin-shell-site-hub__icon-container' +
-							( isTransparent ? ' has-transparent-background' : '' )
+							( isTransparent
+								? ' has-transparent-background'
+								: '' )
 						}
 					>
 						<Button
@@ -57,23 +66,40 @@ const SiteHubApp = memo(
 							tone="neutral"
 							variant="minimal"
 							render={ <a href={ dashboardUrl } /> }
-							aria-label={ __( 'Go to the Dashboard', 'wp-admin-shell' ) }
+							aria-label={ __(
+								'Go to the Dashboard',
+								'wp-admin-shell'
+							) }
 							className="wp-admin-shell-site-hub__icon-button"
 						>
 							<SiteIcon config={ { branding } } />
 						</Button>
 					</div>
 
-					<Stack direction="row" gap="xs" align="center" style={ { minWidth: 0, flex: 1 } }>
+					<Stack
+						direction="row"
+						gap="xs"
+						align="center"
+						style={ { minWidth: 0, flex: 1 } }
+					>
 						<div className="wp-admin-shell-site-hub__title">
 							<Button
 								tone="neutral"
 								variant="minimal"
-								render={ <a href={ homeUrl } target="_blank" rel="noopener noreferrer" /> }
+								render={
+									<a
+										href={ homeUrl }
+										target="_blank"
+										rel="noopener noreferrer"
+									/>
+								}
 							>
 								{ siteTitle }
 								<VisuallyHidden as="span">
-									{ __( '(opens in a new tab)', 'wp-admin-shell' ) }
+									{ __(
+										'(opens in a new tab)',
+										'wp-admin-shell'
+									) }
 								</VisuallyHidden>
 							</Button>
 						</div>
@@ -89,9 +115,13 @@ const SiteHubApp = memo(
 								className="wp-admin-shell-site-hub__command-toggle"
 								icon={ search }
 								onClick={ () => openCommandCenter() }
-								label={ __( 'Open command palette', 'wp-admin-shell' ) }
+								label={ __(
+									'Open command palette',
+									'wp-admin-shell'
+								) }
 								shortcut={ {
-									displayShortcut: displayShortcut.primary( 'k' ),
+									displayShortcut:
+										displayShortcut.primary( 'k' ),
 									ariaKeyShortcut: 'Meta+K',
 								} }
 							/>

@@ -1,8 +1,7 @@
 import './index.css';
-import { useMemo, useState, useCallback } from '@wordpress/element';
-import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
+import { useMemo, useState } from '@wordpress/element';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
@@ -19,6 +18,8 @@ import { navigate } from '../../runtime/routing/router';
  * types (`wp_template`, `wp_block`, `wp_navigation`) need their own
  * edit canvas + URL-encoding (slug-shaped ids); defer until those
  * screens land.
+ * @param {*} postType
+ * @param {*} id
  */
 function editHref( postType, id ) {
 	const segment = postType === 'page' ? 'pages' : 'posts';
@@ -34,7 +35,7 @@ const STATUS_LABELS = {
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
-export default function PostsApp( { app, config } ) {
+export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 
 	const [ view, setView ] = useState( {
@@ -66,7 +67,10 @@ export default function PostsApp( { app, config } ) {
 
 		for ( const filter of view.filters ) {
 			if ( filter.field === 'status' ) {
-				if ( filter.operator === 'isAny' && Array.isArray( filter.value ) ) {
+				if (
+					filter.operator === 'isAny' &&
+					Array.isArray( filter.value )
+				) {
 					args.status = filter.value.join( ',' );
 				} else if ( filter.operator === 'is' ) {
 					args.status = filter.value;
@@ -94,7 +98,10 @@ export default function PostsApp( { app, config } ) {
 		}
 		return records.map( ( record ) => ( {
 			id: record.id,
-			title: record.title?.rendered || record.title?.raw || __( '(no title)', 'wp-admin-shell' ),
+			title:
+				record.title?.rendered ||
+				record.title?.raw ||
+				__( '(no title)', 'wp-admin-shell' ),
 			status: record.status,
 			date: record.date,
 			author: record._embedded?.author?.[ 0 ]?.name || '',
@@ -117,7 +124,9 @@ export default function PostsApp( { app, config } ) {
 				render: ( { item } ) => (
 					<Button
 						variant="minimal"
-						onClick={ () => navigate( editHref( postType, item.id ) ) }
+						onClick={ () =>
+							navigate( editHref( postType, item.id ) )
+						}
 					>
 						{ item.title }
 					</Button>
@@ -152,7 +161,6 @@ export default function PostsApp( { app, config } ) {
 		[ postType ]
 	);
 
-
 	const actions = useMemo(
 		() => [
 			{
@@ -181,7 +189,11 @@ export default function PostsApp( { app, config } ) {
 				supportsBulk: true,
 				icon: trash,
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<Stack direction="column" gap="md" style={ { padding: '16px' } }>
+					<Stack
+						direction="column"
+						gap="md"
+						style={ { padding: '16px' } }
+					>
 						<Text>
 							{ items.length === 1
 								? __(
@@ -194,10 +206,7 @@ export default function PostsApp( { app, config } ) {
 								  ) }
 						</Text>
 						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button
-								variant="minimal"
-								onClick={ closeModal }
-							>
+							<Button variant="minimal" onClick={ closeModal }>
 								{ __( 'Cancel', 'wp-admin-shell' ) }
 							</Button>
 							<DestructiveButton
@@ -223,7 +232,6 @@ export default function PostsApp( { app, config } ) {
 					</Stack>
 				),
 			},
-			
 		],
 		[ postType, deleteEntityRecord ]
 	);

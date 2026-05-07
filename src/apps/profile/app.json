@@ -1,13 +1,13 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:profile",
-  "version": 1,
-  "title": "Profile",
-  "description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
-  "role": "main",
-  "platform": {
-    "dirty-state": true
-  },
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:profile",
+	"version": 1,
+	"title": "Profile",
+	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
+	"role": "main",
+	"platform": {
+		"dirty-state": true
+	},
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

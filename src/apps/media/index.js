@@ -1,16 +1,10 @@
 import './index.css';
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
-import { useEntityRecords } from '@wordpress/core-data';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
-import {
-	Button,
-	InputControl,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, InputControl, Stack, Text } from '@wordpress/ui';
 import {
 	Button as DestructiveButton,
 	Spinner,
@@ -54,12 +48,10 @@ export default function MediaApp() {
 		queryArgs
 	);
 
-	const {
-		deleteEntityRecord,
-		saveEntityRecord,
-		invalidateResolution,
-	} = useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	const handleUpload = useCallback(
 		async ( event ) => {
@@ -172,99 +164,115 @@ export default function MediaApp() {
 				</Stack>
 			</Stack>
 
-			{ isResolving && ! records?.length ? (
-				<div className="wp-admin-shell-app-media__loading">
-					<Spinner />
-				</div>
-			) : ! records?.length ? (
-				<div className="wp-admin-shell-app-media__empty">
-					<Stack direction="column" align="center" gap="md">
-						<Text
-							variant="body-sm"
-							className="wp-admin-shell-app-media__muted"
-						>
-							{ __( 'No media items found.', 'wp-admin-shell' ) }
-						</Text>
-						<Button
-							tone="neutral"
-							variant="outline"
-							icon={ upload }
-							onClick={ () => fileInputRef.current?.click() }
-						>
-							{ __( 'Upload your first file', 'wp-admin-shell' ) }
-						</Button>
-					</Stack>
-				</div>
-			) : (
-				<>
-					<div className="wp-admin-shell-app-media__grid">
-						{ ( records || [] ).map( ( item ) => (
-							<button
-								key={ item.id }
-								className={ `wp-admin-shell-app-media__item${
-									selectedItem?.id === item.id
-										? ' is-selected'
-										: ''
-								}` }
-								onClick={ () => setSelectedItem( item ) }
-								type="button"
-							>
-								{ item.media_type === 'image' ? (
-									<img
-										src={
-											item.media_details?.sizes
-												?.thumbnail?.source_url ||
-											item.source_url
-										}
-										alt={ item.alt_text || '' }
-									/>
-								) : (
-									<div className="wp-admin-shell-app-media__file-icon">
-										<Text>
-											{ item.mime_type
-												?.split( '/' )
-												.pop()
-												?.toUpperCase() || 'FILE' }
-										</Text>
-									</div>
-								) }
-							</button>
-						) ) }
-					</div>
+			{ ( () => {
+				if ( isResolving && ! records?.length ) {
+					return (
+						<div className="wp-admin-shell-app-media__loading">
+							<Spinner />
+						</div>
+					);
+				}
+				if ( ! records?.length ) {
+					return (
+						<div className="wp-admin-shell-app-media__empty">
+							<Stack direction="column" align="center" gap="md">
+								<Text
+									variant="body-sm"
+									className="wp-admin-shell-app-media__muted"
+								>
+									{ __(
+										'No media items found.',
+										'wp-admin-shell'
+									) }
+								</Text>
+								<Button
+									tone="neutral"
+									variant="outline"
+									icon={ upload }
+									onClick={ () =>
+										fileInputRef.current?.click()
+									}
+								>
+									{ __(
+										'Upload your first file',
+										'wp-admin-shell'
+									) }
+								</Button>
+							</Stack>
+						</div>
+					);
+				}
+				return (
+					<>
+						<div className="wp-admin-shell-app-media__grid">
+							{ ( records || [] ).map( ( item ) => (
+								<button
+									key={ item.id }
+									className={ `wp-admin-shell-app-media__item${
+										selectedItem?.id === item.id
+											? ' is-selected'
+											: ''
+									}` }
+									onClick={ () => setSelectedItem( item ) }
+									type="button"
+								>
+									{ item.media_type === 'image' ? (
+										<img
+											src={
+												item.media_details?.sizes
+													?.thumbnail?.source_url ||
+												item.source_url
+											}
+											alt={ item.alt_text || '' }
+										/>
+									) : (
+										<div className="wp-admin-shell-app-media__file-icon">
+											<Text>
+												{ item.mime_type
+													?.split( '/' )
+													.pop()
+													?.toUpperCase() || 'FILE' }
+											</Text>
+										</div>
+									) }
+								</button>
+							) ) }
+						</div>
 
-					{ totalPages > 1 && (
-						<Stack
-							className="wp-admin-shell-app-media__pagination"
-							direction="row"
-							align="center"
-							justify="center"
-							gap="md"
-						>
-							<Button
-								tone="neutral"
-								variant="outline"
-								disabled={ page <= 1 }
-								onClick={ () => setPage( page - 1 ) }
-								size="compact"
+						{ totalPages > 1 && (
+							<Stack
+								className="wp-admin-shell-app-media__pagination"
+								direction="row"
+								align="center"
+								justify="center"
+								gap="md"
 							>
-								{ __( 'Previous', 'wp-admin-shell' ) }
-							</Button>
-							<Text>
-								{ page } / { totalPages }
-							</Text>
-							<Button
-								tone="neutral"
-								variant="outline"
-								disabled={ page >= totalPages }
-								onClick={ () => setPage( page + 1 ) }
-								size="compact"
-							>
-								{ __( 'Next', 'wp-admin-shell' ) }
-							</Button>
-						</Stack>
-					) }
-				</>
-			) }
+								<Button
+									tone="neutral"
+									variant="outline"
+									disabled={ page <= 1 }
+									onClick={ () => setPage( page - 1 ) }
+									size="compact"
+								>
+									{ __( 'Previous', 'wp-admin-shell' ) }
+								</Button>
+								<Text>
+									{ page } / { totalPages }
+								</Text>
+								<Button
+									tone="neutral"
+									variant="outline"
+									disabled={ page >= totalPages }
+									onClick={ () => setPage( page + 1 ) }
+									size="compact"
+								>
+									{ __( 'Next', 'wp-admin-shell' ) }
+								</Button>
+							</Stack>
+						) }
+					</>
+				);
+			} )() }
 
 			{ selectedItem && (
 				<MediaDetailModal
@@ -332,8 +340,8 @@ function MediaDetailModal( {
 					{ item.media_type === 'image' ? (
 						<img
 							src={
-								item.media_details?.sizes?.medium
-									?.source_url || item.source_url
+								item.media_details?.sizes?.medium?.source_url ||
+								item.source_url
 							}
 							alt={ item.alt_text || '' }
 						/>

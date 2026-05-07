@@ -1,242 +1,255 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.wp.org/admin-engine/v1.json",
-  "title": "WP Admin Shell — Engine Manifest (v1)",
-  "description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, and the identifier of its default arrangement algorithm. Engines are the spatial layer of the shell — they read a region tree assembled by the runtime and render it to DOM. The default engine `core:wp-default-layout` ships with the shell plugin; alternative engines (`core:floating-layout`, `core:tiling-layout`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. See WP Admin Shell Design Spec §4.2.",
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://schemas.wp.org/admin-engine/v1.json",
+	"title": "WP Admin Shell — Engine Manifest (v1)",
+	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, and the identifier of its default arrangement algorithm. Engines are the spatial layer of the shell — they read a region tree assembled by the runtime and render it to DOM. The default engine `core:wp-default-layout` ships with the shell plugin; alternative engines (`core:floating-layout`, `core:tiling-layout`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. See WP Admin Shell Design Spec §4.2.",
 
-  "type": "object",
-  "required": [ "id", "version", "title", "specializes-roles", "honored-platform", "templates", "default-arrangement", "script" ],
-  "additionalProperties": false,
+	"type": "object",
+	"required": [
+		"id",
+		"version",
+		"title",
+		"specializes-roles",
+		"honored-platform",
+		"templates",
+		"default-arrangement",
+		"script"
+	],
+	"additionalProperties": false,
 
-  "properties": {
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"format": "uri-reference",
+			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine/v1.json`. Relative paths are accepted (e.g., `../docs/schemas/admin-engine-v2.json` for in-repo authoring), matching the block.json convention."
+		},
 
-    "$schema": {
-      "type": "string",
-      "format": "uri-reference",
-      "description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine/v1.json`. Relative paths are accepted (e.g., `../docs/schemas/admin-engine-v2.json` for in-repo authoring), matching the block.json convention."
-    },
+		"id": {
+			"type": "string",
+			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+			"description": "Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Shell plugin, `plugin:{slug}/{name}` for plugin-contributed engines. Examples: `core:wp-default-layout`, `core:floating-layout`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids."
+		},
 
-    "id": {
-      "type": "string",
-      "pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
-      "description": "Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Shell plugin, `plugin:{slug}/{name}` for plugin-contributed engines. Examples: `core:wp-default-layout`, `core:floating-layout`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids."
-    },
+		"version": {
+			"type": "integer",
+			"minimum": 1,
+			"description": "Engine manifest schema version. v1 is the current shape. Bump only on breaking changes to this engine's manifest contract."
+		},
 
-    "version": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Engine manifest schema version. v1 is the current shape. Bump only on breaking changes to this engine's manifest contract."
-    },
+		"title": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Human-readable name of the engine. Shown in shell-switcher UI, plugin install screens, and developer tooling. Translatable."
+		},
 
-    "title": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Human-readable name of the engine. Shown in shell-switcher UI, plugin install screens, and developer tooling. Translatable."
-    },
+		"description": {
+			"type": "string",
+			"description": "Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable."
+		},
 
-    "description": {
-      "type": "string",
-      "description": "Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable."
-    },
+		"specializes-roles": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/ariaRole" },
+			"uniqueItems": true,
+			"minItems": 0,
+			"description": "ARIA roles this engine recognizes and specializes for. A region whose `role` is in this list receives engine-shipped chrome treatments (default styling, default platform behaviors, position in the default arrangement). Roles outside this list still mount, but fall through to the engine's default arrangement algorithm with author-provided styling and no engine-specific chrome. Authors discover what an engine does well by reading this list. Empty list is valid (an engine that treats every region the same)."
+		},
 
-    "specializes-roles": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/ariaRole" },
-      "uniqueItems": true,
-      "minItems": 0,
-      "description": "ARIA roles this engine recognizes and specializes for. A region whose `role` is in this list receives engine-shipped chrome treatments (default styling, default platform behaviors, position in the default arrangement). Roles outside this list still mount, but fall through to the engine's default arrangement algorithm with author-provided styling and no engine-specific chrome. Authors discover what an engine does well by reading this list. Empty list is valid (an engine that treats every region the same)."
-    },
+		"honored-platform": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/platformServiceName" },
+			"uniqueItems": true,
+			"description": "Platform service requests this engine implements. An app declaring a `platform.{service}: true` request gets that service only if the active engine lists it here. Apps requesting unhonored services still mount; the unhonored requests are no-ops with a logged warning in development. The list grows additively in minor spec versions; engines ship updates as the spec adds services they choose to implement."
+		},
 
-    "honored-platform": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/platformServiceName" },
-      "uniqueItems": true,
-      "description": "Platform service requests this engine implements. An app declaring a `platform.{service}: true` request gets that service only if the active engine lists it here. Apps requesting unhonored services still mount; the unhonored requests are no-ops with a logged warning in development. The list grows additively in minor spec versions; engines ship updates as the spec adds services they choose to implement."
-    },
+		"templates": {
+			"type": "object",
+			"minProperties": 1,
+			"patternProperties": {
+				"^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$": {
+					"$ref": "#/$defs/regionTemplate"
+				}
+			},
+			"additionalProperties": false,
+			"description": "Region template catalog. Authors instantiate these templates from admin.json by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure. Template ids follow the same namespace pattern as apps and engines. The catalog must contain at least one template — an engine with no templates would be unusable. Templates are the engine's primary author-facing contribution; an engine can ship many."
+		},
 
-    "templates": {
-      "type": "object",
-      "minProperties": 1,
-      "patternProperties": {
-        "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$": {
-          "$ref": "#/$defs/regionTemplate"
-        }
-      },
-      "additionalProperties": false,
-      "description": "Region template catalog. Authors instantiate these templates from admin.json by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure. Template ids follow the same namespace pattern as apps and engines. The catalog must contain at least one template — an engine with no templates would be unusable. Templates are the engine's primary author-facing contribution; an engine can ship many."
-    },
+		"default-arrangement": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "Identifier for the engine's spatial arrangement algorithm — a documentation marker, not configuration the runtime reads. The actual algorithm is implementation in the engine's script. Authors and tooling reference this name when describing how an engine behaves: `wp-chrome` (sidebar-topbar-content layout), `tiling-dwindle` (Hyprland-style tiling), `floating-windows` (draggable resizable windows), `single-pane` (one region visible at a time). New algorithm names accumulate in this field's effective vocabulary as engines are written; the schema does not enumerate them."
+		},
 
-    "default-arrangement": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Identifier for the engine's spatial arrangement algorithm — a documentation marker, not configuration the runtime reads. The actual algorithm is implementation in the engine's script. Authors and tooling reference this name when describing how an engine behaves: `wp-chrome` (sidebar-topbar-content layout), `tiling-dwindle` (Hyprland-style tiling), `floating-windows` (draggable resizable windows), `single-pane` (one region visible at a time). New algorithm names accumulate in this field's effective vocabulary as engines are written; the schema does not enumerate them."
-    },
+		"script": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "WordPress script handle for this engine's JavaScript bundle. Must be registered with WordPress before the manifest references it. The runtime enqueues this when the engine activates."
+		},
 
-    "script": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "WordPress script handle for this engine's JavaScript bundle. Must be registered with WordPress before the manifest references it. The runtime enqueues this when the engine activates."
-    },
+		"style": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "Optional WordPress style handle for this engine's CSS. Engines may rely entirely on WPDS tokens and the chrome extension namespace for styling, in which case this is omitted. Engines with their own structural CSS (grid templates, animation, layout-specific pseudo-elements) declare a style handle here."
+		},
 
-    "style": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "description": "Optional WordPress style handle for this engine's CSS. Engines may rely entirely on WPDS tokens and the chrome extension namespace for styling, in which case this is omitted. Engines with their own structural CSS (grid templates, animation, layout-specific pseudo-elements) declare a style handle here."
-    },
+		"default-styles": {
+			"$ref": "#/$defs/defaultStyles",
+			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
+		}
+	},
 
-    "default-styles": {
-      "$ref": "#/$defs/defaultStyles",
-      "description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
-    }
-  },
+	"$defs": {
+		"ariaRole": {
+			"type": "string",
+			"pattern": "^[a-z][a-z]+$",
+			"description": "A WAI-ARIA 1.2 role name. See the app manifest schema for the full description."
+		},
 
-  "$defs": {
+		"platformServiceName": {
+			"enum": [
+				"modal",
+				"dismiss-on",
+				"autofocus-target",
+				"triggerable",
+				"persists-across-navigation",
+				"dirty-state",
+				"block-navigation-on-dirty",
+				"trigger"
+			],
+			"description": "A platform service name from the v1 vocabulary. The list grows additively in future spec versions; this enum is updated when new services are added to the spec. Engines may declare honored services that don't yet exist in the schema if they're targeting a future spec version, but v1 schema validation rejects unknown service names."
+		},
 
-    "ariaRole": {
-      "type": "string",
-      "pattern": "^[a-z][a-z]+$",
-      "description": "A WAI-ARIA 1.2 role name. See the app manifest schema for the full description."
-    },
+		"tokenAlias": {
+			"type": "string",
+			"pattern": "^\\{[a-zA-Z][a-zA-Z0-9._-]*\\}$",
+			"description": "A token alias reference — a curly-brace-wrapped path resolved by the runtime against the merged tokens.json (paths starting with a token category like `color.`, `spacing.`, etc.) or against the merged admin.json `styles` tree (paths starting with `styles.`). See spec §4.0.2 and §9 for resolution rules."
+		},
 
-    "platformServiceName": {
-      "enum": [
-        "modal",
-        "dismiss-on",
-        "autofocus-target",
-        "triggerable",
-        "persists-across-navigation",
-        "dirty-state",
-        "block-navigation-on-dirty",
-        "trigger"
-      ],
-      "description": "A platform service name from the v1 vocabulary. The list grows additively in future spec versions; this enum is updated when new services are added to the spec. Engines may declare honored services that don't yet exist in the schema if they're targeting a future spec version, but v1 schema validation rejects unknown service names."
-    },
+		"cssLayoutValue": {
+			"type": [ "string", "number" ],
+			"description": "A CSS value used in the layout vocabulary. May be a literal CSS string (`240px`, `min(720px, 50%)`, `sticky`), a token alias (`{styles.chrome.sidebar.background}` — for properties accepting decoration values), or a numeric pixel value as shorthand. Validation of the value's syntactic correctness against the property's expected type is delegated to the runtime's CSS parser."
+		},
 
-    "tokenAlias": {
-      "type": "string",
-      "pattern": "^\\{[a-zA-Z][a-zA-Z0-9._-]*\\}$",
-      "description": "A token alias reference — a curly-brace-wrapped path resolved by the runtime against the merged tokens.json (paths starting with a token category like `color.`, `spacing.`, etc.) or against the merged admin.json `styles` tree (paths starting with `styles.`). See spec §4.0.2 and §9 for resolution rules."
-    },
+		"regionTemplate": {
+			"type": "object",
+			"required": [ "role" ],
+			"additionalProperties": false,
+			"description": "A region template declares a reusable region shape that admin.json can instantiate. Templates supply defaults; the instantiating region overrides what it cares about. Templates may declare nested child regions — those become independently addressable as `{parent}/{child}` in admin.json.",
+			"properties": {
+				"role": {
+					"$ref": "#/$defs/ariaRole",
+					"description": "The ARIA role the resulting region carries when instantiated. Drives engine specialization in the active engine. A template with `role: \"navigation\"` produces a region that behaves like a sidebar nav. Required."
+				},
 
-    "cssLayoutValue": {
-      "type": [ "string", "number" ],
-      "description": "A CSS value used in the layout vocabulary. May be a literal CSS string (`240px`, `min(720px, 50%)`, `sticky`), a token alias (`{styles.chrome.sidebar.background}` — for properties accepting decoration values), or a numeric pixel value as shorthand. Validation of the value's syntactic correctness against the property's expected type is delegated to the runtime's CSS parser."
-    },
+				"platform": {
+					"$ref": "#/$defs/regionPlatform",
+					"description": "Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating. The engine honors only services in its top-level `honored-platform` list; other entries are no-ops."
+				},
 
-    "regionTemplate": {
-      "type": "object",
-      "required": [ "role" ],
-      "additionalProperties": false,
-      "description": "A region template declares a reusable region shape that admin.json can instantiate. Templates supply defaults; the instantiating region overrides what it cares about. Templates may declare nested child regions — those become independently addressable as `{parent}/{child}` in admin.json.",
-      "properties": {
+				"default-style": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`). The resolver expands aliases against the merged token tree at compile time. admin.json overrides via the region's `style` field; the merge is shallow (top-level CSS property overrides win). Schema is loose because the engine's CSS allowlist is ultimately what's enforced; declaring `display: grid` here is technically permitted in the engine's own templates because the engine controls layout context, but the same is not true for admin.json regions (see the admin.json schema's `layout` allowlist).",
+					"examples": [
+						{
+							"inline-size": "240px",
+							"block-size": "100%",
+							"background": "{styles.chrome.sidebar.background}",
+							"color": "{styles.chrome.sidebar.foreground}"
+						}
+					]
+				},
 
-        "role": {
-          "$ref": "#/$defs/ariaRole",
-          "description": "The ARIA role the resulting region carries when instantiated. Drives engine specialization in the active engine. A template with `role: \"navigation\"` produces a region that behaves like a sidebar nav. Required."
-        },
+				"regions": {
+					"type": "object",
+					"patternProperties": {
+						"^[a-z][a-z0-9-]*$": {
+							"$ref": "#/$defs/regionTemplate"
+						}
+					},
+					"additionalProperties": false,
+					"description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When admin.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. admin.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
+				}
+			}
+		},
 
-        "platform": {
-          "$ref": "#/$defs/regionPlatform",
-          "description": "Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating. The engine honors only services in its top-level `honored-platform` list; other entries are no-ops."
-        },
+		"defaultStyles": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Engine-supplied seed defaults for the shell `styles` tree. Same shape as the admin.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER admin.json so individual shells override anything they care to customize.",
+			"properties": {
+				"theme": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after admin.json overrides apply."
+				},
+				"chrome": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as admin.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
+				},
+				"color": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — top-level color tokens. Layered onto the seed-derived ThemeProvider output via the host's sibling `<style>` block."
+				},
+				"border": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — border tokens."
+				},
+				"dimension": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — dimension tokens."
+				},
+				"elevation": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — elevation tokens."
+				},
+				"font": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — font tokens."
+				}
+			}
+		},
 
-        "default-style": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`). The resolver expands aliases against the merged token tree at compile time. admin.json overrides via the region's `style` field; the merge is shallow (top-level CSS property overrides win). Schema is loose because the engine's CSS allowlist is ultimately what's enforced; declaring `display: grid` here is technically permitted in the engine's own templates because the engine controls layout context, but the same is not true for admin.json regions (see the admin.json schema's `layout` allowlist).",
-          "examples": [
-            {
-              "inline-size": "240px",
-              "block-size": "100%",
-              "background": "{styles.chrome.sidebar.background}",
-              "color": "{styles.chrome.sidebar.foreground}"
-            }
-          ]
-        },
-
-        "regions": {
-          "type": "object",
-          "patternProperties": {
-            "^[a-z][a-z0-9-]*$": {
-              "$ref": "#/$defs/regionTemplate"
-            }
-          },
-          "additionalProperties": false,
-          "description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When admin.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. admin.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
-        }
-      }
-    },
-
-    "defaultStyles": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Engine-supplied seed defaults for the shell `styles` tree. Same shape as the admin.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER admin.json so individual shells override anything they care to customize.",
-      "properties": {
-        "theme": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after admin.json overrides apply."
-        },
-        "chrome": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as admin.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
-        },
-        "color": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Direct WPDS slot overrides — top-level color tokens. Layered onto the seed-derived ThemeProvider output via the host's sibling `<style>` block."
-        },
-        "border": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Direct WPDS slot overrides — border tokens."
-        },
-        "dimension": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Direct WPDS slot overrides — dimension tokens."
-        },
-        "elevation": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Direct WPDS slot overrides — elevation tokens."
-        },
-        "font": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Direct WPDS slot overrides — font tokens."
-        }
-      }
-    },
-
-    "regionPlatform": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "Platform services a region requests. Same shape as the app manifest's `platform` block, but applied at the region level rather than the app level. When both a region and its mounted app declare the same platform service, the region's declaration is the floor: the engine honors the strictest combined request.",
-      "properties": {
-        "modal":                     { "type": "boolean" },
-        "dismiss-on":                {
-          "type": "array",
-          "uniqueItems": true,
-          "items": { "enum": [ "Escape", "backdrop-click", "outside-click", "navigation" ] }
-        },
-        "autofocus-target":          { "type": "string", "minLength": 1 },
-        "triggerable":               { "type": "boolean" },
-        "persists-across-navigation":{ "type": "boolean" },
-        "dirty-state":               { "type": "boolean" },
-        "block-navigation-on-dirty": { "type": "boolean" },
-        "trigger": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "shortcut": { "type": "string", "minLength": 1 }
-          },
-          "description": "Declarative trigger placeholder — a hint that this region is intended to be invoked by a keystroke. The actual binding is decided in admin.json's `bindings` block; this field is documentary and may be used by tooling to suggest default bindings."
-        }
-      }
-    }
-  }
+		"regionPlatform": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Platform services a region requests. Same shape as the app manifest's `platform` block, but applied at the region level rather than the app level. When both a region and its mounted app declare the same platform service, the region's declaration is the floor: the engine honors the strictest combined request.",
+			"properties": {
+				"modal": { "type": "boolean" },
+				"dismiss-on": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": {
+						"enum": [
+							"Escape",
+							"backdrop-click",
+							"outside-click",
+							"navigation"
+						]
+					}
+				},
+				"autofocus-target": { "type": "string", "minLength": 1 },
+				"triggerable": { "type": "boolean" },
+				"persists-across-navigation": { "type": "boolean" },
+				"dirty-state": { "type": "boolean" },
+				"block-navigation-on-dirty": { "type": "boolean" },
+				"trigger": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"shortcut": { "type": "string", "minLength": 1 }
+					},
+					"description": "Declarative trigger placeholder — a hint that this region is intended to be invoked by a keystroke. The actual binding is decided in admin.json's `bindings` block; this field is documentary and may be used by tooling to suggest default bindings."
+				}
+			}
+		}
+	}
 }

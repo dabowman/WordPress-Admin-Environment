@@ -20,7 +20,10 @@ import { useKernel } from '../../runtime/kernel-context';
  */
 export default function CommandPaletteApp() {
 	const { config } = useKernel();
-	const routes = config?.routes && typeof config.routes === 'object' ? config.routes : null;
+	const routes =
+		config?.routes && typeof config.routes === 'object'
+			? config.routes
+			: null;
 
 	const commands = useMemo( () => {
 		if ( ! routes ) {
@@ -40,16 +43,18 @@ export default function CommandPaletteApp() {
 			const label = entry.title
 				? entry.title
 				: sprintf(
-					/* translators: %s: route pattern (e.g. /posts) */
-					__( 'Go to %s', 'wp-admin-shell' ),
-					pattern
-				);
+						/* translators: %s: route pattern (e.g. /posts) */
+						__( 'Go to %s', 'wp-admin-shell' ),
+						pattern
+				  );
 			// URL-encode the literal pattern so distinct routes (e.g. `/foo-bar`
 			// vs `/foo/bar`) produce distinct command names. A naive
 			// alphanumeric-only collapse would map both to `foo-bar` and trip
 			// `@wordpress/commands` duplicate-name registration.
 			out.push( {
-				name: `core/admin-shell/goto-${ encodeURIComponent( pattern ) }`,
+				name: `core/admin-shell/goto-${ encodeURIComponent(
+					pattern
+				) }`,
 				label,
 				icon: resolveIcon( entry.icon ),
 				callback: ( { close } ) => {

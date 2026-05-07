@@ -1,11 +1,8 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
 import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import {
-	Button,
-	Stack,
-	Text,
-} from '@wordpress/ui';
+import { Button, Stack, Text } from '@wordpress/ui';
 import {
 	CheckboxControl,
 	Spinner,

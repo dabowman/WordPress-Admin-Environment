@@ -1,110 +1,136 @@
 {
-  "$schema": "../../../../docs/schemas/admin-engine-v2.json",
-  "id": "core:single-pane",
-  "version": 1,
-  "title": "Single pane",
-  "description": "Mobile-first single-column layout. Navigation collapses to a hamburger drawer; complementary regions float as overlay panels; main fills the viewport. Validates the engine boundary against a deliberately different idiom from the dual-chrome default engine — apps mount unchanged.",
+	"$schema": "../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:single-pane",
+	"version": 1,
+	"title": "Single pane",
+	"description": "Mobile-first single-column layout. Navigation collapses to a hamburger drawer; complementary regions float as overlay panels; main fills the viewport. Validates the engine boundary against a deliberately different idiom from the dual-chrome default engine — apps mount unchanged.",
 
-  "specializes-roles": [
-    "main",
-    "navigation",
-    "banner",
-    "complementary",
-    "dialog",
-    "contentinfo"
-  ],
+	"specializes-roles": [
+		"main",
+		"navigation",
+		"banner",
+		"complementary",
+		"dialog",
+		"contentinfo"
+	],
 
-  "honored-platform": [
-    "modal",
-    "dismiss-on",
-    "autofocus-target",
-    "triggerable",
-    "persists-across-navigation",
-    "dirty-state",
-    "block-navigation-on-dirty",
-    "trigger"
-  ],
+	"honored-platform": [
+		"modal",
+		"dismiss-on",
+		"autofocus-target",
+		"triggerable",
+		"persists-across-navigation",
+		"dirty-state",
+		"block-navigation-on-dirty",
+		"trigger"
+	],
 
-  "templates": {
+	"templates": {
+		"core:appbar": {
+			"role": "banner",
+			"platform": { "persists-across-navigation": true },
+			"default-style": {
+				"display": "flex",
+				"align-items": "center",
+				"flex": "1",
+				"min-inline-size": "0",
+				"block-size": "56px"
+			},
+			"regions": {
+				"start": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"center": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"end": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center",
+						"margin-inline-start": "auto"
+					}
+				}
+			}
+		},
 
-    "core:appbar": {
-      "role": "banner",
-      "platform": { "persists-across-navigation": true },
-      "default-style": {
-        "block-size":     "56px",
-        "inline-size":    "100%",
-        "background":     "{styles.chrome.toolbar.background}",
-        "color":          "{styles.chrome.toolbar.foreground}",
-        "padding-inline": "{styles.chrome.toolbar.padding-inline}"
-      },
-      "regions": {
-        "start":  { "role": "region" },
-        "center": { "role": "region" },
-        "end":    { "role": "region" }
-      }
-    },
+		"core:nav-drawer": {
+			"role": "navigation",
+			"platform": {
+				"dismiss-on": [ "Escape", "backdrop-click" ],
+				"triggerable": true
+			},
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"inline-size": "100%",
+				"block-size": "100%",
+				"padding-block": "{styles.chrome.sidebar.padding-block}",
+				"padding-inline": "{styles.chrome.sidebar.padding-inline}"
+			}
+		},
 
-    "core:nav-drawer": {
-      "role": "navigation",
-      "platform": {
-        "dismiss-on": [ "Escape", "backdrop-click" ],
-        "triggerable": true
-      },
-      "default-style": {
-        "inline-size":   "min(320px, 85vw)",
-        "block-size":    "100%",
-        "background":    "{styles.chrome.sidebar.background}",
-        "color":         "{styles.chrome.sidebar.foreground}",
-        "padding-block": "{styles.chrome.sidebar.padding-block}",
-        "padding-inline": "{styles.chrome.sidebar.padding-inline}"
-      }
-    },
+		"core:pane": {
+			"role": "main",
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"flex": "1",
+				"min-block-size": "0",
+				"min-inline-size": "0",
+				"inline-size": "100%",
+				"block-size": "100%",
+				"overflow": "auto",
+				"background": "{styles.chrome.canvas.background}",
+				"padding": "{styles.chrome.canvas.padding}"
+			}
+		},
 
-    "core:pane": {
-      "role": "main",
-      "default-style": {
-        "inline-size":     "100%",
-        "min-inline-size": "0",
-        "block-size":      "100%",
-        "background":      "{styles.chrome.canvas.background}",
-        "padding":         "{styles.chrome.canvas.padding}"
-      }
-    },
+		"core:overlay": {
+			"role": "dialog",
+			"platform": {
+				"modal": true,
+				"dismiss-on": [ "Escape", "backdrop-click" ]
+			},
+			"default-style": {
+				"inline-size": "min(560px, 92vw)",
+				"max-block-size": "80vh",
+				"position": "fixed",
+				"inset-block-start": "10vh",
+				"inset-inline-start": "50%",
+				"translate": "-50% 0"
+			}
+		},
 
-    "core:overlay": {
-      "role": "dialog",
-      "platform": { "modal": true, "dismiss-on": [ "Escape", "backdrop-click" ] },
-      "default-style": {
-        "inline-size":        "min(560px, 92vw)",
-        "max-block-size":     "80vh",
-        "position":           "fixed",
-        "inset-block-start":  "10vh",
-        "inset-inline-start": "50%",
-        "translate":          "-50% 0"
-      }
-    },
+		"core:detail": {
+			"role": "complementary",
+			"platform": { "dismiss-on": [ "Escape" ] },
+			"default-style": {
+				"inline-size": "100%",
+				"block-size": "100%",
+				"position": "fixed",
+				"inset": "0",
+				"background": "{styles.chrome.canvas.background}"
+			}
+		}
+	},
 
-    "core:detail": {
-      "role": "complementary",
-      "platform": { "dismiss-on": [ "Escape" ] },
-      "default-style": {
-        "inline-size":        "100%",
-        "block-size":         "100%",
-        "position":           "fixed",
-        "inset":              "0",
-        "background":         "{styles.chrome.canvas.background}"
-      }
-    }
-  },
+	"default-arrangement": "single-pane",
 
-  "default-arrangement": "single-pane",
+	"script": "wp-admin-shell",
+	"style": "wp-admin-shell",
 
-  "script": "wp-admin-shell",
-  "style":  "wp-admin-shell",
-
-  "default-styles": {
-    "theme": {
-      "density": "compact"
-    }
-  }
+	"default-styles": {
+		"theme": {
+			"density": "compact"
+		}
+	}
 }

@@ -1,11 +1,11 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:users",
-  "version": 1,
-  "title": "Users",
-  "description": "DataViews user list with bulk delete-and-reassign and self-delete guard.",
-  "role": "main",
-  "capabilities": [ "list_users" ],
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:users",
+	"version": 1,
+	"title": "Users",
+	"description": "DataViews user list with bulk delete-and-reassign and self-delete guard.",
+	"role": "main",
+	"capabilities": [ "list_users" ],
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

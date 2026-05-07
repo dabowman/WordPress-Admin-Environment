@@ -1,13 +1,13 @@
 {
-  "$schema": "../../../docs/schemas/admin-app-v2.json",
-  "id": "core:settings-general",
-  "version": 1,
-  "title": "Settings — General",
-  "description": "Standalone General-settings panel (legacy entry kept for shells that mount it directly).",
-  "role": "main",
-  "platform": {
-    "dirty-state": true
-  },
-  "config-schema": { "type": "object", "additionalProperties": false },
-  "script": "wp-admin-shell"
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:settings-general",
+	"version": 1,
+	"title": "Settings — General",
+	"description": "Standalone General-settings panel (legacy entry kept for shells that mount it directly).",
+	"role": "main",
+	"platform": {
+		"dirty-state": true
+	},
+	"config-schema": { "type": "object", "additionalProperties": false },
+	"script": "wp-admin-shell"
 }

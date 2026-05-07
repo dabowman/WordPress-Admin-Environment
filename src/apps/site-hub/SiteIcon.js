@@ -13,6 +13,8 @@ import { Icon, wordpress } from '@wordpress/icons';
  *     *and* protocol-relative absolute paths (`/wp-content/uploads/…`).
  *     Anything else is treated as plugin-relative and prefixed with
  *     `wpAdminShell.pluginUrl`.
+ * @param {Object} root0
+ * @param {*}      root0.config
  */
 export default function SiteIcon( { config } ) {
 	const branding = config?.branding || {};

@@ -73,6 +73,7 @@ const warned = new Set();
  *
  * Empty / undefined `name` is treated as "no icon requested" and
  * does not warn.
+ * @param {*} name
  */
 export function resolveIcon( name ) {
 	if ( ! name ) {
@@ -86,7 +87,11 @@ export function resolveIcon( name ) {
 		warned.add( name );
 		// eslint-disable-next-line no-console
 		console.warn(
-			`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to wordpress icon. Add the mapping to src/runtime/config/iconMap.js or pick a known name. Known: ${ Object.keys( iconMap ).sort().join( ', ' ) }`
+			`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to wordpress icon. Add the mapping to src/runtime/config/iconMap.js or pick a known name. Known: ${ Object.keys(
+				iconMap
+			)
+				.sort()
+				.join( ', ' ) }`
 		);
 	}
 	return wordpress;

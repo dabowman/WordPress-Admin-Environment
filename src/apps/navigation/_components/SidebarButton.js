@@ -21,6 +21,15 @@ import { Button, IconButton } from '@wordpress/ui';
  *
  * `showTooltip` from the legacy API is silently dropped — `IconButton`
  * always shows a tooltip from `label`, so the prop is no longer needed.
+ * @param {Object} root0
+ * @param {*}      root0.icon
+ * @param {*}      root0.label
+ * @param {*}      root0.showTooltip
+ * @param {*}      root0.className
+ * @param {*}      root0.children
+ * @param {*}      root0.href
+ * @param {*}      root0.target
+ * @param {*}      root0.rel
  */
 export default function SidebarButton( {
 	icon,
@@ -34,11 +43,13 @@ export default function SidebarButton( {
 	rel,
 	...props
 } ) {
-	const mergedClass = `wp-admin-shell-sidebar-button ${ className || '' }`.trim();
+	const mergedClass = `wp-admin-shell-sidebar-button ${
+		className || ''
+	}`.trim();
 
-	const renderAs = href
-		? <a href={ href } target={ target } rel={ rel } />
-		: undefined;
+	const renderAs = href ? (
+		<a href={ href } target={ target } rel={ rel } />
+	) : undefined;
 
 	if ( icon ) {
 		return (

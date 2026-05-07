@@ -48,32 +48,32 @@ import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
 
 const APP_COMPONENTS = {
-	'core:posts':            PostsApp,
-	'core:editor':           EditorApp,
-	'core:simple-editor':    SimpleEditorApp,
-	'core:media':            MediaApp,
-	'core:profile':          ProfileApp,
+	'core:posts': PostsApp,
+	'core:editor': EditorApp,
+	'core:simple-editor': SimpleEditorApp,
+	'core:media': MediaApp,
+	'core:profile': ProfileApp,
 	'core:settings-general': SettingsGeneralApp,
-	'core:iframe-fallback':  IframeApp,
-	'core:users':            UsersApp,
-	'core:comments':         CommentsApp,
-	'core:settings':         SettingsApp,
-	'core:site-editor':      SiteEditorApp,
-	'core:dashboard':        DashboardApp,
-	'core:plugins':          PluginsApp,
-	'core:themes':           ThemesApp,
-	'core:tools':            ToolsApp,
-	'core:site-health':      SiteHealthApp,
-	'core:taxonomy':         TaxonomyApp,
-	'core:navigation':       NavigationApp,
-	'core:site-hub':         SiteHubApp,
-	'core:toolbar-actions':  ToolbarActionsApp,
-	'core:command-palette':  CommandPaletteApp,
-	'core:preview-pane':     PreviewPaneApp,
-	'core:notices-banner':   NoticesBannerApp,
+	'core:iframe-fallback': IframeApp,
+	'core:users': UsersApp,
+	'core:comments': CommentsApp,
+	'core:settings': SettingsApp,
+	'core:site-editor': SiteEditorApp,
+	'core:dashboard': DashboardApp,
+	'core:plugins': PluginsApp,
+	'core:themes': ThemesApp,
+	'core:tools': ToolsApp,
+	'core:site-health': SiteHealthApp,
+	'core:taxonomy': TaxonomyApp,
+	'core:navigation': NavigationApp,
+	'core:site-hub': SiteHubApp,
+	'core:toolbar-actions': ToolbarActionsApp,
+	'core:command-palette': CommandPaletteApp,
+	'core:preview-pane': PreviewPaneApp,
+	'core:notices-banner': NoticesBannerApp,
 	'core:notices-snackbar': NoticesSnackbarApp,
-	'core:appearance':       AppearanceApp,
-	'core:user-menu':        UserMenuApp,
+	'core:appearance': AppearanceApp,
+	'core:user-menu': UserMenuApp,
 };
 
 const NON_ROUTABLE_APPS = new Set( [
@@ -92,7 +92,7 @@ export function registerBuiltins( registry ) {
 	registry.register( coreSinglePane );
 
 	const manifests = window.wpAdminShell?.manifests?.apps || {};
-	const seen      = new Set();
+	const seen = new Set();
 
 	for ( const [ id, manifest ] of Object.entries( manifests ) ) {
 		const Component = APP_COMPONENTS[ id ];
@@ -100,21 +100,26 @@ export function registerBuiltins( registry ) {
 			continue;
 		}
 		registry.register( {
-			kind:         'app',
+			kind: 'app',
 			id,
-			title:        manifest.title,
-			role:         manifest.role,
+			title: manifest.title,
+			role: manifest.role,
 			Component,
-			routable:     ! NON_ROUTABLE_APPS.has( id ),
-			capabilities: Array.isArray( manifest.capabilities ) ? manifest.capabilities : [],
-			configSchema: manifest[ 'config-schema' ] || { type: 'object', additionalProperties: false },
-			platform:     manifest.platform || {},
+			routable: ! NON_ROUTABLE_APPS.has( id ),
+			capabilities: Array.isArray( manifest.capabilities )
+				? manifest.capabilities
+				: [],
+			configSchema: manifest[ 'config-schema' ] || {
+				type: 'object',
+				additionalProperties: false,
+			},
+			platform: manifest.platform || {},
 		} );
 		seen.add( id );
 	}
 
 	const expected = Object.keys( APP_COMPONENTS );
-	const missing  = expected.filter( ( id ) => ! seen.has( id ) );
+	const missing = expected.filter( ( id ) => ! seen.has( id ) );
 	if ( missing.length && process.env.NODE_ENV !== 'production' ) {
 		// eslint-disable-next-line no-console
 		console.warn(

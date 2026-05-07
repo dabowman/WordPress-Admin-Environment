@@ -32,20 +32,19 @@ export default function ToolbarActionsApp( { config = {} } ) {
 	}
 
 	return (
-		<Stack
-			direction="row"
-			gap="md"
-			align="center"
-			style={ { flex: 1 } }
-		>
+		<Stack direction="row" gap="md" align="center" style={ { flex: 1 } }>
 			<Stack direction="row" gap="xs">
-				{ left.map( ( action, i ) => renderAction( action, `left-${ i }` ) ) }
+				{ left.map( ( action, i ) =>
+					renderAction( action, `left-${ i }` )
+				) }
 			</Stack>
 
 			<div style={ { flex: 1 } } />
 
 			<Stack direction="row" gap="xs">
-				{ right.map( ( action, i ) => renderAction( action, `right-${ i }` ) ) }
+				{ right.map( ( action, i ) =>
+					renderAction( action, `right-${ i }` )
+				) }
 			</Stack>
 		</Stack>
 	);

@@ -41,10 +41,15 @@ export default function UserMenuApp() {
 			},
 		];
 
-		if ( showShellSwitcher && typeof window?.wpAdminShell?.switchShell === 'function' ) {
+		if (
+			showShellSwitcher &&
+			typeof window?.wpAdminShell?.switchShell === 'function'
+		) {
 			for ( const s of switchableShells ) {
 				out.push( {
-					title: `${ __( 'Switch to', 'wp-admin-shell' ) } ${ s.title }`,
+					title: `${ __( 'Switch to', 'wp-admin-shell' ) } ${
+						s.title
+					}`,
 					onClick: () => window.wpAdminShell.switchShell( s.slug ),
 				} );
 			}

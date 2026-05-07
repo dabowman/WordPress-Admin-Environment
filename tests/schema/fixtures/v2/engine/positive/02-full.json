@@ -1,49 +1,59 @@
 {
-  "$schema": "../../../../../../docs/schemas/admin-engine-v2.json",
-  "id": "core:wp-default-layout",
-  "version": 1,
-  "title": "WordPress Default Layout",
-  "description": "Sidebar / topbar / main / detail / overlay arrangement.",
-  "specializes-roles": [
-    "navigation", "banner", "main", "complementary", "dialog", "contentinfo"
-  ],
-  "honored-platform": [
-    "modal", "dismiss-on", "autofocus-target", "triggerable",
-    "persists-across-navigation", "dirty-state", "block-navigation-on-dirty"
-  ],
-  "templates": {
-    "core:sidebar": {
-      "role": "navigation",
-      "platform": { "persists-across-navigation": true },
-      "default-style": {
-        "inline-size": "240px",
-        "block-size":  "100%"
-      }
-    },
-    "core:topbar": {
-      "role": "banner",
-      "platform": { "persists-across-navigation": true },
-      "default-style": {
-        "block-size":  "48px",
-        "inline-size": "100%"
-      },
-      "regions": {
-        "start":  { "role": "region" },
-        "center": { "role": "region" },
-        "end":    { "role": "region" }
-      }
-    },
-    "core:main": {
-      "role": "main",
-      "default-style": { "inline-size": "100%", "min-inline-size": "0" }
-    },
-    "core:detail": {
-      "role": "complementary",
-      "platform": { "dismiss-on": [ "Escape" ] },
-      "default-style": { "inline-size": "min(720px, 50%)" }
-    }
-  },
-  "default-arrangement": "wp-chrome",
-  "script": "core-wp-default-engine",
-  "style":  "core-wp-default-engine"
+	"$schema": "../../../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:wp-default-layout",
+	"version": 1,
+	"title": "WordPress Default Layout",
+	"description": "Sidebar / topbar / main / detail / overlay arrangement.",
+	"specializes-roles": [
+		"navigation",
+		"banner",
+		"main",
+		"complementary",
+		"dialog",
+		"contentinfo"
+	],
+	"honored-platform": [
+		"modal",
+		"dismiss-on",
+		"autofocus-target",
+		"triggerable",
+		"persists-across-navigation",
+		"dirty-state",
+		"block-navigation-on-dirty"
+	],
+	"templates": {
+		"core:sidebar": {
+			"role": "navigation",
+			"platform": { "persists-across-navigation": true },
+			"default-style": {
+				"inline-size": "240px",
+				"block-size": "100%"
+			}
+		},
+		"core:topbar": {
+			"role": "banner",
+			"platform": { "persists-across-navigation": true },
+			"default-style": {
+				"block-size": "48px",
+				"inline-size": "100%"
+			},
+			"regions": {
+				"start": { "role": "region" },
+				"center": { "role": "region" },
+				"end": { "role": "region" }
+			}
+		},
+		"core:main": {
+			"role": "main",
+			"default-style": { "inline-size": "100%", "min-inline-size": "0" }
+		},
+		"core:detail": {
+			"role": "complementary",
+			"platform": { "dismiss-on": [ "Escape" ] },
+			"default-style": { "inline-size": "min(720px, 50%)" }
+		}
+	},
+	"default-arrangement": "wp-chrome",
+	"script": "core-wp-default-engine",
+	"style": "core-wp-default-engine"
 }

@@ -1,7 +1,6 @@
 import { useMemo, useState } from '@wordpress/element';
-import { useEntityRecords } from '@wordpress/core-data';
+import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { store as coreStore } from '@wordpress/core-data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, InputControl, Stack, Text } from '@wordpress/ui';
@@ -21,9 +20,7 @@ const DEFAULT_TAXONOMY_LABEL = {
 export default function TaxonomyApp( { config = {} } ) {
 	const taxonomy = config.taxonomy || 'category';
 	const heading =
-		config.title ||
-		DEFAULT_TAXONOMY_LABEL[ taxonomy ] ||
-		taxonomy;
+		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
 
 	const [ view, setView ] = useState( {
 		type: 'table',
@@ -60,7 +57,8 @@ export default function TaxonomyApp( { config = {} } ) {
 
 	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } = useDispatch( noticesStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
 
 	const [ editTerm, setEditTerm ] = useState( null );
 	const [ isCreating, setIsCreating ] = useState( false );
@@ -137,7 +135,11 @@ export default function TaxonomyApp( { config = {} } ) {
 				isDestructive: true,
 				supportsBulk: true,
 				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<Stack direction="column" gap="md" style={ { padding: '16px' } }>
+					<Stack
+						direction="column"
+						gap="md"
+						style={ { padding: '16px' } }
+					>
 						<Text>
 							{ items.length === 1
 								? __( 'Delete this term?', 'wp-admin-shell' )
@@ -170,14 +172,20 @@ export default function TaxonomyApp( { config = {} } ) {
 											[ 'taxonomy', taxonomy ]
 										);
 										createSuccessNotice(
-											__( 'Term deleted.', 'wp-admin-shell' ),
+											__(
+												'Term deleted.',
+												'wp-admin-shell'
+											),
 											{ type: 'snackbar' }
 										);
 										onActionPerformed?.( items );
 									} catch ( err ) {
 										createErrorNotice(
 											err?.message ||
-												__( 'Failed to delete term.', 'wp-admin-shell' ),
+												__(
+													'Failed to delete term.',
+													'wp-admin-shell'
+												),
 											{ isDismissible: true }
 										);
 									}
@@ -282,7 +290,14 @@ function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
-function TermEditModal( { term, taxonomy, onClose, onSave, onSaved, onError } ) {
+function TermEditModal( {
+	term,
+	taxonomy,
+	onClose,
+	onSave,
+	onSaved,
+	onError,
+} ) {
 	const isNew = ! term;
 	const [ name, setName ] = useState( term?.name || '' );
 	const [ slug, setSlug ] = useState( term?.slug || '' );

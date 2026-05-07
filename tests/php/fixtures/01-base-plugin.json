@@ -1,34 +1,55 @@
 {
-  "name": "test-shell",
-  "title": "Test Shell",
-  "version": 1,
-  "settings": {
-    "shell": { "layoutEngine": "core:default" },
-    "regions": {
-      "sidebar": {
-        "id": "sidebar",
-        "source": "core:sidebar-region",
-        "kind": "persistent",
-        "config": { "width": 280 },
-        "contains": [ "__nav" ]
-      },
-      "content": {
-        "id": "content",
-        "source": "core:content-region",
-        "kind": "persistent",
-        "config": { "router": true },
-        "contains": []
-      }
-    },
-    "applications": [
-      { "id": "posts",   "source": "core:posts",   "title": "Posts",   "icon": "post" },
-      { "id": "pages",   "source": "core:posts",   "title": "Pages",   "icon": "page", "config": { "postType": "page" } },
-      { "id": "media",   "source": "core:media",   "title": "Media",   "icon": "media" },
-      { "id": "plugins", "source": "iframe:plugins.php", "title": "Plugins", "icon": "plugins" }
-    ],
-    "defaultRoute": "/posts"
-  },
-  "styles": {
-    "branding": { "accentColor": "#3858e9", "title": null }
-  }
+	"name": "test-shell",
+	"title": "Test Shell",
+	"version": 1,
+	"settings": {
+		"shell": { "layoutEngine": "core:default" },
+		"regions": {
+			"sidebar": {
+				"id": "sidebar",
+				"source": "core:sidebar-region",
+				"kind": "persistent",
+				"config": { "width": 280 },
+				"contains": [ "__nav" ]
+			},
+			"content": {
+				"id": "content",
+				"source": "core:content-region",
+				"kind": "persistent",
+				"config": { "router": true },
+				"contains": []
+			}
+		},
+		"applications": [
+			{
+				"id": "posts",
+				"source": "core:posts",
+				"title": "Posts",
+				"icon": "post"
+			},
+			{
+				"id": "pages",
+				"source": "core:posts",
+				"title": "Pages",
+				"icon": "page",
+				"config": { "postType": "page" }
+			},
+			{
+				"id": "media",
+				"source": "core:media",
+				"title": "Media",
+				"icon": "media"
+			},
+			{
+				"id": "plugins",
+				"source": "iframe:plugins.php",
+				"title": "Plugins",
+				"icon": "plugins"
+			}
+		],
+		"defaultRoute": "/posts"
+	},
+	"styles": {
+		"branding": { "accentColor": "#3858e9", "title": null }
+	}
 }

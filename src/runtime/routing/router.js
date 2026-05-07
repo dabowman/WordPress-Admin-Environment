@@ -1,4 +1,10 @@
-import { createContext, useState, useEffect, useContext, useMemo } from '@wordpress/element';
+import {
+	createContext,
+	useState,
+	useEffect,
+	useContext,
+	useMemo,
+} from '@wordpress/element';
 
 import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
 
@@ -117,6 +123,8 @@ export function useRoute() {
  * Returns null when the region has no route-key, the slot is empty, or
  * no route pattern matches the slot value. Returns a fully-interpolated
  * route entry (config has `{name}` substitutions resolved) when matched.
+ * @param {*} region
+ * @param {*} routesBlock
  */
 export function useRouteForRegion( region, routesBlock ) {
 	const url = useRoute();
@@ -150,6 +158,8 @@ export function useRouteForRegion( region, routesBlock ) {
  * `<a href>` link emission. When the second argument is present the
  * router treats the call as v1 and joins the segments the way v1
  * shells expect.
+ * @param {*}      href
+ * @param {...any} rest
  */
 export function navigate( href, ...rest ) {
 	if ( typeof window === 'undefined' ) {
@@ -196,6 +206,7 @@ export function navigateRoute( route ) {
  * Decompose a URL hash into both the v2 shape (primary + params) and
  * the legacy v1 shape (appId + segments). v1 shells consume appId +
  * segments; v2 shells consume primary + params via useRouteForRegion.
+ * @param {*} hash
  */
 function decompose( hash ) {
 	const v2 = parseHash( hash );

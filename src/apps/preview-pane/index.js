@@ -25,6 +25,8 @@ import { useKernel } from '../../runtime/kernel-context';
  * Routes whose config carries `post-type` + `post-id` are interpreted
  * as `core-data` posts — `useEntityRecord('postType', post-type, id)`.
  * Other shapes render their config object as JSON for now.
+ * @param {Object} root0
+ * @param {*}      root0.config
  */
 export default function PreviewPaneApp( { config = {} } ) {
 	const follow = config.follow || '_self';
@@ -44,19 +46,27 @@ export default function PreviewPaneApp( { config = {} } ) {
 		);
 	}
 
-	const postType = matched.config?.[ 'post-type' ] || matched.config?.postType;
+	const postType =
+		matched.config?.[ 'post-type' ] || matched.config?.postType;
 	const postIdRaw = matched.config?.[ 'post-id' ] || matched.config?.postId;
-	const postId = postIdRaw && /^\d+$/.test( String( postIdRaw ) )
-		? Number( postIdRaw )
-		: null;
+	const postId =
+		postIdRaw && /^\d+$/.test( String( postIdRaw ) )
+			? Number( postIdRaw )
+			: null;
 
 	if ( postType && postId ) {
-		return <PreviewEntity kind="postType" name={ postType } id={ postId } />;
+		return (
+			<PreviewEntity kind="postType" name={ postType } id={ postId } />
+		);
 	}
 
 	return (
 		<pre style={ { padding: 16, fontSize: 12 } }>
-			{ JSON.stringify( { app: matched.app, config: matched.config }, null, 2 ) }
+			{ JSON.stringify(
+				{ app: matched.app, config: matched.config },
+				null,
+				2
+			) }
 		</pre>
 	);
 }
