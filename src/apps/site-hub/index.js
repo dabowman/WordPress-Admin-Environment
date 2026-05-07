@@ -11,7 +11,7 @@ import { useEntityRecord } from '@wordpress/core-data';
 import { filterURLForDisplay } from '@wordpress/url';
 import { memo, forwardRef } from '@wordpress/element';
 
-import SiteIcon from '../_components/SiteIcon';
+import SiteIcon from './SiteIcon';
 import { useKernel } from '../../runtime/kernel-context';
 
 /**

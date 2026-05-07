@@ -9,13 +9,13 @@ import { useEntityRecord } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 
 import { resolveIcon } from '../../runtime/config/iconMap';
-import SidebarNavigationScreen from '../_components/SidebarNavigationScreen';
-import SidebarNavigationItem from '../_components/SidebarNavigationItem';
-import SidebarContent from '../_components/SidebarContent';
+import SidebarNavigationScreen from './_components/SidebarNavigationScreen';
+import SidebarNavigationItem from './_components/SidebarNavigationItem';
+import SidebarContent from './_components/SidebarContent';
 import {
 	SidebarNavigationProvider,
 	useSidebarNavigation,
-} from '../_components/SidebarNavigationContext';
+} from './_components/SidebarNavigationContext';
 
 import { useRoute, navigate } from '../../runtime/routing/router';
 import { userCan } from '../../runtime/capabilities/userCan';
