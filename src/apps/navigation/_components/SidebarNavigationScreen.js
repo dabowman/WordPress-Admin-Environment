@@ -1,7 +1,7 @@
+/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalItemGroup has no @wordpress/ui 0.12 port. */
 import { Stack, Text } from '@wordpress/ui';
 import { __experimentalItemGroup as ItemGroup } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
-import { isRTL } from '@wordpress/i18n';
+import { __, isRTL } from '@wordpress/i18n';
 import { chevronRight, chevronLeft } from '@wordpress/icons';
 
 import SidebarButton from './SidebarButton';
@@ -12,11 +12,15 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  * SidebarNavigationScreen. Shows a back button (or dashboard link at root),
  * title, optional description, and content (usually an ItemGroup of nav items).
  *
- * The chrome-text color is driven by a CSS custom property
- * (`--wp-admin-shell--chrome--text-secondary`) instead of a hardcoded hex,
- * so dark/light chrome variants emitted from the cascade pick it up.
- *
  * `ItemGroup` stays from `@wordpress/components` — no WPDS port in 0.12.
+ * @param {Object} root0
+ * @param {*}      root0.isRoot
+ * @param {*}      root0.title
+ * @param {*}      root0.description
+ * @param {*}      root0.content
+ * @param {*}      root0.actions
+ * @param {*}      root0.footer
+ * @param {*}      root0.onBack
  */
 export default function SidebarNavigationScreen( {
 	isRoot,
@@ -61,7 +65,10 @@ export default function SidebarNavigationScreen( {
 					{ isRoot && (
 						<SidebarButton
 							icon={ icon }
-							label={ __( 'Go to the Dashboard', 'wp-admin-shell' ) }
+							label={ __(
+								'Go to the Dashboard',
+								'wp-admin-shell'
+							) }
 							href={ window.wpAdminShell?.dashboardUrl }
 						/>
 					) }

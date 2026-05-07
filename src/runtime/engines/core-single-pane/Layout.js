@@ -25,6 +25,7 @@
  */
 
 import { useState, useCallback } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 import { Region } from '../../regions/Region';
 import { isModal } from '../../regions/platformServices.mjs';
@@ -75,11 +76,6 @@ export default function CoreSinglePaneLayout( { regions } ) {
 
 	const hasNav = buckets.navigation.length > 0;
 
-	// Brand/accent color flows through the WPDS chrome→token bridge in
-	// `compileStyles.CHROME_WPDS_BINDINGS`; engines no longer read
-	// admin.json `branding.accentColor` (v0 legacy) or fabricate a
-	// `--wp-admin-shell-accent` custom property.
-
 	return (
 		<div
 			className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
@@ -115,7 +111,13 @@ export default function CoreSinglePaneLayout( { regions } ) {
 					}` }
 					aria-hidden={ ! navOpen }
 				>
-					<div
+					<button
+						type="button"
+						tabIndex={ -1 }
+						aria-label={ __(
+							'Close navigation',
+							'wp-admin-shell'
+						) }
 						className="wp-admin-shell-single-pane__nav-backdrop"
 						onClick={ toggleNav }
 					/>

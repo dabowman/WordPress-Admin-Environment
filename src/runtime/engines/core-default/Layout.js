@@ -54,7 +54,7 @@ function findById( bucket, id ) {
 	return bucket.find( ( region ) => region.id === id );
 }
 
-export default function CoreSiteEditorLayout( { config, regions } ) {
+export default function CoreSiteEditorLayout( { regions } ) {
 	const buckets = classifyRegions( regions );
 
 	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
@@ -71,16 +71,10 @@ export default function CoreSiteEditorLayout( { config, regions } ) {
 		( region ) => ! claimed.has( region.id )
 	);
 
-	const accent =
-		config?.styles?.color?.accent?.brand ||
-		config?.branding?.accentColor ||
-		'#3858e9';
-
 	return (
 		<div
 			className="wp-admin-shell-layout"
 			data-engine="core:default"
-			style={ { '--wp-admin-shell-accent': accent } }
 		>
 			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
@@ -92,8 +86,12 @@ export default function CoreSiteEditorLayout( { config, regions } ) {
 						preview ? ' has-preview' : ''
 					}` }
 				>
-					{ content && <Region key={ content.id } region={ content } /> }
-					{ preview && <Region key={ preview.id } region={ preview } /> }
+					{ content && (
+						<Region key={ content.id } region={ content } />
+					) }
+					{ preview && (
+						<Region key={ preview.id } region={ preview } />
+					) }
 				</div>
 			</div>
 
