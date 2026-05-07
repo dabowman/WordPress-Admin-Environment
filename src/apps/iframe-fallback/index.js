@@ -1,4 +1,4 @@
-import './iframe-fallback/index.css';
+import './index.css';
 import { useCallback, useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 

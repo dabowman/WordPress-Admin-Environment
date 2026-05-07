@@ -1,4 +1,4 @@
-import './simple-editor/index.css';
+import './index.css';
 import { useState, useEffect, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button } from '@wordpress/ui';
@@ -16,9 +16,9 @@ import {
 	ObserveTyping,
 	BlockEditorKeyboardShortcuts,
 } from '@wordpress/block-editor';
-import { navigate } from '../runtime/routing/router';
+import { navigate } from '../../runtime/routing/router';
 import { Slot } from '@wordpress/components';
-import { useDirtyState } from '../runtime/dirty-state/useDirtyState';
+import { useDirtyState } from '../../runtime/dirty-state/useDirtyState';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;

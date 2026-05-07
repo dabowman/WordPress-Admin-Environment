@@ -1,4 +1,4 @@
-import './site-hub/index.css';
+import './index.css';
 import { Button, IconButton, Stack } from '@wordpress/ui';
 import { VisuallyHidden } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -11,8 +11,8 @@ import { useEntityRecord } from '@wordpress/core-data';
 import { filterURLForDisplay } from '@wordpress/url';
 import { memo, forwardRef } from '@wordpress/element';
 
-import SiteIcon from './_components/SiteIcon';
-import { useKernel } from '../runtime/kernel-context';
+import SiteIcon from '../_components/SiteIcon';
+import { useKernel } from '../../runtime/kernel-context';
 
 /**
  * core:site-hub — sidebar header app.

@@ -1,7 +1,5 @@
-import './notices-banner/index.css';
-import './notices-snackbar/index.css';
+import './index.css';
 import { Notice } from '@wordpress/ui';
-import { SnackbarList } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 
@@ -11,16 +9,8 @@ import { store as noticesStore } from '@wordpress/notices';
  * pins this app. Sourced from `@wordpress/notices` so any app calling
  * `wp.data.dispatch('core/notices').createNotice(...)` lands here.
  *
- * core:notices-snackbar — same store, snackbar context. Transient
- * messages auto-dismiss; the user can click to dismiss earlier.
- *
- * Pinning: every bundled shell pins both into named regions through the
- * v0 normalizer (M4.6) so apps can rely on a single store-driven
- * location regardless of which shell mounted them.
- *
- * Banner is rendered by hand against `Notice.Root` from `@wordpress/ui`
- * (the WPDS-native primitive). `SnackbarList` is kept from
- * `@wordpress/components` because WPDS 0.12 ships no snackbar primitive.
+ * Rendered by hand against `Notice.Root` from `@wordpress/ui` (the
+ * WPDS-native primitive).
  */
 
 const INTENT_BY_STATUS = {
@@ -30,7 +20,7 @@ const INTENT_BY_STATUS = {
 	info: 'info',
 };
 
-export function NoticesBannerApp() {
+export default function NoticesBannerApp() {
 	const notices = useSelect(
 		( select ) => select( noticesStore ).getNotices(),
 		[]
@@ -60,23 +50,5 @@ export function NoticesBannerApp() {
 				</Notice.Root>
 			) ) }
 		</div>
-	);
-}
-
-export function NoticesSnackbarApp() {
-	const notices = useSelect(
-		( select ) => select( noticesStore ).getNotices(),
-		[]
-	);
-	const { removeNotice } = useDispatch( noticesStore );
-
-	const visible = ( notices || [] ).filter( ( n ) => n.type === 'snackbar' );
-
-	return (
-		<SnackbarList
-			notices={ visible }
-			className="wp-admin-shell-notices-snackbar"
-			onRemove={ removeNotice }
-		/>
 	);
 }

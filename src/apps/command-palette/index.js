@@ -2,8 +2,8 @@ import { useCallback, useMemo } from '@wordpress/element';
 import { useCommandLoader } from '@wordpress/commands';
 import { __, sprintf } from '@wordpress/i18n';
 
-import { resolveIcon } from '../runtime/config/iconMap';
-import { useKernel } from '../runtime/kernel-context';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import { useKernel } from '../../runtime/kernel-context';
 
 /**
  * core:command-palette — registers shell-aware commands with

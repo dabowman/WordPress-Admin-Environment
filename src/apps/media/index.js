@@ -1,4 +1,4 @@
-import './media/index.css';
+import './index.css';
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';

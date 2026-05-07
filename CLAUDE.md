@@ -202,21 +202,24 @@ wp-admin-shell/
 │   │   ├── config/iconMap.js       # icon name → @wordpress/icons (dev-warn on miss)
 │   │   └── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
 │   └── apps/                # All shell-bundled apps (registered via builtins.js)
-│       ├── <Name>App.js                    # one JS file per app — imports its own index.css side-effect
-│       ├── <id>/                           # one dir per id, co-located w/ JS source
+│       ├── <id>/                           # one dir per app id; everything for the app lives here
+│       │   ├── index.js                    #   React component (default export); imports './index.css' side-effect
 │       │   ├── app.json                    #   manifest (declares source id, capabilities, platform, etc.)
-│       │   └── index.css                   #   app-specific structural CSS (imported from <Name>App.js)
+│       │   └── index.css                   #   app-specific structural CSS (optional)
 │       └── _components/                    # Sidebar* + SiteIcon presentational helpers (shared internals)
 │
-│       Convention for plugin:* apps (spec §13 #3): same shape — app dir
-│       contains app.json + JS + index.css. Webpack picks up CSS through
-│       the dependency graph; tree-shakes unused apps' CSS automatically.
-│       Apps that don't ship CSS (CommandPaletteApp, PreviewPaneApp,
-│       AppearanceApp, etc.) skip the dir/index.css and just expose a JS
-│       file. NoticesApp.js imports both notices-banner + notices-snackbar
-│       index.css since it owns both surfaces. NavigationApp.js bundles
-│       its drill-down helpers (Screen/Item/Button + slide keyframes) into
-│       its own index.css.
+│       Same shape as engines/. Convention for plugin:* apps (spec §13 #3)
+│       matches: app dir contains app.json + index.js + optional index.css.
+│       Webpack picks up CSS through the dependency graph; tree-shakes
+│       unused apps' CSS automatically. Apps that don't ship CSS
+│       (command-palette, preview-pane, appearance, etc.) skip index.css
+│       and just expose index.js. notices-banner + notices-snackbar are
+│       independent dirs — each ships its own index.js + index.css.
+│       navigation/index.js bundles its drill-down helpers (Screen/Item/
+│       Button + slide keyframes) into its own index.css. Settings sub-
+│       panels (SettingsDiscussionApp / Reading / Writing) live inside
+│       settings/ as siblings of the host index.js (no separate manifests
+│       — internal helpers, not registered apps).
 ├── tests/
 │   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
 │   └── parity/              # node: WPDS slot-drift detector (4)

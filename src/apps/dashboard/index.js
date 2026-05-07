@@ -11,7 +11,7 @@ import {
 	Spinner,
 } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
-import { navigate } from '../runtime/routing/router';
+import { navigate } from '../../runtime/routing/router';
 
 function StatCard( { label, value, isLoading } ) {
 	return (

@@ -1,4 +1,4 @@
-import './posts/index.css';
+import './index.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecords, useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
@@ -8,7 +8,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { pencil, external, trash } from '@wordpress/icons';
-import { navigate } from '../runtime/routing/router';
+import { navigate } from '../../runtime/routing/router';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.

@@ -1,4 +1,4 @@
-import './profile/index.css';
+import './index.css';
 import { useEntityRecord } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';

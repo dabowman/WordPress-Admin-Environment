@@ -4,7 +4,7 @@
  *
  * Walks the resolved navigation tree against each test user (subscriber →
  * administrator) and prints which app ids survive the JS prune logic in
- * src/apps/NavigationApp.js#pruneNavItems. Compares to a hand-curated
+ * src/apps/navigation/index.js#pruneNavItems. Compares to a hand-curated
  * expectation set per role and reports drift.
  *
  * Run: wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
@@ -53,7 +53,7 @@ $expected = array(
 );
 
 /**
- * Mirrors src/apps/NavigationApp.js#pruneNavItems in PHP.
+ * Mirrors src/apps/navigation/index.js#pruneNavItems in PHP.
  *
  * @param array $items
  * @param array $apps_by_id

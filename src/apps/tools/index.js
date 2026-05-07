@@ -8,7 +8,7 @@ import {
 	__experimentalGrid as Grid,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { navigate } from '../runtime/routing/router';
+import { navigate } from '../../runtime/routing/router';
 
 const TOOLS = [
 	{

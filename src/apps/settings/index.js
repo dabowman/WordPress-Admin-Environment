@@ -1,4 +1,4 @@
-import './settings/index.css';
+import './index.css';
 import { useState, useMemo } from '@wordpress/element';
 import {
 	__experimentalItemGroup as ItemGroup,
@@ -6,11 +6,11 @@ import {
 } from '@wordpress/components';
 import { Stack } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
-import SettingsGeneralApp from './SettingsGeneralApp';
+import SettingsGeneralApp from '../settings-general';
 import SettingsWritingApp from './SettingsWritingApp';
 import SettingsReadingApp from './SettingsReadingApp';
 import SettingsDiscussionApp from './SettingsDiscussionApp';
-import IframeApp from './IframeApp';
+import IframeApp from '../iframe-fallback';
 
 /**
  * core:settings — composable settings host.

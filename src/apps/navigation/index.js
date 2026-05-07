@@ -1,4 +1,4 @@
-import './navigation/index.css';
+import './index.css';
 import { IconButton, Stack } from '@wordpress/ui';
 import {
 	Icon,
@@ -8,17 +8,17 @@ import { __ } from '@wordpress/i18n';
 import { useEntityRecord } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 
-import { resolveIcon } from '../runtime/config/iconMap';
-import SidebarNavigationScreen from './_components/SidebarNavigationScreen';
-import SidebarNavigationItem from './_components/SidebarNavigationItem';
-import SidebarContent from './_components/SidebarContent';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import SidebarNavigationScreen from '../_components/SidebarNavigationScreen';
+import SidebarNavigationItem from '../_components/SidebarNavigationItem';
+import SidebarContent from '../_components/SidebarContent';
 import {
 	SidebarNavigationProvider,
 	useSidebarNavigation,
-} from './_components/SidebarNavigationContext';
+} from '../_components/SidebarNavigationContext';
 
-import { useRoute, navigate } from '../runtime/routing/router';
-import { userCan } from '../runtime/capabilities/userCan';
+import { useRoute, navigate } from '../../runtime/routing/router';
+import { userCan } from '../../runtime/capabilities/userCan';
 
 /**
  * core:navigation — sidebar nav app.

@@ -1,4 +1,4 @@
-import './user-menu/index.css';
+import './index.css';
 import { DropdownMenu } from '@wordpress/components';
 import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
