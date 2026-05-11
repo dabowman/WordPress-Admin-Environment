@@ -17,7 +17,7 @@ const __dirname   = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
 const { compileStyles } = await import(
-	resolve( projectRoot, 'src/runtime/styles/compileStyles.js' )
+	resolve( projectRoot, 'src/runtime/engines/core-default/compileStyles.mjs' )
 );
 const { flattenTokens } = await import(
 	resolve( projectRoot, 'src/runtime/tokens/tokensResolver.mjs' )
@@ -61,13 +61,13 @@ console.log( '\n— spec §9.1 worked example: tokens.json → admin.json styles
 	const compiled = compileStyles( styles, tokens );
 	ok(
 		'WPDS slot picks up the literal brand color',
-		compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ] === '#3858e9',
-		'got: ' + compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ]
+		compiled.top[ '--wpds-color-bg-interactive-brand-strong' ] === '#3858e9',
+		'got: ' + compiled.top[ '--wpds-color-bg-interactive-brand-strong' ]
 	);
 	ok(
 		'no leftover var() fallback for the resolved alias',
 		! /var\(/.test(
-			compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ] || ''
+			compiled.top[ '--wpds-color-bg-interactive-brand-strong' ] || ''
 		)
 	);
 }
@@ -108,11 +108,11 @@ console.log( '\n— spec §9.1: re-branding edits one token, fans out —' );
 	const compiled = compileStyles( styles, tokens );
 	ok(
 		'bg slot follows the re-brand',
-		compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ] === '#7c3aed'
+		compiled.top[ '--wpds-color-bg-interactive-brand-strong' ] === '#7c3aed'
 	);
 	ok(
 		'fg slot also follows the re-brand (single edit, multiple consumers)',
-		compiled.wpds[ '--wpds-color-fg-interactive-brand-strong' ] === '#7c3aed'
+		compiled.top[ '--wpds-color-fg-interactive-brand-strong' ] === '#7c3aed'
 	);
 }
 

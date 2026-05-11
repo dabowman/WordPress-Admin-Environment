@@ -15,7 +15,7 @@ const projectRoot = resolve( __dirname, '..', '..' );
 
 // compileStyles imports React-free deps so it loads cleanly under node.
 const { compileStyles } = await import(
-	resolve( projectRoot, 'src/runtime/styles/compileStyles.js' )
+	resolve( projectRoot, 'src/runtime/engines/core-default/compileStyles.mjs' )
 );
 
 let pass = 0;
@@ -58,7 +58,7 @@ console.log( '\n— alias resolves to tokens.json literal —' );
 	const compiled = compileStyles( styles, tokens );
 	eq(
 		'WPDS slot picks up tokens.json literal',
-		compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ],
+		compiled.top[ '--wpds-color-bg-interactive-brand-strong' ],
 		'#3858e9'
 	);
 }
@@ -73,7 +73,7 @@ console.log( '\n— unresolved alias falls back to var() —' );
 	const compiled = compileStyles( styles, {
 		color: { $type: 'color', brand: { 500: { $value: '#3858e9' } } },
 	} );
-	const value = compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ];
+	const value = compiled.top[ '--wpds-color-bg-interactive-brand-strong' ];
 	ok( 'unresolved alias emits var()', value && value.startsWith( 'var(' ) );
 }
 
@@ -90,7 +90,7 @@ console.log( '\n— within-doc alias still wins —' );
 	} );
 	eq(
 		'styles.* alias prefers admin.json tree',
-		compiled.wpds[ '--wpds-color-pri-interactive-brand-strong' ],
+		compiled.top[ '--wpds-color-pri-interactive-brand-strong' ],
 		'#fafafa'
 	);
 }
@@ -101,7 +101,7 @@ console.log( '\n— missing tokens arg keeps var() fallback —' );
 		color: { bg: { interactive: { brand: { strong: '{color.brand.500}' } } } },
 	};
 	const compiled = compileStyles( styles ); // no tokens
-	const value = compiled.wpds[ '--wpds-color-bg-interactive-brand-strong' ];
+	const value = compiled.top[ '--wpds-color-bg-interactive-brand-strong' ];
 	ok( 'missing tokens emits var()', value && value.startsWith( 'var(' ) );
 }
 

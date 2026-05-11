@@ -25,9 +25,14 @@
 
 import { useId, useMemo, createElement, Component } from '@wordpress/element';
 
-import { compileStyles } from './compileStyles';
 import { WpdsThemeProvider } from './WpdsThemeProvider';
 import { useKernel } from '../kernel-context';
+
+const EMPTY_COMPILED = Object.freeze( {
+	top: Object.freeze( {} ),
+	scoped: Object.freeze( [] ),
+	subtrees: Object.freeze( {} ),
+} );
 
 const EMPTY_TOKENS = Object.freeze( {} );
 
@@ -112,11 +117,12 @@ function ProviderShell( {
 	const detailCss = useMemo(
 		() =>
 			buildScopedDetailCss( {
+				engineSource,
 				styles: styles || {},
 				tokens: tokens || EMPTY_TOKENS,
 				providerId: id,
 			} ),
-		[ styles, tokens, id ]
+		[ engineSource, styles, tokens, id ]
 	);
 
 	const wrapper = createElement(
@@ -189,22 +195,28 @@ class ThemeProviderErrorBoundary extends Component {
 
 /**
  * Build the slot-override CSS layered on top of the engine's
- * ThemeProvider. No `:root` writes — the WPDS provider already covers
- * that layer (including the `--wp-admin-theme-color` /
- * `--wp-components-color-*` compat aliases). Shell-level + chrome +
- * region/app overrides emit scoped to the provider id we attach to our
- * wrapping `<div>`.
+ * ThemeProvider. No `:root` writes — the engine's provider already
+ * covers that layer. Shell-level + chrome + region/app overrides
+ * emit scoped to the provider id we attach to our wrapping `<div>`.
+ *
+ * Delegates the actual styles → CSS-variable compilation to the
+ * engine's optional `compileStyles` hook. When the engine omits the
+ * hook, no scoped CSS is emitted — the engine's ThemeProvider owns
+ * all token plumbing directly.
+ *
  * @param {Object} root0
+ * @param {*}      root0.engineSource
  * @param {*}      root0.styles
  * @param {*}      root0.tokens
  * @param {*}      root0.providerId
  */
-function buildScopedDetailCss( { styles, tokens, providerId } ) {
-	const compiled = compileStyles( styles, tokens );
+function buildScopedDetailCss( { engineSource, styles, tokens, providerId } ) {
+	const compile = engineSource?.compileStyles;
+	const compiled = compile ? compile( styles, tokens ) : EMPTY_COMPILED;
 	const lines = [];
 	const scopeSel = `[data-wpds-theme-provider-id="${ providerId }"]`;
 
-	const topVars = { ...compiled.wpds, ...compiled.chrome };
+	const topVars = compiled.top || {};
 	if ( Object.keys( topVars ).length > 0 ) {
 		lines.push( `${ scopeSel } {` );
 		for ( const [ name, value ] of Object.entries( topVars ) ) {
@@ -213,7 +225,7 @@ function buildScopedDetailCss( { styles, tokens, providerId } ) {
 		lines.push( '}' );
 	}
 
-	for ( const { selector, vars } of compiled.chromeScopedWpds || [] ) {
+	for ( const { selector, vars } of compiled.scoped || [] ) {
 		lines.push( `${ scopeSel } ${ selector } {` );
 		for ( const [ name, value ] of Object.entries( vars ) ) {
 			lines.push( `\t${ name }: ${ value };` );
@@ -221,7 +233,9 @@ function buildScopedDetailCss( { styles, tokens, providerId } ) {
 		lines.push( '}' );
 	}
 
-	for ( const [ scopeKey, vars ] of Object.entries( compiled.scoped ) ) {
+	for ( const [ scopeKey, vars ] of Object.entries(
+		compiled.subtrees || {}
+	) ) {
 		const sel = scopedSelector( scopeKey, scopeSel );
 		if ( ! sel ) {
 			continue;
