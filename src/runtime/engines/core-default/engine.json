@@ -140,6 +140,18 @@
 	"script": "wp-admin-shell",
 	"style": "wp-admin-shell",
 
+	"styles": [
+		{
+			"handle": "wp-admin-shell-wpds-tokens",
+			"src": "build/wpds-tokens.css"
+		},
+		{
+			"handle": "wp-admin-shell-dataviews",
+			"src": "build/dataviews.css",
+			"deps": [ "wp-components" ]
+		}
+	],
+
 	"default-styles": {
 		"theme": {
 			"density": "default"

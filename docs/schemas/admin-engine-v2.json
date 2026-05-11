@@ -94,6 +94,33 @@
 			"description": "Optional WordPress style handle for this engine's CSS. Engines may rely entirely on WPDS tokens and the chrome extension namespace for styling, in which case this is omitted. Engines with their own structural CSS (grid templates, animation, layout-specific pseudo-elements) declare a style handle here."
 		},
 
+		"styles": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [ "handle", "src" ],
+				"additionalProperties": false,
+				"properties": {
+					"handle": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9-]*$",
+						"description": "WordPress style handle. Must be unique across all enqueued engines. Convention: `<plugin-slug>-<engine-name>-<asset>` (e.g. `wp-admin-shell-wpds-tokens`)."
+					},
+					"src": {
+						"type": "string",
+						"minLength": 1,
+						"description": "URL or plugin-relative path to the CSS file. The kernel resolves plugin-relative paths against the engine's plugin URL at enqueue time."
+					},
+					"deps": {
+						"type": "array",
+						"items": { "type": "string" },
+						"description": "Optional dependency handles enqueued before this one."
+					}
+				}
+			},
+			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `admin.json#engine`. The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
+		},
+
 		"default-styles": {
 			"$ref": "#/$defs/defaultStyles",
 			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."

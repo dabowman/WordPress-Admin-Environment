@@ -248,23 +248,29 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		true
 	);
 
-	// WPDS baseline tokens — `:root { --wpds-*: ... }` for all 140 slots.
-	// Copied from `@wordpress/theme/src/prebuilt/css/design-tokens.css` by
-	// webpack's CopyPlugin. Loaded first so engine + app CSS rules find a
-	// defined value when they reference any `--wpds-*` slot.
-	wp_enqueue_style(
-		'wp-admin-shell-wpds-tokens',
-		WP_ADMIN_SHELL_URL . 'build/wpds-tokens.css',
-		array(),
-		$asset['version']
-	);
+	$config = wp_admin_shell_get_active_config();
 
-	wp_enqueue_style(
-		'wp-admin-shell-dataviews',
-		WP_ADMIN_SHELL_URL . 'build/dataviews.css',
-		array( 'wp-components' ),
-		$asset['version']
-	);
+	// Engine-driven style enqueue. Each registered engine declares a
+	// `styles` array in its manifest listing the CSS bundles it depends
+	// on (WPDS baseline tokens, DataViews stylesheet, MUI bundle, etc.).
+	// Only the active engine's styles enqueue — keeps non-WPDS engines
+	// from loading WPDS tokens (and vice versa for other DS plugins).
+	$active_engine_id      = is_array( $config ) && isset( $config['engine'] ) ? $config['engine'] : null;
+	$active_engine_manifest = $active_engine_id ? WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
+
+	if ( is_array( $active_engine_manifest ) && isset( $active_engine_manifest['styles'] ) && is_array( $active_engine_manifest['styles'] ) ) {
+		foreach ( $active_engine_manifest['styles'] as $style ) {
+			if ( ! isset( $style['handle'], $style['src'] ) ) {
+				continue;
+			}
+			$src  = $style['src'];
+			$deps = isset( $style['deps'] ) && is_array( $style['deps'] ) ? $style['deps'] : array();
+			// Plugin-relative path → resolve against plugin URL. Absolute
+			// URLs pass through unchanged.
+			$resolved_src = ( strpos( $src, '//' ) === 0 || preg_match( '#^https?://#', $src ) ) ? $src : WP_ADMIN_SHELL_URL . ltrim( $src, '/' );
+			wp_enqueue_style( $style['handle'], $resolved_src, $deps, $asset['version'] );
+		}
+	}
 
 	// Block editor styles — needed by SimpleEditorApp (BlockEditorProvider + BlockList).
 	wp_enqueue_style( 'wp-block-editor' );
@@ -274,11 +280,9 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',
-		array( 'wp-admin-shell-wpds-tokens', 'wp-components', 'wp-admin-shell-dataviews' ),
+		array( 'wp-components' ),
 		$asset['version']
 	);
-
-	$config = wp_admin_shell_get_active_config();
 
 	$current_user = wp_get_current_user();
 
