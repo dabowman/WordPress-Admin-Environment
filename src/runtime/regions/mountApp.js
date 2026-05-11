@@ -15,6 +15,26 @@
 import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
+import { getApp, getEngine } from '../manifests';
+
+const IS_DEV =
+	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+const dsMismatchWarned = new Set();
+
+function warnDsMismatch( engineId, appId, engineDs, appDs ) {
+	if ( ! IS_DEV ) {
+		return;
+	}
+	const key = `${ engineId }::${ appId }`;
+	if ( dsMismatchWarned.has( key ) ) {
+		return;
+	}
+	dsMismatchWarned.add( key );
+	// eslint-disable-next-line no-console
+	console.warn(
+		`wp-admin-shell DS mismatch: app "${ appId }" declares designSystem="${ appDs }" but active engine "${ engineId }" declares designSystem="${ engineDs }". Visual results will be inconsistent.`
+	);
+}
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const { registry, config } = useKernel();
@@ -22,6 +42,20 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const appInstance = resolveAppInstance( appRef );
 	if ( ! appInstance ) {
 		return null;
+	}
+
+	// Dev-mode: warn once per (engine, app) pair when designSystem
+	// declarations disagree. Both fields are optional — missing data
+	// skips the check.
+	if ( IS_DEV ) {
+		const engineId = config?.engine;
+		const appManifest = getApp( appInstance.source );
+		const engineManifest = engineId ? getEngine( engineId ) : null;
+		const appDs = appManifest?.designSystem;
+		const engineDs = engineManifest?.designSystem;
+		if ( appDs && engineDs && appDs !== engineDs ) {
+			warnDsMismatch( engineId, appInstance.id, engineDs, appDs );
+		}
 	}
 	// Per-app theme override. `styles.applications[appId]` may declare
 	// `theme` seeds (Tier 1) or direct slot overrides (Tier 3); when

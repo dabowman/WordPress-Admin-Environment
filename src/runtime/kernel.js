@@ -123,6 +123,12 @@ export function kernel( config ) {
 	// `console.warn`; sanitization drops `app` so URL routing wins.
 	const regionsMap = config.regions || {};
 	const regions = {};
+	const honoredServices = new Set(
+		Array.isArray( engineManifest?.[ 'honored-platform' ] )
+			? engineManifest[ 'honored-platform' ]
+			: []
+	);
+	const unhonoredWarned = new Set();
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
 		// user lacks capability for is dropped before mounting, so
@@ -140,6 +146,29 @@ export function kernel( config ) {
 			for ( const v of violations ) {
 				// eslint-disable-next-line no-console
 				console.warn( `[wp-admin-shell] ${ v.message }` );
+			}
+		}
+		// Dev-mode: warn once per service when a region declares a
+		// platform service the active engine doesn't list in
+		// `honored-platform`. Unhonored requests still mount silently,
+		// they just no-op — author may have a typo or be targeting a
+		// future engine.
+		if (
+			process.env?.NODE_ENV !== 'production' &&
+			decorated.platform &&
+			typeof decorated.platform === 'object'
+		) {
+			for ( const serviceName of Object.keys( decorated.platform ) ) {
+				if (
+					! honoredServices.has( serviceName ) &&
+					! unhonoredWarned.has( serviceName )
+				) {
+					unhonoredWarned.add( serviceName );
+					// eslint-disable-next-line no-console
+					console.warn(
+						`[wp-admin-shell] platform service "${ serviceName }" requested by region "${ id }" but engine "${ engineId }" does not list it in honored-platform. Request is a no-op.`
+					);
+				}
 			}
 		}
 		regions[ id ] = sanitizeRegion( decorated );
