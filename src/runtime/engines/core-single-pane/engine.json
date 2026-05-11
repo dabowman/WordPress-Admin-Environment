@@ -15,20 +15,20 @@
 	],
 
 	"honored-platform": [
-		"modal",
-		"dismiss-on",
-		"autofocus-target",
-		"triggerable",
-		"persists-across-navigation",
-		"dirty-state",
-		"block-navigation-on-dirty",
-		"trigger"
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty",
+		"core:trigger"
 	],
 
 	"templates": {
 		"core:appbar": {
 			"role": "banner",
-			"platform": { "persists-across-navigation": true },
+			"platform": { "core:persists-across-navigation": true },
 			"default-style": {
 				"display": "flex",
 				"align-items": "center",
@@ -65,8 +65,8 @@
 		"core:nav-drawer": {
 			"role": "navigation",
 			"platform": {
-				"dismiss-on": [ "Escape", "backdrop-click" ],
-				"triggerable": true
+				"core:dismiss-on": [ "Escape", "backdrop-click" ],
+				"core:triggerable": true
 			},
 			"default-style": {
 				"display": "flex",
@@ -97,8 +97,8 @@
 		"core:overlay": {
 			"role": "dialog",
 			"platform": {
-				"modal": true,
-				"dismiss-on": [ "Escape", "backdrop-click" ]
+				"core:modal": true,
+				"core:dismiss-on": [ "Escape", "backdrop-click" ]
 			},
 			"default-style": {
 				"inline-size": "min(560px, 92vw)",
@@ -112,7 +112,7 @@
 
 		"core:detail": {
 			"role": "complementary",
-			"platform": { "dismiss-on": [ "Escape" ] },
+			"platform": { "core:dismiss-on": [ "Escape" ] },
 			"default-style": {
 				"inline-size": "100%",
 				"block-size": "100%",

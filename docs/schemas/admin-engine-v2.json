@@ -141,17 +141,9 @@
 		},
 
 		"platformServiceName": {
-			"enum": [
-				"modal",
-				"dismiss-on",
-				"autofocus-target",
-				"triggerable",
-				"persists-across-navigation",
-				"dirty-state",
-				"block-navigation-on-dirty",
-				"trigger"
-			],
-			"description": "A platform service name from the v1 vocabulary. The list grows additively in future spec versions; this enum is updated when new services are added to the spec. Engines may declare honored services that don't yet exist in the schema if they're targeting a future spec version, but v1 schema validation rejects unknown service names."
+			"type": "string",
+			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+			"description": "A platform service name. Same namespace convention as app, region-template, and engine ids: `core:{name}` for services blessed by the WP Admin Shell core spec (the v1 set is `core:modal`, `core:dismiss-on`, `core:autofocus-target`, `core:triggerable`, `core:persists-across-navigation`, `core:dirty-state`, `core:block-navigation-on-dirty`, `core:trigger`), and `plugin:{slug}/{name}` for plugin-contributed services. The schema does not enumerate names — the vocabulary grows as engines and plugins ship. Apps declare requested services; engines declare honored ones. Apps requesting unhonored services still mount; the unhonored request is a no-op with a dev-mode warning. Namespacing eliminates collision between independently-developed plugin services (e.g. one plugin's `swipe-to-dismiss` versus another's)."
 		},
 
 		"tokenAlias": {
@@ -256,8 +248,8 @@
 			"additionalProperties": false,
 			"description": "Platform services a region requests. Same shape as the app manifest's `platform` block, but applied at the region level rather than the app level. When both a region and its mounted app declare the same platform service, the region's declaration is the floor: the engine honors the strictest combined request.",
 			"properties": {
-				"modal": { "type": "boolean" },
-				"dismiss-on": {
+				"core:modal": { "type": "boolean" },
+				"core:dismiss-on": {
 					"type": "array",
 					"uniqueItems": true,
 					"items": {
@@ -269,12 +261,12 @@
 						]
 					}
 				},
-				"autofocus-target": { "type": "string", "minLength": 1 },
-				"triggerable": { "type": "boolean" },
-				"persists-across-navigation": { "type": "boolean" },
-				"dirty-state": { "type": "boolean" },
-				"block-navigation-on-dirty": { "type": "boolean" },
-				"trigger": {
+				"core:autofocus-target": { "type": "string", "minLength": 1 },
+				"core:triggerable": { "type": "boolean" },
+				"core:persists-across-navigation": { "type": "boolean" },
+				"core:dirty-state": { "type": "boolean" },
+				"core:block-navigation-on-dirty": { "type": "boolean" },
+				"core:trigger": {
 					"type": "object",
 					"additionalProperties": false,
 					"properties": {

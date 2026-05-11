@@ -92,15 +92,15 @@ class WP_Admin_Shell_Manifest_Validator {
 			}
 		}
 
-		// Conditional: app's `block-navigation-on-dirty` requires `dirty-state`.
+		// Conditional: app's `core:block-navigation-on-dirty` requires `core:dirty-state`.
 		if ( 'app' === $kind ) {
 			$platform = $manifest['platform'] ?? array();
 			if (
 				is_array( $platform )
-				&& ( $platform['block-navigation-on-dirty'] ?? false )
-				&& ! ( $platform['dirty-state'] ?? false )
+				&& ( $platform['core:block-navigation-on-dirty'] ?? false )
+				&& ! ( $platform['core:dirty-state'] ?? false )
 			) {
-				$errors[] = 'platform.block-navigation-on-dirty requires platform.dirty-state';
+				$errors[] = 'platform.core:block-navigation-on-dirty requires platform.core:dirty-state';
 			}
 		}
 

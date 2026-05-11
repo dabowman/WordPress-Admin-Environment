@@ -6,7 +6,7 @@
 	"description": "Standalone General-settings panel (legacy entry kept for shells that mount it directly).",
 	"role": "main",
 	"platform": {
-		"dirty-state": true
+		"core:dirty-state": true
 	},
 	"config-schema": { "type": "object", "additionalProperties": false },
 	"script": "wp-admin-shell"

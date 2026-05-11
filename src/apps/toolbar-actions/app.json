@@ -6,7 +6,7 @@
 	"description": "Topbar action group rendering left/right anchor buttons. Bridges legacy command/app shapes via COMMAND_HREFS.",
 	"role": "region",
 	"platform": {
-		"persists-across-navigation": true
+		"core:persists-across-navigation": true
 	},
 	"config-schema": {
 		"type": "object",

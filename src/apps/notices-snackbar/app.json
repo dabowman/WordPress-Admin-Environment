@@ -6,7 +6,7 @@
 	"description": "Transient snackbar notices sourced from `@wordpress/notices` (snackbar context). Uses legacy `SnackbarList` — WPDS 0.12 has no port.",
 	"role": "region",
 	"platform": {
-		"persists-across-navigation": true
+		"core:persists-across-navigation": true
 	},
 	"config-schema": { "type": "object", "additionalProperties": false },
 	"script": "wp-admin-shell"

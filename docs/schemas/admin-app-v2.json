@@ -114,9 +114,9 @@
 				"properties": {
 					"platform": {
 						"properties": {
-							"block-navigation-on-dirty": { "const": true }
+							"core:block-navigation-on-dirty": { "const": true }
 						},
-						"required": [ "block-navigation-on-dirty" ]
+						"required": [ "core:block-navigation-on-dirty" ]
 					}
 				},
 				"required": [ "platform" ]
@@ -124,8 +124,8 @@
 			"then": {
 				"properties": {
 					"platform": {
-						"properties": { "dirty-state": { "const": true } },
-						"required": [ "dirty-state" ]
+						"properties": { "core:dirty-state": { "const": true } },
+						"required": [ "core:dirty-state" ]
 					}
 				}
 			}
@@ -151,13 +151,13 @@
 			"additionalProperties": false,
 			"description": "Platform services this app requests from its hosting engine. Each field corresponds to a service with a clear browser/OS analog — services every region author would otherwise reimplement identically. The list is governed centrally and grows additively in minor spec versions; engines opt into honoring each service via their own `honored-platform` array.",
 			"properties": {
-				"modal": {
+				"core:modal": {
 					"type": "boolean",
 					"default": false,
 					"description": "When true, the app should be rendered with focus trapped inside its region, ARIA modal attributes applied, and (for engines that support it) a backdrop scrim rendered behind the region. Browser analog: HTML `<dialog>` with `showModal()`. Use for command palettes, confirmation dialogs, full-screen takeover apps. Implies that other regions cannot receive interaction while the app is mounted."
 				},
 
-				"dismiss-on": {
+				"core:dismiss-on": {
 					"type": "array",
 					"uniqueItems": true,
 					"items": {
@@ -172,31 +172,31 @@
 					"description": "Triggers that cause the engine to unmount this app's region. Browser analog: HTML `<dialog>` Escape-to-close behavior, popover dismissal. Use for ephemeral apps (modals, palettes, drawers). Apps mounted in persistent regions typically omit this field — they live for the life of the shell. Multiple triggers are honored simultaneously."
 				},
 
-				"autofocus-target": {
+				"core:autofocus-target": {
 					"type": "string",
 					"minLength": 1,
 					"description": "CSS selector identifying which element should receive focus when this app mounts. Browser analog: HTML `autofocus` attribute. The selector is evaluated against the app's rendered DOM after mount. If the selector matches no element (or matches multiple — first wins), focus falls through to the engine's default — typically the region's container element. Use for apps where a specific input or button should receive focus immediately (search fields in a command palette, the title input in a new-post editor)."
 				},
 
-				"triggerable": {
+				"core:triggerable": {
 					"type": "boolean",
 					"default": false,
 					"description": "When true, this app can be invoked by a binding declared in admin.json's `bindings` block (e.g., `Mod+K` opens the command palette). Browser analog: HTML `commandfor` / `command` attributes. The app declares only that it accepts being invoked; the actual keystroke or invocation source is decided at install time in admin.json. Apps that should never be invoked by user shortcut (e.g., always-mounted persistent system apps) omit this field. Note: setting this to `true` does not register a binding — admin.json must explicitly bind a keystroke to the app's id."
 				},
 
-				"persists-across-navigation": {
+				"core:persists-across-navigation": {
 					"type": "boolean",
 					"default": false,
 					"description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.route-key`) typically omit this field — they unmount when the URL slot they read from changes."
 				},
 
-				"dirty-state": {
+				"core:dirty-state": {
 					"type": "boolean",
 					"default": false,
 					"description": "When true, this app may report unsaved-changes state via the runtime's dirty-state API. Engines honoring this field will query the app before unmounting and may delay or prevent navigation if state is dirty. Browser analog: `beforeunload` event. Use for editor-style apps where unsaved changes matter. Apps without unsaved-state semantics (read-only views, simple displays) omit this field. Setting this true is a prerequisite for `block-navigation-on-dirty`."
 				},
 
-				"block-navigation-on-dirty": {
+				"core:block-navigation-on-dirty": {
 					"type": "boolean",
 					"default": false,
 					"description": "When true (and `dirty-state` is also true), the engine shows a confirmation dialog before unmounting the app while it reports dirty state. Browser analog: the `beforeunload` confirmation dialog. Use for editors where data loss must be guarded against. Without this field, dirty state is reported but does not block navigation — the app is responsible for any other warning UX. Setting this without also setting `dirty-state: true` is a manifest error and rejected by the schema."

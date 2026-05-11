@@ -2,10 +2,12 @@
  * Platform service accessors for regions.
  *
  * Spec §5.3: a region's `platform` block requests browser-analog
- * services from the engine — modal/dismiss-on/autofocus-target/
- * triggerable/persists-across-navigation/dirty-state/
- * block-navigation-on-dirty/trigger. The engine consults these
- * requests when composing the region. This module gives the engine
+ * services from the engine — `core:modal`, `core:dismiss-on`,
+ * `core:autofocus-target`, `core:triggerable`,
+ * `core:persists-across-navigation`, `core:dirty-state`,
+ * `core:block-navigation-on-dirty`, `core:trigger`. The engine
+ * consults these requests when composing the region. This module
+ * gives the engine
  * and the generic Region renderer one place to read those services
  * from any region declaration.
  *
@@ -30,10 +32,10 @@ function isDialogRole( region ) {
 
 export function isModal( region ) {
 	const platform = platformBlock( region );
-	if ( platform && platform.modal === true ) {
+	if ( platform && platform[ 'core:modal' ] === true ) {
 		return true;
 	}
-	if ( platform && platform.modal === false ) {
+	if ( platform && platform[ 'core:modal' ] === false ) {
 		return false;
 	}
 	return isDialogRole( region ) === true;
@@ -46,33 +48,33 @@ export function isModal( region ) {
  */
 export function dismissTriggers( region ) {
 	const platform = platformBlock( region );
-	if ( platform && Array.isArray( platform[ 'dismiss-on' ] ) ) {
-		return platform[ 'dismiss-on' ].slice();
+	if ( platform && Array.isArray( platform[ 'core:dismiss-on' ] ) ) {
+		return platform[ 'core:dismiss-on' ].slice();
 	}
 	return [];
 }
 
 export function autofocusSelector( region ) {
 	const platform = platformBlock( region );
-	if ( platform && typeof platform[ 'autofocus-target' ] === 'string' ) {
-		return platform[ 'autofocus-target' ];
+	if ( platform && typeof platform[ 'core:autofocus-target' ] === 'string' ) {
+		return platform[ 'core:autofocus-target' ];
 	}
 	return null;
 }
 
 export function persistsAcrossNavigation( region ) {
 	const platform = platformBlock( region );
-	return !! ( platform && platform[ 'persists-across-navigation' ] === true );
+	return !! ( platform && platform[ 'core:persists-across-navigation' ] === true );
 }
 
 export function isTriggerable( region ) {
 	const platform = platformBlock( region );
-	return !! ( platform && platform.triggerable === true );
+	return !! ( platform && platform[ 'core:triggerable' ] === true );
 }
 
 export function triggerShortcut( region ) {
 	const platform = platformBlock( region );
-	const trigger = platform && platform.trigger;
+	const trigger = platform && platform[ 'core:trigger' ];
 	if ( trigger && typeof trigger === 'object' && typeof trigger.shortcut === 'string' ) {
 		return trigger.shortcut;
 	}
@@ -81,12 +83,12 @@ export function triggerShortcut( region ) {
 
 export function wantsDirtyState( region ) {
 	const platform = platformBlock( region );
-	return !! ( platform && platform[ 'dirty-state' ] === true );
+	return !! ( platform && platform[ 'core:dirty-state' ] === true );
 }
 
 export function blocksNavigationOnDirty( region ) {
 	const platform = platformBlock( region );
-	return !! ( platform && platform[ 'block-navigation-on-dirty' ] === true );
+	return !! ( platform && platform[ 'core:block-navigation-on-dirty' ] === true );
 }
 
 /**
@@ -95,7 +97,7 @@ export function blocksNavigationOnDirty( region ) {
  *   - 'drawer'     — slides in from edge; dismiss-on attached
  *   - 'persistent' — fixed slot in the engine's default arrangement
  *
- * `platform.modal: true` (or `role: dialog`) → overlay; otherwise
+ * `platform[ 'core:modal' ]: true` (or `role: dialog`) → overlay; otherwise
  * drawer if `role: complementary` and dismiss-on is declared (the
  * spec drawer pattern); else persistent.
  */

@@ -13,18 +13,18 @@
 		"contentinfo"
 	],
 	"honored-platform": [
-		"modal",
-		"dismiss-on",
-		"autofocus-target",
-		"triggerable",
-		"persists-across-navigation",
-		"dirty-state",
-		"block-navigation-on-dirty"
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty"
 	],
 	"templates": {
 		"core:sidebar": {
 			"role": "navigation",
-			"platform": { "persists-across-navigation": true },
+			"platform": { "core:persists-across-navigation": true },
 			"default-style": {
 				"inline-size": "240px",
 				"block-size": "100%"
@@ -32,7 +32,7 @@
 		},
 		"core:topbar": {
 			"role": "banner",
-			"platform": { "persists-across-navigation": true },
+			"platform": { "core:persists-across-navigation": true },
 			"default-style": {
 				"block-size": "48px",
 				"inline-size": "100%"
@@ -49,7 +49,7 @@
 		},
 		"core:detail": {
 			"role": "complementary",
-			"platform": { "dismiss-on": [ "Escape" ] },
+			"platform": { "core:dismiss-on": [ "Escape" ] },
 			"default-style": { "inline-size": "min(720px, 50%)" }
 		}
 	},

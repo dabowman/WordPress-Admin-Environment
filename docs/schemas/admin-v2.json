@@ -284,8 +284,8 @@
 			"additionalProperties": false,
 			"description": "Platform service requests at the region level. Same vocabulary as the app manifest's `platform`; see app manifest schema for per-field description. Region-level requests combine with the mounted app's requests; strictest wins.",
 			"properties": {
-				"modal": { "type": "boolean" },
-				"dismiss-on": {
+				"core:modal": { "type": "boolean" },
+				"core:dismiss-on": {
 					"type": "array",
 					"uniqueItems": true,
 					"items": {
@@ -297,12 +297,12 @@
 						]
 					}
 				},
-				"autofocus-target": { "type": "string", "minLength": 1 },
-				"triggerable": { "type": "boolean" },
-				"persists-across-navigation": { "type": "boolean" },
-				"dirty-state": { "type": "boolean" },
-				"block-navigation-on-dirty": { "type": "boolean" },
-				"trigger": {
+				"core:autofocus-target": { "type": "string", "minLength": 1 },
+				"core:triggerable": { "type": "boolean" },
+				"core:persists-across-navigation": { "type": "boolean" },
+				"core:dirty-state": { "type": "boolean" },
+				"core:block-navigation-on-dirty": { "type": "boolean" },
+				"core:trigger": {
 					"type": "object",
 					"additionalProperties": false,
 					"properties": {
@@ -315,13 +315,13 @@
 					"description": "block-navigation-on-dirty requires dirty-state, same as in the app manifest.",
 					"if": {
 						"properties": {
-							"block-navigation-on-dirty": { "const": true }
+							"core:block-navigation-on-dirty": { "const": true }
 						},
-						"required": [ "block-navigation-on-dirty" ]
+						"required": [ "core:block-navigation-on-dirty" ]
 					},
 					"then": {
-						"properties": { "dirty-state": { "const": true } },
-						"required": [ "dirty-state" ]
+						"properties": { "core:dirty-state": { "const": true } },
+						"required": [ "core:dirty-state" ]
 					}
 				}
 			]

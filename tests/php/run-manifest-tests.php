@@ -253,7 +253,7 @@ $ok = $registry->register_template(
 	'plugin:foo/popover',
 	array(
 		'role'          => 'dialog',
-		'platform'      => array( 'modal' => true, 'dismiss-on' => array( 'Escape' ) ),
+		'platform'      => array( 'core:modal' => true, 'core:dismiss-on' => array( 'Escape' ) ),
 		'default-style' => array( 'inline-size' => '320px' ),
 	)
 );

@@ -166,10 +166,10 @@ The app manifest declares **what an app is**. It is shipped with the app's code,
   "role": "dialog",
 
   "platform": {
-    "modal": true,
-    "dismiss-on": [ "Escape", "backdrop-click" ],
-    "autofocus-target": ".command-palette__input",
-    "triggerable": true
+    "core:modal": true,
+    "core:dismiss-on": [ "Escape", "backdrop-click" ],
+    "core:autofocus-target": ".command-palette__input",
+    "core:triggerable": true
   },
 
   "capabilities": [],
@@ -228,16 +228,16 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
   ],
 
   "honored-platform": [
-    "modal", "dismiss-on", "autofocus-target", "triggerable",
-    "persists-across-navigation", "dirty-state",
-    "block-navigation-on-dirty", "trigger"
+    "core:modal", "core:dismiss-on", "core:autofocus-target", "core:triggerable",
+    "core:persists-across-navigation", "core:dirty-state",
+    "core:block-navigation-on-dirty", "core:trigger"
   ],
 
   "templates": {
 
     "core:sidebar": {
       "role": "navigation",
-      "platform": { "persists-across-navigation": true },
+      "platform": { "core:persists-across-navigation": true },
       "default-style": {
         "inline-size": "240px",
         "block-size":  "100%",
@@ -248,7 +248,7 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
 
     "core:topbar": {
       "role": "banner",
-      "platform": { "persists-across-navigation": true },
+      "platform": { "core:persists-across-navigation": true },
       "default-style": {
         "block-size":  "48px",
         "inline-size": "100%",
@@ -268,7 +268,7 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
 
     "core:detail": {
       "role": "complementary",
-      "platform": { "dismiss-on": [ "Escape" ] },
+      "platform": { "core:dismiss-on": [ "Escape" ] },
       "default-style": {
         "inline-size":     "min(720px, 50%)",
         "min-inline-size": "320px",
@@ -278,7 +278,7 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
 
     "core:overlay": {
       "role": "dialog",
-      "platform": { "modal": true },
+      "platform": { "core:modal": true },
       "default-style": {
         "inline-size":      "min(600px, 90vw)",
         "max-block-size":   "70vh",
@@ -370,7 +370,7 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
     "status-bar": {
       "role":     "contentinfo",
-      "platform": { "persists-across-navigation": true },
+      "platform": { "core:persists-across-navigation": true },
       "style":    { "block-size": "24px", "inline-size": "100%" },
       "position": "block-end",
       "app":      "plugin:dev-tools/status-bar"
@@ -463,7 +463,7 @@ When `template` is absent, the region is declared from scratch. `role` is requir
 
 1. **Accessibility.** The engine emits `role="..."` (and any role-implied attributes) on the region's DOM element. Screen readers announce the region appropriately.
 2. **Engine specialization.** Engines declare which roles they specialize for in `engine.json`'s `specializes-roles`. A specialized role gets engine-shipped chrome (default styling, default platform behaviors, position in the default arrangement). Unspecialized roles fall through to the engine's default arrangement algorithm with author-provided styling.
-3. **Default platform pairing.** A region with `role: "dialog"` paired with `platform.modal: true` is the standard modal pattern; the engine pairs them for focus trap, backdrop, ARIA modal attributes.
+3. **Default platform pairing.** A region with `role: "dialog"` paired with `platform['core:modal']: true` is the standard modal pattern; the engine pairs them for focus trap, backdrop, ARIA modal attributes.
 
 Common roles used in shell contexts:
 
@@ -693,7 +693,7 @@ Keyboard shortcuts in the shell are install-level decisions and live in `admin.j
 ]
 ```
 
-Each binding maps a keystroke to an app invocation. The invoked app must have `platform.triggerable: true` in its manifest. When the binding fires, the engine ensures the app's region is mounted (mounting it if ephemeral) and applies the app's platform requests (focus trap, autofocus target, etc.).
+Each binding maps a keystroke to an app invocation. The invoked app must have `platform['core:triggerable']: true` in its manifest. When the binding fires, the engine ensures the app's region is mounted (mounting it if ephemeral) and applies the app's platform requests (focus trap, autofocus target, etc.).
 
 `shortcut` syntax follows `@wordpress/keyboard-shortcuts`: `Mod+K` (Cmd on macOS, Ctrl elsewhere), `Shift+Mod+P`, `Alt+ArrowDown`, etc.
 

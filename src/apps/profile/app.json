@@ -6,7 +6,7 @@
 	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
 	"role": "main",
 	"platform": {
-		"dirty-state": true
+		"core:dirty-state": true
 	},
 	"config-schema": { "type": "object", "additionalProperties": false },
 	"script": "wp-admin-shell"

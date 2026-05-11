@@ -45,7 +45,7 @@ const ENGINE = {
 	templates: {
 		'core:sidebar': {
 			role: 'navigation',
-			platform: { 'persists-across-navigation': true },
+			platform: { 'core:persists-across-navigation': true },
 			'default-style': {
 				'inline-size': '280px',
 				background: '{styles.chrome.sidebar.background}',
@@ -53,7 +53,7 @@ const ENGINE = {
 		},
 		'core:topbar': {
 			role: 'banner',
-			platform: { 'persists-across-navigation': true },
+			platform: { 'core:persists-across-navigation': true },
 			'default-style': {
 				'block-size': '48px',
 				background: '{styles.chrome.toolbar.background}',
@@ -66,7 +66,7 @@ const ENGINE = {
 		},
 		'core:overlay': {
 			role: 'dialog',
-			platform: { modal: true, 'dismiss-on': [ 'Escape' ] },
+			platform: { 'core:modal': true, 'core:dismiss-on': [ 'Escape' ] },
 			'default-style': { 'inline-size': 'min(600px, 90vw)' },
 		},
 	},
@@ -126,24 +126,24 @@ ok(
 console.log( '\n— resolveRegion: platform shallow merge —\n' );
 
 const platformResolved = resolveRegion(
-	{ template: 'core:overlay', platform: { 'autofocus-target': '[autofocus]' } },
+	{ template: 'core:overlay', platform: { 'core:autofocus-target': '[autofocus]' } },
 	ENGINE
 );
 
 ok(
 	'platform: template fields carry through',
-	platformResolved.platform.modal === true
+	platformResolved.platform[ 'core:modal' ] === true
 );
 ok(
 	'platform: declaration adds new key',
-	platformResolved.platform[ 'autofocus-target' ] === '[autofocus]'
+	platformResolved.platform[ 'core:autofocus-target' ] === '[autofocus]'
 );
 ok(
 	'platform: declaration overrides template key',
 	resolveRegion(
-		{ template: 'core:overlay', platform: { modal: false } },
+		{ template: 'core:overlay', platform: { 'core:modal': false } },
 		ENGINE
-	).platform.modal === false
+	).platform[ 'core:modal' ] === false
 );
 
 console.log( '\n— resolveRegion: style/layout merge —\n' );
@@ -221,7 +221,7 @@ ok(
 	resolveRegion(
 		{ regions: { drawer: { template: 'core:overlay' } } },
 		ENGINE
-	).regions.drawer.platform.modal === true
+	).regions.drawer.platform[ 'core:modal' ] === true
 );
 
 ok(

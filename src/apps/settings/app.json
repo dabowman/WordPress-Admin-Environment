@@ -7,7 +7,7 @@
 	"role": "main",
 	"capabilities": [ "manage_options" ],
 	"platform": {
-		"dirty-state": true
+		"core:dirty-state": true
 	},
 	"config-schema": {
 		"type": "object",

@@ -4,7 +4,7 @@
 	"title": "Bad Editor",
 	"role": "main",
 	"platform": {
-		"block-navigation-on-dirty": true
+		"core:block-navigation-on-dirty": true
 	},
 	"script": "core-bad-editor"
 }

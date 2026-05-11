@@ -83,8 +83,8 @@
 			"template": "core:overlay",
 			"app": "core:command-palette",
 			"platform": {
-				"triggerable": true,
-				"trigger": { "shortcut": "Mod+K" }
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
 			}
 		},
 

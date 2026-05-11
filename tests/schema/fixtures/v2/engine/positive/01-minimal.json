@@ -4,7 +4,7 @@
 	"version": 1,
 	"title": "Minimal Engine",
 	"specializes-roles": [ "main" ],
-	"honored-platform": [ "modal" ],
+	"honored-platform": [ "core:modal" ],
 	"templates": {
 		"core:main": {
 			"role": "main"

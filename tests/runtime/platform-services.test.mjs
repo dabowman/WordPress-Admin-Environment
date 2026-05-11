@@ -55,9 +55,9 @@ console.log( '— platformServices: explicit v2 platform block —\n' );
 
 const v2Modal = {
 	role: 'dialog',
-	platform: { modal: true, 'dismiss-on': [ 'Escape', 'backdrop-click' ] },
+	platform: { 'core:modal': true, 'core:dismiss-on': [ 'Escape', 'backdrop-click' ] },
 };
-ok( 'isModal: platform.modal=true', isModal( v2Modal ) === true );
+ok( "isModal: platform['core:modal']=true", isModal( v2Modal ) === true );
 ok(
 	'dismissTriggers: from platform',
 	eq( dismissTriggers( v2Modal ), [ 'Escape', 'backdrop-click' ] )
@@ -67,45 +67,45 @@ ok( 'placement: modal → overlay', placement( v2Modal ) === 'overlay' );
 ok(
 	'autofocusSelector: from platform',
 	autofocusSelector( {
-		platform: { 'autofocus-target': '#first-input' },
+		platform: { 'core:autofocus-target': '#first-input' },
 	} ) === '#first-input'
 );
 
 ok(
 	'persistsAcrossNavigation: from platform',
 	persistsAcrossNavigation( {
-		platform: { 'persists-across-navigation': true },
+		platform: { 'core:persists-across-navigation': true },
 	} ) === true
 );
 
 ok(
 	'isTriggerable: from platform',
-	isTriggerable( { platform: { triggerable: true } } ) === true
+	isTriggerable( { platform: { 'core:triggerable': true } } ) === true
 );
 
 ok(
-	'triggerShortcut: from platform.trigger.shortcut',
+	"triggerShortcut: from platform['core:trigger'].shortcut",
 	triggerShortcut( {
-		platform: { trigger: { shortcut: 'Mod+K' } },
+		platform: { 'core:trigger': { shortcut: 'Mod+K' } },
 	} ) === 'Mod+K'
 );
 
 ok(
 	'wantsDirtyState: from platform',
-	wantsDirtyState( { platform: { 'dirty-state': true } } ) === true
+	wantsDirtyState( { platform: { 'core:dirty-state': true } } ) === true
 );
 
 ok(
 	'blocksNavigationOnDirty: from platform',
 	blocksNavigationOnDirty( {
-		platform: { 'block-navigation-on-dirty': true },
+		platform: { 'core:block-navigation-on-dirty': true },
 	} ) === true
 );
 
 console.log( '\n— platformServices: role=dialog implies modal —\n' );
 
 ok(
-	'isModal: role=dialog with no platform.modal still modal',
+	"isModal: role=dialog with no platform['core:modal'] still modal",
 	isModal( { role: 'dialog' } ) === true
 );
 ok(
@@ -113,21 +113,21 @@ ok(
 	isModal( { role: 'alertdialog' } ) === true
 );
 ok(
-	'isModal: explicit platform.modal=false overrides role=dialog',
-	isModal( { role: 'dialog', platform: { modal: false } } ) === false
+	"isModal: explicit platform['core:modal']=false overrides role=dialog",
+	isModal( { role: 'dialog', platform: { 'core:modal': false } } ) === false
 );
 
 console.log( '\n— platformServices: drawer pattern (role=complementary + dismiss) —\n' );
 
 ok(
-	'v2 drawer pattern: complementary + dismiss-on → drawer placement',
+	'v2 drawer pattern: complementary + core:dismiss-on → drawer placement',
 	placement( {
 		role: 'complementary',
-		platform: { 'dismiss-on': [ 'Escape' ] },
+		platform: { 'core:dismiss-on': [ 'Escape' ] },
 	} ) === 'drawer'
 );
 ok(
-	'v2 complementary without dismiss-on: persistent',
+	'v2 complementary without core:dismiss-on: persistent',
 	placement( { role: 'complementary' } ) === 'persistent'
 );
 
@@ -155,14 +155,14 @@ console.log( '\n— platformServices: aggregate getPlatformServices —\n' );
 const services = getPlatformServices( {
 	role: 'dialog',
 	platform: {
-		modal: true,
-		'dismiss-on': [ 'Escape' ],
-		'autofocus-target': '#x',
-		triggerable: true,
-		'persists-across-navigation': false,
-		'dirty-state': true,
-		'block-navigation-on-dirty': true,
-		trigger: { shortcut: 'Mod+S' },
+		'core:modal': true,
+		'core:dismiss-on': [ 'Escape' ],
+		'core:autofocus-target': '#x',
+		'core:triggerable': true,
+		'core:persists-across-navigation': false,
+		'core:dirty-state': true,
+		'core:block-navigation-on-dirty': true,
+		'core:trigger': { shortcut: 'Mod+S' },
 	},
 } );
 ok( 'aggregate: isModal', services.isModal === true );

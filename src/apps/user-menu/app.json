@@ -6,7 +6,7 @@
 	"description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a shell switcher. Reads `window.wpAdminShell.user`.",
 	"role": "region",
 	"platform": {
-		"persists-across-navigation": true
+		"core:persists-across-navigation": true
 	},
 	"config-schema": { "type": "object", "additionalProperties": false },
 	"script": "wp-admin-shell"

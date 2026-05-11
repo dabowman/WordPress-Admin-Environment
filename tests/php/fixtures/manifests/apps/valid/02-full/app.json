@@ -5,9 +5,9 @@
 	"description": "Exercises optional fields.",
 	"role": "main",
 	"platform": {
-		"dirty-state": true,
-		"block-navigation-on-dirty": true,
-		"modal": false
+		"core:dirty-state": true,
+		"core:block-navigation-on-dirty": true,
+		"core:modal": false
 	},
 	"capabilities": [ "edit_posts" ],
 	"config-schema": {

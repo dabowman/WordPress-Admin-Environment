@@ -6,7 +6,7 @@
 	"description": "Persistent banner notices sourced from `@wordpress/notices` (default context). Rendered with `Notice.Root` from `@wordpress/ui`.",
 	"role": "region",
 	"platform": {
-		"persists-across-navigation": true
+		"core:persists-across-navigation": true
 	},
 	"config-schema": { "type": "object", "additionalProperties": false },
 	"script": "wp-admin-shell"

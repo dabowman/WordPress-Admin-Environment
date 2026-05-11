@@ -6,9 +6,9 @@
 	"description": "Full block editor for posts and pages.",
 	"role": "main",
 	"platform": {
-		"dirty-state": true,
-		"block-navigation-on-dirty": true,
-		"autofocus-target": ".editor-post-title__input"
+		"core:dirty-state": true,
+		"core:block-navigation-on-dirty": true,
+		"core:autofocus-target": ".editor-post-title__input"
 	},
 	"capabilities": [ "edit_posts" ],
 	"config-schema": {
