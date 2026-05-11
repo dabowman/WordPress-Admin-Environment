@@ -1,0 +1,15 @@
+{
+	"id": "core:unnamespaced-platform",
+	"version": 1,
+	"title": "Unnamespaced Platform Service",
+	"description": "Negative fixture: honored-platform entries must use the namespaced form (core:X or plugin:slug/X). Bare kebab-case names like 'modal' are no longer accepted; the platformServiceName pattern requires a namespace.",
+	"specializes-roles": [ "main" ],
+	"honored-platform": [ "modal", "dismiss-on" ],
+	"templates": {
+		"core:main": {
+			"role": "main"
+		}
+	},
+	"default-arrangement": "single-pane",
+	"script": "core-unnamespaced"
+}
