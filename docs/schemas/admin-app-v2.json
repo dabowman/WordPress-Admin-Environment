@@ -38,6 +38,12 @@
 			"description": "Optional human-readable description of what the app does. Used in admin.json authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph."
 		},
 
+		"designSystem": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Design system the app's render tree emits components from. Free-form string by convention: `@wordpress/ui` (WPDS, the WordPress Design System — used by every `core:*` app), `mui` (Material Design), `chakra`, `radix`, `custom`, etc. Apps are bound to their design system because they import its component primitives directly; mounting a `@wordpress/ui` app inside a Material engine produces visually inconsistent results. The kernel emits a dev-mode warning when the active engine's declared `designSystem` differs from a mounted app's. Optional — apps that don't declare a value are treated as DS-unknown and skip the mismatch check."
+		},
+
 		"role": {
 			"$ref": "#/$defs/ariaRole",
 			"description": "The app's primary ARIA role when mounted into a region. Drives engine specialization: engines that recognize the role apply specialized chrome (e.g., a `navigation` app gets sidebar treatment in the wp-default engine). Roles outside an engine's specializes-roles list fall through to the engine's default arrangement. Required because every mounted app must have a defined accessibility role for screen readers. Common values: `main`, `dialog`, `navigation`, `complementary`, `banner`, `contentinfo`, `region`, `search`. Any valid WAI-ARIA 1.2 role is accepted."
