@@ -9,7 +9,8 @@
  *
  * v0 (MVP flat) inputs are no longer supported. Pre-v2 shells must be
  * migrated by hand (or via `wp admin-shell upgrade-config`) before
- * activation. The previous v0 → v1 partitioned synthesis is retired.
+ * activation. The previous v0 → v1 partitioned synthesis is retired,
+ * and the `normalize_v0()` backwards-compat shim was removed in P2.7.
  *
  * @package WP_Admin_Shell
  */
@@ -35,16 +36,6 @@ class WP_Admin_Shell_Origin_Core {
 		// invalid docs fall through to no engine + no regions and the
 		// kernel renders the fallback view.
 		return $raw;
-	}
-
-	/**
-	 * Backwards-compat shim. The cascade resolver previously called
-	 * `normalize_v0` on every loaded doc. The v0 normalizer is gone;
-	 * the loader returns docs as-is. Kept here as an alias so existing
-	 * callers that import the class don't break.
-	 */
-	public static function normalize_v0( $raw ) {
-		return is_array( $raw ) ? $raw : self::empty_doc();
 	}
 
 	/**

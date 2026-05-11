@@ -240,8 +240,8 @@ $T::assert_true( 'core origin: empty_doc carries content region',
 	isset( $empty['regions']['content'] ),
 	'regions: ' . json_encode( array_keys( $empty['regions'] ?? array() ) )
 );
-$T::assert_true( 'core origin: malformed doc falls back to empty_doc',
-	is_array( WP_Admin_Shell_Origin_Core::normalize_v0( null ) )
+$T::assert_true( 'core origin: missing shell path falls back to empty_doc',
+	is_array( WP_Admin_Shell_Origin_Core::load( '/path/does/not/exist.json' ) )
 );
 
 $injected = array(
