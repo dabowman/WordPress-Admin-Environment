@@ -95,10 +95,55 @@
  */
 
 /**
+ * Engine-supplied style compiler. The kernel calls this hook from
+ * `ThemeProviderHost` whenever the resolved styles or tokens change.
+ *
+ * Pure function — no React, no DOM. Returns three buckets of CSS-variable
+ * assignments that the host serializes into a sibling `<style>` block
+ * scoped to the engine's ThemeProvider wrapper:
+ *
+ *   - `top`:      scope-root variables (single rule on the wrapper).
+ *   - `scoped`:   array of `{selector, vars}` for surface-scoped
+ *                 variables (chrome bindings, sidebar palette, etc.).
+ *   - `subtrees`: per-region / per-app variables, keyed by
+ *                 `region:<id>` or `app:<id>`. Host emits one rule per
+ *                 subtree under the appropriate descendant selector.
+ *
+ * Engines that omit this hook get zero scoped overrides; their
+ * `ThemeProvider` must own all token plumbing directly.
+ *
+ * @callback EngineStyleCompiler
+ * @param {Object} styles Resolved admin.json `styles` block (deep-merged
+ *                        with engine `default-styles`).
+ * @param {Object} tokens Flattened DTCG tokens (paths → primitive values).
+ * @return {{
+ *   top:      Object<string,string>,
+ *   scoped:   Array<{ selector: string, vars: Object<string,string> }>,
+ *   subtrees: Object<string, Object<string,string>>
+ * }}
+ */
+
+/**
+ * Engine-supplied icon table. Maps icon-name strings (referenced from
+ * `app.icon`, nav items, command-palette commands, etc.) to React
+ * components. Engines call `registerIcons(table)` from the kernel
+ * registry at module-load time; apps look up icons via `resolveIcon`
+ * regardless of which engine populated the table.
+ *
+ * Lets each engine ship its own DS-appropriate icon set (e.g. core
+ * uses `@wordpress/icons`; a Material engine ships Material icons)
+ * without app code knowing which engine is active.
+ *
+ * @typedef {Object<string, *>} EngineIconTable
+ */
+
+/**
  * @typedef {SourceBase & {
  *   kind: 'engine',
  *   Component: (props: EngineSourceProps) => any,
- *   ThemeProvider?: (props: EngineThemeProviderProps) => any
+ *   ThemeProvider?: (props: EngineThemeProviderProps) => any,
+ *   compileStyles?: EngineStyleCompiler,
+ *   iconTable?: EngineIconTable
  * }} EngineSource
  */
 

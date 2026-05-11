@@ -72,10 +72,7 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	);
 
 	return (
-		<div
-			className="wp-admin-shell-layout"
-			data-engine="core:default"
-		>
+		<div className="wp-admin-shell-layout" data-engine="core:default">
 			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
 			<div className="wp-admin-shell-layout__body">
