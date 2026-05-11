@@ -47,6 +47,12 @@
 			"description": "Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable."
 		},
 
+		"designSystem": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Design system this engine ships with. Free-form string by convention: `@wordpress/ui` (WPDS — what `core:default` + `core:single-pane` use), `mui` (Material Design), `chakra`, `radix`, `custom`, etc. The kernel emits a dev-mode warning when a mounted app's `designSystem` differs from this engine's, signaling a visual-mismatch risk. Optional — engines that don't declare a value are treated as DS-unknown and skip the mismatch check."
+		},
+
 		"specializes-roles": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/ariaRole" },
