@@ -4,7 +4,11 @@
 	"version": 1,
 	"title": "Tools",
 	"description": "Tools landing — linker cards to import, export, site-health, and other admin utilities.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

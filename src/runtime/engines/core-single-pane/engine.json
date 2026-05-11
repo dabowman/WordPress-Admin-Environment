@@ -5,6 +5,8 @@
 	"title": "Single pane",
 	"description": "Mobile-first single-column layout. Navigation collapses to a hamburger drawer; complementary regions float as overlay panels; main fills the viewport. Validates the engine boundary against a deliberately different idiom from the dual-chrome default engine — apps mount unchanged.",
 
+	"designSystem": "@wordpress/ui",
+
 	"specializes-roles": [
 		"main",
 		"navigation",

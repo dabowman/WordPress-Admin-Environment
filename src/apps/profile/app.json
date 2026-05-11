@@ -4,10 +4,14 @@
 	"version": 1,
 	"title": "Profile",
 	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
 		"core:dirty-state": true
 	},
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

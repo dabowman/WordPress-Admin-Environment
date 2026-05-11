@@ -4,10 +4,14 @@
 	"version": 1,
 	"title": "Notices (banner)",
 	"description": "Persistent banner notices sourced from `@wordpress/notices` (default context). Rendered with `Notice.Root` from `@wordpress/ui`.",
+	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"platform": {
 		"core:persists-across-navigation": true
 	},
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

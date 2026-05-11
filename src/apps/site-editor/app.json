@@ -4,12 +4,18 @@
 	"version": 1,
 	"title": "Site editor",
 	"description": "Site-editor adapter: iframes `site-editor.php` with chrome hidden. v2 native mount in flight.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"capabilities": [ "edit_theme_options" ],
+	"capabilities": [
+		"edit_theme_options"
+	],
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"url": { "type": "string", "default": "site-editor.php" }
+			"url": {
+				"type": "string",
+				"default": "site-editor.php"
+			}
 		},
 		"additionalProperties": false
 	},

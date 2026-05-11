@@ -4,10 +4,14 @@
 	"version": 1,
 	"title": "User menu",
 	"description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a shell switcher. Reads `window.wpAdminShell.user`.",
+	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"platform": {
 		"core:persists-across-navigation": true
 	},
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

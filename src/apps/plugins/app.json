@@ -4,8 +4,14 @@
 	"version": 1,
 	"title": "Plugins",
 	"description": "DataViews plugin manager: list, activate, deactivate. Reads via `core-data` `'root','plugin'` entity.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"capabilities": [ "activate_plugins" ],
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"capabilities": [
+		"activate_plugins"
+	],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

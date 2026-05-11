@@ -4,11 +4,15 @@
 	"version": 1,
 	"title": "Preview pane",
 	"description": "Reads the active route's matched entity from `core-data` and renders a live preview alongside the primary region.",
+	"designSystem": "@wordpress/ui",
 	"role": "complementary",
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"follow": { "type": "string", "default": "content.selection" }
+			"follow": {
+				"type": "string",
+				"default": "content.selection"
+			}
 		},
 		"additionalProperties": false
 	},

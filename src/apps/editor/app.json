@@ -4,6 +4,7 @@
 	"version": 1,
 	"title": "Editor",
 	"description": "Full block editor for posts and pages. Currently mounts via iframe adapter on post.php; v2 native mount in flight.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
 		"core:dirty-state": true,
@@ -12,7 +13,10 @@
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"postType": { "type": "string", "default": "post" }
+			"postType": {
+				"type": "string",
+				"default": "post"
+			}
 		},
 		"additionalProperties": false
 	},

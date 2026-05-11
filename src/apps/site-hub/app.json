@@ -4,10 +4,14 @@
 	"version": 1,
 	"title": "Site hub",
 	"description": "Site icon + name affordance pinned to the top of the navigation sidebar.",
+	"designSystem": "@wordpress/ui",
 	"role": "banner",
 	"platform": {
 		"core:persists-across-navigation": true
 	},
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

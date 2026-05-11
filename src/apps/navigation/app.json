@@ -4,6 +4,7 @@
 	"version": 1,
 	"title": "Navigation",
 	"description": "Recursive sidebar navigation with capability-prune, drill-down screens, and group/separator items.",
+	"designSystem": "@wordpress/ui",
 	"role": "navigation",
 	"platform": {
 		"core:persists-across-navigation": true
@@ -11,10 +12,18 @@
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"items": { "type": "array" },
-			"collapsed": { "type": "boolean" },
-			"title": { "type": "string" },
-			"description": { "type": "string" }
+			"items": {
+				"type": "array"
+			},
+			"collapsed": {
+				"type": "boolean"
+			},
+			"title": {
+				"type": "string"
+			},
+			"description": {
+				"type": "string"
+			}
 		},
 		"additionalProperties": false
 	},

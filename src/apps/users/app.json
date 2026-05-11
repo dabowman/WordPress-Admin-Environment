@@ -4,8 +4,14 @@
 	"version": 1,
 	"title": "Users",
 	"description": "DataViews user list with bulk delete-and-reassign and self-delete guard.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"capabilities": [ "list_users" ],
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"capabilities": [
+		"list_users"
+	],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

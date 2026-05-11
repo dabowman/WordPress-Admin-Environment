@@ -4,7 +4,11 @@
 	"version": 1,
 	"title": "Appearance",
 	"description": "User-prefs UI driven by the `customizable` field. Per-user overrides persist via `/wp-admin-shell/v1/user-prefs`.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

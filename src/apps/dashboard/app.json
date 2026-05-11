@@ -4,7 +4,11 @@
 	"version": 1,
 	"title": "Dashboard",
 	"description": "Site overview cards: recent posts, drafts, comments, quick links.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"config-schema": { "type": "object", "additionalProperties": false },
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
 	"script": "wp-admin-shell"
 }

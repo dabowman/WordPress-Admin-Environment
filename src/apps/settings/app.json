@@ -4,8 +4,11 @@
 	"version": 1,
 	"title": "Settings",
 	"description": "Composable settings host. Native general / writing / reading / discussion plus iframed permalinks / media / privacy.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
-	"capabilities": [ "manage_options" ],
+	"capabilities": [
+		"manage_options"
+	],
 	"platform": {
 		"core:dirty-state": true
 	},
@@ -14,7 +17,9 @@
 		"properties": {
 			"panels": {
 				"type": "array",
-				"items": { "type": "string" }
+				"items": {
+					"type": "string"
+				}
 			}
 		},
 		"additionalProperties": false

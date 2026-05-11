@@ -4,6 +4,7 @@
 	"version": 1,
 	"title": "Simple editor",
 	"description": "Substack-style minimal block editor: title plus nine allowed blocks. Auto-save with 2s debounce.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
 		"core:dirty-state": true,
@@ -13,7 +14,10 @@
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"postType": { "type": "string", "default": "post" }
+			"postType": {
+				"type": "string",
+				"default": "post"
+			}
 		},
 		"additionalProperties": false
 	},

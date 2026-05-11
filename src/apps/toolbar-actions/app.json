@@ -4,6 +4,7 @@
 	"version": 1,
 	"title": "Toolbar actions",
 	"description": "Topbar action group rendering left/right anchor buttons. Bridges legacy command/app shapes via COMMAND_HREFS.",
+	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"platform": {
 		"core:persists-across-navigation": true
@@ -11,8 +12,12 @@
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"left": { "type": "array" },
-			"right": { "type": "array" }
+			"left": {
+				"type": "array"
+			},
+			"right": {
+				"type": "array"
+			}
 		},
 		"additionalProperties": false
 	},

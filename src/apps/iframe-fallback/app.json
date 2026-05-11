@@ -4,11 +4,14 @@
 	"version": 1,
 	"title": "Iframe fallback",
 	"description": "Wraps any wp-admin URL inside the shell. Chrome hidden via injected CSS.",
+	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"config-schema": {
 		"type": "object",
 		"properties": {
-			"url": { "type": "string" }
+			"url": {
+				"type": "string"
+			}
 		},
 		"additionalProperties": true
 	},
