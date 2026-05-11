@@ -1,62 +1,26 @@
-import {
-	post,
-	page,
-	media,
-	pencil,
-	settings,
-	people,
-	plugins,
-	layout,
-	external,
-	plus,
-	tool,
-	drafts,
-	wordpress,
-	search,
-	styles,
-	navigation,
-	symbol,
-	category,
-	dashboard,
-	comment,
-	brush,
-	home,
-	tag,
-	update,
-} from '@wordpress/icons';
+/**
+ * Kernel icon registry.
+ *
+ * Design-system agnostic. The kernel knows about icon-name strings only;
+ * engines populate the registry with their own DS-appropriate icon
+ * components at module-load time via `registerIcons()`.
+ *
+ * Apps look up icons by name via `resolveIcon(name)` regardless of which
+ * engine is active. Unknown names fall back to whichever icon the active
+ * engine registered as the fallback (typically a generic "logo" mark).
+ *
+ * Engine contract:
+ *   import { registerIcons } from '../../config/iconMap';
+ *   import { iconTable, fallbackIcon } from './icons';
+ *   registerIcons( iconTable, { fallback: fallbackIcon } );
+ *
+ * App contract (unchanged):
+ *   import { resolveIcon } from '../../runtime/config/iconMap';
+ *   const Icon = resolveIcon( 'post' );
+ */
 
-const iconMap = {
-	post,
-	page,
-	media,
-	edit: pencil,
-	pencil,
-	settings,
-	user: people,
-	people,
-	plugins,
-	layout,
-	external,
-	plus,
-	wrench: tool,
-	tool,
-	draft: drafts,
-	drafts,
-	search,
-	wordpress,
-	styles,
-	navigation,
-	symbol,
-	category,
-	dashboard,
-	comment,
-	comments: comment,
-	brush,
-	appearance: brush,
-	home,
-	tag,
-	update,
-};
+const registry = {};
+let fallbackIcon = null;
 
 const IS_DEV =
 	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
@@ -64,22 +28,41 @@ const IS_DEV =
 const warned = new Set();
 
 /**
- * Resolve an icon name string to a `@wordpress/icons` component.
+ * Register an icon-name → component map. Engines call this at module
+ * load. Multiple calls merge — last-write-wins on overlapping keys.
  *
- * Falls back to the `wordpress` icon when the name misses. In dev
- * mode, the first miss per name emits a console warning so authors
- * see the typo without needing a dedicated lint pass. Production
- * stays silent — the wordpress fallback is acceptable visual behavior.
+ * @param {Object<string,*>} table              Icon-name → component map.
+ * @param {Object}           [options]
+ * @param {*}                [options.fallback] Component returned when a
+ *                                              name misses or is empty.
+ *                                              Overwrites prior fallback.
+ */
+export function registerIcons( table, options = {} ) {
+	if ( table && typeof table === 'object' ) {
+		Object.assign( registry, table );
+	}
+	if ( options.fallback ) {
+		fallbackIcon = options.fallback;
+	}
+}
+
+/**
+ * Resolve an icon name string to a component supplied by the active
+ * engine.
  *
- * Empty / undefined `name` is treated as "no icon requested" and
- * does not warn.
- * @param {*} name
+ * Returns the engine-registered fallback when the name misses or is
+ * empty. In dev mode, the first miss per name emits a console warning
+ * so authors see typos without needing a dedicated lint pass.
+ * Production stays silent — visual fallback is acceptable.
+ *
+ * @param {string|undefined|null} name
+ * @return {*} Icon component (or `null` when no fallback registered).
  */
 export function resolveIcon( name ) {
 	if ( ! name ) {
-		return wordpress;
+		return fallbackIcon;
 	}
-	const icon = iconMap[ name ];
+	const icon = registry[ name ];
 	if ( icon ) {
 		return icon;
 	}
@@ -87,12 +70,25 @@ export function resolveIcon( name ) {
 		warned.add( name );
 		// eslint-disable-next-line no-console
 		console.warn(
-			`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to wordpress icon. Add the mapping to src/runtime/config/iconMap.js or pick a known name. Known: ${ Object.keys(
-				iconMap
+			`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to engine default. Known: ${ Object.keys(
+				registry
 			)
 				.sort()
 				.join( ', ' ) }`
 		);
 	}
-	return wordpress;
+	return fallbackIcon;
+}
+
+/**
+ * Test-only: clear the registry. Lets tests register a controlled icon
+ * set without bleed-through from other test files. Not part of the
+ * public API.
+ */
+export function _resetIconRegistry() {
+	for ( const key of Object.keys( registry ) ) {
+		delete registry[ key ];
+	}
+	fallbackIcon = null;
+	warned.clear();
 }

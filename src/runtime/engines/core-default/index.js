@@ -1,7 +1,11 @@
 import Layout from './Layout';
 import { WpdsThemeProvider } from '../../styles/WpdsThemeProvider';
 import { compileStyles } from './compileStyles.mjs';
+import { iconTable, fallbackIcon } from './icons';
+import { registerIcons } from '../../config/iconMap';
 import './index.css';
+
+registerIcons( iconTable, { fallback: fallbackIcon } );
 
 /** @type {import('../../registry/source-types.js').EngineSource} */
 const coreDefault = {
@@ -11,6 +15,7 @@ const coreDefault = {
 	Component: Layout,
 	ThemeProvider: WpdsThemeProvider,
 	compileStyles,
+	iconTable,
 };
 
 export default coreDefault;
