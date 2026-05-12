@@ -95,10 +95,14 @@ export default function AppearanceApp() {
 
 	const density =
 		prefs.styles?.density || config.styles?.density || 'default';
+	// No literal-hex fallback: the WPDS provider supplies
+	// `--wpds-color-bg-interactive-brand-strong` when the cascade omits
+	// an accent. The empty string here means "no authored override"
+	// and the color picker reads the resolved CSS var directly.
 	const accent =
 		prefs.styles?.color?.bg?.interactive?.brand?.strong ||
 		config.styles?.color?.bg?.interactive?.brand?.strong ||
-		'#3858e9';
+		'';
 	const defaultRoute =
 		prefs[ 'default-route' ] || config[ 'default-route' ] || '';
 

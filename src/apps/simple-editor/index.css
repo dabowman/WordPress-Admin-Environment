@@ -11,15 +11,16 @@
 .wp-admin-shell-app-simple-editor__toolbar {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 8px 16px;
-	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	gap: var(--wpds-dimension-gap-md);
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	border-bottom: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
 	background: var(--wpds-color-bg-surface-neutral-strong);
 	flex-shrink: 0;
 }
 
 .wp-admin-shell-app-simple-editor__status {
-	font-size: 12px;
+	font-size: var(--wpds-font-size-sm);
 	color: var(--wpds-color-fg-content-neutral-weak);
 	margin-left: auto;
 }
@@ -112,9 +113,9 @@
 
 .wp-admin-shell-app-simple-editor__body .wp-block-code {
 	font-family: var(--wpds-font-family-mono);
-	font-size: 15px;
+	font-size: var(--wpds-font-size-lg);
 	background: var(--wpds-color-bg-surface-neutral);
-	padding: 16px;
+	padding: var(--wpds-dimension-padding-lg);
 	border-radius: var(--wpds-border-radius-md);
 }
 

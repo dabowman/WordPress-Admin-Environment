@@ -8,8 +8,9 @@
 .wp-admin-shell-app-editor__toolbar {
 	display: flex;
 	align-items: center;
-	padding: 4px 8px;
-	border-bottom: 1px solid var(--wpds-color-stroke-surface-neutral);
+	padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
+	border-bottom: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
 	background: var(--wpds-color-bg-surface-neutral);
 	flex-shrink: 0;
 }

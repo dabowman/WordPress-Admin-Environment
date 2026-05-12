@@ -1,11 +1,11 @@
 .wp-admin-shell-notices-banner {
 	position: fixed;
-	top: 16px;
+	top: var(--wpds-dimension-padding-lg);
 	left: 50%;
 	transform: translateX(-50%);
 	z-index: 100000;
 	max-width: 600px;
-	width: calc(100% - 32px);
+	width: calc(100% - 2 * var(--wpds-dimension-padding-lg));
 	pointer-events: none;
 }
 

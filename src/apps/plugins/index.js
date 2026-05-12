@@ -233,7 +233,9 @@ export default function PluginsApp() {
 					<Stack
 						direction="column"
 						gap="lg"
-						style={ { padding: '16px' } }
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
 					>
 						<Text variant="body-md">
 							{ items.length === 1

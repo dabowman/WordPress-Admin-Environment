@@ -26,6 +26,12 @@ const PRIVATE_API_CONSENT =
 
 const ALLOWLIST_PROXY_MODULE = '@wordpress/edit-site';
 
+// WPDS-specific density vocabulary. Unknown values fall back to
+// 'default' silently — keeps the WPDS provider's contract clean even
+// when an upstream cascade produces a non-WPDS density value (e.g.
+// shell-switching from a Material engine that authored 'dense').
+const WPDS_DENSITIES = [ 'default', 'compact', 'comfortable' ];
+
 const RealThemeProvider = ( () => {
 	if ( typeof window === 'undefined' || ! window.wp ) {
 		return null;
@@ -101,7 +107,7 @@ export function WpdsThemeProvider( { styles, density, isRoot, children } ) {
 
 	const props = {
 		isRoot: !! isRoot,
-		density,
+		density: WPDS_DENSITIES.includes( density ) ? density : 'default',
 	};
 	if ( color ) {
 		props.color = color;

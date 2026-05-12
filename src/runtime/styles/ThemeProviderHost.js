@@ -44,12 +44,35 @@ const EMPTY_TOKENS = Object.freeze( {} );
  *                                       (e.g. tests), falls back to WPDS.
  * @param {Object}  props.styles
  * @param {Object}  props.tokens
- * @param {string}  [props.density]
  * @param {boolean} [props.isRoot]
  * @param {*}       props.children
  */
 export function ThemeProviderHost( props ) {
-	return createElement( ProviderShell, props );
+	const density = pickDensity( props.styles );
+	return createElement( ProviderShell, { ...props, density } );
+}
+
+/**
+ * Extract a density value from a styles tree. Returns whatever string the
+ * author authored (tier-1 `styles.theme.density`, tier-4 legacy
+ * `styles.density`) or `undefined`. Validation of the value against a DS-
+ * specific vocabulary is the engine's ThemeProvider's responsibility —
+ * the kernel does not enforce a fixed enum here so engines built on
+ * design systems with different density names (Material's `dense`,
+ * Tailwind's `sm/md/lg`, etc.) can interpret their own values.
+ * @param {*} styles
+ */
+function pickDensity( styles ) {
+	if ( ! styles ) {
+		return undefined;
+	}
+	if ( typeof styles.theme?.density === 'string' ) {
+		return styles.theme.density;
+	}
+	if ( typeof styles.density === 'string' ) {
+		return styles.density;
+	}
+	return undefined;
 }
 
 /**
@@ -76,11 +99,7 @@ export function ScopedThemeProvider( { styles, children } ) {
 	const tokens =
 		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) ||
 		EMPTY_TOKENS;
-	const density =
-		( typeof styles?.theme?.density === 'string' &&
-			styles.theme.density ) ||
-		( typeof styles?.density === 'string' && styles.density ) ||
-		undefined;
+	const density = pickDensity( styles );
 	return createElement(
 		ProviderShell,
 		{

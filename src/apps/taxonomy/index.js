@@ -138,7 +138,9 @@ export default function TaxonomyApp( { config = {} } ) {
 					<Stack
 						direction="column"
 						gap="md"
-						style={ { padding: '16px' } }
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
 					>
 						<Text>
 							{ items.length === 1

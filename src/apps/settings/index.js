@@ -124,7 +124,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 				gap="xs"
 				style={ { height: '100%' } }
 			>
-				<aside className="wp-admin-shell-app-settings__nav">
+				<div className="wp-admin-shell-app-settings__nav">
 					<ItemGroup isBordered={ false } isSeparated={ false }>
 						{ panels.map( ( panel ) => (
 							<Item
@@ -141,8 +141,8 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 							</Item>
 						) ) }
 					</ItemGroup>
-				</aside>
-				<section className="wp-admin-shell-app-settings__panel">
+				</div>
+				<div className="wp-admin-shell-app-settings__panel">
 					{ ( () => {
 						if ( PanelComponent ) {
 							return (
@@ -162,7 +162,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 						}
 						return null;
 					} )() }
-				</section>
+				</div>
 			</Stack>
 		</div>
 	);

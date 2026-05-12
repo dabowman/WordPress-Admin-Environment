@@ -227,7 +227,9 @@ export default function CommentsApp() {
 					<Stack
 						direction="column"
 						gap="lg"
-						style={ { padding: '16px' } }
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
 					>
 						<Text>
 							{ items.length === 1

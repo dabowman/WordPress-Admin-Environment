@@ -80,8 +80,9 @@
  *   - Children must be rendered inside a wrapper carrying
  *     `data-wpds-theme-provider-id={id}` (or an equivalent attribute the
  *     engine declares) so shell-level scoped detail CSS can target them.
- *   - The `density` prop must be honored — typically by setting
- *     `data-wpds-density={density}` on the wrapper.
+ *   - The `density` prop must be honored according to the engine's own
+ *     DS vocabulary — the kernel passes through whatever string the
+ *     author authored on `styles.theme.density` without normalization.
  *   - Tier-3 slot overrides + chrome → WPDS bridge + region/app scoped
  *     overrides are emitted as a sibling `<style>` block by the kernel,
  *     scoped to the wrapper id. Engines do NOT need to reimplement them.

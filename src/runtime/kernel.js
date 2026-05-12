@@ -6,7 +6,6 @@ import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from '@wordpress/components';
 import { ThemeProviderHost } from './styles/ThemeProviderHost';
-import { resolveDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
@@ -104,7 +103,6 @@ export function kernel( config ) {
 	const shellStyles = engineDefaults
 		? deepMergeUnder( config.styles || {}, engineDefaults )
 		: config.styles || {};
-	const density = resolveDensity( shellStyles );
 
 	if ( ! engineSource ) {
 		return (
@@ -185,7 +183,6 @@ export function kernel( config ) {
 						isRoot
 						styles={ shellStyles }
 						tokens={ shellTokens }
-						density={ density }
 					>
 						<NavigationGuard />
 						<BindingsConsumer />

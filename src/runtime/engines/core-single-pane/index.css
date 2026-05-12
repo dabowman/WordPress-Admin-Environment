@@ -70,7 +70,10 @@
 .wp-admin-shell-single-pane__nav-backdrop {
 	position: absolute;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.4);
+	background: var(
+		--wp-admin-shell--chrome--nav-backdrop--background,
+		rgba(0, 0, 0, 0.4)
+	);
 	opacity: 0;
 	transition: opacity 0.16s ease;
 }

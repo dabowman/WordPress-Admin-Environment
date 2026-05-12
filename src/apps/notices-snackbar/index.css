@@ -1,11 +1,11 @@
 .wp-admin-shell-notices-snackbar {
 	position: fixed;
-	bottom: 16px;
-	right: 16px;
+	bottom: var(--wpds-dimension-padding-lg);
+	right: var(--wpds-dimension-padding-lg);
 	z-index: 100000;
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: var(--wpds-dimension-gap-sm);
 	pointer-events: none;
 }
 

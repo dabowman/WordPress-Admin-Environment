@@ -387,7 +387,7 @@ function MediaDetailModal( {
 			<Stack
 				direction="row"
 				justify="space-between"
-				style={ { marginTop: '16px' } }
+				style={ { marginTop: 'var(--wpds-dimension-padding-lg)' } }
 			>
 				<Stack direction="row" gap="sm">
 					<Button
