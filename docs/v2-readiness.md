@@ -49,9 +49,13 @@ Methodology unchanged from v1-readiness. Cold mount target ≤ 500 ms on
 a baseline laptop with throttling. Re-run before tagging.
 
 Token compilation gains a tokens.json layer: `flattenTokens` walks the
-DTCG tree once at mount, the result feeds `compileStyles.resolveValue`
-through a flat map. Cost is bounded by the size of the merged tokens
-tree (~150 leaves in the bundled `core.tokens.json`).
+DTCG tree once at mount, the result feeds the active engine's
+`compileStyles.resolveValue` (engine-private since P1.2; `core:default`'s
+lives at `src/runtime/engines/core-default/compileStyles.mjs`). Cost is
+bounded by the size of the merged tokens tree (~150 leaves in the
+bundled `core.tokens.json`). Engines omitting the compileStyles hook
+emit zero scoped overrides — their ThemeProvider owns all token
+plumbing directly.
 
 **Pre-mount FOUC.** Same as v1 — tokens emit from JS at kernel mount.
 SSR token emission remains a future polish item.
@@ -255,6 +259,37 @@ header.
 - **`core:editor` native mount.** Same iframe-vs-native trade-off as
   site-editor. The simple-editor (`core:simple-editor`) covers the
   common write path natively today.
+
+## DS-decoupling refactor (post-v2.0.0-beta.1)
+
+Three-phase refactor landed after the beta tag to make the kernel
+design-system-neutral so third-party plugins can ship complete
+alternative design systems (Material, brutalist, etc.) without
+modifying this plugin. Plan: `~/.claude/plans/yes-open-enum-enter-jaunty-hippo.md`.
+
+- **Phase 1 (kernel CSS extraction).** WPDS-flavored rules + chrome
+  → WPDS bridge + `compileStyles` + `wpds-defaults` snapshot moved
+  out of kernel into `src/runtime/engines/core-default/`. `iconMap`
+  reworked into a DS-neutral registry that engines populate.
+  Engine-driven style enqueue replaces hardcoded
+  `wp-admin-shell-wpds-tokens` + `wp-admin-shell-dataviews` enqueues
+  in `wp-admin-shell.php`. New `EngineSource.compileStyles` +
+  `iconTable` fields.
+- **Phase 2 (schema + cleanup).** Adds `designSystem` field to both
+  `admin-app-v2.json` + `admin-engine-v2.json` schemas. Refactors
+  `platformServiceName` from a closed 8-entry enum to a namespaced
+  pattern (`core:foo` / `plugin:slug/foo`); renames the 8 blessed
+  services downstream (`modal` → `core:modal`, etc.). Deletes the
+  retired `normalize_v0()` stub. Wires DS-mismatch +
+  unhonored-service dev-mode warnings in the kernel.
+- **Phase 3 (spec rewrite).** §3 (architecture), §4.2 (engines), §13
+  (extension points) + new §13.1 worked example for a Material
+  Design plugin. CLAUDE.md gains a Key Rule codifying the DS-neutral
+  kernel contract.
+
+All 23 plan tasks shipped; test totals adjust slightly (61 schema, 4
+parity, ~239 runtime, 283 PHP). No public surface broke — the branch
+is unshipped, no back-compat layer needed.
 
 ## Sign-off
 
