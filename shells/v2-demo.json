@@ -2,7 +2,7 @@
 	"$schema": "../docs/schemas/admin-v2.json",
 	"version": 1,
 	"$wpds": "6.9",
-	"name": "v1-demo",
+	"name": "v2-demo",
 	"title": "v2 Demo (canonical v2 admin.json shape)",
 	"description": "Authored against admin-v2.json. Demonstrates engine templates, nested child regions, the routes block, default-route, per-region routing.route-key, and platform.trigger keystroke binding. First bundled shell migrated to v2 in the joint V2.M2 task 7 + V2.M3 task 8 step.",
 	"user-switchable": true,

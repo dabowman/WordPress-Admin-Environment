@@ -109,7 +109,7 @@ Bundled shells (5 + single-pane-demo = 6):
 | `developer-admin`   | default     | Native v2 apps + drill-down design |
 | `content-author`    | default     | Minimal writer shell |
 | `client-portal`     | default     | Branded shell |
-| `v1-demo`           | default     | Canonical-shape demo |
+| `v2-demo`           | default     | Canonical-shape demo |
 | `single-pane-demo`  | single-pane | Mobile-first; validates engine boundary |
 
 `tests/php/run-shape-tests.php` walks every shell through the resolver
@@ -131,7 +131,7 @@ PostsApp + SimpleEditorApp rewritten against the v2 routes block:
   `history.replaceState`.
 - Editor routes (`/posts/new`, `/posts/{id}/edit` with `id: '{id}'`
   interpolation; pages equivalents) bundled in developer-admin /
-  content-author / single-pane-demo / client-portal / v1-demo.
+  content-author / single-pane-demo / client-portal / v2-demo.
 
 ToolbarActionsApp `COMMAND_HREFS` maps `core/new-post` → `#/posts/new`
 and `core/new-page` → `#/pages/new` against the same route block.
@@ -217,26 +217,28 @@ require no schema-side change.
 
 `tests/schema/validate-shells.test.mjs` sweeps:
 - 6 bundled shells under `admin-v2.json`.
-- 19 bundled `app.json` manifests under `admin-app-v2.json`.
+- 26 bundled `app.json` manifests under `admin-app-v2.json`.
 - 2 bundled `engine.json` manifests under `admin-engine-v2.json`.
 - `core.tokens.json` under `tokens-v1.json`.
-- Plus positive + negative fixtures under each.
+- Plus positive + negative fixtures under each (including
+  unnamespaced-platform-service negative).
 
-53/53.
+61/61.
 
 ## Test totals
 
 | Suite | Cases |
 |---|---:|
-| `run-cascade-tests.php`  | 22 |
-| `run-cap-tests.php`      | 54 |
-| `run-shape-tests.php`    | 100 |
-| `run-manifest-tests.php` | 60 |
-| `run-tokens-tests.php`   | 13 |
-| `validate-shells.test.mjs` | 53 |
-| `wpds-snapshot.test.mjs`   | 4 |
-| `tests/runtime/*.mjs`      | 161 |
-| **Total**                  | **467** |
+| `run-cascade-tests.php`         |  29 |
+| `run-cap-tests.php`             |  54 |
+| `run-shape-tests.php`           |  98 |
+| `run-manifest-tests.php`        |  67 |
+| `run-tokens-tests.php`          |  13 |
+| `run-engine-defaults-tests.php` |  22 |
+| `validate-shells.test.mjs`      |  61 |
+| `wpds-snapshot.test.mjs`        |   4 |
+| `tests/runtime/*.mjs`           | 239 |
+| **Total**                       | **587** |
 
 All green on `feat/wp-admin-shell-v2`.
 
@@ -307,5 +309,5 @@ is unshipped, no back-compat layer needed.
 - Keyboard / VoiceOver / axe checks clear on `developer-admin` plus
   `single-pane-demo`.
 
-Automated suites: 467/467. Tag: `v2.0.0-beta.1` at `6e4dc61` on
+Automated suites: 587/587. Tag: `v2.0.0-beta.1` at `8b98093` on
 `feat/wp-admin-shell-v2`.
