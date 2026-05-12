@@ -215,7 +215,9 @@ App manifests are discovered by the runtime via:
 
 ### 4.2 Engine manifest (`engine.json`)
 
-The engine manifest declares **what an engine provides**. It enumerates the region templates the engine ships, the ARIA roles it specializes for, the platform services it implements, and any default arrangement behavior.
+The engine manifest declares **what an engine provides**. It enumerates the region templates the engine ships, the ARIA roles it specializes for, the platform services it implements, the design system it brings, the CSS bundles it depends on, and any default arrangement behavior.
+
+**Engines are the design-system boundary.** An engine packages a complete visual identity: a `ThemeProvider` that mounts around the region tree, an icon table that populates the kernel's icon registry, a style compiler that maps the resolved `styles` tree to CSS-variable buckets, and one or more CSS bundles enqueued only when the engine is active. The kernel knows nothing DS-specific; engines plug into a single seam and bring the whole stack with them.
 
 ```jsonc
 {
@@ -224,6 +226,8 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
   "version": 1,
   "title": "WordPress Default Layout",
   "description": "Default WP admin shell — sidebar, topbar, content, optional detail pane.",
+
+  "designSystem": "@wordpress/ui",
 
   "specializes-roles": [
     "navigation", "banner", "main", "complementary", "dialog", "contentinfo"
@@ -295,7 +299,13 @@ The engine manifest declares **what an engine provides**. It enumerates the regi
   "default-arrangement": "wp-chrome",
 
   "script": "core-wp-default-engine",
-  "style":  "core-wp-default-engine"
+  "style":  "core-wp-default-engine",
+
+  "styles": [
+    { "handle": "wp-admin-shell-wpds-tokens", "src": "build/wpds-tokens.css" },
+    { "handle": "wp-admin-shell-dataviews",   "src": "build/dataviews.css",
+      "deps":   [ "wp-components" ] }
+  ]
 }
 ```
 
@@ -304,11 +314,15 @@ Manifest fields:
 | Field | Purpose |
 |---|---|
 | `id`, `version`, `title`, `description` | Same as app manifest. |
+| `designSystem` | Free-form string naming the design system this engine ships (`@wordpress/ui`, `mui`, `chakra`, `custom`, etc.). Apps declare the same field; the kernel dev-warns at mount time when a mounted app's `designSystem` differs from the active engine's. Optional — engines omitting it skip the mismatch check. |
 | `specializes-roles` | ARIA roles for which this engine has chrome treatments and recognized layouts. Roles outside this list fall through to the engine's default arrangement algorithm (`default-arrangement`). |
-| `honored-platform` | Platform service requests this engine implements. Apps requesting platform services outside this list still mount; the unhonored requests are no-ops with a logged warning. |
+| `honored-platform` | Platform service names this engine implements (namespaced strings — `core:modal`, `plugin:slug/swipe-to-dismiss`, etc.). Apps/regions requesting platform services outside this list still mount; the unhonored requests are no-ops with a dev-mode warning. |
 | `templates` | Region template catalog. Each entry declares a reusable region shape (`role`, `platform`, `default-style`, optional nested `regions`). Authors instantiate templates from `admin.json`. |
 | `default-arrangement` | Identifier for the engine's spatial arrangement algorithm. The algorithm itself is implementation in the engine's script — this field is a marker for documentation and tooling. |
-| `script`, `style` | Engine asset handles. |
+| `script` | The engine's primary JS module handle. |
+| `style` | The engine's primary CSS handle (its own layout / structural styles). |
+| `styles` | Optional array of additional `{handle, src, deps?}` objects — design-system token bundles, component-library CSS, anything the engine needs enqueued only when it's active. The kernel skips this loop for any engine that isn't the active one, so a Material-Design engine plugin alongside `core:default` only loads its own bundles when activated. |
+| `default-styles` | Optional engine-supplied seed defaults for the `styles` tree. The resolver deep-merges this UNDER admin.json `styles` so individual shells override anything they want. Use for the engine's characteristic visual identity (dark chrome, accent palette, density preset). |
 
 **`templates` is the engine's primary contribution to authors.** A template ships with sensible defaults for everything an author might want — role, platform behaviors, geometry, child regions, even default apps for those child regions. The author instantiates templates and overrides only what they care about. Templates are reusable; an engine can ship many.
 
@@ -318,7 +332,29 @@ Manifest fields:
 
 **`default-arrangement` is implementation, not declaration.** Engines decide spatially how regions are arranged using whatever logic they want — flex, grid, absolute positioning, custom geometry. This field is a name (e.g., `wp-chrome`, `tiling-dwindle`, `floating-windows`) authors and tooling can reference for documentation. The actual algorithm is in the engine's React code.
 
-Engines register the same way as apps: convention path (`{plugin}/engines/{name}/engine.json`) or programmatic. Most plugins will not ship engines; engines are infrastructure-level contributions.
+**Engines also export a JavaScript `EngineSource` object** alongside their manifest. The `EngineSource` is what the kernel registry holds; it carries the engine's React component plus the optional fields that let an engine bring its own design system:
+
+```js
+const coreDefault = {
+  kind:           'engine',
+  id:             'core:default',
+  title:          'Default',
+  Component:      Layout,           // React layout — required
+  ThemeProvider:  MyThemeProvider,  // wraps the region tree — optional
+  compileStyles:  myCompileStyles,  // styles → {top, scoped, subtrees} — optional
+  iconTable:      myIconTable,      // populates kernel icon registry — optional
+};
+registerIcons( iconTable, { fallback: fallbackIcon } );
+```
+
+| EngineSource field | Purpose |
+|---|---|
+| `Component` | React component the kernel mounts as the engine. Receives `{config, regions}`. Renders regions through the generic `<Region>` primitive. |
+| `ThemeProvider` | Optional. React component the kernel mounts around the engine's render tree (`<ThemeProviderHost>`). Engines use this to plug in a complete DS — MUI's `ThemeProvider`, Tailwind's class-application wrapper, WPDS's `WpdsThemeProvider`, etc. Omit when the engine doesn't need provider-driven theming. |
+| `compileStyles` | Optional. Pure function `(styles, tokens) → {top, scoped, subtrees}`. Maps the resolved admin.json `styles` block to three buckets of CSS-variable assignments the kernel host serializes into a sibling `<style>` block scoped to the provider wrapper. Engines omitting this hook get zero scoped overrides — their ThemeProvider must own all token plumbing directly. |
+| `iconTable` | Optional. Map of icon-name strings to React icon components. The engine calls `registerIcons(iconTable, {fallback})` at module load; apps look up via `resolveIcon(name)` regardless of which engine populated the table. |
+
+Engines register the same way as apps: convention path (`{plugin}/engines/{name}/engine.json`) or programmatic. Most plugins will not ship engines; engines are infrastructure-level contributions. **A plugin shipping a non-WPDS engine ships everything it needs alongside — Theme­Provider, icon table, style compiler, CSS bundles, region templates, and apps that emit components from the same DS.** The bundled `core:*` apps are WPDS-bound; a Material-Design engine plugin will ship its own `plugin:material/posts`, `plugin:material/editor`, etc. The kernel boundary holds without modification.
 
 ### 4.3 `admin.json`
 
