@@ -85,16 +85,16 @@ Three layers, mirroring the structure of every shell environment surveyed (GNOME
 | Layer | What it is | WordPress equivalent |
 |---|---|---|
 | **System** | Capabilities exposed to the shell | REST API + `@wordpress/core-data` entities |
-| **Shell** | Runtime kernel: artifact loader, router, registries, token compiler, capability gate, cascade merger | React runtime (this plugin) |
+| **Shell** | Runtime kernel: artifact loader, router, registries, capability gate, cascade merger, ThemeProvider seam, region renderer, bindings, dirty-state | React runtime (this plugin) — design-system-neutral |
 | **Configuration** | Declarative description of the shell | App manifests + engine manifests + `admin.json` |
 
 The shell layer is composed of three runtime primitives:
 
-- **Apps** — addressable mountable units. Declared by app manifests shipped with their code. Render whatever they want internally, including any React component composition (slot/fill, hooks, etc.) the app's author chooses.
+- **Apps** — addressable mountable units. Declared by app manifests shipped with their code. Render whatever they want internally, including any React component composition (slot/fill, hooks, etc.) the app's author chooses. Apps declare which **design system** they emit components from (`designSystem: "@wordpress/ui"`, `"mui"`, etc.).
 - **Regions** — typed containers, each holding one app. Declared in `admin.json` either by referencing an engine-shipped template or from scratch. Regions can declare child regions; nesting is the multi-app composition mechanism.
-- **Engines** — pluggable components that arrange regions into DOM. Default `core:default`. Each engine ships region templates and a default arrangement algorithm. Swappable for floating-window, single-pane, or custom (§4.2).
+- **Engines** — pluggable components that arrange regions into DOM AND own the visual identity. Default `core:default`. Each engine ships region templates, a default arrangement algorithm, a `ThemeProvider`, an icon table, a style compiler, and any CSS bundles its design system depends on. Swappable for floating-window, single-pane, Material Design, or custom (§4.2).
 
-The runtime kernel does not know what a sidebar is; it knows how to ask the active engine to render a region tree, and how to ask each region to render its assigned app.
+The runtime kernel does not know what a sidebar is, what `@wordpress/ui` is, or which CSS tokens are in play; it knows how to ask the active engine to render a region tree, mount the engine's ThemeProvider around it, and ask each region to render its assigned app. Anything that presupposes a specific design system — token namespaces, component libraries, icon sets, chrome class names, scoped style compilation — lives inside an engine, never the kernel.
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -108,15 +108,17 @@ The runtime kernel does not know what a sidebar is; it knows how to ask the acti
 │   └────────────────────────────────┬───────────────────────────┘ │
 │                                    │                              │
 │   ┌────────────────────────────────▼───────────────────────────┐ │
-│   │                Shell runtime kernel                         │ │
-│   │  Manifest loader · Router · Registries · Token compiler     │ │
-│   │  Capability gate · Cascade merger · Binding registry        │ │
+│   │                Shell runtime kernel (DS-neutral)             │ │
+│   │  Manifest loader · Router · Registries · Capability gate     │ │
+│   │  Cascade merger · ThemeProvider host · Region renderer       │ │
+│   │  Bindings · Dirty-state · Icon registry (engine-populated)   │ │
 │   └────────────────────────────────┬───────────────────────────┘ │
 │                                    │                              │
 │   ┌────────────────────────────────▼───────────────────────────┐ │
 │   │                Active engine                                │ │
-│   │  core:default  |  core:floating  |  ...   │ │
-│   │  Default arrangement algorithm + region templates           │ │
+│   │  core:default  |  core:single-pane  |  plugin:foo/material │ │
+│   │  Layout · Arrangement · ThemeProvider · Icon table          │ │
+│   │  Style compiler · CSS bundles · Region templates            │ │
 │   └────────────────────────────────┬───────────────────────────┘ │
 │                                    │                              │
 │   ┌────────────────────────────────▼───────────────────────────┐ │
@@ -138,12 +140,12 @@ The runtime kernel does not know what a sidebar is; it knows how to ask the acti
 The boundaries are strict:
 
 - The **system layer** does not know the shell exists.
-- The **shell runtime kernel** does not know about specific apps, regions, or engines. It loads them by string identifier and orchestrates rendering through the active engine.
-- The **engine** does not know about specific apps. It receives a region tree, arranges it, and asks each region to render its app.
+- The **shell runtime kernel** does not know about specific apps, regions, engines, or design systems. It loads them by string identifier, orchestrates rendering through the active engine, and stays DS-neutral — no design-system-specific imports, CSS rules, token namespaces, or icon components live in kernel code.
+- The **engine** does not know about specific apps. It receives a region tree, arranges it, and asks each region to render its app. It DOES know about design systems — the engine ships its own DS by mounting a ThemeProvider, populating the icon registry, declaring CSS bundles, and providing a style compiler that the kernel host invokes through a single seam.
 - The **regions** do not know about app internals. A region mounts one app and styles its container.
-- The **apps** do not know about their region's geometry, the active engine, or any other app. They render intrinsically responsively into whatever container they are given.
+- The **apps** do not know about their region's geometry, the active engine, or any other app. They render intrinsically responsively into whatever container they are given. They DO know which DS they emit (declared via `designSystem` in their manifest); the kernel surfaces a dev-mode warning when a mounted app's DS differs from the active engine's.
 
-Crossing a boundary is a design smell. If a `core:*` app needs to call WordPress directly via PHP-injected globals, that app has leaked through the system layer. If an engine needs to know that a region contains a navigation app, the engine has leaked through the region boundary. If an app needs to know its container size in pixels, the app has leaked through the layout boundary.
+Crossing a boundary is a design smell. If a `core:*` app needs to call WordPress directly via PHP-injected globals, that app has leaked through the system layer. If an engine needs to know that a region contains a navigation app, the engine has leaked through the region boundary. If an app needs to know its container size in pixels, the app has leaked through the layout boundary. If the kernel needs to know about `--wpds-*` tokens, `@wordpress/ui`, `@wordpress/icons`, or any other design-system-specific surface, the kernel has leaked through the engine boundary.
 
 ---
 
