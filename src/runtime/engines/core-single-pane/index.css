@@ -16,6 +16,14 @@
 .wp-admin-shell-layout--single-pane {
 	display: flex;
 	flex-direction: column;
+	background: var(
+		--wp-admin-shell--chrome--canvas--background,
+		var(--wpds-color-bg-surface-neutral)
+	);
+	color: var(
+		--wp-admin-shell--chrome--canvas--foreground,
+		var(--wpds-color-fg-content-neutral)
+	);
 }
 
 .wp-admin-shell-single-pane__appbar {

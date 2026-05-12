@@ -121,7 +121,7 @@
 	"styles": {
 		"theme": {
 			"color": {
-				"primary": "#7c3aed"
+				"bg": "#fafafa"
 			}
 		}
 	}

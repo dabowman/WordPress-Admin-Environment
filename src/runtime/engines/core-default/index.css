@@ -23,6 +23,14 @@
 	width: 100vw;
 	overflow: hidden;
 	font-family: var(--wpds-font-family-body);
+	background: var(
+		--wp-admin-shell--chrome--canvas--background,
+		var(--wpds-color-bg-surface-neutral)
+	);
+	color: var(
+		--wp-admin-shell--chrome--canvas--foreground,
+		var(--wpds-color-fg-content-neutral)
+	);
 }
 
 .wp-admin-shell-layout__body {
