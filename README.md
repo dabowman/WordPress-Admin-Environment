@@ -13,7 +13,7 @@ Same WordPress. Same data. Same plugins. Different admin for different people.
 ## What v1 ships
 
 - **Cascade resolver.** Five origins (core / plugin / site / role / user) merge into a single config with field-aware semantics, restrict-only enforcement, and `userCustomizable` declarations modeled on block supports.
-- **Token system.** `admin.json.styles` compiles to three CSS-variable families: WPDS surface (`--wpds-*`), chrome extensions (`--wp-admin-shell--chrome--*`), and a static compat bridge for legacy `--wp-admin-theme-color` consumers.
+- **Token system.** Engines own theming through the kernel's `ThemeProviderHost` seam. The bundled `core:default` engine compiles `admin.json.styles` to two CSS-variable families: WPDS surface (`--wpds-*`) and chrome extensions (`--wp-admin-shell--chrome--*`). Third-party engines plug in their own `ThemeProvider`, style compiler, icon table, and CSS bundles — the kernel itself is DS-neutral.
 - **Capability gating.** Four layers — region fast-path, app gate, source-cap floor, REST observation. Recursive nav prune drops gated apps + empty drilldowns.
 - **Native apps.** Posts, Pages (`core:posts`), Simple editor (`core:simple-editor`), Block editor (`core:editor`, iframed), Media (`core:media`), Profile (`core:profile`), Users (`core:users`), Comments (`core:comments`), Settings (`core:settings` composable host with REST-bounded native panels), Site editor (`core:site-editor`, iframe-backed adapter), Appearance prefs (`core:appearance`).
 - **Slots.** Render slots (`core:app.before/.after`, `core:editor.sidebar`) and data slots (`core:posts.row-actions`, `core:users.row-actions`, `core:comments.row-actions`, `core:settings.panels`) for plugin extension.
@@ -118,9 +118,9 @@ wp-admin-shell/
 │   │   ├── routing/                # Hash router
 │   │   ├── selection/              # Cross-region selection bus
 │   │   ├── slots/                  # Render + data slots
-│   │   ├── styles/                 # Token compiler, compat bridge, density, WPDS baseline
+│   │   ├── styles/                 # ThemeProviderHost (engine-pluggable), WpdsThemeProvider (core-default's contribution), density helper
 │   │   ├── capabilities/           # userCan / checkCan
-│   │   ├── config/                 # normalizeV0, iconMap
+│   │   ├── config/                 # iconMap (DS-neutral registry; engines populate)
 │   │   └── apps/                   # System apps (NavigationApp, SiteHubApp, etc.)
 │   └── apps/                       # User apps (PostsApp, MediaApp, …)
 ├── tests/
@@ -171,7 +171,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 
 **Why a cascade resolver?** `theme.json` resolves through merged origins; admin.json takes the same shape so site administrators / plugin authors / end users can override the active shell along well-defined precedence boundaries. Trusted origins (core / plugin) merge authoritatively (omission ⇒ tombstone); consumer origins (site / role / user) merge additively, filtered through `userCustomizable`.
 
-**Why three CSS-variable families?** WPDS slots cover most of the surface but not shell-only chrome (sidebar, toolbar, site hub, content card). The chrome extension namespace fills that gap. The compat bridge keeps legacy `@wordpress/components` consumers + SCSS-compiled wp-admin CSS inheriting shell theming without touching every legacy stylesheet.
+**Why two CSS-variable families (in `core:default`)?** WPDS slots cover most of the WPDS-themed surface but not shell-only chrome (sidebar, toolbar, site hub, content card). The chrome extension namespace fills that gap. Both families are emitted by `core:default`'s engine-private style compiler — third-party engines bring whatever variable namespaces their own design system uses (or none, if their `ThemeProvider` owns all token plumbing directly).
 
 **Why iframe for the editor + site editor?** Both packages assume full-viewport ownership and own private-API stores. Embedding inside a region requires resolving four collisions (preferences-store namespace, command-palette double-registration, full-screen-mode CSS, hash-router conflicts). v1 ships iframe; v2 takes the native-mount path.
 
