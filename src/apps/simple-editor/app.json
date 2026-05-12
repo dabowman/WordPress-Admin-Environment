@@ -1,0 +1,25 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:simple-editor",
+	"version": 1,
+	"title": "Simple editor",
+	"description": "Substack-style minimal block editor: title plus nine allowed blocks. Auto-save with 2s debounce.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true,
+		"core:block-navigation-on-dirty": true,
+		"core:autofocus-target": "input[name=\"post-title\"]"
+	},
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"postType": {
+				"type": "string",
+				"default": "post"
+			}
+		},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

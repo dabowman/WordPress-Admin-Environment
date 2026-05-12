@@ -1,0 +1,128 @@
+{
+	"$schema": "../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "v2-demo",
+	"title": "v2 Demo (canonical v2 admin.json shape)",
+	"description": "Authored against admin-v2.json. Demonstrates engine templates, nested child regions, the routes block, default-route, per-region routing.route-key, and platform.trigger keystroke binding. First bundled shell migrated to v2 in the joint V2.M2 task 7 + V2.M3 task 8 step.",
+	"user-switchable": true,
+
+	"engine": "core:default",
+
+	"regions": {
+		"toolbar": {
+			"template": "core:topbar",
+			"regions": {
+				"end": {
+					"role": "region",
+					"app": "core:toolbar-actions",
+					"config": {
+						"right": [
+							{
+								"command": "core/new-post",
+								"icon": "plus",
+								"label": "New post"
+							}
+						]
+					}
+				}
+			}
+		},
+
+		"sidebar": {
+			"template": "core:sidebar",
+			"regions": {
+				"hub": {
+					"role": "region",
+					"app": "core:site-hub"
+				},
+				"nav": {
+					"role": "navigation",
+					"app": "core:navigation",
+					"config": {
+						"title": "v2 demo navigation",
+						"items": [
+							{
+								"label": "Posts",
+								"icon": "post",
+								"href": "#/posts"
+							},
+							{
+								"label": "Media",
+								"icon": "media",
+								"href": "#/media"
+							},
+							{ "separator": true },
+							{
+								"label": "Appearance",
+								"icon": "brush",
+								"href": "#/appearance"
+							},
+							{
+								"label": "Profile",
+								"icon": "user",
+								"href": "#/profile"
+							},
+							{ "separator": true },
+							{
+								"label": "View site",
+								"icon": "external",
+								"href": "/",
+								"external": true
+							}
+						]
+					}
+				}
+			}
+		},
+
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		},
+
+		"command-palette": {
+			"template": "core:overlay",
+			"app": "core:command-palette",
+			"platform": {
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
+	},
+
+	"routes": {
+		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/posts/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post" }
+		},
+		"/posts/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post", "id": "{id}" }
+		},
+		"/media": { "app": "core:media" },
+		"/profile": { "app": "core:profile" },
+		"/appearance": { "app": "core:appearance" }
+	},
+
+	"default-route": "/posts",
+
+	"styles": {
+		"theme": {
+			"color": {
+				"primary": "#7c3aed"
+			}
+		}
+	}
+}

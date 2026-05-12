@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 /**
- * Schema validation: every bundled shell + every fixture in
- * tests/schema/fixtures/ validates against docs/schemas/admin-v1.json.
+ * Schema validation harness — Ajv 2020-12.
+ *
+ * Validates against:
+ *   - docs/schemas/admin-v1.json   (legacy beta-shipped schema; $id /admin/v0.json
+ *                                   to free /admin/v1.json for the new manifest model)
+ *   - docs/schemas/admin-v2.json   (canonical v1 of the new admin.json manifest)
+ *   - docs/schemas/admin-app-v2.json
+ *   - docs/schemas/admin-engine-v2.json
+ *
+ * For each schema, runs:
+ *   - Bundled-shell sweep (admin only — engines/apps don't have bundled equivalents)
+ *   - Positive fixtures (must validate clean)
+ *   - Negative fixtures (must fail validation)
+ *   - Inline negative cases (compact one-liners)
  *
  * Run: `node tests/schema/validate-shells.test.mjs` (also `npm run test:schema`).
- *
- * Catches: shell-author errors going forward — typos in field names,
- * wrong types, missing required fields. Bundled shells are checked
- * after-normalize too (the v0 → v1 normalizer runs in PHP, so v0 shells
- * fail validation directly; the harness skips them with a note).
- *
- * Does NOT catch: runtime-reader bugs where the schema is correct but
- * the kernel reads from the wrong path. Those need run-shape-tests.php
- * (PHP integration) + the runtime smoke harness (open issue).
  */
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -23,9 +26,35 @@ import addFormats from 'ajv-formats';
 
 const __dirname    = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot  = resolve( __dirname, '..', '..' );
-const SCHEMA_PATH  = resolve( projectRoot, 'docs/schemas/admin-v1.json' );
+const SCHEMAS_DIR  = resolve( projectRoot, 'docs/schemas' );
 const SHELLS_DIR   = resolve( projectRoot, 'shells' );
 const FIXTURES_DIR = resolve( __dirname, 'fixtures' );
+const APP_MANIFEST_DIRS = [
+	resolve( projectRoot, 'src/apps' ),
+];
+const ENGINE_MANIFEST_DIRS = [
+	resolve( projectRoot, 'src/runtime/engines' ),
+];
+const CORE_TOKENS_PATH = resolve( projectRoot, 'core.tokens.json' );
+
+function listManifests( bases, filename ) {
+	const out = [];
+	for ( const base of bases ) {
+		if ( ! existsSync( base ) ) {
+			continue;
+		}
+		for ( const entry of readdirSync( base, { withFileTypes: true } ) ) {
+			if ( ! entry.isDirectory() ) {
+				continue;
+			}
+			const candidate = join( base, entry.name, filename );
+			if ( existsSync( candidate ) ) {
+				out.push( candidate );
+			}
+		}
+	}
+	return out.sort();
+}
 
 let pass = 0;
 let fail = 0;
@@ -43,104 +72,191 @@ function ok( label, condition, detail = '' ) {
 	}
 }
 
-function isV1Shape( doc ) {
+function compileSchema( name ) {
+	const schema = JSON.parse(
+		readFileSync( resolve( SCHEMAS_DIR, name ), 'utf8' )
+	);
+	const ajv = new Ajv( { allErrors: true, strict: false } );
+	addFormats( ajv );
+	return ajv.compile( schema );
+}
+
+function readJson( path ) {
+	return JSON.parse( readFileSync( path, 'utf8' ) );
+}
+
+function listJson( dir ) {
+	if ( ! existsSync( dir ) ) {
+		return [];
+	}
+	return readdirSync( dir )
+		.filter( ( f ) => f.endsWith( '.json' ) )
+		.sort();
+}
+
+function formatErrors( errors ) {
+	return ( errors || [] )
+		.slice( 0, 5 )
+		.map( ( e ) => `  ${ e.instancePath || '/' } ${ e.message } ${ JSON.stringify( e.params ) }` )
+		.join( '\n      ' );
+}
+
+function isV1ShellShape( doc ) {
 	return Boolean( doc?.settings?.shell?.layoutEngine );
 }
 
-const schema = JSON.parse( readFileSync( SCHEMA_PATH, 'utf8' ) );
-const ajv    = new Ajv( {
-	allErrors: true,
-	strict: false,
-	// $schema in our docs uses a relative URL (e.g. "../docs/schemas/admin-v1.json")
-	// — Ajv's strict $schema check trips on that. Relax.
-} );
-addFormats( ajv );
-const validate = ajv.compile( schema );
+function isV2ShellShape( doc ) {
+	// v2 puts engine + regions at root with no `settings` partition.
+	return typeof doc?.engine === 'string' && ! doc?.settings;
+}
 
-function validateDoc( label, doc, { skipIfV0 = false } = {} ) {
-	if ( skipIfV0 && ! isV1Shape( doc ) ) {
-		console.log( `SKIP  ${ label } (v0 flat shape; PHP normalizer transforms at load)` );
-		return;
+// ── Schema 1: legacy admin-v1.json ─────────────────────────────────
+
+console.log( '\n— admin-v1.json (legacy beta) —' );
+{
+	const validate = compileSchema( 'admin-v1.json' );
+
+	console.log( '\n  Bundled shells:' );
+	for ( const file of listJson( SHELLS_DIR ) ) {
+		const path  = join( SHELLS_DIR, file );
+		const doc   = readJson( path );
+		if ( isV2ShellShape( doc ) ) {
+			console.log( `SKIP  shells/${ file } (v2 shape; validated under admin-v2.json)` );
+			continue;
+		}
+		if ( ! isV1ShellShape( doc ) ) {
+			console.log( `SKIP  shells/${ file } (v0 flat shape; PHP normalizer transforms at load)` );
+			continue;
+		}
+		const valid = validate( doc );
+		ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 	}
-	const valid = validate( doc );
-	const detail = valid
-		? ''
-		: ( validate.errors || [] )
-			.slice( 0, 5 )
-			.map( ( e ) => `  ${ e.instancePath || '/' } ${ e.message } ${ JSON.stringify( e.params ) }` )
-			.join( '\n      ' );
-	ok( label, valid, detail );
-}
 
-// ── Bundled shells ─────────────────────────────────────────────────
-
-console.log( '\n— Bundled shells —' );
-const shellFiles = readdirSync( SHELLS_DIR ).filter( ( f ) => f.endsWith( '.json' ) );
-for ( const file of shellFiles ) {
-	const path = join( SHELLS_DIR, file );
-	const doc  = JSON.parse( readFileSync( path, 'utf8' ) );
-	validateDoc( `shells/${ file }`, doc, { skipIfV0: true } );
-}
-
-// ── Fixtures ───────────────────────────────────────────────────────
-
-console.log( '\n— Fixtures (tests/schema/fixtures/) —' );
-if ( existsSync( FIXTURES_DIR ) ) {
-	const fixtureFiles = readdirSync( FIXTURES_DIR ).filter( ( f ) => f.endsWith( '.json' ) );
-	for ( const file of fixtureFiles ) {
-		const path = join( FIXTURES_DIR, file );
-		const doc  = JSON.parse( readFileSync( path, 'utf8' ) );
-		validateDoc( `fixtures/${ file }`, doc );
+	console.log( '\n  v1 fixtures (top-level fixtures dir):' );
+	for ( const file of listJson( FIXTURES_DIR ) ) {
+		const path  = join( FIXTURES_DIR, file );
+		const doc   = readJson( path );
+		const valid = validate( doc );
+		ok( `fixtures/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 	}
-} else {
-	console.log( '  (no fixtures directory)' );
-}
 
-// ── Negative fixtures ──────────────────────────────────────────────
-
-console.log( '\n— Negative fixtures (must fail) —' );
-
-const negatives = [
-	{
-		label: 'rejects missing version',
-		doc: { name: 'broken' },
-	},
-	{
-		label: 'rejects bad userCustomizable type (number)',
-		doc: {
-			version: 1,
-			styles: { userCustomizable: 42 },
+	console.log( '\n  v1 inline negative cases:' );
+	const negatives = [
+		{
+			label: 'rejects missing version',
+			doc: { name: 'broken' },
 		},
-	},
-	{
-		label: 'rejects bad shell.layoutEngine type (number)',
-		doc: {
-			version: 1,
-			settings: { shell: { layoutEngine: 99 } },
+		{
+			label: 'rejects bad userCustomizable type (number)',
+			doc: { version: 1, styles: { userCustomizable: 42 } },
 		},
-	},
-	{
-		label: 'rejects bad density value',
-		doc: {
-			version: 1,
-			styles: { density: 'huge' },
+		{
+			label: 'rejects bad shell.layoutEngine type (number)',
+			doc: { version: 1, settings: { shell: { layoutEngine: 99 } } },
 		},
-	},
-	{
-		label: 'rejects region with no source',
-		doc: {
-			version: 1,
-			settings: {
-				shell: { layoutEngine: 'core:site-editor-layout' },
-				regions: { sidebar: { kind: 'persistent' } },
+		{
+			label: 'rejects bad density value',
+			doc: { version: 1, styles: { density: 'huge' } },
+		},
+		{
+			label: 'rejects region with no source',
+			doc: {
+				version: 1,
+				settings: {
+					shell: { layoutEngine: 'core:site-editor-layout' },
+					regions: { sidebar: { kind: 'persistent' } },
+				},
 			},
 		},
-	},
+	];
+	for ( const { label, doc } of negatives ) {
+		const valid = validate( doc );
+		ok( label, ! valid, valid ? 'expected validation failure but doc accepted' : '' );
+	}
+}
+
+// ── Schemas 2-4: v2 manifest schemas ───────────────────────────────
+
+const v2Schemas = [
+	{ key: 'admin',  schemaFile: 'admin-v2.json',        fixtureKey: 'admin'  },
+	{ key: 'app',    schemaFile: 'admin-app-v2.json',    fixtureKey: 'app'    },
+	{ key: 'engine', schemaFile: 'admin-engine-v2.json', fixtureKey: 'engine' },
 ];
 
-for ( const { label, doc } of negatives ) {
-	const valid = validate( doc );
-	ok( label, ! valid, valid ? 'expected validation failure but doc accepted' : '' );
+for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
+	console.log( `\n— ${ schemaFile } —` );
+	const validate = compileSchema( schemaFile );
+
+	if ( key === 'admin' ) {
+		console.log( '\n  Bundled shells (v2 shape):' );
+		for ( const file of listJson( SHELLS_DIR ) ) {
+			const doc = readJson( join( SHELLS_DIR, file ) );
+			if ( ! isV2ShellShape( doc ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( key === 'app' ) {
+		console.log( '\n  Bundled app manifests:' );
+		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
+			const doc   = readJson( path );
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( key === 'engine' ) {
+		console.log( '\n  Bundled engine manifests:' );
+		for ( const path of listManifests( ENGINE_MANIFEST_DIRS, 'engine.json' ) ) {
+			const doc   = readJson( path );
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	const positiveDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'positive' );
+	const negativeDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'negative' );
+
+	console.log( `\n  Positive (must validate):` );
+	for ( const file of listJson( positiveDir ) ) {
+		const doc   = readJson( join( positiveDir, file ) );
+		const valid = validate( doc );
+		ok( `v2/${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+	}
+
+	console.log( `\n  Negative (must fail):` );
+	for ( const file of listJson( negativeDir ) ) {
+		const doc   = readJson( join( negativeDir, file ) );
+		const valid = validate( doc );
+		ok(
+			`v2/${ key }/negative/${ file }`,
+			! valid,
+			valid ? 'expected validation failure but doc accepted' : ''
+		);
+	}
+}
+
+// ── Schema 5: tokens-v1.json ───────────────────────────────────────
+
+console.log( '\n— tokens-v1.json —' );
+{
+	const validate = compileSchema( 'tokens-v1.json' );
+
+	console.log( '\n  Bundled core.tokens.json:' );
+	if ( existsSync( CORE_TOKENS_PATH ) ) {
+		const doc   = readJson( CORE_TOKENS_PATH );
+		const valid = validate( doc );
+		ok(
+			'core.tokens.json',
+			valid,
+			valid ? '' : formatErrors( validate.errors )
+		);
+	}
 }
 
 // ── Summary ────────────────────────────────────────────────────────

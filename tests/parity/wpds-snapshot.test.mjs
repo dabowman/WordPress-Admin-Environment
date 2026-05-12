@@ -4,8 +4,9 @@
  *
  * Run: `node tests/parity/wpds-snapshot.test.mjs`
  *
- * Loads the pinned WPDS snapshot under `src/runtime/styles/wpds-defaults/`
- * and parses the same upstream CSS at runtime. Fails (exit 1) on:
+ * Loads the pinned WPDS snapshot under
+ * `src/runtime/engines/core-default/wpds-defaults/` and parses the same
+ * upstream CSS at runtime. Fails (exit 1) on:
  *
  *   - Added slot:    upstream has a `--wpds-*` the snapshot doesn't.
  *   - Removed slot:  snapshot has a `--wpds-*` upstream no longer ships.
@@ -20,12 +21,12 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { wpdsSlotPattern } from '../../src/runtime/styles/wpds-defaults/_slot-pattern.mjs';
+import { wpdsSlotPattern } from '../../src/runtime/engines/core-default/wpds-defaults/_slot-pattern.mjs';
 
 const __dirname    = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot  = resolve( __dirname, '..', '..' );
 
-const SNAPSHOT_PATH = resolve( projectRoot, 'src/runtime/styles/wpds-defaults/6.9.json' );
+const SNAPSHOT_PATH = resolve( projectRoot, 'src/runtime/engines/core-default/wpds-defaults/6.9.json' );
 const UPSTREAM_PATH = resolve( projectRoot, 'node_modules/@wordpress/theme/src/prebuilt/css/design-tokens.css' );
 
 let pass = 0;

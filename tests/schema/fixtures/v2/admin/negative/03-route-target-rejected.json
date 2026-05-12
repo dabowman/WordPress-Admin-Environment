@@ -1,0 +1,15 @@
+{
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "broken-route-target",
+	"engine": "core:wp-default-layout",
+	"regions": {
+		"main": { "template": "core:main", "routing": { "route-key": "_self" } }
+	},
+	"routes": {
+		"/posts": {
+			"app": "core:posts",
+			"target": "_self"
+		}
+	}
+}

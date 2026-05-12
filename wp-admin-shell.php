@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 1.0.0-beta.1
+ * Version: 2.0.0-beta.1
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Requires Plugins: gutenberg
@@ -73,7 +73,6 @@ add_action( 'init', function () {
 	update_option( 'wp_admin_shell_db_version', WP_ADMIN_SHELL_DB_VERSION );
 }, 5 );
 
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-selection-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-can-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-prefs-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
@@ -84,6 +83,109 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-shells.php';
+
+/**
+ * V2.M1 — Public manifest registration API.
+ *
+ * Plugins call these to register an `app.json` or `engine.json`
+ * manifest, either as an associative array or by absolute path. The
+ * convention path (`apps/{name}/app.json`, `engines/{name}/engine.json`
+ * under the plugin root) is auto-scanned on `init` priority 8 — most
+ * plugins don't need to call these directly.
+ *
+ * @return string|WP_Error Manifest id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_app( $manifest_or_path ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_app( $manifest_or_path );
+}
+
+function wp_admin_shell_register_engine( $manifest_or_path ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_engine( $manifest_or_path );
+}
+
+/**
+ * Register a region template against an existing engine. Plugin
+ * extension point per spec §13 #4 — adds a `templates[$template_id]`
+ * entry to the engine's manifest at runtime so admin.json regions can
+ * reference it via `template`. The engine must already be registered.
+ *
+ * @param string $engine_id  Engine id to extend.
+ * @param string $template_id Template id (use `plugin:{slug}/{name}`).
+ * @param array  $template   Template body; must declare at least `role`.
+ *
+ * @return string|WP_Error template id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_template( $engine_id, $template_id, $template ) {
+	return WP_Admin_Shell_Manifest_Registry::instance()->register_template(
+		$engine_id,
+		$template_id,
+		$template
+	);
+}
+
+/**
+ * Register a complete shell programmatically (spec §13 #6). Use when
+ * a shell's shape is computed at runtime (per role, per feature flag,
+ * etc.) rather than stored on disk under `shells/`.
+ *
+ * The registered shell participates in the same cascade as file
+ * shells: site/role/user origins still merge on top.
+ *
+ * @param string $slug      Unique slug.
+ * @param array  $admin_json Full admin.json document.
+ *
+ * @return string|WP_Error slug on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_shell( $slug, $admin_json ) {
+	return WP_Admin_Shell_Shells::register( $slug, $admin_json );
+}
+
+/**
+ * Manifest registration on init.
+ *
+ * Two phases at priority 8 (before main shell init at 10) so manifests
+ * are available when the kernel's inline-script handoff is composed:
+ *
+ *  1. Shell-bundled core manifests — registered explicitly. App
+ *     manifests live under `src/apps/<name>/app.json`, engine
+ *     manifests under `src/runtime/engines/<name>/engine.json` —
+ *     co-located with their JS source rather than at the convention
+ *     plugin-root path. They're framework defaults, not pluggable.
+ *
+ *  2. Plugin-contributed manifests — auto-discovered at the convention
+ *     path `<plugin>/apps/<name>/app.json` and
+ *     `<plugin>/engines/<name>/engine.json`. Plugins can also extend
+ *     discovery by adding paths via the
+ *     `wp_admin_shell_manifest_discovery_paths` filter (useful for
+ *     plugins that ship manifests at a non-standard location).
+ */
+add_action( 'init', function () {
+	$registry = WP_Admin_Shell_Manifest_Registry::instance();
+
+	// 1. Shell-bundled core manifests. Co-located with their JS source
+	// rather than at the plugin-root convention path. `discover()`
+	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`;
+	// `src/` covers all bundled apps, `src/runtime/` covers the engines
+	// (still co-located with their layout JS).
+	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/' );
+	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/runtime/' );
+
+	// 2. Convention-path discovery for the shell plugin itself + plugins
+	// extending the discovery surface.
+	$registry->discover( WP_ADMIN_SHELL_PATH );
+
+	$additional = apply_filters( 'wp_admin_shell_manifest_discovery_paths', array() );
+	foreach ( (array) $additional as $path ) {
+		if ( is_string( $path ) ) {
+			$registry->discover( $path );
+		}
+	}
+}, 8 );
 
 /**
  * Register the shell admin page and settings.
@@ -146,12 +248,29 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		true
 	);
 
-	wp_enqueue_style(
-		'wp-admin-shell-dataviews',
-		WP_ADMIN_SHELL_URL . 'build/dataviews.css',
-		array( 'wp-components' ),
-		$asset['version']
-	);
+	$config = wp_admin_shell_get_active_config();
+
+	// Engine-driven style enqueue. Each registered engine declares a
+	// `styles` array in its manifest listing the CSS bundles it depends
+	// on (WPDS baseline tokens, DataViews stylesheet, MUI bundle, etc.).
+	// Only the active engine's styles enqueue — keeps non-WPDS engines
+	// from loading WPDS tokens (and vice versa for other DS plugins).
+	$active_engine_id      = is_array( $config ) && isset( $config['engine'] ) ? $config['engine'] : null;
+	$active_engine_manifest = $active_engine_id ? WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
+
+	if ( is_array( $active_engine_manifest ) && isset( $active_engine_manifest['styles'] ) && is_array( $active_engine_manifest['styles'] ) ) {
+		foreach ( $active_engine_manifest['styles'] as $style ) {
+			if ( ! isset( $style['handle'], $style['src'] ) ) {
+				continue;
+			}
+			$src  = $style['src'];
+			$deps = isset( $style['deps'] ) && is_array( $style['deps'] ) ? $style['deps'] : array();
+			// Plugin-relative path → resolve against plugin URL. Absolute
+			// URLs pass through unchanged.
+			$resolved_src = ( strpos( $src, '//' ) === 0 || preg_match( '#^https?://#', $src ) ) ? $src : WP_ADMIN_SHELL_URL . ltrim( $src, '/' );
+			wp_enqueue_style( $style['handle'], $resolved_src, $deps, $asset['version'] );
+		}
+	}
 
 	// Block editor styles — needed by SimpleEditorApp (BlockEditorProvider + BlockList).
 	wp_enqueue_style( 'wp-block-editor' );
@@ -161,13 +280,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	wp_enqueue_style(
 		'wp-admin-shell',
 		WP_ADMIN_SHELL_URL . 'build/index.css',
-		array( 'wp-components', 'wp-admin-shell-dataviews' ),
+		array( 'wp-components' ),
 		$asset['version']
 	);
 
-	$config = wp_admin_shell_get_active_config();
-
 	$current_user = wp_get_current_user();
+
+	$manifest_registry = WP_Admin_Shell_Manifest_Registry::instance();
 
 	wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
 		'config'        => $config,
@@ -184,11 +303,25 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'user'          => array(
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
+			'profileUrl'  => '#/profile',
+			'logoutUrl'   => wp_logout_url( admin_url( 'admin.php?page=wp-admin-shell' ) ),
 		),
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
 			: null,
 		'capabilities'  => wp_admin_shell_resolve_capabilities( $config ),
+		// V2.M1 — manifest payload. Empty until plugins ship app.json /
+		// engine.json files; the kernel reads from this map alongside
+		// the imperative registry during the v1→v2 transition.
+		'manifests'     => array(
+			'apps'    => $manifest_registry->list_apps(),
+			'engines' => $manifest_registry->list_engines(),
+		),
+		// V2.M5 — DTCG primitives layer. Site → theme → plugin → core
+		// origins merged here. Empty object when no origin contributes.
+		// `compileStyles` consumes this when resolving non-`styles.*`
+		// curly-brace aliases in admin.json `styles`.
+		'tokens'        => WP_Admin_Shell_Tokens::resolve(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -231,6 +364,9 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
 	if ( file_exists( $path ) ) {
 		return $sanitized;
 	}
+	if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $sanitized ) ) {
+		return $sanitized;
+	}
 
 	add_settings_error(
 		'wp_admin_shell_active_shell',
@@ -265,6 +401,38 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
 function wp_admin_shell_resolve_capabilities( $config ) {
 	$declared = array();
 
+	// v2: regions live at the root, recursively. Walk the tree and
+	// collect both `region.capability` and any caps declared on nav
+	// items inside `region.config.items` (the navigation app's config —
+	// inline labels + capability gates per item, the v2 way to express
+	// per-screen caps now that there's no `settings.applications` array).
+	$collect_from_regions = function ( $regions ) use ( &$declared, &$collect_from_regions ) {
+		if ( ! is_array( $regions ) ) {
+			return;
+		}
+		foreach ( $regions as $region ) {
+			if ( ! is_array( $region ) ) {
+				continue;
+			}
+			if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
+				$declared[ $region['capability'] ] = true;
+			}
+			$items = $region['config']['items'] ?? null;
+			if ( is_array( $items ) ) {
+				wpas_collect_nav_item_caps( $items, $declared );
+			}
+			if ( ! empty( $region['regions'] ) && is_array( $region['regions'] ) ) {
+				$collect_from_regions( $region['regions'] );
+			}
+		}
+	};
+
+	if ( isset( $config['regions'] ) && is_array( $config['regions'] ) ) {
+		$collect_from_regions( $config['regions'] );
+	}
+
+	// v1: regions + applications under settings.*. Walk the legacy paths
+	// for unmigrated shells.
 	foreach ( ( $config['settings']['regions'] ?? array() ) as $region ) {
 		if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
 			$declared[ $region['capability'] ] = true;
@@ -288,6 +456,29 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		$out[ $cap ] = current_user_can( $cap );
 	}
 	return $out;
+}
+
+/**
+ * Walk a navigation items[] tree (the v2 navigation app's `config.items`
+ * shape — same as v1's `navigation` array but inline-described per item)
+ * and collect every `capability` declaration. Recurses into `screen`/
+ * `group` children.
+ */
+function wpas_collect_nav_item_caps( $items, &$declared ) {
+	if ( ! is_array( $items ) ) {
+		return;
+	}
+	foreach ( $items as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		if ( isset( $item['capability'] ) && is_string( $item['capability'] ) ) {
+			$declared[ $item['capability'] ] = true;
+		}
+		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
+			wpas_collect_nav_item_caps( $item['items'], $declared );
+		}
+	}
 }
 
 /**
@@ -541,24 +732,39 @@ function wp_admin_shell_render_settings() {
 }
 
 /**
- * List available shell configurations from the shells/ directory.
+ * List available shell configurations from the shells/ directory plus
+ * any shells contributed via `wp_admin_shell_register_shell()`. When a
+ * programmatic registration shares a slug with a file-based shell, the
+ * programmatic version wins (mirrors resolver precedence).
  */
 function wp_admin_shell_get_available_shells() {
-	$shells = array();
-	$dir    = WP_ADMIN_SHELL_PATH . 'shells/';
+	$by_slug = array();
+	$dir     = WP_ADMIN_SHELL_PATH . 'shells/';
 
 	foreach ( glob( $dir . '*.json' ) ?: array() as $file ) {
 		$data = json_decode( file_get_contents( $file ), true );
 		if ( ! is_array( $data ) ) {
 			continue;
 		}
-		$shells[] = array(
-			'slug'           => basename( $file, '.json' ),
-			'title'          => $data['title'] ?? basename( $file, '.json' ),
+		$slug             = basename( $file, '.json' );
+		$by_slug[ $slug ] = array(
+			'slug'           => $slug,
+			'title'          => $data['title'] ?? $slug,
 			'description'    => $data['description'] ?? '',
-			'userSwitchable' => ! empty( $data['userSwitchable'] ),
+			'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
 		);
 	}
 
-	return $shells;
+	if ( class_exists( 'WP_Admin_Shell_Shells' ) ) {
+		foreach ( WP_Admin_Shell_Shells::all() as $slug => $data ) {
+			$by_slug[ $slug ] = array(
+				'slug'           => $slug,
+				'title'          => $data['title'] ?? $slug,
+				'description'    => $data['description'] ?? '',
+				'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+			);
+		}
+	}
+
+	return array_values( $by_slug );
 }

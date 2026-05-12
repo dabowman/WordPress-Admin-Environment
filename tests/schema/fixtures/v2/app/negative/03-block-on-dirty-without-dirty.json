@@ -1,0 +1,10 @@
+{
+	"id": "core:bad-editor",
+	"version": 1,
+	"title": "Bad Editor",
+	"role": "main",
+	"platform": {
+		"core:block-navigation-on-dirty": true
+	},
+	"script": "core-bad-editor"
+}

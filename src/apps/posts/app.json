@@ -1,0 +1,32 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:posts",
+	"version": 1,
+	"title": "Posts",
+	"description": "DataViews-driven list and grid view for any post type. Reads via `core-data` `useEntityRecords`.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"postType": {
+				"type": "string",
+				"default": "post"
+			},
+			"status": {
+				"type": "string"
+			},
+			"contentWidth": {
+				"type": [
+					"number",
+					"string"
+				]
+			},
+			"preview": {
+				"type": "string"
+			}
+		},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

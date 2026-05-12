@@ -1,0 +1,59 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:wp-default-layout",
+	"version": 1,
+	"title": "WordPress Default Layout",
+	"description": "Sidebar / topbar / main / detail / overlay arrangement.",
+	"specializes-roles": [
+		"navigation",
+		"banner",
+		"main",
+		"complementary",
+		"dialog",
+		"contentinfo"
+	],
+	"honored-platform": [
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty"
+	],
+	"templates": {
+		"core:sidebar": {
+			"role": "navigation",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"inline-size": "240px",
+				"block-size": "100%"
+			}
+		},
+		"core:topbar": {
+			"role": "banner",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"block-size": "48px",
+				"inline-size": "100%"
+			},
+			"regions": {
+				"start": { "role": "region" },
+				"center": { "role": "region" },
+				"end": { "role": "region" }
+			}
+		},
+		"core:main": {
+			"role": "main",
+			"default-style": { "inline-size": "100%", "min-inline-size": "0" }
+		},
+		"core:detail": {
+			"role": "complementary",
+			"platform": { "core:dismiss-on": [ "Escape" ] },
+			"default-style": { "inline-size": "min(720px, 50%)" }
+		}
+	},
+	"default-arrangement": "wp-chrome",
+	"script": "core-wp-default-engine",
+	"style": "core-wp-default-engine"
+}

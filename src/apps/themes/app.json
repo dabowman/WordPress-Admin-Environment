@@ -1,0 +1,17 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:themes",
+	"version": 1,
+	"title": "Themes",
+	"description": "Theme grid with activate / preview / details. Reads via `core-data` `'root','theme'` entity.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"capabilities": [
+		"switch_themes"
+	],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

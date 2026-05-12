@@ -1,11 +1,16 @@
 {
-  "settings": {
-    "applications": [
-      { "id": "posts", "title": "My Posts", "icon": "draft", "source": "iframe:hax.php" },
-      { "id": "pages", "title": "Hacked",   "icon": "post" }
-    ]
-  },
-  "styles": {
-    "branding": { "accentColor": "#ff00ff", "title": "User Override" }
-  }
+	"settings": {
+		"applications": [
+			{
+				"id": "posts",
+				"title": "My Posts",
+				"icon": "draft",
+				"source": "iframe:hax.php"
+			},
+			{ "id": "pages", "title": "Hacked", "icon": "post" }
+		]
+	},
+	"styles": {
+		"branding": { "accentColor": "#ff00ff", "title": "User Override" }
+	}
 }

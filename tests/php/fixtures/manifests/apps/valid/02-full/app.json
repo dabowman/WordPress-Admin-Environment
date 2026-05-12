@@ -1,0 +1,18 @@
+{
+	"id": "core:test-full-app",
+	"version": 1,
+	"title": "Test Full App",
+	"description": "Exercises optional fields.",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true,
+		"core:block-navigation-on-dirty": true,
+		"core:modal": false
+	},
+	"capabilities": [ "edit_posts" ],
+	"config-schema": {
+		"type": "object"
+	},
+	"script": "test-full-app",
+	"style": "test-full-app"
+}

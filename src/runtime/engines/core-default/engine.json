@@ -1,0 +1,162 @@
+{
+	"$schema": "../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:default",
+	"version": 1,
+	"title": "Default",
+	"description": "Default WP Admin Shell engine. Mirrors the site-editor visual idiom: dark chrome with elevated cards. Ships templates for sidebar, topbar (with start/center/end child regions), main, detail, and overlay; applies a dark chrome background and floats main + detail as elevated white cards.",
+
+	"designSystem": "@wordpress/ui",
+
+	"specializes-roles": [
+		"navigation",
+		"banner",
+		"main",
+		"complementary",
+		"dialog",
+		"contentinfo"
+	],
+
+	"honored-platform": [
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty",
+		"core:trigger"
+	],
+
+	"templates": {
+		"core:sidebar": {
+			"role": "navigation",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"flex-shrink": "0",
+				"inline-size": "var(--wp-admin-shell--chrome--sidebar--width, 280px)",
+				"block-size": "100%",
+				"overflow-y": "auto",
+				"overflow-x": "hidden",
+				"background": "var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
+				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))",
+				"padding-block": "var(--wp-admin-shell--chrome--sidebar--padding-block, var(--wpds-dimension-padding-md))",
+				"padding-inline": "var(--wp-admin-shell--chrome--sidebar--padding-inline, var(--wpds-dimension-padding-md))"
+			}
+		},
+
+		"core:topbar": {
+			"role": "banner",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"display": "flex",
+				"align-items": "center",
+				"flex-shrink": "0",
+				"inline-size": "100%",
+				"background": "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong))",
+				"color": "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
+				"border-block-end": "1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
+				"padding-block": "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm))",
+				"padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
+			},
+			"regions": {
+				"start": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"center": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"end": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center",
+						"margin-inline-start": "auto"
+					}
+				}
+			}
+		},
+
+		"core:main": {
+			"role": "main",
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"flex": "1",
+				"min-inline-size": "0",
+				"overflow-y": "auto",
+				"overflow-x": "hidden",
+				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
+				"border-radius": "var(--wpds-border-radius-lg)",
+				"box-shadow": "var(--wpds-elevation-sm)",
+				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+			}
+		},
+
+		"core:detail": {
+			"role": "complementary",
+			"platform": { "core:dismiss-on": [ "Escape" ] },
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"inline-size": "min(720px, 50%)",
+				"min-inline-size": "320px",
+				"block-size": "100%",
+				"overflow-y": "auto",
+				"overflow-x": "hidden",
+				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
+				"border-radius": "var(--wpds-border-radius-lg)",
+				"box-shadow": "var(--wpds-elevation-sm)",
+				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+			}
+		},
+
+		"core:overlay": {
+			"role": "dialog",
+			"platform": {
+				"core:modal": true,
+				"core:dismiss-on": [ "Escape", "backdrop-click" ]
+			},
+			"default-style": {
+				"inline-size": "min(600px, 90vw)",
+				"max-block-size": "70vh",
+				"position": "fixed",
+				"inset-block-start": "20vh",
+				"inset-inline-start": "50%",
+				"translate": "-50% 0"
+			}
+		}
+	},
+
+	"default-arrangement": "wp-chrome",
+
+	"script": "wp-admin-shell",
+	"style": "wp-admin-shell",
+
+	"styles": [
+		{
+			"handle": "wp-admin-shell-wpds-tokens",
+			"src": "build/wpds-tokens.css"
+		},
+		{
+			"handle": "wp-admin-shell-dataviews",
+			"src": "build/dataviews.css",
+			"deps": [ "wp-components" ]
+		}
+	],
+
+	"default-styles": {
+		"theme": {
+			"density": "default"
+		}
+	}
+}

@@ -1,0 +1,7 @@
+{
+	"id": "core:test-minimal-app",
+	"version": 1,
+	"title": "Test Minimal App",
+	"role": "main",
+	"script": "test-minimal-app"
+}

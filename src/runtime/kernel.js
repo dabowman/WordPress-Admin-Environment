@@ -4,13 +4,49 @@ import { createRegistry } from './registry/createRegistry';
 import { registerBuiltins } from './registry/builtins';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
-import { SlotFillProvider } from './slots/Slot';
-import { ensureSelectionStore } from './selection/store';
-import { bootstrapSelections } from './selection/persist';
-import { injectTokens } from './styles/emitTokens';
-import { resolveDensity, applyDensity } from './styles/density';
+import { SlotFillProvider } from '@wordpress/components';
+import { ThemeProviderHost } from './styles/ThemeProviderHost';
+import { resolveDensity } from './styles/density';
 import { userCan } from './capabilities/userCan';
 import { attachShellSwitcherToWindow } from './shell-switching';
+import { getEngine as getEngineManifest } from './manifests';
+import { resolveRegion } from './regions/resolveRegion.mjs';
+import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
+import { NavigationGuard } from './dirty-state/NavigationGuard';
+import { BindingsConsumer } from './bindings/BindingsConsumer';
+
+/**
+ * Deep-merge plain-object trees with `over` winning on overlapping keys.
+ * Used to fold engine `default-styles` UNDER admin.json `styles` when
+ * the kernel is mounted with raw config (tests, Storybook). The PHP
+ * resolver normally does this server-side; the JS path is defensive.
+ *
+ * Arrays are replaced wholesale (no positional merge) — matches the
+ * PHP merge's behavior for indexed arrays.
+ * @param {*} over
+ * @param {*} under
+ */
+function deepMergeUnder( over, under ) {
+	if ( under === null || under === undefined ) {
+		return over;
+	}
+	if ( over === null || over === undefined ) {
+		return under;
+	}
+	if (
+		typeof over !== 'object' ||
+		typeof under !== 'object' ||
+		Array.isArray( over ) ||
+		Array.isArray( under )
+	) {
+		return over;
+	}
+	const out = { ...under };
+	for ( const [ key, value ] of Object.entries( over ) ) {
+		out[ key ] = deepMergeUnder( value, under[ key ] );
+	}
+	return out;
+}
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -28,6 +64,7 @@ import { attachShellSwitcherToWindow } from './shell-switching';
  * bypasses PHP, restore it.
  *
  * Returns a React element that the entry script renders into the DOM.
+ * @param {*} config
  */
 export function kernel( config ) {
 	if ( ! config ) {
@@ -41,64 +78,119 @@ export function kernel( config ) {
 	const registry = createRegistry();
 	registerBuiltins( registry );
 
-	// Token emission (§4.3.2): write `<style id="wp-admin-shell-tokens">`
-	// with the WPDS surface, chrome extensions, compat bridge, and any
-	// per-region/per-app scoped overrides. Density is an attribute, not
-	// a CSS variable — applied to #wp-admin-shell directly.
-	injectTokens( config.styles || {} );
-	if ( typeof document !== 'undefined' ) {
-		const root = document.getElementById( 'wp-admin-shell' );
-		applyDensity( root, resolveDensity( config.styles || {} ) );
-	}
+	// Token cascade: `<ThemeProviderHost>` mounts the active engine's
+	// `ThemeProvider` (or the WPDS-backed default when the engine
+	// declines to ship one), wraps children in a scoped
+	// `<div data-wpds-theme-provider-id>`, and emits tier-3 slot
+	// overrides + chrome → WPDS bridge + region/app scoped overrides as
+	// a sibling `<style>` block. Engines pluggable here; kernel agnostic.
+	const shellTokens =
+		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {};
 
-	ensureSelectionStore();
-	// Fire-and-forget; UI never blocks on persisted-selection hydration.
-	bootstrapSelections();
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
-	const engineId =
-		config.settings?.shell?.layoutEngine || 'core:site-editor-layout';
+	const engineId = config.engine || 'core:default';
 	const engineSource = registry.get( engineId, 'engine' );
+
+	// Engine `default-styles` deep-merged UNDER admin.json `styles`.
+	// PHP resolver already does this in `WP_Admin_Shell_Resolver::engine_origin`,
+	// so the kernel is normally a no-op. Defensive: covers tests and
+	// Storybook stories that mount the kernel with raw fixture config
+	// bypassing the PHP resolver.
+	const engineManifest = getEngineManifest( engineId );
+	const engineDefaults =
+		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
+	const shellStyles = engineDefaults
+		? deepMergeUnder( config.styles || {}, engineDefaults )
+		: config.styles || {};
+	const density = resolveDensity( shellStyles );
 
 	if ( ! engineSource ) {
 		return (
 			<div style={ { padding: 32 } }>
-				{ __( 'Unknown layout engine: ', 'wp-admin-shell' ) }
+				{ __( 'Unknown layout engine:', 'wp-admin-shell' ) }
 				{ engineId }
 			</div>
 		);
 	}
 
-	const regionsMap = config.settings?.regions || {};
+	// Regions may declare `template` referencing a shape shipped by the
+	// active engine's manifest. `resolveRegion` merges defaults (role,
+	// platform, default-style, nested children) with per-region
+	// overrides and recurses into nested children. `app` xor
+	// `routing.route-key` is enforced post-merge: violations log a
+	// `console.warn`; sanitization drops `app` so URL routing wins.
+	const regionsMap = config.regions || {};
 	const regions = {};
-	const regionSources = {};
+	const honoredServices = new Set(
+		Array.isArray( engineManifest?.[ 'honored-platform' ] )
+			? engineManifest[ 'honored-platform' ]
+			: []
+	);
+	const unhonoredWarned = new Set();
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
-		// user lacks capability for is dropped before its source is
-		// looked up, so contains[] never evaluates.
-		if ( regionInstance.capability && ! userCan( regionInstance.capability ) ) {
+		// user lacks capability for is dropped before mounting, so
+		// contains[] never evaluates.
+		if (
+			regionInstance.capability &&
+			! userCan( regionInstance.capability )
+		) {
 			return;
 		}
-		const sourceDef = registry.get( regionInstance.source, 'region' );
-		if ( ! sourceDef ) {
-			return;
+		const resolved = resolveRegion( regionInstance, engineManifest );
+		const decorated = { id, ...resolved };
+		const violations = validateRegion( decorated, id );
+		if ( violations.length && typeof console !== 'undefined' ) {
+			for ( const v of violations ) {
+				// eslint-disable-next-line no-console
+				console.warn( `[wp-admin-shell] ${ v.message }` );
+			}
 		}
-		regions[ id ] = { id, ...regionInstance };
-		regionSources[ regionInstance.source ] = sourceDef;
+		// Dev-mode: warn once per service when a region declares a
+		// platform service the active engine doesn't list in
+		// `honored-platform`. Unhonored requests still mount silently,
+		// they just no-op — author may have a typo or be targeting a
+		// future engine.
+		if (
+			process.env?.NODE_ENV !== 'production' &&
+			decorated.platform &&
+			typeof decorated.platform === 'object'
+		) {
+			for ( const serviceName of Object.keys( decorated.platform ) ) {
+				if (
+					! honoredServices.has( serviceName ) &&
+					! unhonoredWarned.has( serviceName )
+				) {
+					unhonoredWarned.add( serviceName );
+					// eslint-disable-next-line no-console
+					console.warn(
+						`[wp-admin-shell] platform service "${ serviceName }" requested by region "${ id }" but engine "${ engineId }" does not list it in honored-platform. Request is a no-op.`
+					);
+				}
+			}
+		}
+		regions[ id ] = sanitizeRegion( decorated );
 	} );
 
 	const Engine = engineSource.Component;
 
 	return (
-		<KernelProvider value={ { registry, config } }>
+		<KernelProvider value={ { registry, config, engineSource } }>
 			<SlotFillProvider>
-				<RouterProvider>
-					<Engine
-						config={ config }
-						regions={ regions }
-						regionSources={ regionSources }
-					/>
+				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
+					<ThemeProviderHost
+						engineSource={ engineSource }
+						isRoot
+						styles={ shellStyles }
+						tokens={ shellTokens }
+						density={ density }
+					>
+						<NavigationGuard />
+						<BindingsConsumer />
+						<Engine config={ config } regions={ regions } />
+					</ThemeProviderHost>
 				</RouterProvider>
 			</SlotFillProvider>
 		</KernelProvider>

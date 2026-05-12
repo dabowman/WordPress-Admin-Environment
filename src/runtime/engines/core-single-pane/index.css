@@ -1,0 +1,95 @@
+/* core:single-pane engine — engine-internal layout infrastructure only.
+ *
+ * Region-level styling (background/color/padding/border for the main /
+ * detail / dialog regions) lives in engine.json template `default-style`
+ * blocks so admin.json regions can override via `regions[id].style`.
+ *
+ * The `__appbar`, `__body`, `__nav-drawer`, `__nav-pane`, `__nav-toggle`,
+ * and `__nav-backdrop` classes are engine wrappers (NOT regions). They
+ * render around regions for the appbar / hamburger drawer chrome, so
+ * their visual styling stays here — there is no template hook for them.
+ * The hamburger row, drawer pane, and backdrop pull their colors from
+ * the chrome → WPDS bridge so admin.json `styles.chrome.toolbar.*`
+ * / `styles.chrome.sidebar.*` overrides still flow through.
+ */
+
+.wp-admin-shell-layout--single-pane {
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__appbar {
+	display: flex;
+	align-items: center;
+	gap: var(--wpds-dimension-gap-sm);
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
+	background: var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong));
+	color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
+	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle {
+	background: transparent;
+	color: inherit;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 20px;
+	line-height: 1;
+	padding: 6px 10px;
+	flex-shrink: 0;
+}
+
+.wp-admin-shell-single-pane__nav-toggle:hover,
+.wp-admin-shell-single-pane__nav-toggle:focus-visible {
+	background: var(--wpds-color-bg-interactive-neutral-weak-active);
+	outline: none;
+}
+
+.wp-admin-shell-single-pane__body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-single-pane__nav-drawer {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open {
+	pointer-events: auto;
+	visibility: visible;
+}
+
+.wp-admin-shell-single-pane__nav-backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	opacity: 0;
+	transition: opacity 0.16s ease;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-backdrop {
+	opacity: 1;
+}
+
+.wp-admin-shell-single-pane__nav-pane {
+	position: relative;
+	height: 100%;
+	width: min(320px, 85vw);
+	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
+	transform: translateX(-100%);
+	transition: transform 0.16s ease;
+	overflow: auto;
+}
+
+.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-pane {
+	transform: translateX(0);
+}

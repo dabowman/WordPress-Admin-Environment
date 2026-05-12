@@ -6,17 +6,21 @@
  * references through `get()` (kind-checked) or the looser `find()`.
  */
 
-const VALID_KINDS = new Set( [ 'app', 'region', 'engine' ] );
+const VALID_KINDS = new Set( [ 'app', 'engine' ] );
 
 export function createRegistry() {
 	const sources = new Map();
 
 	function register( source ) {
 		if ( ! source || typeof source !== 'object' ) {
-			throw new Error( 'createRegistry: register() requires a source object' );
+			throw new Error(
+				'createRegistry: register() requires a source object'
+			);
 		}
 		if ( ! source.id || typeof source.id !== 'string' ) {
-			throw new Error( 'createRegistry: source.id must be a non-empty string' );
+			throw new Error(
+				'createRegistry: source.id must be a non-empty string'
+			);
 		}
 		if ( ! VALID_KINDS.has( source.kind ) ) {
 			throw new Error(
@@ -26,6 +30,15 @@ export function createRegistry() {
 		if ( sources.has( source.id ) ) {
 			throw new Error(
 				`createRegistry: duplicate source id "${ source.id }"`
+			);
+		}
+		if (
+			source.kind === 'engine' &&
+			source.ThemeProvider !== undefined &&
+			typeof source.ThemeProvider !== 'function'
+		) {
+			throw new Error(
+				`createRegistry: engine "${ source.id }" ThemeProvider must be a React component`
 			);
 		}
 		sources.set( source.id, source );

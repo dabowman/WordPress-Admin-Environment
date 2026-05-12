@@ -14,6 +14,7 @@ import apiFetch from '@wordpress/api-fetch';
  *
  * For caps the runtime can't pre-compute (plugin-driven, dynamic, etc.),
  * use `checkCan(cap)` async — it goes through /wp-admin-shell/v1/can/{cap}.
+ * @param {*} capability
  */
 export function userCan( capability ) {
 	if ( ! capability || typeof capability !== 'string' ) {
@@ -35,14 +36,19 @@ export async function checkCan( capability ) {
 	if ( cache.has( capability ) ) {
 		return cache.get( capability );
 	}
-	if ( window.wpAdminShell?.capabilities && capability in window.wpAdminShell.capabilities ) {
+	if (
+		window.wpAdminShell?.capabilities &&
+		capability in window.wpAdminShell.capabilities
+	) {
 		const result = !! window.wpAdminShell.capabilities[ capability ];
 		cache.set( capability, result );
 		return result;
 	}
 	try {
 		const response = await apiFetch( {
-			path: `/wp-admin-shell/v1/can/${ encodeURIComponent( capability ) }`,
+			path: `/wp-admin-shell/v1/can/${ encodeURIComponent(
+				capability
+			) }`,
 		} );
 		const allowed = !! response?.can;
 		cache.set( capability, allowed );

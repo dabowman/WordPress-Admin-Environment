@@ -1,0 +1,17 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:comments",
+	"version": 1,
+	"title": "Comments",
+	"description": "DataViews comment moderation: approve / spam / trash via partial saveEntityRecord.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"capabilities": [
+		"moderate_comments"
+	],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

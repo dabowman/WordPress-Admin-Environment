@@ -52,10 +52,26 @@ class WP_Admin_Shell_Cache {
 
 	public static function flush() {
 		wp_cache_flush_group( self::GROUP );
-		// Transients are scoped per-request; full flush is impractical
-		// (no native API for "delete all transients matching prefix").
-		// Hash-based keys self-invalidate when their inputs change, so
-		// stale transients age out via TTL. Leave them.
+		self::flush_transients();
+	}
+
+	/**
+	 * Delete every transient this cache layer owns. The hash-based key
+	 * scheme normally lets stale transients age out via TTL when their
+	 * inputs change, but tests + admin-side cache-flush actions need an
+	 * explicit purge so cache-shape changes (e.g. v1 → v2 admin.json
+	 * shape transitions) take effect immediately on the next read.
+	 */
+	public static function flush_transients() {
+		global $wpdb;
+		if ( ! isset( $wpdb ) ) {
+			return;
+		}
+		$opt_like      = $wpdb->esc_like( '_transient_' . self::TRANSIENT_BASE ) . '%';
+		$timeout_like  = $wpdb->esc_like( '_transient_timeout_' . self::TRANSIENT_BASE ) . '%';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $opt_like, $timeout_like ) );
+		// phpcs:enable
 	}
 
 	/**

@@ -1,0 +1,23 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:taxonomy",
+	"version": 1,
+	"title": "Taxonomy",
+	"description": "DataViews term manager for any taxonomy. `config.taxonomy` selects which taxonomy to manage; defaults to `category`.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"taxonomy": {
+				"type": "string",
+				"default": "category"
+			},
+			"title": {
+				"type": "string"
+			}
+		},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

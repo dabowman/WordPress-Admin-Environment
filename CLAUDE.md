@@ -4,39 +4,48 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 ## Status
 
-**v1.0.0-beta.1 shipping on `feat/wp-admin-shell-v1`.** All five planned milestones (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship) landed; the open-issue review pass is in flight before merge to `main`. Master design spec at `docs/wp-admin-shell-design-spec.md` is authoritative; per-milestone implementation lives in `docs/wp-admin-shell-v1-plan.md`. Detailed change list in `CHANGELOG.md`.
+- **v1.0.0-beta.1** tagged at `df5fcb5` on `main` (PR #32). v1 milestones M1–M5 landed.
+- **v2.0.0-beta.1** tagged at `8b98093` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done met. Post-tag spec-§15 polish (bindings runtime, six orphan apps registered, `wp_admin_shell_register_template`, `wp_admin_shell_register_shell`, schema-hosting note, spec §9.1 worked-example test) lands on the branch ahead of the next beta cut. Native `@wordpress/edit-{post,site}` mount deferred to v2.x — see `SiteEditorApp.js` for blockers.
 
-**Architecture in one paragraph.** PHP `WP_Admin_Shell_Resolver` (in `includes/cascade/`) merges five admin.json origins (core / plugin / site / role / user) with restrict-only enforcement and `userCustomizable` filtering, hands the resolved tree to a JS kernel (`src/runtime/kernel.js`) that picks a layout engine + region sources from a registry, mounts apps inside regions via `MountedApp`, and emits `<style id="wp-admin-shell-tokens">` at `:root` from the styles tree. Capability gating is four-layer (region fast-path → app gate → source-cap floor → REST observation); navigation prunes recursively. Shell switching is option-write + page-reload (no UI surface in v1). Default install shell is `wp-admin-default` — every wp-admin screen rendered as an iframe gated by capability so each user role sees what wp-admin would surface natively.
+**v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:default` + `core:single-pane`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
 
-**Test surface.** `tests/php/run-cascade-tests.php` (22), `run-selection-tests.php` (5), `run-cap-tests.php` (54), all via `wp eval-file`. `tests/parity/wpds-snapshot.test.mjs` (4) via `node`. Browser-side perf + a11y manual passes tracked in `docs/v1-readiness.md` and `docs/v1-perf-baseline.md`; both must be re-run before tagging.
+**Pipeline (PHP → JS).** `WP_Admin_Shell_Resolver` merges six admin.json origins (core / engine / plugin / site / role / user) with restrict-only enforcement + `customizable` filtering (legacy `userCustomizable` read one cycle). The synthetic `engine` origin sits between `core` and `plugin` and carries the active engine manifest's `default-styles` block (Phase C); admin.json wins on every overlapping key. Resolved tree feeds `src/runtime/kernel.js` which picks engine from registry, renders regions through generic `<Region>` (→ `ModalRegion` | `PersistentRegion` from platform services), mounts apps via `MountedApp`, and wraps the tree in `<ThemeProviderHost engineSource isRoot>` so token overrides cascade through the DOM tree, not via global `:root` pollution. Capability gating is four layers: region fast-path → app gate → source-cap floor → REST observation; nav prunes recursively. Shell switching is option-write + reload. Default install shell `wp-admin-default` mirrors wp-admin via capability-gated iframe routes.
 
-**Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg` header). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without Gutenberg, the shell renders empty.
+**Theming model (4 tiers, DS-neutral kernel).** `src/runtime/styles/ThemeProviderHost.js` is the kernel's single seam to whatever ThemeProvider the active engine ships. Engines export an optional `ThemeProvider` field on their `EngineSource`; absent provider = host falls back to `WpdsThemeProvider` (`src/runtime/styles/WpdsThemeProvider.js`) which is core-default's contribution, NOT a kernel default. The fallback only fires because `WpdsThemeProvider` is imported by the bundled core engines today; a non-WPDS engine plugin replaces it wholesale. `WpdsThemeProvider` unlocks the real `@wordpress/theme.ThemeProvider` by piggybacking on `@wordpress/edit-site`'s allowlist entry (the package's `__dangerousOptInToUnstableAPIsOnlyForCoreModules` does string-match-only verification), then `unlock(wpTheme.privateApis).ThemeProvider`. Sites without Gutenberg + WPDS engines render empty (no fallback path — removed at v2.0.0-beta.2; the `Requires Plugins: gutenberg` header advertises the contract for the bundled WPDS engines specifically). The host wraps the inner provider in a render-error boundary; if a third-party engine's provider throws during render, the host swaps to `WpdsThemeProvider` and logs a console warning. **Engine-pluggable style compiler:** the engine source MAY ship a `compileStyles(styles, tokens) → {top, scoped, subtrees}` hook (`src/runtime/engines/core-default/compileStyles.mjs` for the WPDS-flavored compiler). The host calls it and emits the three buckets as a sibling `<style>` block scoped to a wrapper `<div data-wpds-theme-provider-id={id}>`. Engines omitting the hook get zero scoped overrides — provider owns all token plumbing directly. Author customization paths, in order of preference: (1) **seeds** under `styles.theme.{color.{primary,bg}, cursor.control, density}` — engine ThemeProvider's responsibility to interpret; (2) **nested seeds** under `styles.regions[id].theme` and `styles.applications[id].theme` — `<Region>` and `<MountedApp>` wrap content in nested `<ScopedThemeProvider>` reading the engine's provider from kernel context; (3) **direct slot overrides** under `styles.{color,border,dimension,elevation,font}` (top-level + per-region/app) — escape hatch the engine's `compileStyles` translates into provider-scoped CSS variables; (4) **DTCG `tokens.json` primitives** — independent of ThemeProvider, useful as named primitives consumable from any of the above via `{tokens.x.y}` aliases. Chrome extension layer (`--wp-admin-shell--chrome--*`) stays parallel for shell-only concepts WPDS doesn't cover (sidebar width, site-hub icon size, etc.) — bundled-engine-only concern, lives in core-default's compiler. Density resolves from `styles.theme.density` first, falls back to legacy `styles.density` for one cycle.
+
+**How tokens reach DOM.** Two paths (both engine-side now, not kernel): (a) **engine template `default-style`** — `core:default` engine emits values like `var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))` as **inline style** on each region's `<div>`. `resolveRegion.mjs` merges template `default-style` into `region.style`, and `Region.js`'s `toReactStyle` helper kebab→camelCases the keys and applies them as React `style={...}`. The two-arg `var()` chain means: chrome var wins when authored; falls back to WPDS slot when chrome layer is empty. (b) **engine `index.css` class rules** — `core:default/index.css` ships the chrome-anchor/svg/Stack-defensive overrides; non-WPDS engines ship none of these. Kernel `src/index.css` is ~10 lines: body positioning + a11y forbidden fallback structure only. **Inside WPDS-flavored app/engine code, don't hardcode hex colors** — use `var(--wpds-*)` directly so ThemeProvider seeds flow through. App-level CSS audited 2026-05-06; no remaining hardcoded hex colors in `src/apps/**/*.js` inline styles.
+
+**Test surface (587 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (98), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22). Node: `tests/schema/validate-shells.test.mjs` (61 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 26 bundled app manifests, both bundled engines, positive + negative fixtures including unnamespaced-platform-service), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (12 files, ~239 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
+
+**Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg`). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without it, shell renders empty.
 
 ## Before modifying code
 
-1. Load these skills (symlinked in `.claude/skills/`):
-   - `/wordpress-rest-api` — REST API endpoints, authentication, `_fields`/`_embed`, entity records
-   - `/wordpress-dataviews` — DataViews component for PostsApp: fields, views, actions, filtering
-   - `/gutenberg-contributor` — `@wordpress/*` package APIs, package boundaries, build tooling
-2. Read `docs/wp-admin-shell-design-spec.md` — **master design spec** (post-MVP architecture, regions+apps+layout-engines, 5-origin cascade w/ restrict-only overrides, three-tier design system w/ proposed `tokens.json` primitives layer aliased into both admin.json and theme.json, extension model). `$wpds` is **top-level** (resolved 2026-04-30); selection scopes are per-mount with opt-in `persist: true` (resolved 2026-04-30); `color.palette[]` is dropped from admin.json (resolved 2026-04-30).
-3. Read `docs/wp-admin-shell-v1-plan.md` — **v1 implementation plan** (M1–M5 milestones, source layout, ordered tasks, exit criteria, MVP code disposition table). Required reading before any v1 work.
-4. Skim `docs/archive/wp-admin-shell-mvp-spec.md` — archived MVP design spec (kept for historical reference; v1 architecture supersedes it)
-5. Read `docs/admin-json-schema.md` — original v0/flat schema reference (preserved for cascade resolver)
-6. Read `docs/admin-json-api-validation.md` — REST API coverage analysis per application source. The `core:settings` v1 scope split (REST-native panels vs iframe fallbacks) is bounded by this doc.
-7. Skim `docs/feedback.md` — running triage log (Inbox / Triaged / In progress / Done). Drop new bugs, feature requests, and to-dos into Inbox as they come up; promote items here before treating them as work.
-8. Consult `docs/screens/` — per-screen functional specs covering every wp-admin screen (site admin + network admin). 17-section template (Identity, Purpose, Capabilities, Data model, Layout, States, Actions, Filters, Forms, Routing, Inter-app nav, Notifications, A11y, Extension points, Mapping & gaps, Out of scope, Reference). `posts.md` is the canonical template. Source of truth when (re)building any `core:*` app or evaluating REST coverage. Each spec ends with a "Gaps" section enumerating the actionable rebuild tickets for the screen.
+1. Load skills (symlinked in `.claude/skills/`): `/wordpress-rest-api`, `/wordpress-dataviews`, `/gutenberg-contributor`.
+2. Read `docs/wp-admin-shell-design-spec.md` — **master spec** (2026-05-01, URL-routing refined 2026-05-04). Authoritative. When prose and schema disagree, schema wins.
+3. Read the three v2 schemas: `docs/schemas/admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json` (JSON Schema 2020-12, fully inline-documented). Canonical `$id`s point at `schemas.wp.org/admin/v1.json` etc.; see `docs/v2-readiness.md` "Schema hosting" for the beta-cycle raw-GitHub URL.
+4. Read `docs/plans/wp-admin-shell-v2-migration-directive.md` — active v2 plan (V2.M1 manifests → M2 region vocab → M3 routing → M4 selection-bus + slot removal + app manifests → M5 second engine + tokens.json + ship).
+5. Read `docs/post-editor-sketch.md` — worked example decomposing post editor into v2; surfaces `dirty-state` + `block-navigation-on-dirty` platform services.
+6. Read `docs/research/schema-exercise-findings.md` — what schema can't validate, runtime must.
+7. Read `docs/admin-json-api-validation.md` — REST API coverage per app source.
+8. Consult `docs/screens/` — 42 tier-2 functional specs covering every wp-admin screen. Source of truth when (re)building any `core:*` app. Gaps section = REST rebuild tickets.
+9. Read `docs/research/app-validation-2026-05-04.md` — WPDS / REST / core-data audit of every `src/apps/*` (chrome + content apps; the V2.M5 `src/runtime/apps/` directory was consolidated into `src/apps/`). Remediation merged at `a29a32e`. Captures destructive-button fallback, DataViews `/wp` import path, WPDS 0.12 gaps (no `tone="critical"`, no `variant="ghost"`, no `Text weight/size/color`, no SnackbarList port).
+10. Skim `docs/feedback.md` — Inbox/Triaged/In-progress/Done triage log. Per directive §2 #4: don't fix items proactively during migration — clean migration first, triage on v2 baseline second.
+11. Archived for reference (skim only when needed): `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`, `docs/archive/wp-admin-shell-v1-plan.md`, `docs/schemas/admin-v1.json`, `docs/admin-json-schema.md` (v0 flat).
 
 ## Key rules
 
-- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles with no extra config. Fall back to `@wordpress/components` for primitives `@wordpress/ui` doesn't ship yet: `RadioControl`, `CheckboxControl`, `SelectControl` (also needed for native `<optgroup>` support), `Spinner`, `Divider` as of `0.12.0`. No custom component libraries.
+- **Kernel is DS-neutral.** No `--wpds-*` token, no `@wordpress/ui` import, no `@wordpress/icons` import, no chrome class name (`.wp-admin-shell-nav`, `.wp-admin-shell-toolbar`, etc.) appears in kernel code (`src/runtime/*` outside `src/runtime/engines/`). The kernel owns: cascade resolver, routing, capability gating, region rendering primitive, ThemeProviderHost seam, bindings, dirty-state, icon **registry** (engines populate). Anything DS-specific lives inside an engine. **Test before adding kernel code: would a hypothetical Material Design engine plugin loading alongside this plugin still work?** If your change tightens the kernel to WPDS, it goes in `src/runtime/engines/core-default/` instead. See spec §3 + §4.2 + §13.1.
+- **WPDS components: prefer `@wordpress/ui` (next-gen WPDS) over `@wordpress/components` whenever an equivalent exists.** Both are part of WPDS — `@wordpress/ui` is built on Base UI + the WPDS token system (`--wpds-*` CSS variables) and is in `@wordpress/dependency-extraction-webpack-plugin`'s `BUNDLED_PACKAGES`, so it bundles with no extra config. Fall back to `@wordpress/components` as of `0.12.0` for: `RadioControl`, `CheckboxControl`, `SelectControl` (also needed for native `<optgroup>` support), `Spinner`, `Divider` (`__experimentalDivider`), `TextareaControl`, `Modal`, `Item`/`ItemGroup`, `__experimentalGrid`, `FormToggle`, `KeyboardShortcuts`, and `Button as DestructiveButton` w/ `isDestructive` (no critical tone in WPDS 0.12). No custom component libraries.
 - **Gutenberg plugin is a hard runtime dependency.** Any `@wordpress/ui` overlay component (`Notice`, `Tooltip`, `Popover`, `Dialog`, `AlertDialog`, `Drawer`, `IconButton`, form `Select`/`Autocomplete`) transitively imports `@wordpress/theme`, which calls `__dangerousOptInToUnstableAPIsOnlyForCoreModules` against `wp.privateApis`. WP 6.9 core's allowlist excludes `@wordpress/theme`/`@wordpress/ui`/`@wordpress/dataviews`; the Gutenberg plugin overrides `wp-private-apis` with one that includes them. Without Gutenberg, those modules throw at load and the shell renders empty. Local dev: `gutenberg` is in `.wp-env.json`'s `plugins` array. Production: declare a `Requires Plugins: gutenberg` header (or detect-and-conditionally-render) before shipping.
-- Component-mapping cheat sheet (use `@wordpress/ui` left side when available):
-  - `Button` (`tone`, `variant`, `size`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `isBusy` → `loading`).
-  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — onChange takes a DOM event, not the raw value.
-  - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`) replaces `__experimentalVStack` / `__experimentalHStack`.
-  - `Text` (`variant="heading-xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`.
-  - `Notice.Root` (`intent="info|warning|success|error|neutral"`) + `Notice.Description` + `Notice.Actions` + `Notice.CloseIcon` replaces `Notice`.
-  - Other namespaced replacements when needed: `Card.*`, `Dialog.*`, `Drawer.*`, `Tabs.*`, `Tooltip.*`, `Popover.*`, `EmptyState.*`, `Collapsible.*`.
+- Component-mapping cheat sheet (use `@wordpress/ui` left side when available; verified against `@wordpress/ui` 0.12.0 source):
+  - `Button` (`tone="brand|neutral"`, `variant="solid|outline|minimal|unstyled"`, `size="default|compact|small"`, `loading`) replaces `@wordpress/components` `Button` (`variant="primary"` → `tone="brand" variant="solid"`; `variant="secondary"` → `tone="neutral" variant="solid"`; `variant="tertiary"` → `tone="neutral" variant="outline"`; `variant="link"` → `variant="minimal"`; `isBusy` → `loading`). **No `tone="critical"` and no `variant="ghost"` in 0.12** — for destructive actions keep legacy `Button as DestructiveButton` w/ `isDestructive`. **No `icon`/`label`/`showTooltip` props** — render `<Icon/>` as a child + `aria-label`, or use `IconButton` (has `tooltip`/`shortcut`).
+  - `InputControl` (`label`, `description`, `value`, `onChange(e)`) replaces `TextControl` — onChange takes a DOM event, not the raw value (`e.target.value`).
+  - `Stack` (`direction`, `gap="xs|sm|md|lg|xl|2xl|3xl"`, `align`, `justify`, `wrap` — CSS string `"wrap"`, not boolean) replaces `__experimentalVStack` / `__experimentalHStack`. `spacing={N}` legacy prop maps to `gap` token names; `flex` style props map to `align`/`justify` (CSS values, not legacy `alignment`).
+  - `Text` (`variant="heading-2xl|xl|lg|md|sm|body-xl|lg|md|sm"`, `render={ <h2/> }` to set the tag) replaces `__experimentalHeading` and `__experimentalText`. **No `weight`/`size`/`color` props** — use `<strong>` child or className for emphasis/muted.
+  - `Notice.Root` (`intent="info|warning|success|error|neutral"`) + `Notice.Description` + `Notice.Actions` + `Notice.CloseIcon` replaces `Notice`. No `NoticeList` aggregator — render `notices.map(<Notice.Root/>)`. `SnackbarList` has no WPDS port; keep legacy.
+  - `Badge` w/ `intent="success|warning|error|neutral"` replaces hand-rolled status pills.
+  - Other namespaced replacements when needed: `Card.*` (Root/Header/Title/Content), `Dialog.*`, `Drawer.*`, `Tabs.*`, `Tooltip.*`, `Popover.*`, `EmptyState.*`, `Collapsible.*`. `Modal` from `@wordpress/components` has no clean Dialog port for complex modals — keep legacy where migration would be risky.
 - All data fetching uses `@wordpress/core-data` (`useEntityRecords`, `useEntityRecord`). No raw `fetch()`.
 - Exception: `@wordpress/api-fetch` is used for non-entity operations (media upload, auto-draft creation).
 - Always pass `context: 'edit'` on entity queries that need raw field values. Without it, `view` context is used and `title`/`content`/`excerpt` return only `rendered`, not `raw` — edits silently break.
@@ -59,9 +68,45 @@ These three patterns drive most of the bugs caught in code review. Codified here
   ```
   `useEntityRecords` (plural) returns `{ records: null }` similarly — always check before iterating.
 
-- **Refresh state after mutations.** When you `deleteEntityRecord` / `saveEntityRecord` outside `useEntityRecord`'s built-in `save()`, the local `useEntityRecords` cache may not invalidate. Use `useDispatch( coreStore ).invalidateResolution()` or rely on `core-data`'s entity store to propagate. If you're maintaining shadow state (`useState` mirroring an entity field), reset it whenever the entity record updates.
+- **Refresh state after mutations.** When you `deleteEntityRecord` / `saveEntityRecord` outside `useEntityRecord`'s built-in `save()`, the local `useEntityRecords` cache may not invalidate. Pattern:
+  ```jsx
+  import { useDispatch } from '@wordpress/data';
+  import { store as coreStore } from '@wordpress/core-data';
+  const { invalidateResolution } = useDispatch( coreStore );
+  // After delete/save:
+  invalidateResolution( 'getEntityRecords', [ 'root', 'media', queryArgs ] );
+  ```
+  If you're maintaining shadow state (`useState` mirroring an entity field), reset it whenever the entity record updates. For modals that mutate one-of-many records, also pass `key={item.id}` so per-item state resets between openings.
 
-- **Icon names go through `iconMap`.** Strings like `"post"`, `"page"`, `"comment"` resolve via `src/runtime/config/iconMap.js`. `resolveIcon` falls back to the `wordpress` icon and emits a dev-mode console warning on misses (M5 #14). When adding a new icon name, add the mapping to `iconMap.js` first; the warn-on-miss surfaces typos in browser console without a dedicated lint pass.
+- **Icon names go through the kernel icon registry.** `src/runtime/config/iconMap.js` is a DS-neutral registry exposing `registerIcons(table, {fallback})` and `resolveIcon(name)`. The active engine populates it at module load — `core:default` ships the @wordpress/icons table in `src/runtime/engines/core-default/icons.js` and calls `registerIcons(iconTable, {fallback: fallbackIcon})` from its `index.js`. App-side imports unchanged: `import { resolveIcon } from '../../runtime/config/iconMap'`. `resolveIcon` falls back to the engine-registered fallback and dev-warns once per unknown name. Adding a new icon: edit the engine's `icons.js` (or whichever engine you're authoring), not the kernel registry.
+
+- **DataViews import path.** Use `import { DataViews } from '@wordpress/dataviews/wp';` — NOT bare `'@wordpress/dataviews'`. The bare path risks `Minified React error #130` in plugin contexts. Affected: PostsApp, TaxonomyApp, UsersApp, CommentsApp, PluginsApp.
+
+- **Site title source-of-truth.** Read site title via `useEntityRecord('root','site').record.title` (with `decodeEntities` from `@wordpress/html-entities`). Fall back to `window.wpAdminShell?.siteName` only as last resort.
+
+- **Self-delete guard on bulk user delete.** Filter out the acting user (`window.wpAdminShell?.userId`) before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight.
+
+- **`@wordpress/components` Item renders `<button>` when `onClick` is defined.** `build-module/item-group/item/hook.mjs` does `as = onClick !== undefined ? 'button' : 'div'` — the `href` prop is silently dropped. `SidebarNavigationItem` forces `as="a"` when href is set so anchor-style navigation (browser-native click, middle-click new tab, right-click "Copy link") works. Same trap exists for any `Item`-based nav: pass `as="a"` explicitly when href is the primary action.
+
+- **`@wordpress/ui` layered CSS gotcha.** Component CSS is injected at module-load via `document.head.appendChild`, wrapped in `@layer wp-ui-utilities, wp-ui-components, wp-ui-compositions, wp-ui-overrides`. Per the cascade-layer spec, **unlayered rules win against any layered rule regardless of specificity** — and WP-admin loads many unlayered stylesheets (common.css, forms.css, dashboard.css, theme resets) that can stomp `@wordpress/ui` defaults.
+  - **Theme `@wordpress/ui` by overriding the WPDS tokens it consumes, NOT by overriding rendered colors per component.** The shell does this via the chrome → WPDS bridge in `src/runtime/engines/core-default/compileStyles.mjs` (`CHROME_WPDS_BINDINGS`): each chrome surface (sidebar / toolbar / site-hub) maps `chrome.<surface>.<slot>` → a `--wpds-*` interactive token, scoped under the surface's container class (`.wp-admin-shell-nav, .wp-admin-shell-site-hub` etc.). `@wordpress/ui` Buttons / IconButtons / Stacks inside the scope inherit the chrome palette automatically. **Do not** add `.wp-admin-shell-*-button { color: ... }` rules — extend the bindings table instead. This compiler is engine-private; a non-WPDS engine ships its own.
+  - When a layered rule like `Stack`'s `display: flex` gets stomped, the component falls back to `display: block` and children flow vertically regardless of the inline `flex-direction: row` style. `core:default/index.css` ships a defensive unlayered rule: `.wp-admin-shell [class*="__stack"] { display: flex }`. Do not remove it without first verifying the cascade layer applies in every shell DOM context (especially inside `<button>` content models). The rule moved out of kernel `src/index.css` because it's `@wordpress/ui`-specific.
+  - Pass explicit `align="center"` to `<Stack direction="row">` calls that contain icon + text. The browser default `align-items: stretch` can render SVGs at unexpected heights inside flex containers.
+  - **`href` on `@wordpress/ui` Button / IconButton requires `render={<a href={...}/>}`.** Both wrap `@base-ui/react` Button which always renders a native `<button>` and silently drops `href` — clicks don't navigate. Use the `render` prop to swap the underlying element. Add `target` / `rel` to the `<a>` directly.
+  - **Anchor-rendered chrome buttons need an unlayered color override.** WP-admin's `colors/<scheme>/colors.css` ships an unlayered `a { color: var(--wp-admin-theme-color) }` rule. `@wordpress/ui` Button's color is layered (`@layer wp-ui-components`) and loses. `core:default/index.css` ships scoped anchor color rules (`.wp-admin-shell-region--{sidebar,toolbar} a, .wp-admin-shell-site-hub a { color: var(--wpds-color-fg-interactive-neutral) }`) for the same scopes the chrome → WPDS bridge populates. Symmetric `:hover/:focus/:active → -active` rules cover state transitions. These moved out of kernel `src/index.css` to keep kernel DS-neutral.
+  - **`@wordpress/icons` SVGs need `fill: currentColor` forced.** `@wordpress/icons` Icon clones the SVG and sets `width`/`height` but does NOT add `fill="currentColor"` (`@wordpress/ui`'s Icon does). Library SVGs (e.g. `wordpress`) have no `fill` attribute → browser default black. `core:default/index.css` ships `.wp-admin-shell-region--{sidebar,toolbar} svg, .wp-admin-shell-site-hub svg { fill: currentColor }` to unify behavior.
+  - **Ellipsis-in-flex pattern for `@wordpress/ui` Button text content.** `@wordpress/ui` Button is `inline-flex` by default. To make the text truncate inside a constrained flex parent (e.g. the site-hub title): the Button's wrapper div needs `display: flex; min-width: 0;` AND the Button needs `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap`. The wrapper's `min-width: 0` overrides the default flex-item `min-width: auto`; the wrapper's `display: flex` is what makes the Button's `flex-grow: 1` actually stretch.
+  - Custom CSS that targets `@wordpress/ui`-rendered DOM should NOT use the legacy `.components-button` / `.components-item` chains (those are `@wordpress/components` classes that don't appear on `@wordpress/ui` output). Use the `wp-admin-shell-*` class alone, or the `button` element selector inside a chrome wrapper. When the rendering can be either `<button>` or `<a>` (e.g. via `render` prop), use `:is(button, a)`.
+
+- **DataViews uses `@wordpress/dataviews/wp` plus a CSS copy.** Webpack copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`; PHP enqueues `dataviews.css` separately. The `/wp` subpath is the runtime-private export that registers DataViews against `wp.privateApis` correctly.
+
+- **Apps don't add their own ARIA landmark element.** Region wrappers already render `<div role={region.role}>` (e.g. `core:sidebar` declares `role: "navigation"` in `engine.json`). An app component nesting its own `<nav>`, `<main>`, `<aside>`, etc. inside doubles the landmark in the a11y tree. NavigationApp dropped its outer `<nav class="wp-admin-shell-nav__landmark">` for this reason.
+
+- **`[aria-current="true"]` is the sole authority for the active state.** Don't also emit a `.is-active` className when an item is the current route. CSS targets `[aria-current="true"]`; the redundant class causes drift when the two get out of sync. SidebarNavigationItem only sets the attribute now.
+
+- **Sidebar drill-down state belongs in the URL.** Sub-screens (the `{ screen, items }` shape in nav config) are URL-addressable via the `?screen=<id>` query slot, NOT `useState`. NavigationApp reads `useRoute().params.screen` and writes via a small `navigateScreen(id|null)` helper that preserves the current primary path. Deep-links and refresh-survives. Multiple sidebars in one shell would collide on the slot — namespace later (`?nav-{regionId}-screen=…`) if needed. Corollary of the URL-as-state principle (spec §6 / §18).
+
+- **Sidebar internals mirror `@wordpress/edit-site/src/components/sidebar*` class naming, swapping the top-level prefix `edit-site` → `wp-admin-shell`.** That maps `edit-site-sidebar-navigation-{screen,item}` → `wp-admin-shell-sidebar-navigation-{screen,item}`, drilldown indicator class is `__drilldown-indicator` (not `__chevron`), description is a `<div>` not `<p>`. When porting more elements from edit-site, keep the names (and BEM modifiers like `.has-footer` on `__main`) one-for-one — that lets the Gutenberg sidebar source serve as the structural reference.
 
 ## Build
 
@@ -69,43 +114,59 @@ These three patterns drive most of the bugs caught in code review. Codified here
 npm install
 npm run build    # production build
 npm run start    # dev build with watch
+npm run lint:js  # eslint via wp-scripts (clean baseline as of 2026-05-07)
 ```
+
+## Lint conventions
+
+`.eslintrc.js` extends `@wordpress/eslint-plugin/recommended` (canonical WP Core JS config — same one Gutenberg uses). Three documented overrides; do not loosen further without justification:
+
+- **`@wordpress/no-unsafe-wp-apis`** — kept enabled at config level. Files importing `__experimental*` from `@wordpress/components` (per-component fallback for WPDS 0.12 gaps) carry a file-scoped pragma at the top:
+
+  ```js
+  /* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
+  ```
+
+  Per-file is deliberate — keeps each fallback's reason inline + audit-able. Don't move this to project rules.
+
+- **`jsx-a11y/heading-has-content`** + **`jsx-a11y/anchor-has-content`** — disabled project-wide. Known false-positive on `@wordpress/ui`'s polymorphic `render` prop pattern (`<Text variant="heading-md" render={ <h2 /> }>{ children }</Text>`). The rule inspects the JSX literal `<h2 />` in isolation and can't see that the rendered output inherits `children`. Browser-rendered HTML always has content; the rule disable is a known-false-positive waiver, not a blanket a11y waiver.
+
+- **`import/no-extraneous-dependencies`** — disabled for `webpack.config.js` / `tests/**` / `scripts/**` only (these import from `@wordpress/scripts`'s nested deps, which is fine).
+
+Coding-standard adherence — tabs (matches WP JS coding standards), single quotes, brace style, JSDoc with types — all enforced by `@wordpress/eslint-plugin` defaults. The `--fix` pass also tabifies JSON files (shells, schemas, fixtures); that's WP-Core-canonical and intentional. Don't fight it.
+
+JSDoc convention for React function components with destructured props: `@param {Object} root0` + `@param {*} root0.<key>` for each destructured prop. Auto-generated by eslint --fix when JSDoc precedes the function.
 
 ## Testing
 
-171 assertions across six suites — all run before merge. The two regressions surfaced during review (`settings.defaultRoute` / `settings.applications` reader-path drift) are now covered by the shape + smoke-target suites.
+467 assertions — all run before merge.
 
 ```bash
-# Node — schema + WPDS parity
-npm run test:schema      # 11 — Ajv against admin-v1.json (bundled shells + fixtures)
+# Node
+npm run test:schema      # 53 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
 npm run test:parity      # 4  — WPDS slot-list drift detector
+npm run test:runtime     # 222 — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-selection-tests.php  # 5
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php   # 60
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 75
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 100
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php     # 13
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php  # 22
 ```
 
-`run-shape-tests.php` walks every bundled shell through the resolver and asserts structural invariants (engine + regions + applications + defaultRoute resolves). Catches the v1-canonical-path-drift bug class. Runtime React-component smoke (JSDOM) tracked in issue #30.
+**Pure-JS runtime modules go in `.mjs` files** so node test scripts (`tests/runtime/*`) can `import()` them directly without a webpack/jest harness. Webpack's default `resolve.extensions` (from `@wordpress/scripts`) does NOT include `.mjs`, so importing a `.mjs` module from app code requires the explicit extension at the import site (e.g. `import { resolveRegion } from './regions/resolveRegion.mjs'`). Convention applies only to side-effect-free utility modules; React components stay `.js`.
+
+`run-shape-tests.php` walks every bundled shell through the resolver and asserts structural invariants (engine + regions + applications + defaultRoute resolves). Catches v1-canonical-path-drift bugs (always read `config.settings?.X || config.X` for any v0/v1 shell field — bare `config.X` only works in v2). Runtime React-component smoke (JSDOM) tracked in issue #30.
 
 Test layering matches `WP_Theme_JSON_*Test`'s pattern: schema validation, fixture-driven unit, end-to-end shape, plus pending JSDOM mount. Add a fixture before fixing the next runtime-reader bug — never in the fix commit.
 
 ## Webpack externals
 
-`webpack.config.js` extends the default `@wordpress/scripts` config with a `copy-webpack-plugin` step that copies `node_modules/@wordpress/dataviews/build-style/style.css` to `build/dataviews.css`. The dep-extraction plugin's defaults handle the rest — `@wordpress/dataviews` and `@wordpress/ui` are both in the upstream `BUNDLED_PACKAGES` list and bundle themselves; everything else externalizes to `wp.*`.
+`webpack.config.js` extends `@wordpress/scripts` defaults with one `copy-webpack-plugin` step copying `node_modules/@wordpress/dataviews/build-style/style.css` → `build/dataviews.css`. The dep-extraction plugin handles the rest — `@wordpress/dataviews` and `@wordpress/ui` are in upstream `BUNDLED_PACKAGES` and bundle themselves; everything else externalizes to `wp.*`.
 
-### `@wordpress/ui` requires the Gutenberg plugin
-
-`@wordpress/ui` and `@wordpress/theme` opt into private APIs via `__dangerousOptInToUnstableAPIsOnlyForCoreModules`. WP core 6.9's runtime allowlist (`CORE_MODULES_USING_PRIVATE_APIS`) is a 16-package set that does **not** include `@wordpress/ui`/`@wordpress/theme`/`@wordpress/dataviews`. The list and the `allowCoreModule` helper are not exported on `wp.privateApis`, so we cannot extend the allowlist from outside.
-
-The **Gutenberg plugin** ships its own `wp-private-apis` script bundle (`build/scripts/private-apis/`) that overrides core's. Its allowlist (verified on Gutenberg 23.0.1) includes `@wordpress/ui`, `@wordpress/theme`, `@wordpress/dataviews`, `@wordpress/fields`, `@wordpress/admin-ui`, `@wordpress/views` and more, with the `'I acknowledge…'` consent string those packages send. With Gutenberg active, every `@wordpress/ui` component loads cleanly.
-
-Without Gutenberg, overlay components throw at module-load time — the throw fires inside the import graph before React mounts, so the entire shell renders empty with no React error boundary catching it. `Notice.CloseIcon → IconButton → Tooltip → themePrivateApis` is one of several chains that breaks.
-
-**Implication:** Gutenberg is a hard runtime dependency. `.wp-env.json` includes `gutenberg` in its `plugins` array. Distribution must declare `Requires Plugins: gutenberg` (or detect-and-conditionally-render a `@wordpress/components` fallback when missing).
-
-**Past failed workaround — don't repeat:** bundling `@wordpress/private-apis` to control the allowlist creates a *separate registry* from the runtime `wp.privateApis`. `@wordpress/dataviews` (also bundled) then tries to `unlock()` objects locked by `wp.components` in the runtime registry → `"Cannot unlock an object that was not locked before"`.
+**Past failed workaround — don't repeat:** bundling `@wordpress/private-apis` to control the allowlist creates a *separate registry* from runtime `wp.privateApis`. `@wordpress/dataviews` (also bundled) then fails to `unlock()` objects locked by `wp.components` → `"Cannot unlock an object that was not locked before"`. Gutenberg plugin overriding `wp-private-apis` is the only working answer.
 
 ## Project structure
 
@@ -113,77 +174,79 @@ Without Gutenberg, overlay components throw at module-load time — the throw fi
 wp-admin-shell/
 ├── wp-admin-shell.php       # Plugin entry point (admin page, assets, settings, config loading)
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
-├── shells/                  # Bundled admin.json configurations
-│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated apps
-│   ├── developer-admin.json   # Demo: native v1 apps (users / comments / settings / site-editor)
+├── shells/                  # Bundled admin.json configurations (all in v2 shape — no settings.*, no kind/contains/source)
+│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated nav items + iframe-fallback routes
+│   ├── developer-admin.json   # Demo: native v2 apps (users / comments / settings / site-editor) + drill-down design nav
 │   ├── content-author.json    # Demo: minimal writer shell (collapsed nav)
-│   └── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
+│   ├── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
+│   └── v2-demo.json           # Canonical-shape demo
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
 ├── includes/                # PHP
 │   ├── class-wp-admin-shell-config.php           # Read-only wrapper around merged tree
 │   ├── class-wp-admin-shell-can-rest.php         # /wp-admin-shell/v1/can/{cap}
 │   ├── class-wp-admin-shell-prefs-rest.php       # /wp-admin-shell/v1/user-prefs
-│   ├── class-wp-admin-shell-selection-rest.php   # /wp-admin-shell/v1/selection[/{scope}]
 │   ├── class-wp-admin-shell-cli.php              # `wp admin-shell …` commands
 │   ├── cascade/                                  # Cascade resolver
 │   │   ├── class-wp-admin-shell-resolver.php     # Two-phase merge + load_origins
 │   │   ├── class-wp-admin-shell-merge.php        # merge_authoritative + plain merge w/ tombstones
-│   │   ├── class-wp-admin-shell-customizable.php # userCustomizable filter (default-deny)
+│   │   ├── class-wp-admin-shell-customizable.php # `customizable` filter (default-deny); reads legacy `userCustomizable` for one cycle
 │   │   ├── class-wp-admin-shell-cache.php        # WP_Object_Cache + transient w/ hash keying
 │   │   └── class-wp-admin-shell-config-validator.php  # configSchema cache
 │   └── origins/
 │       └── class-wp-admin-shell-origin-core.php  # v0 → v1 normalize + empty baseline + chrome defaults
 ├── src/                     # JS source (built with @wordpress/scripts)
 │   ├── index.js             # Entry — calls kernel(window.wpAdminShell.config) and mounts result
-│   ├── index.css            # All custom CSS (layout, nav, apps)
+│   ├── index.css            # Bootstrap CSS only — body positioning, defensive Stack rule, chrome anchor/svg color overrides, cap-gate fallback. Engine + per-app CSS lives with the engine/app it belongs to (see below).
 │   ├── runtime/             # v1 kernel — registry-driven, replaces MVP src/shell/*
 │   │   ├── kernel.js        # Top-level mount: registry + normalizer + engine + region resolution
 │   │   ├── kernel-context.js  # KernelProvider exposing { registry, config } to all sources
 │   │   ├── registry/
-│   │   │   ├── createRegistry.js   # Kind-checked registry (app | region | engine), dup-rejection
+│   │   │   ├── createRegistry.js   # Kind-checked registry (app | engine — region kind retired in V2.M2 task 2), dup-rejection
 │   │   │   ├── builtins.js         # Imperative registration of every core:* source
 │   │   │   └── source-types.js     # JSDoc typedefs for SourceProps (no runtime)
-│   │   ├── engines/
-│   │   │   └── core-site-editor-layout/
-│   │   │       ├── index.js        # EngineSource definition
-│   │   │       └── Layout.js       # Arranges regions: dark chrome + elevated cards
-│   │   ├── regions/                # Six built-in region sources, thin contains[] wrappers
-│   │   │   ├── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
-│   │   │   ├── sidebar-region/index.js
-│   │   │   ├── toolbar-region/index.js
-│   │   │   ├── content-region/index.js   # router:true honored; routable single-region
-│   │   │   ├── preview-region/index.js   # subscribes to selection scope via useSelection
-│   │   │   ├── overlay-region/index.js   # display:contents pass-through (command palette host)
-│   │   │   └── drawer-region/index.js    # slides L/R, dismissOn: escape | overlay-click
-│   │   ├── routing/
-│   │   │   ├── router.js           # Hash router, RouterProvider, useRoute, navigate, navigateRoute
+│   │   ├── engines/                # Per-engine modules. Each ships index.js (EngineSource def + side-effect imports its index.css), Layout.js (React layout component), engine.json (manifest w/ region templates + default-style CSS), index.css (engine-specific layout idiom CSS).
+│   │   │   ├── core-default/        # Flagship: dark chrome + elevated cards (toolbar/sidebar/content/preview)
+│   │   │   └── core-single-pane/    # Mobile-first: appbar + collapsible nav drawer
+│   │   ├── regions/                # Single declaration-driven renderer
+│   │   │   ├── Region.js           # Generic <Region>: GenericRegion → ModalRegion (backdrop + focus trap + ARIA modal + dismiss + autofocus) or PersistentRegion (landmark) composed from platform services. Recursive cap fast-path. Renders `region.regions` children with id `parent/child` (spec §5.5).
+│   │   │   ├── regionKind.js       # Derives bucket (persistent | overlay | drawer) from platformServices.placement(region).
+│   │   │   ├── platformServices.mjs # Pure-ESM spec §5.3 accessors (isModal, dismissTriggers, autofocusSelector, persistsAcrossNavigation, isTriggerable, triggerShortcut, wantsDirtyState, blocksNavigationOnDirty, placement) — reads region.platform/role.
+│   │   │   ├── resolveRegion.mjs   # Pure-ESM template merge (declaration, engine) → resolved region. Recursive child resolution with MAX_REGION_DEPTH=10 + visited-templates set.
+│   │   │   ├── validateRegion.mjs  # validateRegion + sanitizeRegion enforce `app` xor `routing.route-key` (spec §5.4). Kernel logs violation + drops `app` so URL routing wins.
+│   │   │   └── mountApp.js         # Shared <MountedApp> resolver: appRef → registry → render
+│   │   ├── routing/                # URL-decomposer router, routes-block matcher
+│   │   │   ├── router.js           # RouterProvider (hashchange + Navigation API navigatesuccess), useRoute, useRouteForRegion(region, routesBlock), navigate(href).
+│   │   │   ├── matchRoute.mjs      # Pure ESM: matchPattern, matchRoute (most-specific-wins), interpolate, parseHash, readSlot, isValidRoutePattern.
 │   │   │   └── useRoute.js         # Re-export
-│   │   ├── selection/              # Cross-region selection event bus
-│   │   │   ├── store.js            # core/admin-shell/selection Redux store
-│   │   │   ├── useSelection.js     # Subscriber hook
-│   │   │   └── persist.js          # apiFetch bridge to selection REST endpoint
-│   │   ├── slots/                  # Render slots (Slot/Fill) + data slots (useSlotItems)
-│   │   ├── styles/                 # Token compiler + compat bridge + density + WPDS baseline
+│   │   ├── styles/                 # ThemeProviderHost (engine-pluggable seam) + WpdsThemeProvider (core-default's contribution) + density. compileStyles + wpds-defaults snapshot moved to core-default in P1.
 │   │   ├── capabilities/userCan.js # userCan() sync + checkCan() async via /can REST
-│   │   ├── config/iconMap.js       # icon name → @wordpress/icons (dev-warn on miss)
-│   │   ├── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
-│   │   └── apps/                   # System apps (sidebar / toolbar / overlay / appearance)
-│   │       ├── NavigationApp.js      # core:navigation — recursive cap-prune
-│   │       ├── SiteHubApp.js         # core:site-hub
-│   │       ├── ToolbarActionsApp.js  # core:toolbar-actions
-│   │       ├── CommandPickerApp.js   # core:command-picker (signs into @wordpress/commands)
-│   │       ├── PreviewPaneApp.js     # core:preview-pane
-│   │       ├── NoticesApp.js         # core:notices-banner + core:notices-snackbar
-│   │       ├── AppearanceApp.js      # core:appearance — userCustomizable-driven prefs UI
-│   │       ├── SiteEditorApp.js      # core:site-editor iframe adapter (v2 native mount)
-│   │       └── _components/          # Sidebar* + SiteIcon presentational helpers
-│   └── apps/                # User-facing apps (registered via builtins.js)
-│       ├── PostsApp.js / SimpleEditorApp.js / EditorApp.js / MediaApp.js
-│       ├── ProfileApp.js / SettingsGeneralApp.js / IframeApp.js
-│       ├── UsersApp.js / CommentsApp.js
-│       ├── SettingsApp.js               # core:settings composable host
-│       └── settings-panels/             # writing / reading / discussion native panels
+│   │   ├── config/iconMap.js       # DS-neutral icon registry: registerIcons(table, {fallback}) + resolveIcon(name). Engines populate at module load.
+│   │   └── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
+│   └── apps/                # All shell-bundled apps (registered via builtins.js)
+│       └── <id>/                           # one dir per app id; everything for the app lives here
+│           ├── index.js                    #   React component (default export); imports './index.css' side-effect
+│           ├── app.json                    #   manifest (declares source id, capabilities, platform, etc.)
+│           ├── index.css                   #   app-specific structural CSS (optional)
+│           └── (helpers/_components/)      #   single-app-only helpers colocate with their consumer
+│
+│       Same shape as engines/. Convention for plugin:* apps (spec §13 #3)
+│       matches: app dir contains app.json + index.js + optional index.css.
+│       Webpack picks up CSS through the dependency graph; tree-shakes
+│       unused apps' CSS automatically. Apps that don't ship CSS
+│       (command-palette, preview-pane, appearance, etc.) skip index.css
+│       and just expose index.js. notices-banner + notices-snackbar are
+│       independent dirs — each ships its own index.js + index.css.
+│       navigation/index.js bundles its drill-down helpers (Screen/Item/
+│       Button + slide keyframes) into its own index.css; the Sidebar*
+│       presentational helpers live under navigation/_components/.
+│       site-hub/SiteIcon.js is a sibling of site-hub/index.js. Settings
+│       sub-panels (SettingsDiscussionApp / Reading / Writing) live
+│       inside settings/ as siblings of the host index.js (no separate
+│       manifests — internal helpers, not registered apps). Rule of
+│       thumb: presentational helper used by exactly one app belongs
+│       inside that app's dir; promote to a shared location only when
+│       a second consumer appears.
 ├── tests/
 │   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
 │   └── parity/              # node: WPDS slot-drift detector (4)
@@ -198,17 +261,23 @@ wp-admin-shell/
 |---|---|---|---|---|
 | `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType` |
 | `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
-| `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. v2 native mount. |
+| `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. Native `@wordpress/edit-post` mount deferred to v2.x — see `SiteEditorApp.js` for blockers. |
 | `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
+| `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
-| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign |
+| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard |
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord |
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
-| `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter; v2 native mount |
-| `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `userCustomizable` |
+| `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
+| `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST |
+| `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
+| `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
+| `core:site-health` | SiteHealthApp | ✅ | — | `/wp-site-health/v1/tests/{id}` runner |
+| `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount deferred to v2.x; five blockers (preferences-store / commands / full-screen CSS / hash-router collisions, edit-site not in BUNDLED_PACKAGES) documented in `SiteEditorApp.js`. |
+| `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
-| System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar` — pinned by the v0 normalizer |
+| System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu` — pinned by the v0 normalizer |
 
 ### `core:simple-editor` notes
 
@@ -244,9 +313,25 @@ Example: `{ "id": "pages", "source": "core:posts", "config": { "postType": "page
 
 ## Shell switching
 
-The active shell config is stored in `wp_admin_shell_active_config` option (registered with `show_in_rest`). Switchable via:
+The active shell config is stored in `wp_admin_shell_active_shell` option (registered with `show_in_rest`). The MVP wrote `wp_admin_shell_active_config`; the resolver reads the new key first and falls back to the legacy key. Switchable via:
 - Settings page (`wp-admin/admin.php?page=wp-admin-shell-settings`)
 - Toolbar dropdown (saves via `POST /wp/v2/settings`, then reloads)
+
+## Extension points (spec §13)
+
+Six extension surfaces, all in place:
+
+1. **Filter merged config.** PHP `apply_filters( 'wp_admin_shell_data', $config )` runs after the cascade resolves; per-origin `wp_admin_shell_data_{origin}` runs during the merge.
+2. **Filter per-origin configs.** `wp_admin_shell_data_core` / `_plugin` / `_site` / `_role` / `_user`.
+3. **Register a `plugin:*` app.** PHP `wp_admin_shell_register_app( $manifest_or_path )` or convention-path discovery (`{plugin}/apps/{name}/app.json`).
+4. **Register a region template.** PHP `wp_admin_shell_register_template( $engine_id, $template_id, $template )` — extends an existing engine's template catalog at runtime. Validates engine exists, template id matches the namespaced pattern, body has a string `role`.
+5. **Register an engine.** PHP `wp_admin_shell_register_engine( $manifest_or_path )` or convention-path discovery (`{plugin}/engines/{name}/engine.json`). Engine modules MAY export an optional JS-side `ThemeProvider` field on their `EngineSource` (`src/runtime/registry/source-types.js`) — when present, `ThemeProviderHost` mounts it instead of the WPDS default. Use this to ship an entirely different design system (Material, Tailwind tokens, brand-locked palette) without touching kernel code. Render-time errors in a custom provider trip the host's error boundary and silently fall back to WPDS so the shell still paints. Engine manifests MAY also declare a top-level `default-styles` block (Phase C; see `docs/schemas/admin-engine-v2.json#defaultStyles`) — same shape as admin.json `styles` minus `regions`/`applications`/`branding`. The PHP resolver injects a synthetic `engine` origin between `core` and `plugin` carrying these defaults; admin.json wins on every overlapping key. Use this to ship the engine's visual identity (palette, density, chrome surface bindings) so consuming shells stop having to repeat the rules.
+6. **Register a complete shell.** PHP `wp_admin_shell_register_shell( $slug, $admin_json )` for runtime-computed shells. Programmatic registrations win over file-based shells of the same slug; site/role/user origins still merge on top via the same cascade.
+
+JS-side surfaces:
+
+- `useDirtyState( regionId, isDirty, { blocksNavigation } )` — reports unsaved-changes status; `<NavigationGuard>` honors it across `beforeunload` + Navigation API + hashchange-revert.
+- `bindings` block in admin.json — declares `[{shortcut, invoke}]`. `<BindingsConsumer>` wires keystrokes to triggerable apps via the `triggerStore`. Only triggerable regions register their open handlers.
 
 ## Manual smoke before tagging
 

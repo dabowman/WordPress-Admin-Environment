@@ -13,7 +13,7 @@ Same WordPress. Same data. Same plugins. Different admin for different people.
 ## What v1 ships
 
 - **Cascade resolver.** Five origins (core / plugin / site / role / user) merge into a single config with field-aware semantics, restrict-only enforcement, and `userCustomizable` declarations modeled on block supports.
-- **Token system.** `admin.json.styles` compiles to three CSS-variable families: WPDS surface (`--wpds-*`), chrome extensions (`--wp-admin-shell--chrome--*`), and a static compat bridge for legacy `--wp-admin-theme-color` consumers.
+- **Token system.** Engines own theming through the kernel's `ThemeProviderHost` seam. The bundled `core:default` engine compiles `admin.json.styles` to two CSS-variable families: WPDS surface (`--wpds-*`) and chrome extensions (`--wp-admin-shell--chrome--*`). Third-party engines plug in their own `ThemeProvider`, style compiler, icon table, and CSS bundles — the kernel itself is DS-neutral.
 - **Capability gating.** Four layers — region fast-path, app gate, source-cap floor, REST observation. Recursive nav prune drops gated apps + empty drilldowns.
 - **Native apps.** Posts, Pages (`core:posts`), Simple editor (`core:simple-editor`), Block editor (`core:editor`, iframed), Media (`core:media`), Profile (`core:profile`), Users (`core:users`), Comments (`core:comments`), Settings (`core:settings` composable host with REST-bounded native panels), Site editor (`core:site-editor`, iframe-backed adapter), Appearance prefs (`core:appearance`).
 - **Slots.** Render slots (`core:app.before/.after`, `core:editor.sidebar`) and data slots (`core:posts.row-actions`, `core:users.row-actions`, `core:comments.row-actions`, `core:settings.panels`) for plugin extension.
@@ -73,7 +73,7 @@ The palette publishes `Go to {App}` and `New Post` / `New Page` commands scoped 
 
 ## `admin.json` schema
 
-The full v1 schema lives at [`docs/schemas/admin-v1.json`](docs/schemas/admin-v1.json). Bundled shells reference it via `$schema`. The spec at [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) is authoritative.
+The full v1 schema lives at [`docs/schemas/admin-v1.json`](docs/schemas/admin-v1.json) and is the active schema for v1.0.0-beta.x bundled shells, which reference it via `$schema`. The post-v1 architecture is described in the master spec at [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (2026-05-01); the three v2 manifest schemas (`admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json`) live alongside it. The 2026-04-29 architecture is preserved at [`docs/archive/wp-admin-shell-design-spec-2026-04-29.md`](docs/archive/wp-admin-shell-design-spec-2026-04-29.md). The v2 migration directive at [`docs/plans/wp-admin-shell-v2-migration-directive.md`](docs/plans/wp-admin-shell-v2-migration-directive.md) is the active plan on `feat/wp-admin-shell-v2`.
 
 v0 (MVP flat) admin.json files keep working indefinitely — the resolver normalizes them through the `core` origin loader. To rewrite a v0 file in place, run `wp admin-shell upgrade-config <name>` (the v0 file is preserved as `<name>.v0.json`).
 
@@ -93,7 +93,7 @@ v0 (MVP flat) admin.json files keep working indefinitely — the resolver normal
 | `core:appearance` | ✅ | User-prefs UI driven by `userCustomizable` declarations. |
 | `iframe:{url}` | iframe | Any wp-admin URL with chrome hidden. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-picker`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`) are pinned by the v0 normalizer and don't appear in shell author files unless overridden.
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`) are pinned by the v0 normalizer and don't appear in shell author files unless overridden.
 
 ## Project structure
 
@@ -113,26 +113,38 @@ wp-admin-shell/
 │   ├── runtime/                    # v1 kernel
 │   │   ├── kernel.js, kernel-context.js
 │   │   ├── registry/               # Source registry + builtins
-│   │   ├── engines/                # core:site-editor-layout
-│   │   ├── regions/                # 6 built-in region sources
+│   │   ├── engines/                # core:default + core:single-pane
+│   │   ├── regions/                # Generic Region renderer + regionKind helper + mountApp
 │   │   ├── routing/                # Hash router
 │   │   ├── selection/              # Cross-region selection bus
 │   │   ├── slots/                  # Render + data slots
-│   │   ├── styles/                 # Token compiler, compat bridge, density, WPDS baseline
+│   │   ├── styles/                 # ThemeProviderHost (engine-pluggable), WpdsThemeProvider (core-default's contribution), density helper
 │   │   ├── capabilities/           # userCan / checkCan
-│   │   ├── config/                 # normalizeV0, iconMap
+│   │   ├── config/                 # iconMap (DS-neutral registry; engines populate)
 │   │   └── apps/                   # System apps (NavigationApp, SiteHubApp, etc.)
 │   └── apps/                       # User apps (PostsApp, MediaApp, …)
 ├── tests/
-│   ├── php/                        # Cascade + selection runners (wp eval-file)
+│   ├── php/                        # Cascade + manifest + cap + shape + selection runners (wp eval-file)
+│   ├── schema/                     # Ajv 2020-12 against admin-v1/v2/app-v2/engine-v2 (node)
+│   ├── runtime/                    # Pure-JS runtime helpers (node) — resolveRegion merge, etc.
 │   └── parity/                     # WPDS slot-list parity (node)
 ├── docs/                           # Specs, schemas, readiness notes
-│   ├── wp-admin-shell-design-spec.md   # Master design (authoritative)
-│   ├── wp-admin-shell-v1-plan.md       # Implementation plan
+│   ├── wp-admin-shell-design-spec.md       # Master design (2026-05-01)
+│   ├── post-editor-sketch.md               # v2 worked example
+│   ├── plans/
+│   │   └── wp-admin-shell-v2-migration-directive.md  # Active v2 plan
+│   ├── schemas/
+│   │   ├── admin-v1.json                   # v1.0.0-beta.x schema (still load-bearing)
+│   │   ├── admin-v2.json                   # v2 admin.json schema
+│   │   ├── admin-app-v2.json               # v2 app manifest schema
+│   │   └── admin-engine-v2.json            # v2 engine manifest schema
+│   ├── research/schema-exercise-findings.md
 │   ├── v1-token-emission.md
 │   ├── v1-readiness.md
-│   ├── schemas/admin-v1.json
-│   └── archive/wp-admin-shell-mvp-spec.md
+│   └── archive/
+│       ├── wp-admin-shell-mvp-spec.md
+│       ├── wp-admin-shell-design-spec-2026-04-29.md
+│       └── wp-admin-shell-v1-plan.md
 ├── scripts/                        # snapshot-wpds.mjs
 └── build/                          # Compiled output (gitignored)
 ```
@@ -159,7 +171,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 
 **Why a cascade resolver?** `theme.json` resolves through merged origins; admin.json takes the same shape so site administrators / plugin authors / end users can override the active shell along well-defined precedence boundaries. Trusted origins (core / plugin) merge authoritatively (omission ⇒ tombstone); consumer origins (site / role / user) merge additively, filtered through `userCustomizable`.
 
-**Why three CSS-variable families?** WPDS slots cover most of the surface but not shell-only chrome (sidebar, toolbar, site hub, content card). The chrome extension namespace fills that gap. The compat bridge keeps legacy `@wordpress/components` consumers + SCSS-compiled wp-admin CSS inheriting shell theming without touching every legacy stylesheet.
+**Why two CSS-variable families (in `core:default`)?** WPDS slots cover most of the WPDS-themed surface but not shell-only chrome (sidebar, toolbar, site hub, content card). The chrome extension namespace fills that gap. Both families are emitted by `core:default`'s engine-private style compiler — third-party engines bring whatever variable namespaces their own design system uses (or none, if their `ThemeProvider` owns all token plumbing directly).
 
 **Why iframe for the editor + site editor?** Both packages assume full-viewport ownership and own private-API stores. Embedding inside a region requires resolving four collisions (preferences-store namespace, command-palette double-registration, full-screen-mode CSS, hash-router conflicts). v1 ships iframe; v2 takes the native-mount path.
 

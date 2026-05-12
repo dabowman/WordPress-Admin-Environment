@@ -1,0 +1,10 @@
+.wp-admin-shell-app-profile {
+	max-width: 600px;
+}
+
+.wp-admin-shell-app-profile__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 200px;
+}

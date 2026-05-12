@@ -1,0 +1,150 @@
+{
+	"$schema": "../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:single-pane",
+	"version": 1,
+	"title": "Single pane",
+	"description": "Mobile-first single-column layout. Navigation collapses to a hamburger drawer; complementary regions float as overlay panels; main fills the viewport. Validates the engine boundary against a deliberately different idiom from the dual-chrome default engine — apps mount unchanged.",
+
+	"designSystem": "@wordpress/ui",
+
+	"specializes-roles": [
+		"main",
+		"navigation",
+		"banner",
+		"complementary",
+		"dialog",
+		"contentinfo"
+	],
+
+	"honored-platform": [
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty",
+		"core:trigger"
+	],
+
+	"templates": {
+		"core:appbar": {
+			"role": "banner",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"display": "flex",
+				"align-items": "center",
+				"flex": "1",
+				"min-inline-size": "0",
+				"block-size": "56px"
+			},
+			"regions": {
+				"start": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"center": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"end": {
+					"role": "region",
+					"default-style": {
+						"display": "flex",
+						"align-items": "center",
+						"margin-inline-start": "auto"
+					}
+				}
+			}
+		},
+
+		"core:nav-drawer": {
+			"role": "navigation",
+			"platform": {
+				"core:dismiss-on": [ "Escape", "backdrop-click" ],
+				"core:triggerable": true
+			},
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"inline-size": "100%",
+				"block-size": "100%",
+				"padding-block": "{styles.chrome.sidebar.padding-block}",
+				"padding-inline": "{styles.chrome.sidebar.padding-inline}"
+			}
+		},
+
+		"core:pane": {
+			"role": "main",
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "column",
+				"flex": "1",
+				"min-block-size": "0",
+				"min-inline-size": "0",
+				"inline-size": "100%",
+				"block-size": "100%",
+				"overflow": "auto",
+				"background": "{styles.chrome.canvas.background}",
+				"padding": "{styles.chrome.canvas.padding}"
+			}
+		},
+
+		"core:overlay": {
+			"role": "dialog",
+			"platform": {
+				"core:modal": true,
+				"core:dismiss-on": [ "Escape", "backdrop-click" ]
+			},
+			"default-style": {
+				"inline-size": "min(560px, 92vw)",
+				"max-block-size": "80vh",
+				"position": "fixed",
+				"inset-block-start": "10vh",
+				"inset-inline-start": "50%",
+				"translate": "-50% 0"
+			}
+		},
+
+		"core:detail": {
+			"role": "complementary",
+			"platform": { "core:dismiss-on": [ "Escape" ] },
+			"default-style": {
+				"inline-size": "100%",
+				"block-size": "100%",
+				"position": "fixed",
+				"inset": "0",
+				"background": "{styles.chrome.canvas.background}"
+			}
+		}
+	},
+
+	"default-arrangement": "single-pane",
+
+	"script": "wp-admin-shell",
+	"style": "wp-admin-shell",
+
+	"styles": [
+		{
+			"handle": "wp-admin-shell-wpds-tokens",
+			"src": "build/wpds-tokens.css"
+		},
+		{
+			"handle": "wp-admin-shell-dataviews",
+			"src": "build/dataviews.css",
+			"deps": [ "wp-components" ]
+		}
+	],
+
+	"default-styles": {
+		"theme": {
+			"density": "compact"
+		}
+	}
+}

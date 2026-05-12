@@ -1,0 +1,157 @@
+/* core:default engine — engine-internal layout infrastructure only.
+ *
+ * Author-overridable region styling (background, color, border, padding,
+ * margin, border-radius, box-shadow, decoration) lives in engine.json
+ * template `default-style` blocks so admin.json regions can override
+ * via `regions[id].style`. CSS here is reserved for:
+ *   - engine root layout shape (.wp-admin-shell-layout)
+ *   - engine-internal helper containers (.wp-admin-shell-areas)
+ *   - the `__app` mount-point inside a region (not addressable from
+ *     templates — apps mount inside this wrapper, not the region itself)
+ *   - the `is-fullscreen` opt-in for iframe apps
+ *
+ * Don't add visual properties here. If a property would be overridden
+ * by a template default-style or by an admin.json region.style, it
+ * belongs in the template.
+ */
+
+.wp-admin-shell-layout {
+	isolation: isolate;
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	width: 100vw;
+	overflow: hidden;
+	font-family: var(--wpds-font-family-body);
+}
+
+.wp-admin-shell-layout__body {
+	display: flex;
+	flex: 1;
+	min-height: 0;
+}
+
+.wp-admin-shell-areas {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	gap: 0;
+}
+
+/* Inner app mount-point — engine-internal, not a region, has no
+ * template hook. When the parent region carries `role="main"` or
+ * `role="complementary"` (the content-card roles), the mount becomes
+ * a flex column so apps like DataViews can flex against a known-height
+ * ancestor. The mount also carries the visual padding because
+ * `is-fullscreen` overrides need a stable target (template default-style
+ * applies to the region wrapper as inline style and would beat any CSS
+ * rule trying to zero it out for iframe apps). */
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="main"]
+	> .wp-admin-shell-region__app,
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="complementary"]
+	> .wp-admin-shell-region__app {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	padding: var(--wpds-dimension-padding-2xl);
+	box-sizing: border-box;
+}
+
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="main"]
+	> .wp-admin-shell-region__app
+	> *,
+.wp-admin-shell-layout
+	.wp-admin-shell-region[role="complementary"]
+	> .wp-admin-shell-region__app
+	> * {
+	flex: 1;
+	min-height: 0;
+}
+
+.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen {
+	padding: 0;
+}
+
+.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen iframe {
+	border-radius: var(--wpds-border-radius-lg);
+	border: 0;
+	width: 100%;
+	height: 100%;
+}
+
+/* ==========================================================================
+   Engine-DS-specific overrides — WPDS coupling.
+
+   These rules belong here (not the kernel) because they presuppose
+   @wordpress/ui + WPDS tokens. A different engine using a different
+   design system would replace them wholesale.
+   ========================================================================== */
+
+/* @wordpress/ui ships its component CSS inside `@layer wp-ui-components`
+   (wp-ui-utilities < wp-ui-components < wp-ui-compositions < wp-ui-overrides).
+   Per the cascade-layer spec unlayered rules win over any layered rule, so
+   a wide range of unlayered admin / theme / shell CSS can override
+   @wordpress/ui's defaults — including the Stack's `display: flex`. When
+   that happens, Stack falls back to `display: block` and its children
+   stack vertically regardless of the inline `flex-direction: row` style.
+
+   Force the Stack default unlayered for any Stack rendered inside the
+   shell. Targets the hashed CSS-module class @wordpress/ui assigns
+   to the Stack root. Hash matches the regex pattern `[hash]__stack`
+   so a class*= selector tracks the convention without binding to a
+   specific build hash. */
+.wp-admin-shell [class*="__stack"] {
+	display: flex;
+}
+
+/* Chrome-surface anchor + SVG color overrides.
+ *
+ * The selectors target chrome containers. `<a>` elements rendered by
+ * `@wordpress/ui` Button via `render={<a/>}` get hit by WP-admin's
+ * unlayered `colors/<scheme>/colors.css` → `a { color: #3858e9 }` rule;
+ * @wordpress/ui's layered Button color loses per the cascade-layer spec.
+ * Forcing the chrome anchor color unlayered here wins.
+ *
+ * SVG fill: `@wordpress/icons` Icon clones the SVG and sets width/height
+ * but does NOT add `fill="currentColor"`; library SVGs (e.g. `wordpress`)
+ * ship with no fill attribute, so the browser default `fill: black`
+ * applies. `@wordpress/ui`'s Icon does set fill via inline style. To
+ * unify, force `fill: currentColor` on any SVG inside a chrome surface —
+ * both library variants then inherit the surface text color. */
+.wp-admin-shell-region--sidebar a,
+.wp-admin-shell-region--toolbar a,
+.wp-admin-shell-site-hub a {
+	color: var(--wpds-color-fg-interactive-neutral);
+}
+
+.wp-admin-shell-region--sidebar a:hover,
+.wp-admin-shell-region--sidebar a:focus,
+.wp-admin-shell-region--sidebar a:active,
+.wp-admin-shell-region--toolbar a:hover,
+.wp-admin-shell-region--toolbar a:focus,
+.wp-admin-shell-region--toolbar a:active,
+.wp-admin-shell-site-hub a:hover,
+.wp-admin-shell-site-hub a:focus,
+.wp-admin-shell-site-hub a:active {
+	color: var(--wpds-color-fg-interactive-neutral-active);
+}
+
+.wp-admin-shell-region--sidebar svg,
+.wp-admin-shell-region--toolbar svg,
+.wp-admin-shell-site-hub svg {
+	fill: currentColor;
+}
+
+/* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
+ * structural rule (`src/index.css` ships padding + text-align only). */
+.wp-admin-shell-region__forbidden {
+	color: var(--wpds-color-fg-content-neutral);
+}
+
+.wp-admin-shell-region__forbidden p {
+	color: var(--wpds-color-fg-content-neutral-weak);
+}

@@ -10,20 +10,24 @@
  */
 
 /**
- * @typedef {'app' | 'region' | 'engine'} SourceKind
+ * @typedef {'app' | 'engine'} SourceKind
+ *
+ * Region sources were retired in V2.M2. Regions are now rendered by the
+ * generic `src/runtime/regions/Region.js` directly off declarations; the
+ * registry only holds apps and engines.
  */
 
 /**
  * Common identity envelope for any source registered with the runtime.
  *
  * @typedef {Object} SourceBase
- * @property {SourceKind}     kind          - Discriminant.
- * @property {string}         id            - Globally unique identifier (e.g. `core:posts`).
- * @property {string}         [title]       - Human-readable title (used in registries / pickers).
- * @property {Object}         [configSchema] - Optional JSON Schema for the source's instance config.
- * @property {string[]}       [capabilities] - Capability floor (spec §8 layer 3). Every cap listed
- *                                            must be held by the current user for the source to
- *                                            mount. Enforced at registry lookup time.
+ * @property {SourceKind} kind           - Discriminant.
+ * @property {string}     id             - Globally unique identifier (e.g. `core:posts`).
+ * @property {string}     [title]        - Human-readable title (used in registries / pickers).
+ * @property {Object}     [configSchema] - Optional JSON Schema for the source's instance config.
+ * @property {string[]}   [capabilities] - Capability floor (spec §8 layer 3). Every cap listed
+ *                                       must be held by the current user for the source to
+ *                                       mount. Enforced at registry lookup time.
  */
 
 /* ──────────────────────── App sources ─────────────────────── */
@@ -32,14 +36,14 @@
  * Props delivered to an `AppSource.Component` when it mounts inside a region.
  *
  * @typedef {Object} AppSourceProps
- * @property {Object} app           - The application instance from the resolved config.
- * @property {string} app.id        - The application id from admin.json.
- * @property {string} app.source    - The source string (e.g. `core:posts`).
- * @property {string} [app.title]   - Display title.
- * @property {string} [app.icon]    - Icon name (resolved via iconMap).
- * @property {Object} [config]      - Per-instance config validated against `configSchema`.
+ * @property {Object}   app         - The application instance from the resolved config.
+ * @property {string}   app.id      - The application id from admin.json.
+ * @property {string}   app.source  - The source string (e.g. `core:posts`).
+ * @property {string}   [app.title] - Display title.
+ * @property {string}   [app.icon]  - Icon name (resolved via iconMap).
+ * @property {Object}   [config]    - Per-instance config validated against `configSchema`.
  * @property {string[]} [segments]  - Sub-route segments (single routable region only in v1).
- * @property {string} regionId      - The id of the region currently mounting this app.
+ * @property {string}   regionId    - The id of the region currently mounting this app.
  */
 
 /**
@@ -50,41 +54,6 @@
  * }} AppSource
  */
 
-/* ──────────────────────── Region sources ──────────────────── */
-
-/**
- * Region kinds — control how an engine arranges the region.
- *
- * `persistent` regions render in a fixed slot. `overlay` regions float over
- * persistent regions (e.g. command palette). `drawer` regions slide in from a
- * configurable side and persist until dismissed.
- *
- * `floating` and `tiled` are reserved for v2 — engines may collapse them to
- * `persistent` for v1.
- *
- * @typedef {'persistent' | 'overlay' | 'drawer' | 'floating' | 'tiled'} RegionKind
- */
-
-/**
- * Props delivered to a `RegionSource.Component` when an engine mounts it.
- *
- * @typedef {Object} RegionSourceProps
- * @property {Object}   region            - Region instance from the resolved config.
- * @property {string}   region.id         - Region id (e.g. `nav`, `main`, `commands`).
- * @property {string}   region.source     - Region source string (e.g. `core:sidebar-region`).
- * @property {Object}   [region.config]   - Region-instance config.
- * @property {Object[]} [region.contains] - Resolved app instances assigned to this region.
- */
-
-/**
- * @typedef {SourceBase & {
- *   kind: 'region',
- *   regionKind: RegionKind,
- *   Component: (props: RegionSourceProps) => any,
- *   routable?: boolean
- * }} RegionSource
- */
-
 /* ──────────────────────── Engine sources ──────────────────── */
 
 /**
@@ -92,25 +61,96 @@
  * arranges all regions for a shell.
  *
  * `regions` is keyed by region id; each value is a fully-resolved region
- * instance ready to mount (the engine renders the region's `Component`).
+ * declaration. Engines render regions by passing them to the generic
+ * `<Region>` renderer (see `src/runtime/regions/Region.js`).
  *
  * @typedef {Object} EngineSourceProps
- * @property {Object} config                       - The full resolved shell config.
- * @property {Object<string, Object>} regions      - Region instances keyed by region id.
- * @property {Object<string, Object>} regionSources - Region source defs keyed by source id.
+ * @property {Object}                 config  - The full resolved shell config.
+ * @property {Object<string, Object>} regions - Region declarations keyed by region id.
+ */
+
+/**
+ * Optional ThemeProvider supplied by an engine. When present, the kernel
+ * mounts this provider around the engine's render tree instead of the
+ * platform-default (WPDS-backed) provider. Engines can use this to ship
+ * an entirely different design system (Material, Tailwind tokens, brand-
+ * locked palette, etc.) without touching kernel code.
+ *
+ * Contract:
+ *   - Children must be rendered inside a wrapper carrying
+ *     `data-wpds-theme-provider-id={id}` (or an equivalent attribute the
+ *     engine declares) so shell-level scoped detail CSS can target them.
+ *   - The `density` prop must be honored — typically by setting
+ *     `data-wpds-density={density}` on the wrapper.
+ *   - Tier-3 slot overrides + chrome → WPDS bridge + region/app scoped
+ *     overrides are emitted as a sibling `<style>` block by the kernel,
+ *     scoped to the wrapper id. Engines do NOT need to reimplement them.
+ *
+ * @typedef {Object} EngineThemeProviderProps
+ * @property {boolean} isRoot    True when mounted at the kernel root.
+ * @property {Object}  styles    Resolved admin.json `styles` block.
+ * @property {Object}  tokens    Flattened DTCG tokens from `tokens.json`.
+ * @property {string}  [density] Active density preset, if declared.
+ * @property {*}       children  Tree to render inside the provider.
+ */
+
+/**
+ * Engine-supplied style compiler. The kernel calls this hook from
+ * `ThemeProviderHost` whenever the resolved styles or tokens change.
+ *
+ * Pure function — no React, no DOM. Returns three buckets of CSS-variable
+ * assignments that the host serializes into a sibling `<style>` block
+ * scoped to the engine's ThemeProvider wrapper:
+ *
+ *   - `top`:      scope-root variables (single rule on the wrapper).
+ *   - `scoped`:   array of `{selector, vars}` for surface-scoped
+ *                 variables (chrome bindings, sidebar palette, etc.).
+ *   - `subtrees`: per-region / per-app variables, keyed by
+ *                 `region:<id>` or `app:<id>`. Host emits one rule per
+ *                 subtree under the appropriate descendant selector.
+ *
+ * Engines that omit this hook get zero scoped overrides; their
+ * `ThemeProvider` must own all token plumbing directly.
+ *
+ * @callback EngineStyleCompiler
+ * @param {Object} styles Resolved admin.json `styles` block (deep-merged
+ *                        with engine `default-styles`).
+ * @param {Object} tokens Flattened DTCG tokens (paths → primitive values).
+ * @return {{
+ *   top:      Object<string,string>,
+ *   scoped:   Array<{ selector: string, vars: Object<string,string> }>,
+ *   subtrees: Object<string, Object<string,string>>
+ * }}
+ */
+
+/**
+ * Engine-supplied icon table. Maps icon-name strings (referenced from
+ * `app.icon`, nav items, command-palette commands, etc.) to React
+ * components. Engines call `registerIcons(table)` from the kernel
+ * registry at module-load time; apps look up icons via `resolveIcon`
+ * regardless of which engine populated the table.
+ *
+ * Lets each engine ship its own DS-appropriate icon set (e.g. core
+ * uses `@wordpress/icons`; a Material engine ships Material icons)
+ * without app code knowing which engine is active.
+ *
+ * @typedef {Object<string, *>} EngineIconTable
  */
 
 /**
  * @typedef {SourceBase & {
  *   kind: 'engine',
- *   Component: (props: EngineSourceProps) => any
+ *   Component: (props: EngineSourceProps) => any,
+ *   ThemeProvider?: (props: EngineThemeProviderProps) => any,
+ *   compileStyles?: EngineStyleCompiler,
+ *   iconTable?: EngineIconTable
  * }} EngineSource
  */
 
 /**
  * Union of every source kind the registry can hold.
  *
- * @typedef {AppSource | RegionSource | EngineSource} Source
+ * @typedef {AppSource | EngineSource} Source
  */
 
 export {};

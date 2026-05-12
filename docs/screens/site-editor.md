@@ -425,7 +425,7 @@ Plugin compatibility note: most third-party block / pattern / theme.json extensi
 | Hub navigation surface in shell | Medium | If kept iframed, shell hub menu duplicates iframe hub nav — acceptable for v1, awkward. |
 | Selection bridge | Medium | iframe → shell selection bus via postMessage |
 | Hash sync | Low | Bidirectional hash sync via postMessage |
-| Command palette merge | Medium | Iframe runs its own palette; shell's `core:command-picker` should forward Cmd+K into the iframe when it has focus, otherwise show shell commands. |
+| Command palette merge | Medium | Iframe runs its own palette; shell's `core:command-palette` should forward Cmd+K into the iframe when it has focus, otherwise show shell commands. |
 | REST preload via shell | Low | Replicate `block_editor_rest_api_preload()` from shell PHP for performance. |
 | Theme export download | Low | Surface `POST /wp-block-editor/v1/export` as a shell command. |
 

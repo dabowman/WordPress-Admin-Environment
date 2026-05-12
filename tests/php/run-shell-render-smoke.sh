@@ -38,7 +38,7 @@ SHELLS=(
 	"developer-admin"
 	"content-author"
 	"client-portal"
-	"v1-demo"
+	"v2-demo"
 )
 
 fail=0

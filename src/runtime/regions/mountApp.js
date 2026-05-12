@@ -1,34 +1,77 @@
 /**
  * Shared region helper: render a single contained app instance.
  *
- * `appRef` may be either:
- *   - a string app id (resolved against `config.applications` and the registry),
- *   - or a fully-formed app instance object (the runtime path the kernel
- *     uses when it pre-resolves contained apps before mounting regions).
+ * `appRef` is either:
+ *   - a namespaced id string (`core:posts`, `plugin:foo/bar`) — the
+ *     v2-canonical reference. The id is the source; the registry
+ *     resolves it. Optional inline config is supplied by the caller.
+ *   - a fully-formed app instance object (`{ id, source, config?,
+ *     capability? }`) — the runtime path the kernel uses when it
+ *     pre-resolves regions, and the path region renderers use to mount
+ *     route-matched apps with interpolated config.
  *
  * Regions delegate to this helper to keep the resolution path uniform.
  */
 import { useKernel } from '../kernel-context';
-import { Slot } from '../slots/Slot';
 import { userCan } from '../capabilities/userCan';
+import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
+import { getApp, getEngine } from '../manifests';
+
+const IS_DEV =
+	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+const dsMismatchWarned = new Set();
+
+function warnDsMismatch( engineId, appId, engineDs, appDs ) {
+	if ( ! IS_DEV ) {
+		return;
+	}
+	const key = `${ engineId }::${ appId }`;
+	if ( dsMismatchWarned.has( key ) ) {
+		return;
+	}
+	dsMismatchWarned.add( key );
+	// eslint-disable-next-line no-console
+	console.warn(
+		`wp-admin-shell DS mismatch: app "${ appId }" declares designSystem="${ appDs }" but active engine "${ engineId }" declares designSystem="${ engineDs }". Visual results will be inconsistent.`
+	);
+}
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const { registry, config } = useKernel();
 
-	const appInstance = resolveAppInstance( appRef, config );
+	const appInstance = resolveAppInstance( appRef );
 	if ( ! appInstance ) {
 		return null;
 	}
+
+	// Dev-mode: warn once per (engine, app) pair when designSystem
+	// declarations disagree. Both fields are optional — missing data
+	// skips the check.
+	if ( IS_DEV ) {
+		const engineId = config?.engine;
+		const appManifest = getApp( appInstance.source );
+		const engineManifest = engineId ? getEngine( engineId ) : null;
+		const appDs = appManifest?.designSystem;
+		const engineDs = engineManifest?.designSystem;
+		if ( appDs && engineDs && appDs !== engineDs ) {
+			warnDsMismatch( engineId, appInstance.id, engineDs, appDs );
+		}
+	}
+	// Per-app theme override. `styles.applications[appId]` may declare
+	// `theme` seeds (Tier 1) or direct slot overrides (Tier 3); when
+	// present, wrap the app in a nested provider so its subtree carries
+	// the override. Zero-cost when no overrides authored.
+	const appStyles = config?.styles?.applications?.[ appInstance.id ];
 
 	// Spec §8 layer 2 — apps with `capability` are hidden from rendering.
 	if ( appInstance.capability && ! userCan( appInstance.capability ) ) {
 		return fallback;
 	}
 
-	const sourceDef = resolveAppSource( appInstance.source, registry );
+	const sourceDef = registry.get( appInstance.source, 'app' );
 	if ( ! sourceDef ) {
 		return (
-			<div className="wp-admin-shell-content__empty">
+			<div className="wp-admin-shell-region__empty">
 				Unknown source: { appInstance.source }
 			</div>
 		);
@@ -37,7 +80,9 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	// Spec §8 layer 3 — source-declared capability floor. Even if the
 	// shell config omits `capability`, the source's required caps still
 	// apply.
-	const sourceCaps = Array.isArray( sourceDef.capabilities ) ? sourceDef.capabilities : [];
+	const sourceCaps = Array.isArray( sourceDef.capabilities )
+		? sourceDef.capabilities
+		: [];
 	for ( const cap of sourceCaps ) {
 		if ( ! userCan( cap ) ) {
 			return fallback;
@@ -45,74 +90,40 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	}
 
 	const Component = sourceDef.Component;
-	const mergedConfig = { ...( sourceDef.defaults || {} ), ...( appInstance.config || {} ) };
-
-	const fillProps = {
-		appId:    appInstance.id,
-		source:   appInstance.source,
-		regionId,
+	const mergedConfig = {
+		...( sourceDef.defaults || {} ),
+		...( appInstance.config || {} ),
 	};
 
 	return (
-		<div data-app-id={ appInstance.id } data-app-source={ appInstance.source } style={ { display: 'contents' } }>
-			<Slot name="core:app.before" fillProps={ fillProps } />
-			<Component
-				app={ appInstance }
-				config={ mergedConfig }
-				regionId={ regionId }
-				segments={ segments || [] }
-			/>
-			<Slot name="core:app.after" fillProps={ fillProps } />
-		</div>
+		<ScopedThemeProvider styles={ appStyles }>
+			<div
+				data-app-id={ appInstance.id }
+				data-app-source={ appInstance.source }
+				style={ { display: 'contents' } }
+			>
+				<Component
+					app={ appInstance }
+					config={ mergedConfig }
+					regionId={ regionId }
+					segments={ segments || [] }
+				/>
+			</div>
+		</ScopedThemeProvider>
 	);
 }
 
-function resolveAppInstance( appRef, config ) {
+function resolveAppInstance( appRef ) {
 	if ( ! appRef ) {
 		return null;
 	}
 	if ( typeof appRef === 'string' ) {
-		const apps = getApplications( config );
-		return apps.find( ( a ) => a.id === appRef ) || null;
-	}
-	return appRef;
-}
-
-function resolveAppSource( source, registry ) {
-	if ( ! source ) {
+		// Namespaced ids (core:* / plugin:*) are self-identifying — the id
+		// is the source. Anything else is invalid in v2.
+		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
+			return { id: appRef, source: appRef };
+		}
 		return null;
 	}
-	const direct = registry.get( source, 'app' );
-	if ( direct ) {
-		return direct;
-	}
-	if ( source.startsWith( 'iframe:' ) ) {
-		return registry.get( 'core:iframe-fallback', 'app' );
-	}
-	return null;
-}
-
-export function toApplicationList( applications ) {
-	if ( ! applications ) {
-		return [];
-	}
-	if ( Array.isArray( applications ) ) {
-		return applications;
-	}
-	// v1 spec uses { id: { source, ... } } map form.
-	return Object.entries( applications ).map( ( [ id, body ] ) => ( {
-		id,
-		...body,
-	} ) );
-}
-
-/**
- * Pull the applications list off a resolved config. v1 canonical path
- * is `settings.applications`; v0 mirrors at top-level. Read the v1 path
- * first so v1-shape shells work without depending on the v0 mirrors.
- */
-export function getApplications( config ) {
-	return toApplicationList(
-		config?.settings?.applications || config?.applications
-	);
+	return appRef;
 }

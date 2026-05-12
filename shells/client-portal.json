@@ -1,76 +1,132 @@
 {
-  "$schema": "../docs/schemas/admin-v1.json",
-  "name": "acme-client-portal",
-  "title": "Acme Corp Portal",
-  "description": "Client portal for Acme Corp website management.",
-  "version": 1,
-  "branding": {
-    "logo": "./assets/acme-logo.svg",
-    "title": "Acme Corp",
-    "accentColor": "#e63946"
-  },
-  "layout": {
-    "navigation": "left",
-    "navigationCollapsed": false,
-    "navigationWidth": 240
-  },
-  "applications": [
-    {
-      "id": "pages",
-      "source": "core:posts",
-      "title": "Pages",
-      "icon": "page",
-      "config": { "postType": "page" }
-    },
-    {
-      "id": "posts",
-      "source": "core:posts",
-      "title": "Blog",
-      "icon": "post",
-      "config": { "postType": "post" }
-    },
-    {
-      "id": "editor",
-      "source": "core:editor",
-      "title": "Editor",
-      "icon": "edit",
-      "hidden": true
-    },
-    {
-      "id": "media",
-      "source": "iframe:upload.php",
-      "title": "Images & Files",
-      "icon": "media"
-    },
-    {
-      "id": "profile",
-      "source": "core:profile",
-      "title": "My Account",
-      "icon": "user"
-    }
-  ],
-  "navigation": [
-    { "app": "pages" },
-    { "app": "posts" },
-    { "app": "media" },
-    { "separator": true },
-    { "app": "profile" },
-    {
-      "label": "View My Site",
-      "icon": "external",
-      "href": "/",
-      "external": true
-    }
-  ],
-  "toolbar": {
-    "right": [
-      {
-        "href": "/",
-        "icon": "external",
-        "label": "View Site",
-        "external": true
-      }
-    ]
-  },
-  "defaultApp": "pages"
+	"$schema": "../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "acme-client-portal",
+	"title": "Acme Corp Portal",
+	"description": "Client portal for Acme Corp website management. Branded shell — logo, red accent, scoped navigation.",
+	"engine": "core:default",
+
+	"regions": {
+		"toolbar": {
+			"template": "core:topbar",
+			"regions": {
+				"end": {
+					"role": "region",
+					"app": "core:toolbar-actions",
+					"config": {
+						"right": [
+							{
+								"href": "/",
+								"icon": "external",
+								"label": "View Site",
+								"external": true
+							}
+						]
+					}
+				}
+			}
+		},
+
+		"sidebar": {
+			"template": "core:sidebar",
+			"regions": {
+				"hub": { "role": "region", "app": "core:site-hub" },
+				"nav": {
+					"role": "navigation",
+					"app": "core:navigation",
+					"config": {
+						"items": [
+							{
+								"app": "pages",
+								"label": "Pages",
+								"icon": "page",
+								"href": "#/pages"
+							},
+							{
+								"app": "posts",
+								"label": "Blog",
+								"icon": "post",
+								"href": "#/posts"
+							},
+							{
+								"app": "media",
+								"label": "Images & Files",
+								"icon": "media",
+								"href": "#/media"
+							},
+							{ "separator": true },
+							{
+								"app": "profile",
+								"label": "My Account",
+								"icon": "user",
+								"href": "#/profile"
+							},
+							{
+								"label": "View My Site",
+								"icon": "external",
+								"href": "/",
+								"external": true
+							}
+						]
+					}
+				}
+			}
+		},
+
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		},
+
+		"command-palette": {
+			"template": "core:overlay",
+			"app": "core:command-palette",
+			"platform": {
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+
+		"notices-banner": { "role": "region", "app": "core:notices-banner" },
+		"notices-snackbar": { "role": "region", "app": "core:notices-snackbar" }
+	},
+
+	"routes": {
+		"/pages": { "app": "core:posts", "config": { "postType": "page" } },
+		"/pages/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "page" }
+		},
+		"/pages/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "page", "id": "{id}" }
+		},
+		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/posts/new": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post" }
+		},
+		"/posts/{id}/edit": {
+			"app": "core:simple-editor",
+			"config": { "postType": "post", "id": "{id}" }
+		},
+		"/media": {
+			"app": "core:iframe-fallback",
+			"config": { "url": "upload.php" }
+		},
+		"/profile": { "app": "core:profile" }
+	},
+
+	"default-route": "/pages",
+
+	"styles": {
+		"branding": {
+			"logo": "./assets/acme-logo.svg",
+			"title": "Acme Corp"
+		},
+		"theme": {
+			"color": { "primary": "#e63946" }
+		}
+	}
 }

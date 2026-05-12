@@ -7,7 +7,7 @@
  *   node scripts/snapshot-wpds.mjs
  *
  * Inputs:  node_modules/@wordpress/theme/src/prebuilt/css/design-tokens.css
- * Output:  src/runtime/styles/wpds-defaults/6.9.json
+ * Output:  src/runtime/engines/core-default/wpds-defaults/6.9.json
  *
  * The output is a flat map of `--wpds-*` variable name → value, plus a
  * `meta` block with the @wordpress/theme version and a slot count for
@@ -17,14 +17,14 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { wpdsSlotPattern } from '../src/runtime/styles/wpds-defaults/_slot-pattern.mjs';
+import { wpdsSlotPattern } from '../src/runtime/engines/core-default/wpds-defaults/_slot-pattern.mjs';
 
 const __dirname = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..' );
 
 const CSS_PATH = resolve( projectRoot, 'node_modules/@wordpress/theme/src/prebuilt/css/design-tokens.css' );
 const PKG_PATH = resolve( projectRoot, 'node_modules/@wordpress/theme/package.json' );
-const OUT_PATH = resolve( projectRoot, 'src/runtime/styles/wpds-defaults/6.9.json' );
+const OUT_PATH = resolve( projectRoot, 'src/runtime/engines/core-default/wpds-defaults/6.9.json' );
 
 if ( ! existsSync( CSS_PATH ) ) {
 	console.error( `WPDS source not found: ${ CSS_PATH }` );

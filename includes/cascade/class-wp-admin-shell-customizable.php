@@ -1,11 +1,11 @@
 <?php
 /**
- * userCustomizable enforcement (spec §4.4.2).
+ * `customizable` enforcement (spec §4.4.2).
  *
  * Each admin.json entry may declare:
- *   - `userCustomizable: true`        — every field on this entry is writable downstream
- *   - `userCustomizable: false`       — entry is locked; no fields writable
- *   - `userCustomizable: [path,...]`  — only listed dotted paths are writable
+ *   - `customizable: true`        — every field on this entry is writable downstream
+ *   - `customizable: false`       — entry is locked; no fields writable
+ *   - `customizable: [path,...]`  — only listed dotted paths are writable
  *
  * The default (absent declaration) is *locked* — same posture as block
  * supports. This is enforced *before* the merge step so blocked fields
@@ -13,7 +13,7 @@
  *
  * `filter_writes` operates on a single entry. `filter_doc` walks a full
  * admin.json doc and applies the filter at the document, regions/applications
- * keyed-array level, and the styles tree (using `userCustomizable` declared
+ * keyed-array level, and the styles tree (using `customizable` declared
  * on the relevant ancestor node).
  *
  * @package WP_Admin_Shell
@@ -23,11 +23,24 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Shell_Customizable {
 
-	const FIELD = 'userCustomizable';
+	const FIELD = 'customizable';
+
+	/**
+	 * Read the customizable declaration from an entry.
+	 */
+	private static function read_decl( $entry ) {
+		if ( ! is_array( $entry ) ) {
+			return null;
+		}
+		if ( array_key_exists( self::FIELD, $entry ) ) {
+			return $entry[ self::FIELD ];
+		}
+		return null;
+	}
 
 	/**
 	 * Filter a downstream-origin patch against an upstream entry's
-	 * `userCustomizable` declaration. Returns only the writable subset.
+	 * `customizable` declaration. Returns only the writable subset.
 	 */
 	public static function filter_writes( $upstream_entry, $downstream_patch ) {
 		if ( ! is_array( $downstream_patch ) ) {
@@ -37,7 +50,7 @@ class WP_Admin_Shell_Customizable {
 			return $downstream_patch;
 		}
 
-		$decl = $upstream_entry[ self::FIELD ] ?? null;
+		$decl = self::read_decl( $upstream_entry );
 
 		if ( $decl === true ) {
 			return $downstream_patch;
@@ -63,7 +76,7 @@ class WP_Admin_Shell_Customizable {
 	/**
 	 * Filter a downstream doc against an upstream doc — walks
 	 * settings.applications / settings.regions per-entry, plus root-level
-	 * `userCustomizable` for styles.
+	 * `customizable` for styles.
 	 */
 	public static function filter_doc( $upstream, $downstream ) {
 		if ( ! is_array( $downstream ) ) {
@@ -83,7 +96,7 @@ class WP_Admin_Shell_Customizable {
 		}
 
 		if ( isset( $downstream['styles'] ) && is_array( $downstream['styles'] ) ) {
-			$styles_decl = $upstream['styles'][ self::FIELD ] ?? null;
+			$styles_decl = self::read_decl( $upstream['styles'] ?? array() );
 			$out['styles'] = self::filter_subtree(
 				$upstream['styles'] ?? array(),
 				$downstream['styles'],

@@ -1,0 +1,14 @@
+.wp-admin-shell-notices-banner {
+	position: fixed;
+	top: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100000;
+	max-width: 600px;
+	width: calc(100% - 32px);
+	pointer-events: none;
+}
+
+.wp-admin-shell-notices-banner > * {
+	pointer-events: auto;
+}

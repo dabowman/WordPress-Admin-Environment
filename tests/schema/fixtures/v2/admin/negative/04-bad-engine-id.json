@@ -1,0 +1,9 @@
+{
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "broken-engine-id",
+	"engine": "WP-Default-Layout",
+	"regions": {
+		"main": { "template": "core:main", "routing": { "route-key": "_self" } }
+	}
+}

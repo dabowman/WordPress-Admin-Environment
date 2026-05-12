@@ -1,0 +1,8 @@
+{
+	"$wpds": "6.9",
+	"name": "broken",
+	"engine": "core:wp-default-layout",
+	"regions": {
+		"main": { "template": "core:main" }
+	}
+}

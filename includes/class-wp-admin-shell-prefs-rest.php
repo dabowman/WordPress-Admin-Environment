@@ -4,11 +4,11 @@
  *
  * Backs `core:appearance`. Returns the full `wp_admin_shell_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
- * `userCustomizable` paths the active shell exposes; writes are partial
+ * `customizable` paths the active shell exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save
  * independently without clobbering siblings.
  *
- * Server-side `userCustomizable` enforcement still runs in the cascade
+ * Server-side `customizable` enforcement still runs in the cascade
  * resolver — this endpoint is a transport. The resolver filters writes
  * the user shouldn't have set when it merges; this endpoint stores
  * what the UI sends so the user has a record of their attempt.

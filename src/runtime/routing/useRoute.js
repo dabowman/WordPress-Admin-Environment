@@ -1,1 +1,1 @@
-export { useRoute, navigate, navigateRoute } from './router';
+export { useRoute, useRouteForRegion, navigate, navigateRoute } from './router';

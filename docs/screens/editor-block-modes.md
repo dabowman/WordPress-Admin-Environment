@@ -380,7 +380,7 @@ Recommended shell URL params:
 | Command palette → any global command | Cross-app navigation supported (e.g. "Go to Site Editor") |
 | List View → block click | Stays in editor (canvas selection change) |
 
-The command palette is the **primary cross-app navigator** in WP 6.6+; the shell's `core:command-picker` source mirrors this.
+The command palette is the **primary cross-app navigator** in WP 6.6+; the shell's `core:command-palette` source mirrors this.
 
 ---
 
@@ -457,7 +457,7 @@ The command palette is the **primary cross-app navigator** in WP 6.6+; the shell
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- The shell's `core:command-picker` system app already integrates with `@wordpress/commands` global registry and surfaces a Cmd+K palette. All modes/inserter/list-view are absent from `core:simple-editor` and rely on the iframed `core:editor`.
+- The shell's `core:command-palette` system app already integrates with `@wordpress/commands` global registry and surfaces a Cmd+K palette. All modes/inserter/list-view are absent from `core:simple-editor` and rely on the iframed `core:editor`.
 
 ### Gaps (rebuild list)
 
@@ -478,7 +478,7 @@ The command palette is the **primary cross-app navigator** in WP 6.6+; the shell
 | Find/Replace overlay (6.5+) | Medium | `EditorFindReplace` (private until stabilized) |
 | Welcome guide modal | Low | `WelcomeGuide` |
 | Keyboard shortcuts modal | Medium | `KeyboardShortcutHelpModal` |
-| Command palette host | Done | Shell already mounts `core:command-picker` |
+| Command palette host | Done | Shell already mounts `core:command-palette` |
 | Command palette: register editor commands | Medium | Each toggle/action above must register a command |
 | Patterns preload (`block_editor_rest_api_preload_paths`) | High | Without preload, patterns fetch is a 200ms-1s network blocker |
 | Synced-pattern (wp_block) inserter integration | Medium | `getEntityRecords('postType', 'wp_block')` |

@@ -1,0 +1,17 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:notices-snackbar",
+	"version": 1,
+	"title": "Notices (snackbar)",
+	"description": "Transient snackbar notices sourced from `@wordpress/notices` (snackbar context). Uses legacy `SnackbarList` — WPDS 0.12 has no port.",
+	"designSystem": "@wordpress/ui",
+	"role": "region",
+	"platform": {
+		"core:persists-across-navigation": true
+	},
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

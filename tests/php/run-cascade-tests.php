@@ -146,13 +146,13 @@ $T::assert_true( 'restrict-only: surviving apps preserved',
 	'ids: ' . implode( ',', $ids )
 );
 
-// ── userCustomizable ────────────────────────────────────────────────
+// ── customizable ────────────────────────────────────────────────────
 
-echo "\n— userCustomizable enforcement —\n";
+echo "\n— customizable enforcement —\n";
 
 $T::assert_eq( 'customizable=true: all fields allowed',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => true ),
+		array( 'id' => 'x', 'customizable' => true ),
 		array( 'title' => 'B', 'icon' => 'j' )
 	),
 	array( 'title' => 'B', 'icon' => 'j' )
@@ -160,7 +160,7 @@ $T::assert_eq( 'customizable=true: all fields allowed',
 
 $T::assert_eq( 'customizable=false: all fields blocked',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => false ),
+		array( 'id' => 'x', 'customizable' => false ),
 		array( 'title' => 'X' )
 	),
 	array()
@@ -168,7 +168,7 @@ $T::assert_eq( 'customizable=false: all fields blocked',
 
 $T::assert_eq( 'customizable=[title]: only title allowed',
 	WP_Admin_Shell_Customizable::filter_writes(
-		array( 'id' => 'x', 'userCustomizable' => array( 'title' ) ),
+		array( 'id' => 'x', 'customizable' => array( 'title' ) ),
 		array( 'title' => 'OK', 'icon' => 'NO' )
 	),
 	array( 'title' => 'OK' )
@@ -226,19 +226,22 @@ $T::assert_true( 'doc: pages locked entirely',
 
 echo "\n— Origin loaders + full pipeline —\n";
 
-$flat       = $T::load( '07-v0-flat.json' );
-$normalized = WP_Admin_Shell_Origin_Core::normalize_v0( $flat );
-$T::assert_eq( 'core origin: v0 → v1 emits layoutEngine',
-	$normalized['settings']['shell']['layoutEngine'] ?? null,
-	'core:site-editor-layout'
+// V2.M4 task 8: the v0 → v1 normalizer is gone. v0 inputs are no
+// longer supported. The loader passes docs through as-is + falls back
+// to `empty_doc()` for missing/malformed JSON. The empty doc carries
+// an `engine` field and a single content region so the kernel can
+// render a valid (empty) shell.
+$empty = WP_Admin_Shell_Origin_Core::empty_doc();
+$T::assert_eq( 'core origin: empty_doc carries engine',
+	$empty['engine'] ?? null,
+	'core:default'
 );
-$T::assert_true( 'core origin: v0 → v1 emits regions',
-	isset( $normalized['settings']['regions']['content'] ),
-	'regions: ' . json_encode( array_keys( $normalized['settings']['regions'] ?? array() ) )
+$T::assert_true( 'core origin: empty_doc carries content region',
+	isset( $empty['regions']['content'] ),
+	'regions: ' . json_encode( array_keys( $empty['regions'] ?? array() ) )
 );
-$T::assert_true( 'core origin: preserves user applications',
-	in_array( 'posts', array_column( $normalized['settings']['applications'], 'id' ), true ),
-	'apps: ' . json_encode( array_column( $normalized['settings']['applications'], 'id' ) )
+$T::assert_true( 'core origin: missing shell path falls back to empty_doc',
+	is_array( WP_Admin_Shell_Origin_Core::load( '/path/does/not/exist.json' ) )
 );
 
 $injected = array(
@@ -268,6 +271,69 @@ $T::assert_true( 'resolver: origin tags stripped',
 	! isset( $resolved['__origin'] ) && ! isset( $resolved['settings']['__origin'] ),
 	json_encode( array_keys( $resolved ) )
 );
+
+// ── Programmatic shell registration (spec §13 #6) ──────────────────
+
+echo "\n— Programmatic shell registration —\n";
+
+require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-shell-shells.php';
+
+WP_Admin_Shell_Shells::reset();
+$slug = WP_Admin_Shell_Shells::register( 'computed-shell', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'title'   => 'Computed',
+	'regions' => array(
+		'content' => array( 'role' => 'main' ),
+	),
+) );
+$T::assert_eq( 'register_shell returns slug', $slug, 'computed-shell' );
+$T::assert_true( 'has() finds registered slug', WP_Admin_Shell_Shells::has( 'computed-shell' ) );
+$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Shell_Shells::all()['computed-shell'] ) );
+
+$bad = WP_Admin_Shell_Shells::register( '', array() );
+$T::assert_true( 'empty slug → WP_Error', is_wp_error( $bad ) );
+
+$bad = WP_Admin_Shell_Shells::register( 'no-doc', 'not an array' );
+$T::assert_true( 'non-array doc → WP_Error', is_wp_error( $bad ) );
+
+// Registration without a `name` field stamps the slug in.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Shells::register( 'auto-name', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'regions' => array( 'content' => array( 'role' => 'main' ) ),
+) );
+$T::assert_eq(
+	'register stamps slug into doc when name missing',
+	WP_Admin_Shell_Shells::get( 'auto-name' )['name'] ?? null,
+	'auto-name'
+);
+
+// Resolver picks programmatic over file-based when slug exists.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Shells::register( 'wp-admin-default', array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'title'   => 'Programmatic Override',
+	'regions' => array( 'content' => array( 'role' => 'main' ) ),
+) );
+
+WP_Admin_Shell_Cache::flush();
+WP_Admin_Shell_Resolver::reset_request_memo();
+update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+$resolved = WP_Admin_Shell_Resolver::resolve();
+$T::assert_eq(
+	'resolver: programmatic shell wins over file-based same slug',
+	$resolved['title'] ?? null,
+	'Programmatic Override'
+);
+
+// Cleanup so subsequent tests get a clean slate.
+WP_Admin_Shell_Shells::reset();
+WP_Admin_Shell_Cache::flush();
+WP_Admin_Shell_Resolver::reset_request_memo();
+delete_option( 'wp_admin_shell_active_shell' );
 
 // ── Summary ─────────────────────────────────────────────────────────
 
