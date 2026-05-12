@@ -891,19 +891,138 @@ Six extension points, in increasing power:
 2. **Filter per-origin configs.** `wp_admin_shell_data_{origin}` for each cascade origin.
 3. **Register a `plugin:*` app.** New app available for routing/regions to reference. App manifest + script/style registration.
 4. **Register a region template.** Plugin contributes a new template engines can reference, or that admin.json can instantiate. Templates are part of an engine's manifest; plugins extending an engine declare additions via `wp_admin_shell_register_template( $engine_id, $template )`.
-5. **Register an engine.** Most powerful. Plugin ships an `engine.json` and the engine's React/JS implementation. Used for floating-window, tiling, custom paradigms.
-6. **Register a complete shell.** A plugin programmatically registers an entire `admin.json` (e.g., based on user role at runtime).
+5. **Register an engine — including a complete design system.** A plugin ships an `engine.json`, the engine's React/JS implementation, an optional `ThemeProvider`, an optional icon table, an optional style compiler, optional CSS bundles, and (typically) a matched app set that emits components from the same DS. Used for floating-window, tiling, Material Design, brutalist, or any other paradigm a plugin author wants. See §13.1 for a worked example.
+6. **Register a complete shell.** A plugin programmatically registers an entire `admin.json` (e.g., based on user role at runtime). `wp_admin_shell_register_shell( $slug, $admin_json )`.
 
 What is **not** an extension point, by design:
 
 - Patching the shell's React tree.
 - Replacing core apps by re-registering the same id (registry rejects duplicates; use a different id and route to it).
 - Loading code outside WordPress's enqueue system.
-- Adding new ARIA roles or new platform services from plugin code (these are governed centrally; plugins request additions via the spec process).
+- Adding new ARIA roles from plugin code (these are governed centrally; plugins request additions via the spec process). Platform services use the namespaced pattern (`core:*` / `plugin:slug/*`) and may be added by any plugin engine via `honored-platform`.
 - Re-enabling features an upstream origin restricted (cascade is restrict-only).
 - Adding region "slots" or other new composition primitives. The architecture is one-region-one-app with nested regions; that is the only composition mechanism the shell governs.
 
 App-internal extensibility (`PluginSidebar`, `InspectorControls`, `BlockControls`, etc.) is **not a shell extension point**. It is governed by each app's own React extension API (`@wordpress/plugins`, slot/fill, filters). The shell does not see or govern these.
+
+### 13.1 Worked example — shipping a Material Design engine
+
+A plugin wants to deliver a Google-Docs-flavored WordPress admin: Material-flavored chrome, document list, real-time-collab block editor. All of it bundled in one third-party plugin, zero modifications to the WP Admin Shell plugin.
+
+**Plugin layout:**
+
+```
+my-material-shell/
+├── my-material-shell.php             # plugin bootstrap, calls registers
+├── engines/
+│   └── material/
+│       ├── engine.json               # designSystem: "mui", styles[]: MUI CSS
+│       ├── index.js                  # EngineSource: Layout + MaterialThemeProvider + compileStyles + iconTable
+│       ├── Layout.js                 # MUI <AppBar> + <Box> + <Drawer>
+│       └── icons.js                  # @mui/icons-material table
+├── apps/
+│   ├── material-docs-list/
+│   │   ├── app.json                  # designSystem: "mui"
+│   │   └── index.js                  # MUI <DataGrid> over /wp/v2/posts
+│   └── material-doc-editor/
+│       ├── app.json                  # designSystem: "mui"
+│       └── index.js                  # @wordpress/block-editor + MUI chrome + Gutenberg collab provider
+└── shells/
+    └── material-docs.json            # admin.json wiring the two apps into the engine
+```
+
+**Plugin bootstrap (PHP):**
+
+```php
+add_action( 'plugins_loaded', function () {
+  wp_admin_shell_register_engine( __DIR__ . '/engines/material/engine.json' );
+  wp_admin_shell_register_app(    __DIR__ . '/apps/material-docs-list/app.json' );
+  wp_admin_shell_register_app(    __DIR__ . '/apps/material-doc-editor/app.json' );
+  wp_admin_shell_register_shell( 'material-docs',
+    json_decode( file_get_contents( __DIR__ . '/shells/material-docs.json' ), true ) );
+} );
+```
+
+**`engines/material/engine.json` (excerpt):**
+
+```jsonc
+{
+  "id": "plugin:my-material-shell/material",
+  "version": 1,
+  "title": "Material Layout",
+  "designSystem": "mui",
+  "specializes-roles": [ "banner", "main", "complementary" ],
+  "honored-platform": [
+    "core:modal", "core:dismiss-on", "core:dirty-state",
+    "plugin:my-material-shell/presence"
+  ],
+  "templates": {
+    "appbar": { "role": "banner", "default-style": { "block-size": "64px" } },
+    "doc-list-pane": { "role": "main" },
+    "doc-editor-pane": { "role": "main", "platform": { "core:dirty-state": true } }
+  },
+  "default-arrangement": "material-shell",
+  "script": "plugin-material-engine",
+  "style":  "plugin-material-engine",
+  "styles": [
+    { "handle": "plugin-material-mui",      "src": "build/mui.css" },
+    { "handle": "plugin-material-icons",    "src": "build/material-icons.css" }
+  ]
+}
+```
+
+**`engines/material/index.js` (excerpt):**
+
+```js
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import Layout    from './Layout';
+import iconTable from './icons';
+import { registerIcons } from 'wp-admin-shell/runtime/config/iconMap';
+
+const theme = createTheme( { palette: { primary: { main: '#1a73e8' } } } );
+
+function MaterialThemeProvider( { children } ) {
+  return <ThemeProvider theme={ theme }>{ children }</ThemeProvider>;
+}
+
+function compileStyles( styles /* , tokens */ ) {
+  // Map admin.json `styles.theme.color.primary` into Material's palette
+  // var, etc. Return { top, scoped, subtrees }.
+  const top = {};
+  if ( styles?.theme?.color?.primary ) {
+    top[ '--mui-palette-primary-main' ] = styles.theme.color.primary;
+  }
+  return { top, scoped: [], subtrees: {} };
+}
+
+registerIcons( iconTable, { fallback: iconTable.description } );
+
+export default {
+  kind:          'engine',
+  id:            'plugin:my-material-shell/material',
+  Component:     Layout,
+  ThemeProvider: MaterialThemeProvider,
+  compileStyles,
+  iconTable,
+};
+```
+
+**What this buys the plugin author:**
+
+- Zero kernel modifications. The plugin loads alongside the unchanged WP Admin Shell plugin; users switch to `material-docs` shell via the shell switcher.
+- Zero WPDS contact. No `--wpds-*` token, no `@wordpress/ui` component, no `@wordpress/icons` import. The plugin ships a complete Material visual identity.
+- Full kernel benefits: cascade resolver, capability gating, routing, dirty-state, bindings, manifest validation, REST endpoints, role/user prefs. The plugin's apps inherit all of it.
+- Gutenberg integration where it helps. The `material-doc-editor` app can still use `@wordpress/block-editor` internals for real-time collab, while wrapping the editor chrome in MUI components.
+
+**What the plugin author owns:**
+
+- The Material `ThemeProvider` and palette construction.
+- A `compileStyles` hook that maps admin.json seeds to Material's CSS variables.
+- An icon table that registers Material icons under the same name strings authors use (`post`, `edit`, `settings`).
+- The CSS bundles that ship with MUI (and the build pipeline that produces them).
+- A matched set of apps that emit Material components rather than `@wordpress/ui`.
+
+**The kernel ↔ engine contract is the only seam the plugin touches.** Switching back to `core:default` reactivates WPDS theming with no leftover Material state.
 
 ---
 
