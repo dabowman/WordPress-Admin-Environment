@@ -25,6 +25,7 @@ import {
 	useWindowManager,
 	useWindowStack,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
+import { getAppWindowBlock } from '../../runtime/engines/core-desktop/windowing/appWindowBlock';
 import { resolveIcon } from '../../runtime/config/iconMap';
 
 function resolveDockItem( item, routes ) {
@@ -60,7 +61,10 @@ function appIconName( appId, items, routes ) {
 			return item.icon;
 		}
 	}
-	return null;
+	// Fall back to the app manifest's `window.icon` so apps opened by
+	// means other than a dock launcher still get a recognizable tile.
+	const block = getAppWindowBlock( appId );
+	return block.icon || null;
 }
 
 export default function DesktopDockApp( { config } ) {
@@ -92,10 +96,24 @@ export default function DesktopDockApp( { config } ) {
 							if ( ! resolved ) {
 								return;
 							}
+							const block = getAppWindowBlock( resolved.app );
+							// Multi-instance apps always open fresh.
+							// Singleton apps focus an existing window
+							// instead of stacking duplicates.
+							if ( ! block.multiInstance ) {
+								const existing = stack.find(
+									( w ) => w.app === resolved.app
+								);
+								if ( existing ) {
+									manager.focusWindow( existing.id );
+									return;
+								}
+							}
 							manager.openWindow( {
 								app: resolved.app,
 								config: resolved.config,
 								title: resolved.title,
+								size: block.defaultSize,
 							} );
 						};
 						return (

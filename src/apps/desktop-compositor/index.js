@@ -28,11 +28,13 @@ import {
 	useWindowManager,
 	useWindowStack,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
+import { getAppWindowBlock } from '../../runtime/engines/core-desktop/windowing/appWindowBlock';
 
 function buildWindowDecl( win, parentId ) {
 	const maximized = win.state === 'maximized';
 	const minimized = win.state === 'minimized';
 	const windowRegionId = `${ parentId }/${ win.id }`;
+	const block = getAppWindowBlock( win.app );
 	return {
 		role: 'region',
 		style: {
@@ -55,6 +57,8 @@ function buildWindowDecl( win, parentId ) {
 					windowId: win.id,
 					windowRegionId,
 					title: win.title,
+					minW: block.minSize.w,
+					minH: block.minSize.h,
 				},
 			},
 			body: {

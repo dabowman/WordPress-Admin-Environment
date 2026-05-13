@@ -13,5 +13,17 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"window": {
+		"defaultSize": {
+			"w": 1024,
+			"h": 720
+		},
+		"minSize": {
+			"w": 540,
+			"h": 400
+		},
+		"multiInstance": false,
+		"icon": "layout"
+	}
 }
