@@ -29,6 +29,10 @@ import {
 	useWindowManager,
 	useWindowEntry,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
+import {
+	detectSnapZone,
+	snapRect,
+} from '../../runtime/engines/core-desktop/windowing/snap';
 
 /** Minimum window size in CSS pixels (fallback when manifest doesn't specify). */
 const DEFAULT_MIN_W = 320;
@@ -82,6 +86,48 @@ function findWindowEl( windowRegionId ) {
 		return null;
 	}
 	return document.querySelector( `[data-region-id="${ windowRegionId }"]` );
+}
+
+/**
+ * Create a translucent overlay inside the workspace that previews the
+ * snap target rect during drag. Returns the element so the caller can
+ * `.remove()` it on pointerup. Returns null if the workspace element
+ * is missing or not positioned (the overlay relies on absolute
+ * positioning resolving against the workspace).
+ *
+ * @param {Element|null} workspaceEl Workspace region DOM node.
+ * @return {HTMLDivElement|null} The mounted ghost element.
+ */
+function createSnapGhost( workspaceEl ) {
+	if ( ! workspaceEl ) {
+		return null;
+	}
+	const el = document.createElement( 'div' );
+	el.className = 'wp-admin-shell-desktop-snap-ghost';
+	el.style.position = 'absolute';
+	el.style.pointerEvents = 'none';
+	el.style.display = 'none';
+	workspaceEl.appendChild( el );
+	return el;
+}
+
+function positionGhost( ghost, zone, workspace ) {
+	if ( ! ghost ) {
+		return;
+	}
+	if ( ! zone ) {
+		ghost.style.display = 'none';
+		return;
+	}
+	const rect = snapRect( zone, workspace );
+	if ( ! rect ) {
+		ghost.style.display = 'none';
+		return;
+	}
+	ghost.style.display = 'block';
+	ghost.style.transform = `translate(${ rect.x }px, ${ rect.y }px)`;
+	ghost.style.inlineSize = `${ rect.w }px`;
+	ghost.style.blockSize = `${ rect.h }px`;
 }
 
 export default function DesktopWindowFrameApp( { config } ) {
@@ -199,12 +245,80 @@ export default function DesktopWindowFrameApp( { config } ) {
 		if ( win.state === 'maximized' ) {
 			return;
 		}
-		startPointerOp( event, ( startRect ) => ( dx, dy ) => ( {
-			x: startRect.x + dx,
-			y: startRect.y + dy,
-			w: startRect.w,
-			h: startRect.h,
-		} ) );
+		const el = findWindowEl( windowRegionId );
+		if ( ! el ) {
+			return;
+		}
+		const workspaceEl = el.parentElement;
+		const workspaceBounds = workspaceEl
+			? workspaceEl.getBoundingClientRect()
+			: null;
+		event.preventDefault();
+		event.stopPropagation();
+		focus();
+
+		const startX = event.clientX;
+		const startY = event.clientY;
+		const startRect = { ...win.rect };
+		let activeZone = null;
+		const ghost = createSnapGhost( workspaceEl );
+
+		const onMove = ( e ) => {
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			el.style.transform = `translate(${ startRect.x + dx }px, ${
+				startRect.y + dy
+			}px)`;
+			if ( ! workspaceBounds || ! ghost ) {
+				return;
+			}
+			const zone = detectSnapZone( e.clientX, e.clientY, {
+				x: workspaceBounds.x,
+				y: workspaceBounds.y,
+				w: workspaceBounds.width,
+				h: workspaceBounds.height,
+			} );
+			if ( zone !== activeZone ) {
+				activeZone = zone;
+				positionGhost( ghost, zone, {
+					x: 0,
+					y: 0,
+					w: workspaceBounds.width,
+					h: workspaceBounds.height,
+				} );
+			}
+		};
+		const onUp = ( e ) => {
+			window.removeEventListener( 'pointermove', onMove );
+			window.removeEventListener( 'pointerup', onUp );
+			window.removeEventListener( 'pointercancel', onUp );
+			dragRef.current = null;
+			if ( ghost ) {
+				ghost.remove();
+			}
+			if ( activeZone && workspaceBounds ) {
+				const snapped = snapRect( activeZone, {
+					x: 0,
+					y: 0,
+					w: workspaceBounds.width,
+					h: workspaceBounds.height,
+				} );
+				if ( snapped ) {
+					manager.setRect( windowId, snapped );
+					return;
+				}
+			}
+			const dx = e.clientX - startX;
+			const dy = e.clientY - startY;
+			manager.setRect( windowId, {
+				x: startRect.x + dx,
+				y: startRect.y + dy,
+			} );
+		};
+		dragRef.current = { onMove, onUp };
+		window.addEventListener( 'pointermove', onMove );
+		window.addEventListener( 'pointerup', onUp );
+		window.addEventListener( 'pointercancel', onUp );
 	};
 
 	const resizable = win.state !== 'maximized';

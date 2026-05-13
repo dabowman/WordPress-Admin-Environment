@@ -206,6 +206,18 @@
 	background: #28c840;
 }
 
+.wp-admin-shell-desktop-snap-ghost {
+	border: 2px solid
+		var( --wp-admin-shell--chrome--snap-ghost--border, rgba( 90, 160, 255, 0.9 ) );
+	background: var(
+		--wp-admin-shell--chrome--snap-ghost--background,
+		rgba( 90, 160, 255, 0.18 )
+	);
+	border-radius: 8px;
+	z-index: 9999;
+	transition: transform 0.08s ease, inline-size 0.08s ease, block-size 0.08s ease;
+}
+
 .wp-admin-shell-desktop-window-frame__resize {
 	position: absolute;
 	z-index: 1;
