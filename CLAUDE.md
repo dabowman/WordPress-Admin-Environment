@@ -16,7 +16,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **How tokens reach DOM.** Two paths (both engine-side now, not kernel): (a) **engine template `default-style`** — `core:default` engine emits values like `var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))` as **inline style** on each region's `<div>`. `resolveRegion.mjs` merges template `default-style` into `region.style`, and `Region.js`'s `toReactStyle` helper kebab→camelCases the keys and applies them as React `style={...}`. The two-arg `var()` chain means: chrome var wins when authored; falls back to WPDS slot when chrome layer is empty. (b) **engine `index.css` class rules** — `core:default/index.css` ships the chrome-anchor/svg/Stack-defensive overrides + the engine root paint (`.wp-admin-shell-layout` background+color via `--wp-admin-shell--chrome--canvas--{background,foreground}` slots, same fallback chain). Single-pane engine paints its root through the same canvas slot for parity. Non-WPDS engines ship none of these. Kernel `src/index.css` is ~10 lines: body positioning + a11y forbidden fallback structure only. The `chrome.canvas.*` slot is the author entry point for shell-wide background/foreground; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface chrome. **Inside WPDS-flavored app/engine code, don't hardcode hex colors** — use `var(--wpds-*)` directly so ThemeProvider seeds flow through. App-level CSS audited 2026-05-06; no remaining hardcoded hex colors in `src/apps/**/*.js` inline styles.
 
-**Test surface (646 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22). Node: `tests/schema/validate-shells.test.mjs` (69 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 29 bundled app manifests, three bundled engines incl. `core:desktop` scaffold, positive + negative fixtures including unnamespaced-platform-service + window-block fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (13 files, ~277 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
+**Test surface (665 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22). Node: `tests/schema/validate-shells.test.mjs` (69 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 29 bundled app manifests, three bundled engines incl. `core:desktop` scaffold, positive + negative fixtures including unnamespaced-platform-service + window-block fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (13 files, ~277 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store), `tests/engines/core-desktop/*` (TS via Node `--experimental-strip-types`; 19 assertions — WindowManager open/close/focus/min/max/subscribe/cascade). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
 
 **Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg`). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without it, shell renders empty.
 
@@ -116,7 +116,10 @@ npm install
 npm run build    # production build
 npm run start    # dev build with watch
 npm run lint:js  # eslint via wp-scripts (clean baseline as of 2026-05-07)
+npm run lint:ts  # tsc --noEmit; type-checks the core:desktop engine sources
 ```
+
+TypeScript is scoped to `src/runtime/engines/core-desktop/**` + `tests/engines/core-desktop/**` per D6 of the desktop engine port plan. `tsconfig.json`'s `include` is intentionally narrow — the rest of the repo stays JS/JSDoc. Emission is handled by `@wordpress/babel-preset-default` (which already pulls in `@babel/preset-typescript`) inside `wp-scripts build`; `tsc --noEmit` runs as the type-check safety net. Test scripts under `tests/engines/core-desktop/*.ts` execute via Node's native type-stripping (`node --experimental-strip-types`), no compile step required.
 
 ## Lint conventions
 
@@ -144,9 +147,10 @@ JSDoc convention for React function components with destructured props: `@param 
 
 ```bash
 # Node
-npm run test:schema      # 53 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
+npm run test:schema      # 69 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
 npm run test:parity      # 4  — WPDS slot-list drift detector
-npm run test:runtime     # 222 — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults
+npm run test:runtime     # 33 files chained — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults + icon-registry + dynamicChildren store
+npm run test:engines     # 19 — TS WindowManager state machine (core:desktop engine)
 
 # PHP — wp-env CLI container
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
@@ -208,7 +212,8 @@ wp-admin-shell/
 │   │   │   └── source-types.js     # JSDoc typedefs for SourceProps (no runtime)
 │   │   ├── engines/                # Per-engine modules. Each ships index.js (EngineSource def + side-effect imports its index.css), Layout.js (React layout component), engine.json (manifest w/ region templates + default-style CSS), index.css (engine-specific layout idiom CSS).
 │   │   │   ├── core-default/        # Flagship: dark chrome + elevated cards (toolbar/sidebar/content/preview)
-│   │   │   └── core-single-pane/    # Mobile-first: appbar + collapsible nav drawer
+│   │   │   ├── core-single-pane/    # Mobile-first: appbar + collapsible nav drawer
+│   │   │   └── core-desktop/        # Windowed engine. Adds windowing/ subdir (TS): WindowManager state class + WindowManagerContext + hooks. icons.js + Layout.js + index.css mirror sibling engines' shape; Layout wraps tree in WindowManagerProvider.
 │   │   ├── regions/                # Single declaration-driven renderer
 │   │   │   ├── Region.js           # Generic <Region>: GenericRegion → ModalRegion (backdrop + focus trap + ARIA modal + dismiss + autofocus) or PersistentRegion (landmark) composed from platform services. Recursive cap fast-path. Renders `region.regions` children with id `parent/child` (spec §5.5).
 │   │   │   ├── regionKind.js       # Derives bucket (persistent | overlay | drawer) from platformServices.placement(region).
@@ -250,7 +255,10 @@ wp-admin-shell/
 │       a second consumer appears.
 ├── tests/
 │   ├── php/                 # wp eval-file: cascade (22), selection (5), cap (54)
-│   └── parity/              # node: WPDS slot-drift detector (4)
+│   ├── parity/              # node: WPDS slot-drift detector (4)
+│   ├── runtime/             # node: pure-ESM runtime modules (resolveRegion / validateRegion / …)
+│   ├── schema/              # node: Ajv sweeps over shells + manifests
+│   └── engines/             # TS engine tests; run via `node --experimental-strip-types`
 ├── scripts/snapshot-wpds.mjs   # Regenerate src/runtime/styles/wpds-defaults/<wpds>.json
 ├── build/                   # webpack output (gitignored)
 └── docs/                    # spec, plan, schemas, readiness, perf-baseline, archive
@@ -279,7 +287,7 @@ wp-admin-shell/
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
 | System apps | various | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu` — each shell declares them explicitly in admin.json regions (no v0 normalizer auto-pinning) |
-| Desktop engine apps | `core:desktop-compositor`, `core:desktop-dock-app`, `core:desktop-window-frame` | partial | — | Scaffolding stubs for the `core:desktop` engine (P2.T1, on `feat/desktop-engine-p2-mvp`). P2.T2 fills compositor + WindowManager; P2.T3 fills dock |
+| Desktop engine apps | `core:desktop-compositor`, `core:desktop-dock-app`, `core:desktop-window-frame` | partial | — | `core:desktop` engine apps (P2.T2 MVP on `feat/desktop-engine-p2-mvp`). Compositor drives the kernel's dynamic-children store from a `WindowManager` TS class (`src/runtime/engines/core-desktop/windowing/`); each open window becomes a child region whose decl nests `frame`+`body` static grandchildren. Frame app dispatches close/minimize/maximize through `WindowManagerContext`. Dock renders two groups: launcher tiles (from region `config.items`, resolved against `admin.json` `routes` → `openWindow()`) + live-window tiles (one per `useWindowStack()` entry, click → `focusWindow(id)` which auto-restores minimized state, since `WindowManager.focusWindow` un-minimizes as part of its z-bump path). **MVP scope** — drag/resize/snap/tabs/menus/native-window-hydration/spaces/activity-state from upstream `desktop-mode/src/window*` defer to a follow-up that mutates window rects imperatively during pointer-move and commits to the manager on pointer-up. P2.T3 ports the dock rail registry; P2.T4 wires the chromeless bridge. |
 
 ### `core:simple-editor` notes
 

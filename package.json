@@ -6,11 +6,13 @@
 		"build": "wp-scripts build",
 		"start": "wp-scripts start",
 		"lint:js": "wp-scripts lint-js",
+		"lint:ts": "tsc --noEmit",
 		"format": "wp-scripts format",
 		"snapshot:wpds": "node scripts/snapshot-wpds.mjs",
 		"test:parity": "node tests/parity/wpds-snapshot.test.mjs",
 		"test:schema": "node tests/schema/validate-shells.test.mjs",
-		"test:runtime": "node tests/runtime/resolve-region.test.mjs && node tests/runtime/validate-region.test.mjs && node tests/runtime/platform-services.test.mjs && node tests/runtime/match-route.test.mjs && node tests/runtime/dirty-state.test.mjs && node tests/runtime/tokens-resolver.test.mjs && node tests/runtime/compile-styles-tokens.test.mjs && node tests/runtime/bindings.test.mjs && node tests/runtime/spec-worked-example.test.mjs && node tests/runtime/registry-theme-provider.test.mjs && node tests/runtime/engine-defaults.test.mjs && node tests/runtime/icon-registry.test.mjs && node tests/runtime/dynamic-children.test.mjs"
+		"test:runtime": "node tests/runtime/resolve-region.test.mjs && node tests/runtime/validate-region.test.mjs && node tests/runtime/platform-services.test.mjs && node tests/runtime/match-route.test.mjs && node tests/runtime/dirty-state.test.mjs && node tests/runtime/tokens-resolver.test.mjs && node tests/runtime/compile-styles-tokens.test.mjs && node tests/runtime/bindings.test.mjs && node tests/runtime/spec-worked-example.test.mjs && node tests/runtime/registry-theme-provider.test.mjs && node tests/runtime/engine-defaults.test.mjs && node tests/runtime/icon-registry.test.mjs && node tests/runtime/dynamic-children.test.mjs",
+		"test:engines": "node --experimental-strip-types tests/engines/core-desktop/window-manager.test.ts"
 	},
 	"devDependencies": {
 		"@base-ui/react": "^1.4.0",

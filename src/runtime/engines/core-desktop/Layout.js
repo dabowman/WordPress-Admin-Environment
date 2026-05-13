@@ -16,20 +16,18 @@
  *
  *   wallpaper (role: presentation) — decorative gradient/canvas/widgets.
  *   workspace (role: main, core:dynamic-children) — compositor renders
- *      windows here as runtime-mutated child regions. P2.T2 fills.
+ *      windows here as runtime-mutated child regions.
  *   dock (role: navigation) — desktop-dock-app reads admin.json nav and
- *      dispatches `openWindow` to the compositor. P2.T3 fills.
+ *      dispatches `openWindow` to the compositor.
  *
- * Layout is intentionally simple: the engine paints chrome layers, the
- * kernel paints regions inside them. Multi-region role classification is
- * not needed — shells using this engine declare exactly three regions
- * (`wallpaper`, `workspace`, `dock`), and the layout positions them by
- * id. Other declared regions render in document order at z=3 for now;
- * MVP doesn't formalize a slot vocabulary beyond the three persistent
- * surfaces.
+ * WindowManagerProvider wraps the entire engine tree so the dock app
+ * (sibling of workspace) and the window-frame app (descendant of
+ * dynamic-children inside workspace) both reach the same manager
+ * instance via `useWindowManager()`.
  */
 
 import { Region } from '../../regions/Region';
+import { WindowManagerProvider } from './windowing/WindowManagerContext';
 
 const PERSISTENT_IDS = new Set( [ 'wallpaper', 'workspace', 'dock' ] );
 
@@ -42,28 +40,30 @@ export default function CoreDesktopLayout( { regions } ) {
 	);
 
 	return (
-		<div
-			className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
-			data-engine="core:desktop"
-		>
-			{ wallpaper && (
-				<div className="wp-admin-shell-desktop__wallpaper-slot">
-					<Region region={ wallpaper } />
-				</div>
-			) }
-			{ workspace && (
-				<div className="wp-admin-shell-desktop__workspace-slot">
-					<Region region={ workspace } />
-				</div>
-			) }
-			{ dock && (
-				<div className="wp-admin-shell-desktop__dock-slot">
-					<Region region={ dock } />
-				</div>
-			) }
-			{ overlays.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-		</div>
+		<WindowManagerProvider>
+			<div
+				className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
+				data-engine="core:desktop"
+			>
+				{ wallpaper && (
+					<div className="wp-admin-shell-desktop__wallpaper-slot">
+						<Region region={ wallpaper } />
+					</div>
+				) }
+				{ workspace && (
+					<div className="wp-admin-shell-desktop__workspace-slot">
+						<Region region={ workspace } />
+					</div>
+				) }
+				{ dock && (
+					<div className="wp-admin-shell-desktop__dock-slot">
+						<Region region={ dock } />
+					</div>
+				) }
+				{ overlays.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+			</div>
+		</WindowManagerProvider>
 	);
 }
