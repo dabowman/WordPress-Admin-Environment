@@ -30,7 +30,7 @@ import { __ } from '@wordpress/i18n';
 
 import { MountedApp } from './mountApp';
 import { useRouteForRegion } from '../routing/useRoute';
-import { useKernel } from '../kernel-context';
+import { useKernel, useDynamicChildren } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { getPlatformServices } from './platformServices.mjs';
 import { registerTrigger } from '../bindings/triggerStore.mjs';
@@ -71,23 +71,43 @@ function ScopedRegionTheme( { regionId, children } ) {
 
 /**
  * Spec §5.5: nested children are addressable as `{parent}/{child}`. This
- * helper materializes each child as a `<Region>` whose `id` is the
+ * component materializes each child as a `<Region>` whose `id` is the
  * parent's id joined with the child's key. Children pass through the
  * same dispatcher recursively, so further nesting + per-child cap
  * gating work without coordination.
- * @param {*} region
+ *
+ * Statically-declared `region.regions` render first; runtime children
+ * added via the `core:dynamic-children` platform service (spec §5.5)
+ * append after. Each entry's React key uses the child key directly so
+ * runtime add/remove preserves identity for unchanged siblings.
+ * @param {Object} root0
+ * @param {*}      root0.region
  */
-function renderChildren( region ) {
-	const children = region.regions;
-	if ( ! children || typeof children !== 'object' ) {
+function RegionChildren( { region } ) {
+	const { children: dynamic } = useDynamicChildren( region.id );
+	const staticEntries =
+		region.regions && typeof region.regions === 'object'
+			? Object.entries( region.regions )
+			: [];
+	if ( staticEntries.length === 0 && dynamic.length === 0 ) {
 		return null;
 	}
-	return Object.entries( children ).map( ( [ key, child ] ) => (
-		<Region
-			key={ key }
-			region={ { id: childId( region.id, key ), ...child } }
-		/>
-	) );
+	return (
+		<>
+			{ staticEntries.map( ( [ key, child ] ) => (
+				<Region
+					key={ key }
+					region={ { id: childId( region.id, key ), ...child } }
+				/>
+			) ) }
+			{ dynamic.map( ( { key, decl } ) => (
+				<Region
+					key={ key }
+					region={ { id: childId( region.id, key ), ...decl } }
+				/>
+			) ) }
+		</>
+	);
 }
 
 function childId( parentId, key ) {
@@ -161,7 +181,7 @@ function PersistentRegion( { region, matched } ) {
 			style={ style }
 		>
 			{ renderRegionApp( region, matched ) }
-			{ renderChildren( region ) }
+			<RegionChildren region={ region } />
 		</div>
 	);
 }
@@ -252,7 +272,7 @@ function ModalRegion( { region, services, matched } ) {
 				style={ { display: 'none' } }
 			>
 				{ renderRegionApp( region, matched ) }
-				{ renderChildren( region ) }
+				<RegionChildren region={ region } />
 			</div>
 		);
 	}
@@ -284,7 +304,7 @@ function ModalRegion( { region, services, matched } ) {
 					</span>
 				) : null }
 				{ renderRegionApp( region, matched ) }
-				{ renderChildren( region ) }
+				<RegionChildren region={ region } />
 			</div>
 		</>
 	);

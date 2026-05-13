@@ -47,10 +47,25 @@
  */
 
 /**
+ * Optional window-mount hints declared on an app manifest. Engines that
+ * mount apps inside window frames (windowed/MDI/desktop-style) consult
+ * the block when spawning a window; default sidebar+toolbar+content
+ * engines ignore it.
+ *
+ * @typedef {Object} AppManifestWindow
+ * @property {{w: number, h: number}} [defaultSize]   Preferred initial window size (CSS px).
+ * @property {{w: number, h: number}} [minSize]       Minimum window size (CSS px).
+ * @property {string}                 [chrome]        Engine-defined frame-style id (e.g. `default`, `minimal`, `dialog`).
+ * @property {boolean}                [multiInstance] When true, app may open as multiple simultaneous windows.
+ * @property {string}                 [icon]          Icon registry name for the window frame titlebar.
+ */
+
+/**
  * @typedef {SourceBase & {
  *   kind: 'app',
  *   Component: (props: AppSourceProps) => any,
- *   routable?: boolean
+ *   routable?: boolean,
+ *   window?: AppManifestWindow
  * }} AppSource
  */
 

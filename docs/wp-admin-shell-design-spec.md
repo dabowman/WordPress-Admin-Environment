@@ -554,6 +554,7 @@ Authors use logical properties (`inline-size`, `block-size`) rather than physica
 | `trigger` | object | `{ shortcut: "Mod+K" }` — placeholder for declarative trigger; install-level binding overrides | `accesskey` |
 | `dirty-state` | boolean | App may report unsaved state; engine asks before navigation | `beforeunload` |
 | `block-navigation-on-dirty` | boolean | When dirty, engine shows confirm dialog rather than allowing navigation | `beforeunload` confirm |
+| `dynamic-children` | boolean | Region's mounted app may add/remove child regions at runtime; kernel renders them through the same `<Region>` recursion as static `regions` (§5.5) | Web Components `appendChild` / `removeChild` on a host element |
 
 The list grows additively. New platform services join when real apps surface real needs and the additions pass the browser-analog test. The `extensions` policy: a new field added in a minor spec version, engines may opt to honor; unhonored fields are no-ops with a logged warning. Apps requesting an unhonored service still mount.
 
@@ -600,6 +601,8 @@ This is the multi-app composition mechanism. The toolbar isn't a region with thr
 **Authoring rule of thumb:** prefer engine-shipped templates over from-scratch declaration. A template encapsulates the role + platform + layout + child structure that makes a "toolbar" or "sidebar" coherent. Authors who want a custom shape declare from scratch with full control.
 
 **No depth limit, but flat conventions.** The architecture permits arbitrary nesting; convention discourages going more than two levels deep. Deep region trees become hard to reason about; the same way the block editor's slot tree accumulated complexity, region trees can. Use templates that ship with the engine for common cases; only add depth when it represents real spatial structure.
+
+**Runtime-mutated children.** A region whose template declares `platform[ 'core:dynamic-children' ]: true` (§5.3) may have its `regions` extended at runtime by its mounted app — typically a compositor managing N child regions whose identity is data-driven (open windows in a desktop-mode engine, tabs in an MDI editor, panels in a notebook layout). The runtime API is `useDynamicChildren(parentRegionId)` → `{ children, add, remove }` exposed via `KernelContext`. `add(key, decl)` runs `validateRegion` so spec §5.4 invariants (`app` xor `routing.route-key`) apply to dynamic children identically. Children resolve to IDs `{parent}/{key}` exactly like statically-declared nested regions, so routing slots, dirty-state, trigger registration, capability gating, ARIA roles, and theming scope all key per child without extra plumbing. Static `regions` render first; runtime children append after.
 
 ---
 

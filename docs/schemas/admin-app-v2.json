@@ -104,6 +104,10 @@
 			"type": "string",
 			"pattern": "^[a-z][a-z0-9-]*$",
 			"description": "Optional WordPress style handle for this app's CSS. Enqueued alongside the script when the app mounts. Apps with no dedicated styles (relying entirely on WPDS tokens for theming) may omit this field."
+		},
+
+		"window": {
+			"$ref": "#/$defs/appWindow"
 		}
 	},
 
@@ -200,6 +204,56 @@
 					"type": "boolean",
 					"default": false,
 					"description": "When true (and `dirty-state` is also true), the engine shows a confirmation dialog before unmounting the app while it reports dirty state. Browser analog: the `beforeunload` confirmation dialog. Use for editors where data loss must be guarded against. Without this field, dirty state is reported but does not block navigation — the app is responsible for any other warning UX. Setting this without also setting `dirty-state: true` is a manifest error and rejected by the schema."
+				}
+			}
+		},
+
+		"windowSize": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "w", "h" ],
+			"properties": {
+				"w": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Width in CSS pixels."
+				},
+				"h": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Height in CSS pixels."
+				}
+			},
+			"description": "A `{ w, h }` pixel pair used by windowing engines for default + minimum window dimensions. Pixels, not tokens — these are author-supplied hints describing the app's preferred viewport. Engines that don't host windowed mounts ignore the value."
+		},
+
+		"appWindow": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Optional window-mount hints for engines that mount this app inside a window-frame region (windowed/MDI/desktop-style engines). Default engines (sidebar+toolbar+content) ignore the block entirely. Added 2026-05-12 alongside the `core:dynamic-children` platform service (spec §5.5). The block is purely declarative: engines consult it on mount and apply sensible defaults if any field is missing.",
+			"properties": {
+				"defaultSize": {
+					"$ref": "#/$defs/windowSize",
+					"description": "Preferred initial window size in CSS pixels. Authors pick values that frame the app's first view at a comfortable density — e.g., a posts list at 960×720, a settings page at 720×600. Engines may override based on viewport size."
+				},
+				"minSize": {
+					"$ref": "#/$defs/windowSize",
+					"description": "Minimum window size in CSS pixels. The compositor enforces this floor when the user resizes — content below this size becomes unusable. Defaults to engine policy (typically 320×240) when omitted."
+				},
+				"chrome": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Engine-defined window chrome style identifier. Engines that ship multiple frame styles (e.g., `default`, `minimal`, `dialog`) accept the matching id here. Unrecognized values fall back to the engine's default chrome. Acts as a documentation hint — the engine is the source of truth for valid values."
+				},
+				"multiInstance": {
+					"type": "boolean",
+					"default": false,
+					"description": "When true, the app may be opened as multiple simultaneous windows with independent state (e.g., two posts lists with different post-type configs side-by-side). When false (default), opening a second window of this app focuses the existing one. Apps with singleton semantics — settings pages, site-wide tool panels — omit this field. Engines that don't differentiate single-vs-multi instance ignore the value."
+				},
+				"icon": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Icon registry name (resolved by the active engine's icon table via the kernel icon registry). Used by windowing engines for the window-frame titlebar icon, taskbar/dock entry, and overview switcher. Defaults to a generic application icon when omitted."
 				}
 			}
 		}

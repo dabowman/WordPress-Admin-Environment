@@ -92,6 +92,21 @@ export function blocksNavigationOnDirty( region ) {
 }
 
 /**
+ * Spec §5.5 — `core:dynamic-children` service. When `true`, the region's
+ * mounted app may add/remove child regions at runtime via
+ * `useDynamicChildren(regionId)`. The kernel renders dynamic children
+ * through the same `<Region>` recursion as static `region.regions[]`, so
+ * they inherit every kernel service keyed by region ID. Engines without
+ * the service declared see the request as a no-op (with a dev-mode
+ * `unhonored-platform-service` warning in `kernel.js`).
+ * @param {*} region
+ */
+export function hostsDynamicChildren( region ) {
+	const platform = platformBlock( region );
+	return !! ( platform && platform[ 'core:dynamic-children' ] === true );
+}
+
+/**
  * Engine bucket placement:
  *   - 'overlay'    — modal-style (backdrop + focus trap + ARIA modal)
  *   - 'drawer'     — slides in from edge; dismiss-on attached
@@ -123,6 +138,7 @@ export function getPlatformServices( region ) {
 		triggerShortcut: triggerShortcut( region ),
 		wantsDirtyState: wantsDirtyState( region ),
 		blocksNavigationOnDirty: blocksNavigationOnDirty( region ),
+		hostsDynamicChildren: hostsDynamicChildren( region ),
 		placement: placement( region ),
 	};
 }

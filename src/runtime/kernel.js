@@ -11,6 +11,7 @@ import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
 import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
+import { createDynamicChildrenStore } from './regions/dynamicChildren.mjs';
 import { NavigationGuard } from './dirty-state/NavigationGuard';
 import { BindingsConsumer } from './bindings/BindingsConsumer';
 
@@ -76,6 +77,17 @@ export function kernel( config ) {
 
 	const registry = createRegistry();
 	registerBuiltins( registry );
+
+	// Per-mount dynamic-children store. Regions whose templates declare
+	// `platform[ 'core:dynamic-children' ]: true` host runtime-mutated
+	// child regions; their mounted apps consume the store via
+	// `useDynamicChildren(parentRegionId)` from kernel-context.
+	// `add()` runs `validateRegion` so spec §5.4 invariants
+	// (`app` xor `routing.route-key`) are enforced for runtime regions
+	// the same way they are for statically-declared ones.
+	const dynamicChildrenStore = createDynamicChildrenStore( {
+		validate: validateRegion,
+	} );
 
 	// Token cascade: `<ThemeProviderHost>` mounts the active engine's
 	// `ThemeProvider` (or the WPDS-backed default when the engine
@@ -175,7 +187,9 @@ export function kernel( config ) {
 	const Engine = engineSource.Component;
 
 	return (
-		<KernelProvider value={ { registry, config, engineSource } }>
+		<KernelProvider
+			value={ { registry, config, engineSource, dynamicChildrenStore } }
+		>
 			<SlotFillProvider>
 				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
 					<ThemeProviderHost
