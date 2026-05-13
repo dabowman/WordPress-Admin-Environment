@@ -1,0 +1,14 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:desktop-compositor",
+	"version": 1,
+	"title": "Desktop compositor",
+	"description": "Headless controller mounted by the `core:desktop` engine inside its `core:desktop-workspace` region. Owns the WindowManager state class — z-stack, focus, drag, resize, snap — and drives the kernel's `core:dynamic-children` store: each open window is a runtime-mutated child region whose declaration nests a `frame` chrome sub-region and a `body` sub-region carrying the user's target app. Renders nothing visible itself; all visible DOM comes through kernel `<Region>` rendering of the compositor's dynamic children. Engine-owned — do not mount under non-desktop engines.",
+	"designSystem": "@wordpress/ui",
+	"role": "region",
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell"
+}

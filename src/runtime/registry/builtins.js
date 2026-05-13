@@ -44,8 +44,13 @@ import NoticesSnackbarApp from '../../apps/notices-snackbar';
 import AppearanceApp from '../../apps/appearance';
 import UserMenuApp from '../../apps/user-menu';
 
+import DesktopCompositorApp from '../../apps/desktop-compositor';
+import DesktopDockApp from '../../apps/desktop-dock-app';
+import DesktopWindowFrameApp from '../../apps/desktop-window-frame';
+
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
+import coreDesktop from '../engines/core-desktop';
 
 const APP_COMPONENTS = {
 	'core:posts': PostsApp,
@@ -74,6 +79,9 @@ const APP_COMPONENTS = {
 	'core:notices-snackbar': NoticesSnackbarApp,
 	'core:appearance': AppearanceApp,
 	'core:user-menu': UserMenuApp,
+	'core:desktop-compositor': DesktopCompositorApp,
+	'core:desktop-dock-app': DesktopDockApp,
+	'core:desktop-window-frame': DesktopWindowFrameApp,
 };
 
 const NON_ROUTABLE_APPS = new Set( [
@@ -85,11 +93,15 @@ const NON_ROUTABLE_APPS = new Set( [
 	'core:notices-banner',
 	'core:notices-snackbar',
 	'core:user-menu',
+	'core:desktop-compositor',
+	'core:desktop-dock-app',
+	'core:desktop-window-frame',
 ] );
 
 export function registerBuiltins( registry ) {
 	registry.register( coreDefault );
 	registry.register( coreSinglePane );
+	registry.register( coreDesktop );
 
 	const manifests = window.wpAdminShell?.manifests?.apps || {};
 	const seen = new Set();

@@ -68,7 +68,7 @@ $known_region_sources = array(
 );
 
 // Known engine sources.
-$known_engines = array( 'core:default', 'core:single-pane' );
+$known_engines = array( 'core:default', 'core:single-pane', 'core:desktop' );
 
 /**
  * Walk a v2 region tree (top-level map of regions, each possibly with
