@@ -126,6 +126,37 @@ console.log( '\n— WindowManager: minimize / restore / maximize —\n' );
 	);
 }
 
+console.log( '\n— WindowManager: setRect —\n' );
+
+{
+	const wm = new WindowManager();
+	const id = wm.openWindow( { app: 'core:posts' } );
+	const before = wm.getStack()[ 0 ].rect;
+	wm.setRect( id, { x: 200, y: 150 } );
+	const after = wm.getStack()[ 0 ].rect;
+	ok( 'setRect updates x/y', after.x === 200 && after.y === 150 );
+	ok(
+		'setRect preserves untouched w/h',
+		after.w === before.w && after.h === before.h
+	);
+
+	let calls = 0;
+	const unsub = wm.subscribe( () => {
+		calls++;
+	} );
+	wm.setRect( id, { x: 200, y: 150 } );
+	ok( 'setRect with same values is a no-op', calls === 0 );
+	wm.setRect( 'win-missing', { x: 9999 } );
+	ok( 'setRect on unknown id is a no-op', calls === 0 );
+	wm.setRect( id, { w: 800, h: 600 } );
+	ok( 'setRect can change size only', calls === 1 );
+	ok(
+		'size mutation applied',
+		wm.getStack()[ 0 ].rect.w === 800 && wm.getStack()[ 0 ].rect.h === 600
+	);
+	unsub();
+}
+
 console.log( '\n— WindowManager: subscribe —\n' );
 
 {

@@ -14,10 +14,11 @@
  * controller that drives the dynamic-children store + owns the
  * WindowManager via context.
  *
- * MVP scope: position via `transform: translate(...)`, sizes inline,
- * z-index from the stack. Drag/resize/snap arrive in a follow-up that
- * mutates the WindowManager directly + commits to the store on
- * pointer-up (verbatim upstream pattern).
+ * Layout: position via `transform: translate(...)`, sizes inline,
+ * z-index from the stack. Drag is wired in `desktop-window-frame` —
+ * pointer-move mutates `style.transform` imperatively, pointer-up
+ * commits the final rect via `WindowManager.setRect()`. Resize + snap
+ * follow the same pattern.
  */
 
 import { useEffect, useRef } from '@wordpress/element';
@@ -28,9 +29,10 @@ import {
 	useWindowStack,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
 
-function buildWindowDecl( win ) {
+function buildWindowDecl( win, parentId ) {
 	const maximized = win.state === 'maximized';
 	const minimized = win.state === 'minimized';
+	const windowRegionId = `${ parentId }/${ win.id }`;
 	return {
 		role: 'region',
 		style: {
@@ -49,7 +51,11 @@ function buildWindowDecl( win ) {
 				role: 'presentation',
 				style: { 'flex-shrink': '0' },
 				app: 'core:desktop-window-frame',
-				config: { windowId: win.id, title: win.title },
+				config: {
+					windowId: win.id,
+					windowRegionId,
+					title: win.title,
+				},
 			},
 			body: {
 				role: 'region',
@@ -109,7 +115,7 @@ export default function DesktopCompositorApp( { regionId } ) {
 			if ( synced.get( win.id ) === sig ) {
 				continue;
 			}
-			add( win.id, buildWindowDecl( win ) );
+			add( win.id, buildWindowDecl( win, parentId ) );
 			synced.set( win.id, sig );
 		}
 
@@ -120,7 +126,7 @@ export default function DesktopCompositorApp( { regionId } ) {
 				synced.delete( key );
 			}
 		}
-	}, [ stack, add, remove ] );
+	}, [ stack, add, remove, parentId ] );
 
 	return null;
 }

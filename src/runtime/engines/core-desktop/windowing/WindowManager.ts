@@ -90,6 +90,7 @@ export interface IWindowManager {
 	minimizeWindow: ( id: string ) => void;
 	restoreWindow: ( id: string ) => void;
 	maximizeWindow: ( id: string ) => void;
+	setRect: ( id: string, partial: Partial< WindowRect > ) => void;
 	subscribe: ( listener: Listener ) => () => void;
 }
 
@@ -177,6 +178,21 @@ export class WindowManager implements IWindowManager {
 				? { ...w, state: 'normal' }
 				: { ...w, state: 'maximized' }
 		);
+	}
+
+	setRect( id: string, partial: Partial< WindowRect > ): void {
+		this.patch( id, ( w ) => {
+			const next: WindowRect = { ...w.rect, ...partial };
+			if (
+				next.x === w.rect.x &&
+				next.y === w.rect.y &&
+				next.w === w.rect.w &&
+				next.h === w.rect.h
+			) {
+				return null;
+			}
+			return { ...w, rect: next };
+		} );
 	}
 
 	subscribe( listener: Listener ): () => void {

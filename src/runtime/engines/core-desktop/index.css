@@ -171,6 +171,12 @@
 	gap: 8px;
 	padding: 6px 10px;
 	min-block-size: 32px;
+	cursor: grab;
+	touch-action: none;
+}
+
+.wp-admin-shell-desktop-window-frame__titlebar:active {
+	cursor: grabbing;
 }
 
 .wp-admin-shell-desktop-window-frame__controls {
