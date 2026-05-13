@@ -206,6 +206,76 @@
 	background: #28c840;
 }
 
+.wp-admin-shell-desktop-window-frame__resize {
+	position: absolute;
+	z-index: 1;
+	touch-action: none;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--n,
+.wp-admin-shell-desktop-window-frame__resize--s {
+	inset-inline-start: 8px;
+	inset-inline-end: 8px;
+	block-size: 6px;
+	cursor: ns-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--n {
+	inset-block-start: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--s {
+	inset-block-end: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--e,
+.wp-admin-shell-desktop-window-frame__resize--w {
+	inset-block-start: 8px;
+	inset-block-end: 8px;
+	inline-size: 6px;
+	cursor: ew-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--e {
+	inset-inline-end: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--w {
+	inset-inline-start: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--ne,
+.wp-admin-shell-desktop-window-frame__resize--nw,
+.wp-admin-shell-desktop-window-frame__resize--se,
+.wp-admin-shell-desktop-window-frame__resize--sw {
+	inline-size: 14px;
+	block-size: 14px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--ne {
+	inset-block-start: -3px;
+	inset-inline-end: -3px;
+	cursor: nesw-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--nw {
+	inset-block-start: -3px;
+	inset-inline-start: -3px;
+	cursor: nwse-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--se {
+	inset-block-end: -3px;
+	inset-inline-end: -3px;
+	cursor: nwse-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--sw {
+	inset-block-end: -3px;
+	inset-inline-start: -3px;
+	cursor: nesw-resize;
+}
+
 .wp-admin-shell-desktop-window-frame__title {
 	flex: 1 1 0;
 	min-inline-size: 0;
