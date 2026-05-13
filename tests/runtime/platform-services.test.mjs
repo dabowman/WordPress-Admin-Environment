@@ -29,6 +29,7 @@ const {
 	triggerShortcut,
 	wantsDirtyState,
 	blocksNavigationOnDirty,
+	hostsDynamicChildren,
 	placement,
 } = await import(
 	resolve( projectRoot, 'src/runtime/regions/platformServices.mjs' )
@@ -173,6 +174,35 @@ ok( 'aggregate: shortcut', services.triggerShortcut === 'Mod+S' );
 ok( 'aggregate: dirty-state', services.wantsDirtyState === true );
 ok( 'aggregate: block-on-dirty', services.blocksNavigationOnDirty === true );
 ok( 'aggregate: placement overlay', services.placement === 'overlay' );
+
+console.log( '\n— platformServices: hostsDynamicChildren —\n' );
+
+ok(
+	"hostsDynamicChildren: platform['core:dynamic-children']=true",
+	hostsDynamicChildren( {
+		platform: { 'core:dynamic-children': true },
+	} ) === true
+);
+ok(
+	'hostsDynamicChildren: missing platform → false',
+	hostsDynamicChildren( { role: 'main' } ) === false
+);
+ok(
+	"hostsDynamicChildren: platform['core:dynamic-children']=false → false",
+	hostsDynamicChildren( {
+		platform: { 'core:dynamic-children': false },
+	} ) === false
+);
+ok(
+	'hostsDynamicChildren: null region safe',
+	hostsDynamicChildren( null ) === false
+);
+ok(
+	'aggregate: hostsDynamicChildren surfaced',
+	getPlatformServices( {
+		platform: { 'core:dynamic-children': true },
+	} ).hostsDynamicChildren === true
+);
 
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );
