@@ -25,5 +25,121 @@
 		},
 		"multiInstance": false,
 		"icon": "layout"
+	},
+	"documentation": {
+		"purpose": "Grid view of installed themes with screenshot + activate / details actions. The active theme floats to the front; the remainder sorts alphabetically. Activation uses a custom `/wp-admin-shell/v1/activate-theme` endpoint with a graceful fall-back to wp-admin's `themes.php?action=activate` link if the endpoint is missing. Details modal surfaces description + version + author + theme-site link.",
+		"rebuilds": "themes",
+		"data": {
+			"reads": [
+				{
+					"source": "root/theme",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Installed themes (active + inactive).",
+					"fields": [
+						"stylesheet",
+						"name.rendered",
+						"description.rendered",
+						"version",
+						"author.rendered",
+						"screenshot",
+						"status",
+						"theme_uri"
+					],
+					"query": {
+						"context": "edit",
+						"status": "active,inactive"
+					}
+				},
+				{
+					"source": "window.wpAdminShell.activeTheme",
+					"via": "window-global",
+					"purpose": "Fallback for active stylesheet lookup before core-data hydrates."
+				}
+			],
+			"writes": [
+				{
+					"source": "/wp-admin-shell/v1/activate-theme",
+					"via": "api-fetch",
+					"operation": "custom",
+					"purpose": "Switch the active theme via the shell's custom endpoint.",
+					"invalidates": [
+						"root/theme"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isLoading || !themes",
+				"renders": "Centered `Spinner` covering the panel."
+			},
+			{
+				"id": "ready",
+				"when": "themes !== null",
+				"renders": "Header (count) + 3-column grid of theme cards. Active card has an Active badge; non-active cards show Activate button."
+			},
+			{
+				"id": "details-open",
+				"when": "details !== null",
+				"renders": "Modal with large screenshot + description + version / author + Theme site / Activate buttons."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click Details on a theme card",
+				"effect": "Open the details modal with that theme."
+			},
+			{
+				"trigger": "Click Activate on a theme card",
+				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme` + close any open modal. On failure: `window.location.href` to `themes.php?action=activate&stylesheet=...` so the user falls back to wp-admin.",
+				"guards": [
+					"theme.stylesheet !== activeStylesheet"
+				]
+			},
+			{
+				"trigger": "Click Theme site in details",
+				"effect": "`window.open(theme.theme_uri, '_blank')`.",
+				"guards": [
+					"!!theme.theme_uri"
+				]
+			}
+		],
+		"a11y": {
+			"focus-management": "Legacy `Modal` traps focus while open. After close (via Esc or backdrop click) focus returns to the trigger button."
+		},
+		"constraints": [
+			{
+				"concern": "no-core-rest-theme-switch",
+				"note": "WordPress core REST does not expose a theme-switch operation. The shell ships a custom `/wp-admin-shell/v1/activate-theme` endpoint; rebuilds must provide the equivalent or implement the wp-admin link fall-back."
+			},
+			{
+				"concern": "graceful-fallback",
+				"note": "If the custom endpoint 404s (older shell version or stripped feature), the app navigates to wp-admin's `themes.php` flow so the user can complete the action — preserves the right outcome even without the optimized path."
+			},
+			{
+				"concern": "modal-fallback",
+				"note": "Uses legacy `Modal` from `@wordpress/components`; WPDS Dialog 0.12 lacks size variants."
+			},
+			{
+				"concern": "grid-fallback",
+				"note": "Uses `__experimentalGrid` — no WPDS 0.12 port."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button, Card, Stack, Text",
+				"purpose": "Theme card layout, header, action buttons."
+			},
+			{
+				"import": "@wordpress/components#__experimentalGrid, CardMedia, Spinner, Modal",
+				"purpose": "Grid layout, screenshot media slot, loading spinner, details modal — all WPDS 0.12 gaps."
+			},
+			{
+				"import": "@wordpress/icons#check, external",
+				"purpose": "Action icons."
+			}
+		]
 	}
 }

@@ -32,5 +32,111 @@
 		},
 		"multiInstance": true,
 		"icon": "edit"
+	},
+	"documentation": {
+		"purpose": "Iframe-backed adapter for WordPress's full block editor. Routes `#/editor/{postType}/{postId}` to `wp-admin/post.php?post={id}&action=edit` and routes `#/editor/{postType}/new` through an auto-draft creation flow (POST `/wp/v2/{postType}s`) before redirecting to the editor URL. Injects CSS into the iframe document to hide wp-admin chrome so the embedded editor reads as a native shell view. The native `@wordpress/edit-post` mount is deferred to a v2.x cut; the iframe is the contracted MVP path.",
+		"rebuilds": "editor-block",
+		"data": {
+			"reads": [
+				{
+					"source": "window.wpAdminShell.adminUrl",
+					"via": "window-global",
+					"purpose": "Base URL for the iframe `src` attribute."
+				}
+			],
+			"writes": [
+				{
+					"source": "/wp/v2/posts | /wp/v2/pages",
+					"via": "api-fetch",
+					"operation": "create",
+					"purpose": "Create a draft when navigating to `#/editor/{postType}/new`. Seeds an empty paragraph block in `content` because REST rejects fully-empty posts."
+				}
+			]
+		},
+		"url": {
+			"reads-slots": [
+				"_self"
+			],
+			"navigates": [
+				"#/posts",
+				"#/pages",
+				"#/editor/{postType}/{postId}"
+			]
+		},
+		"states": [
+			{
+				"id": "creating-draft",
+				"when": "isNew && !postId",
+				"renders": "Centered spinner; auto-draft is in flight."
+			},
+			{
+				"id": "loading-iframe",
+				"when": "postId && iframeLoading",
+				"renders": "Centered spinner overlaid on the iframe while it loads."
+			},
+			{
+				"id": "ready",
+				"when": "postId && !iframeLoading",
+				"renders": "Toolbar (Back to list) + full-bleed iframe of `post.php?post={id}&action=edit`."
+			},
+			{
+				"id": "error",
+				"when": "error !== null",
+				"renders": "Toolbar + empty-state message showing the error."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Mount with `#/editor/{postType}/new`",
+				"effect": "POST a draft, update `postId`, replace URL via `history.replaceState` (not navigate — avoids re-render loop)."
+			},
+			{
+				"trigger": "Iframe `load` event",
+				"effect": "Set `iframeLoading=false`; inject CSS to hide adminmenu / adminbar / wpfooter / wpcontent margins. Cross-origin iframes silently skip the injection."
+			},
+			{
+				"trigger": "Click Back to list",
+				"effect": "`navigate('posts')` or `navigate('pages')` based on `postType`."
+			}
+		],
+		"a11y": {
+			"focus-management": "Iframe owns its own focus tree (WordPress block editor handles this). Toolbar Back button is focusable; the shell does not trap focus."
+		},
+		"constraints": [
+			{
+				"concern": "iframe-css-fragile",
+				"note": "Chrome-hiding selectors are tied to wp-admin's class names (`#adminmenuwrap`, `#wpadminbar`, etc.). Rev with each WordPress release; verify post.php layout after upgrades."
+			},
+			{
+				"concern": "empty-post-seed",
+				"note": "REST rejects fully-empty posts with `Content, title, and excerpt are empty`. Seed `<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->` into `content` so the auto-draft saves even before the user types."
+			},
+			{
+				"concern": "dirty-state-not-honored",
+				"note": "Manifest declares `core:dirty-state` + `core:block-navigation-on-dirty`, but the iframe-backed implementation has no way to read unsaved-state from the embedded editor. The platform service is reserved for the native mount."
+			},
+			{
+				"concern": "history-replacestate",
+				"note": "After auto-draft creation, the URL is updated via `window.history.replaceState` — using `navigate()` would trigger the router and unmount the app mid-flight."
+			},
+			{
+				"concern": "native-mount-deferred",
+				"note": "See `SiteEditorApp.js` blockers list (preferences-store collision, command double-registration, fullscreen CSS, hash-router collision, no BUNDLED_PACKAGES entry) — they apply equally to `@wordpress/edit-post`."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button",
+				"purpose": "Toolbar Back button."
+			},
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading indicator — WPDS 0.12 has no Spinner port."
+			},
+			{
+				"import": "@wordpress/icons#arrowLeft",
+				"purpose": "Back button icon."
+			}
+		]
 	}
 }

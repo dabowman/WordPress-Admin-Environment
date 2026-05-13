@@ -13,5 +13,46 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminShell.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminShell.shells` (for the switcher submenu). Shell switcher only renders when more than one `userSwitchable` shell is available; calls `window.wpAdminShell.switchShell(slug)` which posts the new active shell + reloads.",
+		"data": {
+			"reads": [
+				{
+					"source": "window.wpAdminShell.user",
+					"via": "window-global",
+					"purpose": "Display name, avatar URL, profile URL, logout URL."
+				},
+				{
+					"source": "window.wpAdminShell.shells",
+					"via": "window-global",
+					"purpose": "Available shells (with `userSwitchable` flag) for the switcher submenu."
+				}
+			]
+		},
+		"states": [
+			{ "id": "ready-no-switcher", "when": "shells.length <= 1 || no userSwitchable", "renders": "Avatar trigger + dropdown with Profile + Log out." },
+			{ "id": "ready-with-switcher", "when": "More than one userSwitchable shell", "renders": "Same dropdown plus `Switch to {title}` entries between Profile and Log out." }
+		],
+		"interactions": [
+			{ "trigger": "Click avatar", "effect": "Open dropdown." },
+			{ "trigger": "Click Profile", "effect": "`window.location.hash = profileUrl` (or `#/profile`)." },
+			{ "trigger": "Click Switch to {title}", "effect": "Call `window.wpAdminShell.switchShell(slug)` — PHP saves new active shell + page reloads." },
+			{ "trigger": "Click Log out", "effect": "`window.location.href = logoutUrl`." }
+		],
+		"a11y": {
+			"focus-management": "DropdownMenu handles focus trap when open. Avatar has `aria-label={displayName}`.",
+			"screen-reader": "Avatar `<img>` carries empty `alt=\"\"` (decorative — the `aria-label` on the toggle is the accessible name)."
+		},
+		"constraints": [
+			{ "concern": "window-global-only", "note": "Doesn't fetch user data via core-data — `wpAdminShell.user` is injected PHP-side at every page load. Cheaper than a REST round trip; safe because user identity is fixed for the session." },
+			{ "concern": "shell-switch-reloads", "note": "Switching shells does a full page reload (PHP-side option write + reload). No SPA-style live switch; the alternative would require unmounting + remounting the entire shell, which has tricky edge cases (modal state, in-flight saves)." },
+			{ "concern": "dropdown-fallback", "note": "Uses legacy `DropdownMenu` from `@wordpress/components`. WPDS 0.12 has no direct port; `Tabs.*` + `Popover.*` could compose one but `DropdownMenu` is more semantic." },
+			{ "concern": "default-profile-hash", "note": "`profileUrl` defaults to `#/profile` if missing. Shells that omit a `#/profile` route from their map will render the link, but clicking it 404s." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/components#DropdownMenu", "purpose": "Avatar trigger + items + submenu — no WPDS 0.12 port." },
+			{ "import": "@wordpress/icons#moreVertical", "purpose": "Fallback trigger icon when no avatar URL." }
+		]
+	}
 }

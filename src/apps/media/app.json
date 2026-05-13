@@ -22,5 +22,174 @@
 		},
 		"multiInstance": true,
 		"icon": "media"
+	},
+	"documentation": {
+		"purpose": "Media library: paginated grid of attachments + upload + detail modal. Filter by media type (all / images / video / audio / documents). Images render their thumbnail; non-image attachments render a labeled file-type tile. Clicking an item opens a detail modal where authors can edit title / alt text (images only) / caption / description, copy URL, or delete (permanent — media has no trash).",
+		"rebuilds": "media",
+		"data": {
+			"reads": [
+				{
+					"source": "root/media",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Attachment grid.",
+					"fields": [
+						"id",
+						"title.raw",
+						"alt_text",
+						"caption.raw",
+						"description.raw",
+						"source_url",
+						"media_type",
+						"mime_type",
+						"media_details.sizes"
+					],
+					"query": {
+						"per_page": 40,
+						"page": "state.page",
+						"context": "edit",
+						"media_type": "state.mediaType"
+					}
+				}
+			],
+			"writes": [
+				{
+					"source": "/wp/v2/media",
+					"via": "api-fetch",
+					"operation": "upload",
+					"purpose": "Multipart upload: `FormData` with `file` field, POST to `/wp/v2/media`. One request per file.",
+					"invalidates": [
+						"root/media"
+					]
+				},
+				{
+					"source": "root/media",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Edit attachment metadata (title / alt_text / caption / description) via `saveEntityRecord` partial.",
+					"invalidates": [
+						"root/media"
+					]
+				},
+				{
+					"source": "root/media",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Permanently delete attachment (`force: true` — media has no trash).",
+					"invalidates": [
+						"root/media"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading-initial",
+				"when": "isResolving && !records?.length",
+				"renders": "Centered Spinner covering the panel."
+			},
+			{
+				"id": "empty",
+				"when": "!isResolving && !records?.length",
+				"renders": "Empty-state copy + Upload your first file button."
+			},
+			{
+				"id": "ready",
+				"when": "records?.length > 0",
+				"renders": "Grid of thumbnail tiles + pagination footer (when totalPages > 1)."
+			},
+			{
+				"id": "uploading",
+				"when": "isUploading === true",
+				"renders": "Upload button shows loading state + disabled; new items appear after invalidation."
+			},
+			{
+				"id": "detail-open",
+				"when": "selectedItem !== null",
+				"renders": "Large modal with preview on left + form fields on right + action row (copy URL, delete, cancel, save)."
+			},
+			{
+				"id": "saving-detail",
+				"when": "isSaving === true (inside modal)",
+				"renders": "Save button shows loading state."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Change media-type select",
+				"effect": "Update `mediaType` state + reset `page` to 1 + queryArgs recompute."
+			},
+			{
+				"trigger": "Click Upload",
+				"effect": "Open hidden `<input type=\"file\" multiple>`. On file pick, iterate + POST each via `apiFetch` with FormData; invalidate after all complete."
+			},
+			{
+				"trigger": "Click an item tile",
+				"effect": "Set `selectedItem` + open detail modal."
+			},
+			{
+				"trigger": "Edit fields in modal",
+				"effect": "Local component state mirrors entity fields; nothing persisted until Save."
+			},
+			{
+				"trigger": "Click Save in modal",
+				"effect": "`saveEntityRecord('root', 'media', { id, title, alt_text, caption, description })`; invalidate + close modal."
+			},
+			{
+				"trigger": "Click Copy URL",
+				"effect": "`navigator.clipboard.writeText(item.source_url)`; success snackbar (or error notice on clipboard denial)."
+			},
+			{
+				"trigger": "Click Delete in modal",
+				"effect": "`deleteEntityRecord(..., { force: true })`; invalidate + close modal."
+			},
+			{
+				"trigger": "Click pagination Previous/Next",
+				"effect": "`setPage(page ± 1)`; queryArgs recompute; records refetch."
+			}
+		],
+		"a11y": {
+			"focus-management": "Grid tiles are native `<button>` elements — keyboard accessible by default. Modal traps focus while open. Modal `key={item.id}` resets per-item state so reopening a different item starts clean."
+		},
+		"constraints": [
+			{
+				"concern": "force-delete",
+				"note": "Media has no trash. `deleteEntityRecord` requires `{ force: true }` or the request 400s."
+			},
+			{
+				"concern": "multipart-via-api-fetch",
+				"note": "Upload uses `apiFetch` with `FormData` body. `core-data`'s `saveEntityRecord` doesn't handle multipart well; the raw api-fetch path is more reliable."
+			},
+			{
+				"concern": "invalidate-after-mutate",
+				"note": "Every mutation (upload, save, delete) must `invalidateResolution('getEntityRecords', ['root', 'media', queryArgs])`. The mutation hooks do not bust the parent query."
+			},
+			{
+				"concern": "shadow-state-per-item",
+				"note": "Modal's local `useState` mirrors the entity fields. `key={item.id}` on the modal forces remount + state reset when the user opens a different item. Without the key, switching items mid-edit would carry over the previous form values."
+			},
+			{
+				"concern": "modal-fallback",
+				"note": "Legacy `Modal` + `TextareaControl` + `SelectControl` — WPDS 0.12 gaps."
+			},
+			{
+				"concern": "destructive-button-fallback",
+				"note": "Legacy `Button as DestructiveButton` with `isDestructive` — WPDS 0.12 has no `tone=\"critical\"`."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
+				"purpose": "Toolbar + grid pagination + modal layout + form inputs."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton), Spinner, SelectControl, Modal, TextareaControl",
+				"purpose": "Destructive delete + loading + filter select + detail modal + caption/description textareas — WPDS 0.12 gaps."
+			},
+			{
+				"import": "@wordpress/icons#upload, trash, copy",
+				"purpose": "Action icons."
+			}
+		]
 	}
 }

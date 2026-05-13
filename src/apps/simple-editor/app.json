@@ -33,5 +33,191 @@
 		},
 		"multiInstance": true,
 		"icon": "edit"
+	},
+	"documentation": {
+		"purpose": "Substack-style minimal block editor: a title input plus a constrained block tree (paragraph / heading / image / quote / list / list-item / code / separator / embed). Loads/saves through `core-data` `useEntityRecord('postType', postType, id)`. Auto-saves on a 2-second debounce after edits stop; Publish button flips between `Publish` and `Update` based on `record.status`. Composes Gutenberg's `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` directly so the editor renders inline (not iframed) and inherits the shell's DOM.",
+		"rebuilds": "editor-block",
+		"data": {
+			"reads": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Existing-post hydration via `useEntityRecord`.",
+					"fields": [
+						"id",
+						"title.raw",
+						"content.raw",
+						"status"
+					]
+				}
+			],
+			"writes": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Auto-save (`save()` from useEntityRecord) every 2s of inactivity while `hasEdits`; Publish/Update button flushes immediately."
+				},
+				{
+					"source": "/wp/v2/posts | /wp/v2/pages",
+					"via": "api-fetch",
+					"operation": "create",
+					"purpose": "Create a draft when the route lacks an `id`. Seeds an empty paragraph block in `content` for the same REST 400-on-empty reason as the iframe editor."
+				}
+			]
+		},
+		"url": {
+			"reads-slots": [
+				"_self"
+			],
+			"navigates": [
+				"#/posts",
+				"#/pages",
+				"#/{segment}/{id}/edit"
+			]
+		},
+		"states": [
+			{
+				"id": "creating-draft",
+				"when": "isNew && isCreating",
+				"renders": "Centered spinner during the POST."
+			},
+			{
+				"id": "loading-entity",
+				"when": "isResolving || !record || !hydrated",
+				"renders": "Centered spinner while core-data resolves the post + block-tree hydrates from `content.raw`."
+			},
+			{
+				"id": "ready",
+				"when": "record && hydrated && !hasEdits",
+				"renders": "Toolbar (Back + clean state) + title input + block editor body."
+			},
+			{
+				"id": "with-edits",
+				"when": "hasEdits && !isSaving",
+				"renders": "Toolbar shows `Unsaved changes` indicator; auto-save timer running."
+			},
+			{
+				"id": "saving",
+				"when": "isSaving || saveStatus === 'saving'",
+				"renders": "Toolbar shows `Saving…`; Publish button is `loading` + disabled."
+			},
+			{
+				"id": "saved",
+				"when": "saveStatus === 'saved'",
+				"renders": "Toolbar shows `Saved`; auto-fades to `idle` after 2s."
+			},
+			{
+				"id": "save-failed",
+				"when": "saveStatus === 'error'",
+				"renders": "Toolbar shows `Save failed` with `err.message`."
+			},
+			{
+				"id": "error",
+				"when": "error !== null",
+				"renders": "Toolbar + empty-state with the error message; no editor body."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Mount with `#/{segment}/new`",
+				"effect": "POST a draft with seeded empty paragraph; replace URL via `history.replaceState`; hydrate block tree."
+			},
+			{
+				"trigger": "Type in title input",
+				"effect": "`edit({ title })` on the entity; debounce triggers auto-save."
+			},
+			{
+				"trigger": "Enter / Tab from title",
+				"effect": "Focus moves to the first contenteditable in the body (the block list)."
+			},
+			{
+				"trigger": "Edit blocks",
+				"effect": "`onChange(newBlocks)` updates local block state + serializes back via `edit({ content: serialize(newBlocks) })`; debounce triggers auto-save."
+			},
+			{
+				"trigger": "Auto-save tick (2s after last edit)",
+				"effect": "`save()` runs; saveStatus transitions `saving → saved`; success fades after 2s. On failure: `saveStatus = 'error'` with `err.message`."
+			},
+			{
+				"trigger": "Click Publish/Update",
+				"effect": "Cancel any pending auto-save timer, `edit({ status: 'publish' })`, then `save()` synchronously."
+			},
+			{
+				"trigger": "Click Back to list",
+				"effect": "Navigate to `#/posts` or `#/pages` based on postType. Dirty-state guard fires if there are unsaved edits."
+			}
+		],
+		"a11y": {
+			"focus-management": "Title input gets autofocus via `core:autofocus-target` platform service. Enter/Tab on the title moves focus to the first contenteditable in the body.",
+			"keyboard": [
+				{
+					"keys": "Tab",
+					"action": "From title input: focus first block."
+				},
+				{
+					"keys": "Enter",
+					"action": "From title input: focus first block (overrides default newline)."
+				}
+			],
+			"screen-reader": "Save status announces transitions via the visible `Saving…` / `Saved` text; not aria-live (would announce too eagerly during typing)."
+		},
+		"constraints": [
+			{
+				"concern": "block-registration-idempotent",
+				"note": "`registerCoreBlocks()` is gated by a module-level flag + `getBlockTypes().length === 0` check. Calling twice would throw duplicate-registration errors."
+			},
+			{
+				"concern": "empty-post-seed",
+				"note": "Same `<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->` seed as EditorApp — REST rejects fully-empty posts."
+			},
+			{
+				"concern": "block-styles-enqueued-php-side",
+				"note": "PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the shell page so block chrome and default block styles render. A reimplementation must arrange the equivalent style loading."
+			},
+			{
+				"concern": "hydrate-once",
+				"note": "Block tree is parsed from `record.content.raw` exactly once after first paint (`hydrated` flag). Subsequent records updates do NOT re-parse — that would clobber in-progress edits."
+			},
+			{
+				"concern": "dirty-state-wired",
+				"note": "`useDirtyState(regionId, hasEdits, { blocksNavigation: true })` reports unsaved state to the kernel; NavigationGuard shows beforeunload + intra-shell confirm dialogs."
+			},
+			{
+				"concern": "auto-save-cancelable",
+				"note": "Auto-save uses a single `setTimeout` ref. Publish clears the pending timer + saves immediately to avoid a double-save race."
+			},
+			{
+				"concern": "title-shape-fallback",
+				"note": "`editedRecord.title` may be a string (from inline edit) or an object (from REST). The titleValue reader handles both."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button",
+				"purpose": "Toolbar Back + Publish buttons."
+			},
+			{
+				"import": "@wordpress/components#Spinner, Slot",
+				"purpose": "Loading indicator + plugin-extension slot — WPDS 0.12 has no Spinner or Slot port."
+			},
+			{
+				"import": "@wordpress/block-editor#BlockEditorProvider, BlockList, BlockTools, WritingFlow, ObserveTyping, BlockEditorKeyboardShortcuts",
+				"purpose": "The Gutenberg block-editor primitives. Inline-mounted (not iframed) so block styles inherit from the shell DOM."
+			},
+			{
+				"import": "@wordpress/block-library#registerCoreBlocks",
+				"purpose": "Register the ~30 core blocks at first mount (idempotent guard)."
+			},
+			{
+				"import": "@wordpress/blocks#parse, serialize, getBlockTypes",
+				"purpose": "Block tree (de)serialization between `record.content.raw` HTML and the React block array."
+			},
+			{
+				"import": "@wordpress/icons#arrowLeft",
+				"purpose": "Back button icon."
+			}
+		]
 	}
 }

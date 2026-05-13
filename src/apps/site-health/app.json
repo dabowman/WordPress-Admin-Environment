@@ -25,5 +25,91 @@
 		},
 		"multiInstance": false,
 		"icon": "wordpress"
+	},
+	"documentation": {
+		"purpose": "Runs WordPress's async site-health checks (`/wp-site-health/v1/tests/{id}`) in parallel on mount and on user re-run. Surfaces a per-test card with status (Good / Recommended / Critical) and a HTML description; the toolbar summarizes counts per category and offers a re-run button. Five tests today: WordPress.org communication, background updates, loopback requests, HTTPS status, authorization header.",
+		"rebuilds": "site-health",
+		"data": {
+			"reads": [
+				{
+					"source": "/wp-site-health/v1/tests/{id}",
+					"via": "api-fetch",
+					"purpose": "One request per test id; runs `Promise.all` over all five. Each returns `{ status, label, description }`."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "running",
+				"when": "isRunning === true",
+				"renders": "Toolbar Re-run button shows loading; cards without results show Spinner."
+			},
+			{
+				"id": "partial",
+				"when": "isRunning && results has some entries",
+				"renders": "Cards already-completed show their status pill; remaining cards show Spinner."
+			},
+			{
+				"id": "complete",
+				"when": "!isRunning && results has all entries",
+				"renders": "All cards show status + description; toolbar shows category counts."
+			},
+			{
+				"id": "error",
+				"when": "error !== null",
+				"renders": "Error text below the toolbar (plus per-test error captured in results)."
+			},
+			{
+				"id": "per-test-error",
+				"when": "A test request rejected",
+				"renders": "That test's card shows status=critical with `err.message` as description."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Mount",
+				"effect": "`runTests()` fires automatically."
+			},
+			{
+				"trigger": "Click Re-run tests",
+				"effect": "Reset results + run all tests in parallel."
+			}
+		],
+		"a11y": {
+			"focus-management": "Native focus order — toolbar button + card content.",
+			"screen-reader": "Per-test status surfaces as a Badge with intent (`success` / `warning` / `error` / `neutral`). The badge text is the live status; no aria-live region announces completion."
+		},
+		"constraints": [
+			{
+				"concern": "trusted-html-description",
+				"note": "Test descriptions arrive as HTML from `/wp-site-health/v1/tests/{id}`. WordPress core authors these strings; we render via `dangerouslySetInnerHTML`. ESLint disable comment in source notes the trust boundary."
+			},
+			{
+				"concern": "promise-all-with-per-error-catch",
+				"note": "Each test's request is wrapped in try/catch so one failing test doesn't reject the `Promise.all`. Failed tests show as critical with the error message — preserves partial results."
+			},
+			{
+				"concern": "spinner-fallback",
+				"note": "Uses legacy `Spinner` from `@wordpress/components`."
+			},
+			{
+				"concern": "static-test-list",
+				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the shell doesn't yet honor this."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Badge, Button, Card, Stack, Text",
+				"purpose": "Status pills + cards + heading + re-run button."
+			},
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Per-test loading indicator."
+			},
+			{
+				"import": "@wordpress/icons#update",
+				"purpose": "Re-run button icon."
+			}
+		]
 	}
 }

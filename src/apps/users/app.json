@@ -25,5 +25,140 @@
 		},
 		"multiInstance": false,
 		"icon": "people"
+	},
+	"documentation": {
+		"purpose": "DataViews table of WordPress users with permanent bulk delete (content reassigned to the acting user). Lists name + username, email, roles, and registered date. Search hits name + email. Filter by role. The DataViews `RenderModal` for the destructive action ships a self-delete guard that strips the acting user from the target set before issuing the REST call.",
+		"rebuilds": "users",
+		"data": {
+			"reads": [
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "User rows in the DataViews table. `context: 'edit'` is required for email + roles to be present.",
+					"fields": [
+						"id",
+						"name",
+						"username",
+						"email",
+						"roles",
+						"registered_date"
+					],
+					"query": {
+						"per_page": "view.perPage",
+						"page": "view.page",
+						"order": "view.sort.direction",
+						"orderby": "view.sort.field|registered_date",
+						"context": "edit",
+						"search": "view.search",
+						"roles": "filter.roles"
+					}
+				},
+				{
+					"source": "window.wpAdminShell.userId",
+					"via": "window-global",
+					"purpose": "Identify the acting user so self-delete is blocked + content reassignment target is set."
+				}
+			],
+			"writes": [
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Bulk-delete users permanently with content reassigned to the acting user (`force: true, reassign: currentUserId`).",
+					"invalidates": [
+						"root/user"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isResolving && !records",
+				"renders": "DataViews loading indicator."
+			},
+			{
+				"id": "ready",
+				"when": "records !== null && records.length > 0",
+				"renders": "Table of users with Delete bulk action."
+			},
+			{
+				"id": "empty",
+				"when": "records?.length === 0",
+				"renders": "DataViews empty state."
+			},
+			{
+				"id": "delete-confirm",
+				"when": "User triggered Delete action",
+				"renders": "Confirm modal. Copy varies by target count and whether the acting user is in the selection."
+			},
+			{
+				"id": "delete-self-only",
+				"when": "Modal opened but `targets` is empty after self-filter",
+				"renders": "Cannot-delete-yourself message; destructive button is disabled."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click Delete action (single or bulk)",
+				"effect": "Open confirm modal with copy adjusted for target count + self-skipped marker."
+			},
+			{
+				"trigger": "Confirm delete",
+				"effect": "Filter out the acting user, dispatch `deleteEntityRecord` per target with `{ force: true, reassign: currentUserId }`, `invalidateResolution` on the user query, success snackbar.",
+				"guards": [
+					"targets.length > 0",
+					"currentUserId !== item.id"
+				]
+			},
+			{
+				"trigger": "Change view (search / filter / sort / page)",
+				"effect": "Local `view` updates; queryArgs recomputes; records refetch."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataViews owns focus inside the table + modal."
+		},
+		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import from `@wordpress/dataviews/wp`."
+			},
+			{
+				"concern": "context-edit",
+				"note": "Without `context: 'edit'` the response omits email + roles."
+			},
+			{
+				"concern": "self-delete-guard",
+				"note": "Filter out `window.wpAdminShell.userId` before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight."
+			},
+			{
+				"concern": "no-trash-for-users",
+				"note": "WordPress has no user trash. Delete is permanent; the `reassign` parameter is mandatory or content with `post_author = id` is orphaned."
+			},
+			{
+				"concern": "invalidate-after-delete",
+				"note": "Call `invalidateResolution('getEntityRecords', ['root', 'user', queryArgs])` — the per-row `deleteEntityRecord` does not bust the parent query."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Table view with selection + bulk action."
+			},
+			{
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Modal layout + cancel button."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton)",
+				"purpose": "Destructive primary action — WPDS 0.12 has no `tone=\"critical\"`."
+			},
+			{
+				"import": "@wordpress/icons#trash",
+				"purpose": "Delete row action icon."
+			}
+		]
 	}
 }

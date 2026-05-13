@@ -25,5 +25,155 @@
 		},
 		"multiInstance": false,
 		"icon": "comments"
+	},
+	"documentation": {
+		"purpose": "DataViews-driven comment moderation list. Lists author (name + email), comment content (rendered HTML), status, and date. Bulk + per-row actions: approve, unapprove, mark as spam, trash. Status changes round-trip via partial `saveEntityRecord` PATCH so optimistic edits behave; trash routes through `deleteEntityRecord`.",
+		"rebuilds": "comments",
+		"data": {
+			"reads": [
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Comment rows.",
+					"fields": [
+						"id",
+						"author_name",
+						"author_email",
+						"content.rendered",
+						"status",
+						"date"
+					],
+					"query": {
+						"per_page": "view.perPage",
+						"page": "view.page",
+						"order": "view.sort.direction",
+						"orderby": "view.sort.field|date_gmt",
+						"context": "edit",
+						"status": "any|filter.status",
+						"search": "view.search"
+					}
+				}
+			],
+			"writes": [
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"operation": "partial-update",
+					"purpose": "Approve / unapprove / spam — PATCH `{ id, status }`.",
+					"invalidates": [
+						"root/comment"
+					]
+				},
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"operation": "trash",
+					"purpose": "Move comment to trash (no `force`).",
+					"invalidates": [
+						"root/comment"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isResolving && !records",
+				"renders": "DataViews loading indicator."
+			},
+			{
+				"id": "ready",
+				"when": "records !== null && records.length > 0",
+				"renders": "Table with action chips per row."
+			},
+			{
+				"id": "empty",
+				"when": "records?.length === 0",
+				"renders": "DataViews empty state for the current filter."
+			},
+			{
+				"id": "trash-confirm",
+				"when": "User triggered Trash action",
+				"renders": "Confirm modal with destructive primary."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click Approve action",
+				"effect": "Partial-update status to `approved`; success snackbar.",
+				"guards": [
+					"item.status !== 'approved'"
+				]
+			},
+			{
+				"trigger": "Click Unapprove action",
+				"effect": "Partial-update status to `hold`; success snackbar.",
+				"guards": [
+					"item.status === 'approved'"
+				]
+			},
+			{
+				"trigger": "Click Mark as spam action",
+				"effect": "Partial-update status to `spam`; success snackbar.",
+				"guards": [
+					"item.status !== 'spam'"
+				]
+			},
+			{
+				"trigger": "Click Trash action",
+				"effect": "Open confirm modal; on confirm `deleteEntityRecord` (trash, no `force`) per item; invalidate; success snackbar.",
+				"guards": [
+					"item.status !== 'trash'"
+				]
+			},
+			{
+				"trigger": "Change view (search / filter / sort / page)",
+				"effect": "Local `view` updates; queryArgs recomputes; records refetch."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataViews owns focus inside the table + action modal."
+		},
+		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import from `@wordpress/dataviews/wp`."
+			},
+			{
+				"concern": "partial-saveentityrecord",
+				"note": "Status changes are sent as `saveEntityRecord('root', 'comment', { id, status })` — a partial payload that PATCHes only the status. Sending the full record would clobber any concurrent edit."
+			},
+			{
+				"concern": "dangerously-set-inner-html",
+				"note": "Comment content is rendered HTML — WordPress core sanitizes via `wp_filter_comment_content` (kses + comment-text filter chain) server-side before it reaches the REST response, so the value is trust-bounded. Plain text would lose the formatted view moderators rely on."
+			},
+			{
+				"concern": "orderby-date-gmt",
+				"note": "REST orderby alias for date is `date_gmt`, not `date`. Sorting by `date` column passes `date_gmt` to the API."
+			},
+			{
+				"concern": "invalidate-after-mutate",
+				"note": "Every action invalidates `getEntityRecords` on `root/comment` so the list reflects the new state."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Table view + per-row actions."
+			},
+			{
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Author cell, modal layout, cancel button."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton)",
+				"purpose": "Destructive primary in trash confirm modal — WPDS 0.12 has no `tone=\"critical\"`."
+			},
+			{
+				"import": "@wordpress/icons#trash",
+				"purpose": "Trash action icon."
+			}
+		]
 	}
 }

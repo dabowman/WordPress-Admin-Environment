@@ -40,5 +40,154 @@
 		},
 		"multiInstance": true,
 		"icon": "post"
+	},
+	"documentation": {
+		"purpose": "DataViews table over any single post type. Defaults to 20 rows per page sorted by date descending, with title / status / author / date columns. Authors filter by status, search the title field, switch between table and grid layouts, paginate, and run per-row or bulk actions (edit, view in new tab, move to trash). Used in every bundled shell for the Posts and Pages screens, and rebindable to custom post types through the `postType` config key.",
+		"rebuilds": "posts",
+		"data": {
+			"reads": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Rows in the DataViews table.",
+					"fields": [
+						"id",
+						"title.raw",
+						"title.rendered",
+						"status",
+						"date",
+						"link",
+						"_embedded.author.0.name"
+					],
+					"query": {
+						"_embed": "author",
+						"per_page": "view.perPage",
+						"page": "view.page",
+						"order": "view.sort.direction",
+						"orderby": "view.sort.field",
+						"status": "config.status||any|filter.status",
+						"context": "edit",
+						"search": "view.search",
+						"author": "filter.author"
+					}
+				}
+			],
+			"writes": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "trash",
+					"purpose": "Move one or more selected posts to trash from the row action or bulk action.",
+					"invalidates": [
+						"postType/{config.postType}"
+					]
+				}
+			]
+		},
+		"url": {
+			"navigates": [
+				"#/posts/{id}/edit",
+				"#/pages/{id}/edit"
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isResolving && !records",
+				"renders": "DataViews built-in loading indicator over the previous rows (or an empty table on first paint)."
+			},
+			{
+				"id": "ready",
+				"when": "records !== null && records.length > 0",
+				"renders": "Rows in the active layout (table or grid). Pagination footer shows totalItems / totalPages."
+			},
+			{
+				"id": "empty",
+				"when": "records?.length === 0",
+				"renders": "DataViews built-in empty state for the current filter/search."
+			},
+			{
+				"id": "trash-confirm",
+				"when": "User clicked Trash row/bulk action",
+				"renders": "Modal asking to confirm the destructive action with Cancel + Move to Trash buttons."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click row title",
+				"effect": "Navigate to the editor route for the post type via `navigate(editHref(postType, item.id))`."
+			},
+			{
+				"trigger": "Edit row action",
+				"effect": "Same as clicking the title — navigate to editor."
+			},
+			{
+				"trigger": "View row action",
+				"effect": "Open `item.link` in a new tab.",
+				"guards": [
+					"item.status === 'publish'"
+				]
+			},
+			{
+				"trigger": "Trash row action (single)",
+				"effect": "Open the confirm modal; on confirm `deleteEntityRecord('postType', postType, item.id)` is dispatched without `force` so the record is trashed not deleted."
+			},
+			{
+				"trigger": "Trash bulk action",
+				"effect": "Open the confirm modal with a pluralized message; on confirm `Promise.all(items.map(deleteEntityRecord(...)))` is awaited."
+			},
+			{
+				"trigger": "Change DataViews view (search / filter / sort / layout / page / perPage)",
+				"effect": "Local `view` state updates; `queryArgs` recomputes via `useMemo` and `useEntityRecords` re-fetches."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataViews owns focus inside the grid. After the trash modal closes, DataViews restores focus to the action trigger automatically via its `RenderModal` plumbing."
+		},
+		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import `DataViews` from `@wordpress/dataviews/wp` (the runtime-private export), never bare `@wordpress/dataviews`. The bare path risks minified React error #130 in plugin contexts."
+			},
+			{
+				"concern": "context-edit",
+				"note": "Pass `context: 'edit'` so `title.raw` is populated; without it the table renders decoded HTML and any future inline-edit flow silently breaks."
+			},
+			{
+				"concern": "trash-not-delete",
+				"note": "`deleteEntityRecord('postType', name, id)` without `force: true` trashes the record (standard wp-admin behavior). Passing `force: true` would permanently delete."
+			},
+			{
+				"concern": "destructive-button-fallback",
+				"note": "WPDS 0.12 has no `tone=\"critical\"`. The destructive Trash button uses legacy `Button as DestructiveButton` from `@wordpress/components` with `isDestructive`."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Table + grid view with built-in filtering, sorting, pagination, selection, bulk actions, and per-row action modals."
+			},
+			{
+				"import": "@wordpress/ui#Button",
+				"purpose": "Title cell renderer + Cancel button in trash-confirm modal."
+			},
+			{
+				"import": "@wordpress/ui#Stack",
+				"purpose": "Layout primitives inside the trash-confirm modal."
+			},
+			{
+				"import": "@wordpress/ui#Text",
+				"purpose": "Status label + modal copy."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton)",
+				"purpose": "Destructive primary button in trash-confirm modal — WPDS 0.12 has no `tone=\"critical\"`."
+			},
+			{
+				"import": "@wordpress/icons#pencil, external, trash",
+				"purpose": "Row action icons."
+			}
+		]
 	}
 }

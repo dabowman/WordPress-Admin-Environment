@@ -27,5 +27,67 @@
 		},
 		"multiInstance": true,
 		"icon": "external"
+	},
+	"documentation": {
+		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The shell's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
+		"data": {
+			"reads": [
+				{
+					"source": "window.wpAdminShell.adminUrl",
+					"via": "window-global",
+					"purpose": "Base URL for relative `config.url` paths."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "empty",
+				"when": "!config.url",
+				"renders": "Nothing (return null)."
+			},
+			{
+				"id": "loading",
+				"when": "isLoading === true",
+				"renders": "Centered Spinner overlaid on the iframe element."
+			},
+			{
+				"id": "ready",
+				"when": "isLoading === false",
+				"renders": "Full-bleed iframe with chrome hidden (best-effort — cross-origin iframes silently skip the injection)."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Iframe `load` event",
+				"effect": "Set `isLoading=false`; attempt to inject chrome-hiding CSS into `event.target.contentDocument`. Cross-origin iframes throw and we silently swallow."
+			}
+		],
+		"a11y": {
+			"focus-management": "Iframe owns its own focus tree; the shell does not trap."
+		},
+		"constraints": [
+			{
+				"concern": "css-selectors-fragile",
+				"note": "Chrome-hide selectors target wp-admin's class names (`#adminmenuwrap`, `#wpadminbar`, `#wpcontent`, `.edit-site-layout__sidebar*`, etc.). Rev with each WordPress release. Style Book canvas in edit-site has historically been the most fragile."
+			},
+			{
+				"concern": "cross-origin-silent-skip",
+				"note": "Cross-origin iframes can't have CSS injected (DOM access throws). We swallow the exception silently — the iframe still loads, but with wp-admin chrome visible. Production sites that embed cross-origin URLs accept this trade-off."
+			},
+			{
+				"concern": "config-additional-properties",
+				"note": "Schema allows additional properties on `config` because adapters (SiteEditorApp, custom apps that delegate to IframeApp) may carry extra fields. The app itself only reads `url`."
+			},
+			{
+				"concern": "spinner-fallback",
+				"note": "Legacy `Spinner` — WPDS 0.12 has no port."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading indicator."
+			}
+		]
 	}
 }

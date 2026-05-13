@@ -22,5 +22,118 @@
 		},
 		"multiInstance": false,
 		"icon": "page"
+	},
+	"documentation": {
+		"purpose": "Per-user customization screen for shell appearance. Reads the active shell's `customizable` declarations from the resolved config and renders ONLY the controls the shell allows. MVP controls: density (default / compact / comfortable), accent color (color picker that writes a single token override), default-route override (text input for landing path). Saves go through `POST /wp-admin-shell/v1/user-prefs`; the server deep-merges onto the existing prefs blob and the resolver re-runs on next mount.",
+		"data": {
+			"reads": [
+				{
+					"source": "/wp-admin-shell/v1/user-prefs",
+					"via": "api-fetch",
+					"purpose": "Existing per-user overrides on mount."
+				},
+				{
+					"source": "config.styles.customizable + config.styles + config.default-route",
+					"via": "core-data",
+					"purpose": "Active shell's customizable allowlist + current resolved values (used as fallbacks when prefs are empty)."
+				}
+			],
+			"writes": [
+				{
+					"source": "/wp-admin-shell/v1/user-prefs",
+					"via": "api-fetch",
+					"operation": "partial-update",
+					"purpose": "Patch user prefs via POST with the changed key only — server deep-merges."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "prefs === null",
+				"renders": "Centered Spinner — waiting for initial fetch."
+			},
+			{
+				"id": "no-controls",
+				"when": "Nothing is customizable for this shell",
+				"renders": "Empty-state copy explaining the shell has locked customization."
+			},
+			{
+				"id": "ready",
+				"when": "prefs !== null and at least one control is allowed",
+				"renders": "Stack of controls — only those the shell allows render."
+			},
+			{
+				"id": "saving",
+				"when": "isSaving === true",
+				"renders": "Controls disabled; save button shows loading."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Mount",
+				"effect": "Fetch `/wp-admin-shell/v1/user-prefs`; on success set state to result; on failure set state to `{}`."
+			},
+			{
+				"trigger": "Change density radio",
+				"effect": "POST `{ styles: { density } }` to user-prefs; success snackbar.",
+				"guards": [
+					"shell allows `density`"
+				]
+			},
+			{
+				"trigger": "Pick accent color",
+				"effect": "POST `{ styles: { color: { bg: { interactive: { brand: { strong: value } } } } } }`.",
+				"guards": [
+					"shell allows `color.bg.interactive.brand.strong` or `branding.accentColor`"
+				]
+			},
+			{
+				"trigger": "Change default-route input",
+				"effect": "POST `{ 'default-route': value }`.",
+				"guards": [
+					"shell allows `default-route`"
+				]
+			}
+		],
+		"a11y": {
+			"focus-management": "Native form focus order."
+		},
+		"constraints": [
+			{
+				"concern": "customizable-server-authoritative",
+				"note": "Server enforces `customizable` via the cascade resolver. Controls hidden here are a UX nicety; an attacker hand-crafting a POST cannot bypass the server-side default-deny."
+			},
+			{
+				"concern": "customizable-shape-validation",
+				"note": "`customizable` is either a boolean or a string-array allowlist. Other types (object, number) are treated as locked, with a dev-mode console warn. This matches the server-side default-deny posture."
+			},
+			{
+				"concern": "partial-patch-semantics",
+				"note": "POST body is a partial — server deep-merges onto existing prefs. Sending `{ styles: { density: 'compact' } }` doesn't clobber `styles.color.*`."
+			},
+			{
+				"concern": "no-literal-hex-fallback",
+				"note": "The color picker doesn't fall back to a literal hex when accent is unset — WPDS provider supplies `--wpds-color-bg-interactive-brand-strong`. Empty string = no override; picker reads the resolved CSS var directly."
+			},
+			{
+				"concern": "cache-flush-on-prefs-write",
+				"note": "WordPress hook `wp_admin_shell_user_prefs` user-meta updates triggers the cascade cache flush; next page-load resolves the new prefs."
+			},
+			{
+				"concern": "form-fallbacks",
+				"note": "Legacy `RadioControl` (density) + `Spinner` — WPDS 0.12 gaps."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button, Stack, Text, InputControl",
+				"purpose": "Form layout + color hex input + default-route input + save buttons."
+			},
+			{
+				"import": "@wordpress/components#RadioControl, Spinner",
+				"purpose": "Density radio + loading — WPDS 0.12 gaps."
+			}
+		]
 	}
 }
