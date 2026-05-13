@@ -1,0 +1,24 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:desktop-window-frame",
+	"version": 1,
+	"title": "Desktop window frame",
+	"description": "Frame chrome (titlebar + traffic-light controls + resize handles) wrapping a single window's content in the `core:desktop` engine. The compositor adds each window as a dynamic child region whose nested `frame` sub-region mounts this app. Controls dispatch close/minimize/maximize to the compositor via `WindowManagerContext`. P2.T2 fills the chrome render; P2.T1 ships a stub so schema sweeps + builtins registration succeed.",
+	"designSystem": "@wordpress/ui",
+	"role": "presentation",
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {
+			"windowId": {
+				"type": "string",
+				"description": "Identifier of the window this frame chrome belongs to. Set by the compositor when adding the window region."
+			},
+			"title": {
+				"type": "string",
+				"description": "Window titlebar text. Falls back to the target app's manifest title."
+			}
+		}
+	},
+	"script": "wp-admin-shell"
+}

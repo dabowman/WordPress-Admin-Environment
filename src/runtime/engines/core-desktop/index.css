@@ -1,0 +1,49 @@
+/**
+ * core:desktop — structural CSS.
+ *
+ * Bottom-up layering: wallpaper (z=0) → workspace (z=1, fills viewport)
+ * → dock (z=2, anchored bottom-center, floating). The engine paints
+ * chrome surfaces via `--wp-admin-shell--chrome--*` slot variables with
+ * fallback defaults (P2.T5 will wire these through compileStyles).
+ *
+ * Windows themselves are rendered by the compositor via the kernel's
+ * dynamic-children mechanism (P2.T2). This file owns only the three
+ * persistent surfaces.
+ */
+
+.wp-admin-shell-layout--desktop {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	background: var(
+		--wp-admin-shell--chrome--canvas--background,
+		#0a0a1a
+	);
+	color: var( --wp-admin-shell--chrome--canvas--foreground, #f0f0f5 );
+	font-family: var( --wpds-font-family-sans, -apple-system, system-ui, sans-serif );
+}
+
+.wp-admin-shell-desktop__wallpaper-slot {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	pointer-events: none;
+}
+
+.wp-admin-shell-desktop__workspace-slot {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+.wp-admin-shell-desktop__dock-slot {
+	position: absolute;
+	z-index: 2;
+	inset-block-end: var(
+		--wp-admin-shell--chrome--dock--offset-block-end,
+		24px
+	);
+	inset-inline-start: 50%;
+	transform: translateX( -50% );
+	pointer-events: auto;
+}

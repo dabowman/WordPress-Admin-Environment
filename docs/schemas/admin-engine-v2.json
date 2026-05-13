@@ -266,6 +266,10 @@
 				"core:persists-across-navigation": { "type": "boolean" },
 				"core:dirty-state": { "type": "boolean" },
 				"core:block-navigation-on-dirty": { "type": "boolean" },
+				"core:dynamic-children": {
+					"type": "boolean",
+					"description": "When true, this region's mounted app may add/remove child regions at runtime via the `useDynamicChildren(regionId)` API. Kernel renders runtime children through the same nested-region recursion as static `regions`, so all per-region services (routing, dirty-state, triggerStore, capability gating, ARIA roles, theming scope) apply uniformly. Added 2026-05-12 for windowed/MDI/desktop-style engines. See spec §5.5."
+				},
 				"core:trigger": {
 					"type": "object",
 					"additionalProperties": false,

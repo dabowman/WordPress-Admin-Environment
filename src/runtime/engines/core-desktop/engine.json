@@ -1,0 +1,78 @@
+{
+	"$schema": "../../../../docs/schemas/admin-engine-v2.json",
+	"id": "core:desktop",
+	"version": 1,
+	"title": "Desktop",
+	"description": "Desktop-OS engine. Admin screens open as draggable, resizable windows in a wallpapered workspace, with a dock built from the resolved admin.json navigation. Ports the desktop-mode UX onto the WP Admin Shell kernel via the `core:dynamic-children` platform service (spec §5.5) — windows are runtime-mutated child regions of the workspace region, so per-window routing, dirty-state, triggerStore, and capability gating fall out of region-ID nesting with no engine-specific plumbing.",
+
+	"designSystem": "@wordpress/ui",
+
+	"specializes-roles": [
+		"main",
+		"navigation",
+		"presentation",
+		"region",
+		"dialog"
+	],
+
+	"honored-platform": [
+		"core:modal",
+		"core:dismiss-on",
+		"core:autofocus-target",
+		"core:triggerable",
+		"core:persists-across-navigation",
+		"core:dirty-state",
+		"core:block-navigation-on-dirty",
+		"core:trigger",
+		"core:dynamic-children"
+	],
+
+	"templates": {
+		"core:desktop-workspace": {
+			"role": "main",
+			"platform": { "core:dynamic-children": true },
+			"default-style": {
+				"position": "relative",
+				"flex": "1 1 auto",
+				"inline-size": "100%",
+				"block-size": "100%",
+				"min-inline-size": "0",
+				"min-block-size": "0",
+				"overflow": "hidden"
+			}
+		},
+
+		"core:desktop-dock": {
+			"role": "navigation",
+			"platform": { "core:persists-across-navigation": true },
+			"default-style": {
+				"display": "flex",
+				"flex-direction": "row",
+				"align-items": "center",
+				"justify-content": "center",
+				"gap": "var(--wp-admin-shell--chrome--dock--gap, 8px)",
+				"padding-block": "var(--wp-admin-shell--chrome--dock--padding-block, 8px)",
+				"padding-inline": "var(--wp-admin-shell--chrome--dock--padding-inline, 16px)",
+				"background": "var(--wp-admin-shell--chrome--dock--background, rgba(20, 20, 30, 0.6))",
+				"backdrop-filter": "blur(16px)",
+				"border-radius": "var(--wp-admin-shell--chrome--dock--radius, 16px)",
+				"color": "var(--wp-admin-shell--chrome--dock--foreground, #fff)"
+			}
+		},
+
+		"core:desktop-wallpaper": {
+			"role": "presentation",
+			"default-style": {
+				"position": "absolute",
+				"inset": "0",
+				"z-index": "0",
+				"background": "var(--wp-admin-shell--chrome--wallpaper--background, linear-gradient(135deg, #1e3a5f 0%, #2d5985 100%))",
+				"pointer-events": "none"
+			}
+		}
+	},
+
+	"default-arrangement": "desktop-windows",
+
+	"script": "wp-admin-shell-engine-core-desktop"
+}
