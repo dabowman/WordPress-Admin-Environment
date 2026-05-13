@@ -49,5 +49,13 @@
 		"/settings": { "app": "core:settings" }
 	},
 
-	"default-route": "/posts"
+	"default-route": "/posts",
+
+	"styles": {
+		"chrome": {
+			"dock": {
+				"background": "#ff0000"
+			}
+		}
+	}
 }

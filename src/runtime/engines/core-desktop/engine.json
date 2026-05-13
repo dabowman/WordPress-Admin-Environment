@@ -74,5 +74,38 @@
 
 	"default-arrangement": "desktop-windows",
 
+	"default-styles": {
+		"chrome": {
+			"canvas": {
+				"background": "#0a0a1a",
+				"foreground": "#f0f0f5"
+			},
+			"wallpaper": {
+				"background": "linear-gradient(135deg, #1e3a5f 0%, #2d5985 100%)"
+			},
+			"dock": {
+				"background": "rgba(20, 20, 30, 0.6)",
+				"foreground": "#ffffff",
+				"gap": "8px",
+				"padding-block": "8px",
+				"padding-inline": "16px",
+				"radius": "16px",
+				"offset-block-end": "24px"
+			},
+			"window-frame": {
+				"background": "#2a2a3a",
+				"foreground": "#f0f0f5",
+				"border": "#404050",
+				"body-background": "#1c1c28",
+				"body-foreground": "#f0f0f5",
+				"shadow": "0 8px 24px rgba(0, 0, 0, 0.5)"
+			},
+			"snap-ghost": {
+				"background": "rgba(90, 160, 255, 0.18)",
+				"border": "rgba(90, 160, 255, 0.9)"
+			}
+		}
+	},
+
 	"script": "wp-admin-shell-engine-core-desktop"
 }

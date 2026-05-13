@@ -1,4 +1,5 @@
 import Layout from './Layout';
+import { compileStyles } from './compileStyles.mjs';
 import { iconTable, fallbackIcon } from './icons';
 import { registerIcons } from '../../config/iconMap';
 import './index.css';
@@ -8,25 +9,27 @@ registerIcons( iconTable, { fallback: fallbackIcon } );
 /**
  * @type {import('../../registry/source-types.js').EngineSource}
  *
- * Phase notes:
- *   - P2.T1 (this commit): scaffolding only. ThemeProvider + compileStyles
- *     are not declared; the kernel's `ThemeProviderHost` falls back to the
- *     WPDS-backed default. P2.T5 will add `WpdThemeProvider` + the engine's
- *     `compileStyles` that maps admin.json chrome slots to `--wpd-*` vars
- *     plus the WPDS-to-WPD primitives bridge for default apps mounted
- *     inside window frames.
- *   - P2.T2 will fill `core:desktop-compositor` with the WindowManager
- *     state class; `core:desktop-window-frame` with React frame chrome.
- *   - P2.T3 will fill `core:desktop-dock-app` with the ported dock rail
- *     renderer driving the compositor via `WindowManagerContext`.
- *   - P2.T4 wires the chromeless bridge for legacy admin pages mounted in
- *     `core:desktop-iframe` windows.
+ * Phase status:
+ *   - P2.T1: scaffolding (engine.json templates, Layout, icon table).
+ *   - P2.T2: WindowManager + Window frame + dock; drag, 8-handle resize,
+ *     snap-to-edge; live-window dock tiles for minimize restore.
+ *   - P2.T5 (this commit): `compileStyles` hook maps admin.json
+ *     `styles.chrome.*` slot overrides into CSS variables scoped to the
+ *     kernel's ThemeProvider wrapper. `engine.json#default-styles`
+ *     carries the desktop palette so consuming shells inherit. No
+ *     `ThemeProvider` field — kernel falls back to `WpdsThemeProvider`,
+ *     so bundled apps inside windows continue to render with the WPDS
+ *     contract they were authored against. The WPDS-to-WPD aesthetic
+ *     bridge from the original plan defers to a follow-up.
+ *   - P2.T3 ports the dock-rail registry.
+ *   - P2.T4 wires the chromeless iframe bridge.
  */
 const coreDesktop = {
 	kind: 'engine',
 	id: 'core:desktop',
 	title: 'Desktop',
 	Component: Layout,
+	compileStyles,
 	iconTable,
 };
 
