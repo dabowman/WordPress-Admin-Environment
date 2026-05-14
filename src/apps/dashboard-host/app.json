@@ -1,0 +1,63 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:dashboard-host",
+	"version": 1,
+	"title": "Dashboard",
+	"description": "Renders a grid of registered dashboard widgets. Reads manifest `dashboardWidget` blocks + admin.json `dashboardWidgets` overrides and mounts each widget as a tile.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Host app for the dashboard widget grid. Bundles the widget composition + tile rendering for any region using the `core:dashboard-grid` template (or any region — the host's grid container is part of its own DOM tree). Each tile mounts the widget app via the shared `MountedApp` resolver so the existing 4-layer cap gating + theming applies uniformly.",
+		"data": {
+			"reads": [
+				{
+					"source": "config.dashboardWidgets",
+					"via": "kernel-config",
+					"purpose": "Per-widget overrides (position / size / hidden) keyed by app id."
+				},
+				{
+					"source": "window.wpAdminShell.manifests.apps",
+					"via": "window-global",
+					"purpose": "Read each app's `dashboardWidget` manifest block — only apps declaring one are eligible widgets."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "ready",
+				"when": "composeWidgets() returns a non-empty list",
+				"renders": "Grid of tiles, one per surviving widget."
+			},
+			{
+				"id": "empty",
+				"when": "composeWidgets() returns an empty list (no eligible widgets or all hidden)",
+				"renders": "`No dashboard widgets are registered.` copy."
+			}
+		],
+		"interactions": [],
+		"a11y": {
+			"focus-management": "Tab order follows widget registration order. Each tile is a `region` landmark via the kernel; the host renders tiles as plain `<div>` since the kernel's region wrapper already supplies landmark roles for widgets that need them."
+		},
+		"constraints": [
+			{
+				"concern": "manifest-only-eligibility",
+				"note": "An app participates iff its manifest declares a `dashboardWidget` block. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` flow through the manifest registry — the registry adds a synthetic `dashboardWidget` block onto the host's app manifest, so the same gating applies."
+			},
+			{
+				"concern": "no-runtime-mutation",
+				"note": "The host is config-driven only — widgets are computed from `composeWidgets(manifests, overrides)` once per (manifests, overrides) tuple. Adding a widget at runtime requires the PHP side to update the manifest registry + cascade output, which happens at page load. Drag-to-reorder is out of scope for v1."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui (none directly)",
+				"purpose": "The host is DS-light — it renders structural `<div>` chrome only. Widget tiles inherit WPDS via the active engine's chrome bindings."
+			}
+		]
+	}
+}

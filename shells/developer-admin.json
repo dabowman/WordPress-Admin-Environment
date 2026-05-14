@@ -22,6 +22,11 @@
 								"icon": "wordpress",
 								"href": "#/dashboard"
 							},
+							{
+								"label": "Dashboard Grid",
+								"icon": "layout",
+								"href": "#/dashboard-grid"
+							},
 							{ "separator": true },
 							{
 								"label": "Posts",
@@ -203,6 +208,7 @@
 			"config": { "postType": "wp_block" }
 		},
 		"/dashboard": { "app": "core:dashboard" },
+		"/dashboard-grid": { "app": "core:dashboard-host" },
 		"/plugins": { "app": "core:plugins" },
 		"/themes": { "app": "core:themes" },
 		"/users": { "app": "core:users" },

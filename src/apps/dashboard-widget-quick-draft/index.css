@@ -1,0 +1,15 @@
+.wp-admin-shell-dashboard-quick-draft__title {
+	inline-size: 100%;
+	padding: var(--wpds-dimension-padding-sm);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--wpds-border-radius-sm);
+	background: var(--wpds-color-bg-surface-neutral);
+	color: var(--wpds-color-fg-content-neutral);
+	font-size: inherit;
+	font-family: inherit;
+}
+
+.wp-admin-shell-dashboard-quick-draft__title:focus {
+	outline: 2px solid var(--wpds-color-stroke-interactive-brand);
+	outline-offset: 1px;
+}

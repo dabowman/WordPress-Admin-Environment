@@ -154,6 +154,17 @@
 	fill: currentColor;
 }
 
+/* `core:dashboard-grid`-templated region: zero the inner `region__app`
+ * padding so the host's own grid container reaches the region edges.
+ * Touches engine-owned chrome (`region__app`), so it belongs engine-side.
+ * Scoped on `data-region-id$="dashboard-grid"` so the rule fires for any
+ * shell-chosen id ending in `dashboard-grid`. Tile chrome lives with the
+ * host app — `src/apps/dashboard-host/index.css`. */
+.wp-admin-shell-region[data-region-id$="dashboard-grid"]
+	.wp-admin-shell-region__app {
+	padding: 0;
+}
+
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
 .wp-admin-shell-region__forbidden {

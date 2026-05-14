@@ -110,6 +110,11 @@
 			"$ref": "#/$defs/appWindow"
 		},
 
+		"dashboardWidget": {
+			"$ref": "#/$defs/dashboardWidget",
+			"description": "Optional dashboard-widget hints. When present, the app may be mounted as a tile inside a `core:dashboard-grid` region by `core:dashboard-host`. The block carries default placement + sizing hints; admin.json's top-level `dashboardWidgets` block overrides per-id. Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this block."
+		},
+
 		"viewConfig": {
 			"$ref": "#/$defs/appViewConfig",
 			"description": "Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with admin.json `viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard) omit this field. See spec §13 #7."
@@ -263,6 +268,78 @@
 					"type": "string",
 					"minLength": 1,
 					"description": "Icon registry name (resolved by the active engine's icon table via the kernel icon registry). Used by windowing engines for the window-frame titlebar icon, taskbar/dock entry, and overview switcher. Defaults to a generic application icon when omitted."
+				}
+			}
+		},
+
+		"dashboardWidgetSize": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "w", "h" ],
+			"description": "Grid-cell width/height pair used by `core:dashboard-host`. Cells, not pixels — the host engine's `core:dashboard-grid` template owns the cell dimension. Authors pick small integers (1–4 typical).",
+			"properties": {
+				"w": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Width in grid cells."
+				},
+				"h": {
+					"type": "integer",
+					"minimum": 1,
+					"description": "Height in grid cells (rows)."
+				}
+			}
+		},
+
+		"dashboardWidgetPosition": {
+			"oneOf": [
+				{
+					"const": "auto",
+					"description": "Auto-flow placement; the host appends the widget in registration order."
+				},
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": [ "row", "col" ],
+					"properties": {
+						"row": {
+							"type": "integer",
+							"minimum": 1,
+							"description": "1-indexed grid row. Authors may collide intentionally — later widgets overwrite the cell."
+						},
+						"col": {
+							"type": "integer",
+							"minimum": 1,
+							"description": "1-indexed grid column."
+						}
+					},
+					"description": "Explicit `{row, col}` placement. 1-indexed CSS Grid coordinates."
+				}
+			],
+			"description": "Where on the grid this widget renders. `auto` (default) yields auto-flow; an explicit `{row, col}` object pins the widget. admin.json `dashboardWidgets[id].position` overrides per install."
+		},
+
+		"dashboardWidget": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Dashboard-widget manifest block. Declares layout intrinsics the app prefers when mounted inside a `core:dashboard-grid`. Every field is overrideable by admin.json `dashboardWidgets[appId]`; the resolver merges per-id with admin.json winning per-property.",
+			"properties": {
+				"title": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Widget title shown in the tile header. Translatable. Falls back to the app manifest's top-level `title` when omitted."
+				},
+				"defaultSize": {
+					"$ref": "#/$defs/dashboardWidgetSize",
+					"description": "Initial `{w, h}` size in grid cells. Defaults to `{ w: 1, h: 1 }` when omitted."
+				},
+				"minSize": {
+					"$ref": "#/$defs/dashboardWidgetSize",
+					"description": "Floor `{w, h}` size in grid cells. The host clamps admin.json overrides to this floor. Defaults to `{ w: 1, h: 1 }`."
+				},
+				"position": {
+					"$ref": "#/$defs/dashboardWidgetPosition",
+					"description": "Default placement. Defaults to `auto`."
 				}
 			}
 		},

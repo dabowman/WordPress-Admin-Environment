@@ -1,0 +1,15 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "bad-position",
+	"engine": "core:default",
+	"regions": {
+		"content": { "template": "core:main", "routing": { "route-key": "_self" } }
+	},
+	"dashboardWidgets": {
+		"core:dashboard-widget-recent-posts": {
+			"position": { "row": 0, "col": 1 }
+		}
+	}
+}

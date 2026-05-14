@@ -199,6 +199,26 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-desktop-iframe" */ '../../apps/desktop-iframe'
 			),
 	},
+
+	// ─── C4 dashboard widget grid ──────────────────────────────────
+	'core:dashboard-host': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-host" */ '../../apps/dashboard-host'
+			),
+	},
+	'core:dashboard-widget-recent-posts': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-recent-posts" */ '../../apps/dashboard-widget-recent-posts'
+			),
+	},
+	'core:dashboard-widget-quick-draft': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-quick-draft" */ '../../apps/dashboard-widget-quick-draft'
+			),
+	},
 };
 
 const NON_ROUTABLE_APPS = new Set( [

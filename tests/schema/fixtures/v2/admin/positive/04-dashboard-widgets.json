@@ -1,0 +1,28 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "dashboard-widgets-demo",
+	"engine": "core:default",
+	"regions": {
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		}
+	},
+	"dashboardWidgets": {
+		"core:dashboard-widget-recent-posts": {
+			"position": { "row": 1, "col": 1 },
+			"defaultSize": { "w": 2, "h": 1 }
+		},
+		"core:dashboard-widget-quick-draft": {
+			"hidden": true
+		},
+		"plugin:acme/sales-stats": {
+			"title": "Sales (Acme)",
+			"defaultSize": { "w": 2, "h": 2 },
+			"minSize": { "w": 1, "h": 1 },
+			"position": "auto"
+		}
+	}
+}

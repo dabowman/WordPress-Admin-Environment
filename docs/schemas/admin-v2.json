@@ -131,6 +131,17 @@
 			"type": "array",
 			"items": { "$ref": "#/$defs/preloadEntry" },
 			"description": "REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs. Each entry is either a string path (defaults to GET) or a `[ path, method ]` tuple. Across origins the resolved value is the concatenation of every origin's `preload[]` (no override semantics — additive union; site/role/user simply append). Duplicates by exact `path+method` are deduped before serialization. Use to eliminate the round-trips `@wordpress/core-data` resolvers make on cold mount (`/wp/v2/users/me`, `/wp/v2/types?context=view`, etc.). Conditional preloads belong in a `wp_admin_shell_data_{origin}` filter callback. See spec §13 #9."
+		},
+
+		"dashboardWidgets": {
+			"type": "object",
+			"additionalProperties": false,
+			"patternProperties": {
+				"^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$": {
+					"$ref": "#/$defs/dashboardWidgetOverride"
+				}
+			},
+			"description": "Per-widget overrides keyed by app id. Each entry layers on top of the app manifest's `dashboardWidget` block — admin.json wins per-property. Use to hide widgets the shell ships with (`hidden: true`), to pin a widget to a specific cell, or to grow its size. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` contribute through the plugin origin and are overrideable by site/role/user origins via this block. See spec §13 #13."
 		}
 	},
 
@@ -614,6 +625,49 @@
 							"description": "Item status(es) that make the action eligible. Examples: `\"publish\"`, `[\"publish\", \"future\"]`."
 						}
 					}
+				}
+			}
+		},
+
+		"dashboardWidgetSize": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "w", "h" ],
+			"properties": {
+				"w": { "type": "integer", "minimum": 1 },
+				"h": { "type": "integer", "minimum": 1 }
+			},
+			"description": "Grid cell {w, h}. Same shape as admin-app-v2.json#dashboardWidgetSize."
+		},
+
+		"dashboardWidgetPosition": {
+			"oneOf": [
+				{ "const": "auto" },
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": [ "row", "col" ],
+					"properties": {
+						"row": { "type": "integer", "minimum": 1 },
+						"col": { "type": "integer", "minimum": 1 }
+					}
+				}
+			],
+			"description": "`auto` or explicit `{row, col}`. Same shape as admin-app-v2.json#dashboardWidgetPosition."
+		},
+
+		"dashboardWidgetOverride": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Per-widget admin.json override entry. Every field is optional; resolver merges against the app manifest's `dashboardWidget` block per-property with admin.json winning. Includes the `hidden` switch which is admin.json-only (manifests can't hide themselves).",
+			"properties": {
+				"title": { "type": "string", "minLength": 1 },
+				"defaultSize": { "$ref": "#/$defs/dashboardWidgetSize" },
+				"minSize": { "$ref": "#/$defs/dashboardWidgetSize" },
+				"position": { "$ref": "#/$defs/dashboardWidgetPosition" },
+				"hidden": {
+					"type": "boolean",
+					"description": "When true, the host skips this widget. Use site/role/user origins to hide widgets you don't want on this install. Default false."
 				}
 			}
 		},
