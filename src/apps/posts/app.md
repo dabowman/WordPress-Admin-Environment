@@ -30,14 +30,20 @@ PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7)
 
 The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
-### Translation contract for the JSON baseline
+### i18n regression — accepted CIAB-parity loss
 
-`app.json#viewConfig` ships raw English labels because JSON can't carry `__()` calls. The PHP resolver injects this baseline into the core origin (via `WP_Admin_Shell_View_Config::inject_app_baselines`), so the cascade snapshot serializes English labels to `window.wpAdminShell.config`. Locale-translated copy is delivered through two complementary paths:
+PostsApp regresses on label translation as of the C2 migration. Before C2, all DataViews column labels and row-action labels were authored inline as `__('Title', 'wp-admin-shell')` calls in `index.js` — `@wordpress/i18n` translated them at render time using the active locale. After C2, the cascade primitive ships from `app.json#viewConfig` (and any admin.json `viewConfigs` overrides). JSON can't carry `__()` calls, so the manifest baseline reaches DataViews with **raw English labels** regardless of the user's locale.
 
-1. **Per-id translation in the consuming app.** `buildFields` / `buildActions` could map known ids (`title`, `status`, `author`, `date`, `edit`, `view`, `trash`) to `__('Title', 'wp-admin-shell')` etc. at render time. PostsApp doesn't do this today; the static `STATUS_LABELS` table is the existing model.
-2. **`viewConfigFallback.js` is the i18n-aware React-side variant.** Its labels wrap in `__()` calls and ship a translated default when the cascade has no entry for the triple. Field/action *structure* in the fallback must stay in sync with the app.json baseline (same field ids, same flags, same action ids); the only intentional drift is label string i18n. Once a site adds a `wp_admin_shell_view_config_postType_post` filter that translates labels server-side, the fallback's labels never surface.
+This is an **accepted regression**, not a bug. Spec §13 #7 codifies the contract: view-configs are *locale-agnostic primitives*, matching CIAB's `next_admin_entity_view_config_*` design. Translation is the consumer's responsibility, not the cascade's.
 
-The fallback file is defense-in-depth — in production, manifest discovery runs at init priority 8 and the baseline lands in the cascade before the resolver fires.
+Two paths exist to restore locale awareness (neither wired in PostsApp today):
+
+1. **Server-side filter callback.** Plugins authoring against `wp_admin_shell_view_config_postType_post` can wrap labels in `__()` from inside the PHP filter — that's where translation calls actually work. Best for plugins shipping a localized override of the bundled spec.
+2. **Render-time id→string mapping in the app.** `buildFields` / `buildActions` could keep a small `LABELS = { title: __('Title'), status: __('Status'), ... }` table and prefer those over the JSON spec's raw labels when the id matches. Static-analysis-friendly (translation tools scan `__()` literals); preserves the JSON spec's locale-agnostic shape.
+
+Path 2 is the cheapest fix and will land before any other entity-CRUD app (TaxonomyApp, UsersApp, CommentsApp, PluginsApp, ThemesApp) migrates to the C2 primitive — otherwise each migration repeats the regression. The `viewConfigFallback.js` file's `__()`-wrapped strings are no longer load-bearing once Path 2 ships and can either be removed or kept as a structural-only file (label strings stripped).
+
+Action callbacks are unaffected — `RenderModal` and inline button labels still live in JSX inside `index.js` and translate normally.
 
 ## Rebuild guide
 
