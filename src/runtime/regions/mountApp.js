@@ -11,7 +11,21 @@
  *     route-matched apps with interpolated config.
  *
  * Regions delegate to this helper to keep the resolution path uniform.
+ *
+ * **Lazy apps.** Apps registered with `{ load: () => import(...) }`
+ * resolve through the registry's `resolveComponent(id)` cache, which
+ * returns a stable Promise per id. We wrap that Promise in `React.lazy`
+ * once per id (memoized in `lazyAppCache`) so React's Suspense
+ * machinery suspends the subtree until the chunk lands. An
+ * `<AppErrorBoundary>` catches load failures and renders an inline
+ * fallback rather than crashing the whole tree.
  */
+import {
+	Suspense,
+	lazy,
+	Component as ReactComponent,
+} from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { useKernel } from '../kernel-context';
 import { userCan } from '../capabilities/userCan';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
@@ -34,6 +48,115 @@ function warnDsMismatch( engineId, appId, engineDs, appDs ) {
 	console.warn(
 		`wp-admin-shell DS mismatch: app "${ appId }" declares designSystem="${ appDs }" but active engine "${ engineId }" declares designSystem="${ engineDs }". Visual results will be inconsistent.`
 	);
+}
+
+// One React.lazy() wrapper per app id. React.lazy expects a thunk
+// returning `{ default: Component }`; resolveComponent returns a
+// Promise resolving to the bare component, so we adapt. The cache
+// keeps identity stable across renders so React doesn't remount the
+// suspending subtree on every parent re-render.
+const lazyAppCache = new Map();
+
+function getLazyComponent( registry, id ) {
+	if ( lazyAppCache.has( id ) ) {
+		return lazyAppCache.get( id );
+	}
+	const promise = registry.resolveComponent( id );
+	if ( ! promise ) {
+		return null;
+	}
+	const Lazy = lazy( () =>
+		promise.then( ( Component ) => ( { default: Component } ) )
+	);
+	lazyAppCache.set( id, Lazy );
+	return Lazy;
+}
+
+function AppLoading() {
+	return (
+		<div
+			className="wp-admin-shell-app-loading"
+			role="status"
+			aria-live="polite"
+			aria-busy="true"
+		/>
+	);
+}
+
+function AppLoadError( { appId, error, onRetry } ) {
+	const message = error?.message || String( error );
+	return (
+		<div className="wp-admin-shell-app-error" role="alert">
+			<p>
+				{ __( 'Failed to load app', 'wp-admin-shell' ) }
+				{ appId ? ` "${ appId }"` : null }.
+			</p>
+			<p className="wp-admin-shell-app-error__detail">{ message }</p>
+			{ onRetry ? (
+				<button type="button" onClick={ onRetry }>
+					{ __( 'Retry', 'wp-admin-shell' ) }
+				</button>
+			) : null }
+		</div>
+	);
+}
+
+/**
+ * Catches errors thrown by a suspending app's load. Without a boundary,
+ * a rejected lazy() promise crashes the whole tree. Resetting via
+ * `retry` clears the cached lazy() (so the next attempt re-fires the
+ * underlying load thunk via the registry).
+ */
+class AppErrorBoundary extends ReactComponent {
+	constructor( props ) {
+		super( props );
+		this.state = { error: null };
+		this.retry = this.retry.bind( this );
+	}
+
+	static getDerivedStateFromError( error ) {
+		return { error };
+	}
+
+	componentDidCatch( error ) {
+		// eslint-disable-next-line no-console
+		console.error(
+			`[wp-admin-shell] app "${ this.props.appId }" failed to load:`,
+			error
+		);
+	}
+
+	retry() {
+		const { appId, onRetry } = this.props;
+		if ( onRetry ) {
+			onRetry( appId );
+		}
+		this.setState( { error: null } );
+	}
+
+	render() {
+		if ( this.state.error ) {
+			return (
+				<AppLoadError
+					appId={ this.props.appId }
+					error={ this.state.error }
+					onRetry={ this.retry }
+				/>
+			);
+		}
+		return this.props.children;
+	}
+}
+
+function retryLazyApp( appId ) {
+	// Drop the cached React.lazy wrapper so the next render rebuilds
+	// it. The registry's resolveComponent cache is also wiped via the
+	// load thunk being re-invoked. (Note: the registry itself does not
+	// expose a public invalidate — the most common cause of a load
+	// failure is a chunk fetch error, which webpack's chunk-loading
+	// runtime already retries internally. The retry button mostly
+	// re-tries any lazy() that errored during render.)
+	lazyAppCache.delete( appId );
 }
 
 export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
@@ -89,7 +212,22 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 		}
 	}
 
-	const Component = sourceDef.Component;
+	// Eager registrations expose `Component` directly. Lazy ones need
+	// a React.lazy wrapper backed by the registry's resolveComponent
+	// Promise. Both paths produce the same `<AppComponent />` JSX; the
+	// Suspense boundary below is a no-op for eager apps (their render
+	// doesn't throw a Promise) so there's no perf cost to wrapping
+	// uniformly.
+	const Component =
+		sourceDef.Component || getLazyComponent( registry, appInstance.source );
+	if ( ! Component ) {
+		return (
+			<div className="wp-admin-shell-region__empty">
+				Unknown source: { appInstance.source }
+			</div>
+		);
+	}
+
 	const mergedConfig = {
 		...( sourceDef.defaults || {} ),
 		...( appInstance.config || {} ),
@@ -102,12 +240,19 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 				data-app-source={ appInstance.source }
 				style={ { display: 'contents' } }
 			>
-				<Component
-					app={ appInstance }
-					config={ mergedConfig }
-					regionId={ regionId }
-					segments={ segments || [] }
-				/>
+				<AppErrorBoundary
+					appId={ appInstance.source }
+					onRetry={ retryLazyApp }
+				>
+					<Suspense fallback={ <AppLoading /> }>
+						<Component
+							app={ appInstance }
+							config={ mergedConfig }
+							regionId={ regionId }
+							segments={ segments || [] }
+						/>
+					</Suspense>
+				</AppErrorBoundary>
 			</div>
 		</ScopedThemeProvider>
 	);

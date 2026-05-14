@@ -31,10 +31,26 @@ Pass if all four shells fall under **500 ms**. Annotate any miss with the networ
 
 ## What's in the path
 
-- Network: `index.js` (~110 KiB gz), `index.css` (~2.5 KiB gz), `dataviews.css` (~14 KiB gz).
+- Network: `index.js` (boot bundle), `index.css`, `dataviews.css`. Post-C5 the per-app code is no longer in the boot bundle — each app loads on-demand from its own chunk (`build/app-<id>.js`) the first time its region mounts.
 - Parse + execute: kernel registers built-ins, the resolved config arrives via inline `<script>`, token CSS injects.
 - React: engine + region tree + the routed app render.
 - First app's data: PostsApp (developer-admin) fires `useEntityRecords` query; iframed apps mount the iframe (defer first paint of iframed content from the cold-mount measurement — measure to shell-card paint, not to iframed-content paint).
+
+## Bundle size — Track D (C5) lazy app loading
+
+Captured 2026-05-14 with `npm run build` (production). Pre-D = `main` at `e86ed3b`; post-D = `feat/c5-lazy-app-loading`. Webpack auto-extracts a shared vendor chunk; that chunk loads on-demand when its first consumer (any DataViews-backed app) mounts.
+
+| Asset | Pre-D | Post-D | Δ |
+|---|---:|---:|---:|
+| `index.js` (boot bundle) | 2,164,072 B (2.06 MiB) | 213,691 B (209 KiB) | **−90.1 %** |
+| `index.css` | 28,735 B | 20,860 B | −27 % |
+| Entrypoint (cold-mount JS+CSS) | 2.12 MiB | 250 KiB | **−88 %** |
+| Vendors chunk `245.js` (lazy) | — | 1,832,141 B (1.75 MiB) | new — loaded on first app mount that needs it |
+| Lazy per-app chunks `app-*.js` | — | 25 chunks, 973 B – 17,213 B | new — one per non-system app |
+
+Cold-mount for a shell that mounts only chrome apps (navigation, site-hub, toolbar-actions, notices-banner, notices-snackbar) downloads only the 250 KiB entrypoint plus whichever app chunk the default route mounts and the vendors chunk that app pulls in. A shell whose default route mounts a non-DataViews app (e.g. `wp-admin-default` → iframe to wp-admin/index.php) can stay below 260 KiB until the user navigates to a DataViews-backed surface.
+
+The 1.75 MiB vendors chunk is the dominant cost for the first DataViews-backed mount. Splitting that further (per-app vendor chunks, or aggressive tree-shaking of `@wordpress/dataviews` re-exports) is a Track E candidate, not in C5 scope.
 
 ## What's already memoized
 
