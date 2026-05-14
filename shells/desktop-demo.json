@@ -4,7 +4,7 @@
 	"$wpds": "6.9",
 	"name": "desktop-demo",
 	"title": "Desktop demo (core:desktop engine)",
-	"description": "Demo shell exercising the windowed desktop engine. The three persistent regions (wallpaper, workspace, dock) map to engine templates of the same names. Workspace hosts the compositor app and accepts runtime-mutated child regions (one per open window) via the `core:dynamic-children` platform service. Dock reads the same nav tree as default-engine shells; clicking a tile dispatches `openWindow` to the compositor. P2.T1 ships the demo with the engine registered but the compositor + dock + frame apps still stubbed — windows arrive in P2.T2/T3.",
+	"description": "Demo shell exercising the windowed desktop engine. The three persistent regions (wallpaper, workspace, dock) map to engine templates of the same names. Workspace hosts the compositor app and accepts runtime-mutated child regions (one per open window) via the `core:dynamic-children` platform service. Dock reads the same nav tree as default-engine shells; clicking a tile dispatches `openWindow` to the compositor.",
 	"user-switchable": true,
 
 	"engine": "core:desktop",
@@ -27,10 +27,21 @@
 					{ "label": "Posts", "icon": "post", "href": "#/posts" },
 					{ "label": "Media", "icon": "media", "href": "#/media" },
 					{ "label": "Users", "icon": "people", "href": "#/users" },
+					{ "label": "Pages", "icon": "page", "href": "#/pages" },
 					{
 						"label": "Settings",
 						"icon": "settings",
 						"href": "#/settings"
+					},
+					{
+						"label": "Site Health",
+						"icon": "wordpress",
+						"href": "#/site-health"
+					},
+					{
+						"label": "Permalinks",
+						"icon": "external",
+						"href": "#/permalinks"
 					}
 				]
 			}
@@ -44,9 +55,15 @@
 
 	"routes": {
 		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/pages": { "app": "core:posts", "config": { "postType": "page" } },
 		"/media": { "app": "core:media" },
 		"/users": { "app": "core:users" },
-		"/settings": { "app": "core:settings" }
+		"/settings": { "app": "core:settings" },
+		"/site-health": { "app": "core:site-health" },
+		"/permalinks": {
+			"app": "core:desktop-iframe",
+			"config": { "url": "options-permalink.php" }
+		}
 	},
 
 	"default-route": "/posts"

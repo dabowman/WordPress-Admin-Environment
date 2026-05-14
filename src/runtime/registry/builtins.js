@@ -47,6 +47,7 @@ import UserMenuApp from '../../apps/user-menu';
 import DesktopCompositorApp from '../../apps/desktop-compositor';
 import DesktopDockApp from '../../apps/desktop-dock-app';
 import DesktopWindowFrameApp from '../../apps/desktop-window-frame';
+import DesktopIframeApp from '../../apps/desktop-iframe';
 
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
@@ -82,6 +83,7 @@ const APP_COMPONENTS = {
 	'core:desktop-compositor': DesktopCompositorApp,
 	'core:desktop-dock-app': DesktopDockApp,
 	'core:desktop-window-frame': DesktopWindowFrameApp,
+	'core:desktop-iframe': DesktopIframeApp,
 };
 
 const NON_ROUTABLE_APPS = new Set( [

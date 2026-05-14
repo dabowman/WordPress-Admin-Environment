@@ -89,6 +89,13 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-mani
 require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-shells.php';
 
+// Engine-specific PHP — each engine that needs server hooks ships
+// under `includes/engines/<engine-id>/`. Bootstrap files load
+// unconditionally; their handlers gate themselves on the active engine
+// or per-request signals (`core:desktop` only hooks the chromeless
+// bridge when the request carries `wp_admin_shell_chromeless=1`).
+require_once WP_ADMIN_SHELL_PATH . 'includes/engines/core-desktop/bootstrap.php';
+
 /**
  * V2.M1 — Public manifest registration API.
  *

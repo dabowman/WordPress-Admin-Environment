@@ -47,3 +47,343 @@
 	transform: translateX( -50% );
 	pointer-events: auto;
 }
+
+/* ─────────────────────────── Dock ─────────────────────────── */
+
+.wp-admin-shell-desktop-dock {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var( --wp-admin-shell--chrome--dock--gap, 8px );
+}
+
+.wp-admin-shell-desktop-dock__group {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var( --wp-admin-shell--chrome--dock--gap, 8px );
+}
+
+.wp-admin-shell-desktop-dock__separator {
+	inline-size: 1px;
+	block-size: 36px;
+	background: rgba( 255, 255, 255, 0.18 );
+	margin-inline: 4px;
+}
+
+.wp-admin-shell-desktop-dock__item {
+	display: flex;
+}
+
+.wp-admin-shell-desktop-dock__tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 10px;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
+	border-radius: 12px;
+	transition: background 0.12s ease, opacity 0.12s ease;
+}
+
+.wp-admin-shell-desktop-dock__tile--window[ data-state='minimized' ] {
+	opacity: 0.55;
+}
+
+.wp-admin-shell-desktop-dock__indicator {
+	position: absolute;
+	inset-block-end: 2px;
+	inset-inline-start: 50%;
+	transform: translateX( -50% );
+	inline-size: 4px;
+	block-size: 4px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.4;
+}
+
+.wp-admin-shell-desktop-dock__tile--window[ data-active='true' ]
+	.wp-admin-shell-desktop-dock__indicator {
+	opacity: 1;
+	inline-size: 6px;
+}
+
+.wp-admin-shell-desktop-dock__tile:hover,
+.wp-admin-shell-desktop-dock__tile:focus-visible {
+	background: rgba( 255, 255, 255, 0.12 );
+	outline: none;
+}
+
+.wp-admin-shell-desktop-dock__tile[ disabled ] {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.wp-admin-shell-desktop-dock__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+}
+
+.wp-admin-shell-desktop-dock__icon svg {
+	fill: currentColor;
+}
+
+.wp-admin-shell-desktop-dock__label {
+	font-size: 11px;
+	line-height: 1;
+}
+
+/* ────────────────────── Window chrome ─────────────────────── */
+
+.wp-admin-shell-desktop-window-frame {
+	display: flex;
+	flex-direction: column;
+	background: var(
+		--wp-admin-shell--chrome--window-frame--background,
+		#2a2a3a
+	);
+	color: var(
+		--wp-admin-shell--chrome--window-frame--foreground,
+		#f0f0f5
+	);
+	border: 1px solid
+		var( --wp-admin-shell--chrome--window-frame--border, #404050 );
+	border-block-end: 0;
+	border-start-start-radius: 8px;
+	border-start-end-radius: 8px;
+	user-select: none;
+}
+
+.wp-admin-shell-desktop-window-frame__titlebar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	min-block-size: 32px;
+	cursor: grab;
+	touch-action: none;
+}
+
+.wp-admin-shell-desktop-window-frame__titlebar:active {
+	cursor: grabbing;
+}
+
+.wp-admin-shell-desktop-window-frame__controls {
+	display: flex;
+	flex-direction: row;
+	gap: 6px;
+}
+
+.wp-admin-shell-desktop-window-frame__control {
+	inline-size: 12px;
+	block-size: 12px;
+	border: 0;
+	padding: 0;
+	border-radius: 50%;
+	cursor: pointer;
+}
+
+.wp-admin-shell-desktop-window-frame__control--close {
+	background: #ff5f57;
+}
+
+.wp-admin-shell-desktop-window-frame__control--minimize {
+	background: #febc2e;
+}
+
+.wp-admin-shell-desktop-window-frame__control--maximize {
+	background: #28c840;
+}
+
+/*
+ * Window transitions.
+ *
+ * Window regions animate transform / size changes (snap commit,
+ * restoreFromPinned, maximize toggle). The class-substring match
+ * `--workspace__win-` targets only window region roots; children
+ * carry suffixes (`__frame`, `__body`) the negations strip.
+ *
+ * During a live drag/resize the frame app stamps
+ * `data-dragging="true"` on the window region and the transition is
+ * suppressed — the imperative pointermove writes must land on every
+ * frame without easing. The flag is cleared on pointerup, so the
+ * post-commit React re-render animates back to the new style.
+ */
+.wp-admin-shell-layout--desktop
+	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+		[ class*='__frame' ]
+	):not( [ class*='__body' ] ) {
+	transition: transform 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 ),
+		inline-size 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 ),
+		block-size 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 );
+}
+
+.wp-admin-shell-layout--desktop
+	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+		[ class*='__frame' ]
+	):not( [ class*='__body' ] )[ data-dragging='true' ] {
+	transition: none;
+}
+
+.wp-admin-shell-desktop-snap-ghost {
+	border: 2px solid
+		var( --wp-admin-shell--chrome--snap-ghost--border, rgba( 90, 160, 255, 0.9 ) );
+	background: var(
+		--wp-admin-shell--chrome--snap-ghost--background,
+		rgba( 90, 160, 255, 0.18 )
+	);
+	border-radius: 8px;
+	z-index: 9999;
+	transition: transform 0.08s ease, inline-size 0.08s ease, block-size 0.08s ease;
+}
+
+.wp-admin-shell-desktop-window-frame__resize {
+	position: absolute;
+	z-index: 1;
+	touch-action: none;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--n,
+.wp-admin-shell-desktop-window-frame__resize--s {
+	inset-inline-start: 8px;
+	inset-inline-end: 8px;
+	block-size: 6px;
+	cursor: ns-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--n {
+	inset-block-start: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--s {
+	inset-block-end: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--e,
+.wp-admin-shell-desktop-window-frame__resize--w {
+	inset-block-start: 8px;
+	inset-block-end: 8px;
+	inline-size: 6px;
+	cursor: ew-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--e {
+	inset-inline-end: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--w {
+	inset-inline-start: -3px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--ne,
+.wp-admin-shell-desktop-window-frame__resize--nw,
+.wp-admin-shell-desktop-window-frame__resize--se,
+.wp-admin-shell-desktop-window-frame__resize--sw {
+	inline-size: 14px;
+	block-size: 14px;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--ne {
+	inset-block-start: -3px;
+	inset-inline-end: -3px;
+	cursor: nesw-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--nw {
+	inset-block-start: -3px;
+	inset-inline-start: -3px;
+	cursor: nwse-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--se {
+	inset-block-end: -3px;
+	inset-inline-end: -3px;
+	cursor: nwse-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__resize--sw {
+	inset-block-end: -3px;
+	inset-inline-start: -3px;
+	cursor: nesw-resize;
+}
+
+.wp-admin-shell-desktop-window-frame__title {
+	flex: 1 1 0;
+	min-inline-size: 0;
+	text-align: center;
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/*
+ * Window body sizing chain.
+ *
+ * Region.js wraps every region's mounted app in a `.wp-admin-shell-
+ * region__app` div between the region root and the app component. That
+ * wrapper is `display: block` by default with no sizing rules, so apps
+ * that ask for `block-size: 100%` collapse against the wrapper's
+ * content height (the iframe's native 300×150 default for our
+ * `core:desktop-iframe`). `core:default` solves this by making the
+ * wrapper a flex column whose children flex-fill — same pattern here,
+ * scoped to window body regions only so other regions (frame, modal,
+ * widget) keep their block flow.
+ */
+.wp-admin-shell-layout--desktop
+	[ data-region-id*='/body' ]
+	> .wp-admin-shell-region__app {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-block-size: 0;
+	block-size: 100%;
+	inline-size: 100%;
+}
+
+.wp-admin-shell-layout--desktop
+	[ data-region-id*='/body' ]
+	> .wp-admin-shell-region__app
+	> * {
+	flex: 1 1 0;
+	min-block-size: 0;
+}
+
+/*
+ * Window body region — the kernel renders this as
+ * <div data-region-id="workspace/{winId}/body"> via Region.js. Give it a
+ * neutral surface so apps without their own background paint a sensible
+ * window content area.
+ */
+.wp-admin-shell-layout--desktop
+	[ data-region-id*='/body' ] {
+	background: var(
+		--wp-admin-shell--chrome--window-frame--body-background,
+		#1c1c28
+	);
+	color: var(
+		--wp-admin-shell--chrome--window-frame--body-foreground,
+		#f0f0f5
+	);
+	border: 1px solid
+		var( --wp-admin-shell--chrome--window-frame--border, #404050 );
+	border-block-start: 0;
+	border-end-start-radius: 8px;
+	border-end-end-radius: 8px;
+	box-shadow: var(
+		--wp-admin-shell--chrome--window-frame--shadow,
+		0 8px 24px rgba( 0, 0, 0, 0.5 )
+	);
+}
