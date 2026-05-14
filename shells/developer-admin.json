@@ -250,7 +250,7 @@
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }
 					},
-					"defaultLayouts": { "table": {}, "grid": {} },
+					"defaultLayouts": { "table": {}, "grid": {}, "list": {} },
 					"actions": [
 						{ "id": "edit",  "label": "Edit",          "isPrimary": true, "icon": "pencil" },
 						{ "id": "view",  "label": "View",          "icon": "external", "eligibleWhen": { "status": "publish" } },

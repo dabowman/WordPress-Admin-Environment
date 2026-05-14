@@ -232,10 +232,23 @@ export default function PostsApp( { config } ) {
 		}
 	);
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...( viewConfig.defaultView || POSTS_VIEW_CONFIG_FALLBACK.defaultView ),
-	} ) );
+	const [ view, setView ] = useState( () => {
+		const merged = {
+			...VIEW_DEFAULTS,
+			...( viewConfig.defaultView ||
+				POSTS_VIEW_CONFIG_FALLBACK.defaultView ),
+		};
+		// DataViews renders `titleField` as its own special cell — if
+		// the same id is also in `view.fields`, the column renders twice.
+		// Authoring data tends to include it (intuitive: "list every
+		// visible column"); strip it here so the gotcha is one-sided.
+		if ( merged.titleField && Array.isArray( merged.fields ) ) {
+			merged.fields = merged.fields.filter(
+				( id ) => id !== merged.titleField
+			);
+		}
+		return merged;
+	} );
 
 	const queryArgs = useMemo( () => {
 		const args = {
