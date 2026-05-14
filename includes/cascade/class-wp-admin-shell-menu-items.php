@@ -43,7 +43,25 @@ class WP_Admin_Shell_Menu_Items {
 	/**
 	 * Register a menu item.
 	 *
-	 * @param string $id   Unique menu-item id.
+	 * Screen emission heuristic: a registered item becomes a `screen`
+	 * (drilldown parent) when EITHER it explicitly declares
+	 * `parent_type=drilldown` OR another registered item in the same
+	 * region bucket references it as `parent`. The latter is the
+	 * ergonomic shortcut so plugin authors don't have to register a
+	 * "parent shell" item separately when they already have children.
+	 *
+	 * Screen-id constraint: the registered `$id` is reused verbatim as
+	 * the navigation app's drilldown `screen` key, which routes through
+	 * the `?screen=<id>` URL slot. Pick ids that survive URL encoding
+	 * (alnum + `-` + `_`) and check for collisions with inline
+	 * admin.json `screen` ids — the shim does not namespace.
+	 *
+	 * Cross-region parent caveat: `parent`/child resolution runs per
+	 * region bucket. A child whose `parent` lives in a different region
+	 * silently lands as a root in the child's bucket. Keep parent +
+	 * child in the same region (or use admin.json directly).
+	 *
+	 * @param string $id   Unique menu-item id (URL-safe; namespaces yourself if you need collision avoidance with inline admin.json screens).
 	 * @param array  $args {
 	 *     CIAB-flavored args.
 	 *
@@ -59,7 +77,9 @@ class WP_Admin_Shell_Menu_Items {
 	 *                                        Defaults to the first `core:navigation` region in the tree.
 	 *     @type string|null     $capability  WP capability gate. Picked up by the shell's existing cap layer.
 	 *     @type bool|null       $external    Mark as external link (rendered with target="_blank" semantics).
-	 *                                        Auto-detected when `to` is an absolute URL.
+	 *                                        `true` = always external; `false` = always internal (escape hatch
+	 *                                        for absolute URLs that should still hash-route); `null` (default)
+	 *                                        = auto-detect from `to` (absolute URL → external).
 	 *     @type string|null     $description Drilldown screen description. Ignored on link items.
 	 * }
 	 *
@@ -306,7 +326,14 @@ class WP_Admin_Shell_Menu_Items {
 		if ( ! empty( $item['capability'] ) ) {
 			$shell['capability'] = (string) $item['capability'];
 		}
-		if ( $item['external'] === true || self::is_absolute_url( $item['to'] ?? '' ) ) {
+		// Explicit `external` arg wins over absolute-URL auto-detect:
+		// `external => true` always flags; `external => false` always
+		// suppresses (escape hatch for absolute URLs that should still
+		// hash-route through the shell, e.g. signed S3 viewer redirects);
+		// `external === null` (default) falls back to URL sniffing.
+		if ( $item['external'] === true ) {
+			$shell['external'] = true;
+		} elseif ( $item['external'] === null && self::is_absolute_url( $item['to'] ?? '' ) ) {
 			$shell['external'] = true;
 		}
 		return $shell;

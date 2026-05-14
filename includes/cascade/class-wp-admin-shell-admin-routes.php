@@ -111,7 +111,9 @@ class WP_Admin_Shell_Admin_Routes {
 			}
 			// CIAB pass-through. Fold into `config` so the admin-v2 schema
 			// (which only allows `app` + `config` on a route) accepts it.
-			$config = array_merge( $config, $args['static_data'] );
+			// `config` wins on collision — explicit overrides preloaded
+			// route state, matching CIAB's static_data-as-base convention.
+			$config = array_merge( $args['static_data'], $config );
 		}
 		if ( ! empty( $config ) ) {
 			$route['config'] = $config;

@@ -408,6 +408,31 @@ WPAS_Shim_Test_Runner::assert_true( 'protocol-relative flagged external', ! empt
 WPAS_Shim_Test_Runner::assert_eq( 'hash href passes through unchanged', $ext_items[3]['href'], '#/inside-shell' );
 WPAS_Shim_Test_Runner::assert_true( 'hash NOT flagged external', empty( $ext_items[3]['external'] ) );
 
+// Explicit `external => false` suppresses absolute-URL auto-detect
+// (escape hatch — author chose to hash-route an absolute URL).
+WP_Admin_Shell_Menu_Items::reset();
+wp_admin_shell_register_menu_item( 'ext-explicit-false', array(
+	'to'       => 'https://wordpress.org/',
+	'label'    => 'Internal Despite https',
+	'external' => false,
+) );
+wp_admin_shell_register_menu_item( 'ext-explicit-true', array(
+	'to'       => '#/inside',
+	'label'    => 'External Despite Hash',
+	'external' => true,
+) );
+$doc_explicit = wpas_shim_test_shell_doc();
+$filtered_explicit = WP_Admin_Shell_Menu_Items::contribute( $doc_explicit );
+$exp_items = $filtered_explicit['regions']['sidebar']['regions']['nav']['config']['items'];
+WPAS_Shim_Test_Runner::assert_true(
+	'explicit external=false suppresses absolute-URL auto-detect',
+	empty( $exp_items[1]['external'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'explicit external=true overrides hash-href default',
+	! empty( $exp_items[2]['external'] )
+);
+
 // -----------------------------------------------------------------------------
 // Menu items — empty registry is a no-op on contribute
 // -----------------------------------------------------------------------------
@@ -476,7 +501,26 @@ $registry = WP_Admin_Shell_Admin_Routes::all();
 WPAS_Shim_Test_Runner::assert_eq(
 	'static_data merged into config',
 	$registry['/plugin/detail']['config'],
-	array( 'view' => 'edit', 'origin' => 'shim' )
+	array( 'origin' => 'shim', 'view' => 'edit' )
+);
+
+// Merge direction: explicit `config` wins on key collision.
+WP_Admin_Shell_Admin_Routes::reset();
+wp_admin_shell_register_admin_route( '/plugin/collide', array(
+	'app'         => 'plugin:my-plugin/detail',
+	'config'      => array( 'view' => 'config-wins' ),
+	'static_data' => array( 'view' => 'static-loses', 'extra' => 'kept' ),
+) );
+$collide_registry = WP_Admin_Shell_Admin_Routes::all();
+WPAS_Shim_Test_Runner::assert_eq(
+	'explicit config wins on collision with static_data',
+	$collide_registry['/plugin/collide']['config']['view'],
+	'config-wins'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'static_data extras (no collision) survive merge',
+	$collide_registry['/plugin/collide']['config']['extra'],
+	'kept'
 );
 
 // `gc_time` accepted, no fatal.

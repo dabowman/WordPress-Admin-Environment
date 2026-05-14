@@ -170,6 +170,14 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
  * an optional `region` arg (defaults to the first `core:navigation`
  * region in the resolved tree).
  *
+ * Timing: call from `init` priority 9 or earlier (`plugins_loaded` is
+ * fine). The cascade resolver's first run on the page render or first
+ * REST hit triggers `wp_admin_shell_data_plugin` and memoizes the
+ * resolved tree through `WP_Admin_Shell_Cache`. Registrations made
+ * after the resolver's first run miss the current request entirely
+ * and only land on the next cache-invalidating event (option write,
+ * plugin/theme activation, role change, manual `WP_Admin_Shell_Cache::flush()`).
+ *
  * @param string $id   Menu-item id (must be unique within the registry).
  * @param array  $args Args. See `WP_Admin_Shell_Menu_Items::register`.
  * @return string|WP_Error Id on success, WP_Error on failure.
@@ -186,9 +194,13 @@ function wp_admin_shell_register_menu_item( $id, $args ) {
  * (`$path, $content_module, $route_module, $before_load, $static_data, $gc_time`)
  * into `($path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ])`.
  * `app` replaces `content_module`, `static_data` is folded into `config`
- * for forward compatibility, and `gc_time` is accepted but ignored
- * (TanStack-specific cache GC, no shell equivalent — emits a one-time
- * `WP_DEBUG` notice).
+ * for forward compatibility (explicit `config` keys win on collision),
+ * and `gc_time` is accepted but ignored (TanStack-specific cache GC,
+ * no shell equivalent — emits a one-time `WP_DEBUG` notice).
+ *
+ * Timing: same as `wp_admin_shell_register_menu_item()` — call from
+ * `init` priority 9 or earlier so the cascade resolver picks the route
+ * up on its first memoized run.
  *
  * @param string $path Route path (`/posts`, `/posts/{id}`, `/media/*`).
  * @param array  $args Args. See `WP_Admin_Shell_Admin_Routes::register`.
