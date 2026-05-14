@@ -39,9 +39,9 @@
 					"fields": [ "title" ]
 				},
 				{
-					"source": "userCan",
-					"via": "core-data",
-					"purpose": "Per-item capability check via the kernel's `userCan(cap)` helper. Items declaring `capability` get pruned recursively when the user lacks the cap."
+					"source": "/wp-admin-shell/v1/can/{cap}",
+					"via": "api-fetch",
+					"purpose": "Per-item capability check via the kernel's `userCan(cap)` helper. Reads a sync cache populated by an `api-fetch` REST call. Items declaring `capability` get pruned recursively when the user lacks the cap."
 				}
 			]
 		},
@@ -73,11 +73,17 @@
 			{ "concern": "active-class-fallback-not-set", "note": "SidebarNavigationItem only sets `aria-current`; legacy `.is-active` is intentionally absent." },
 			{ "concern": "item-prune-recursive", "note": "`pruneNavItems` recursively walks the tree. A screen/group whose children all prune renders nothing (the screen itself drops). Orphan separators at top/bottom are stripped." },
 			{ "concern": "experimental-itemgroup", "note": "Uses legacy `__experimentalItemGroup` from `@wordpress/components` — WPDS 0.12 has no port." },
-			{ "concern": "no-app-landmark", "note": "Region wrapper renders `<div role=\"navigation\">`; the app must NOT nest its own `<nav>` (would double the landmark)." }
+			{ "concern": "no-app-landmark", "note": "Region wrapper renders `<div role=\"navigation\">`; the app must NOT nest its own `<nav>` (would double the landmark)." },
+			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }` rule that wins against `@wordpress/ui` Button's layered color. The bundled `core:default` engine ships a defensive unlayered `.wp-admin-shell-region--sidebar a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for whatever color scheme its chrome uses, or anchor-rendered nav buttons will inherit wp-admin's blue." },
+			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs do not set `fill`, so library icons paint browser-default black. The bundled `core:default` engine ships `.wp-admin-shell-region--sidebar svg { fill: currentColor }`. A non-WPDS engine MUST force `fill: currentColor` on the icons it pairs with this app or icons render in the wrong color." },
+			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack's `display: flex` rule lives in `@layer wp-ui-components` and loses against unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `.wp-admin-shell [class*=\"__stack\"] { display: flex }` defensive rule. A rebuild that uses Stack-style flex containers must defeat unlayered host CSS the same way (or use a non-layered layout primitive)." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Collapsed-rail buttons + layout." },
-			{ "import": "@wordpress/components#Icon, __experimentalItemGroup", "purpose": "Item icons + nav list — WPDS 0.12 gaps." }
+			{ "import": "@wordpress/components#Icon, __experimentalItemGroup", "purpose": "Item icons + nav list — WPDS 0.12 gaps." },
+			{ "import": "@wordpress/core-data#useEntityRecord", "purpose": "Reads `root/site.title` for the root drill-down screen heading." },
+			{ "import": "@wordpress/html-entities#decodeEntities", "purpose": "Decodes HTML entities in the site title before rendering." },
+			{ "import": "@wordpress/icons (via resolveIcon)", "purpose": "Icon names from admin.json resolve through the kernel icon registry — bundled `core:default` engine ships the `@wordpress/icons` table." }
 		]
 	}
 }

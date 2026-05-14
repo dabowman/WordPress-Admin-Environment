@@ -28,8 +28,8 @@
 			"reads": [
 				{
 					"source": "config.left + config.right",
-					"via": "core-data",
-					"purpose": "Action descriptors — declared inline in admin.json."
+					"via": "kernel-config",
+					"purpose": "Action descriptors — declared inline in admin.json and passed as React props by mountApp."
 				}
 			]
 		},
@@ -48,7 +48,9 @@
 		"constraints": [
 			{ "concern": "command-href-map", "note": "`COMMAND_HREFS` translates legacy `command` ids (`core/new-post`, `core/new-page`) to hash URLs. Adding more requires updating the table." },
 			{ "concern": "iconbutton-anchor-render", "note": "Render-prop swap is required: `<IconButton render={<a href target rel/>}/>`. The plain `href` prop is dropped by Base UI Button." },
-			{ "concern": "no-onclick-actions", "note": "All actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app for command-style invocations." }
+			{ "concern": "no-onclick-actions", "note": "All actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app for command-style invocations." },
+			{ "concern": "chrome-anchor-color-override", "note": "WP-admin's unlayered `a { color: var(--wp-admin-theme-color) }` wins against `@wordpress/ui` IconButton's layered color. The bundled `core:default` engine ships `.wp-admin-shell-region--toolbar a { color: var(--wpds-color-fg-interactive-neutral) }` (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for its toolbar scheme." },
+			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-shell-region--toolbar svg { fill: currentColor }`. A non-WPDS engine MUST do the same." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Toolbar buttons + layout primitives." }

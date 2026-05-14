@@ -27,7 +27,9 @@ A non-WPDS rebuild needs a table with selection + bulk actions, a destructive co
 
 ## Known limitations
 
-- No reply / quick-edit (in-place edit of comment text). Reply is the major missing feature — wp-admin offers an inline reply form; the v2 design defers this.
+- No reply. wp-admin offers an inline reply form on each row; the v2 design defers this.
+- No Quick Edit. wp-admin's row inline-edit (toggleable form for author / email / URL / content) is not wired up.
+- No full single-comment Edit screen. wp-admin links to `comment.php?action=editcomment` for a full edit form with parent-comment selector + status switcher; the v2 app surfaces neither the link nor the screen.
 - No author/IP/email row-level filtering.
 - The Trash action lacks an undo path. wp-admin's edit-comments has a "Undo" snackbar after trash; we issue a plain success snackbar.
 - Pagination caps perPage at 100 server-side; the app passes whatever DataViews sends.

@@ -38,3 +38,16 @@ Two patterns to preserve:
 - Status filter is a single-select today. The `filterBy.operators: ['isAny']` declaration exists but the queryArgs mapper only handles the `isAny`/`is` operators against the `status` field.
 - Site-editor post types (`wp_template`, `wp_block`, `wp_navigation`) navigate through `editHref()` but `editHref()` only special-cases `page`. Their URL-encoded slug-shaped IDs would need a new edit pattern + decode step; deferred until those screens land.
 - The trash action is hard-coded. A future iteration may surface restore / delete-permanently as separate eligible actions once the post is in trash status.
+
+Parity gaps versus `docs/screens/posts.md` not surfaced in the v2 app:
+
+- No status-count tabs (`All (N) | Mine (N) | Published (N) | Drafts (N) | Pending (N) | Trash (N)`). DataViews `totalItems` covers the active filter only.
+- No author / date / taxonomy column filters. wp-admin offers a separate dropdown per axis; the v2 app exposes only the status filter.
+- No trash view + Restore + Delete Permanently actions. Trashed posts are filtered out by `status: any` and the app never surfaces them.
+- No undo snackbar after trash. We emit a plain success notice; wp-admin offers "Move to trash · Undo".
+- No keyboard shortcuts (J/K navigation, X to select, T to trash). DataViews has no built-in shortcut layer.
+- No hierarchical pages tree. The Pages screen in wp-admin indents child pages under parents; DataViews renders a flat list ordered by `menu_order` and date.
+- No grid-card layout polish (cover image, excerpt). DataViews ships a grid variant but the v2 fields config doesn't emit a thumbnail / excerpt-aware card template.
+- No "Quick Edit" inline form. wp-admin's row toggle for status / author / sticky / template is not wired up.
+- No bulk-edit row picker (status / author / sticky / category / tag).
+- ARIA + screen-reader polish: DataViews ships its own announcements; the v2 app doesn't layer on the wp-admin-specific live-region copy.

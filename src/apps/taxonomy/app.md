@@ -35,3 +35,5 @@ A non-WPDS rebuild needs: a Modal/Dialog component (focus trap + Esc close + bac
 - No bulk update — only bulk delete.
 - The slug field is editable on edit but the REST endpoint may renormalize it server-side. We don't reflect the normalized value back into the form after save.
 - Term content count (`count`) is read-only; clicking it does not filter posts by the term.
+- No default-category protection. wp-admin disables Delete on the site's default category (option `default_category`); the v2 app surfaces a Delete action that the REST endpoint will reject server-side without a clear UX cue.
+- No term-reassignment on delete. wp-admin's term delete offers "Reassign to another term" before deleting; the v2 app deletes outright and posts get reparented to the default term by core's fallback.

@@ -7,7 +7,7 @@ import {
 	useRef,
 } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
-import { Button } from '@wordpress/ui';
+import { Button, Icon } from '@wordpress/ui';
 import { Spinner, Slot } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
@@ -161,10 +161,10 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 			<div className="wp-admin-shell-app-simple-editor">
 				<div className="wp-admin-shell-app-simple-editor__toolbar">
 					<Button
-						icon={ arrowLeft }
 						onClick={ () => navigate( backHref ) }
 						variant="minimal"
 					>
+						<Icon icon={ arrowLeft } size={ 16 } />
 						{ __( 'Back to list', 'wp-admin-shell' ) }
 					</Button>
 				</div>
@@ -345,11 +345,11 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 		<div className="wp-admin-shell-app-simple-editor">
 			<div className="wp-admin-shell-app-simple-editor__toolbar">
 				<Button
-					icon={ arrowLeft }
 					onClick={ () => navigate( backHref ) }
 					variant="minimal"
 					size="compact"
 				>
+					<Icon icon={ arrowLeft } size={ 16 } />
 					{ __( 'Back to list', 'wp-admin-shell' ) }
 				</Button>
 				<SaveStatus

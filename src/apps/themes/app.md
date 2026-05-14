@@ -38,3 +38,4 @@ For a non-WPDS rebuild:
 - The screenshot URL is loaded directly from the theme record; large screenshots are not lazy-loaded.
 - Description truncation is hard 140 chars. No "read more" affordance — long descriptions live in the details modal.
 - The fallback URL flow loses the user's place in the shell; we don't restore it on return.
+- **The classic-activate fallback link is missing `_wpnonce`.** `themes.php?action=activate&stylesheet=…` requires a fresh nonce or it silently bounces back to the themes list without activating. Per `docs/research/app-validation-2026-05-04.md`, this fallback path should either (a) call `wp_create_nonce('switch-theme_'.stylesheet)` from PHP and inject the resulting `&_wpnonce=…` into the link, or (b) route through a small PHP shim that performs the activation server-side. Until then, the fallback is best-effort only.

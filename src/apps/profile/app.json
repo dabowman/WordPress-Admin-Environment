@@ -27,8 +27,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the acting user (`window.wpAdminShell.userId`). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner.",
-		"rebuilds": "profile",
+		"purpose": "Profile editor for the acting user (`window.wpAdminShell.userId`). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Covers the own-profile sub-screen of wp-admin's `users.php?action=editself` flow; the multi-user editor lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{

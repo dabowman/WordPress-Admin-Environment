@@ -3,7 +3,7 @@ import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { Button, Card, Stack, Text } from '@wordpress/ui';
+import { Button, Card, Icon, Stack, Text } from '@wordpress/ui';
 import {
 	__experimentalGrid as Grid,
 	CardMedia,
@@ -172,9 +172,9 @@ export default function ThemesApp() {
 											tone="brand"
 											variant="solid"
 											size="compact"
-											icon={ check }
 											onClick={ () => activate( theme ) }
 										>
+											<Icon icon={ check } size={ 16 } />
 											{ __(
 												'Activate',
 												'wp-admin-shell'
@@ -220,7 +220,6 @@ export default function ThemesApp() {
 								<Button
 									tone="neutral"
 									variant="outline"
-									icon={ external }
 									onClick={ () =>
 										window.open(
 											details.theme.theme_uri,
@@ -228,6 +227,7 @@ export default function ThemesApp() {
 										)
 									}
 								>
+									<Icon icon={ external } size={ 16 } />
 									{ __( 'Theme site', 'wp-admin-shell' ) }
 								</Button>
 							) }

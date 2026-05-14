@@ -4,7 +4,7 @@ import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
-import { Button, InputControl, Stack, Text } from '@wordpress/ui';
+import { Button, Icon, InputControl, Stack, Text } from '@wordpress/ui';
 import {
 	Button as DestructiveButton,
 	Spinner,
@@ -146,12 +146,12 @@ export default function MediaApp() {
 					<Button
 						tone="brand"
 						variant="solid"
-						icon={ upload }
 						onClick={ () => fileInputRef.current?.click() }
 						loading={ isUploading }
 						disabled={ isUploading }
 						size="compact"
 					>
+						<Icon icon={ upload } size={ 16 } />
 						{ __( 'Upload', 'wp-admin-shell' ) }
 					</Button>
 					<input
@@ -188,11 +188,11 @@ export default function MediaApp() {
 								<Button
 									tone="neutral"
 									variant="outline"
-									icon={ upload }
 									onClick={ () =>
 										fileInputRef.current?.click()
 									}
 								>
+									<Icon icon={ upload } size={ 16 } />
 									{ __(
 										'Upload your first file',
 										'wp-admin-shell'
@@ -391,12 +391,12 @@ function MediaDetailModal( {
 			>
 				<Stack direction="row" gap="sm">
 					<Button
-						icon={ copy }
 						tone="neutral"
 						variant="minimal"
 						onClick={ () => onCopyUrl( item.source_url ) }
 						size="compact"
 					>
+						<Icon icon={ copy } size={ 16 } />
 						{ __( 'Copy URL', 'wp-admin-shell' ) }
 					</Button>
 					<DestructiveButton

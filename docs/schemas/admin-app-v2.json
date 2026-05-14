@@ -427,7 +427,7 @@
 				},
 				"design-system-leakage": {
 					"type": "array",
-					"description": "Specific `@wordpress/*` imports the app cannot do without. A rebuild on a non-WPDS design system (Material, Tailwind, custom) must provide functional equivalents for every entry. Generic utility imports (`@wordpress/element`, `@wordpress/i18n`) are out of scope — only the design-system-coupled imports belong here.",
+					"description": "Specific `@wordpress/*` imports the app cannot do without. A rebuild on a non-WPDS design system (Material, Tailwind, custom) must provide functional equivalents for every entry. In scope: any package whose API shape a non-WPDS rebuild needs a substitute for, including UI components (`@wordpress/ui`, `@wordpress/components`, `@wordpress/dataviews`), data-binding packages (`@wordpress/core-data`, `@wordpress/api-fetch`, `@wordpress/notices`, `@wordpress/commands`), block-editor packages (`@wordpress/block-editor`, `@wordpress/blocks`), and DS-adjacent helpers (`@wordpress/icons`, `@wordpress/html-entities`, `@wordpress/url`, `@wordpress/keycodes`). Out of scope: framework primitives (`@wordpress/element`, `@wordpress/i18n`, `@wordpress/data`) and intra-app imports (relative paths between bundled apps).",
 					"items": {
 						"type": "object",
 						"additionalProperties": false,
@@ -461,8 +461,8 @@
 					"description": "REST endpoint (e.g. `/wp/v2/posts`), `core-data` entity path (e.g. `postType/post`, `root/site`, `root/user`), external URL, or window-global property (e.g. `window.wpAdminShell.user`)."
 				},
 				"via": {
-					"enum": [ "core-data", "api-fetch", "window-global", "external", "commands" ],
-					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call; `window-global` = read from `window.wpAdminShell.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry."
+					"enum": [ "core-data", "api-fetch", "window-global", "external", "commands", "kernel-config" ],
+					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call (includes apps that read a sync cache populated by an `api-fetch` REST call, e.g. the `userCan` helper); `window-global` = read from `window.wpAdminShell.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry; `kernel-config` = props passed by the runtime from the resolved admin.json tree or kernel context (e.g. `config.styles.branding`, `config.routes`, `config.left/right`)."
 				},
 				"context": {
 					"enum": [ "view", "edit", "embed" ],

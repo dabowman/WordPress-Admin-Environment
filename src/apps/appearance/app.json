@@ -34,8 +34,8 @@
 				},
 				{
 					"source": "config.styles.customizable + config.styles + config.default-route",
-					"via": "core-data",
-					"purpose": "Active shell's customizable allowlist + current resolved values (used as fallbacks when prefs are empty)."
+					"via": "kernel-config",
+					"purpose": "Active shell's customizable allowlist + current resolved values (read from the resolved admin.json tree, used as fallbacks when prefs are empty)."
 				}
 			],
 			"writes": [
@@ -44,6 +44,12 @@
 					"via": "api-fetch",
 					"operation": "partial-update",
 					"purpose": "Patch user prefs via POST with the changed key only — server deep-merges."
+				},
+				{
+					"source": "/wp-admin-shell/v1/user-prefs",
+					"via": "api-fetch",
+					"operation": "delete",
+					"purpose": "DELETE wipes all per-user overrides (Reset to shell defaults)."
 				}
 			]
 		},
@@ -94,6 +100,10 @@
 				"guards": [
 					"shell allows `default-route`"
 				]
+			},
+			{
+				"trigger": "Click Reset to shell defaults",
+				"effect": "DELETE `/wp-admin-shell/v1/user-prefs` to clear all per-user overrides; on success local `prefs` state resets to `{}` and a snackbar confirms."
 			}
 		],
 		"a11y": {

@@ -26,7 +26,7 @@
 			"reads": [
 				{
 					"source": "config.routes",
-					"via": "core-data",
+					"via": "kernel-config",
 					"purpose": "Route patterns to convert into palette commands."
 				}
 			],
@@ -41,8 +41,8 @@
 		},
 		"url": {
 			"reads-slots": [],
-			"writes-slots": [],
-			"navigates": []
+			"writes-slots": [ "_self" ],
+			"navigates": [ "{any non-parameterized pattern from config.routes}" ]
 		},
 		"states": [
 			{ "id": "renders-null", "when": "Always", "renders": "Nothing — this app is invisible. The `@wordpress/commands` portal renders the palette UI elsewhere in the DOM." }
@@ -61,7 +61,8 @@
 			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `bindings` block map keystrokes to this app." }
 		],
 		"design-system-leakage": [
-			{ "import": "@wordpress/commands#useCommandLoader, store", "purpose": "Command registration. The package owns the palette UI." }
+			{ "import": "@wordpress/commands#useCommandLoader, store", "purpose": "Command registration. The package owns the palette UI." },
+			{ "import": "@wordpress/icons (via resolveIcon)", "purpose": "Per-command icons resolved through the kernel icon registry — bundled `core:default` engine ships the `@wordpress/icons` table." }
 		]
 	}
 }

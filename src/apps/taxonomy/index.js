@@ -3,7 +3,7 @@ import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, InputControl, Stack, Text } from '@wordpress/ui';
+import { Button, Icon, InputControl, Stack, Text } from '@wordpress/ui';
 import {
 	Button as DestructiveButton,
 	Modal,
@@ -234,10 +234,10 @@ export default function TaxonomyApp( { config = {} } ) {
 				<Button
 					tone="brand"
 					variant="solid"
-					icon={ plus }
 					onClick={ () => setIsCreating( true ) }
 					size="compact"
 				>
+					<Icon icon={ plus } size={ 16 } />
 					{ __( 'Add new', 'wp-admin-shell' ) }
 				</Button>
 			</Stack>

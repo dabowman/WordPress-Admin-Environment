@@ -8,7 +8,9 @@ CommandPaletteApp is unusual: it renders no UI. The palette itself lives in `@wo
 
 The split keeps responsibilities clean: the palette UI is one thing (and Gutenberg already does it well); the command set is shell-specific (every app, route, action that wants to be commandable). Plugins can register their own commands the same way without touching this app.
 
-The `core:dialog` role + `core:modal` + `core:dismiss-on` platform services are declared **for the conceptual contract**, not because this app renders the modal. The kernel's region wrapper applies the modal treatment when the palette is mounted; the actual dismiss + focus-trap behavior is handled by `@wordpress/commands` internally. The manifest declarations let admin.json authors bind keystrokes to the app (`core:triggerable: true` makes that possible).
+The `core:dialog` role + `core:modal` + `core:dismiss-on` platform services are declared **for the conceptual contract**, not because this app renders the modal. The kernel's region wrapper applies the modal treatment when the palette is mounted; the actual dismiss + focus-trap behavior is handled by `@wordpress/commands` internally.
+
+`core:triggerable: true` is a declaration of *eligibility*, not a binding. The actual `Mod+K` flow lives entirely inside `@wordpress/commands` — the package ships its own global keystroke listener via `@wordpress/keyboard-shortcuts` and dispatches `core/commands#open()` directly. The kernel's `triggerStore` is not in the loop. The manifest declaration exists so a host that doesn't use `@wordpress/commands` (a hypothetical alternate-palette engine, or a plugin author wiring a non-Mod+K binding) could route a kernel binding to this app via admin.json's `bindings` block. Today, on the bundled engines, that path is unused.
 
 ## Architecture
 
@@ -41,3 +43,4 @@ A rebuild that wants to ship its own palette UI (rather than borrow from a packa
 - **Hash navigation only.** Commands hard-set `window.location.hash`. A SPA-router rebuild may want to dispatch through the router instead so the navigation respects route guards.
 - **No per-command capability gate.** All routes become commands; users see entries for screens they can't reach. The router catches the navigation attempt + may render an empty state, but the palette entry itself isn't filtered.
 - **No "recent" or "frequent" ordering.** Commands surface in route-block order. A frequency / recency model would need separate state.
+- **No iframe-command harvest.** Per the desktop-engine chromeless bridge (`includes/engines/core-desktop/chromeless-bridge.php` sub-system 11), iframed wp-admin screens can postMessage a list of in-page commands up to the parent. This app does NOT yet consume those messages — the bridge sub-system 11 is a stub on the iframe side. A future iteration wires a parent-side listener that converts incoming command lists into additional `useCommandLoader` entries scoped to the active iframe window.

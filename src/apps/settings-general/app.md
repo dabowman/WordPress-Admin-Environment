@@ -41,3 +41,4 @@ A non-WPDS rebuild needs text inputs, email + URL types, select (with optgroup s
 - **Time-format custom field accepts any PHP date format string** — no live preview of what the format produces against the current time.
 - **No "reset to default" affordance** for date/time formats.
 - **Constant-defined URL fields** show "Defined by WP_SITEURL constant" but don't show the value of the constant; user has to look at wp-config.php to see it.
+- **No Site Icon picker.** `docs/screens/settings-general.md` documents a Site Icon control (uploads to media, sets the `site_icon` option, surfaces favicon + Apple touch icon previews). The v2 panel doesn't ship it — covering the field requires a media-picker primitive the shell doesn't yet expose.

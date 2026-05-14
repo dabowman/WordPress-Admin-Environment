@@ -40,3 +40,4 @@ A non-WPDS rebuild needs a Tab / SegmentedControl / vertical-nav primitive, and 
 - **No plugin-panel registry.** The slot/fill extension was retired in V2.M4; plugins can ship their own apps but can't slot panels into `core:settings`. v2.x may reintroduce a registry once the surface stabilizes.
 - **Capability gating is uniform** — every built-in panel requires `manage_options`. Per-panel capability differentiation (e.g. a future site-health-related panel needing `view_site_health_checks`) isn't wired up.
 - **Empty-allowlist edge case** — if `config.panels = []` or filters out every built-in, the empty-state copy renders. Authoring tools should warn.
+- **Site Icon picker not in any panel.** `docs/screens/settings-general.md` documents one as part of General settings, but `core:settings-general` does not ship it (see that app's Known limitations) and `core:settings` has no overlay UI for it either.

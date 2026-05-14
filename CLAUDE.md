@@ -16,7 +16,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **How tokens reach DOM.** Two paths (both engine-side now, not kernel): (a) **engine template `default-style`** — `core:default` engine emits values like `var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))` as **inline style** on each region's `<div>`. `resolveRegion.mjs` merges template `default-style` into `region.style`, and `Region.js`'s `toReactStyle` helper kebab→camelCases the keys and applies them as React `style={...}`. The two-arg `var()` chain means: chrome var wins when authored; falls back to WPDS slot when chrome layer is empty. (b) **engine `index.css` class rules** — `core:default/index.css` ships the chrome-anchor/svg/Stack-defensive overrides + the engine root paint (`.wp-admin-shell-layout` background+color via `--wp-admin-shell--chrome--canvas--{background,foreground}` slots, same fallback chain). Single-pane engine paints its root through the same canvas slot for parity. Non-WPDS engines ship none of these. Kernel `src/index.css` is ~10 lines: body positioning + a11y forbidden fallback structure only. The `chrome.canvas.*` slot is the author entry point for shell-wide background/foreground; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface chrome. **Inside WPDS-flavored app/engine code, don't hardcode hex colors** — use `var(--wpds-*)` directly so ThemeProvider seeds flow through. App-level CSS audited 2026-05-06; no remaining hardcoded hex colors in `src/apps/**/*.js` inline styles.
 
-**Test surface (709 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22). Node: `tests/schema/validate-shells.test.mjs` (70 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 30 bundled app manifests incl. `core:desktop-iframe`, three bundled engines incl. `core:desktop`, positive + negative fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (13 files, ~277 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store), `tests/engines/core-desktop/*` (TS via Node `--experimental-strip-types`; 63 assertions — WindowManager state machine + snap geometry + compileStyles + dockRailRegistry). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
+**Test surface (778 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22), `run-cap-gating-smoke.php` (5 — per-role nav-prune smoke for `wp-admin-default`, v2 region-tree walker), `run-chromeless-bridge-tests.php` (13 — PHP gate + body-class + script-emission contract for `core:desktop` chromeless bridge). Node: `tests/schema/validate-shells.test.mjs` (74 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 30 bundled app manifests incl. `core:desktop-iframe`, three bundled engines incl. `core:desktop`, positive + negative fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (16 files, 309 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store + chromeless-bridge envelope contract + `shouldRenderRegion` cap-gate + resolveRegion×gate integration pipeline), `tests/engines/core-desktop/*` (TS via Node `--experimental-strip-types`; 77 assertions — WindowManager state machine + snap geometry + compileStyles + dockRailRegistry). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
 
 **Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg`). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without it, shell renders empty.
 
@@ -34,7 +34,8 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 10. Skim `docs/feedback.md` — Inbox/Triaged/In-progress/Done triage log. Per directive §2 #4: don't fix items proactively during migration — clean migration first, triage on v2 baseline second.
 11. Read `docs/engines-and-design-systems.md` — kernel-vs-engine-vs-app DS boundary + three contracts (reuse-WPDS, token-bridge, engine-native apps). Authoritative for any work on a non-WPDS engine.
 12. Read `docs/desktop-engine-readiness.md` if working on `core:desktop` — manual smoke checklist + known issues + automated test gates for the engine.
-13. Archived for reference (skim only when needed): `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`, `docs/archive/wp-admin-shell-v1-plan.md`, `docs/schemas/admin-v1.json`, `docs/admin-json-schema.md` (v0 flat).
+13. For any bundled app, read `src/apps/<id>/app.json#documentation` + `src/apps/<id>/app.md` — per-app contract introduced 2026-05-13. `documentation` block (schema: `admin-app-v2.json#appDocumentation` $def around line 265) is machine-readable: purpose, `rebuilds` (matching `docs/screens/*.md` slug or omitted for shell-only apps), `data.reads/writes` (with `via`: `core-data`/`api-fetch`/`window-global`/`external`/`commands`/`kernel-config`), `url.{reads-slots,writes-slots,navigates}`, `states[]`, `interactions[]`, `a11y`, `constraints[]`, `design-system-leakage[]`. Sibling `app.md` carries the prose — overview, architecture, rebuild guide for a non-WPDS / non-React port, known limitations (must include parity gaps versus the matched `docs/screens/*.md`). Update both whenever touching an app's behavior; `design-system-leakage` covers UI packages + data-binding packages + DS-adjacent helpers, but excludes framework primitives (`@wordpress/element`, `@wordpress/i18n`, `@wordpress/data`) and intra-app relative imports.
+14. Archived for reference (skim only when needed): `docs/archive/wp-admin-shell-design-spec-2026-04-29.md`, `docs/archive/wp-admin-shell-v1-plan.md`, `docs/schemas/admin-v1.json`, `docs/admin-json-schema.md` (v0 flat).
 
 ## Key rules
 
@@ -145,22 +146,24 @@ JSDoc convention for React function components with destructured props: `@param 
 
 ## Testing
 
-467 assertions — all run before merge.
+778 assertions — all run before merge.
 
 ```bash
 # Node
-npm run test:schema      # 69 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
-npm run test:parity      # 4  — WPDS slot-list drift detector
-npm run test:runtime     # 33 files chained — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults + icon-registry + dynamicChildren store
-npm run test:engines     # 63 — TS WindowManager + snap + compileStyles + dockRailRegistry (core:desktop engine)
+npm run test:schema      # 74 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
+npm run test:parity      #  4 — WPDS slot-list drift detector
+npm run test:runtime     # 309 — 16 files chained: resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults + icon-registry + dynamicChildren store + chromeless-bridge envelope contract + shouldRenderRegion + resolver-gate pipeline
+npm run test:engines     # 77 — TS WindowManager + snap + compileStyles + dockRailRegistry (core:desktop engine)
 
 # PHP — wp-env CLI container
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php    # 22
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php   # 60
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php        # 54
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php      # 100
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php     # 13
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php  # 22
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php          #  29
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php         #  67
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php              #  54
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php            # 111
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php           #  13
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php  #  22
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php       #   5
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-chromeless-bridge-tests.php #  13
 ```
 
 **Pure-JS runtime modules go in `.mjs` files** so node test scripts (`tests/runtime/*`) can `import()` them directly without a webpack/jest harness. Webpack's default `resolve.extensions` (from `@wordpress/scripts`) does NOT include `.mjs`, so importing a `.mjs` module from app code requires the explicit extension at the import site (e.g. `import { resolveRegion } from './regions/resolveRegion.mjs'`). Convention applies only to side-effect-free utility modules; React components stay `.js`.
@@ -234,7 +237,8 @@ wp-admin-shell/
 │   └── apps/                # All shell-bundled apps (registered via builtins.js)
 │       └── <id>/                           # one dir per app id; everything for the app lives here
 │           ├── index.js                    #   React component (default export); imports './index.css' side-effect
-│           ├── app.json                    #   manifest (declares source id, capabilities, platform, etc.)
+│           ├── app.json                    #   manifest (declares source id, capabilities, platform, etc.) — includes `documentation` block (machine-readable rebuild contract)
+│           ├── app.md                      #   prose docs — overview, architecture, rebuild guide, known limitations (with parity gaps vs docs/screens/*.md)
 │           ├── index.css                   #   app-specific structural CSS (optional)
 │           └── (helpers/_components/)      #   single-app-only helpers colocate with their consumer
 │
@@ -284,7 +288,7 @@ wp-admin-shell/
 | `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST |
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
-| `core:site-health` | SiteHealthApp | ✅ | — | `/wp-site-health/v1/tests/{id}` runner |
+| `core:site-health` | SiteHealthApp | ✅ | `view_site_health_checks` | `/wp-site-health/v1/tests/{id}` runner |
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount deferred to v2.x; five blockers (preferences-store / commands / full-screen CSS / hash-router collisions, edit-site not in BUNDLED_PACKAGES) documented in `SiteEditorApp.js`. |
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |

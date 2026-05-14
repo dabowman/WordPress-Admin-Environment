@@ -48,7 +48,8 @@
 			{ "concern": "window-global-only", "note": "Doesn't fetch user data via core-data — `wpAdminShell.user` is injected PHP-side at every page load. Cheaper than a REST round trip; safe because user identity is fixed for the session." },
 			{ "concern": "shell-switch-reloads", "note": "Switching shells does a full page reload (PHP-side option write + reload). No SPA-style live switch; the alternative would require unmounting + remounting the entire shell, which has tricky edge cases (modal state, in-flight saves)." },
 			{ "concern": "dropdown-fallback", "note": "Uses legacy `DropdownMenu` from `@wordpress/components`. WPDS 0.12 has no direct port; `Tabs.*` + `Popover.*` could compose one but `DropdownMenu` is more semantic." },
-			{ "concern": "default-profile-hash", "note": "`profileUrl` defaults to `#/profile` if missing. Shells that omit a `#/profile` route from their map will render the link, but clicking it 404s." }
+			{ "concern": "default-profile-hash", "note": "`profileUrl` defaults to `#/profile` if missing. Shells that omit a `#/profile` route from their map will render the link, but clicking it 404s." },
+			{ "concern": "manifest-role-is-documentation", "note": "The `role: \"region\"` field in this manifest is NOT applied to the rendered DOM. Region wrappers in the kernel read the engine template's `role` and emit `<div role={template.role}>` themselves. The app manifest role is documentation — it advertises the landmark role this app expects its region to carry. Mismatch between manifest role and rendered role indicates the app is mounted in the wrong kind of region." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/components#DropdownMenu", "purpose": "Avatar trigger + items + submenu — no WPDS 0.12 port." },

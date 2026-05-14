@@ -189,6 +189,10 @@
 				"purpose": "Destructive confirm action, modal container, multiline description input — WPDS 0.12 gaps."
 			},
 			{
+				"import": "@wordpress/notices#store",
+				"purpose": "Success / error notices for create / update / delete flows. The canonical shell notices contract — a non-WPDS rebuild must mirror it."
+			},
+			{
 				"import": "@wordpress/icons#plus, pencil, trash",
 				"purpose": "Add / row / delete action icons."
 			}

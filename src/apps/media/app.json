@@ -189,6 +189,10 @@
 			{
 				"import": "@wordpress/icons#upload, trash, copy",
 				"purpose": "Action icons."
+			},
+			{
+				"import": "@wordpress/notices#store",
+				"purpose": "Success / error snackbars + banners for upload + delete flows. The canonical shell notices contract — a non-WPDS rebuild must mirror it."
 			}
 		]
 	}

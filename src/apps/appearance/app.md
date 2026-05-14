@@ -37,5 +37,5 @@ A non-WPDS rebuild needs radio + color picker + text input + button — all stan
 - **No theme preset selector.** Each control is single-axis. A future iteration may add presets (`'Light' / 'Dark' / 'High contrast'`) that compose multiple token overrides.
 - **No live preview.** Changes apply on the next render; there's no "preview before save" affordance.
 - **Color picker is naive.** Plain text input expecting a hex string. A real color picker (with picker chip + swatch palette) is deferred.
-- **No "Restore defaults" button.** Reverting a single override means setting the field back to empty manually.
+- **Reset is all-or-nothing.** "Reset to shell defaults" wipes every per-user override via `DELETE /wp-admin-shell/v1/user-prefs`. No per-field revert (setting one field back to the resolved value requires manually clearing that field).
 - **Custom typography / font controls are not exposed.** The cascade has tokens for `font.size.*` etc., but the appearance app doesn't surface them.

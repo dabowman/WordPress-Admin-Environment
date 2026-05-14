@@ -26,8 +26,8 @@
 				},
 				{
 					"source": "config.styles.branding",
-					"via": "core-data",
-					"purpose": "Branded site icon — branding object passed to SiteIcon helper."
+					"via": "kernel-config",
+					"purpose": "Branded site icon — branding object read from the resolved admin.json tree via `useKernel()` and passed to SiteIcon helper."
 				},
 				{
 					"source": "window.wpAdminShell.siteName",
@@ -61,7 +61,10 @@
 			{ "concern": "site-title-source-of-truth", "note": "Read title via `useEntityRecord('root','site').record.title` (with `decodeEntities`). Falls back to `window.wpAdminShell?.siteName` only as last resort. Fixes a prior bug where the toolbar showed a stale title on first paint." },
 			{ "concern": "memoized-forwardref", "note": "Wrapped in `memo + forwardRef` because engines may attach refs (e.g. for measure-on-mount layout)." },
 			{ "concern": "ellipsis-in-flex", "note": "Title button uses the `display: flex; min-width: 0;` wrapper pattern + button-level `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap` so long site titles truncate cleanly in a constrained sidebar." },
-			{ "concern": "anchor-rendered-buttons", "note": "Site-icon button + site-title button + palette button all use `render={<a href={...}/>}` so native HTML link behavior works (middle-click new tab, etc.)." }
+			{ "concern": "anchor-rendered-buttons", "note": "Site-icon button + site-title button + palette button all use `render={<a href={...}/>}` so native HTML link behavior works (middle-click new tab, etc.)." },
+			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }`. The bundled `core:default` engine ships an unlayered `.wp-admin-shell-site-hub a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent rule scoped to this app's chrome surface." },
+			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-shell-site-hub svg { fill: currentColor }`. A non-WPDS engine MUST do the same for icons it ships." },
+			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack flex rules live in `@layer wp-ui-components` and lose to unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `[class*=\"__stack\"] { display: flex }` defensive rule. A rebuild using Stack-style flex must defeat unlayered host CSS the same way." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#Button, IconButton, Stack", "purpose": "Three controls + layout primitives." },

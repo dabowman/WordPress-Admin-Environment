@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
-import { Badge, Button, Card, Stack, Text } from '@wordpress/ui';
+import { Badge, Button, Card, Icon, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
@@ -118,12 +118,12 @@ export default function SiteHealthApp() {
 				<Button
 					tone="neutral"
 					variant="solid"
-					icon={ update }
 					onClick={ runTests }
 					disabled={ isRunning }
 					loading={ isRunning }
 					size="compact"
 				>
+					<Icon icon={ update } size={ 16 } />
 					{ __( 'Re-run tests', 'wp-admin-shell' ) }
 				</Button>
 			</Stack>

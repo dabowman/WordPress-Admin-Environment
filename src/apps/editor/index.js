@@ -1,6 +1,6 @@
 import './index.css';
 import { useState, useEffect, useCallback } from '@wordpress/element';
-import { Button } from '@wordpress/ui';
+import { Button, Icon } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
@@ -10,15 +10,15 @@ import { navigate } from '../../runtime/routing/router';
 /**
  * Block editor via iframe. Handles existing posts and new post (auto-draft) flow.
  *
- * Routes:
- *   #/editor/{postType}/{postId}  — edit existing post
- *   #/editor/{postType}/new       — create auto-draft, then edit
+ * Routes (route table interpolates captures into `config`):
+ *   #/editor/{postType}/{id}   — edit existing post
+ *   #/editor/{postType}/new    — create auto-draft, then edit
  * @param {Object} root0
- * @param {*}      root0.params
+ * @param {Object} root0.config
  */
-export default function EditorApp( { params } ) {
-	const postType = params[ 0 ] || 'post';
-	const postIdParam = params[ 1 ];
+export default function EditorApp( { config = {} } ) {
+	const postType = config.postType || 'post';
+	const postIdParam = config.id;
 	const isNew = postIdParam === 'new';
 
 	const [ postId, setPostId ] = useState(
@@ -111,10 +111,10 @@ export default function EditorApp( { params } ) {
 			<div className="wp-admin-shell-app-editor">
 				<div className="wp-admin-shell-app-editor__toolbar">
 					<Button
-						icon={ arrowLeft }
 						onClick={ () => navigate( backRoute ) }
 						variant="minimal"
 					>
+						<Icon icon={ arrowLeft } size={ 16 } />
 						{ __( 'Back to list', 'wp-admin-shell' ) }
 					</Button>
 				</div>
@@ -140,11 +140,11 @@ export default function EditorApp( { params } ) {
 		<div className="wp-admin-shell-app-editor">
 			<div className="wp-admin-shell-app-editor__toolbar">
 				<Button
-					icon={ arrowLeft }
 					onClick={ () => navigate( backRoute ) }
 					variant="minimal"
 					size="compact"
 				>
+					<Icon icon={ arrowLeft } size={ 16 } />
 					{ __( 'Back to list', 'wp-admin-shell' ) }
 				</Button>
 			</div>

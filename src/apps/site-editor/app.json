@@ -81,8 +81,8 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "../iframe-fallback#IframeApp",
-				"purpose": "Delegated rendering. Inherits IframeApp's DS dependencies (Spinner from @wordpress/components)."
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading indicator — inherited from `core:iframe-fallback` (sibling app that this app delegates to). WPDS 0.12 has no Spinner port."
 			}
 		]
 	}
