@@ -234,9 +234,10 @@ console.log( '\n— registry: lazy app shape —' );
 	ok( 'resolveComponent returns null for engines', result === null );
 }
 
-// 12. After lazy resolve, the registry entry has Component populated so
-//     synchronous consumers (the legacy `sourceDef.Component` read path
-//     in mountApp) hit the eager path on subsequent renders.
+// 12. After lazy resolve, the synchronous accessor returns the resolved
+//     component so subsequent mounts skip Suspense. The registered
+//     descriptor itself is NOT mutated — `Component XOR load` stays
+//     true for life so invariants from `register()` keep holding.
 {
 	const r = createRegistry();
 	r.register( {
@@ -244,9 +245,152 @@ console.log( '\n— registry: lazy app shape —' );
 		id: 'test:hydrate',
 		load: () => Promise.resolve( { default: LazyComponent } ),
 	} );
+	ok(
+		'getResolvedComponent returns null before first resolve',
+		r.getResolvedComponent( 'test:hydrate' ) === null
+	);
 	await r.resolveComponent( 'test:hydrate' );
+	ok(
+		'getResolvedComponent returns Component after first resolve',
+		r.getResolvedComponent( 'test:hydrate' ) === LazyComponent
+	);
 	const got = r.get( 'test:hydrate', 'app' );
-	ok( 'lazy entry hydrates Component after first resolve', got?.Component === LazyComponent );
+	ok(
+		'lazy descriptor is NOT mutated with Component (invariant preserved)',
+		got?.Component === undefined && typeof got?.load === 'function'
+	);
+}
+
+// 12a. Eager registrations expose their Component through
+//      `getResolvedComponent` immediately — no resolve roundtrip needed.
+{
+	const r = createRegistry();
+	r.register( {
+		kind: 'app',
+		id: 'test:eager-sync',
+		Component: EagerComponent,
+	} );
+	ok(
+		'eager getResolvedComponent returns Component without resolve',
+		r.getResolvedComponent( 'test:eager-sync' ) === EagerComponent
+	);
+}
+
+// 12b. getResolvedComponent returns null for unknown ids and for
+//      non-app kinds (engines route through `get(id, 'engine')`).
+{
+	const r = createRegistry();
+	r.register( {
+		kind: 'engine',
+		id: 'test:engine-sync',
+		Component: EagerComponent,
+	} );
+	ok(
+		'getResolvedComponent returns null for unknown id',
+		r.getResolvedComponent( 'test:nope' ) === null
+	);
+	ok(
+		'getResolvedComponent returns null for engines (apps-only)',
+		r.getResolvedComponent( 'test:engine-sync' ) === null
+	);
+}
+
+// 13. invalidateComponent drops the cached Promise + resolved
+//     component for a lazy id so the next resolve re-fires `load()`.
+//     Required for the mount-path retry-button to actually retry —
+//     webpack 5 does not auto-retry rejected `import()` promises.
+{
+	const r = createRegistry();
+	let loadCalls = 0;
+	r.register( {
+		kind: 'app',
+		id: 'test:invalidate',
+		load: () => {
+			loadCalls += 1;
+			return Promise.resolve( { default: LazyComponent } );
+		},
+	} );
+	await r.resolveComponent( 'test:invalidate' );
+	ok( 'first resolve calls load() once', loadCalls === 1 );
+
+	r.invalidateComponent( 'test:invalidate' );
+	ok(
+		'invalidate drops resolvedCache for lazy id',
+		r.getResolvedComponent( 'test:invalidate' ) === null
+	);
+
+	await r.resolveComponent( 'test:invalidate' );
+	ok( 'second resolve after invalidate re-fires load()', loadCalls === 2 );
+}
+
+// 14. invalidateComponent on a rejected lazy id lets the next resolve
+//     succeed if the underlying load thunk recovers. Models the
+//     chunk-load-fails-then-network-recovers case.
+{
+	const r = createRegistry();
+	let attempt = 0;
+	r.register( {
+		kind: 'app',
+		id: 'test:recover',
+		load: () => {
+			attempt += 1;
+			if ( attempt === 1 ) {
+				return Promise.reject( new Error( 'chunk 404' ) );
+			}
+			return Promise.resolve( { default: LazyComponent } );
+		},
+	} );
+
+	let firstError = null;
+	try {
+		await r.resolveComponent( 'test:recover' );
+	} catch ( e ) {
+		firstError = e;
+	}
+	ok( 'first resolve rejects', firstError?.message === 'chunk 404' );
+
+	// Without invalidate, second resolve returns the same rejected promise.
+	let staleError = null;
+	try {
+		await r.resolveComponent( 'test:recover' );
+	} catch ( e ) {
+		staleError = e;
+	}
+	ok(
+		'resolve without invalidate returns the cached rejection',
+		staleError?.message === 'chunk 404' && attempt === 1
+	);
+
+	r.invalidateComponent( 'test:recover' );
+	const Component = await r.resolveComponent( 'test:recover' );
+	ok( 'resolve after invalidate retries load()', attempt === 2 );
+	ok( 'resolve after invalidate succeeds', Component === LazyComponent );
+}
+
+// 15. invalidateComponent leaves eager apps' resolvedCache intact —
+//     there's nothing to re-fetch, the Component is part of the boot
+//     bundle.
+{
+	const r = createRegistry();
+	r.register( {
+		kind: 'app',
+		id: 'test:eager-invalidate',
+		Component: EagerComponent,
+	} );
+	r.invalidateComponent( 'test:eager-invalidate' );
+	ok(
+		'eager resolvedCache survives invalidate',
+		r.getResolvedComponent( 'test:eager-invalidate' ) === EagerComponent
+	);
+}
+
+// 16. invalidateComponent on unknown id returns null, doesn't throw.
+{
+	const r = createRegistry();
+	ok(
+		'invalidateComponent on unknown id returns null',
+		r.invalidateComponent( 'test:nope' ) === null
+	);
 }
 
 // 13. Duplicate id rejected (parity with eager path).
