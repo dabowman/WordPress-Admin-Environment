@@ -125,6 +125,12 @@
 				}
 			},
 			"description": "Cascade registry of field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). View-configs reference a collection via `fieldsRef` and the runtime merges ref-wins with inline `fields` per-field override. See spec §13 #8."
+		},
+
+		"preload": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/preloadEntry" },
+			"description": "REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs. Each entry is either a string path (defaults to GET) or a `[ path, method ]` tuple. Across origins the resolved value is the concatenation of every origin's `preload[]` (no override semantics — additive union; site/role/user simply append). Duplicates by exact `path+method` are deduped before serialization. Use to eliminate the round-trips `@wordpress/core-data` resolvers make on cold mount (`/wp/v2/users/me`, `/wp/v2/types?context=view`, etc.). Conditional preloads belong in a `wp_admin_shell_data_{origin}` filter callback. See spec §13 #9."
 		}
 	},
 
@@ -638,6 +644,34 @@
 					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the shell runtime does not resolve or load this value in the C2 phase; declaring it logs a one-time dev warning that the value is currently inert. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
 				}
 			}
+		},
+
+		"preloadEntry": {
+			"description": "A single REST preload declaration. String form is shorthand for a GET against the path. Tuple form `[ path, method ]` selects the verb explicitly. Paths are leading-slash REST routes (`/wp/v2/users/me`, `/wp/v2/types?context=view`); query-string `_fields` filters and other GET parameters are part of the path string. Methods mirror the verbs `rest_preload_api_request` understands.",
+			"oneOf": [
+				{
+					"type": "string",
+					"pattern": "^/.+",
+					"description": "Path-only shorthand. Equivalent to `[ path, \"GET\" ]`."
+				},
+				{
+					"type": "array",
+					"prefixItems": [
+						{
+							"type": "string",
+							"pattern": "^/.+",
+							"description": "REST path (leading slash; query string allowed)."
+						},
+						{
+							"enum": [ "GET", "OPTIONS" ],
+							"description": "HTTP verb. CIAB convention preloads only GET + OPTIONS — the WP REST controller dispatches OPTIONS for entity schema discovery."
+						}
+					],
+					"items": false,
+					"minItems": 2,
+					"maxItems": 2
+				}
+			]
 		}
 	}
 }
