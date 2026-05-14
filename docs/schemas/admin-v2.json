@@ -496,6 +496,10 @@
 					"type": "array",
 					"items": { "$ref": "#/$defs/viewConfigAction" },
 					"description": "Row-level + bulk action descriptors. Each entry declares an id (the consuming app maps to a callback), label, icon name, primacy/destructiveness flags, bulk support, and eligibility predicates expressed in declarative form. Custom modal render functions stay in the app."
+				},
+				"_resolvedFieldsRef": {
+					"type": "string",
+					"description": "Output-only debug stamp. The PHP resolver and JS hydration helper write this on the *resolved* view-config doc when a `fieldsRef` was resolved against a `fieldCollections` entry; carries the source ref id so downstream debug snapshots can trace where columns came from. Authors do not declare it on inputs — Ajv accepts it on resolved-tree snapshots."
 				}
 			}
 		},

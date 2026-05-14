@@ -354,6 +354,92 @@ WPAS_View_Config_Test_Runner::assert_eq(
 
 WP_Admin_Shell_Field_Collections::reset();
 
+// --- inject_app_baselines (spec §13 #7 contract) ----------------------------
+
+// Register a synthetic app with a viewConfig block and confirm injection.
+$reg = WP_Admin_Shell_Manifest_Registry::instance();
+$reg->register_app( array(
+	'id'         => 'plugin:wpas-test/baseline-app',
+	'version'    => 1,
+	'title'      => 'Baseline App',
+	'role'       => 'main',
+	'script'     => 'wpas-test',
+	'viewConfig' => array(
+		'kind'        => 'postType',
+		'name'        => 'recipe',
+		'defaultView' => array( 'type' => 'table', 'perPage' => 25 ),
+		'fields'      => array(
+			array( 'id' => 'title', 'type' => 'text', 'label' => 'Title' ),
+		),
+	),
+) );
+
+$injected = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
+WPAS_View_Config_Test_Runner::assert_true(
+	'app baseline injected into core origin',
+	isset( $injected['viewConfigs']['postType']['recipe']['_default'] )
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'baseline preserves defaultView',
+	$injected['viewConfigs']['postType']['recipe']['_default']['defaultView']['perPage'],
+	25
+);
+WPAS_View_Config_Test_Runner::assert_true(
+	'baseline strips redundant kind/name/variant keys',
+	! isset( $injected['viewConfigs']['postType']['recipe']['_default']['kind'] )
+);
+
+// Inline declaration on the core origin wins — manifest baseline does
+// not overwrite when the triple is already declared.
+$prepopulated = WP_Admin_Shell_View_Config::inject_app_baselines( array(
+	'viewConfigs' => array(
+		'postType' => array(
+			'recipe' => array(
+				'_default' => array(
+					'defaultView' => array( 'type' => 'grid', 'perPage' => 999 ),
+				),
+			),
+		),
+	),
+) );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'pre-existing inline core declaration wins over manifest baseline',
+	$prepopulated['viewConfigs']['postType']['recipe']['_default']['defaultView']['perPage'],
+	999
+);
+
+// Variant flavor — manifest declares variant and lands in the correct bucket.
+$reg->register_app( array(
+	'id'         => 'plugin:wpas-test/services-variant-app',
+	'version'    => 1,
+	'title'      => 'Services Variant App',
+	'role'       => 'main',
+	'script'     => 'wpas-test',
+	'viewConfig' => array(
+		'kind'    => 'postType',
+		'name'    => 'product',
+		'variant' => 'services',
+		'fields'  => array(
+			array( 'id' => 'duration', 'type' => 'text', 'label' => 'Duration' ),
+		),
+	),
+) );
+
+$with_variant = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
+WPAS_View_Config_Test_Runner::assert_true(
+	'variant baseline lands in named bucket',
+	isset( $with_variant['viewConfigs']['postType']['product']['services'] )
+);
+
+// Field-collection duplicate-id rejection.
+WP_Admin_Shell_Field_Collections::reset();
+$first = wp_admin_shell_register_field_collection( 'core/dup', 'postType', 'post', array() );
+WPAS_View_Config_Test_Runner::assert_eq( 'first registration succeeds', $first, 'core/dup' );
+$second = wp_admin_shell_register_field_collection( 'core/dup', 'postType', 'post', array() );
+WPAS_View_Config_Test_Runner::assert_wp_error( 'second registration rejected (duplicate id)', $second );
+
+WP_Admin_Shell_Field_Collections::reset();
+
 // --- Summary ---------------------------------------------------------------
 
 $total = WPAS_View_Config_Test_Runner::$pass + WPAS_View_Config_Test_Runner::$fail;

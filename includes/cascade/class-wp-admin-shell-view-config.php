@@ -106,6 +106,71 @@ class WP_Admin_Shell_View_Config {
 	}
 
 	/**
+	 * Walk registered app manifests, extract each `viewConfig` baseline,
+	 * inject into the core origin's `viewConfigs[$kind][$name][$variant|'_default']`.
+	 *
+	 * Spec §13 #7 contract: an app's `viewConfig` block (declared on its
+	 * `app.json`) carries through the core origin so plugin / site / role /
+	 * user origins can override per-field via the cascade. Manifest
+	 * registry already discovers app.json at init priority 8; this filter
+	 * fires when the core origin's doc is being prepared (resolver phase
+	 * 1), so manifests are available.
+	 *
+	 * Inline declarations on the existing core origin doc win over
+	 * manifest baselines — only injects when the triple is absent.
+	 * Matches the additive contribution pattern used by
+	 * `class-wp-admin-shell-field-collections.php`.
+	 *
+	 * @param array $doc Pre-merge core-origin document.
+	 * @return array
+	 */
+	public static function inject_app_baselines( $doc ) {
+		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+			return $doc;
+		}
+		$apps = WP_Admin_Shell_Manifest_Registry::instance()->list_apps();
+		if ( empty( $apps ) ) {
+			return $doc;
+		}
+		if ( ! isset( $doc['viewConfigs'] ) || ! is_array( $doc['viewConfigs'] ) ) {
+			$doc['viewConfigs'] = array();
+		}
+
+		foreach ( $apps as $app ) {
+			if ( ! is_array( $app ) || empty( $app['viewConfig'] ) || ! is_array( $app['viewConfig'] ) ) {
+				continue;
+			}
+			$vc      = $app['viewConfig'];
+			$kind    = isset( $vc['kind'] ) && is_string( $vc['kind'] ) ? $vc['kind'] : null;
+			$name    = isset( $vc['name'] ) && is_string( $vc['name'] ) ? $vc['name'] : null;
+			$variant = isset( $vc['variant'] ) && is_string( $vc['variant'] ) && $vc['variant'] !== ''
+				? $vc['variant']
+				: '_default';
+			if ( $kind === null || $name === null ) {
+				continue;
+			}
+
+			// Strip the binding keys before storing — the bucket position
+			// already names them.
+			$entry = $vc;
+			unset( $entry['kind'], $entry['name'], $entry['variant'] );
+
+			if ( ! isset( $doc['viewConfigs'][ $kind ] ) ) {
+				$doc['viewConfigs'][ $kind ] = array();
+			}
+			if ( ! isset( $doc['viewConfigs'][ $kind ][ $name ] ) ) {
+				$doc['viewConfigs'][ $kind ][ $name ] = array();
+			}
+			// Inline declarations win — only inject when triple is absent.
+			if ( ! isset( $doc['viewConfigs'][ $kind ][ $name ][ $variant ] ) ) {
+				$doc['viewConfigs'][ $kind ][ $name ][ $variant ] = $entry;
+			}
+		}
+
+		return $doc;
+	}
+
+	/**
 	 * Merge inline fields over a collection's base fields. Both arrays
 	 * are lists of field descriptors keyed by `id`. Inline overrides
 	 * win per-field; collection fields not redeclared carry through.
@@ -155,3 +220,15 @@ class WP_Admin_Shell_View_Config {
 		return $out;
 	}
 }
+
+/**
+ * Cascade contribution — app manifest baselines enter the resolver
+ * through the `core` origin so plugin / site / role / user origins can
+ * override via admin.json (spec §13 #7). Priority 5 so plugin authors
+ * using add_filter('wp_admin_shell_data_core', ...) directly land after
+ * this baseline.
+ *
+ * Lazy: only wired once the manifest registry is loadable. The function
+ * is no-op when no app declares a `viewConfig` block.
+ */
+add_filter( 'wp_admin_shell_data_core', array( 'WP_Admin_Shell_View_Config', 'inject_app_baselines' ), 5 );

@@ -68,6 +68,13 @@ class WP_Admin_Shell_Field_Collections {
 				__( 'Field collection fields must be an array.', 'wp-admin-shell' )
 			);
 		}
+		if ( isset( self::$registry[ $id ] ) ) {
+			return new WP_Error(
+				'wp_admin_shell_field_collection_duplicate_id',
+				/* translators: %s: collection id */
+				sprintf( __( 'Field collection %s is already registered. Use a different id.', 'wp-admin-shell' ), $id )
+			);
+		}
 
 		$doc = array(
 			'kind'   => self::sanitize_segment( $kind ),
@@ -102,9 +109,9 @@ class WP_Admin_Shell_Field_Collections {
 
 	/**
 	 * Find every collection matching `(kind, name)`. Exact-name matches
-	 * win when both an exact and a universal (`name === null`) entry are
-	 * registered for the same kind. Same-id duplicates impossible — the
-	 * registry rejects them on `register()`.
+	 * are returned alongside universal (`name === null`) entries for the
+	 * same kind. Same-id duplicates are impossible — `register()` rejects
+	 * a second call with the same id.
 	 *
 	 * @param string $kind Entity kind.
 	 * @param string $name Entity name.

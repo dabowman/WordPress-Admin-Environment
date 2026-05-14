@@ -34,11 +34,14 @@
 		"name": "post",
 		"defaultView": {
 			"type": "table",
+			"search": "",
+			"filters": [],
 			"page": 1,
 			"perPage": 20,
+			"sort": { "field": "date", "direction": "desc" },
 			"fields": [ "title", "status", "author", "date" ],
 			"titleField": "title",
-			"sort": { "field": "date", "direction": "desc" }
+			"layout": {}
 		},
 		"defaultLayouts": { "table": {}, "grid": {} },
 		"fields": [

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { addQueryArgs } from '@wordpress/url';
-import { mergeFields } from './mergeFields.mjs';
+import { hydrateInlineViewConfig } from './hydrateInline.mjs';
 
 /**
  * Module-level cache for resolved view-configs. Keyed by
@@ -13,47 +13,6 @@ const inflight = new Map();
 
 function cacheKey( kind, name, variant ) {
 	return `${ kind }/${ name }/${ variant ?? '_default' }`;
-}
-
-/**
- * Hydrate the cache from the inline `window.wpAdminShell.config`
- * snapshot at module load. PHP serializes the resolved cascade tree
- * including `viewConfigs` + `fieldCollections`, so the first read for
- * any registered triple is synchronous.
- * @param {string}      kind    Entity kind.
- * @param {string}      name    Entity name.
- * @param {string|null} variant Variant id, or null for base.
- */
-function readInlineConfig( kind, name, variant ) {
-	const inline = window.wpAdminShell?.config;
-	if ( ! inline || ! inline.viewConfigs ) {
-		return null;
-	}
-	const bucket = inline.viewConfigs[ kind ]?.[ name ];
-	if ( ! bucket ) {
-		return null;
-	}
-	const doc = bucket[ variant ?? '_default' ];
-	if ( ! doc ) {
-		return null;
-	}
-	// Resolve fieldsRef inline-side too — same ref-wins-inline merge as
-	// the PHP resolver. Lets apps render synchronously on first paint
-	// without waiting on /view-config REST.
-	if ( typeof doc.fieldsRef === 'string' && doc.fieldsRef !== '' ) {
-		const collection = inline.fieldCollections?.[ doc.fieldsRef ];
-		if ( collection && Array.isArray( collection.fields ) ) {
-			return {
-				...doc,
-				fields: mergeFields(
-					collection.fields,
-					Array.isArray( doc.fields ) ? doc.fields : []
-				),
-				_resolvedFieldsRef: doc.fieldsRef,
-			};
-		}
-	}
-	return doc;
 }
 
 /**
@@ -72,14 +31,45 @@ async function fetchViewConfig( kind, name, variant ) {
 }
 
 /**
+ * Resolve the inline-snapshot doc for a triple, caching the result
+ * module-side. Reads `window.wpAdminShell.config` lazily so tests can
+ * mutate the snapshot between calls.
+ *
+ * @param {string}      key
+ * @param {string}      kind
+ * @param {string}      name
+ * @param {string|null} variant
+ */
+function readInline( key, kind, name, variant ) {
+	if ( cache.has( key ) ) {
+		return cache.get( key );
+	}
+	const hydrated = hydrateInlineViewConfig(
+		typeof window !== 'undefined' ? window.wpAdminShell?.config : null,
+		kind,
+		name,
+		variant
+	);
+	if ( hydrated ) {
+		cache.set( key, hydrated );
+		return hydrated;
+	}
+	return null;
+}
+
+/**
  * useViewConfig — read the resolved view-config for an entity triple.
  *
  * Reads the cascade-resolved + filter-finalized doc for `(kind, name, variant?)`.
- * On first mount, attempts a synchronous read from the inline
+ * On every triple change, attempts a synchronous read from the inline
  * `window.wpAdminShell.config.viewConfigs` snapshot. If the triple
  * isn't pre-serialized (registered after page load, dynamic filter
  * output that depends on REST context, etc.), falls through to a
  * `/wp-admin-shell/v1/view-config` fetch.
+ *
+ * Triples can change on the same hook instance (e.g. a generic
+ * entity-list app rebinds `postType` from `post` to `page`). The hook
+ * resyncs `doc` whenever the cache key changes — no stale state.
  *
  * The consuming app supplies a `fallback` arg — its baked-in inline
  * view-config — used when the cascade has no entry for the triple.
@@ -100,20 +90,22 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 	const { fallback = null } = options;
 	const key = cacheKey( kind, name, variant );
 
-	const initial = useMemo( () => {
-		if ( cache.has( key ) ) {
-			return cache.get( key );
-		}
-		const inline = readInlineConfig( kind, name, variant );
-		if ( inline ) {
-			cache.set( key, inline );
-			return inline;
-		}
-		return null;
-	}, [ key, kind, name, variant ] );
+	const initial = useMemo(
+		() => readInline( key, kind, name, variant ),
+		[ key, kind, name, variant ]
+	);
 
 	const [ doc, setDoc ] = useState( initial );
 	const [ isLoading, setIsLoading ] = useState( initial === null );
+
+	// Resync local state when the triple changes on the same hook
+	// instance. Without this, the second triple's render reads the
+	// first triple's `doc` until the REST fallback resolves (or
+	// indefinitely when the second triple has an inline hit).
+	useEffect( () => {
+		setDoc( initial );
+		setIsLoading( initial === null );
+	}, [ key, initial ] );
 
 	useEffect( () => {
 		if ( initial !== null ) {

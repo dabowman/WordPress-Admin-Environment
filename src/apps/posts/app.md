@@ -30,6 +30,15 @@ PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7)
 
 The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
+### Translation contract for the JSON baseline
+
+`app.json#viewConfig` ships raw English labels because JSON can't carry `__()` calls. The PHP resolver injects this baseline into the core origin (via `WP_Admin_Shell_View_Config::inject_app_baselines`), so the cascade snapshot serializes English labels to `window.wpAdminShell.config`. Locale-translated copy is delivered through two complementary paths:
+
+1. **Per-id translation in the consuming app.** `buildFields` / `buildActions` could map known ids (`title`, `status`, `author`, `date`, `edit`, `view`, `trash`) to `__('Title', 'wp-admin-shell')` etc. at render time. PostsApp doesn't do this today; the static `STATUS_LABELS` table is the existing model.
+2. **`viewConfigFallback.js` is the i18n-aware React-side variant.** Its labels wrap in `__()` calls and ship a translated default when the cascade has no entry for the triple. Field/action *structure* in the fallback must stay in sync with the app.json baseline (same field ids, same flags, same action ids); the only intentional drift is label string i18n. Once a site adds a `wp_admin_shell_view_config_postType_post` filter that translates labels server-side, the fallback's labels never surface.
+
+The fallback file is defense-in-depth — in production, manifest discovery runs at init priority 8 and the baseline lands in the cascade before the resolver fires.
+
 ## Rebuild guide
 
 A rebuild on a non-WPDS / non-DataViews stack needs to provide:
