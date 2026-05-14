@@ -888,7 +888,7 @@ Power users can pin the palette inline by changing the region template from `cor
 
 ## 13. Extensibility model
 
-Six extension points, in increasing power:
+Eight extension points, in increasing power:
 
 1. **Filter merged config.** `wp_admin_shell_data` (PHP) / `wp.hooks.applyFilters('adminShell.data', config)` (JS). Last-mile mutation.
 2. **Filter per-origin configs.** `wp_admin_shell_data_{origin}` for each cascade origin.
@@ -896,6 +896,8 @@ Six extension points, in increasing power:
 4. **Register a region template.** Plugin contributes a new template engines can reference, or that admin.json can instantiate. Templates are part of an engine's manifest; plugins extending an engine declare additions via `wp_admin_shell_register_template( $engine_id, $template )`.
 5. **Register an engine — including a complete design system.** A plugin ships an `engine.json`, the engine's React/JS implementation, an optional `ThemeProvider`, an optional icon table, an optional style compiler, optional CSS bundles, and (typically) a matched app set that emits components from the same DS. Used for floating-window, tiling, Material Design, brutalist, or any other paradigm a plugin author wants. See §13.1 for a worked example.
 6. **Register a complete shell.** A plugin programmatically registers an entire `admin.json` (e.g., based on user role at runtime). `wp_admin_shell_register_shell( $slug, $admin_json )`.
+7. **Filter a view-config (C2).** For each entity triple `(kind, name, variant?)` the cascade resolves a view-config doc (fields, default view, default layouts, actions). The runtime walks `viewConfigs[kind][name][variant|_default]` through the 6 origins (and an app manifest's `viewConfig` baseline carries through `core`), then runs `apply_filters( "wp_admin_shell_view_config_{$kind}_{$name}", $doc, $kind, $name, $variant )` plus the variant-qualified `..._{$variant}` flavor when present. Apps consume via `useViewConfig(kind, name, variant?, { fallback })`. Variants are addressable and resolve independently — no implicit parent merge. CIAB compatibility: filter naming + sanitization mirror `next_admin_entity_view_config_*` so plugins port mechanically.
+8. **Register a field collection (C2).** `wp_admin_shell_register_field_collection( $id, $kind, $name, $fields, $fields_module )`. A field collection bundles field descriptors against `(kind, name)` (or universal, when `name === null`). View-configs reference a collection via `fieldsRef`; the resolver merges fields with **ref wins, inline overrides per-field** semantics. Programmatic registrations contribute through the `plugin` origin so site/role/user overrides extend or replace via admin.json's `fieldCollections` block. `fieldsModule` is reserved for forward-compat ESM script-module resolution (not loaded by the C2 runtime; a future native-script-modules adoption arc wires it up).
 
 What is **not** an extension point, by design:
 

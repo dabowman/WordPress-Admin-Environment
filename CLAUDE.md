@@ -7,6 +7,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 - **v1.0.0-beta.1** tagged at `df5fcb5` on `main` (PR #32). v1 milestones M1–M5 landed.
 - **v2.0.0-beta.1** tagged at `01cc512` on `feat/wp-admin-shell-v2`. V2.M1–M5 done; manual smoke signed off 2026-05-06 (`docs/v2-readiness.md`). Migration directive's full Definition of Done met. Post-tag spec-§15 polish (bindings runtime, six orphan apps registered, `wp_admin_shell_register_template`, `wp_admin_shell_register_shell`, schema-hosting note, spec §9.1 worked-example test) landed on the branch.
 - **v2.0.0-beta.2** tagged at `147011c` on `main` after the DS-decoupling refactor (three-phase rewrite making the kernel DS-neutral; see the `project_ds_decoupling_2026_05_12` memory). Wrap-up sweep also renamed `shells/v1-demo.json` → `v2-demo.json` and refreshed test totals. Native `@wordpress/edit-{post,site}` mount deferred to v2.x — see `SiteEditorApp.js` for blockers.
+- **C2 view-config + field-collections** landed on `feat/c2-view-config` (2026-05-14). New `viewConfigs` + `fieldCollections` blocks in admin-v2; per-app `viewConfig` block in admin-app-v2; cascade-resolved triples `(kind, name, variant)` with `_default` representing the base view; `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter on the resolved doc; ref-wins-inline-overrides field merge; `wp_admin_shell_register_field_collection()` PHP API; `useViewConfig(kind, name, variant?, {fallback})` React hook; `/wp-admin-shell/v1/view-config` + `/view-config/variants` + `/field-collections` REST endpoints. PostsApp migrated as proof — reads its DataViews spec via the hook with inline fallback (no behavior change when no override is registered). Five renderer apps' worth of CRUD screens collapse to JSON spec + filter overrides on this primitive once the rest follow. See `project_c2_view_config_design` memory + `docs/research/ciab-primitives-cascade-integration.md`.
 
 **v2 architecture (current branch).** Three artifacts replace v1's single-file shape: `app.json` (per-app intrinsics, ships with app code) + `engine.json` (engine + region templates) + `admin.json` (install decisions only). Region typing is `role` (ARIA) + `layout` (CSS subset) + `platform` (browser-analog services) + `routing` (URL participation) — `kind` enum retired. One-region-one-app with nested child regions replaces `contains[]`. Selection event bus and shell-level slot/fill removed (app-internal slots survive). Navigation is URL-driven — routable regions declare `routing.route-key` naming the URL slot they read; plain `<a href>` navigates; `target` keeps native HTML meaning. Cascade resolver, token compiler, and capability gating carry forward. Two engines ship: `core:default` + `core:single-pane`. DTCG `tokens.json` resolver: PHP `WP_Admin_Shell_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types. All 5 bundled shells in canonical v2 shape.
 
@@ -16,7 +17,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 **How tokens reach DOM.** Two paths (both engine-side now, not kernel): (a) **engine template `default-style`** — `core:default` engine emits values like `var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))` as **inline style** on each region's `<div>`. `resolveRegion.mjs` merges template `default-style` into `region.style`, and `Region.js`'s `toReactStyle` helper kebab→camelCases the keys and applies them as React `style={...}`. The two-arg `var()` chain means: chrome var wins when authored; falls back to WPDS slot when chrome layer is empty. (b) **engine `index.css` class rules** — `core:default/index.css` ships the chrome-anchor/svg/Stack-defensive overrides + the engine root paint (`.wp-admin-shell-layout` background+color via `--wp-admin-shell--chrome--canvas--{background,foreground}` slots, same fallback chain). Single-pane engine paints its root through the same canvas slot for parity. Non-WPDS engines ship none of these. Kernel `src/index.css` is ~10 lines: body positioning + a11y forbidden fallback structure only. The `chrome.canvas.*` slot is the author entry point for shell-wide background/foreground; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface chrome. **Inside WPDS-flavored app/engine code, don't hardcode hex colors** — use `var(--wpds-*)` directly so ThemeProvider seeds flow through. App-level CSS audited 2026-05-06; no remaining hardcoded hex colors in `src/apps/**/*.js` inline styles.
 
-**Test surface (778 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22), `run-cap-gating-smoke.php` (5 — per-role nav-prune smoke for `wp-admin-default`, v2 region-tree walker), `run-chromeless-bridge-tests.php` (13 — PHP gate + body-class + script-emission contract for `core:desktop` chromeless bridge). Node: `tests/schema/validate-shells.test.mjs` (74 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 30 bundled app manifests incl. `core:desktop-iframe`, three bundled engines incl. `core:desktop`, positive + negative fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (16 files, 309 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store + chromeless-bridge envelope contract + `shouldRenderRegion` cap-gate + resolveRegion×gate integration pipeline), `tests/engines/core-desktop/*` (TS via Node `--experimental-strip-types`; 77 assertions — WindowManager state machine + snap geometry + compileStyles + dockRailRegistry). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
+**Test surface (822 assertions).** PHP via `wp eval-file`: `run-cascade-tests.php` (29), `run-cap-tests.php` (54), `run-shape-tests.php` (111 — known-engines list extended with `core:desktop` 2026-05-12), `run-manifest-tests.php` (67), `run-tokens-tests.php` (13), `run-engine-defaults-tests.php` (22), `run-cap-gating-smoke.php` (5 — per-role nav-prune smoke for `wp-admin-default`, v2 region-tree walker), `run-chromeless-bridge-tests.php` (13 — PHP gate + body-class + script-emission contract for `core:desktop` chromeless bridge), `run-view-config-tests.php` (37 — field-collections registry + view-config resolver + ref-wins-inline merge + filter machinery + variants_for discovery + cascade contribution). Node: `tests/schema/validate-shells.test.mjs` (79 — sweeps shells/manifests/engine-manifests/tokens against admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1; 30 bundled app manifests incl. `core:desktop-iframe`, three bundled engines incl. `core:desktop`, positive + negative fixtures), `tests/parity/wpds-snapshot.test.mjs` (4), `tests/runtime/*` (17 files, 316 assertions — resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings parser + triggerStore + spec §9.1 worked example + registry ThemeProvider validation + engine default-styles defensive merge + icon-registry contract + dynamicChildren store + chromeless-bridge envelope contract + `shouldRenderRegion` cap-gate + resolveRegion×gate integration pipeline + view-config `mergeFields`), `tests/engines/core-desktop/*` (TS via Node `--experimental-strip-types`; 77 assertions — WindowManager state machine + snap geometry + compileStyles + dockRailRegistry). Browser-side perf + a11y manual passes per `docs/v1-readiness.md` + `docs/v1-perf-baseline.md`.
 
 **Hard runtime dep:** Gutenberg plugin (declared via `Requires Plugins: gutenberg`). `@wordpress/ui` overlay components use private APIs whose allowlist only Gutenberg supplies. Without it, shell renders empty.
 
@@ -146,13 +147,13 @@ JSDoc convention for React function components with destructured props: `@param 
 
 ## Testing
 
-778 assertions — all run before merge.
+822 assertions — all run before merge.
 
 ```bash
 # Node
-npm run test:schema      # 74 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps
+npm run test:schema      # 79 — Ajv: admin-v1 + admin-v2 + admin-app-v2 + admin-engine-v2 + tokens-v1 sweeps (+ C2 viewConfigs / fieldCollections fixtures)
 npm run test:parity      #  4 — WPDS slot-list drift detector
-npm run test:runtime     # 309 — 16 files chained: resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults + icon-registry + dynamicChildren store + chromeless-bridge envelope contract + shouldRenderRegion + resolver-gate pipeline
+npm run test:runtime     # 316 — 17 files chained: resolveRegion + validateRegion + platformServices + matchRoute + dirtyState + tokensResolver + compileStylesTokens + bindings + spec-worked-example + registry ThemeProvider + engine defaults + icon-registry + dynamicChildren store + chromeless-bridge envelope contract + shouldRenderRegion + resolver-gate pipeline + view-config mergeFields
 npm run test:engines     # 77 — TS WindowManager + snap + compileStyles + dockRailRegistry (core:desktop engine)
 
 # PHP — wp-env CLI container
@@ -164,6 +165,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php  #  22
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php       #   5
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-chromeless-bridge-tests.php #  13
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-view-config-tests.php      #  37
 ```
 
 **Pure-JS runtime modules go in `.mjs` files** so node test scripts (`tests/runtime/*`) can `import()` them directly without a webpack/jest harness. Webpack's default `resolve.extensions` (from `@wordpress/scripts`) does NOT include `.mjs`, so importing a `.mjs` module from app code requires the explicit extension at the import site (e.g. `import { resolveRegion } from './regions/resolveRegion.mjs'`). Convention applies only to side-effect-free utility modules; React components stay `.js`.
@@ -196,13 +198,17 @@ wp-admin-shell/
 │   ├── class-wp-admin-shell-config.php           # Read-only wrapper around merged tree
 │   ├── class-wp-admin-shell-can-rest.php         # /wp-admin-shell/v1/can/{cap}
 │   ├── class-wp-admin-shell-prefs-rest.php       # /wp-admin-shell/v1/user-prefs
+│   ├── class-wp-admin-shell-view-config-rest.php # /wp-admin-shell/v1/view-config + /view-config/variants (C2)
+│   ├── class-wp-admin-shell-field-collections-rest.php # /wp-admin-shell/v1/field-collections (C2)
 │   ├── class-wp-admin-shell-cli.php              # `wp admin-shell …` commands
 │   ├── cascade/                                  # Cascade resolver
 │   │   ├── class-wp-admin-shell-resolver.php     # Two-phase merge + load_origins
 │   │   ├── class-wp-admin-shell-merge.php        # merge_authoritative + plain merge w/ tombstones
 │   │   ├── class-wp-admin-shell-customizable.php # `customizable` filter (default-deny); reads legacy `userCustomizable` for one cycle
 │   │   ├── class-wp-admin-shell-cache.php        # WP_Object_Cache + transient w/ hash keying
-│   │   └── class-wp-admin-shell-config-validator.php  # configSchema cache
+│   │   ├── class-wp-admin-shell-config-validator.php  # configSchema cache
+│   │   ├── class-wp-admin-shell-field-collections.php # C2 field-collections registry + cascade contribution
+│   │   └── class-wp-admin-shell-view-config.php  # C2 view-config resolver: triple lookup + ref-wins-inline merge + filter machinery
 │   └── origins/
 │       └── class-wp-admin-shell-origin-core.php  # v0 → v1 normalize + empty baseline + chrome defaults
 ├── src/                     # JS source (built with @wordpress/scripts)
@@ -233,6 +239,9 @@ wp-admin-shell/
 │   │   ├── styles/                 # ThemeProviderHost (engine-pluggable seam, owns DS-neutral density extraction) + WpdsThemeProvider (core-default's contribution; owns WPDS density enum). compileStyles + wpds-defaults snapshot moved to core-default in P1; density.js retired (kernel no longer writes `data-wpds-density` — the real `@wordpress/theme.ThemeProvider` handles attribute emission internally via its `density` prop).
 │   │   ├── capabilities/userCan.js # userCan() sync + checkCan() async via /can REST
 │   │   ├── config/iconMap.js       # DS-neutral icon registry: registerIcons(table, {fallback}) + resolveIcon(name). Engines populate at module load.
+│   │   ├── viewConfig/             # C2 view-config + field-collections client (spec §13 #7-8)
+│   │   │   ├── useViewConfig.js    # React hook: useViewConfig(kind, name, variant?, {fallback}) → {config, isLoading}. Inline-snapshot fast path + /wp-admin-shell/v1/view-config REST fallback.
+│   │   │   └── mergeFields.mjs     # Pure ref-wins-inline-overrides field merge. Mirror of WP_Admin_Shell_View_Config::merge_fields.
 │   │   └── shell-switching.js      # window.wpAdminShell.switchShell(slug) plumbing
 │   └── apps/                # All shell-bundled apps (registered via builtins.js)
 │       └── <id>/                           # one dir per app id; everything for the app lives here
@@ -335,7 +344,7 @@ The active shell config is stored in `wp_admin_shell_active_shell` option (regis
 
 ## Extension points (spec §13)
 
-Six extension surfaces, all in place:
+Eight extension surfaces, all in place:
 
 1. **Filter merged config.** PHP `apply_filters( 'wp_admin_shell_data', $config )` runs after the cascade resolves; per-origin `wp_admin_shell_data_{origin}` runs during the merge.
 2. **Filter per-origin configs.** `wp_admin_shell_data_core` / `_plugin` / `_site` / `_role` / `_user`.
@@ -343,11 +352,14 @@ Six extension surfaces, all in place:
 4. **Register a region template.** PHP `wp_admin_shell_register_template( $engine_id, $template_id, $template )` — extends an existing engine's template catalog at runtime. Validates engine exists, template id matches the namespaced pattern, body has a string `role`.
 5. **Register an engine.** PHP `wp_admin_shell_register_engine( $manifest_or_path )` or convention-path discovery (`{plugin}/engines/{name}/engine.json`). Engine modules MAY export an optional JS-side `ThemeProvider` field on their `EngineSource` (`src/runtime/registry/source-types.js`) — when present, `ThemeProviderHost` mounts it instead of the WPDS default. Use this to ship an entirely different design system (Material, Tailwind tokens, brand-locked palette) without touching kernel code. Render-time errors in a custom provider trip the host's error boundary and silently fall back to WPDS so the shell still paints. Engine manifests MAY also declare a top-level `default-styles` block (Phase C; see `docs/schemas/admin-engine-v2.json#defaultStyles`) — same shape as admin.json `styles` minus `regions`/`applications`/`branding`. The PHP resolver injects a synthetic `engine` origin between `core` and `plugin` carrying these defaults; admin.json wins on every overlapping key. Use this to ship the engine's visual identity (palette, density, chrome surface bindings) so consuming shells stop having to repeat the rules.
 6. **Register a complete shell.** PHP `wp_admin_shell_register_shell( $slug, $admin_json )` for runtime-computed shells. Programmatic registrations win over file-based shells of the same slug; site/role/user origins still merge on top via the same cascade.
+7. **Filter a view-config (C2).** Each `(kind, name[, variant])` triple resolves through the 6-origin cascade (via the `viewConfigs` top-level block in admin.json or the app manifest's `viewConfig` baseline), then runs through `apply_filters( "wp_admin_shell_view_config_{$kind}_{$name}", $doc, $kind, $name, $variant )` plus `..._{$variant}` when present. Variant key `_default` represents the unqualified base; variants resolve independently (no implicit parent merge) — CIAB convention preserved. Apps consume via the `useViewConfig(kind, name, variant?, {fallback})` React hook; built-in fallback ships with the app, cascade/filter overrides win. Filter naming mirrors CIAB's `next_admin_entity_view_config_*` with a `s/next_admin_entity_view_config_/wp_admin_shell_view_config_/g` rename for mechanical migration.
+8. **Register a field collection (C2).** PHP `wp_admin_shell_register_field_collection( $id, $kind, $name, $fields, $fields_module )` — registers a named field bundle bound to `(kind, name)` (or universal when `name === null`). Contributes through the `plugin` origin so site/role/user overrides can extend or replace via admin.json's `fieldCollections` block. View-configs reference a collection via `fieldsRef`; the resolver merges fields ref-wins-inline-overrides — collection provides the base, inline `fields` shallow-merges per-id, inline-only ids append after the base. `fieldsModule` is reserved for forward-compat; the C2 runtime does not load it (one-time dev warning when declared). Filter `wp_admin_shell_data_plugin` runs after the contribution, so plugin authors can still mutate fields via the regular cascade entry point.
 
 JS-side surfaces:
 
 - `useDirtyState( regionId, isDirty, { blocksNavigation } )` — reports unsaved-changes status; `<NavigationGuard>` honors it across `beforeunload` + Navigation API + hashchange-revert.
 - `bindings` block in admin.json — declares `[{shortcut, invoke}]`. `<BindingsConsumer>` wires keystrokes to triggerable apps via the `triggerStore`. Only triggerable regions register their open handlers.
+- `useViewConfig( kind, name, variant?, { fallback } )` — reads the resolved view-config triple. Synchronous when the inline `window.wpAdminShell.config` snapshot already carries the triple; falls through to `/wp-admin-shell/v1/view-config` REST for triples registered after page load. Returns `{ config, isLoading }`.
 
 ## Manual smoke before tagging
 
