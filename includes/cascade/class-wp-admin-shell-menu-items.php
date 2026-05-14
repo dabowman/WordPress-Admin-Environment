@@ -418,10 +418,10 @@ class WP_Admin_Shell_Menu_Items {
 		if ( ! is_string( $to ) || $to === '' ) {
 			return true;
 		}
+		// Leading `/` covers both root-relative paths (`/posts`) AND
+		// protocol-relative URLs (`//cdn.example/foo`) — the latter is
+		// safe because the browser inherits the page scheme.
 		if ( $to[0] === '/' || $to[0] === '#' ) {
-			return true;
-		}
-		if ( strpos( $to, '//' ) === 0 ) {
 			return true;
 		}
 		if ( preg_match( '#^(https?|ftps?)://#i', $to ) ) {
