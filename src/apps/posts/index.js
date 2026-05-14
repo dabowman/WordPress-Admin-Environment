@@ -203,10 +203,16 @@ function buildFields( fieldSpecs, fieldRenderers ) {
 
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
+	const variant = config.variant || null;
 
-	const { config: viewConfig } = useViewConfig( 'postType', postType, null, {
-		fallback: POSTS_VIEW_CONFIG_FALLBACK,
-	} );
+	const { config: viewConfig } = useViewConfig(
+		'postType',
+		postType,
+		variant,
+		{
+			fallback: POSTS_VIEW_CONFIG_FALLBACK,
+		}
+	);
 
 	const [ view, setView ] = useState(
 		() => viewConfig.defaultView || POSTS_VIEW_CONFIG_FALLBACK.defaultView

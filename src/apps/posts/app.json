@@ -16,6 +16,10 @@
 			"status": {
 				"type": "string"
 			},
+			"variant": {
+				"type": "string",
+				"description": "Optional view-config variant id to consume (e.g. 'drafts'). When set, useViewConfig reads `viewConfigs.postType.<postType>.<variant>` instead of the `_default` triple."
+			},
 			"contentWidth": {
 				"type": [
 					"number",
