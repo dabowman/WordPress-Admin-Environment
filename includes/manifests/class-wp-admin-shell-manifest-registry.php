@@ -50,6 +50,28 @@ class WP_Admin_Shell_Manifest_Registry {
 	}
 
 	/**
+	 * Deregister a single manifest by id. Test-only — production code
+	 * has no use case (manifests are intrinsic to their owning plugin
+	 * and discovered at init). Lets tests clean up synthetic
+	 * registrations without wiping the bundled set.
+	 *
+	 * @param string $id Manifest id (`core:*` or `plugin:slug/*`).
+	 * @return bool True when a manifest was removed.
+	 */
+	public function deregister( $id ) {
+		$removed = false;
+		if ( isset( $this->apps[ $id ] ) ) {
+			unset( $this->apps[ $id ] );
+			$removed = true;
+		}
+		if ( isset( $this->engines[ $id ] ) ) {
+			unset( $this->engines[ $id ] );
+			$removed = true;
+		}
+		return $removed;
+	}
+
+	/**
 	 * Register an app manifest. Accepts an associative array or an
 	 * absolute file path to an `app.json`.
 	 *

@@ -431,6 +431,12 @@ WPAS_View_Config_Test_Runner::assert_true(
 	isset( $with_variant['viewConfigs']['postType']['product']['services'] )
 );
 
+// Clean up synthetic manifest registrations so later tests in the
+// same `wp eval-file` run see the bundled-only registry. No public
+// unregister exists in production code; `deregister()` is test-only.
+$reg->deregister( 'plugin:wpas-test/baseline-app' );
+$reg->deregister( 'plugin:wpas-test/services-variant-app' );
+
 // Field-collection duplicate-id rejection.
 WP_Admin_Shell_Field_Collections::reset();
 $first = wp_admin_shell_register_field_collection( 'core/dup', 'postType', 'post', array() );

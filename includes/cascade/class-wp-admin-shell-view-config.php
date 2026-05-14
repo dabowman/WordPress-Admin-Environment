@@ -147,6 +147,25 @@ class WP_Admin_Shell_View_Config {
 				? $vc['variant']
 				: '_default';
 			if ( $kind === null || $name === null ) {
+				// Schema validator should reject manifests with non-string
+				// kind/name at registration; defensive skip here keeps the
+				// cascade pass safe if a malformed manifest slipped through
+				// (e.g. dynamic registration via wp_admin_shell_register_app
+				// without validation). Log so future debugging can locate
+				// the offender.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					$app_id = isset( $app['id'] ) && is_string( $app['id'] ) ? $app['id'] : '(unknown id)';
+					trigger_error(
+						esc_html(
+							sprintf(
+								/* translators: %s: app manifest id */
+								'wp_admin_shell: skipped viewConfig baseline injection for %s — non-string kind/name in manifest.',
+								$app_id
+							)
+						),
+						E_USER_NOTICE
+					);
+				}
 				continue;
 			}
 
