@@ -132,12 +132,6 @@ through every section below. Mark blockers in
 
 ### KNOWN ISSUES (do not block merge)
 
-- **Iframe collapses to native 300×150.** Tracked in
-  [`docs/feedback.md`](feedback.md). Multiple CSS strategies
-  attempted (block-size 100%, flex chain, absolute positioning).
-  Suspect `MountedApp`'s `display: contents` wrapper. Functionality
-  (bridge, focus, link routing) confirmed working through the
-  collapsed iframe. Revisit after bridge consumer wiring stabilizes.
 - **Command-palette harvest (bridge sub-system 11) is a stub.** Plan
   §D2 accepts the upstream WP-private-API breakage cost, but the
   parent shell's `core:command-palette` app isn't wired to consume
