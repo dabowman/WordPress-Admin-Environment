@@ -37,7 +37,14 @@ const DEFAULT_SIZE = { w: 960, h: 720 };
 /** Default starting top-left for the first window. */
 const DEFAULT_ORIGIN = { x: 80, y: 60 };
 
-export type WindowState = 'normal' | 'minimized' | 'maximized';
+export type WindowState =
+	| 'normal'
+	| 'minimized'
+	| 'maximized'
+	| 'snapped-left'
+	| 'snapped-right';
+
+export type SnapZone = 'left' | 'right' | 'full';
 
 export interface WindowRect {
 	x: number;
@@ -66,10 +73,19 @@ export interface WindowEntry {
 	config: Record< string, unknown >;
 	/** Title shown in the frame's titlebar. */
 	title: string;
-	/** Current state (normal | minimized | maximized). */
+	/** Current state (normal | minimized | maximized | snapped-*). */
 	state: WindowState;
 	/** CSS pixels — drives `transform: translate(...)` + width/height. */
 	rect: WindowRect;
+	/**
+	 * Last "normal floating" rect to restore to when the user un-pins
+	 * a maximized or snapped window. Initialized to the window's
+	 * spawn rect; updated on every `setRect` call made while state is
+	 * `'normal'`. Pinned setRect calls don't disturb it, so a user
+	 * who maximizes → resizes-internally-via-maximize-bug → drags
+	 * still gets their pre-pin floating size back.
+	 */
+	restoreRect: WindowRect;
 	/** Z-stack ordering; highest = topmost. */
 	zIndex: number;
 }
@@ -91,6 +107,8 @@ export interface IWindowManager {
 	restoreWindow: ( id: string ) => void;
 	maximizeWindow: ( id: string ) => void;
 	setRect: ( id: string, partial: Partial< WindowRect > ) => void;
+	snapWindow: ( id: string, zone: SnapZone, rect: WindowRect ) => void;
+	restoreFromPinned: ( id: string, atRect?: WindowRect ) => void;
 	subscribe: ( listener: Listener ) => () => void;
 }
 
@@ -115,13 +133,20 @@ export class WindowManager implements IWindowManager {
 		};
 		this.cascadeIndex = ( this.cascadeIndex + 1 ) % 12;
 		this.zSeq += 1;
+		const rect: WindowRect = {
+			x: origin.x,
+			y: origin.y,
+			w: size.w,
+			h: size.h,
+		};
 		const entry: WindowEntry = {
 			id,
 			app: args.app,
 			config: args.config ?? {},
 			title: args.title ?? args.app,
 			state: 'normal',
-			rect: { x: origin.x, y: origin.y, w: size.w, h: size.h },
+			rect,
+			restoreRect: { ...rect },
 			zIndex: this.zSeq,
 		};
 		this.stack = [ ...this.stack, entry ];
@@ -173,11 +198,25 @@ export class WindowManager implements IWindowManager {
 	}
 
 	maximizeWindow( id: string ): void {
-		this.patch( id, ( w ) =>
-			w.state === 'maximized'
-				? { ...w, state: 'normal' }
-				: { ...w, state: 'maximized' }
-		);
+		this.patch( id, ( w ) => {
+			if ( w.state !== 'normal' ) {
+				// Any pinned state (maximized / snapped-*) un-pins
+				// back to the saved floating rect.
+				return {
+					...w,
+					state: 'normal',
+					rect: { ...w.restoreRect },
+				};
+			}
+			// Normal → maximized: capture current rect as the
+			// floating restore target; leave rect itself untouched
+			// (compositor overrides display while state is maximized).
+			return {
+				...w,
+				state: 'maximized',
+				restoreRect: { ...w.rect },
+			};
+		} );
 	}
 
 	setRect( id: string, partial: Partial< WindowRect > ): void {
@@ -191,7 +230,53 @@ export class WindowManager implements IWindowManager {
 			) {
 				return null;
 			}
-			return { ...w, rect: next };
+			// Only update restoreRect when the window is in normal
+			// floating state — pinned/maximized rect changes (snap
+			// commit) preserve the pre-pin floating size to return to.
+			return {
+				...w,
+				rect: next,
+				restoreRect: w.state === 'normal' ? { ...next } : w.restoreRect,
+			};
+		} );
+	}
+
+	snapWindow( id: string, zone: SnapZone, rect: WindowRect ): void {
+		this.patch( id, ( w ) => {
+			let nextState: WindowState;
+			if ( zone === 'full' ) {
+				nextState = 'maximized';
+			} else if ( zone === 'left' ) {
+				nextState = 'snapped-left';
+			} else {
+				nextState = 'snapped-right';
+			}
+			// Save the pre-pin floating rect so a future drag-to-
+			// unpin has a size to come back to. Only save when leaving
+			// normal — pin → pin transitions preserve the original.
+			const restoreRect =
+				w.state === 'normal' ? { ...w.rect } : w.restoreRect;
+			return {
+				...w,
+				state: nextState,
+				rect: { ...rect },
+				restoreRect,
+			};
+		} );
+	}
+
+	restoreFromPinned( id: string, atRect?: WindowRect ): void {
+		this.patch( id, ( w ) => {
+			if ( w.state === 'normal' ) {
+				return null;
+			}
+			const target = atRect ?? w.restoreRect;
+			return {
+				...w,
+				state: 'normal',
+				rect: { ...target },
+				restoreRect: { ...target },
+			};
 		} );
 	}
 

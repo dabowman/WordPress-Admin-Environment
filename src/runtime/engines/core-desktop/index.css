@@ -206,6 +206,36 @@
 	background: #28c840;
 }
 
+/*
+ * Window transitions.
+ *
+ * Window regions animate transform / size changes (snap commit,
+ * restoreFromPinned, maximize toggle). The class-substring match
+ * `--workspace__win-` targets only window region roots; children
+ * carry suffixes (`__frame`, `__body`) the negations strip.
+ *
+ * During a live drag/resize the frame app stamps
+ * `data-dragging="true"` on the window region and the transition is
+ * suppressed — the imperative pointermove writes must land on every
+ * frame without easing. The flag is cleared on pointerup, so the
+ * post-commit React re-render animates back to the new style.
+ */
+.wp-admin-shell-layout--desktop
+	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+		[ class*='__frame' ]
+	):not( [ class*='__body' ] ) {
+	transition: transform 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 ),
+		inline-size 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 ),
+		block-size 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 );
+}
+
+.wp-admin-shell-layout--desktop
+	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+		[ class*='__frame' ]
+	):not( [ class*='__body' ] )[ data-dragging='true' ] {
+	transition: none;
+}
+
 .wp-admin-shell-desktop-snap-ghost {
 	border: 2px solid
 		var( --wp-admin-shell--chrome--snap-ghost--border, rgba( 90, 160, 255, 0.9 ) );
@@ -297,6 +327,38 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+/*
+ * Window body sizing chain.
+ *
+ * Region.js wraps every region's mounted app in a `.wp-admin-shell-
+ * region__app` div between the region root and the app component. That
+ * wrapper is `display: block` by default with no sizing rules, so apps
+ * that ask for `block-size: 100%` collapse against the wrapper's
+ * content height (the iframe's native 300×150 default for our
+ * `core:desktop-iframe`). `core:default` solves this by making the
+ * wrapper a flex column whose children flex-fill — same pattern here,
+ * scoped to window body regions only so other regions (frame, modal,
+ * widget) keep their block flow.
+ */
+.wp-admin-shell-layout--desktop
+	[ data-region-id*='/body' ]
+	> .wp-admin-shell-region__app {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-block-size: 0;
+	block-size: 100%;
+	inline-size: 100%;
+}
+
+.wp-admin-shell-layout--desktop
+	[ data-region-id*='/body' ]
+	> .wp-admin-shell-region__app
+	> * {
+	flex: 1 1 0;
+	min-block-size: 0;
 }
 
 /*

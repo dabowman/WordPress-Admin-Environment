@@ -157,6 +157,84 @@ console.log( '\n— WindowManager: setRect —\n' );
 	unsub();
 }
 
+console.log( '\n— WindowManager: snap + restoreFromPinned —\n' );
+
+{
+	const wm = new WindowManager();
+	const id = wm.openWindow( { app: 'core:posts' } );
+	const openRect = { ...wm.getStack()[ 0 ].rect };
+
+	wm.snapWindow( id, 'left', { x: 0, y: 0, w: 800, h: 900 } );
+	let entry = wm.getStack()[ 0 ];
+	ok( 'snap left sets snapped-left state', entry.state === 'snapped-left' );
+	ok( 'snap left applies the snap rect', entry.rect.w === 800 );
+	ok(
+		'snap saves restoreRect = pre-snap rect',
+		entry.restoreRect.x === openRect.x && entry.restoreRect.w === openRect.w
+	);
+
+	wm.snapWindow( id, 'right', { x: 800, y: 0, w: 800, h: 900 } );
+	entry = wm.getStack()[ 0 ];
+	ok(
+		'pin → pin transition preserves restoreRect',
+		entry.restoreRect.w === openRect.w
+	);
+	ok(
+		'snap right sets snapped-right state',
+		entry.state === 'snapped-right'
+	);
+
+	wm.restoreFromPinned( id );
+	entry = wm.getStack()[ 0 ];
+	ok( 'restoreFromPinned returns to normal state', entry.state === 'normal' );
+	ok(
+		'restoreFromPinned puts rect back to restoreRect',
+		entry.rect.x === openRect.x && entry.rect.w === openRect.w
+	);
+
+	wm.restoreFromPinned( id );
+	ok(
+		'restoreFromPinned on normal window is a no-op',
+		wm.getStack()[ 0 ].state === 'normal'
+	);
+
+	wm.snapWindow( id, 'full', { x: 0, y: 0, w: 1600, h: 900 } );
+	ok(
+		'snap full sets maximized state',
+		wm.getStack()[ 0 ].state === 'maximized'
+	);
+
+	wm.maximizeWindow( id );
+	ok(
+		'maximize toggle from pinned → normal restores rect',
+		wm.getStack()[ 0 ].state === 'normal' &&
+			wm.getStack()[ 0 ].rect.w === openRect.w
+	);
+
+	wm.maximizeWindow( id );
+	ok(
+		'maximize toggle from normal → maximized',
+		wm.getStack()[ 0 ].state === 'maximized'
+	);
+	wm.setRect( id, { x: 999, y: 999 } );
+	ok(
+		'setRect during maximized does NOT update restoreRect',
+		wm.getStack()[ 0 ].restoreRect.w === openRect.w
+	);
+
+	const override = { x: 50, y: 50, w: 400, h: 300 };
+	wm.restoreFromPinned( id, override );
+	entry = wm.getStack()[ 0 ];
+	ok(
+		'restoreFromPinned accepts an override rect (drag-under-cursor unpin)',
+		entry.rect.x === 50 && entry.rect.w === 400
+	);
+	ok(
+		'override also becomes the new restoreRect baseline',
+		entry.restoreRect.x === 50 && entry.restoreRect.w === 400
+	);
+}
+
 console.log( '\n— WindowManager: subscribe —\n' );
 
 {

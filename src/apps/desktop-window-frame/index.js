@@ -148,14 +148,22 @@ export default function DesktopWindowFrameApp( { config } ) {
 	const dragRef = useRef( null );
 
 	useEffect( () => {
-		// Cleanup any lingering global listeners if the frame unmounts
-		// mid-drag (window closed during drag, etc.).
+		// Cleanup any lingering captures + listeners if the frame
+		// unmounts mid-drag (window closed during drag, etc.).
 		return () => {
 			const state = dragRef.current;
 			if ( state ) {
-				window.removeEventListener( 'pointermove', state.onMove );
-				window.removeEventListener( 'pointerup', state.onUp );
-				window.removeEventListener( 'pointercancel', state.onUp );
+				const { handle, onMove, onUp, pointerId } = state;
+				if ( handle ) {
+					handle.removeEventListener( 'pointermove', onMove );
+					handle.removeEventListener( 'pointerup', onUp );
+					handle.removeEventListener( 'pointercancel', onUp );
+					try {
+						handle.releasePointerCapture( pointerId );
+					} catch ( _err ) {
+						/* already released */
+					}
+				}
 				dragRef.current = null;
 			}
 		};
@@ -177,6 +185,28 @@ export default function DesktopWindowFrameApp( { config } ) {
 	};
 	const onMaximize = () => {
 		focus();
+		if ( win.state !== 'normal' ) {
+			// Un-pinning via the maximize button (vs. dragging the
+			// titlebar) centers the restored floating rect in the
+			// workspace — the cursor isn't necessarily near where the
+			// window should land, so the natural default is "put it
+			// somewhere I can see it." Drag-to-unpin uses a different
+			// path that places the rect under the cursor instead.
+			const el = findWindowEl( windowRegionId );
+			const workspaceEl = el ? el.parentElement : null;
+			const ws = workspaceEl ? workspaceEl.getBoundingClientRect() : null;
+			if ( ws ) {
+				const r = win.restoreRect;
+				const centered = {
+					x: Math.round( Math.max( 0, ( ws.width - r.w ) / 2 ) ),
+					y: Math.round( Math.max( 0, ( ws.height - r.h ) / 2 ) ),
+					w: r.w,
+					h: r.h,
+				};
+				manager.restoreFromPinned( windowId, centered );
+				return;
+			}
+		}
 		manager.maximizeWindow( windowId );
 	};
 
@@ -193,10 +223,32 @@ export default function DesktopWindowFrameApp( { config } ) {
 		event.preventDefault();
 		event.stopPropagation();
 		focus();
+		// Suppress the engine's transition while the pointer drives
+		// transform / size directly. Cleared on pointerup so the
+		// post-commit React re-render animates.
+		el.dataset.dragging = 'true';
 		const startX = event.clientX;
 		const startY = event.clientY;
 		const startRect = { ...win.rect };
 		const apply = makeApply( startRect );
+
+		// setPointerCapture on the originating handle reroutes every
+		// pointermove/pointerup to it regardless of which document the
+		// cursor enters. Without it, a cursor that hits the iframe
+		// content during drag/resize moves into the iframe's document;
+		// pointer events fire inside the iframe and never reach the
+		// parent's window listener — the drag/resize gets "stuck" and
+		// keeps running after the pointer is released because the
+		// release happened in a document we weren't listening on.
+		const handle = event.currentTarget;
+		const pointerId = event.pointerId;
+		try {
+			handle.setPointerCapture( pointerId );
+		} catch ( _err ) {
+			/* setPointerCapture can fail if the element is detached
+			 * before this runs (rare). Fall back to window listeners
+			 * so drag still mostly works. */
+		}
 
 		const onMove = ( e ) => {
 			const dx = e.clientX - startX;
@@ -207,22 +259,32 @@ export default function DesktopWindowFrameApp( { config } ) {
 			el.style.blockSize = `${ next.h }px`;
 		};
 		const onUp = ( e ) => {
-			window.removeEventListener( 'pointermove', onMove );
-			window.removeEventListener( 'pointerup', onUp );
-			window.removeEventListener( 'pointercancel', onUp );
+			handle.removeEventListener( 'pointermove', onMove );
+			handle.removeEventListener( 'pointerup', onUp );
+			handle.removeEventListener( 'pointercancel', onUp );
+			try {
+				handle.releasePointerCapture( pointerId );
+			} catch ( _err ) {
+				/* already released or detached */
+			}
+			delete el.dataset.dragging;
 			dragRef.current = null;
 			const dx = e.clientX - startX;
 			const dy = e.clientY - startY;
 			manager.setRect( windowId, apply( dx, dy ) );
 		};
-		dragRef.current = { onMove, onUp };
-		window.addEventListener( 'pointermove', onMove );
-		window.addEventListener( 'pointerup', onUp );
-		window.addEventListener( 'pointercancel', onUp );
+		dragRef.current = { onMove, onUp, handle, pointerId };
+		handle.addEventListener( 'pointermove', onMove );
+		handle.addEventListener( 'pointerup', onUp );
+		handle.addEventListener( 'pointercancel', onUp );
 	};
 
 	const onResizePointerDown = ( mutates ) => ( event ) => {
-		if ( win.state === 'maximized' ) {
+		// Block resize on any pinned state — user expects to drag-to-
+		// unpin first, then resize. Without the block the snapped
+		// window would resize but stay flagged as snapped, and the
+		// restoreRect would no longer be useful.
+		if ( win.state !== 'normal' ) {
 			return;
 		}
 		startPointerOp(
@@ -241,10 +303,6 @@ export default function DesktopWindowFrameApp( { config } ) {
 		) {
 			return;
 		}
-		// Don't drag maximized windows — matches native OS behavior.
-		if ( win.state === 'maximized' ) {
-			return;
-		}
 		const el = findWindowEl( windowRegionId );
 		if ( ! el ) {
 			return;
@@ -257,13 +315,60 @@ export default function DesktopWindowFrameApp( { config } ) {
 		event.stopPropagation();
 		focus();
 
+		const handle = event.currentTarget;
+		const pointerId = event.pointerId;
+		try {
+			handle.setPointerCapture( pointerId );
+		} catch ( _err ) {
+			/* fall through */
+		}
+
 		const startX = event.clientX;
 		const startY = event.clientY;
-		const startRect = { ...win.rect };
+		const wasPinned = win.state !== 'normal';
+		// Pixel threshold before pointerdown turns into a drag. Without
+		// the threshold, a simple click on the titlebar of a pinned
+		// window would un-pin it under the cursor (jarring) — with it,
+		// the click → up-no-move path centers via the maximize-button
+		// handler instead.
+		const DRAG_THRESHOLD = 4;
+		let dragStarted = false;
+		let startRect = wasPinned ? null : { ...win.rect };
 		let activeZone = null;
-		const ghost = createSnapGhost( workspaceEl );
+		let ghost = null;
+
+		const beginDrag = ( e ) => {
+			dragStarted = true;
+			el.dataset.dragging = 'true';
+			if ( wasPinned ) {
+				const restored = win.restoreRect;
+				const newRect = {
+					x: Math.round( e.clientX - restored.w / 2 ),
+					y: Math.round( e.clientY - 16 ),
+					w: restored.w,
+					h: restored.h,
+				};
+				manager.restoreFromPinned( windowId, newRect );
+				el.style.transform = `translate(${ newRect.x }px, ${ newRect.y }px)`;
+				el.style.inlineSize = `${ newRect.w }px`;
+				el.style.blockSize = `${ newRect.h }px`;
+				startRect = newRect;
+			}
+			ghost = createSnapGhost( workspaceEl );
+		};
 
 		const onMove = ( e ) => {
+			if ( ! dragStarted ) {
+				const dx0 = e.clientX - startX;
+				const dy0 = e.clientY - startY;
+				if (
+					Math.abs( dx0 ) < DRAG_THRESHOLD &&
+					Math.abs( dy0 ) < DRAG_THRESHOLD
+				) {
+					return;
+				}
+				beginDrag( e );
+			}
 			const dx = e.clientX - startX;
 			const dy = e.clientY - startY;
 			el.style.transform = `translate(${ startRect.x + dx }px, ${
@@ -289,12 +394,40 @@ export default function DesktopWindowFrameApp( { config } ) {
 			}
 		};
 		const onUp = ( e ) => {
-			window.removeEventListener( 'pointermove', onMove );
-			window.removeEventListener( 'pointerup', onUp );
-			window.removeEventListener( 'pointercancel', onUp );
+			handle.removeEventListener( 'pointermove', onMove );
+			handle.removeEventListener( 'pointerup', onUp );
+			handle.removeEventListener( 'pointercancel', onUp );
+			try {
+				handle.releasePointerCapture( pointerId );
+			} catch ( _err ) {
+				/* already released */
+			}
+			delete el.dataset.dragging;
 			dragRef.current = null;
 			if ( ghost ) {
 				ghost.remove();
+				ghost = null;
+			}
+			if ( ! dragStarted ) {
+				// Click without drag. On pinned windows this centers
+				// the restored rect (same as the maximize button). On
+				// normal-state windows it's a no-op — focus already
+				// happened on pointerdown.
+				if ( wasPinned && workspaceBounds ) {
+					const r = win.restoreRect;
+					const centered = {
+						x: Math.round(
+							Math.max( 0, ( workspaceBounds.width - r.w ) / 2 )
+						),
+						y: Math.round(
+							Math.max( 0, ( workspaceBounds.height - r.h ) / 2 )
+						),
+						w: r.w,
+						h: r.h,
+					};
+					manager.restoreFromPinned( windowId, centered );
+				}
+				return;
 			}
 			if ( activeZone && workspaceBounds ) {
 				const snapped = snapRect( activeZone, {
@@ -304,7 +437,7 @@ export default function DesktopWindowFrameApp( { config } ) {
 					h: workspaceBounds.height,
 				} );
 				if ( snapped ) {
-					manager.setRect( windowId, snapped );
+					manager.snapWindow( windowId, activeZone, snapped );
 					return;
 				}
 			}
@@ -315,10 +448,10 @@ export default function DesktopWindowFrameApp( { config } ) {
 				y: startRect.y + dy,
 			} );
 		};
-		dragRef.current = { onMove, onUp };
-		window.addEventListener( 'pointermove', onMove );
-		window.addEventListener( 'pointerup', onUp );
-		window.addEventListener( 'pointercancel', onUp );
+		dragRef.current = { onMove, onUp, handle, pointerId };
+		handle.addEventListener( 'pointermove', onMove );
+		handle.addEventListener( 'pointerup', onUp );
+		handle.addEventListener( 'pointercancel', onUp );
 	};
 
 	const resizable = win.state !== 'maximized';

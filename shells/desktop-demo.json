@@ -27,6 +27,7 @@
 					{ "label": "Posts", "icon": "post", "href": "#/posts" },
 					{ "label": "Media", "icon": "media", "href": "#/media" },
 					{ "label": "Users", "icon": "people", "href": "#/users" },
+					{ "label": "Pages", "icon": "page", "href": "#/pages" },
 					{
 						"label": "Settings",
 						"icon": "settings",
@@ -54,6 +55,7 @@
 
 	"routes": {
 		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
+		"/pages": { "app": "core:posts", "config": { "postType": "page" } },
 		"/media": { "app": "core:media" },
 		"/users": { "app": "core:users" },
 		"/settings": { "app": "core:settings" },

@@ -1,17 +1,15 @@
 /*
- * KNOWN ISSUE (P2.T4a, 2026-05-13): the iframe collapses to its native
- * 300×150 default. Attempted: block-size:100%, flex:1 1 0, position:
- * absolute with body region position:relative, body region display:flex
- * — none fill. Suspect MountedApp's `display: contents` wrapper between
- * body region and the iframe app is the containing-block culprit, but
- * direct repro is open. Tracked in docs/feedback.md. The bridge work
- * (P2.T4-A/B/C) doesn't depend on the iframe rendering correctly, so
- * unblock that next; revisit fill once the bridge contract is settled
- * (it may obviate the CSS-hide fallback entirely, simplifying the DOM).
+ * Iframe app fills its window body region via the engine's
+ * `.wp-admin-shell-region__app` flex-fill rule (engine CSS). The
+ * wrapper becomes a flex column; this root div inherits `flex: 1 1
+ * 0` from the engine's `* > *` rule and the iframe element below
+ * fills via its own flex declaration.
  */
-
 .wp-admin-shell-desktop-iframe {
-	block-size: 100%;
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-block-size: 0;
 	inline-size: 100%;
 	position: relative;
 	background: var(
@@ -21,8 +19,9 @@
 }
 
 .wp-admin-shell-desktop-iframe__frame {
+	flex: 1 1 0;
+	min-block-size: 0;
 	inline-size: 100%;
-	block-size: 100%;
 	border: 0;
 	display: block;
 }
