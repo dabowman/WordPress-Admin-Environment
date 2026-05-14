@@ -83,6 +83,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-view-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
@@ -159,7 +160,7 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
 }
 
 /**
- * Register a nav menu item — CIAB compatibility shim (spec §13 #9).
+ * Register a nav menu item — CIAB compatibility shim (spec §13 #10).
  *
  * Mechanical port of CIAB's `next_admin_register_menu_item()`. Plugins
  * that previously called `next_admin_register_menu_item()` rename to
@@ -192,7 +193,7 @@ function wp_admin_shell_register_menu_item( $id, $args ) {
 }
 
 /**
- * Register an admin route — CIAB compatibility shim (spec §13 #10).
+ * Register an admin route — CIAB compatibility shim (spec §13 #11).
  *
  * Mechanical port of CIAB's `next_admin_register_admin_route()`. The
  * arg signature collapses CIAB's positional
@@ -321,6 +322,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	);
 
 	$config = wp_admin_shell_get_active_config();
+
+	// REST preload (spec §13 #9). Cascade-resolved `preload[]` paths
+	// hydrate through `rest_preload_api_request` and ship as inline
+	// script on `wp-api-fetch` before the shell bundle runs. Eliminates
+	// cold-mount round-trips for `useEntityRecord('root','user',me)`,
+	// `loadPostTypeEntities`, and similar resolvers.
+	WP_Admin_Shell_Preload::inject();
 
 	// Engine-driven style enqueue. Each registered engine declares a
 	// `styles` array in its manifest listing the CSS bundles it depends

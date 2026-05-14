@@ -4,12 +4,44 @@
  * The runtime uses one registry instance per kernel mount. Sources are
  * added via `register()`; the kernel then resolves config-declared
  * references through `get()` (kind-checked) or the looser `find()`.
+ *
+ * **App registration shapes.** Two shapes are accepted:
+ *
+ *   1. Eager — `{ kind: 'app', id, Component, … }`. The component renders
+ *      synchronously; its module is part of the boot bundle. Used for
+ *      always-mounted chrome apps (navigation, site-hub, toolbar-actions,
+ *      notices-banner, notices-snackbar) where lazy-loading adds a
+ *      flicker without saving bytes.
+ *
+ *   2. Lazy — `{ kind: 'app', id, load: () => import('...'), … }`. The
+ *      `load` thunk returns a Promise resolving to a module namespace
+ *      (`{ default: Component }`) or a bare component. Webpack code-splits
+ *      each `import()` into its own chunk; mount-time logic awaits the
+ *      load. Subsequent mounts of the same id reuse the cached component
+ *      reference — no double-loading.
+ *
+ * Engines always use the eager shape — there's exactly one engine
+ * mounted per shell and it's needed before any region renders.
+ *
+ * Both shapes cannot be set simultaneously (`Component` + `load`) —
+ * that's a contradictory declaration and the registry rejects it. The
+ * descriptor stored in `sources` keeps this invariant for life — the
+ * read path resolves through `loadCache` (id → Promise<Component>)
+ * rather than mutating the descriptor.
  */
 
 const VALID_KINDS = new Set( [ 'app', 'engine' ] );
 
 export function createRegistry() {
 	const sources = new Map();
+	// Promise cache: id → Promise<Component>. Identity-stable so the
+	// mount path can feed the same Promise into `React.lazy()` across
+	// renders — React.lazy memoizes per-thunk internally, so a stable
+	// Promise reference is what keeps Suspense state consistent.
+	// After a Promise settles, `React.lazy` returns its resolved
+	// component synchronously on subsequent renders; no separate
+	// sync cache needed.
+	const loadCache = new Map();
 
 	function register( source ) {
 		if ( ! source || typeof source !== 'object' ) {
@@ -41,6 +73,23 @@ export function createRegistry() {
 				`createRegistry: engine "${ source.id }" ThemeProvider must be a React component`
 			);
 		}
+		const hasComponent = source.Component !== undefined;
+		const hasLoad = source.load !== undefined;
+		if ( hasComponent && hasLoad ) {
+			throw new Error(
+				`createRegistry: source "${ source.id }" declares both Component and load — pick one`
+			);
+		}
+		if ( hasLoad && typeof source.load !== 'function' ) {
+			throw new Error(
+				`createRegistry: source "${ source.id }" load must be a function returning a Promise`
+			);
+		}
+		if ( source.kind === 'engine' && hasLoad ) {
+			throw new Error(
+				`createRegistry: engine "${ source.id }" cannot be lazy — engines must be eager`
+			);
+		}
 		sources.set( source.id, source );
 		return source;
 	}
@@ -69,5 +118,101 @@ export function createRegistry() {
 		return sources.has( id );
 	}
 
-	return { register, get, find, list, has };
+	/**
+	 * Resolve the React component for an app source. Returns a Promise
+	 * that resolves to the component reference. Eager registrations
+	 * resolve synchronously (wrapped in `Promise.resolve`). Lazy
+	 * registrations call `load()` once on first request and cache the
+	 * resolved component reference — subsequent calls return the same
+	 * Promise (identity stable, no double-load).
+	 *
+	 * Returns `null` for unknown ids or non-app kinds.
+	 *
+	 * The mount path consumes this through `React.lazy` so the same
+	 * cached Promise drives Suspense without extra plumbing.
+	 *
+	 * @param {string} id App source id.
+	 * @return {Promise<Function>|null} Resolved component, or null for
+	 *   unknown / non-app ids.
+	 */
+	function resolveComponent( id ) {
+		const source = sources.get( id );
+		if ( ! source || source.kind !== 'app' ) {
+			return null;
+		}
+		if ( loadCache.has( id ) ) {
+			return loadCache.get( id );
+		}
+		if ( source.Component ) {
+			const eager = Promise.resolve( source.Component );
+			loadCache.set( id, eager );
+			return eager;
+		}
+		if ( typeof source.load !== 'function' ) {
+			return null;
+		}
+		const promise = Promise.resolve()
+			.then( () => source.load() )
+			.then( ( mod ) => {
+				// Accept either a module namespace (`{ default: Component }`)
+				// or a bare component reference. Dynamic `import()`
+				// resolves to the former; hand-rolled thunks may return
+				// either. The cached Promise resolves to the unwrapped
+				// component so consumers don't have to repeat the check.
+				const Component =
+					mod && typeof mod === 'object' && 'default' in mod
+						? mod.default
+						: mod;
+				if ( typeof Component !== 'function' ) {
+					throw new Error(
+						`createRegistry: load() for "${ id }" did not resolve to a React component`
+					);
+				}
+				// Descriptor is intentionally left untouched —
+				// `Component XOR load` stays true for life. React.lazy
+				// memoizes the resolved component on the cached
+				// Promise, so subsequent mounts render synchronously
+				// without re-running this thunk.
+				return Component;
+			} );
+		loadCache.set( id, promise );
+		return promise;
+	}
+
+	/**
+	 * Drop the cached Promise for an id so the next `resolveComponent`
+	 * call re-fires `load()` from scratch.
+	 *
+	 * The mount path's error-boundary retry button calls this — without
+	 * it, a rejected chunk-load Promise lives in `loadCache` for the
+	 * lifetime of the registry and every retry attempt hits the same
+	 * stale rejection. Webpack 5's `import()` does NOT auto-retry on
+	 * 404/network errors (only on a narrow set of timeout-style
+	 * transient signals), so the recovery path has to clear the cache
+	 * deliberately.
+	 *
+	 * No-op when there's nothing cached. Returns the descriptor on
+	 * success or null for unknown ids.
+	 *
+	 * @param {string} id App source id.
+	 * @return {Object|null} Source descriptor, or null for unknown ids.
+	 */
+	function invalidateComponent( id ) {
+		const source = sources.get( id );
+		if ( ! source ) {
+			return null;
+		}
+		loadCache.delete( id );
+		return source;
+	}
+
+	return {
+		register,
+		get,
+		find,
+		list,
+		has,
+		resolveComponent,
+		invalidateComponent,
+	};
 }

@@ -37,3 +37,27 @@ body {
 .wp-admin-shell-region__forbidden p {
 	margin: 0;
 }
+
+/* Lazy-loaded app placeholder. Reserves a small chunk of vertical space
+   while the dynamic chunk is in flight so the layout doesn't shift when
+   the real app paints. Kernel-level (predates engine mount); colors
+   inherited, no DS tokens. */
+.wp-admin-shell-app-loading {
+	min-block-size: 48px;
+}
+
+/* Inline error fallback when a lazy app chunk fails to load. Structural
+   spacing only — design-system-neutral. */
+.wp-admin-shell-app-error {
+	padding: 16px;
+}
+
+.wp-admin-shell-app-error p {
+	margin: 0 0 8px;
+}
+
+.wp-admin-shell-app-error__detail {
+	font-family: monospace;
+	font-size: 12px;
+	opacity: 0.75;
+}

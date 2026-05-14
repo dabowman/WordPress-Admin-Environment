@@ -5,85 +5,200 @@
  * are gone. The single source of truth is each app's `app.json` /
  * engine's `engine.json`, validated PHP-side at boot and shipped to
  * the browser via `window.wpAdminShell.manifests`. This bootstrap
- * pairs each manifest id with its imported React component and folds
+ * pairs each manifest id with its React component module and folds
  * the manifest's intrinsic fields (`title`, `role`, `capabilities`,
  * `config-schema`, `platform`) onto the registry entry the kernel
  * already consumes.
  *
+ * **Lazy app loading (C5).** Each app exposes one of two shapes:
+ *
+ *   - `{ Component }` — eager; the module ships in the boot bundle.
+ *     Reserved for always-mounted chrome apps (navigation, site-hub,
+ *     toolbar-actions, notices-banner, notices-snackbar) where
+ *     lazy-loading adds a flicker without saving bytes.
+ *
+ *   - `{ load: () => import(...) }` — lazy; webpack code-splits each
+ *     `import()` into its own chunk (`build/app-<id>.js`). The
+ *     registry caches the resolved component on first mount.
+ *
  * Adding a new shell-bundled app: create `src/apps/{name}/` with
- * `index.js`, `app.json`, and (optionally) `index.css`. Add the
- * id → Component pair to `APP_COMPONENTS` below. Discovery scans the
- * convention path and the manifest registry handles the rest.
+ * `index.js`, `app.json`, and (optionally) `index.css`. Add an entry
+ * to `APP_LOADERS` below — eager when the app is always mounted in
+ * every shell, lazy (the default) otherwise. The dynamic import's
+ * `webpackChunkName` magic comment controls the emitted chunk name.
  */
 
-import PostsApp from '../../apps/posts';
-import EditorApp from '../../apps/editor';
-import SimpleEditorApp from '../../apps/simple-editor';
-import MediaApp from '../../apps/media';
-import ProfileApp from '../../apps/profile';
-import SettingsGeneralApp from '../../apps/settings-general';
-import IframeApp from '../../apps/iframe-fallback';
-import UsersApp from '../../apps/users';
-import CommentsApp from '../../apps/comments';
-import SettingsApp from '../../apps/settings';
-import SiteEditorApp from '../../apps/site-editor';
-import DashboardApp from '../../apps/dashboard';
-import PluginsApp from '../../apps/plugins';
-import ThemesApp from '../../apps/themes';
-import ToolsApp from '../../apps/tools';
-import SiteHealthApp from '../../apps/site-health';
-import TaxonomyApp from '../../apps/taxonomy';
-
+// Always-eager chrome apps. Bundled into the boot chunk so the shell
+// paints chrome immediately without a Suspense flash. Keep this list
+// tight — every entry here defeats code-splitting for that module.
 import NavigationApp from '../../apps/navigation';
 import SiteHubApp from '../../apps/site-hub';
 import ToolbarActionsApp from '../../apps/toolbar-actions';
-import CommandPaletteApp from '../../apps/command-palette';
-import PreviewPaneApp from '../../apps/preview-pane';
 import NoticesBannerApp from '../../apps/notices-banner';
 import NoticesSnackbarApp from '../../apps/notices-snackbar';
-import AppearanceApp from '../../apps/appearance';
-import UserMenuApp from '../../apps/user-menu';
-
-import DesktopCompositorApp from '../../apps/desktop-compositor';
-import DesktopDockApp from '../../apps/desktop-dock-app';
-import DesktopWindowFrameApp from '../../apps/desktop-window-frame';
-import DesktopIframeApp from '../../apps/desktop-iframe';
 
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
 import coreDesktop from '../engines/core-desktop';
 
-const APP_COMPONENTS = {
-	'core:posts': PostsApp,
-	'core:editor': EditorApp,
-	'core:simple-editor': SimpleEditorApp,
-	'core:media': MediaApp,
-	'core:profile': ProfileApp,
-	'core:settings-general': SettingsGeneralApp,
-	'core:iframe-fallback': IframeApp,
-	'core:users': UsersApp,
-	'core:comments': CommentsApp,
-	'core:settings': SettingsApp,
-	'core:site-editor': SiteEditorApp,
-	'core:dashboard': DashboardApp,
-	'core:plugins': PluginsApp,
-	'core:themes': ThemesApp,
-	'core:tools': ToolsApp,
-	'core:site-health': SiteHealthApp,
-	'core:taxonomy': TaxonomyApp,
-	'core:navigation': NavigationApp,
-	'core:site-hub': SiteHubApp,
-	'core:toolbar-actions': ToolbarActionsApp,
-	'core:command-palette': CommandPaletteApp,
-	'core:preview-pane': PreviewPaneApp,
-	'core:notices-banner': NoticesBannerApp,
-	'core:notices-snackbar': NoticesSnackbarApp,
-	'core:appearance': AppearanceApp,
-	'core:user-menu': UserMenuApp,
-	'core:desktop-compositor': DesktopCompositorApp,
-	'core:desktop-dock-app': DesktopDockApp,
-	'core:desktop-window-frame': DesktopWindowFrameApp,
-	'core:desktop-iframe': DesktopIframeApp,
+/**
+ * id → registry-registration descriptor.
+ *
+ * Eager entries:  `{ Component }` (always-mounted chrome).
+ * Lazy entries:   `{ load: () => import(/* webpackChunkName: "app-<id>" *\/ '...') }`.
+ *
+ * The webpackChunkName magic comment names the emitted chunk
+ * deterministically (`build/app-posts.js`, `build/app-editor.js`, …) —
+ * makes the network panel + perf debugging readable. Without it
+ * webpack hashes the chunk name.
+ */
+const APP_LOADERS = {
+	// ─── always-eager (boot bundle) ────────────────────────────────
+	'core:navigation': { Component: NavigationApp },
+	'core:site-hub': { Component: SiteHubApp },
+	'core:toolbar-actions': { Component: ToolbarActionsApp },
+	'core:notices-banner': { Component: NoticesBannerApp },
+	'core:notices-snackbar': { Component: NoticesSnackbarApp },
+
+	// ─── lazy (code-split per app) ─────────────────────────────────
+	'core:posts': {
+		load: () =>
+			import( /* webpackChunkName: "app-posts" */ '../../apps/posts' ),
+	},
+	'core:editor': {
+		load: () =>
+			import( /* webpackChunkName: "app-editor" */ '../../apps/editor' ),
+	},
+	'core:simple-editor': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-simple-editor" */ '../../apps/simple-editor'
+			),
+	},
+	'core:media': {
+		load: () =>
+			import( /* webpackChunkName: "app-media" */ '../../apps/media' ),
+	},
+	'core:profile': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-profile" */ '../../apps/profile'
+			),
+	},
+	'core:settings-general': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-general" */ '../../apps/settings-general'
+			),
+	},
+	'core:iframe-fallback': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-iframe-fallback" */ '../../apps/iframe-fallback'
+			),
+	},
+	'core:users': {
+		load: () =>
+			import( /* webpackChunkName: "app-users" */ '../../apps/users' ),
+	},
+	'core:comments': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-comments" */ '../../apps/comments'
+			),
+	},
+	'core:settings': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings" */ '../../apps/settings'
+			),
+	},
+	'core:site-editor': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-site-editor" */ '../../apps/site-editor'
+			),
+	},
+	'core:dashboard': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard" */ '../../apps/dashboard'
+			),
+	},
+	'core:plugins': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-plugins" */ '../../apps/plugins'
+			),
+	},
+	'core:themes': {
+		load: () =>
+			import( /* webpackChunkName: "app-themes" */ '../../apps/themes' ),
+	},
+	'core:tools': {
+		load: () =>
+			import( /* webpackChunkName: "app-tools" */ '../../apps/tools' ),
+	},
+	'core:site-health': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-site-health" */ '../../apps/site-health'
+			),
+	},
+	'core:taxonomy': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-taxonomy" */ '../../apps/taxonomy'
+			),
+	},
+	'core:command-palette': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-command-palette" */ '../../apps/command-palette'
+			),
+	},
+	'core:preview-pane': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-preview-pane" */ '../../apps/preview-pane'
+			),
+	},
+	'core:appearance': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-appearance" */ '../../apps/appearance'
+			),
+	},
+	'core:user-menu': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-user-menu" */ '../../apps/user-menu'
+			),
+	},
+	'core:desktop-compositor': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-desktop-compositor" */ '../../apps/desktop-compositor'
+			),
+	},
+	'core:desktop-dock-app': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-desktop-dock-app" */ '../../apps/desktop-dock-app'
+			),
+	},
+	'core:desktop-window-frame': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-desktop-window-frame" */ '../../apps/desktop-window-frame'
+			),
+	},
+	'core:desktop-iframe': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-desktop-iframe" */ '../../apps/desktop-iframe'
+			),
+	},
 };
 
 const NON_ROUTABLE_APPS = new Set( [
@@ -109,8 +224,8 @@ export function registerBuiltins( registry ) {
 	const seen = new Set();
 
 	for ( const [ id, manifest ] of Object.entries( manifests ) ) {
-		const Component = APP_COMPONENTS[ id ];
-		if ( ! Component ) {
+		const loader = APP_LOADERS[ id ];
+		if ( ! loader ) {
 			continue;
 		}
 		registry.register( {
@@ -118,7 +233,9 @@ export function registerBuiltins( registry ) {
 			id,
 			title: manifest.title,
 			role: manifest.role,
-			Component,
+			// One of Component / load comes from APP_LOADERS — the
+			// registry rejects entries that set both.
+			...loader,
 			routable: ! NON_ROUTABLE_APPS.has( id ),
 			capabilities: Array.isArray( manifest.capabilities )
 				? manifest.capabilities
@@ -132,7 +249,7 @@ export function registerBuiltins( registry ) {
 		seen.add( id );
 	}
 
-	const expected = Object.keys( APP_COMPONENTS );
+	const expected = Object.keys( APP_LOADERS );
 	const missing = expected.filter( ( id ) => ! seen.has( id ) );
 	if ( missing.length && process.env.NODE_ENV !== 'production' ) {
 		// eslint-disable-next-line no-console
