@@ -133,7 +133,10 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 				if ( cancelled ) {
 					return;
 				}
-				cache.set( key, {} );
+				// Do NOT cache an empty doc on error — a transient 5xx
+				// would otherwise poison the triple until page reload.
+				// The next render retries fresh; consuming app falls
+				// through to its fallback while doc stays empty.
 				setDoc( {} );
 				setIsLoading( false );
 			} );

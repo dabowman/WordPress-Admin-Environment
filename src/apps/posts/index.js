@@ -2,10 +2,12 @@ import './index.css';
 import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf, _n } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
 import { resolveIcon } from '../../runtime/config/iconMap';
 import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
@@ -103,11 +105,14 @@ function compileEligibility( eligibleWhen ) {
 		} );
 }
 
-function buildActions( actions, { postType, deleteEntityRecord } ) {
+function buildActions(
+	actions,
+	{ postType, deleteEntityRecord, createNotice }
+) {
 	const callbacks = {
 		edit: ( items ) => navigate( editHref( postType, items[ 0 ].id ) ),
 		view: ( items ) => {
-			window.open( items[ 0 ].link, '_blank' );
+			window.open( items[ 0 ].link, '_blank', 'noopener,noreferrer' );
 		},
 	};
 
@@ -156,7 +161,11 @@ function buildActions( actions, { postType, deleteEntityRecord } ) {
 								variant="primary"
 								isDestructive
 								onClick={ async () => {
-									await Promise.all(
+									// `allSettled` so one failure doesn't
+									// collapse the rest of a bulk action.
+									// Surface partial-success via a
+									// snackbar notice.
+									const results = await Promise.allSettled(
 										items.map( ( item ) =>
 											deleteEntityRecord(
 												'postType',
@@ -165,6 +174,26 @@ function buildActions( actions, { postType, deleteEntityRecord } ) {
 											)
 										)
 									);
+									const failed = results.filter(
+										( r ) => r.status === 'rejected'
+									).length;
+									if ( failed > 0 ) {
+										createNotice?.(
+											'error',
+											sprintf(
+												/* translators: 1: failed item count, 2: total item count */
+												_n(
+													'%1$d of %2$d item failed to move to trash.',
+													'%1$d of %2$d items failed to move to trash.',
+													items.length,
+													'wp-admin-shell'
+												),
+												failed,
+												items.length
+											),
+											{ type: 'snackbar' }
+										);
+									}
 									onActionPerformed?.( items );
 									closeModal();
 								} }
@@ -291,6 +320,7 @@ export default function PostsApp( { config } ) {
 	);
 
 	const { deleteEntityRecord } = useDispatch( coreStore );
+	const { createNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -298,10 +328,11 @@ export default function PostsApp( { config } ) {
 		}
 		return records.map( ( record ) => ( {
 			id: record.id,
-			title:
+			title: decodeEntities(
 				record.title?.rendered ||
-				record.title?.raw ||
-				__( '(no title)', 'wp-admin-shell' ),
+					record.title?.raw ||
+					__( '(no title)', 'wp-admin-shell' )
+			),
 			status: record.status,
 			date: record.date,
 			author: record._embedded?.author?.[ 0 ]?.name || '',
@@ -321,8 +352,12 @@ export default function PostsApp( { config } ) {
 		const specs = Array.isArray( viewConfig.actions )
 			? viewConfig.actions
 			: POSTS_VIEW_CONFIG_FALLBACK.actions;
-		return buildActions( specs, { postType, deleteEntityRecord } );
-	}, [ viewConfig, postType, deleteEntityRecord ] );
+		return buildActions( specs, {
+			postType,
+			deleteEntityRecord,
+			createNotice,
+		} );
+	}, [ viewConfig, postType, deleteEntityRecord, createNotice ] );
 
 	const paginationInfo = useMemo(
 		() => ( {

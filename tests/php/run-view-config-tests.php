@@ -177,6 +177,22 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	'author'
 );
 
+// R1: duplicate inline ids dedupe — first append wins, rest dropped.
+$dup_merged = WP_Admin_Shell_View_Config::merge_fields(
+	array(),
+	array(
+		array( 'id' => 'foo', 'type' => 'text', 'label' => 'First Foo' ),
+		array( 'id' => 'foo', 'type' => 'text', 'label' => 'Second Foo' ),
+		array( 'id' => 'bar', 'type' => 'text', 'label' => 'Bar' ),
+	)
+);
+WPAS_View_Config_Test_Runner::assert_eq( 'duplicate inline ids dedupe count', count( $dup_merged ), 2 );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'duplicate inline ids dedupe — first wins',
+	$dup_merged[0]['label'],
+	'First Foo'
+);
+
 // --- View-config resolution against synthetic config ------------------------
 
 $synthetic = array(
@@ -288,6 +304,22 @@ WPAS_View_Config_Test_Runner::assert_true(
 
 remove_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback );
 remove_filter( 'wp_admin_shell_view_config_postType_post_services', $variant_filter_callback );
+
+// R2: `_default` as a user-facing variant id normalizes to null —
+// no variant-qualified `..._default` filter must fire.
+$dunder_filter_fired = false;
+$dunder_callback     = function ( $doc ) use ( &$dunder_filter_fired ) {
+	$dunder_filter_fired = true;
+	return $doc;
+};
+add_filter( 'wp_admin_shell_view_config_postType_post__default', $dunder_callback );
+WP_Admin_Shell_View_Config::resolve( 'postType', 'post', '_default', $synthetic );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'`_default` variant param normalizes — no ..._default filter fires',
+	$dunder_filter_fired,
+	false
+);
+remove_filter( 'wp_admin_shell_view_config_postType_post__default', $dunder_callback );
 
 // --- Variants-for discovery -------------------------------------------------
 

@@ -94,6 +94,19 @@ class WP_Admin_Shell_View_Config_REST {
 		$variant = $request->get_param( 'variant' );
 		$variant = $variant === '' ? null : $variant;
 
+		// Reject empty-after-sanitize. WP's `required` arg-validator only
+		// checks the param is present; the sanitize_callback strips
+		// disallowed characters and may collapse `kind=$$$` to ''. Empty
+		// segments would otherwise mask a malformed request as a clean
+		// 200 with `config: {}`.
+		if ( $kind === '' || $name === '' ) {
+			return new WP_Error(
+				'wp_admin_shell_view_config_invalid_segment',
+				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		$doc = WP_Admin_Shell_View_Config::resolve( $kind, $name, $variant );
 
 		$response = array(
@@ -111,6 +124,14 @@ class WP_Admin_Shell_View_Config_REST {
 	public static function get_variants( $request ) {
 		$kind = $request->get_param( 'kind' );
 		$name = $request->get_param( 'name' );
+
+		if ( $kind === '' || $name === '' ) {
+			return new WP_Error(
+				'wp_admin_shell_view_config_invalid_segment',
+				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
+				array( 'status' => 400 )
+			);
+		}
 
 		$variants = WP_Admin_Shell_View_Config::variants_for( $kind, $name );
 

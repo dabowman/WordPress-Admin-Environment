@@ -91,6 +91,21 @@ ok(
 		overrideMerged[ 0 ].label === 'Headline'
 );
 
+// R1: duplicate inline ids dedupe — first wins, rest dropped.
+const dupMerged = mergeFields( [], [
+	{ id: 'foo', type: 'text', label: 'First Foo' },
+	{ id: 'foo', type: 'text', label: 'Second Foo' },
+	{ id: 'bar', type: 'text', label: 'Bar' },
+] );
+eq(
+	'duplicate inline ids dedupe — first wins',
+	dupMerged,
+	[
+		{ id: 'foo', type: 'text', label: 'First Foo' },
+		{ id: 'bar', type: 'text', label: 'Bar' },
+	]
+);
+
 // Garbage entries skipped.
 const dirty = mergeFields(
 	[ null, { type: 'text' }, { id: 'a', type: 'text', label: 'A' } ],

@@ -39,6 +39,12 @@ class WP_Admin_Shell_View_Config {
 		$variant = $variant === null || $variant === ''
 			? null
 			: WP_Admin_Shell_Field_Collections::sanitize_variant( (string) $variant );
+		// `_default` is the in-tree sentinel for the base bucket — not a
+		// legal user-facing variant id. Normalize to null so the base
+		// filter fires alone (no variant-qualified `..._default` filter).
+		if ( $variant === '_default' ) {
+			$variant = null;
+		}
 
 		if ( $config === null ) {
 			$config = wp_admin_shell_get_active_config();
@@ -236,14 +242,18 @@ class WP_Admin_Shell_View_Config {
 			}
 		}
 
-		// Append inline-only fields not present in base.
+		// Append inline-only fields not present in base. Track appended
+		// ids so duplicate inline entries (`[{id:'x'},{id:'x'}]`) don't
+		// stack — first wins, rest dropped.
 		foreach ( $inline as $field ) {
 			if ( ! is_array( $field ) || ! isset( $field['id'] ) ) {
 				continue;
 			}
-			if ( ! isset( $seen_ids[ $field['id'] ] ) ) {
-				$out[] = $field;
+			if ( isset( $seen_ids[ $field['id'] ] ) ) {
+				continue;
 			}
+			$seen_ids[ $field['id'] ] = true;
+			$out[]                    = $field;
 		}
 
 		return $out;

@@ -36,13 +36,17 @@ export function mergeFields( base, inline ) {
 		}
 	}
 
+	// Append inline-only ids. Track appended ids so duplicate inline
+	// entries (`[{id:'x'},{id:'x'}]`) don't stack — first wins.
 	for ( const field of inline ) {
 		if ( ! field || typeof field !== 'object' || ! ( 'id' in field ) ) {
 			continue;
 		}
-		if ( ! seen.has( field.id ) ) {
-			out.push( field );
+		if ( seen.has( field.id ) ) {
+			continue;
 		}
+		seen.add( field.id );
+		out.push( field );
 	}
 
 	return out;
