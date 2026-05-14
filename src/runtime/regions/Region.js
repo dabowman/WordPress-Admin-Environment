@@ -31,16 +31,13 @@ import { __ } from '@wordpress/i18n';
 import { MountedApp } from './mountApp';
 import { useRouteForRegion } from '../routing/useRoute';
 import { useKernel, useDynamicChildren } from '../kernel-context';
-import { userCan } from '../capabilities/userCan';
+import { shouldRenderRegion } from '../capabilities/shouldRenderRegion.mjs';
 import { getPlatformServices } from './platformServices.mjs';
 import { registerTrigger } from '../bindings/triggerStore.mjs';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
 
 export function Region( { region } ) {
-	if ( ! region ) {
-		return null;
-	}
-	if ( region.capability && ! userCan( region.capability ) ) {
+	if ( ! shouldRenderRegion( region, window.wpAdminShell?.capabilities ) ) {
 		return null;
 	}
 	return (

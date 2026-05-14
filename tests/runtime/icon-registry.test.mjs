@@ -8,8 +8,8 @@
  * registry's public contract — registration, lookup, fallback,
  * dev-mode miss warning, multi-register merge.
  *
- * Module-level state means each test resets the registry first to
- * avoid bleed-through.
+ * Each scenario constructs a fresh registry via `createIconRegistry()`
+ * so state never leaks between tests.
  */
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
-const { registerIcons, resolveIcon, _resetIconRegistry } = await import(
+const { createIconRegistry } = await import(
 	resolve( projectRoot, 'src/runtime/config/iconMap.js' )
 );
 
@@ -58,7 +58,7 @@ function withSilentWarn( fn ) {
 
 console.log( '\n— registry returns engine-registered icon by name —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST_ICON', edit: 'EDIT_ICON' } );
 	eq( 'post lookup', resolveIcon( 'post' ), 'POST_ICON' );
 	eq( 'edit lookup', resolveIcon( 'edit' ), 'EDIT_ICON' );
@@ -66,7 +66,7 @@ console.log( '\n— registry returns engine-registered icon by name —' );
 
 console.log( '\n— unknown name falls back to engine fallback —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST' }, { fallback: 'FB' } );
 	withSilentWarn( () => {
 		eq(
@@ -79,7 +79,7 @@ console.log( '\n— unknown name falls back to engine fallback —' );
 
 console.log( '\n— empty / null name returns fallback without warning —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST' }, { fallback: 'FB' } );
 	const captured = withSilentWarn( () => {
 		eq( 'empty string → fallback', resolveIcon( '' ), 'FB' );
@@ -91,7 +91,7 @@ console.log( '\n— empty / null name returns fallback without warning —' );
 
 console.log( '\n— no engine registered → resolveIcon returns null fallback —' );
 {
-	_resetIconRegistry();
+	const { resolveIcon } = createIconRegistry();
 	eq( 'empty registry, known-look returns null', resolveIcon( '' ), null );
 	withSilentWarn( () => {
 		eq(
@@ -104,7 +104,7 @@ console.log( '\n— no engine registered → resolveIcon returns null fallback �
 
 console.log( '\n— dev-mode emits one warning per unknown name —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST' }, { fallback: 'FB' } );
 	const captured = withSilentWarn( () => {
 		resolveIcon( 'mystery' );
@@ -126,7 +126,7 @@ console.log(
 	'\n— multiple registerIcons calls merge with last-wins on overlap —'
 );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST_v1', page: 'PAGE' } );
 	registerIcons( { post: 'POST_v2', media: 'MEDIA' } );
 	eq( 'overlapping key takes last value', resolveIcon( 'post' ), 'POST_v2' );
@@ -136,7 +136,7 @@ console.log(
 
 console.log( '\n— fallback can be replaced by a later registerIcons call —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons( { post: 'POST' }, { fallback: 'OLD_FB' } );
 	registerIcons( {}, { fallback: 'NEW_FB' } );
 	eq( 'fallback updates on re-registration', resolveIcon( '' ), 'NEW_FB' );
@@ -144,7 +144,7 @@ console.log( '\n— fallback can be replaced by a later registerIcons call —' 
 
 console.log( '\n— registerIcons tolerates missing args gracefully —' );
 {
-	_resetIconRegistry();
+	const { registerIcons, resolveIcon } = createIconRegistry();
 	registerIcons(); // no args
 	registerIcons( null ); // null table
 	registerIcons( 'not an object' ); // wrong type

@@ -78,36 +78,19 @@ PASS administrator: 33 apps
 | editor        | + posts-categories, posts-tags, pages-all, pages-new, comments |
 | administrator | every app declared in the shell (33) |
 
-**End-to-end browser smoke** — `tests/php/run-cap-gating-browser-smoke.sh` logs in as `admin` and `subscriber` via `wp-login.php`, fetches `/wp-admin/admin.php?page=wp-admin-shell`, and parses the inline `window.wpAdminShell.capabilities` map. Confirms the PHP→JSON→inline-script handoff matches the resolver smoke. Two roles cover the top and bottom of the cap matrix; the resolver smoke proves equivalence for the middle three.
-
 The pre-computed cap map is built by `wp_admin_shell_resolve_capabilities()` (`wp-admin-shell.php:265`), which walks the resolved doc's region + application capability fields plus four built-in source floors (`list_users`, `moderate_comments`, `manage_options`, `edit_theme_options`) and resolves each via `current_user_can()`. Because the JS `userCan()` reads from this same map (`src/runtime/capabilities/userCan.js`), the resolver smoke is truth-equivalent to what the browser renders.
 
-Re-run both before tagging:
+Re-run before tagging:
 
 ```bash
 npx wp-env run cli -- wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
-bash tests/php/run-cap-gating-browser-smoke.sh
 ```
 
-## Per-shell render + form-save smoke
+## Per-shell render shape coverage
 
-End-to-end smoke for the five bundled shells. `tests/php/run-shell-render-smoke.sh` logs in as admin, posts to `options.php` to switch the active shell (exercises the same sanitize/validate path as the in-product Settings form — covers the PHP 8.1+ NULL-sanitize regression fixed in `8cd79ef`), fetches the shell page, and confirms the inline `window.wpAdminShell` payload has resolved applications, navigation, and defaultRoute.
+Structural invariants for every bundled shell are pinned by `tests/php/run-shape-tests.php`: each shell resolves through the cascade, the resolver output carries the expected engine + regions + applications + defaultRoute, and `defaultRoute` matches at least one route pattern.
 
-```
-PASS wp-admin-default — apps=38 nav=15 defaultRoute=/dashboard-home
-PASS developer-admin  — apps=20 nav=10 defaultRoute=/posts
-PASS content-author   — apps=10 nav=3  defaultRoute=/posts
-PASS client-portal    — apps=11 nav=6  defaultRoute=/pages
-PASS v1-demo          — apps=10 nav=7  defaultRoute=/posts
-```
-
-PHP version under test: 8.3.30 (covers the 8.1+ regression target). Re-run before tagging:
-
-```bash
-bash tests/php/run-shell-render-smoke.sh
-```
-
-**Bug surfaced + fixed during this pass.** v0 shells with `hidden:true` apps (e.g. `content-author` hides its `editor` app) and no explicit `navigation` key were producing a sparse-keyed PHP array (`{0:..., 1:..., 3:...}`) from the v0→v1 normalizer's `array_filter` + `array_map` build path. `wp_json_encode` serialized that as a JSON object, JS `Array.isArray()` returned false, and `pruneNavItems` early-returned `[]` → empty sidebar. Fixed by wrapping with `array_values()` in `WP_Admin_Shell_Origin_Core::normalize_v0()`. Regression covered by a new "navigation is a sequential list" assertion in `run-shape-tests.php` (one per shell).
+**Bug surfaced + fixed during the v1 cycle.** v0 shells with `hidden:true` apps (e.g. `content-author` hides its `editor` app) and no explicit `navigation` key were producing a sparse-keyed PHP array (`{0:..., 1:..., 3:...}`) from the v0→v1 normalizer's `array_filter` + `array_map` build path. `wp_json_encode` serialized that as a JSON object, JS `Array.isArray()` returned false, and `pruneNavItems` early-returned `[]` → empty sidebar. Fixed by wrapping with `array_values()` in `WP_Admin_Shell_Origin_Core::normalize_v0()`. Regression covered by a "navigation is a sequential list" assertion in `run-shape-tests.php` (one per shell).
 
 ## Gutenberg dependency gate
 
@@ -125,4 +108,4 @@ The detect-and-conditionally-render alternative (mass-fallback to `@wordpress/co
 
 ## Sign-off
 
-When all five bundled shells render through the kernel with parity, fixture tests stay green (`run-cascade-tests` 22/22, `run-selection-tests` 5/5, `run-cap-tests` 54/54, `run-shape-tests` 82/82, `test:parity` 4/4, `test:schema` 11/11), the cap-gating smoke passes (`run-cap-gating-smoke.php` 5/5 + `run-cap-gating-browser-smoke.sh` 2/2), the per-shell render + form-save smoke passes (`run-shell-render-smoke.sh` 5/5), the build size remains under the ship target, and a manual run of the a11y checklist passes — v1 is ready for tag.
+When all five bundled shells render through the kernel with parity, fixture tests stay green (`run-cascade-tests`, `run-cap-tests`, `run-shape-tests`, `run-manifest-tests`, `run-tokens-tests`, `run-engine-defaults-tests`, `test:parity`, `test:schema`, `test:runtime`, `test:engines`), the cap-gating resolver smoke passes (`run-cap-gating-smoke.php` 5/5), the build size remains under the ship target, and a manual run of the a11y checklist passes — v1 is ready for tag.

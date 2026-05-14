@@ -288,13 +288,29 @@ console.warn = () => {}; // silence guard warnings during these cases.
 
 {
 	// Self-referential chain via deeply nested literal regions. Must
-	// terminate without stack overflow.
-	let deep = { role: 'region' };
+	// terminate without stack overflow AND preserve observable fields
+	// throughout — depth guard kicks in but doesn't strip what made it
+	// past the limit.
+	let deep = { role: 'innermost' };
 	for ( let i = 0; i < 50; i++ ) {
 		deep = { role: 'region', regions: { child: deep } };
 	}
 	const resolved = resolveRegion( deep, ENGINE );
 	ok( 'deeply nested literal chain returns without throwing', !! resolved );
+	// Walk a fixed number of levels and assert the role survives the
+	// recursion until the depth guard truncates. The guard's exact cutoff
+	// is intentionally not asserted — only that the top levels are intact.
+	let cursor = resolved;
+	let surviving = 0;
+	while ( cursor && cursor.role === 'region' && cursor.regions?.child ) {
+		surviving++;
+		cursor = cursor.regions.child;
+		if ( surviving > 60 ) break;
+	}
+	ok(
+		'deeply nested chain preserves at least 5 levels of role before guard truncates',
+		surviving >= 5
+	);
 }
 
 {

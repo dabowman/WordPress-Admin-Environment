@@ -40,28 +40,9 @@ function eq( label, actual, expected ) {
 	ok( label, a === e, a === e ? '' : `expected ${ e }, got ${ a }` );
 }
 
-console.log( '\n— alias resolves to tokens.json literal —' );
-{
-	const styles = {
-		color: {
-			bg: {
-				interactive: { brand: { strong: '{color.brand.500}' } },
-			},
-		},
-	};
-	const tokens = {
-		color: {
-			$type: 'color',
-			brand: { 500: { $value: '#3858e9' } },
-		},
-	};
-	const compiled = compileStyles( styles, tokens );
-	eq(
-		'WPDS slot picks up tokens.json literal',
-		compiled.top[ '--wpds-color-bg-interactive-brand-strong' ],
-		'#3858e9'
-	);
-}
+// Note: the happy-path "alias resolves to tokens.json literal" lives in
+// spec-worked-example.test.mjs as the canonical home (pins spec §9.1).
+// This suite focuses on the edge cases below.
 
 console.log( '\n— unresolved alias falls back to var() —' );
 {

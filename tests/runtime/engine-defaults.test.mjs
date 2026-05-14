@@ -5,13 +5,11 @@
  * The PHP resolver applies engine defaults UNDER admin.json server-side
  * before the kernel ever sees the config. The kernel re-runs the same
  * merge defensively for callers that bypass PHP — tests, Storybook
- * stories, alternative SSR pipelines.
- *
- * `kernel.js`'s `deepMergeUnder` is not exported; this suite tests an
- * inline copy with the same contract. If the kernel implementation
- * drifts, the test will start producing different output and fail
- * before the runtime drifts.
+ * stories, alternative SSR pipelines. Imported directly from the runtime
+ * module the kernel uses so the test cannot drift from production.
  */
+
+import { deepMergeUnder } from '../../src/runtime/styles/deepMergeUnder.mjs';
 
 let pass = 0;
 let fail = 0;
@@ -27,28 +25,6 @@ function ok( label, condition, detail = '' ) {
 			console.log( `      ${ detail }` );
 		}
 	}
-}
-
-function deepMergeUnder( over, under ) {
-	if ( under === null || under === undefined ) {
-		return over;
-	}
-	if ( over === null || over === undefined ) {
-		return under;
-	}
-	if (
-		typeof over !== 'object' ||
-		typeof under !== 'object' ||
-		Array.isArray( over ) ||
-		Array.isArray( under )
-	) {
-		return over;
-	}
-	const out = { ...under };
-	for ( const [ key, value ] of Object.entries( over ) ) {
-		out[ key ] = deepMergeUnder( value, under[ key ] );
-	}
-	return out;
 }
 
 console.log( '\n— deepMergeUnder: shape contract —' );

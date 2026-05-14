@@ -1,0 +1,9 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v2.json",
+	"id": "core:legacy-target",
+	"version": 1,
+	"title": "Legacy Target",
+	"role": "main",
+	"script": "core-legacy-target",
+	"target": "_self"
+}

@@ -19,9 +19,9 @@
  *   - No system-tile cohort, no attention modes, no submenu items.
  *     Those land as renderer-extension data once a plugin asks for them.
  *
- * Pure module, no DOM. Engines populate at module-load with their own
- * defaults; plugins add more at any time. Last-write wins on the
- * `'default'` slot — engine plugins can override the bundled default.
+ * Pure module, no DOM. The default kernel-wide instance lives at the
+ * bottom of this file; tests build isolated instances via
+ * `createDockRailRegistry()` so per-suite state never bleeds.
  */
 
 import type { ComponentType } from 'react';
@@ -49,49 +49,80 @@ export interface DockRailRendererProps {
 
 export type DockRailRenderer = ComponentType< DockRailRendererProps >;
 
-const registry: Map< string, DockRailRenderer > = new Map();
-
-/**
- * Register a renderer under a name. Calling twice overwrites — engine
- * plugins that want to replace the bundled `'default'` simply register
- * under the same name at module-load.
- * @param name
- * @param Component
- */
-export function registerDockRailRenderer(
-	name: string,
-	Component: DockRailRenderer
-): void {
-	if ( typeof name !== 'string' || ! name ) {
-		throw new TypeError(
-			'registerDockRailRenderer: name must be a non-empty string'
-		);
-	}
-	if ( typeof Component !== 'function' ) {
-		throw new TypeError(
-			'registerDockRailRenderer: Component must be a React component'
-		);
-	}
-	registry.set( name, Component );
+export interface DockRailRegistry {
+	registerDockRailRenderer: (
+		name: string,
+		Component: DockRailRenderer
+	) => void;
+	getDockRailRenderer: (
+		name: string | null | undefined
+	) => DockRailRenderer | null;
+	listDockRailRenderers: () => ReadonlyArray< string >;
 }
 
 /**
- * Look up a renderer by name. Falls back to `'default'` when the
- * named renderer is absent. Returns `null` only when neither the
- * requested name nor the default is registered (shouldn't happen
- * in practice — the engine registers `'default'` at module-load).
- * @param name
+ * Build an isolated dock-rail renderer registry. The module-level
+ * exports below are thin facades over a default instance.
  */
-export function getDockRailRenderer(
-	name: string | null | undefined
-): DockRailRenderer | null {
-	if ( typeof name === 'string' && name && registry.has( name ) ) {
-		return registry.get( name ) ?? null;
+export function createDockRailRegistry(): DockRailRegistry {
+	const registry: Map< string, DockRailRenderer > = new Map();
+
+	function registerDockRailRenderer(
+		name: string,
+		Component: DockRailRenderer
+	): void {
+		if ( typeof name !== 'string' || ! name ) {
+			throw new TypeError(
+				'registerDockRailRenderer: name must be a non-empty string'
+			);
+		}
+		if ( typeof Component !== 'function' ) {
+			throw new TypeError(
+				'registerDockRailRenderer: Component must be a React component'
+			);
+		}
+		registry.set( name, Component );
 	}
-	return registry.get( 'default' ) ?? null;
+
+	function getDockRailRenderer(
+		name: string | null | undefined
+	): DockRailRenderer | null {
+		if ( typeof name === 'string' && name && registry.has( name ) ) {
+			return registry.get( name ) ?? null;
+		}
+		return registry.get( 'default' ) ?? null;
+	}
+
+	function listDockRailRenderers(): ReadonlyArray< string > {
+		return Array.from( registry.keys() );
+	}
+
+	return {
+		registerDockRailRenderer,
+		getDockRailRenderer,
+		listDockRailRenderers,
+	};
 }
 
-/** Diagnostic — names currently registered. */
-export function listDockRailRenderers(): ReadonlyArray< string > {
-	return Array.from( registry.keys() );
-}
+const defaultRegistry = createDockRailRegistry();
+
+/**
+ * Register a renderer under a name on the default kernel-wide registry.
+ * Calling twice overwrites — engine plugins that want to replace the
+ * bundled `'default'` simply register under the same name at
+ * module-load.
+ */
+export const registerDockRailRenderer =
+	defaultRegistry.registerDockRailRenderer;
+
+/**
+ * Look up a renderer by name on the default kernel-wide registry. Falls
+ * back to `'default'` when the named renderer is absent. Returns `null`
+ * only when neither the requested name nor the default is registered
+ * (shouldn't happen in practice — the engine registers `'default'` at
+ * module-load).
+ */
+export const getDockRailRenderer = defaultRegistry.getDockRailRenderer;
+
+/** Diagnostic — names currently registered on the default registry. */
+export const listDockRailRenderers = defaultRegistry.listDockRailRenderers;

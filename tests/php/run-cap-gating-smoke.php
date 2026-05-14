@@ -1,11 +1,17 @@
 <?php
 /**
- * Cap-gating smoke for `wp-admin-default`.
+ * Cap-gating smoke for `wp-admin-default` against the v2 region tree.
  *
- * Walks the resolved navigation tree against each test user (subscriber →
- * administrator) and prints which app ids survive the JS prune logic in
- * src/apps/navigation/index.js#pruneNavItems. Compares to a hand-curated
- * expectation set per role and reports drift.
+ * The v2 shape carries nav items with inline `capability` fields under
+ * `regions.sidebar.regions.nav.config.items[]`. The smoke walks the
+ * resolved region tree, prunes nav items the current user can't reach
+ * (`current_user_can($item['capability'])`), derives a stable id from
+ * each surviving item's `href` (`#/dashboard/home` → `dashboard-home`),
+ * and asserts the per-role visible-id set matches a hand-curated
+ * expectation.
+ *
+ * Mirrors the JS pruning logic in `src/apps/navigation/index.js#pruneNavItems`
+ * — same recursion, same drop-orphan-separators rule.
  *
  * Run: wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
  */
@@ -23,43 +29,69 @@ $roles = array(
 	'administrator' => 'administrator',
 );
 
-/** Hand-curated expected visible app ids per role for `wp-admin-default`. */
+/** Hand-curated expected visible nav-item ids per role for `wp-admin-default`. */
 $expected = array(
 	'subscriber'    => array( 'dashboard-home', 'profile' ),
-	'contributor'   => array( 'dashboard-home', 'posts-all', 'posts-new', 'profile', 'tools-available' ),
-	'author'        => array( 'dashboard-home', 'posts-all', 'posts-new', 'media-library', 'media-new', 'profile', 'tools-available' ),
+	'contributor'   => array( 'dashboard-home', 'posts', 'posts-new', 'profile', 'tools' ),
+	'author'        => array( 'dashboard-home', 'posts', 'posts-new', 'media', 'media-new', 'profile', 'tools' ),
 	'editor'        => array(
 		'dashboard-home',
-		'posts-all', 'posts-new', 'posts-categories', 'posts-tags',
-		'media-library', 'media-new',
-		'pages-all', 'pages-new',
+		'posts', 'posts-new', 'posts-categories', 'posts-tags',
+		'media', 'media-new',
+		'pages', 'pages-new',
 		'comments',
 		'profile',
-		'tools-available',
+		'tools',
 	),
 	'administrator' => array(
 		'dashboard-home', 'dashboard-updates',
-		'posts-all', 'posts-new', 'posts-categories', 'posts-tags',
-		'media-library', 'media-new',
-		'pages-all', 'pages-new',
+		'posts', 'posts-new', 'posts-categories', 'posts-tags',
+		'media', 'media-new',
+		'pages', 'pages-new',
 		'comments',
 		'appearance-themes', 'appearance-editor', 'appearance-customize',
-		'plugins-installed', 'plugins-add', 'plugins-editor',
-		'users-all', 'users-new',
+		'plugins', 'plugins-new', 'plugins-editor',
+		'users', 'users-new',
 		'profile',
-		'tools-available', 'tools-import', 'tools-export', 'tools-site-health', 'tools-export-data', 'tools-erase-data',
+		'tools', 'tools-import', 'tools-export', 'tools-site-health', 'tools-export-data', 'tools-erase-data',
 		'settings-general', 'settings-writing', 'settings-reading', 'settings-discussion', 'settings-media', 'settings-permalinks', 'settings-privacy',
 	),
 );
 
 /**
- * Mirrors src/apps/navigation/index.js#pruneNavItems in PHP.
+ * Walk regions recursively, return the first nav-config items[] block we hit.
+ *
+ * @param array $regions
+ * @return array
+ */
+function smoke_find_nav_items( $regions ) {
+	if ( ! is_array( $regions ) ) {
+		return array();
+	}
+	foreach ( $regions as $region ) {
+		if ( ! is_array( $region ) ) {
+			continue;
+		}
+		if ( isset( $region['app'] ) && 'core:navigation' === $region['app'] ) {
+			return $region['config']['items'] ?? array();
+		}
+		if ( isset( $region['regions'] ) && is_array( $region['regions'] ) ) {
+			$found = smoke_find_nav_items( $region['regions'] );
+			if ( ! empty( $found ) ) {
+				return $found;
+			}
+		}
+	}
+	return array();
+}
+
+/**
+ * Mirrors `pruneNavItems` in src/apps/navigation/index.js.
  *
  * @param array $items
- * @param array $apps_by_id
- * @return array Pruned items.
+ * @return array
  */
-function smoke_prune_nav( $items, $apps_by_id ) {
+function smoke_prune_nav( $items ) {
 	if ( ! is_array( $items ) ) {
 		return array();
 	}
@@ -73,7 +105,7 @@ function smoke_prune_nav( $items, $apps_by_id ) {
 			continue;
 		}
 		if ( isset( $item['screen'] ) || isset( $item['group'] ) ) {
-			$kids = smoke_prune_nav( $item['items'] ?? array(), $apps_by_id );
+			$kids = smoke_prune_nav( $item['items'] ?? array() );
 			if ( count( $kids ) === 0 ) {
 				continue;
 			}
@@ -81,18 +113,14 @@ function smoke_prune_nav( $items, $apps_by_id ) {
 			$out[]         = $item;
 			continue;
 		}
-		if ( isset( $item['app'] ) ) {
-			$app = $apps_by_id[ $item['app'] ] ?? null;
-			if ( ! $app ) {
-				continue;
-			}
-			if ( ! empty( $app['capability'] ) && ! current_user_can( $app['capability'] ) ) {
-				continue;
-			}
+		// External links pass through unconditionally — no in-shell cap to check.
+		if ( ! empty( $item['external'] ) ) {
 			$out[] = $item;
 			continue;
 		}
-		// Plain link or other — pass through.
+		if ( ! empty( $item['capability'] ) && ! current_user_can( $item['capability'] ) ) {
+			continue;
+		}
 		$out[] = $item;
 	}
 	while ( count( $out ) && ! empty( $out[0]['separator'] ) ) {
@@ -104,15 +132,41 @@ function smoke_prune_nav( $items, $apps_by_id ) {
 	return $out;
 }
 
-/** Recurse pruned tree, return list of every reachable app id. */
-function smoke_collect_app_ids( $items ) {
+/**
+ * Derive a stable id from an in-shell href like `#/dashboard/home` → `dashboard-home`.
+ * Returns null for items without an in-shell href (separators, external links, etc.).
+ *
+ * @param array $item
+ * @return string|null
+ */
+function smoke_id_from_item( $item ) {
+	if ( ! is_array( $item ) || ! isset( $item['href'] ) ) {
+		return null;
+	}
+	if ( ! empty( $item['external'] ) ) {
+		return null;
+	}
+	$href = (string) $item['href'];
+	if ( strpos( $href, '#/' ) !== 0 ) {
+		return null;
+	}
+	$path = substr( $href, 2 );
+	if ( '' === $path ) {
+		return null;
+	}
+	return str_replace( '/', '-', $path );
+}
+
+/** Recurse pruned tree, return list of every reachable nav-item id. */
+function smoke_collect_ids( $items ) {
 	$ids = array();
 	foreach ( $items as $item ) {
-		if ( isset( $item['app'] ) ) {
-			$ids[] = $item['app'];
+		$id = smoke_id_from_item( $item );
+		if ( null !== $id ) {
+			$ids[] = $id;
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			$ids = array_merge( $ids, smoke_collect_app_ids( $item['items'] ) );
+			$ids = array_merge( $ids, smoke_collect_ids( $item['items'] ) );
 		}
 	}
 	return $ids;
@@ -131,18 +185,17 @@ foreach ( $roles as $role => $login ) {
 	WP_Admin_Shell_Resolver::reset_request_memo();
 
 	$resolved = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
-	$apps     = $resolved['settings']['applications'] ?? $resolved['applications'] ?? array();
-	$nav      = $resolved['settings']['navigation'] ?? $resolved['navigation'] ?? array();
+	$regions  = $resolved['regions'] ?? array();
+	$nav      = smoke_find_nav_items( $regions );
 
-	$apps_by_id = array();
-	foreach ( $apps as $app ) {
-		if ( isset( $app['id'] ) ) {
-			$apps_by_id[ $app['id'] ] = $app;
-		}
+	if ( empty( $nav ) ) {
+		echo "FAIL {$role}: no core:navigation items[] found in resolved regions\n";
+		++$failures;
+		continue;
 	}
 
-	$pruned   = smoke_prune_nav( $nav, $apps_by_id );
-	$got_ids  = smoke_collect_app_ids( $pruned );
+	$pruned   = smoke_prune_nav( $nav );
+	$got_ids  = smoke_collect_ids( $pruned );
 	sort( $got_ids );
 	$want_ids = $expected[ $role ];
 	sort( $want_ids );
@@ -151,7 +204,7 @@ foreach ( $roles as $role => $login ) {
 	$extra   = array_values( array_diff( $got_ids, $want_ids ) );
 
 	if ( count( $missing ) === 0 && count( $extra ) === 0 ) {
-		echo "PASS {$role}: " . count( $got_ids ) . " apps\n";
+		echo "PASS {$role}: " . count( $got_ids ) . " nav items\n";
 		++$pass;
 	} else {
 		echo "FAIL {$role}\n";

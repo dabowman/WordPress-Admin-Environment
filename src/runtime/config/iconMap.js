@@ -17,19 +17,66 @@
  * App contract (unchanged):
  *   import { resolveIcon } from '../../runtime/config/iconMap';
  *   const Icon = resolveIcon( 'post' );
+ *
+ * Tests construct an isolated registry via `createIconRegistry()` so
+ * per-suite state does not bleed across test files.
  */
-
-const registry = {};
-let fallbackIcon = null;
 
 const IS_DEV =
 	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
 
-const warned = new Set();
+/**
+ * Build an isolated icon registry with the standard register/resolve API.
+ * The module-level `registerIcons` / `resolveIcon` exports are thin
+ * facades over a default instance.
+ *
+ * @return {{registerIcons: Function, resolveIcon: Function}} Isolated registry handle.
+ */
+export function createIconRegistry() {
+	const registry = {};
+	let fallbackIcon = null;
+	const warned = new Set();
+
+	function registerIcons( table, options = {} ) {
+		if ( table && typeof table === 'object' ) {
+			Object.assign( registry, table );
+		}
+		if ( options.fallback ) {
+			fallbackIcon = options.fallback;
+		}
+	}
+
+	function resolveIcon( name ) {
+		if ( ! name ) {
+			return fallbackIcon;
+		}
+		const icon = registry[ name ];
+		if ( icon ) {
+			return icon;
+		}
+		if ( IS_DEV && ! warned.has( name ) ) {
+			warned.add( name );
+			// eslint-disable-next-line no-console
+			console.warn(
+				`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to engine default. Known: ${ Object.keys(
+					registry
+				)
+					.sort()
+					.join( ', ' ) }`
+			);
+		}
+		return fallbackIcon;
+	}
+
+	return { registerIcons, resolveIcon };
+}
+
+const defaultRegistry = createIconRegistry();
 
 /**
- * Register an icon-name → component map. Engines call this at module
- * load. Multiple calls merge — last-write-wins on overlapping keys.
+ * Register icons against the default kernel-wide registry. Engines call
+ * this at module load. Multiple calls merge — last-write-wins on
+ * overlapping keys.
  *
  * @param {Object<string,*>} table              Icon-name → component map.
  * @param {Object}           [options]
@@ -37,18 +84,10 @@ const warned = new Set();
  *                                              name misses or is empty.
  *                                              Overwrites prior fallback.
  */
-export function registerIcons( table, options = {} ) {
-	if ( table && typeof table === 'object' ) {
-		Object.assign( registry, table );
-	}
-	if ( options.fallback ) {
-		fallbackIcon = options.fallback;
-	}
-}
+export const registerIcons = defaultRegistry.registerIcons;
 
 /**
- * Resolve an icon name string to a component supplied by the active
- * engine.
+ * Resolve an icon name against the default kernel-wide registry.
  *
  * Returns the engine-registered fallback when the name misses or is
  * empty. In dev mode, the first miss per name emits a console warning
@@ -58,37 +97,4 @@ export function registerIcons( table, options = {} ) {
  * @param {string|undefined|null} name
  * @return {*} Icon component (or `null` when no fallback registered).
  */
-export function resolveIcon( name ) {
-	if ( ! name ) {
-		return fallbackIcon;
-	}
-	const icon = registry[ name ];
-	if ( icon ) {
-		return icon;
-	}
-	if ( IS_DEV && ! warned.has( name ) ) {
-		warned.add( name );
-		// eslint-disable-next-line no-console
-		console.warn(
-			`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to engine default. Known: ${ Object.keys(
-				registry
-			)
-				.sort()
-				.join( ', ' ) }`
-		);
-	}
-	return fallbackIcon;
-}
-
-/**
- * Test-only: clear the registry. Lets tests register a controlled icon
- * set without bleed-through from other test files. Not part of the
- * public API.
- */
-export function _resetIconRegistry() {
-	for ( const key of Object.keys( registry ) ) {
-		delete registry[ key ];
-	}
-	fallbackIcon = null;
-	warned.clear();
-}
+export const resolveIcon = defaultRegistry.resolveIcon;

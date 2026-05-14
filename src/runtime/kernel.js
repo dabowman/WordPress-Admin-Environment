@@ -6,7 +6,7 @@ import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { SlotFillProvider } from '@wordpress/components';
 import { ThemeProviderHost } from './styles/ThemeProviderHost';
-import { userCan } from './capabilities/userCan';
+import { shouldRenderRegion } from './capabilities/shouldRenderRegion.mjs';
 import { attachShellSwitcherToWindow } from './shell-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
@@ -14,39 +14,7 @@ import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
 import { createDynamicChildrenStore } from './regions/dynamicChildren.mjs';
 import { NavigationGuard } from './dirty-state/NavigationGuard';
 import { BindingsConsumer } from './bindings/BindingsConsumer';
-
-/**
- * Deep-merge plain-object trees with `over` winning on overlapping keys.
- * Used to fold engine `default-styles` UNDER admin.json `styles` when
- * the kernel is mounted with raw config (tests, Storybook). The PHP
- * resolver normally does this server-side; the JS path is defensive.
- *
- * Arrays are replaced wholesale (no positional merge) — matches the
- * PHP merge's behavior for indexed arrays.
- * @param {*} over
- * @param {*} under
- */
-function deepMergeUnder( over, under ) {
-	if ( under === null || under === undefined ) {
-		return over;
-	}
-	if ( over === null || over === undefined ) {
-		return under;
-	}
-	if (
-		typeof over !== 'object' ||
-		typeof under !== 'object' ||
-		Array.isArray( over ) ||
-		Array.isArray( under )
-	) {
-		return over;
-	}
-	const out = { ...under };
-	for ( const [ key, value ] of Object.entries( over ) ) {
-		out[ key ] = deepMergeUnder( value, under[ key ] );
-	}
-	return out;
-}
+import { deepMergeUnder } from './styles/deepMergeUnder.mjs';
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -139,14 +107,16 @@ export function kernel( config ) {
 			: []
 	);
 	const unhonoredWarned = new Set();
+	const capMap =
+		typeof window !== 'undefined'
+			? window.wpAdminShell?.capabilities
+			: null;
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
 		// user lacks capability for is dropped before mounting, so
-		// contains[] never evaluates.
-		if (
-			regionInstance.capability &&
-			! userCan( regionInstance.capability )
-		) {
+		// contains[] never evaluates. Shared decision with `<Region>`
+		// via `shouldRenderRegion` so the rule is one place.
+		if ( ! shouldRenderRegion( regionInstance, capMap ) ) {
 			return;
 		}
 		const resolved = resolveRegion( regionInstance, engineManifest );

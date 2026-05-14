@@ -3,7 +3,9 @@
  *
  * Pure registry — register / look up / list / overwrite. Renderers
  * are React components; we don't render here, just verify the
- * identity flows through.
+ * identity flows through. Each scenario builds an isolated registry
+ * via `createDockRailRegistry()` so module-level singletons in the
+ * production export are never touched.
  *
  * Run:
  *   node --experimental-strip-types tests/engines/core-desktop/dock-rail-registry.test.ts
@@ -22,8 +24,7 @@ const mod = ( await import(
 	)
 ) ) as typeof import('../../../src/runtime/engines/core-desktop/windowing/dockRailRegistry');
 
-const { registerDockRailRenderer, getDockRailRenderer, listDockRailRenderers } =
-	mod;
+const { createDockRailRegistry } = mod;
 
 let pass = 0;
 let fail = 0;
@@ -47,67 +48,74 @@ function threw( fn: () => void ): boolean {
 	}
 }
 
+type RegisterFn = ReturnType<
+	typeof createDockRailRegistry
+>[ 'registerDockRailRenderer' ];
+type RendererArg = Parameters< RegisterFn >[ 1 ];
+
 const Stub = function StubRenderer() {
 	return null;
-} as unknown as Parameters< typeof registerDockRailRenderer >[ 1 ];
+} as unknown as RendererArg;
 
 const Stub2 = function StubRenderer2() {
 	return null;
-} as unknown as Parameters< typeof registerDockRailRenderer >[ 1 ];
+} as unknown as RendererArg;
 
 console.log( '— dockRailRegistry —\n' );
 
-registerDockRailRenderer( 'test:basic', Stub );
-ok(
-	'register stores the renderer',
-	getDockRailRenderer( 'test:basic' ) === Stub
-);
-ok(
-	'list includes the registered name',
-	listDockRailRenderers().indexOf( 'test:basic' ) >= 0
-);
+{
+	const {
+		registerDockRailRenderer,
+		getDockRailRenderer,
+		listDockRailRenderers,
+	} = createDockRailRegistry();
+	registerDockRailRenderer( 'test:basic', Stub );
+	ok(
+		'register stores the renderer',
+		getDockRailRenderer( 'test:basic' ) === Stub
+	);
+	ok(
+		'list includes the registered name',
+		listDockRailRenderers().indexOf( 'test:basic' ) >= 0
+	);
 
-registerDockRailRenderer( 'test:basic', Stub2 );
-ok(
-	'register overwrites on duplicate name',
-	getDockRailRenderer( 'test:basic' ) === Stub2
-);
+	registerDockRailRenderer( 'test:basic', Stub2 );
+	ok(
+		'register overwrites on duplicate name',
+		getDockRailRenderer( 'test:basic' ) === Stub2
+	);
+}
 
-ok(
-	'getDockRailRenderer falls back when name is unknown + default registered',
-	( () => {
-		registerDockRailRenderer( 'default', Stub );
-		return getDockRailRenderer( 'no-such-renderer' ) === Stub;
-	} )()
-);
+{
+	const { registerDockRailRenderer, getDockRailRenderer } =
+		createDockRailRegistry();
+	registerDockRailRenderer( 'default', Stub );
+	ok(
+		'getDockRailRenderer falls back when name is unknown + default registered',
+		getDockRailRenderer( 'no-such-renderer' ) === Stub
+	);
+	ok(
+		'getDockRailRenderer falls back when name is empty',
+		getDockRailRenderer( '' ) === Stub
+	);
+}
 
-ok(
-	'getDockRailRenderer falls back when name is empty',
-	getDockRailRenderer( '' ) === Stub
-);
-
-ok(
-	'register rejects empty name',
-	threw( () =>
-		registerDockRailRenderer(
-			'',
-			Stub as unknown as Parameters<
-				typeof registerDockRailRenderer
-			>[ 1 ]
+{
+	const { registerDockRailRenderer } = createDockRailRegistry();
+	ok(
+		'register rejects empty name',
+		threw( () => registerDockRailRenderer( '', Stub ) )
+	);
+	ok(
+		'register rejects non-function component',
+		threw( () =>
+			registerDockRailRenderer(
+				'test:bad',
+				'not a function' as unknown as RendererArg
+			)
 		)
-	)
-);
-ok(
-	'register rejects non-function component',
-	threw( () =>
-		registerDockRailRenderer(
-			'test:bad',
-			'not a function' as unknown as Parameters<
-				typeof registerDockRailRenderer
-			>[ 1 ]
-		)
-	)
-);
+	);
+}
 
 console.log(
 	`\n${ pass } passed, ${ fail } failed (${ pass + fail } total)\n`
