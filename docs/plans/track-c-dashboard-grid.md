@@ -3,7 +3,7 @@
 **Status:** ready
 **Estimate:** ~8d
 **Dependencies:** none (consumes existing `core:dynamic-children` platform service from PR #34)
-**Branch base:** `feat/c2-view-config` (or `main` post-merge)
+**Branch base:** `main` (C2 merged via PR #38)
 **Suggested branch name:** `feat/c4-dashboard-grid`
 
 ## Goal

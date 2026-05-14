@@ -2,9 +2,77 @@
 
 Copy any prompt below verbatim into the agent dispatcher. Each is self-sufficient — the agent should be able to start without further context.
 
-**Common preamble (all tracks):**
+## Worktree setup (run once before launching agents)
 
-The agent should branch from `feat/c2-view-config` (post-C2 base) or `main` once C2 is merged. Tests should stay green before opening a PR. The PR description's "Test plan" section should mirror the plan's "Acceptance criteria" checklist.
+Parallel agents need parallel working trees — one filesystem checkout per agent. `git worktree` is the right tool: each worktree points at the same `.git`, has its own branch + index + node_modules, can be edited simultaneously without conflict.
+
+From the main checkout:
+
+```bash
+cd ~/Github/WordPress-Admin-Environment
+git fetch origin
+git checkout main && git pull origin main
+
+mkdir -p ~/wpas-worktrees
+git worktree add ~/wpas-worktrees/track-a-preload    -b feat/c1-rest-preload      main
+git worktree add ~/wpas-worktrees/track-b-shims      -b feat/c3-menu-route-shims  main
+git worktree add ~/wpas-worktrees/track-c-dashboard  -b feat/c4-dashboard-grid    main
+git worktree add ~/wpas-worktrees/track-d-lazy       -b feat/c5-lazy-app-loading  main
+git worktree add ~/wpas-worktrees/track-e-postsapp   -b feat/c2-postsapp-hardening main
+```
+
+Then `npm install` in each worktree (`node_modules` isn't shared) — or symlink:
+
+```bash
+for wt in track-a-preload track-b-shims track-c-dashboard track-d-lazy track-e-postsapp; do
+  ln -s ~/Github/WordPress-Admin-Environment/node_modules ~/wpas-worktrees/$wt/node_modules
+done
+```
+
+Symlinking saves disk + install time but means a `node_modules` update in any worktree affects all. If tracks add new deps, prefer per-worktree installs.
+
+After Track E merges, create F.1–F.5 worktrees:
+
+```bash
+git worktree add ~/wpas-worktrees/track-f1-taxonomy -b feat/c2-migrate-taxonomy main
+git worktree add ~/wpas-worktrees/track-f2-users    -b feat/c2-migrate-users    main
+git worktree add ~/wpas-worktrees/track-f3-comments -b feat/c2-migrate-comments main
+git worktree add ~/wpas-worktrees/track-f4-plugins  -b feat/c2-migrate-plugins  main
+git worktree add ~/wpas-worktrees/track-f5-themes   -b feat/c2-migrate-themes   main
+```
+
+Cleanup after PR merge:
+
+```bash
+git worktree remove ~/wpas-worktrees/track-a-preload   # etc.
+git branch -d feat/c1-rest-preload                     # if merged
+```
+
+## `wp-env` coordination
+
+`wp-env` runs a single Docker stack on fixed ports (8888 / 8889). **Only one worktree can run wp-env at a time.** Each agent's `.wp-env.json` would otherwise fight the same container.
+
+Practical answer: run `wp-env` from one worktree only (recommend the main checkout). Agents in side worktrees stick to:
+
+- `npm run test:schema` — Ajv sweep, no server
+- `npm run test:runtime` — pure-ESM Node, no server
+- `npm run test:parity` — WPDS snapshot diff, no server
+- `npm run test:engines` — TS engine tests, no server
+- `npm run lint:js` — ESLint, no server
+- `npm run build` — webpack, no server
+
+For PHP-side tests (`wp eval-file ...`), agents queue them and the user (or one designated agent on the main checkout) runs the suite when needed. Since `.wp-env.json` mounts `"."` as the plugin, the main checkout's wp-env automatically sees side-worktree code IF the side worktree commits are merged back — for in-flight branches, the side worktree's PHP code isn't visible to the main wp-env unless you symlink or rebase.
+
+Simpler workflow: each agent develops + commits + opens PR. The user runs the full PHP suite locally against the merged result before pulling the PR. For tight PHP-test feedback loops, the agent can:
+
+1. Switch the main wp-env to its branch temporarily: `cd ~/Github/WordPress-Admin-Environment && git stash && git checkout feat/c1-rest-preload && npx wp-env run cli wp eval-file ...`
+2. Or rsync its tree into a dedicated docker bind-mount (overkill for this scope).
+
+Document in the PR which PHP suites need a manual run.
+
+## Common preamble (all tracks)
+
+Branch from `main` (C2 already merged via PR #38). Worktree directory: `~/wpas-worktrees/track-<id>-<short-name>`. Tests should stay green before opening a PR. PR description's "Test plan" section mirrors the plan's "Acceptance criteria" checklist.
 
 ---
 
@@ -30,7 +98,7 @@ GOAL
 Ship CIAB's REST preload middleware as a declarative cascade primitive. New `preload[]` admin.json block; PHP `WP_Admin_Shell_Preload` class calls `rest_preload_api_request` on the cascade-resolved list and injects via `wp_add_inline_script` on `wp-api-fetch`. Biggest perf-per-LOC win in the CIAB-adoption plan.
 
 BRANCH
-feat/c1-rest-preload (from feat/c2-view-config)
+feat/c1-rest-preload (from main; work in ~/wpas-worktrees/track-a-preload)
 
 DELIVERABLES
 - Schema additions to docs/schemas/admin-v2.json (`preload[]` + $defs/preloadEntry)
@@ -80,7 +148,7 @@ GOAL
 Plugins fluent in CIAB's `next_admin_register_menu_item()` + `next_admin_register_admin_route()` should port to the shell with mechanical `s/next_admin_/wp_admin_shell_/g` rename. Ship the two shims; write into the plugin origin via the existing `wp_admin_shell_data_plugin` filter. Drop CIAB's inline `current_user_can()` checks — shell's 4-layer cap model covers it.
 
 BRANCH
-feat/c3-menu-route-shims (from feat/c2-view-config)
+feat/c3-menu-route-shims (from main; work in ~/wpas-worktrees/track-b-shims)
 
 DELIVERABLES
 - includes/cascade/class-wp-admin-shell-menu-items.php (registry + nav-region resolver + filter contribution)
@@ -132,7 +200,7 @@ GOAL
 First-class widget grid primitive built on the existing `core:dynamic-children` platform service. Widgets are apps with a `dashboardWidget` manifest block; admin.json `dashboardWidgets` overrides positions/sizes/visibility. CIAB's `next_admin_register_dashboard_widget()` ports as `wp_admin_shell_register_dashboard_widget()` and writes into the plugin origin.
 
 BRANCH
-feat/c4-dashboard-grid (from feat/c2-view-config)
+feat/c4-dashboard-grid (from main; work in ~/wpas-worktrees/track-c-dashboard)
 
 DELIVERABLES
 - New region template `core:dashboard-grid` in src/runtime/engines/core-default/engine.json + CSS
@@ -191,7 +259,7 @@ GOAL
 Registry accepts both `{ render: Component }` (eager, current) and `{ load: () => import(...) }` (lazy, new). Mount path awaits the load on first match. Webpack named chunks per app via magic comments. Bundle shrinks proportional to apps not on the user's path.
 
 BRANCH
-feat/c5-lazy-app-loading (from feat/c2-view-config)
+feat/c5-lazy-app-loading (from main; work in ~/wpas-worktrees/track-d-lazy)
 
 DELIVERABLES
 - src/runtime/registry/createRegistry.js extended for lazy shape, identity-cached on first resolve
@@ -250,7 +318,7 @@ PostsApp has three C2 follow-ups. Land all three together because they all touch
 This track GATES Track F (the five entity-CRUD migrations). The LABELS-table pattern + view-resync pattern must be documented in CLAUDE.md so the next migrations copy it verbatim.
 
 BRANCH
-feat/c2-postsapp-hardening (from feat/c2-view-config)
+feat/c2-postsapp-hardening (from main; work in ~/wpas-worktrees/track-e-postsapp)
 
 DELIVERABLES
 - src/apps/posts/index.js: FIELD_LABELS + ACTION_LABELS constants; prefer-over-spec wiring; view-resync useEffect keyed on [postType, variant]
@@ -309,7 +377,7 @@ GOAL
 Migrate `core:<app>` to the C2 view-config primitive. Move structural DataViews config (fields / actions / defaultView / defaultLayouts) into app.json#viewConfig; keep action callbacks + modal renderers in index.js keyed by spec id. Apply the LABELS table pattern + view-state resync useEffect + title-dedup pattern from PostsApp. Behavior must be parity-preserving — the only visible change is that admin.json can now override the spec.
 
 BRANCH
-feat/c2-migrate-<app> (from main after E lands)
+feat/c2-migrate-<app> (from main after E lands; work in ~/wpas-worktrees/track-f<N>-<app>)
 
 DELIVERABLES
 - src/apps/<app>/index.js: rewrite the DataViews mount in the post-E shape
@@ -359,7 +427,11 @@ When dispatching, replace `<app>` and adjust the entity-specific bullets:
 
 Before launching agents:
 
-1. **Land C2** to `main` so all tracks branch from a stable base. Or branch from `feat/c2-view-config` and rebase later.
+1. **Land C2** to `main` (done — PR #38 merged) so all tracks branch from a stable base.
+   ```bash
+   cd ~/Github/WordPress-Admin-Environment
+   git fetch origin && git checkout main && git pull origin main
+   ```
 2. **Confirm test surface is green** on the base branch: `npm run test:schema && npm run test:runtime && npm run test:parity && npm run test:engines && npm run lint:js && npm run build`, plus the PHP suites.
 3. **Launch tracks A, B, C, D, E in parallel** (E is the only one with a downstream gate).
 4. **Wait for E to merge** before launching F sub-tracks.

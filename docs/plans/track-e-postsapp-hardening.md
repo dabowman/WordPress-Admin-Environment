@@ -3,7 +3,7 @@
 **Status:** ready
 **Estimate:** ~2d
 **Dependencies:** none
-**Branch base:** `feat/c2-view-config` (or `main` post-merge)
+**Branch base:** `main` (C2 merged via PR #38)
 **Suggested branch name:** `feat/c2-postsapp-hardening`
 
 ## Goal

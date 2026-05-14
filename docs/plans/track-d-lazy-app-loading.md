@@ -3,7 +3,7 @@
 **Status:** ready
 **Estimate:** ~6d
 **Dependencies:** none (but coordinates with Track C on `builtins.js`)
-**Branch base:** `feat/c2-view-config` (or `main` post-merge)
+**Branch base:** `main` (C2 merged via PR #38)
 **Suggested branch name:** `feat/c5-lazy-app-loading`
 
 ## Goal

@@ -1,12 +1,12 @@
 # CIAB Adoption — Parallel Track Index
 
 **Date:** 2026-05-14
-**Status:** C2 shipped on `feat/c2-view-config`. Remaining phases split into six parallel tracks below.
+**Status:** C2 merged to `main` via PR #38. Remaining phases split into six parallel tracks below.
 
 ## Dependency graph
 
 ```
-                                  [feat/c2-view-config — merged to main]
+                                       [main — C2 merged, PR #38]
                                               │
                   ┌──────────┬─────────────┬──┴──────────┬───────────────┐
                   ▼          ▼             ▼             ▼               ▼
@@ -30,7 +30,7 @@ Within Track F, the five sub-migrations (taxonomy / users / comments / plugins /
 
 ## Branching strategy
 
-Every track branches from `feat/c2-view-config` (or `main` once C2 is merged). Each opens its own PR. Final integration order doesn't matter — tracks are designed to not conflict on shared files except where called out in each plan's "Coordination" section.
+Every track branches from `main` and works in its own `git worktree` under `~/wpas-worktrees/track-<id>-<short>/`. Each opens its own PR. Final integration order doesn't matter — tracks are designed to not conflict on shared files except where called out in each plan's "Coordination" section. See `docs/plans/agent-prompts.md` for the worktree setup + `wp-env` coordination details.
 
 ## Track files
 
