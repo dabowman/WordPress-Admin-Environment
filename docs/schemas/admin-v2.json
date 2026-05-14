@@ -135,7 +135,7 @@
 					"$ref": "#/$defs/dashboardWidgetOverride"
 				}
 			},
-			"description": "Per-widget overrides keyed by app id. Each entry layers on top of the app manifest's `dashboardWidget` block — admin.json wins per-property. Use to hide widgets the shell ships with (`hidden: true`), to pin a widget to a specific cell, or to grow its size. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` contribute through the plugin origin and are overrideable by site/role/user origins via this block. See spec §13 #12."
+			"description": "Per-widget overrides keyed by app id. Each entry layers on top of the app manifest's `dashboardWidget` block — admin.json wins per-property. Use to hide widgets the shell ships with (`hidden: true`), to pin a widget to a specific cell, or to grow its size. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` contribute through the plugin origin and are overrideable by site/role/user origins via this block. See spec §13 #9."
 		}
 	},
 
