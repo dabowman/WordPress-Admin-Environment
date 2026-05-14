@@ -144,6 +144,21 @@ class WP_Admin_Shell_Menu_Items {
 			);
 		}
 
+		if ( $has_to && ! self::is_safe_to( $args['to'] ) ) {
+			return new WP_Error(
+				'wp_admin_shell_menu_item_unsafe_scheme',
+				/* translators: %s: rejected `to` value */
+				sprintf( __( 'Menu item "to" value %s uses a scheme that is not in the allowlist (http/https/ftp/ftps/mailto/tel/sms or relative `/`/`#`).', 'wp-admin-shell' ), $args['to'] )
+			);
+		}
+
+		if ( array_key_exists( 'badge', $args ) && $args['badge'] !== null && ! is_scalar( $args['badge'] ) ) {
+			return new WP_Error(
+				'wp_admin_shell_menu_item_invalid_badge',
+				__( 'Menu item "badge" must be a scalar (string, int, float, bool) or null.', 'wp-admin-shell' )
+			);
+		}
+
 		if ( $args['parent_type'] === 'dropdown' ) {
 			self::warn_dropdown_fallback( $id );
 			$args['parent_type'] = 'drilldown';
@@ -357,6 +372,15 @@ class WP_Admin_Shell_Menu_Items {
 		return $shell;
 	}
 
+	/**
+	 * Convert a CIAB `to` value into a shell `href`.
+	 *
+	 * Path-template `to` values (e.g. `/posts/{id}`) pass through to the
+	 * href verbatim — the shim does not interpolate at menu-render time.
+	 * Per-route param substitution lives in the router (`matchRoute.mjs`)
+	 * and runs when a navigation event matches a route pattern; nav items
+	 * link to the literal pattern, and the router handles binding.
+	 */
 	private static function convert_to_to_href( $to ) {
 		$to = (string) $to;
 		if ( $to === '' ) {
@@ -382,6 +406,33 @@ class WP_Admin_Shell_Menu_Items {
 			return true;
 		}
 		return (bool) preg_match( '#^[a-z][a-z0-9+.\-]*://#i', $value );
+	}
+
+	/**
+	 * Reject `javascript:`, `data:`, `vbscript:`, custom-app schemes etc.
+	 * Allowlist: relative paths (`/`, `#`, plain), protocol-relative (`//`),
+	 * http(s), ftp(s), mailto, tel, sms. Anything else with a `:` is
+	 * rejected at register time so it never reaches a React `<a href>`.
+	 */
+	private static function is_safe_to( $to ) {
+		if ( ! is_string( $to ) || $to === '' ) {
+			return true;
+		}
+		if ( $to[0] === '/' || $to[0] === '#' ) {
+			return true;
+		}
+		if ( strpos( $to, '//' ) === 0 ) {
+			return true;
+		}
+		if ( preg_match( '#^(https?|ftps?)://#i', $to ) ) {
+			return true;
+		}
+		if ( preg_match( '#^(mailto|tel|sms):#i', $to ) ) {
+			return true;
+		}
+		// Relative path with no scheme separator is fine
+		// (`some/sub/page`); anything else with `:` is rejected.
+		return strpos( $to, ':' ) === false;
 	}
 
 	/**
@@ -507,3 +558,14 @@ class WP_Admin_Shell_Menu_Items {
 }
 
 add_filter( 'wp_admin_shell_data_plugin', array( 'WP_Admin_Shell_Menu_Items', 'contribute' ), 5 );
+
+// Registry state lives in static class memory — invisible to the
+// default cache-signal map. Hook into the cache layer's filter so a
+// menu-item registration delta forces a fresh resolver run cross-request.
+add_filter( 'wp_admin_shell_cache_signals', function ( $signals ) {
+	$registry = WP_Admin_Shell_Menu_Items::all();
+	if ( ! empty( $registry ) ) {
+		$signals['menu_items'] = md5( wp_json_encode( $registry ) );
+	}
+	return $signals;
+} );

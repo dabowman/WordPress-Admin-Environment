@@ -174,9 +174,14 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
  * fine). The cascade resolver's first run on the page render or first
  * REST hit triggers `wp_admin_shell_data_plugin` and memoizes the
  * resolved tree through `WP_Admin_Shell_Cache`. Registrations made
- * after the resolver's first run miss the current request entirely
- * and only land on the next cache-invalidating event (option write,
- * plugin/theme activation, role change, manual `WP_Admin_Shell_Cache::flush()`).
+ * after the resolver's first run miss the current request entirely.
+ *
+ * Cross-request invalidation: the registry serializes its current
+ * state into the cache key via the `wp_admin_shell_cache_signals`
+ * filter, so a registration delta between page loads (e.g. plugin
+ * toggles a feature flag that changes which items it registers)
+ * automatically picks a different cache bucket on the next hit. No
+ * explicit `flush()` needed for deterministic registrations.
  *
  * @param string $id   Menu-item id (must be unique within the registry).
  * @param array  $args Args. See `WP_Admin_Shell_Menu_Items::register`.
@@ -200,7 +205,9 @@ function wp_admin_shell_register_menu_item( $id, $args ) {
  *
  * Timing: same as `wp_admin_shell_register_menu_item()` — call from
  * `init` priority 9 or earlier so the cascade resolver picks the route
- * up on its first memoized run.
+ * up on its first memoized run. Cross-request cache invalidation also
+ * works the same way: the registry's serialized state contributes to
+ * the resolver cache key via the `wp_admin_shell_cache_signals` filter.
  *
  * @param string $path Route path (`/posts`, `/posts/{id}`, `/media/*`).
  * @param array  $args Args. See `WP_Admin_Shell_Admin_Routes::register`.

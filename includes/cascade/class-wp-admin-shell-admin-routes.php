@@ -184,3 +184,14 @@ class WP_Admin_Shell_Admin_Routes {
 }
 
 add_filter( 'wp_admin_shell_data_plugin', array( 'WP_Admin_Shell_Admin_Routes', 'contribute' ), 5 );
+
+// Registry state lives in static class memory — invisible to the
+// default cache-signal map. Hook into the cache layer's filter so a
+// route registration delta forces a fresh resolver run cross-request.
+add_filter( 'wp_admin_shell_cache_signals', function ( $signals ) {
+	$registry = WP_Admin_Shell_Admin_Routes::all();
+	if ( ! empty( $registry ) ) {
+		$signals['admin_routes'] = md5( wp_json_encode( $registry ) );
+	}
+	return $signals;
+} );

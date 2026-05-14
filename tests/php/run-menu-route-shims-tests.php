@@ -161,6 +161,29 @@ WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects unknown parent_type', 
 $err = wp_admin_shell_register_menu_item( 'plugin-foo', array( 'to' => '/foo', 'label' => 'Foo Again' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects duplicate id', $err );
 
+// Dangerous-scheme rejection — `to` allowlist enforces http(s)/ftp(s)/
+// mailto/tel/sms or relative paths only. Defense in depth even though
+// plugin code is trusted.
+foreach ( array( 'javascript:alert(1)', 'data:text/html,<script>', 'vbscript:msgbox(1)', 'file:///etc/passwd' ) as $bad ) {
+	$err = wp_admin_shell_register_menu_item( 'bad-' . md5( $bad ), array( 'to' => $bad, 'label' => 'Bad' ) );
+	WPAS_Shim_Test_Runner::assert_wp_error( "register rejects dangerous scheme: $bad", $err );
+}
+foreach ( array( 'mailto:hello@example.com', 'tel:+15551234', 'https://wordpress.org', '/relative', '#hash' ) as $ok ) {
+	$err_id = 'ok-' . md5( $ok );
+	$id     = wp_admin_shell_register_menu_item( $err_id, array( 'to' => $ok, 'label' => 'OK' ) );
+	WPAS_Shim_Test_Runner::assert_eq( "register accepts safe scheme: $ok", $id, $err_id );
+}
+
+// Badge floor — only scalars pass.
+$err = wp_admin_shell_register_menu_item( 'badge-array', array( 'to' => '/x', 'label' => 'X', 'badge' => array( 'html' => '<script>' ) ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects array badge', $err );
+$err = wp_admin_shell_register_menu_item( 'badge-object', array( 'to' => '/x', 'label' => 'X', 'badge' => new stdClass() ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects object badge', $err );
+$ok = wp_admin_shell_register_menu_item( 'badge-int', array( 'to' => '/x', 'label' => 'X', 'badge' => 7 ) );
+WPAS_Shim_Test_Runner::assert_eq( 'register accepts int badge', $ok, 'badge-int' );
+$ok = wp_admin_shell_register_menu_item( 'badge-string', array( 'to' => '/x', 'label' => 'X', 'badge' => 'NEW' ) );
+WPAS_Shim_Test_Runner::assert_eq( 'register accepts string badge', $ok, 'badge-string' );
+
 // -----------------------------------------------------------------------------
 // Menu items — default region resolution
 // -----------------------------------------------------------------------------
@@ -689,6 +712,56 @@ WP_Admin_Shell_Resolver::reset_request_memo();
 if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
 	WP_Admin_Shell_Cache::flush();
 }
+
+// -----------------------------------------------------------------------------
+// Cache-fingerprint signal — registry mutations contribute to the cache key
+// -----------------------------------------------------------------------------
+
+WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Shell_Admin_Routes::reset();
+
+$baseline_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'cache signals — no menu_items key with empty menu registry',
+	! isset( $baseline_signals['menu_items'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'cache signals — no admin_routes key with empty route registry',
+	! isset( $baseline_signals['admin_routes'] )
+);
+
+wp_admin_shell_register_menu_item( 'cache-fp', array( 'to' => '/cache', 'label' => 'Cache' ) );
+$after_menu_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'menu-item registration adds menu_items fingerprint to cache signals',
+	isset( $after_menu_signals['menu_items'] )
+);
+
+wp_admin_shell_register_menu_item( 'cache-fp-2', array( 'to' => '/cache-2', 'label' => 'Cache 2' ) );
+$after_second_menu_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'second menu-item registration changes the menu_items fingerprint',
+	$after_menu_signals['menu_items'] !== $after_second_menu_signals['menu_items']
+);
+
+wp_admin_shell_register_admin_route( '/cache-fp', array( 'app' => 'plugin:my-plugin/cache' ) );
+$after_route_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'admin-route registration adds admin_routes fingerprint to cache signals',
+	isset( $after_route_signals['admin_routes'] )
+);
+
+WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Shell_Admin_Routes::reset();
+$cleared_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'registry reset clears menu_items fingerprint',
+	! isset( $cleared_signals['menu_items'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'registry reset clears admin_routes fingerprint',
+	! isset( $cleared_signals['admin_routes'] )
+);
 
 // -----------------------------------------------------------------------------
 // Summary

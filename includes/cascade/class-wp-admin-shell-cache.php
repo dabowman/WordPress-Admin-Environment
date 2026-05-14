@@ -76,6 +76,14 @@ class WP_Admin_Shell_Cache {
 
 	/**
 	 * Compute a stable cache key over every origin's signal source.
+	 *
+	 * Filter `wp_admin_shell_cache_signals` lets in-process contributors
+	 * (programmatic shim registries, runtime-computed origins) inject
+	 * their own fingerprints so the cached tree invalidates when those
+	 * inputs change. Default signal set covers disk + option + user-meta
+	 * surfaces only — anything held in static class state must hook the
+	 * filter or risk stale cache across requests when the registry shape
+	 * changes between hits.
 	 */
 	public static function key_for( $context = array() ) {
 		$signals = array(
@@ -87,6 +95,7 @@ class WP_Admin_Shell_Cache {
 			'user_prefs'  => self::user_meta_signal( 'wp_admin_shell_user_prefs' ),
 			'user_roles'  => self::current_user_roles(),
 		);
+		$signals = apply_filters( 'wp_admin_shell_cache_signals', $signals, $context );
 		return substr( md5( wp_json_encode( $signals ) ), 0, 16 );
 	}
 
