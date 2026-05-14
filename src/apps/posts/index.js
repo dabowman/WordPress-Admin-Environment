@@ -38,6 +38,24 @@ const STATUS_LABELS = {
 };
 
 /**
+ * Sane defaults for the DataViews `view` state shape. View-configs
+ * authored in admin.json typically omit empty-list fields like
+ * `filters: []` and `search: ''` — those keys must always exist or
+ * downstream code iterating them crashes (the queryArgs `for (... of
+ * view.filters )` loop is the canonical victim).
+ */
+const VIEW_DEFAULTS = {
+	type: 'table',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 20,
+	sort: { field: 'date', direction: 'desc' },
+	fields: [],
+	layout: {},
+};
+
+/**
  * Field id → render callback. View-config declares the *shape* (id,
  * type, label, hide/sort/search flags); the React layer supplies the
  * row renderer. Unknown ids fall through to DataViews' default
@@ -214,9 +232,10 @@ export default function PostsApp( { config } ) {
 		}
 	);
 
-	const [ view, setView ] = useState(
-		() => viewConfig.defaultView || POSTS_VIEW_CONFIG_FALLBACK.defaultView
-	);
+	const [ view, setView ] = useState( () => ( {
+		...VIEW_DEFAULTS,
+		...( viewConfig.defaultView || POSTS_VIEW_CONFIG_FALLBACK.defaultView ),
+	} ) );
 
 	const queryArgs = useMemo( () => {
 		const args = {
