@@ -21,6 +21,16 @@
  * Per-origin contribution rides the existing
  * `wp_admin_shell_data_{origin}` filters — no new filter added.
  *
+ * Filter idempotence requirement.
+ * The collector calls `wp_admin_shell_data_{origin}` against each raw
+ * origin doc independently of `WP_Admin_Shell_Resolver::resolve_with`
+ * (which also runs them). Two passes per render. Pure-functional
+ * filters: harmless. Side-effecting filters (logging, registry
+ * mutation, REST registration): fire twice. **Per-origin filter
+ * callbacks MUST be idempotent.** If a callback's side effect would
+ * be wrong to repeat, gate it with a static or hook a different
+ * filter that runs once (e.g. `wp_admin_shell_data` post-merge).
+ *
  * @package WP_Admin_Shell
  */
 
@@ -42,8 +52,9 @@ class WP_Admin_Shell_Preload {
 	 * site → role → user) and dedupes on `path|method`.
 	 *
 	 * Malformed entries (non-string, non-2-tuple, unknown verb, empty
-	 * path) are skipped silently in production and warned under
-	 * `WP_DEBUG`. A single bad entry never poisons the whole list.
+	 * path) are skipped silently — schema validation catches the same
+	 * cases at authoring time, so runtime warnings would be redundant
+	 * noise. A single bad entry never poisons the whole list.
 	 *
 	 * @param array $origins Origin map: `[ 'core' => array, 'engine' => array, ... ]`.
 	 * @return array<int, array{0:string,1:string}> List of `[ path, method ]` tuples.

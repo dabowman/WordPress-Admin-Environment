@@ -48,9 +48,9 @@ class WPAS_Preload_Test_Runner {
 // Make sure preload entries authored at `me` actually authenticate. The
 // CLI runner is unauthenticated by default — switch to user 1 so
 // `/wp/v2/users/me` resolves a real record instead of 401.
-$admin_id = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
-if ( ! empty( $admin_id ) ) {
-	wp_set_current_user( (int) $admin_id[0] );
+$admin_ids = get_users( array( 'role' => 'administrator', 'number' => 1, 'fields' => 'ids' ) );
+if ( ! empty( $admin_ids ) ) {
+	wp_set_current_user( (int) $admin_ids[0] );
 }
 
 // --- normalize_entry --------------------------------------------------------
@@ -263,6 +263,37 @@ WPAS_Preload_Test_Runner::assert_eq(
 	'hydrate empty list → empty cache',
 	$empty_cache,
 	array()
+);
+
+// --- inject() end-to-end smoke --------------------------------------------
+
+// `inject()` short-circuits when `wp-api-fetch` isn't registered. The
+// CLI bootstrap doesn't enqueue admin scripts, so register a stub
+// handle before exercising the code path.
+if ( ! wp_script_is( 'wp-api-fetch', 'registered' ) ) {
+	wp_register_script( 'wp-api-fetch', '/dev/null/wp-api-fetch.js', array(), '0' );
+}
+
+$inject_filter = function ( $doc ) {
+	$doc['preload'] = array( '/wp/v2/users/me' );
+	return $doc;
+};
+add_filter( 'wp_admin_shell_data_plugin', $inject_filter );
+
+WP_Admin_Shell_Preload::inject();
+
+remove_filter( 'wp_admin_shell_data_plugin', $inject_filter );
+
+$inline_after = wp_scripts()->get_data( 'wp-api-fetch', 'after' );
+$inline_str   = is_array( $inline_after ) ? implode( "\n", $inline_after ) : (string) $inline_after;
+
+WPAS_Preload_Test_Runner::assert_true(
+	'inject attaches createPreloadingMiddleware inline on wp-api-fetch[after]',
+	strpos( $inline_str, 'wp.apiFetch.createPreloadingMiddleware(' ) !== false
+);
+WPAS_Preload_Test_Runner::assert_true(
+	'inject inline payload references the preloaded path',
+	strpos( $inline_str, '/wp/v2/users/me' ) !== false
 );
 
 // --- Summary --------------------------------------------------------------
