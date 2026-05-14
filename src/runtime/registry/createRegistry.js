@@ -26,9 +26,8 @@
  * Both shapes cannot be set simultaneously (`Component` + `load`) —
  * that's a contradictory declaration and the registry rejects it. The
  * descriptor stored in `sources` keeps this invariant for life — the
- * read path resolves through separate caches rather than mutating the
- * descriptor (`resolveComponent` writes `loadCache`; `getResolvedComponent`
- * reads `resolvedCache`).
+ * read path resolves through `loadCache` (id → Promise<Component>)
+ * rather than mutating the descriptor.
  */
 
 const VALID_KINDS = new Set( [ 'app', 'engine' ] );
@@ -37,12 +36,12 @@ export function createRegistry() {
 	const sources = new Map();
 	// Promise cache: id → Promise<Component>. Identity-stable so the
 	// mount path can feed the same Promise into `React.lazy()` across
-	// renders.
+	// renders — React.lazy memoizes per-thunk internally, so a stable
+	// Promise reference is what keeps Suspense state consistent.
+	// After a Promise settles, `React.lazy` returns its resolved
+	// component synchronously on subsequent renders; no separate
+	// sync cache needed.
 	const loadCache = new Map();
-	// Synchronous cache: id → Component. Populated after a Promise
-	// resolves. Lets consumers skip the lazy/Suspense path on the
-	// second mount without mutating the registered descriptor.
-	const resolvedCache = new Map();
 
 	function register( source ) {
 		if ( ! source || typeof source !== 'object' ) {
@@ -92,13 +91,6 @@ export function createRegistry() {
 			);
 		}
 		sources.set( source.id, source );
-		// Eager app entries are immediately available synchronously.
-		// Engines route through `get(id, 'engine')` instead so we
-		// keep `resolvedCache` app-only — matches `resolveComponent`'s
-		// app-only contract.
-		if ( hasComponent && source.kind === 'app' ) {
-			resolvedCache.set( source.id, source.Component );
-		}
 		return source;
 	}
 
@@ -154,7 +146,6 @@ export function createRegistry() {
 		if ( source.Component ) {
 			const eager = Promise.resolve( source.Component );
 			loadCache.set( id, eager );
-			resolvedCache.set( id, source.Component );
 			return eager;
 		}
 		if ( typeof source.load !== 'function' ) {
@@ -177,12 +168,11 @@ export function createRegistry() {
 						`createRegistry: load() for "${ id }" did not resolve to a React component`
 					);
 				}
-				// Populate the sync cache so subsequent
-				// `getResolvedComponent` calls skip the Promise
-				// machinery. The descriptor itself is left untouched
-				// — `Component XOR load` stays true for the life of
-				// the registration.
-				resolvedCache.set( id, Component );
+				// Descriptor is intentionally left untouched —
+				// `Component XOR load` stays true for life. React.lazy
+				// memoizes the resolved component on the cached
+				// Promise, so subsequent mounts render synchronously
+				// without re-running this thunk.
 				return Component;
 			} );
 		loadCache.set( id, promise );
@@ -190,27 +180,8 @@ export function createRegistry() {
 	}
 
 	/**
-	 * Synchronous accessor for an already-resolved component. Returns
-	 * the component reference for eager registrations and for lazy
-	 * registrations whose load promise has settled successfully.
-	 * Returns `null` for unresolved-lazy / unknown / non-app ids — the
-	 * caller falls back to `resolveComponent` + Suspense in that case.
-	 *
-	 * Distinguishing "not loaded yet" from "loaded and resolved to a
-	 * real component" lets the mount path skip the React.lazy wrapper
-	 * once a chunk is cached, avoiding an extra Suspense flash on
-	 * re-mounts.
-	 *
-	 * @param {string} id App source id.
-	 * @return {Function|null} Cached component reference, or null.
-	 */
-	function getResolvedComponent( id ) {
-		return resolvedCache.get( id ) || null;
-	}
-
-	/**
-	 * Drop the cached Promise + resolved-component for an id so the
-	 * next `resolveComponent` call re-fires `load()` from scratch.
+	 * Drop the cached Promise for an id so the next `resolveComponent`
+	 * call re-fires `load()` from scratch.
 	 *
 	 * The mount path's error-boundary retry button calls this — without
 	 * it, a rejected chunk-load Promise lives in `loadCache` for the
@@ -220,8 +191,8 @@ export function createRegistry() {
 	 * transient signals), so the recovery path has to clear the cache
 	 * deliberately.
 	 *
-	 * No-op when there's nothing cached. Always returns the descriptor
-	 * for chaining or null for unknown ids.
+	 * No-op when there's nothing cached. Returns the descriptor on
+	 * success or null for unknown ids.
 	 *
 	 * @param {string} id App source id.
 	 * @return {Object|null} Source descriptor, or null for unknown ids.
@@ -232,16 +203,6 @@ export function createRegistry() {
 			return null;
 		}
 		loadCache.delete( id );
-		// Eager entries stay resolved — their Component is part of the
-		// boot bundle, there's nothing to re-fetch. Only invalidate the
-		// resolvedCache for lazy entries (where `load` is the source of
-		// truth).
-		if (
-			source.Component === undefined &&
-			typeof source.load === 'function'
-		) {
-			resolvedCache.delete( id );
-		}
 		return source;
 	}
 
@@ -252,7 +213,6 @@ export function createRegistry() {
 		list,
 		has,
 		resolveComponent,
-		getResolvedComponent,
 		invalidateComponent,
 	};
 }

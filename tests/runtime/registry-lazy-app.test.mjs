@@ -234,10 +234,11 @@ console.log( '\n— registry: lazy app shape —' );
 	ok( 'resolveComponent returns null for engines', result === null );
 }
 
-// 12. After lazy resolve, the synchronous accessor returns the resolved
-//     component so subsequent mounts skip Suspense. The registered
-//     descriptor itself is NOT mutated — `Component XOR load` stays
-//     true for life so invariants from `register()` keep holding.
+// 12. After lazy resolve, the registered descriptor is NOT mutated —
+//     `Component XOR load` stays true for life so invariants from
+//     `register()` keep holding. React.lazy memoizes the resolved
+//     component on the cached Promise itself, so no separate sync
+//     cache is needed (and no descriptor mutation either).
 {
 	const r = createRegistry();
 	r.register( {
@@ -245,15 +246,7 @@ console.log( '\n— registry: lazy app shape —' );
 		id: 'test:hydrate',
 		load: () => Promise.resolve( { default: LazyComponent } ),
 	} );
-	ok(
-		'getResolvedComponent returns null before first resolve',
-		r.getResolvedComponent( 'test:hydrate' ) === null
-	);
 	await r.resolveComponent( 'test:hydrate' );
-	ok(
-		'getResolvedComponent returns Component after first resolve',
-		r.getResolvedComponent( 'test:hydrate' ) === LazyComponent
-	);
 	const got = r.get( 'test:hydrate', 'app' );
 	ok(
 		'lazy descriptor is NOT mutated with Component (invariant preserved)',
@@ -261,44 +254,10 @@ console.log( '\n— registry: lazy app shape —' );
 	);
 }
 
-// 12a. Eager registrations expose their Component through
-//      `getResolvedComponent` immediately — no resolve roundtrip needed.
-{
-	const r = createRegistry();
-	r.register( {
-		kind: 'app',
-		id: 'test:eager-sync',
-		Component: EagerComponent,
-	} );
-	ok(
-		'eager getResolvedComponent returns Component without resolve',
-		r.getResolvedComponent( 'test:eager-sync' ) === EagerComponent
-	);
-}
-
-// 12b. getResolvedComponent returns null for unknown ids and for
-//      non-app kinds (engines route through `get(id, 'engine')`).
-{
-	const r = createRegistry();
-	r.register( {
-		kind: 'engine',
-		id: 'test:engine-sync',
-		Component: EagerComponent,
-	} );
-	ok(
-		'getResolvedComponent returns null for unknown id',
-		r.getResolvedComponent( 'test:nope' ) === null
-	);
-	ok(
-		'getResolvedComponent returns null for engines (apps-only)',
-		r.getResolvedComponent( 'test:engine-sync' ) === null
-	);
-}
-
-// 13. invalidateComponent drops the cached Promise + resolved
-//     component for a lazy id so the next resolve re-fires `load()`.
-//     Required for the mount-path retry-button to actually retry —
-//     webpack 5 does not auto-retry rejected `import()` promises.
+// 13. invalidateComponent drops the cached Promise for a lazy id so
+//     the next resolve re-fires `load()`. Required for the mount-path
+//     retry-button to actually retry — webpack 5 does not auto-retry
+//     rejected `import()` promises.
 {
 	const r = createRegistry();
 	let loadCalls = 0;
@@ -314,11 +273,6 @@ console.log( '\n— registry: lazy app shape —' );
 	ok( 'first resolve calls load() once', loadCalls === 1 );
 
 	r.invalidateComponent( 'test:invalidate' );
-	ok(
-		'invalidate drops resolvedCache for lazy id',
-		r.getResolvedComponent( 'test:invalidate' ) === null
-	);
-
 	await r.resolveComponent( 'test:invalidate' );
 	ok( 'second resolve after invalidate re-fires load()', loadCalls === 2 );
 }
@@ -367,9 +321,8 @@ console.log( '\n— registry: lazy app shape —' );
 	ok( 'resolve after invalidate succeeds', Component === LazyComponent );
 }
 
-// 15. invalidateComponent leaves eager apps' resolvedCache intact —
-//     there's nothing to re-fetch, the Component is part of the boot
-//     bundle.
+// 15. invalidateComponent on an eager id is harmless — re-resolving
+//     just returns the same registered Component (no `load` to fire).
 {
 	const r = createRegistry();
 	r.register( {
@@ -378,9 +331,10 @@ console.log( '\n— registry: lazy app shape —' );
 		Component: EagerComponent,
 	} );
 	r.invalidateComponent( 'test:eager-invalidate' );
+	const Component = await r.resolveComponent( 'test:eager-invalidate' );
 	ok(
-		'eager resolvedCache survives invalidate',
-		r.getResolvedComponent( 'test:eager-invalidate' ) === EagerComponent
+		'eager resolve still returns Component after invalidate',
+		Component === EagerComponent
 	);
 }
 

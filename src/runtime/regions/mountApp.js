@@ -189,8 +189,7 @@ class AppErrorBoundary extends ReactComponent {
 				);
 			}
 			// Not a load failure — propagate so the upstream boundary
-			// (or React's dev overlay) surfaces the real error. Clear
-			// state first so we don't loop on subsequent renders.
+			// (or React's dev overlay) surfaces the real error.
 			throw error;
 		}
 		return this.props.children;

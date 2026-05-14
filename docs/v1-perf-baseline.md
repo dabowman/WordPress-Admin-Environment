@@ -42,7 +42,7 @@ Captured 2026-05-14 with `npm run build` (production). Pre-D = `main` at `e86ed3
 
 | Asset | Pre-D | Post-D | Δ |
 |---|---:|---:|---:|
-| `index.js` (boot bundle) | 2,164,072 B (2.06 MiB) | 214,491 B (210 KiB) | **−90.1 %** |
+| `index.js` (boot bundle) | 2,164,072 B (2.06 MiB) | 214,289 B (209 KiB) | **−90.1 %** |
 | `index.css` | 28,735 B | 20,860 B | −27 % |
 | Entrypoint (cold-mount JS+CSS) | 2.12 MiB | 250 KiB | **−88 %** |
 | Vendors chunk `245.js` (lazy) | — | 1,832,141 B (1.75 MiB) | new — loaded on first app mount that needs it |
