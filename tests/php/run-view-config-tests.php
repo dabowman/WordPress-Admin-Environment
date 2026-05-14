@@ -177,7 +177,7 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	'author'
 );
 
-// R1: duplicate inline ids dedupe — first append wins, rest dropped.
+// Duplicate inline ids dedupe — first append wins, rest dropped.
 $dup_merged = WP_Admin_Shell_View_Config::merge_fields(
 	array(),
 	array(
@@ -305,8 +305,8 @@ WPAS_View_Config_Test_Runner::assert_true(
 remove_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback );
 remove_filter( 'wp_admin_shell_view_config_postType_post_services', $variant_filter_callback );
 
-// R2: `_default` as a user-facing variant id normalizes to null —
-// no variant-qualified `..._default` filter must fire.
+// `_default` as a user-facing variant id normalizes to null — the
+// variant-qualified `..._default` filter must NOT fire.
 $dunder_filter_fired = false;
 $dunder_callback     = function ( $doc ) use ( &$dunder_filter_fired ) {
 	$dunder_filter_fired = true;
@@ -388,11 +388,8 @@ WP_Admin_Shell_Field_Collections::reset();
 
 // --- Implicit cascade load -------------------------------------------------
 
-// resolve() and variants_for() with $config = null must hit the real
-// cascade resolver via wp_admin_shell_get_active_config(). The earlier
-// assertions pass synthetic configs and never exercised this path —
-// missing it shipped a fatal "undefined method Config::get_active()"
-// to the REST endpoints.
+// resolve() and variants_for() with $config = null hit the real
+// cascade resolver via wp_admin_shell_get_active_config().
 $auto_resolved = WP_Admin_Shell_View_Config::resolve( 'postType', 'post' );
 WPAS_View_Config_Test_Runner::assert_true(
 	'resolve() with null config returns array (cascade auto-load)',
@@ -482,10 +479,8 @@ WPAS_View_Config_Test_Runner::assert_true(
 	isset( $with_variant['viewConfigs']['postType']['product']['services'] )
 );
 
-// End-to-end: admin.json is authoritative for the triples it declares,
-// manifest baseline must NOT deep-merge on top. Regression guard for
-// the bug where authors removing fields/layouts from admin.json saw
-// the manifest values re-appear via cascade additive merge.
+// admin.json declarations are authoritative — manifest baselines do
+// not deep-merge onto declared triples.
 $origins_authoritative = array(
 	'core'   => array(),
 	'engine' => array(),
@@ -494,8 +489,8 @@ $origins_authoritative = array(
 			'postType' => array(
 				'recipe' => array(
 					'_default' => array(
-						// Author declares a single field. Manifest declares
-						// four. Post-merge tree must show one, not five.
+						// Author declares one field; manifest declares four.
+						// Post-merge tree must show one, not five.
 						'fields' => array(
 							array( 'id' => 'title', 'type' => 'text', 'label' => 'Recipe' ),
 						),
@@ -510,9 +505,8 @@ $origins_authoritative = array(
 	'user'   => array(),
 );
 
-// Register a fresh baseline app with the 3-field manifest under a
-// distinct id (the earlier 1-field `baseline-app` registration would
-// be re-used due to first-registration-wins).
+// Register a baseline app with three fields under a distinct id —
+// first-registration-wins means any earlier `baseline-app` id is locked.
 $reg->register_app( array(
 	'id'         => 'plugin:wpas-test/recipe-fat-baseline-app',
 	'version'    => 1,
@@ -569,13 +563,6 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	count( $resolved_fallback['viewConfigs']['postType']['recipe-fat']['_default']['fields'] ),
 	3
 );
-
-// Clean up synthetic manifest registrations so later tests in the
-// same `wp eval-file` run see the bundled-only registry. No public
-// unregister exists in production code; `deregister()` is test-only.
-$reg->deregister( 'plugin:wpas-test/baseline-app' );
-$reg->deregister( 'plugin:wpas-test/services-variant-app' );
-$reg->deregister( 'plugin:wpas-test/recipe-fat-baseline-app' );
 
 // Field-collection duplicate-id rejection.
 WP_Admin_Shell_Field_Collections::reset();

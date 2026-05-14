@@ -10,7 +10,7 @@ PostsApp is the canonical DataViews host in the shell. Every bundled shell that 
 
 Four pieces of state drive the app:
 
-1. **`viewConfig`** — pulled via `useViewConfig('postType', config.postType, null, { fallback: POSTS_VIEW_CONFIG_FALLBACK })`. Holds the JSON spec for fields, default view, default layouts, and actions. Site authors and plugin code override via admin.json `viewConfigs[postType][post]._default` or the `wp_admin_shell_view_config_postType_post` filter; the inline fallback in `viewConfigFallback.js` is the baseline when no override exists. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+1. **`viewConfig`** — pulled via `useViewConfig('postType', config.postType)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#viewConfig` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `viewConfigs[postType][post]._default` or the `wp_admin_shell_view_config_postType_post` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
 2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `viewConfig.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. Owned by the app; DataViews calls `onChangeView(next)` whenever the user changes anything.
 3. **`queryArgs`** — derived from `view + config.status` via `useMemo`. Maps DataViews concepts (filter operators, sort direction) to REST query arguments. The `_embed=author` arg lets one round trip cover the author column without a second request per row.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('postType', config.postType, queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
@@ -23,10 +23,10 @@ The trash-confirm modal is implemented via DataViews' `RenderModal` action shape
 
 PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7). The cascade flow:
 
-1. **Baseline** lives in `viewConfigFallback.js` as `POSTS_VIEW_CONFIG_FALLBACK`. JSON-only — kind / name / fields / defaultView / defaultLayouts / actions. No React in the file.
-2. **Admin.json overrides** under `viewConfigs.postType.post._default` cascade through the 6 origins (core / engine / plugin / site / role / user). Sites and plugins can swap columns, change default page size, hide the trash action, etc., without forking the app.
+1. **Baseline** lives in `app.json#viewConfig` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
+2. **Admin.json overrides** under `viewConfigs.postType.post._default` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins swap columns, change default page size, hide the trash action, etc., without forking the app.
 3. **Filter overrides** run last via `wp_admin_shell_view_config_postType_post`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
-4. **PostsApp consumes** via `useViewConfig('postType', postType, null, { fallback })`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config` REST. `_resolvedFieldsRef` is stamped on the doc when a `fieldsRef` resolved against a `fieldCollections` entry so downstream debug can trace where columns came from.
+4. **PostsApp consumes** via `useViewConfig('postType', postType, variant?)` → `{ config, isLoading }`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config` REST. `_resolvedFieldsRef` is stamped on the doc when a `fieldsRef` resolved against a `fieldCollections` entry so downstream debug can trace where columns came from.
 
 The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
@@ -41,7 +41,7 @@ Two paths exist to restore locale awareness (neither wired in PostsApp today):
 1. **Server-side filter callback.** Plugins authoring against `wp_admin_shell_view_config_postType_post` can wrap labels in `__()` from inside the PHP filter — that's where translation calls actually work. Best for plugins shipping a localized override of the bundled spec.
 2. **Render-time id→string mapping in the app.** `buildFields` / `buildActions` could keep a small `LABELS = { title: __('Title'), status: __('Status'), ... }` table and prefer those over the JSON spec's raw labels when the id matches. Static-analysis-friendly (translation tools scan `__()` literals); preserves the JSON spec's locale-agnostic shape.
 
-Path 2 is the cheapest fix and will land before any other entity-CRUD app (TaxonomyApp, UsersApp, CommentsApp, PluginsApp, ThemesApp) migrates to the C2 primitive — otherwise each migration repeats the regression. The `viewConfigFallback.js` file's `__()`-wrapped strings are no longer load-bearing once Path 2 ships and can either be removed or kept as a structural-only file (label strings stripped).
+Path 2 is the cheapest fix and will land before any other entity-CRUD app (TaxonomyApp, UsersApp, CommentsApp, PluginsApp, ThemesApp) migrates to the C2 primitive — otherwise each migration repeats the regression.
 
 Action callbacks are unaffected — `RenderModal` and inline button labels still live in JSX inside `index.js` and translate normally.
 

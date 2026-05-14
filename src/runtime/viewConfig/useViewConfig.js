@@ -31,10 +31,6 @@ async function fetchViewConfig( kind, name, variant ) {
 }
 
 /**
- * Resolve the inline-snapshot doc for a triple, caching the result
- * module-side. Reads `window.wpAdminShell.config` lazily so tests can
- * mutate the snapshot between calls.
- *
  * @param {string}      key
  * @param {string}      kind
  * @param {string}      name
@@ -60,37 +56,19 @@ function readInline( key, kind, name, variant ) {
 /**
  * useViewConfig — read the resolved view-config for an entity triple.
  *
- * Reads the cascade-resolved + filter-finalized doc for `(kind, name, variant?)`.
- * On every triple change, attempts a synchronous read from the inline
- * `window.wpAdminShell.config.viewConfigs` snapshot. If the triple
- * isn't pre-serialized (registered after page load, dynamic filter
- * output that depends on REST context, etc.), falls through to a
- * `/wp-admin-shell/v1/view-config` fetch.
+ * Tries the inline `window.wpAdminShell.config.viewConfigs` snapshot
+ * synchronously; falls through to `/wp-admin-shell/v1/view-config` for
+ * triples registered after page load.
  *
- * Triples can change on the same hook instance (e.g. a generic
- * entity-list app rebinds `postType` from `post` to `page`). The hook
- * resyncs `doc` whenever the cache key changes — no stale state.
+ * Returns `{ config, isLoading }`. The cascade always supplies a config
+ * (admin.json declaration → manifest baseline → empty object).
  *
- * The consuming app supplies a `fallback` arg — its baked-in inline
- * view-config — used when the cascade has no entry for the triple.
- * This makes migration opt-in per app: PostsApp can read via the
- * hook from day one while still rendering correctly if a site hasn't
- * declared `viewConfigs.postType.post._default`.
- *
- * Returns: `{ config, isLoading }`. `config` is always an object;
- * empty when the triple is unknown and no `fallback` is provided.
- *
- * @param {string}      kind             Entity kind (`postType`, `root`, `taxonomy`).
- * @param {string}      name             Entity name (`post`, `user`, `comment`).
- * @param {string|null} variant          Variant id, or null for base.
- * @param {Object}      options
- * @param {Object}      options.fallback App-shipped fallback view-config.
+ * @param {string}      kind    Entity kind (`postType`, `root`, `taxonomy`).
+ * @param {string}      name    Entity name (`post`, `user`, `comment`).
+ * @param {string|null} variant Variant id, or null for base.
  */
-export function useViewConfig( kind, name, variant = null, options = {} ) {
-	const { fallback = null } = options;
-	// Mirror the PHP resolver's `_default → null` normalization
-	// (`WP_Admin_Shell_View_Config::resolve` after sanitize). Keeps
-	// cache keys + REST query args symmetric with the server.
+export function useViewConfig( kind, name, variant = null ) {
+	// `_default` is the in-tree base sentinel — not a user variant. Normalize.
 	const normalizedVariant = variant === '_default' ? null : variant;
 	const key = cacheKey( kind, name, normalizedVariant );
 
@@ -102,10 +80,6 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 	const [ doc, setDoc ] = useState( initial );
 	const [ isLoading, setIsLoading ] = useState( initial === null );
 
-	// Resync local state when the triple changes on the same hook
-	// instance. Without this, the second triple's render reads the
-	// first triple's `doc` until the REST fallback resolves (or
-	// indefinitely when the second triple has an inline hit).
 	useEffect( () => {
 		setDoc( initial );
 		setIsLoading( initial === null );
@@ -137,10 +111,7 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 				if ( cancelled ) {
 					return;
 				}
-				// Do NOT cache an empty doc on error — a transient 5xx
-				// would otherwise poison the triple until page reload.
-				// The next render retries fresh; consuming app falls
-				// through to its fallback while doc stays empty.
+				// Don't cache empty on error — let next render retry.
 				setDoc( {} );
 				setIsLoading( false );
 			} );
@@ -150,14 +121,7 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 		};
 	}, [ key, kind, name, normalizedVariant, initial ] );
 
-	const config = useMemo( () => {
-		if ( doc && Object.keys( doc ).length > 0 ) {
-			return doc;
-		}
-		return fallback ?? {};
-	}, [ doc, fallback ] );
-
-	return { config, isLoading };
+	return { config: doc ?? {}, isLoading };
 }
 
 /**

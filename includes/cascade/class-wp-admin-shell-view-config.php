@@ -112,30 +112,14 @@ class WP_Admin_Shell_View_Config {
 	}
 
 	/**
-	 * Walk registered app manifests, extract each `viewConfig` baseline,
-	 * inject into the resolved tree's `viewConfigs[$kind][$name][$variant|'_default']`.
+	 * Inject app manifest `viewConfig` baselines into the resolved tree.
 	 *
-	 * Spec §13 #7 contract: an app's `viewConfig` block (declared on its
-	 * `app.json`) is a *fallback* baseline — it fills triples nothing in
-	 * the cascade declared. When admin.json (or site/role/user origins)
-	 * declares the same triple, that declaration is **authoritative** for
-	 * the triple; the manifest does not contribute.
-	 *
-	 * **Why this isn't a cascade origin.** Earlier wiring ran this on
-	 * `wp_admin_shell_data_core` (pre-merge). That made manifest baselines
-	 * cascade participants — admin.json then deep-merged on top, so
-	 * removing a field from admin.json couldn't actually remove it
-	 * (keyed-array merge by id reinstates the manifest entry). Authors
-	 * expect "I declared this triple; what I write is what wins." Moving
-	 * the injection to the post-merge `wp_admin_shell_data` filter
-	 * preserves that mental model: declared triples are authoritative,
-	 * undeclared triples fall through to the manifest. Plugins that want
-	 * to extend (not replace) a manifest baseline use the per-triple
-	 * filter `wp_admin_shell_view_config_{$kind}_{$name}` (and the
-	 * variant-qualified flavor) which runs against the resolved doc.
-	 *
-	 * Manifest registry discovers app.json at init priority 8, so the
-	 * registry is populated by the time the resolver runs.
+	 * Spec §13 #7: each app's `viewConfig` block fills the triple it
+	 * binds to only when nothing in the cascade declared it. Declared
+	 * triples are authoritative — admin.json / site / role / user wins
+	 * outright, no deep-merge. To extend (not replace) a manifest
+	 * baseline, hook the per-triple filter
+	 * `wp_admin_shell_view_config_{$kind}_{$name}`.
 	 *
 	 * @param array $doc Post-merge resolved document.
 	 * @return array
@@ -157,36 +141,13 @@ class WP_Admin_Shell_View_Config {
 				continue;
 			}
 			$vc      = $app['viewConfig'];
-			$kind    = isset( $vc['kind'] ) && is_string( $vc['kind'] ) ? $vc['kind'] : null;
-			$name    = isset( $vc['name'] ) && is_string( $vc['name'] ) ? $vc['name'] : null;
-			$variant = isset( $vc['variant'] ) && is_string( $vc['variant'] ) && $vc['variant'] !== ''
+			$kind    = $vc['kind'];
+			$name    = $vc['name'];
+			$variant = isset( $vc['variant'] ) && $vc['variant'] !== ''
 				? $vc['variant']
 				: '_default';
-			if ( $kind === null || $name === null ) {
-				// Schema validator should reject manifests with non-string
-				// kind/name at registration; defensive skip here keeps the
-				// cascade pass safe if a malformed manifest slipped through
-				// (e.g. dynamic registration via wp_admin_shell_register_app
-				// without validation). Log so future debugging can locate
-				// the offender.
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					$app_id = isset( $app['id'] ) && is_string( $app['id'] ) ? $app['id'] : '(unknown id)';
-					trigger_error(
-						esc_html(
-							sprintf(
-								/* translators: %s: app manifest id */
-								'wp_admin_shell: skipped viewConfig baseline injection for %s — non-string kind/name in manifest.',
-								$app_id
-							)
-						),
-						E_USER_NOTICE
-					);
-				}
-				continue;
-			}
 
-			// Strip the binding keys before storing — the bucket position
-			// already names them.
+			// Strip binding keys — bucket position names them.
 			$entry = $vc;
 			unset( $entry['kind'], $entry['name'], $entry['variant'] );
 
@@ -196,7 +157,6 @@ class WP_Admin_Shell_View_Config {
 			if ( ! isset( $doc['viewConfigs'][ $kind ][ $name ] ) ) {
 				$doc['viewConfigs'][ $kind ][ $name ] = array();
 			}
-			// Inline declarations win — only inject when triple is absent.
 			if ( ! isset( $doc['viewConfigs'][ $kind ][ $name ][ $variant ] ) ) {
 				$doc['viewConfigs'][ $kind ][ $name ][ $variant ] = $entry;
 			}
@@ -260,17 +220,5 @@ class WP_Admin_Shell_View_Config {
 	}
 }
 
-/**
- * Post-merge baseline fallback — app manifest `viewConfig` blocks fill
- * triples nothing in the cascade declared (spec §13 #7). Runs on the
- * final `wp_admin_shell_data` filter at priority 5 so admin.json /
- * site / role / user declarations always win for the triples they
- * touch; the manifest only fills gaps.
- *
- * See `inject_app_baselines()` docblock for the design rationale —
- * earlier wiring against `wp_admin_shell_data_core` made manifest
- * baselines cascade participants, which the merge engine then
- * deep-merged with admin.json (additive over keyed arrays + objects)
- * making "remove a column from admin.json" impossible.
- */
+// Post-merge so admin.json (and downstream origins) are authoritative.
 add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_View_Config', 'inject_app_baselines' ), 5 );

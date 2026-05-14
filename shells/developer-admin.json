@@ -246,7 +246,7 @@
 						"type": "table",
 						"page": 1,
 						"perPage": 10,
-						"fields": [ "title", "status", "author", "date" ],
+						"fields": [ "status", "author", "date" ],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }
 					},
@@ -263,7 +263,7 @@
 						"type": "table",
 						"page": 1,
 						"perPage": 50,
-						"fields": [ "title", "author", "date" ],
+						"fields": [ "author", "date" ],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" },
 						"filters": [ { "field": "status", "operator": "is", "value": "draft" } ]
@@ -281,7 +281,7 @@
 						"type": "table",
 						"page": 1,
 						"perPage": 50,
-						"fields": [ "title", "status", "author", "date" ],
+						"fields": [ "status", "author", "date" ],
 						"titleField": "title",
 						"sort": { "field": "title", "direction": "asc" }
 					},
@@ -303,7 +303,7 @@
 						"type": "grid",
 						"page": 1,
 						"perPage": 24,
-						"fields": [ "title", "date" ],
+						"fields": [ "date" ],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }
 					},
@@ -323,7 +323,7 @@
 						"type": "grid",
 						"page": 1,
 						"perPage": 36,
-						"fields": [ "title" ],
+						"fields": [],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }
 					},
@@ -343,7 +343,7 @@
 						"type": "table",
 						"page": 1,
 						"perPage": 25,
-						"fields": [ "title", "date" ],
+						"fields": [ "date" ],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }
 					},

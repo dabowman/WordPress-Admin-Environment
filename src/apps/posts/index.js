@@ -11,7 +11,6 @@ import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
 import { resolveIcon } from '../../runtime/config/iconMap';
 import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
-import { POSTS_VIEW_CONFIG_FALLBACK } from './viewConfigFallback';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -40,11 +39,9 @@ const STATUS_LABELS = {
 };
 
 /**
- * Sane defaults for the DataViews `view` state shape. View-configs
- * authored in admin.json typically omit empty-list fields like
- * `filters: []` and `search: ''` — those keys must always exist or
- * downstream code iterating them crashes (the queryArgs `for (... of
- * view.filters )` loop is the canonical victim).
+ * Shape defaults for DataViews `view` state. Spread under the resolved
+ * `defaultView` so iteration over `view.filters` / `view.fields` is safe
+ * when admin.json omits empty-list keys.
  */
 const VIEW_DEFAULTS = {
 	type: 'table',
@@ -255,29 +252,13 @@ export default function PostsApp( { config } ) {
 	const { config: viewConfig } = useViewConfig(
 		'postType',
 		postType,
-		variant,
-		{
-			fallback: POSTS_VIEW_CONFIG_FALLBACK,
-		}
+		variant
 	);
 
-	const [ view, setView ] = useState( () => {
-		const merged = {
-			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView ||
-				POSTS_VIEW_CONFIG_FALLBACK.defaultView ),
-		};
-		// DataViews renders `titleField` as its own special cell — if
-		// the same id is also in `view.fields`, the column renders twice.
-		// Authoring data tends to include it (intuitive: "list every
-		// visible column"); strip it here so the gotcha is one-sided.
-		if ( merged.titleField && Array.isArray( merged.fields ) ) {
-			merged.fields = merged.fields.filter(
-				( id ) => id !== merged.titleField
-			);
-		}
-		return merged;
-	} );
+	const [ view, setView ] = useState( () => ( {
+		...VIEW_DEFAULTS,
+		...viewConfig.defaultView,
+	} ) );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -341,23 +322,24 @@ export default function PostsApp( { config } ) {
 		} ) );
 	}, [ records ] );
 
-	const fields = useMemo( () => {
-		const specs = Array.isArray( viewConfig.fields )
-			? viewConfig.fields
-			: POSTS_VIEW_CONFIG_FALLBACK.fields;
-		return buildFields( specs, buildFieldRenderers( postType ) );
-	}, [ viewConfig, postType ] );
+	const fields = useMemo(
+		() =>
+			buildFields(
+				viewConfig.fields ?? [],
+				buildFieldRenderers( postType )
+			),
+		[ viewConfig, postType ]
+	);
 
-	const actions = useMemo( () => {
-		const specs = Array.isArray( viewConfig.actions )
-			? viewConfig.actions
-			: POSTS_VIEW_CONFIG_FALLBACK.actions;
-		return buildActions( specs, {
-			postType,
-			deleteEntityRecord,
-			createNotice,
-		} );
-	}, [ viewConfig, postType, deleteEntityRecord, createNotice ] );
+	const actions = useMemo(
+		() =>
+			buildActions( viewConfig.actions ?? [], {
+				postType,
+				deleteEntityRecord,
+				createNotice,
+			} ),
+		[ viewConfig, postType, deleteEntityRecord, createNotice ]
+	);
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -379,10 +361,7 @@ export default function PostsApp( { config } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={
-					viewConfig.defaultLayouts ||
-					POSTS_VIEW_CONFIG_FALLBACK.defaultLayouts
-				}
+				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

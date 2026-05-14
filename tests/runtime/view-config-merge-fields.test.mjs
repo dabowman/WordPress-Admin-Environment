@@ -91,7 +91,7 @@ ok(
 		overrideMerged[ 0 ].label === 'Headline'
 );
 
-// R1: duplicate inline ids dedupe — first wins, rest dropped.
+// Duplicate inline ids dedupe — first wins, rest dropped.
 const dupMerged = mergeFields( [], [
 	{ id: 'foo', type: 'text', label: 'First Foo' },
 	{ id: 'foo', type: 'text', label: 'Second Foo' },
