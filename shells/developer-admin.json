@@ -359,6 +359,30 @@
 					]
 				}
 			}
+		},
+		"root": {
+			"user": {
+				"_default": {
+					"fields": [
+						{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+						{ "id": "email", "type": "text", "label": "Email", "enableGlobalSearch": true },
+						{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is" ] } },
+						{ "id": "registered_date", "type": "datetime", "label": "Registered" }
+					],
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 10,
+						"fields": [ "email", "roles", "registered_date" ],
+						"titleField": "name",
+						"sort": { "field": "name", "direction": "asc" }
+					},
+					"defaultLayouts": { "table": {}, "grid": {} },
+					"actions": [
+						{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
+					]
+				}
+			}
 		}
 	},
 
