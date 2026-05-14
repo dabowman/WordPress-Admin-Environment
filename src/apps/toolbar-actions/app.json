@@ -21,5 +21,37 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Toolbar layout: two horizontal IconButton clusters separated by a `flex: 1` spacer. Renders nothing if both `left` + `right` arrays are empty. Each action is either `{ href, icon, label, external? }` (link) or `{ command, icon, label }` (built-in command resolved via `COMMAND_HREFS` map). IconButton uses `render={<a href>}` so middle-click + right-click → Copy link work natively.",
+		"data": {
+			"reads": [
+				{
+					"source": "config.left + config.right",
+					"via": "core-data",
+					"purpose": "Action descriptors — declared inline in admin.json."
+				}
+			]
+		},
+		"states": [
+			{ "id": "empty", "when": "Both arrays empty", "renders": "Nothing (return null)." },
+			{ "id": "ready", "when": "At least one action", "renders": "Row layout — left cluster + spacer + right cluster." }
+		],
+		"interactions": [
+			{ "trigger": "Click an action", "effect": "Native anchor navigation. External actions open in new tab." },
+			{ "trigger": "Middle-click / Cmd-click", "effect": "Native browser behavior — opens in new tab. Works because IconButton renders as `<a>`." }
+		],
+		"a11y": {
+			"focus-management": "Native anchor focus order.",
+			"screen-reader": "IconButton's `label` prop doubles as the assistive-tech label and the tooltip."
+		},
+		"constraints": [
+			{ "concern": "command-href-map", "note": "`COMMAND_HREFS` translates legacy `command` ids (`core/new-post`, `core/new-page`) to hash URLs. Adding more requires updating the table." },
+			{ "concern": "iconbutton-anchor-render", "note": "Render-prop swap is required: `<IconButton render={<a href target rel/>}/>`. The plain `href` prop is dropped by Base UI Button." },
+			{ "concern": "no-onclick-actions", "note": "All actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app for command-style invocations." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Toolbar buttons + layout primitives." }
+		]
+	}
 }

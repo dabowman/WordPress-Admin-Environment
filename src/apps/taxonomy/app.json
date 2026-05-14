@@ -31,5 +31,167 @@
 		},
 		"multiInstance": true,
 		"icon": "tag"
+	},
+	"documentation": {
+		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description fields), and bulk delete terms. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
+		"rebuilds": "taxonomies",
+		"data": {
+			"reads": [
+				{
+					"source": "taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Term rows in the DataViews table.",
+					"fields": [
+						"id",
+						"name",
+						"slug",
+						"count",
+						"description",
+						"parent"
+					],
+					"query": {
+						"per_page": "view.perPage",
+						"page": "view.page",
+						"order": "view.sort.direction",
+						"orderby": "view.sort.field",
+						"context": "edit",
+						"hide_empty": false,
+						"search": "view.search"
+					}
+				}
+			],
+			"writes": [
+				{
+					"source": "taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Add a new term via the Add new modal.",
+					"invalidates": [
+						"taxonomy/{config.taxonomy}"
+					]
+				},
+				{
+					"source": "taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Edit an existing term (name / slug / description).",
+					"invalidates": [
+						"taxonomy/{config.taxonomy}"
+					]
+				},
+				{
+					"source": "taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Bulk-delete terms permanently (`force: true` — taxonomies have no trash).",
+					"invalidates": [
+						"taxonomy/{config.taxonomy}"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isResolving && !records",
+				"renders": "DataViews loading indicator."
+			},
+			{
+				"id": "ready",
+				"when": "records !== null && records.length > 0",
+				"renders": "Table of terms with row + bulk actions."
+			},
+			{
+				"id": "empty",
+				"when": "records?.length === 0",
+				"renders": "DataViews empty state."
+			},
+			{
+				"id": "editing",
+				"when": "editTerm !== null",
+				"renders": "Modal with name / slug / description fields populated from the term."
+			},
+			{
+				"id": "creating",
+				"when": "isCreating === true",
+				"renders": "Same modal with empty fields and Add term button."
+			},
+			{
+				"id": "saving",
+				"when": "isSaving === true (inside modal)",
+				"renders": "Save button shows loading spinner; inputs stay editable."
+			},
+			{
+				"id": "delete-confirm",
+				"when": "User triggered Delete action",
+				"renders": "Confirm modal with destructive primary button."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click Add new",
+				"effect": "Open the term modal in create mode."
+			},
+			{
+				"trigger": "Click row name or Edit action",
+				"effect": "Open the term modal in edit mode pre-filled from `item.rawRecord`."
+			},
+			{
+				"trigger": "Submit term modal",
+				"effect": "`saveEntityRecord('taxonomy', taxonomy, payload)`; on success: success snackbar + invalidate `getEntityRecords` + close modal. On failure: error notice (dismissible)."
+			},
+			{
+				"trigger": "Click Delete action (single or bulk)",
+				"effect": "Open confirm modal; on confirm `deleteEntityRecord(..., { force: true })` for each item + invalidate + success snackbar."
+			},
+			{
+				"trigger": "Change view (search / sort / page / perPage)",
+				"effect": "Local `view` updates; queryArgs recomputes; records refetch."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataViews owns focus inside the table. The legacy `Modal` traps focus; on close, DataViews restores focus to the trigger."
+		},
+		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import from `@wordpress/dataviews/wp`."
+			},
+			{
+				"concern": "force-delete",
+				"note": "Taxonomies have no trash. `deleteEntityRecord` must pass `{ force: true }` or the request 400s."
+			},
+			{
+				"concern": "modal-fallback",
+				"note": "Uses legacy `Modal` from `@wordpress/components` because WPDS 0.12's Dialog is not a clean port for complex form modals."
+			},
+			{
+				"concern": "textarea-fallback",
+				"note": "Uses legacy `TextareaControl` — WPDS 0.12 has no TextareaControl port."
+			},
+			{
+				"concern": "invalidate-after-mutate",
+				"note": "Both create + update + delete must call `invalidateResolution('getEntityRecords', ['taxonomy', taxonomy])` — `saveEntityRecord` does not bust the parent query."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Table view with sort/pagination/actions."
+			},
+			{
+				"import": "@wordpress/ui#Button, Stack, Text, InputControl",
+				"purpose": "Header, modal layout, name + slug inputs."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton), Modal, TextareaControl",
+				"purpose": "Destructive confirm action, modal container, multiline description input — WPDS 0.12 gaps."
+			},
+			{
+				"import": "@wordpress/icons#plus, pencil, trash",
+				"purpose": "Add / row / delete action icons."
+			}
+		]
 	}
 }

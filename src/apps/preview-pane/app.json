@@ -16,5 +16,47 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Spec §6.4 + V2.M4: regions coordinate via URL state, not a shell-level selection bus. PreviewPaneApp reads the routes block + URL slot at `config.follow` (default `_self`), maps the matched route's `config` to a `core-data` entity (`post-type` + `post-id`), and renders the entity as JSON. Designed for shells whose `detail` region (or any routable region) holds an editor-style app and whose `preview` region wants to mirror what the editor is editing.",
+		"data": {
+			"reads": [
+				{
+					"source": "config.routes (kernel)",
+					"via": "core-data",
+					"purpose": "Routes block — used to match the URL slot value against route patterns."
+				},
+				{
+					"source": "postType/{post-type}/{post-id}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Entity record matched by the route. Only resolves when the matched route's `config` has both `post-type` + numeric `post-id`."
+				}
+			]
+		},
+		"url": {
+			"reads-slots": [ "_self", "{config.follow}" ]
+		},
+		"states": [
+			{ "id": "empty", "when": "Slot value is empty or route didn't match", "renders": "`Select an item to preview.` placeholder." },
+			{ "id": "loading", "when": "Matched a post-shaped route but entity is resolving", "renders": "Centered Spinner." },
+			{ "id": "not-found", "when": "Entity fetch resolved without a record", "renders": "`Item not found.` placeholder." },
+			{ "id": "ready-entity", "when": "Entity resolved", "renders": "`<pre>` block of `JSON.stringify(record, null, 2)`." },
+			{ "id": "ready-fallback", "when": "Route matched but config isn't post-shaped", "renders": "`<pre>` block of `JSON.stringify({ app, config }, null, 2)` — debug-style fall-back for non-entity routes." }
+		],
+		"interactions": [
+			{ "trigger": "URL changes (primary path or `follow` slot)", "effect": "useRoute re-runs; matchRoute reevaluates; entity record refetches." }
+		],
+		"a11y": {
+			"focus-management": "Preview pane is read-only; focus stays in the primary region."
+		},
+		"constraints": [
+			{ "concern": "self-vs-named-slot", "note": "`follow: '_self'` reads `route.primary` (the primary hash path). Other values read `route.params[follow]` — useful for shells with a named `detail` region carrying its own route param." },
+			{ "concern": "post-shape-only-today", "note": "Only `post-type` + numeric `post-id` routes resolve as entities. Other shapes fall back to JSON-of-config — useful as a debug surface, but a future iteration should support more entity types (taxonomy terms, users, etc.)." },
+			{ "concern": "url-as-coordination-not-bus", "note": "Spec §6.4 explicitly chose URL state over a shell-level selection bus. PreviewPaneApp is the reference consumer." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/components#Spinner", "purpose": "Loading indicator." }
+		]
+	}
 }

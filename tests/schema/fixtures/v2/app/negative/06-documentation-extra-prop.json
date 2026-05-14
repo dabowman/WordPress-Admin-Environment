@@ -1,0 +1,12 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v2.json",
+	"id": "core:posts",
+	"version": 1,
+	"title": "Posts",
+	"role": "main",
+	"script": "core-posts",
+	"documentation": {
+		"purpose": "DataViews over a post type.",
+		"shouldNotBeHere": "extra property — additionalProperties: false rejects this"
+	}
+}

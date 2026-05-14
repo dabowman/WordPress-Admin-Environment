@@ -31,5 +31,59 @@
 		},
 		"multiInstance": false,
 		"icon": "layout"
+	},
+	"documentation": {
+		"purpose": "Stable identifier for the WordPress Site Editor screen, currently fronted by an iframe pointing at `site-editor.php`. Behind the namespace, the implementation is a one-line delegation to `IframeApp` so authors can target `core:site-editor` in admin.json today and inherit the native `@wordpress/edit-site` mount when it lands in a v2.x release — without touching their config.",
+		"rebuilds": "site-editor",
+		"data": {
+			"reads": [
+				{
+					"source": "window.wpAdminShell.adminUrl",
+					"via": "window-global",
+					"purpose": "Base URL passed to IframeApp."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "iframe load event pending",
+				"renders": "Centered `Spinner` overlaid on the iframe."
+			},
+			{
+				"id": "ready",
+				"when": "iframe loaded",
+				"renders": "Full-bleed iframe with wp-admin chrome (admin menu, admin bar, footer) hidden by the injected CSS."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Mount",
+				"effect": "IframeApp renders `<iframe src=\"site-editor.php\">` and injects chrome-hiding CSS on load."
+			}
+		],
+		"a11y": {
+			"focus-management": "Iframe owns its own focus tree."
+		},
+		"constraints": [
+			{
+				"concern": "iframe-css-fragile",
+				"note": "Hides `edit-site-layout__sidebar*` + `edit-site-site-hub` + `edit-site-layout__header-container`; rev with each WordPress release. Verify Style Book canvas layout after upgrades."
+			},
+			{
+				"concern": "native-mount-blockers",
+				"note": "Top-of-file comment in `SiteEditorApp.js` lists five blockers: preferences-store collision (with `core:appearance`), command-palette double-registration (edit-site ships its own commands), full-screen-mode CSS, hash-router collision, and missing `@wordpress/edit-site` from BUNDLED_PACKAGES. All five must be resolved before native mount can land."
+			},
+			{
+				"concern": "stable-id-policy",
+				"note": "Authors target `core:site-editor` (not `core:iframe-fallback` with a hand-rolled URL) so the native-mount path can land in a v2.x release without admin.json migrations."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "../iframe-fallback#IframeApp",
+				"purpose": "Delegated rendering. Inherits IframeApp's DS dependencies (Spinner from @wordpress/components)."
+			}
+		]
 	}
 }

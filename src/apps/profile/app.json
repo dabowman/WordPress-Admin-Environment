@@ -25,5 +25,123 @@
 		},
 		"multiInstance": false,
 		"icon": "people"
+	},
+	"documentation": {
+		"purpose": "Profile editor for the acting user (`window.wpAdminShell.userId`). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner.",
+		"rebuilds": "profile",
+		"data": {
+			"reads": [
+				{
+					"source": "root/user/{window.wpAdminShell.userId}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Profile fields of the acting user.",
+					"fields": [
+						"id",
+						"username",
+						"first_name",
+						"last_name",
+						"nickname",
+						"name",
+						"email",
+						"url",
+						"description"
+					]
+				},
+				{
+					"source": "window.wpAdminShell.userId",
+					"via": "window-global",
+					"purpose": "Identify the acting user; absence shows a permission-denied message."
+				}
+			],
+			"writes": [
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "permission-denied",
+				"when": "!userId (no acting user in context)",
+				"renders": "Single-paragraph fallback message."
+			},
+			{
+				"id": "loading",
+				"when": "!record",
+				"renders": "Centered Spinner."
+			},
+			{
+				"id": "ready",
+				"when": "record !== null && !hasEdits",
+				"renders": "Form with the seven fields populated; Save button disabled."
+			},
+			{
+				"id": "with-edits",
+				"when": "hasEdits === true && !isSaving",
+				"renders": "Same form with Save enabled; dirty-state reported to kernel."
+			},
+			{
+				"id": "saving",
+				"when": "isSaving === true",
+				"renders": "Save button shows loading spinner + disabled state."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Type in any text field",
+				"effect": "`edit({ <field>: e.target.value })`; hasEdits becomes true."
+			},
+			{
+				"trigger": "Choose display name from select",
+				"effect": "`edit({ name: value })` with options generated from username / first / last / first+last / last+first / nickname / current name."
+			},
+			{
+				"trigger": "Click Save Changes",
+				"effect": "`await save()`; on success: success snackbar. On failure: error banner with `err.message`."
+			}
+		],
+		"a11y": {
+			"focus-management": "Form fields are in document order; native focus order is sufficient."
+		},
+		"constraints": [
+			{
+				"concern": "null-guard-record",
+				"note": "`useEntityRecord('root','user', userId)` returns `{ record: null }` while loading. Reading `record.first_name` without a guard crashes on first paint."
+			},
+			{
+				"concern": "displayname-options-generated",
+				"note": "Display name dropdown options are computed in render from the record's name fields. A field combination that produces only one option still renders the select; the user is forced to keep that option even if it's not what they want."
+			},
+			{
+				"concern": "dirty-state-reports",
+				"note": "Manifest declares `core:dirty-state: true`. The app does NOT call `useDirtyState` directly — it relies on `hasEdits` being read by a sibling NavigationGuard. (`block-navigation-on-dirty` is intentionally not set; profile edits are low-stakes.)"
+			},
+			{
+				"concern": "inputcontrol-event-shape",
+				"note": "WPDS `InputControl` onChange takes a DOM event (`e.target.value`), not the raw value. The same applies wherever WPDS form fields are used."
+			},
+			{
+				"concern": "textarea-fallback",
+				"note": "Uses legacy `TextareaControl` from `@wordpress/components` — WPDS 0.12 has no port."
+			},
+			{
+				"concern": "select-fallback",
+				"note": "Uses legacy `SelectControl` from `@wordpress/components` for the display name (WPDS 0.12 SelectControl has no `__nextHasNoMarginBottom` parity)."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
+				"purpose": "Form layout + text + URL + email inputs + save button."
+			},
+			{
+				"import": "@wordpress/components#TextareaControl, SelectControl, Spinner",
+				"purpose": "Bio textarea + display-name select + loading spinner — WPDS 0.12 gaps."
+			}
+		]
 	}
 }

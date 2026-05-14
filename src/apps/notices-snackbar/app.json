@@ -13,5 +13,45 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Renders transient snackbar notices (auto-dismiss after a few seconds; user can click-dismiss earlier). Source: `@wordpress/notices` store filtered to `type === 'snackbar'`. Uses legacy `SnackbarList` from `@wordpress/components` because WPDS 0.12 ships no snackbar primitive.",
+		"data": {
+			"reads": [
+				{
+					"source": "core/notices",
+					"via": "core-data",
+					"purpose": "Notices via `getNotices()`; filter to `type: 'snackbar'`."
+				}
+			],
+			"writes": [
+				{
+					"source": "core/notices",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Remove a notice on auto-dismiss or click — `removeNotice(id)` (called by `SnackbarList`)."
+				}
+			]
+		},
+		"states": [
+			{ "id": "empty", "when": "No snackbar notices", "renders": "Empty SnackbarList container (no visible output)." },
+			{ "id": "ready", "when": "At least one snackbar notice", "renders": "Stacked snackbar pills positioned by SnackbarList; each auto-dismisses on the package's default timer." }
+		],
+		"interactions": [
+			{ "trigger": "App calls `createNotice('success', message, { type: 'snackbar' })`", "effect": "Snackbar appears." },
+			{ "trigger": "Auto-dismiss timer fires", "effect": "SnackbarList calls `onRemove(id)` → `removeNotice(id)`." },
+			{ "trigger": "User clicks snackbar", "effect": "Same — `removeNotice(id)`." }
+		],
+		"a11y": {
+			"screen-reader": "SnackbarList sets `role=\"region\"` + `aria-label=\"Notifications\"` on its container; individual snackbars are `aria-live=\"polite\"`."
+		},
+		"constraints": [
+			{ "concern": "no-wpds-snackbar", "note": "WPDS 0.12 has no SnackbarList port. Legacy `SnackbarList` is kept here; rebuilds on other DS need to provide an equivalent or fall back to banner-style transient notices." },
+			{ "concern": "context-filter", "note": "Only `type: 'snackbar'` notices land here. `type: 'default'` notices go to `core:notices-banner`." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/components#SnackbarList", "purpose": "Stacked auto-dismissing snackbar primitive — no WPDS 0.12 port." },
+			{ "import": "@wordpress/notices", "purpose": "Read store + dispatch removeNotice." }
+		]
+	}
 }

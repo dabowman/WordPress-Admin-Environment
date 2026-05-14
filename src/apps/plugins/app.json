@@ -25,5 +25,151 @@
 		},
 		"multiInstance": false,
 		"icon": "plugins"
+	},
+	"documentation": {
+		"purpose": "DataViews plugin manager. Lists every installed plugin with name + description, status (active / inactive / network-active), version, and author. Row + bulk actions: activate, deactivate, visit plugin site, delete (inactive only). Mutations issue raw `POST /wp/v2/plugins/{file}` and `DELETE /wp/v2/plugins/{file}` via api-fetch because the `root/plugin` entity doesn't expose a save shape for status changes.",
+		"rebuilds": "plugins",
+		"data": {
+			"reads": [
+				{
+					"source": "root/plugin",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Installed-plugin list.",
+					"fields": [
+						"plugin",
+						"name",
+						"description.raw",
+						"status",
+						"version",
+						"author",
+						"author_uri",
+						"plugin_uri"
+					],
+					"query": {
+						"context": "edit"
+					}
+				}
+			],
+			"writes": [
+				{
+					"source": "/wp/v2/plugins/{plugin}",
+					"via": "api-fetch",
+					"operation": "partial-update",
+					"purpose": "Change plugin status (activate / deactivate) — `POST { status }`.",
+					"invalidates": [
+						"root/plugin"
+					]
+				},
+				{
+					"source": "/wp/v2/plugins/{plugin}",
+					"via": "api-fetch",
+					"operation": "delete",
+					"purpose": "Delete an inactive plugin.",
+					"invalidates": [
+						"root/plugin"
+					]
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "isResolving",
+				"renders": "DataViews loading indicator."
+			},
+			{
+				"id": "ready",
+				"when": "records !== null",
+				"renders": "Table of plugins with action menu per row."
+			},
+			{
+				"id": "error",
+				"when": "error !== null",
+				"renders": "`Notice.Root` banner replacing the table; remembers last error until next action."
+			},
+			{
+				"id": "delete-confirm",
+				"when": "User triggered Delete action",
+				"renders": "Confirm modal with destructive primary."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click Activate action",
+				"effect": "POST `/wp/v2/plugins/{file}` `{ status: 'active' }` per item; invalidate `root/plugin`.",
+				"guards": [
+					"item.status === 'inactive'"
+				]
+			},
+			{
+				"trigger": "Click Deactivate action",
+				"effect": "POST `/wp/v2/plugins/{file}` `{ status: 'inactive' }`; invalidate.",
+				"guards": [
+					"item.status === 'active' || item.status === 'network-active'"
+				]
+			},
+			{
+				"trigger": "Click Visit plugin site",
+				"effect": "`window.open(item.pluginUri, '_blank')`.",
+				"guards": [
+					"!!item.pluginUri"
+				]
+			},
+			{
+				"trigger": "Click Delete action",
+				"effect": "Open confirm modal; on confirm `DELETE /wp/v2/plugins/{file}` per item; invalidate.",
+				"guards": [
+					"item.status === 'inactive'"
+				]
+			},
+			{
+				"trigger": "Change view (search / filter / sort / page)",
+				"effect": "Local `view` updates; client-side filter recomputes (single REST request returns the full list)."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataViews owns focus inside the table + modal."
+		},
+		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import from `@wordpress/dataviews/wp`."
+			},
+			{
+				"concern": "client-side-filter",
+				"note": "REST returns the full installed-plugin list in one request (it's typically tens of records). Search + status filter run client-side via `Array.filter`; pagination is computed against the filtered length."
+			},
+			{
+				"concern": "api-fetch-not-coredata",
+				"note": "Status changes + delete go through `apiFetch` because `core-data`'s `saveEntityRecord` / `deleteEntityRecord` don't have a clean payload shape for the plugin endpoint's `{ status }` PATCH. After mutating, manually `invalidateResolution` on the entity records query."
+			},
+			{
+				"concern": "plugin-file-encoding",
+				"note": "Plugin identifiers carry slashes (`hello-dolly/hello.php`). `encodeURIComponent` the value before interpolating into the REST path."
+			},
+			{
+				"concern": "network-active",
+				"note": "Multisite shows `network-active` status. Deactivate action covers both `active` + `network-active` to keep the row menu functional in network admin."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Table view with actions."
+			},
+			{
+				"import": "@wordpress/ui#Button, Notice, Stack, Text",
+				"purpose": "Modal layout + error banner + cells."
+			},
+			{
+				"import": "@wordpress/components#Button (as DestructiveButton)",
+				"purpose": "Destructive primary in delete-confirm modal."
+			},
+			{
+				"import": "@wordpress/icons#trash, external, check, closeSmall",
+				"purpose": "Action icons."
+			}
+		]
 	}
 }

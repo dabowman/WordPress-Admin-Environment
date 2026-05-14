@@ -19,5 +19,49 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Cmd+K command palette contributor. The palette UI itself is owned by `@wordpress/commands` — this app contributes a command set and renders nothing. Commands are derived from the shell's routes block (`config.routes`): each `core:route` whose pattern has no `{param}` placeholder or `/*` wildcard becomes a `Go to <pattern>` entry. Authors can override the label + icon by attaching `title` + `icon` to a route entry (not in the current schema; the runtime reads them if present so a future schema bump can land without migration).",
+		"data": {
+			"reads": [
+				{
+					"source": "config.routes",
+					"via": "core-data",
+					"purpose": "Route patterns to convert into palette commands."
+				}
+			],
+			"writes": [
+				{
+					"source": "core/commands",
+					"via": "core-data",
+					"operation": "custom",
+					"purpose": "Register the derived command set via `useCommandLoader({ name: 'core/admin-shell/apps', hook })`."
+				}
+			]
+		},
+		"url": {
+			"reads-slots": [],
+			"writes-slots": [],
+			"navigates": []
+		},
+		"states": [
+			{ "id": "renders-null", "when": "Always", "renders": "Nothing — this app is invisible. The `@wordpress/commands` portal renders the palette UI elsewhere in the DOM." }
+		],
+		"interactions": [
+			{ "trigger": "Mount", "effect": "Register the command-loader hook with `@wordpress/commands`." },
+			{ "trigger": "User opens palette (Mod+K or other binding)", "effect": "`@wordpress/commands` invokes the registered loader, gets the route-derived commands, and surfaces them. Selecting an entry calls its `callback({ close })` which writes `window.location.hash` + closes the palette." }
+		],
+		"a11y": {
+			"focus-management": "`@wordpress/commands` owns palette focus when open (focus trap inside the modal, return focus on close). This app only contributes commands; it does not render UI."
+		},
+		"constraints": [
+			{ "concern": "no-ui", "note": "Returns `null`. All visual surface area lives in the `@wordpress/commands` portal. Tests that look for shell-rendered DOM should expect nothing." },
+			{ "concern": "skip-parameterized-routes", "note": "Routes with `{param}` placeholders or `/*` wildcards are skipped — `Go to /posts/{id}` isn't a valid invocation because the user can't pick the captured value from a command list. Parameterized routes need a different surface (search-based, entity-based) that's out of scope here." },
+			{ "concern": "url-encode-name", "note": "Command names use `encodeURIComponent(pattern)` so distinct routes (`/foo-bar` vs `/foo/bar`) produce distinct names. Without encoding, both would collapse to `foo-bar` and `@wordpress/commands` would reject the duplicate." },
+			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `bindings` block map keystrokes to this app." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/commands#useCommandLoader, store", "purpose": "Command registration. The package owns the palette UI." }
+		]
+	}
 }

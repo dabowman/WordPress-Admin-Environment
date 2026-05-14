@@ -13,5 +13,64 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Branded header at the top of the navigation sidebar. Renders site icon (linked to the dashboard URL) + site title (linked to the home URL, opens in new tab) + a command-palette toggle. Site icon respects `styles.branding.*` cascade values; site title comes from `useEntityRecord('root', 'site').record.title` with HTML-entity decoding and a window-global fallback.",
+		"data": {
+			"reads": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"purpose": "Site title (decoded via `decodeEntities` from `@wordpress/html-entities`) + URL fallback for site-without-title case.",
+					"fields": [ "title", "url" ]
+				},
+				{
+					"source": "config.styles.branding",
+					"via": "core-data",
+					"purpose": "Branded site icon — branding object passed to SiteIcon helper."
+				},
+				{
+					"source": "window.wpAdminShell.siteName",
+					"via": "window-global",
+					"purpose": "Fallback for site title before core-data hydrates."
+				},
+				{
+					"source": "window.wpAdminShell.homeUrl | siteUrl | dashboardUrl",
+					"via": "window-global",
+					"purpose": "Anchor hrefs for the site-icon button (dashboard) and the site-title button (home, new tab)."
+				}
+			]
+		},
+		"states": [
+			{ "id": "ready", "when": "Always (renders with whatever data is available; falls back gracefully)", "renders": "Site icon + title + command-palette icon button. Title falls back to filterURLForDisplay(site.url) when title is empty but URL is set." },
+			{ "id": "transparent-icon", "when": "appConfig.isTransparent === true", "renders": "Site-icon container drops its background — useful when the engine's chrome already provides the surface." }
+		],
+		"interactions": [
+			{ "trigger": "Click site icon", "effect": "Navigate to `window.wpAdminShell.dashboardUrl` via native `<a href>`." },
+			{ "trigger": "Click site title", "effect": "Open `window.wpAdminShell.homeUrl` in a new tab via native `<a href target=\"_blank\" rel=\"noopener noreferrer\">`." },
+			{ "trigger": "Click command-palette icon", "effect": "`dispatch('core/commands').open()` — opens the global command palette." }
+		],
+		"a11y": {
+			"focus-management": "All three controls (icon, title, palette toggle) are native focusable elements.",
+			"keyboard": [
+				{ "keys": "Mod+K", "action": "Surfaced as the keyboard shortcut hint on the palette button (`displayShortcut.primary('k')`). The actual binding is shell-level — declared in admin.json's `bindings` block + wired through `useCommandLoader`." }
+			],
+			"screen-reader": "Site icon button has `aria-label=\"Go to the Dashboard\"`. Title button includes a visually-hidden `(opens in a new tab)` hint inside the link. Palette button has `aria-label=\"Open command palette\"` + `ariaKeyShortcut=\"Meta+K\"`."
+		},
+		"constraints": [
+			{ "concern": "site-title-source-of-truth", "note": "Read title via `useEntityRecord('root','site').record.title` (with `decodeEntities`). Falls back to `window.wpAdminShell?.siteName` only as last resort. Fixes a prior bug where the toolbar showed a stale title on first paint." },
+			{ "concern": "memoized-forwardref", "note": "Wrapped in `memo + forwardRef` because engines may attach refs (e.g. for measure-on-mount layout)." },
+			{ "concern": "ellipsis-in-flex", "note": "Title button uses the `display: flex; min-width: 0;` wrapper pattern + button-level `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap` so long site titles truncate cleanly in a constrained sidebar." },
+			{ "concern": "anchor-rendered-buttons", "note": "Site-icon button + site-title button + palette button all use `render={<a href={...}/>}` so native HTML link behavior works (middle-click new tab, etc.)." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#Button, IconButton, Stack", "purpose": "Three controls + layout primitives." },
+			{ "import": "@wordpress/components#VisuallyHidden", "purpose": "Visually-hidden `(opens in a new tab)` hint." },
+			{ "import": "@wordpress/icons#search", "purpose": "Command-palette icon." },
+			{ "import": "@wordpress/commands#store", "purpose": "Open the global palette via `dispatch('core/commands').open()`." },
+			{ "import": "@wordpress/keycodes#displayShortcut", "purpose": "Format the `Mod+K` shortcut hint for the palette button." },
+			{ "import": "@wordpress/html-entities#decodeEntities", "purpose": "Decode site title HTML entities." },
+			{ "import": "@wordpress/url#filterURLForDisplay", "purpose": "Compact-URL fallback when site title is empty." }
+		]
+	}
 }

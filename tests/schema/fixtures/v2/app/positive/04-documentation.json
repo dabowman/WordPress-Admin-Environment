@@ -1,0 +1,59 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v2.json",
+	"id": "core:posts",
+	"version": 1,
+	"title": "Posts",
+	"role": "main",
+	"script": "core-posts",
+	"documentation": {
+		"purpose": "DataViews table over a single post type. The default view lists 20 rows, ordered by date descending, with title / status / author / date columns. The author can filter by status, search the title field, switch to a grid layout, paginate, and perform per-row or bulk row actions (edit, view, trash).",
+		"rebuilds": "posts",
+		"data": {
+			"reads": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Rows in the DataViews table.",
+					"fields": [ "id", "title.raw", "status", "date", "link", "_embedded.author.0.name" ],
+					"query": { "_embed": "author", "per_page": 20, "context": "edit" }
+				}
+			],
+			"writes": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "trash",
+					"purpose": "Move selected posts to trash from the row action or bulk action.",
+					"invalidates": [ "postType/{config.postType}" ]
+				}
+			]
+		},
+		"url": {
+			"navigates": [ "#/posts/{id}/edit", "#/pages/{id}/edit" ]
+		},
+		"states": [
+			{ "id": "loading", "when": "isResolving && !records", "renders": "DataViews built-in loading indicator." },
+			{ "id": "ready", "when": "records !== null", "renders": "Rows rendered in the active layout (table or grid)." },
+			{ "id": "empty", "when": "records?.length === 0", "renders": "DataViews built-in empty state." }
+		],
+		"interactions": [
+			{ "trigger": "Click row title", "effect": "Navigate to editor route for the post type." },
+			{ "trigger": "Click row View action", "effect": "Open the post's permalink in a new tab.", "guards": [ "item.status === 'publish'" ] },
+			{ "trigger": "Click Trash action (single or bulk)", "effect": "Confirm in a modal, then trash via deleteEntityRecord and DataViews refreshes the list." }
+		],
+		"a11y": {
+			"focus-management": "DataViews handles focus inside the grid; after trash modal closes focus returns to the action trigger."
+		},
+		"constraints": [
+			{ "concern": "dataviews-import-path", "note": "Import from `@wordpress/dataviews/wp`, not the bare package path — bare risks React error #130." },
+			{ "concern": "context-edit", "note": "Pass `context: 'edit'` so title.raw is populated; without it titles render as decoded HTML and edit flows silently break." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/dataviews/wp#DataViews", "purpose": "Table / grid view with built-in filtering, sorting, pagination, selection, and bulk actions." },
+			{ "import": "@wordpress/ui#Button", "purpose": "Title cell renderer + modal action buttons." },
+			{ "import": "@wordpress/components#Button (as DestructiveButton)", "purpose": "Destructive primary action in the trash-confirm modal — WPDS 0.12 has no `tone=\"critical\"`." },
+			{ "import": "@wordpress/icons#pencil, trash, external", "purpose": "Row action icons." }
+		]
+	}
+}
