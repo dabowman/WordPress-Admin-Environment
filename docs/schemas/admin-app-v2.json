@@ -110,6 +110,11 @@
 			"$ref": "#/$defs/appWindow"
 		},
 
+		"viewConfig": {
+			"$ref": "#/$defs/appViewConfig",
+			"description": "Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with admin.json `viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard) omit this field. See spec §13 #7."
+		},
+
 		"documentation": {
 			"$ref": "#/$defs/appDocumentation"
 		}
@@ -481,6 +486,66 @@
 					"type": "object",
 					"additionalProperties": true,
 					"description": "Notable query args the app passes (e.g. `{ _embed: \"author\", per_page: 20 }`). Dynamic args (search strings, filter values) document the keys, not the values."
+				}
+			}
+		},
+
+		"appViewConfig": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "kind", "name" ],
+			"description": "An app-shipped view-config baseline. Same shape as the top-level admin.json `viewConfigs` entry, with required `kind`/`name` and optional `variant` so the entity binding is self-describing. Cascade-overrideable: admin.json `viewConfigs[kind][name|variant]` wins per-field; filter `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` runs last.",
+			"properties": {
+				"kind": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+					"description": "Entity kind, matching `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.)."
+				},
+				"name": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+					"description": "Entity name (`post`, `page`, `user`, `comment`)."
+				},
+				"variant": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$",
+					"description": "Optional variant identifier. Forward-slash namespacing allowed (e.g. `woocommerce-bookings/services`). Omitted = base view-config."
+				},
+				"fieldsRef": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Reference to a `fieldCollections` entry id. See admin-v2 `viewConfigEntry.fieldsRef`."
+				},
+				"fields": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": true,
+						"required": [ "id", "type", "label" ]
+					},
+					"description": "Field descriptors. See admin-v2 `viewConfigField`."
+				},
+				"defaultView": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Initial DataViews `view` object."
+				},
+				"defaultLayouts": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "DataViews `defaultLayouts` prop."
+				},
+				"actions": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": true,
+						"required": [ "id", "label" ]
+					},
+					"description": "Action descriptors. See admin-v2 `viewConfigAction`."
 				}
 			}
 		},

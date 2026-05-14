@@ -2,12 +2,15 @@ import './index.css';
 import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
-import { pencil, external, trash } from '@wordpress/icons';
+import { __, sprintf, _n } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -35,20 +38,227 @@ const STATUS_LABELS = {
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
+/**
+ * Shape defaults for DataViews `view` state. Spread under the resolved
+ * `defaultView` so iteration over `view.filters` / `view.fields` is safe
+ * when admin.json omits empty-list keys.
+ */
+const VIEW_DEFAULTS = {
+	type: 'table',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 20,
+	sort: { field: 'date', direction: 'desc' },
+	fields: [],
+	layout: {},
+};
+
+/**
+ * Field id → render callback. View-config declares the *shape* (id,
+ * type, label, hide/sort/search flags); the React layer supplies the
+ * row renderer. Unknown ids fall through to DataViews' default
+ * renderer for the declared field type.
+ * @param {string} postType Active post type id from app config.
+ */
+function buildFieldRenderers( postType ) {
+	return {
+		title: ( { item } ) => (
+			<Button
+				variant="minimal"
+				onClick={ () => navigate( editHref( postType, item.id ) ) }
+			>
+				{ item.title }
+			</Button>
+		),
+		status: ( { item } ) => (
+			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+		),
+		author: ( { item } ) => <Text>{ item.author }</Text>,
+	};
+}
+
+/**
+ * Compile a declarative `eligibleWhen` predicate into a DataViews
+ * `isEligible(item)` callback. Supports `{ field: value | [values] }`
+ * shape; absent → no eligibility filter (always shown).
+ * @param {Object} eligibleWhen Eligibility map.
+ */
+function compileEligibility( eligibleWhen ) {
+	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
+		return undefined;
+	}
+	const entries = Object.entries( eligibleWhen );
+	if ( entries.length === 0 ) {
+		return undefined;
+	}
+	return ( item ) =>
+		entries.every( ( [ field, expected ] ) => {
+			const actual = item?.[ field ];
+			if ( Array.isArray( expected ) ) {
+				return expected.includes( actual );
+			}
+			return actual === expected;
+		} );
+}
+
+function buildActions(
+	actions,
+	{ postType, deleteEntityRecord, createNotice }
+) {
+	const callbacks = {
+		edit: ( items ) => navigate( editHref( postType, items[ 0 ].id ) ),
+		view: ( items ) => {
+			window.open( items[ 0 ].link, '_blank', 'noopener,noreferrer' );
+		},
+	};
+
+	return actions
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				label: spec.label,
+				isPrimary: !! spec.isPrimary,
+				isDestructive: !! spec.isDestructive,
+				supportsBulk: !! spec.supportsBulk,
+				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
+				isEligible: compileEligibility( spec.eligibleWhen ),
+			};
+
+			if ( spec.id === 'trash' ) {
+				compiled.RenderModal = ( {
+					items,
+					closeModal,
+					onActionPerformed,
+				} ) => (
+					<Stack
+						direction="column"
+						gap="md"
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
+					>
+						<Text>
+							{ items.length === 1
+								? __(
+										'Are you sure you want to move this item to the trash?',
+										'wp-admin-shell'
+								  )
+								: __(
+										'Are you sure you want to move these items to the trash?',
+										'wp-admin-shell'
+								  ) }
+						</Text>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button variant="minimal" onClick={ closeModal }>
+								{ __( 'Cancel', 'wp-admin-shell' ) }
+							</Button>
+							<DestructiveButton
+								variant="primary"
+								isDestructive
+								onClick={ async () => {
+									// `allSettled` so one failure doesn't
+									// collapse the rest of a bulk action.
+									// Surface partial-success via a
+									// snackbar notice.
+									const results = await Promise.allSettled(
+										items.map( ( item ) =>
+											deleteEntityRecord(
+												'postType',
+												postType,
+												item.id
+											)
+										)
+									);
+									const failed = results.filter(
+										( r ) => r.status === 'rejected'
+									).length;
+									if ( failed > 0 ) {
+										createNotice(
+											'error',
+											sprintf(
+												/* translators: 1: failed item count, 2: total item count */
+												_n(
+													'%1$d of %2$d item failed to move to trash.',
+													'%1$d of %2$d items failed to move to trash.',
+													items.length,
+													'wp-admin-shell'
+												),
+												failed,
+												items.length
+											),
+											{ type: 'snackbar' }
+										);
+									}
+									onActionPerformed?.( items );
+									closeModal();
+								} }
+							>
+								{ __( 'Move to Trash', 'wp-admin-shell' ) }
+							</DestructiveButton>
+						</Stack>
+					</Stack>
+				);
+			} else if ( callbacks[ spec.id ] ) {
+				compiled.callback = callbacks[ spec.id ];
+			}
+
+			return compiled;
+		} );
+}
+
+function buildFields( fieldSpecs, fieldRenderers ) {
+	return fieldSpecs
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				type: spec.type,
+				label: spec.label,
+			};
+			if ( spec.enableGlobalSearch !== undefined ) {
+				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
+			}
+			if ( spec.enableHiding !== undefined ) {
+				compiled.enableHiding = !! spec.enableHiding;
+			}
+			if ( spec.enableSorting !== undefined ) {
+				compiled.enableSorting = !! spec.enableSorting;
+			}
+			if ( Array.isArray( spec.elements ) ) {
+				compiled.elements = spec.elements;
+			} else if ( spec.id === 'status' && ! spec.elements ) {
+				// Fallback: derive elements from STATUS_LABELS for the
+				// status column when none are declared in the spec.
+				compiled.elements = Object.entries( STATUS_LABELS ).map(
+					( [ value, label ] ) => ( { value, label } )
+				);
+			}
+			if ( spec.filterBy ) {
+				compiled.filterBy = spec.filterBy;
+			}
+			if ( fieldRenderers[ spec.id ] ) {
+				compiled.render = fieldRenderers[ spec.id ];
+			}
+			return compiled;
+		} );
+}
+
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
+	const variant = config.variant || null;
 
-	const [ view, setView ] = useState( {
-		type: 'table',
-		search: '',
-		filters: [],
-		page: 1,
-		perPage: 20,
-		sort: { field: 'date', direction: 'desc' },
-		fields: [ 'title', 'status', 'author', 'date' ],
-		titleField: 'title',
-		layout: {},
-	} );
+	const { config: viewConfig } = useViewConfig(
+		'postType',
+		postType,
+		variant
+	);
+
+	const [ view, setView ] = useState( () => ( {
+		...VIEW_DEFAULTS,
+		...viewConfig.defaultView,
+	} ) );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -91,6 +301,7 @@ export default function PostsApp( { config } ) {
 	);
 
 	const { deleteEntityRecord } = useDispatch( coreStore );
+	const { createNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -98,10 +309,11 @@ export default function PostsApp( { config } ) {
 		}
 		return records.map( ( record ) => ( {
 			id: record.id,
-			title:
+			title: decodeEntities(
 				record.title?.rendered ||
-				record.title?.raw ||
-				__( '(no title)', 'wp-admin-shell' ),
+					record.title?.raw ||
+					__( '(no title)', 'wp-admin-shell' )
+			),
 			status: record.status,
 			date: record.date,
 			author: record._embedded?.author?.[ 0 ]?.name || '',
@@ -111,131 +323,22 @@ export default function PostsApp( { config } ) {
 	}, [ records ] );
 
 	const fields = useMemo(
-		() => [
-			{
-				id: 'title',
-				type: 'text',
-				label: __( 'Title', 'wp-admin-shell' ),
-				enableGlobalSearch: true,
-				enableHiding: false,
-				// Site-editor post types (wp_template / wp_block / wp_navigation)
-				// still need a separate edit pattern + URL-encoding for slug-shaped
-				// IDs like "theme//slug"; defer until those screens get a v2 route.
-				render: ( { item } ) => (
-					<Button
-						variant="minimal"
-						onClick={ () =>
-							navigate( editHref( postType, item.id ) )
-						}
-					>
-						{ item.title }
-					</Button>
-				),
-			},
-			{
-				id: 'status',
-				type: 'text',
-				label: __( 'Status', 'wp-admin-shell' ),
-				elements: Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				),
-				render: ( { item } ) => (
-					<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
-				),
-				filterBy: {
-					operators: [ 'isAny' ],
-				},
-			},
-			{
-				id: 'author',
-				type: 'text',
-				label: __( 'Author', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.author }</Text>,
-			},
-			{
-				id: 'date',
-				type: 'datetime',
-				label: __( 'Date', 'wp-admin-shell' ),
-			},
-		],
-		[ postType ]
+		() =>
+			buildFields(
+				viewConfig.fields ?? [],
+				buildFieldRenderers( postType )
+			),
+		[ viewConfig, postType ]
 	);
 
 	const actions = useMemo(
-		() => [
-			{
-				id: 'edit',
-				label: __( 'Edit', 'wp-admin-shell' ),
-				isPrimary: true,
-				icon: pencil,
-				callback: ( items ) => {
-					const item = items[ 0 ];
-					navigate( editHref( postType, item.id ) );
-				},
-			},
-			{
-				id: 'view',
-				label: __( 'View', 'wp-admin-shell' ),
-				icon: external,
-				isEligible: ( item ) => item.status === 'publish',
-				callback: ( items ) => {
-					window.open( items[ 0 ].link, '_blank' );
-				},
-			},
-			{
-				id: 'trash',
-				label: __( 'Move to Trash', 'wp-admin-shell' ),
-				isDestructive: true,
-				supportsBulk: true,
-				icon: trash,
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<Stack
-						direction="column"
-						gap="md"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text>
-							{ items.length === 1
-								? __(
-										'Are you sure you want to move this item to the trash?',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Are you sure you want to move these items to the trash?',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button variant="minimal" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'postType',
-												postType,
-												item.id
-											)
-										)
-									);
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Move to Trash', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				),
-			},
-		],
-		[ postType, deleteEntityRecord ]
+		() =>
+			buildActions( viewConfig.actions ?? [], {
+				postType,
+				deleteEntityRecord,
+				createNotice,
+			} ),
+		[ viewConfig, postType, deleteEntityRecord, createNotice ]
 	);
 
 	const paginationInfo = useMemo(
@@ -258,7 +361,7 @@ export default function PostsApp( { config } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ { table: {}, grid: {} } }
+				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

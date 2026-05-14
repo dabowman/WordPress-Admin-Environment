@@ -16,6 +16,10 @@
 			"status": {
 				"type": "string"
 			},
+			"variant": {
+				"type": "string",
+				"description": "Optional view-config variant id to consume (e.g. 'drafts'). When set, useViewConfig reads `viewConfigs.postType.<postType>.<variant>` instead of the `_default` triple."
+			},
 			"contentWidth": {
 				"type": [
 					"number",
@@ -29,6 +33,33 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
+	"viewConfig": {
+		"kind": "postType",
+		"name": "post",
+		"defaultView": {
+			"type": "table",
+			"search": "",
+			"filters": [],
+			"page": 1,
+			"perPage": 20,
+			"sort": { "field": "date", "direction": "desc" },
+			"fields": [ "status", "author", "date" ],
+			"titleField": "title",
+			"layout": {}
+		},
+		"defaultLayouts": { "table": {}, "grid": {} },
+		"fields": [
+			{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
+			{ "id": "status", "type": "text", "label": "Status", "filterBy": { "operators": [ "isAny" ] } },
+			{ "id": "author", "type": "text", "label": "Author" },
+			{ "id": "date", "type": "datetime", "label": "Date" }
+		],
+		"actions": [
+			{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil" },
+			{ "id": "view", "label": "View", "icon": "external", "eligibleWhen": { "status": "publish" } },
+			{ "id": "trash", "label": "Move to Trash", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
+		]
+	},
 	"window": {
 		"defaultSize": {
 			"w": 1024,
@@ -46,6 +77,18 @@
 		"rebuilds": "posts",
 		"data": {
 			"reads": [
+				{
+					"source": "viewConfigs.postType.{config.postType}._default",
+					"via": "kernel-config",
+					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig(kind, name)`; baseline ships in `app.json#viewConfig` and is injected post-merge by `inject_app_baselines`.",
+					"fields": [
+						"fields",
+						"defaultView",
+						"defaultLayouts",
+						"actions",
+						"fieldsRef"
+					]
+				},
 				{
 					"source": "postType/{config.postType}",
 					"via": "core-data",
