@@ -41,7 +41,7 @@ class WP_Admin_Shell_View_Config {
 			: WP_Admin_Shell_Field_Collections::sanitize_variant( (string) $variant );
 
 		if ( $config === null ) {
-			$config = WP_Admin_Shell_Config::get_active();
+			$config = wp_admin_shell_get_active_config();
 		}
 
 		$variant_key = $variant === null ? '_default' : $variant;
@@ -90,7 +90,7 @@ class WP_Admin_Shell_View_Config {
 		$name = WP_Admin_Shell_Field_Collections::sanitize_segment( (string) $name );
 
 		if ( $config === null ) {
-			$config = WP_Admin_Shell_Config::get_active();
+			$config = wp_admin_shell_get_active_config();
 		}
 
 		$bucket = $config['viewConfigs'][ $kind ][ $name ] ?? array();

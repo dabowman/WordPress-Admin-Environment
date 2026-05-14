@@ -50,7 +50,7 @@ class WP_Admin_Shell_Field_Collections_REST {
 		$kind = $request->get_param( 'kind' );
 		$name = $request->get_param( 'name' );
 
-		$config = WP_Admin_Shell_Config::get_active();
+		$config = wp_admin_shell_get_active_config();
 
 		// Pull cascade-merged field-collections from the resolved tree.
 		// Includes both programmatically-registered (via the

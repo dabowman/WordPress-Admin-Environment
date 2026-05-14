@@ -354,6 +354,25 @@ WPAS_View_Config_Test_Runner::assert_eq(
 
 WP_Admin_Shell_Field_Collections::reset();
 
+// --- Implicit cascade load -------------------------------------------------
+
+// resolve() and variants_for() with $config = null must hit the real
+// cascade resolver via wp_admin_shell_get_active_config(). The earlier
+// assertions pass synthetic configs and never exercised this path —
+// missing it shipped a fatal "undefined method Config::get_active()"
+// to the REST endpoints.
+$auto_resolved = WP_Admin_Shell_View_Config::resolve( 'postType', 'post' );
+WPAS_View_Config_Test_Runner::assert_true(
+	'resolve() with null config returns array (cascade auto-load)',
+	is_array( $auto_resolved )
+);
+
+$auto_variants = WP_Admin_Shell_View_Config::variants_for( 'postType', 'post' );
+WPAS_View_Config_Test_Runner::assert_true(
+	'variants_for() with null config returns array (cascade auto-load)',
+	is_array( $auto_variants )
+);
+
 // --- inject_app_baselines (spec §13 #7 contract) ----------------------------
 
 // Register a synthetic app with a viewConfig block and confirm injection.
