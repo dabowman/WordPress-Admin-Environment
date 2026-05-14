@@ -20,11 +20,13 @@ import {
 	layout,
 	media,
 	page,
+	pencil,
 	people,
 	plus,
 	post,
 	plugins,
 	tool,
+	trash,
 	wordpress,
 } from '@wordpress/icons';
 
@@ -39,11 +41,14 @@ export const iconTable = {
 	layout,
 	media,
 	page,
+	pencil,
+	edit: pencil,
 	people,
 	plus,
 	post,
 	plugins,
 	tool,
+	trash,
 	wordpress,
 };
 

@@ -8,15 +8,27 @@ PostsApp is the canonical DataViews host in the shell. Every bundled shell that 
 
 ## Architecture
 
-Three pieces of state drive the app:
+Four pieces of state drive the app:
 
-1. **`view`** — a local `useState` mirroring the DataViews controlled shape. Holds search string, active filters, page, perPage, sort, fields, and layout. Owned by the app; DataViews calls `onChangeView(next)` whenever the user changes anything.
-2. **`queryArgs`** — derived from `view + config.status` via `useMemo`. Maps DataViews concepts (filter operators, sort direction) to REST query arguments. The `_embed=author` arg lets one round trip cover the author column without a second request per row.
-3. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('postType', config.postType, queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
+1. **`viewConfig`** — pulled via `useViewConfig('postType', config.postType, null, { fallback: POSTS_VIEW_CONFIG_FALLBACK })`. Holds the JSON spec for fields, default view, default layouts, and actions. Site authors and plugin code override via admin.json `viewConfigs[postType][post]._default` or the `wp_admin_shell_view_config_postType_post` filter; the inline fallback in `viewConfigFallback.js` is the baseline when no override exists. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `viewConfig.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. Owned by the app; DataViews calls `onChangeView(next)` whenever the user changes anything.
+3. **`queryArgs`** — derived from `view + config.status` via `useMemo`. Maps DataViews concepts (filter operators, sort direction) to REST query arguments. The `_embed=author` arg lets one round trip cover the author column without a second request per row.
+4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('postType', config.postType, queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
 
 `data` is a `useMemo` projection of `records` into the row shape DataViews wants (`{ id, title, status, date, author, link, rawRecord }`). The original record is kept on `rawRecord` so future row actions can read fields the projection doesn't surface.
 
-The trash-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`.
+The trash-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`. The action's `id` (`trash`) is what `buildActions()` keys off; plugins overriding the view-config can keep / rename / drop the action via their filter, and the React layer simply skips ids it has no callback for.
+
+## View-config integration (C2)
+
+PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7). The cascade flow:
+
+1. **Baseline** lives in `viewConfigFallback.js` as `POSTS_VIEW_CONFIG_FALLBACK`. JSON-only — kind / name / fields / defaultView / defaultLayouts / actions. No React in the file.
+2. **Admin.json overrides** under `viewConfigs.postType.post._default` cascade through the 6 origins (core / engine / plugin / site / role / user). Sites and plugins can swap columns, change default page size, hide the trash action, etc., without forking the app.
+3. **Filter overrides** run last via `wp_admin_shell_view_config_postType_post`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
+4. **PostsApp consumes** via `useViewConfig('postType', postType, null, { fallback })`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config` REST. `_resolvedFieldsRef` is stamped on the doc when a `fieldsRef` resolved against a `fieldCollections` entry so downstream debug can trace where columns came from.
+
+The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
 ## Rebuild guide
 

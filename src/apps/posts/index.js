@@ -6,8 +6,10 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { pencil, external, trash } from '@wordpress/icons';
 import { navigate } from '../../runtime/routing/router';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { POSTS_VIEW_CONFIG_FALLBACK } from './viewConfigFallback';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -35,20 +37,180 @@ const STATUS_LABELS = {
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
+/**
+ * Field id → render callback. View-config declares the *shape* (id,
+ * type, label, hide/sort/search flags); the React layer supplies the
+ * row renderer. Unknown ids fall through to DataViews' default
+ * renderer for the declared field type.
+ * @param {string} postType Active post type id from app config.
+ */
+function buildFieldRenderers( postType ) {
+	return {
+		title: ( { item } ) => (
+			<Button
+				variant="minimal"
+				onClick={ () => navigate( editHref( postType, item.id ) ) }
+			>
+				{ item.title }
+			</Button>
+		),
+		status: ( { item } ) => (
+			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+		),
+		author: ( { item } ) => <Text>{ item.author }</Text>,
+	};
+}
+
+/**
+ * Compile a declarative `eligibleWhen` predicate into a DataViews
+ * `isEligible(item)` callback. Supports `{ field: value | [values] }`
+ * shape; absent → no eligibility filter (always shown).
+ * @param {Object} eligibleWhen Eligibility map.
+ */
+function compileEligibility( eligibleWhen ) {
+	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
+		return undefined;
+	}
+	const entries = Object.entries( eligibleWhen );
+	if ( entries.length === 0 ) {
+		return undefined;
+	}
+	return ( item ) =>
+		entries.every( ( [ field, expected ] ) => {
+			const actual = item?.[ field ];
+			if ( Array.isArray( expected ) ) {
+				return expected.includes( actual );
+			}
+			return actual === expected;
+		} );
+}
+
+function buildActions( actions, { postType, deleteEntityRecord } ) {
+	const callbacks = {
+		edit: ( items ) => navigate( editHref( postType, items[ 0 ].id ) ),
+		view: ( items ) => {
+			window.open( items[ 0 ].link, '_blank' );
+		},
+	};
+
+	return actions
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				label: spec.label,
+				isPrimary: !! spec.isPrimary,
+				isDestructive: !! spec.isDestructive,
+				supportsBulk: !! spec.supportsBulk,
+				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
+				isEligible: compileEligibility( spec.eligibleWhen ),
+			};
+
+			if ( spec.id === 'trash' ) {
+				compiled.RenderModal = ( {
+					items,
+					closeModal,
+					onActionPerformed,
+				} ) => (
+					<Stack
+						direction="column"
+						gap="md"
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
+					>
+						<Text>
+							{ items.length === 1
+								? __(
+										'Are you sure you want to move this item to the trash?',
+										'wp-admin-shell'
+								  )
+								: __(
+										'Are you sure you want to move these items to the trash?',
+										'wp-admin-shell'
+								  ) }
+						</Text>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button variant="minimal" onClick={ closeModal }>
+								{ __( 'Cancel', 'wp-admin-shell' ) }
+							</Button>
+							<DestructiveButton
+								variant="primary"
+								isDestructive
+								onClick={ async () => {
+									await Promise.all(
+										items.map( ( item ) =>
+											deleteEntityRecord(
+												'postType',
+												postType,
+												item.id
+											)
+										)
+									);
+									onActionPerformed?.( items );
+									closeModal();
+								} }
+							>
+								{ __( 'Move to Trash', 'wp-admin-shell' ) }
+							</DestructiveButton>
+						</Stack>
+					</Stack>
+				);
+			} else if ( callbacks[ spec.id ] ) {
+				compiled.callback = callbacks[ spec.id ];
+			}
+
+			return compiled;
+		} );
+}
+
+function buildFields( fieldSpecs, fieldRenderers ) {
+	return fieldSpecs
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				type: spec.type,
+				label: spec.label,
+			};
+			if ( spec.enableGlobalSearch !== undefined ) {
+				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
+			}
+			if ( spec.enableHiding !== undefined ) {
+				compiled.enableHiding = !! spec.enableHiding;
+			}
+			if ( spec.enableSorting !== undefined ) {
+				compiled.enableSorting = !! spec.enableSorting;
+			}
+			if ( Array.isArray( spec.elements ) ) {
+				compiled.elements = spec.elements;
+			} else if ( spec.id === 'status' && ! spec.elements ) {
+				// Fallback: derive elements from STATUS_LABELS for the
+				// status column when none are declared in the spec.
+				compiled.elements = Object.entries( STATUS_LABELS ).map(
+					( [ value, label ] ) => ( { value, label } )
+				);
+			}
+			if ( spec.filterBy ) {
+				compiled.filterBy = spec.filterBy;
+			}
+			if ( fieldRenderers[ spec.id ] ) {
+				compiled.render = fieldRenderers[ spec.id ];
+			}
+			return compiled;
+		} );
+}
+
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 
-	const [ view, setView ] = useState( {
-		type: 'table',
-		search: '',
-		filters: [],
-		page: 1,
-		perPage: 20,
-		sort: { field: 'date', direction: 'desc' },
-		fields: [ 'title', 'status', 'author', 'date' ],
-		titleField: 'title',
-		layout: {},
+	const { config: viewConfig } = useViewConfig( 'postType', postType, null, {
+		fallback: POSTS_VIEW_CONFIG_FALLBACK,
 	} );
+
+	const [ view, setView ] = useState(
+		() => viewConfig.defaultView || POSTS_VIEW_CONFIG_FALLBACK.defaultView
+	);
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -110,133 +272,19 @@ export default function PostsApp( { config } ) {
 		} ) );
 	}, [ records ] );
 
-	const fields = useMemo(
-		() => [
-			{
-				id: 'title',
-				type: 'text',
-				label: __( 'Title', 'wp-admin-shell' ),
-				enableGlobalSearch: true,
-				enableHiding: false,
-				// Site-editor post types (wp_template / wp_block / wp_navigation)
-				// still need a separate edit pattern + URL-encoding for slug-shaped
-				// IDs like "theme//slug"; defer until those screens get a v2 route.
-				render: ( { item } ) => (
-					<Button
-						variant="minimal"
-						onClick={ () =>
-							navigate( editHref( postType, item.id ) )
-						}
-					>
-						{ item.title }
-					</Button>
-				),
-			},
-			{
-				id: 'status',
-				type: 'text',
-				label: __( 'Status', 'wp-admin-shell' ),
-				elements: Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				),
-				render: ( { item } ) => (
-					<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
-				),
-				filterBy: {
-					operators: [ 'isAny' ],
-				},
-			},
-			{
-				id: 'author',
-				type: 'text',
-				label: __( 'Author', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.author }</Text>,
-			},
-			{
-				id: 'date',
-				type: 'datetime',
-				label: __( 'Date', 'wp-admin-shell' ),
-			},
-		],
-		[ postType ]
-	);
+	const fields = useMemo( () => {
+		const specs = Array.isArray( viewConfig.fields )
+			? viewConfig.fields
+			: POSTS_VIEW_CONFIG_FALLBACK.fields;
+		return buildFields( specs, buildFieldRenderers( postType ) );
+	}, [ viewConfig, postType ] );
 
-	const actions = useMemo(
-		() => [
-			{
-				id: 'edit',
-				label: __( 'Edit', 'wp-admin-shell' ),
-				isPrimary: true,
-				icon: pencil,
-				callback: ( items ) => {
-					const item = items[ 0 ];
-					navigate( editHref( postType, item.id ) );
-				},
-			},
-			{
-				id: 'view',
-				label: __( 'View', 'wp-admin-shell' ),
-				icon: external,
-				isEligible: ( item ) => item.status === 'publish',
-				callback: ( items ) => {
-					window.open( items[ 0 ].link, '_blank' );
-				},
-			},
-			{
-				id: 'trash',
-				label: __( 'Move to Trash', 'wp-admin-shell' ),
-				isDestructive: true,
-				supportsBulk: true,
-				icon: trash,
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<Stack
-						direction="column"
-						gap="md"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text>
-							{ items.length === 1
-								? __(
-										'Are you sure you want to move this item to the trash?',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Are you sure you want to move these items to the trash?',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button variant="minimal" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									await Promise.all(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'postType',
-												postType,
-												item.id
-											)
-										)
-									);
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Move to Trash', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				),
-			},
-		],
-		[ postType, deleteEntityRecord ]
-	);
+	const actions = useMemo( () => {
+		const specs = Array.isArray( viewConfig.actions )
+			? viewConfig.actions
+			: POSTS_VIEW_CONFIG_FALLBACK.actions;
+		return buildActions( specs, { postType, deleteEntityRecord } );
+	}, [ viewConfig, postType, deleteEntityRecord ] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -258,7 +306,10 @@ export default function PostsApp( { config } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ { table: {}, grid: {} } }
+				defaultLayouts={
+					viewConfig.defaultLayouts ||
+					POSTS_VIEW_CONFIG_FALLBACK.defaultLayouts
+				}
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }
