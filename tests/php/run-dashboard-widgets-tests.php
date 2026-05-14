@@ -148,6 +148,10 @@ WPAS_Dashboard_Widgets_Test_Runner::assert_eq(
 	'plugin:wpas-test/sales'
 );
 
+// Manifest forwarding is deferred to `init`/`apply_filters(plugin)` —
+// trigger the flush so the registry observes the synthetic manifest.
+WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+
 $manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/sales' );
 WPAS_Dashboard_Widgets_Test_Runner::assert_true(
 	'standalone register seeds manifest registry',
@@ -170,6 +174,74 @@ WPAS_Dashboard_Widgets_Test_Runner::assert_eq(
 WPAS_Dashboard_Widgets_Test_Runner::assert_true(
 	'synthetic manifest strips hidden field from dashboardWidget block',
 	! isset( $manifest['dashboardWidget']['hidden'] )
+);
+
+// Pre-flush state: a freshly-registered widget must NOT hit the manifest
+// registry synchronously. Forwarding is deferred to `init` priority 7
+// (or lazy-flushed on first `wp_admin_shell_data_plugin` apply).
+WP_Admin_Shell_Dashboard_Widgets::reset();
+wp_admin_shell_register_dashboard_widget(
+	'plugin:wpas-test/deferred',
+	array( 'script' => 'wpas-test' )
+);
+$pre_flush = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
+WPAS_Dashboard_Widgets_Test_Runner::assert_true(
+	'standalone register does NOT synchronously hit the manifest registry',
+	$pre_flush === null
+);
+
+WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+$post_flush = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
+WPAS_Dashboard_Widgets_Test_Runner::assert_true(
+	'flush_pending_registrations forwards the manifest',
+	is_array( $post_flush )
+);
+
+// Lazy flush via wp_admin_shell_data_plugin filter (covers the
+// register-then-resolve order where init priority 7 hasn't fired yet).
+WP_Admin_Shell_Dashboard_Widgets::reset();
+wp_admin_shell_register_dashboard_widget(
+	'plugin:wpas-test/lazy',
+	array( 'script' => 'wpas-test' )
+);
+apply_filters( 'wp_admin_shell_data_plugin', array() );
+$lazy = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/lazy' );
+WPAS_Dashboard_Widgets_Test_Runner::assert_true(
+	'apply_filters(wp_admin_shell_data_plugin) lazy-flushes',
+	is_array( $lazy )
+);
+
+// Standalone-flavor dual-source: top-level placement keys + nested
+// dashboardWidget block both supplied. Top-level wins per-property.
+WP_Admin_Shell_Dashboard_Widgets::reset();
+wp_admin_shell_register_dashboard_widget(
+	'plugin:wpas-test/dual-source',
+	array(
+		'script'          => 'wpas-test',
+		'defaultSize'     => array( 'w' => 3, 'h' => 1 ),  // top-level wins
+		'dashboardWidget' => array(
+			'defaultSize' => array( 'w' => 1, 'h' => 1 ),  // overridden
+			'minSize'     => array( 'w' => 1, 'h' => 1 ),  // preserved
+		),
+	)
+);
+$dual_override = WP_Admin_Shell_Dashboard_Widgets::get( 'plugin:wpas-test/dual-source' );
+WPAS_Dashboard_Widgets_Test_Runner::assert_eq(
+	'top-level defaultSize wins per-property over nested dashboardWidget',
+	$dual_override['defaultSize'],
+	array( 'w' => 3, 'h' => 1 )
+);
+WPAS_Dashboard_Widgets_Test_Runner::assert_eq(
+	'nested dashboardWidget keys survive when not overridden top-level',
+	$dual_override['minSize'],
+	array( 'w' => 1, 'h' => 1 )
+);
+WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+$dual_manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/dual-source' );
+WPAS_Dashboard_Widgets_Test_Runner::assert_eq(
+	'synthetic manifest carries the merged defaultSize (single source of truth)',
+	$dual_manifest['dashboardWidget']['defaultSize'],
+	array( 'w' => 3, 'h' => 1 )
 );
 
 // Override-only call (no script) should NOT add to the manifest registry.

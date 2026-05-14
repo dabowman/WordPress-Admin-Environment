@@ -14,6 +14,7 @@ import { TextareaControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { navigate } from '../../runtime/routing/router';
+import { RECENT_DRAFTS_QUERY } from '../dashboard-widget-recent-posts/query.mjs';
 
 import './index.css';
 
@@ -32,38 +33,43 @@ export default function DashboardWidgetQuickDraftApp() {
 			}
 			setSaving( true );
 			setError( null );
+			let draft = null;
 			try {
-				const draft = await saveEntityRecord( 'postType', 'post', {
+				draft = await saveEntityRecord( 'postType', 'post', {
 					title,
 					content:
 						content ||
 						'<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->',
 					status: 'draft',
 				} );
-				// Refresh the recent-drafts widget's query.
+				// Refresh the recent-drafts widget's query. The shape
+				// must match `RECENT_DRAFTS_QUERY` exactly — otherwise
+				// the sibling tile keeps stale data.
 				invalidateResolution( 'getEntityRecords', [
 					'postType',
 					'post',
-					{
-						per_page: 5,
-						status: 'draft',
-						context: 'edit',
-						orderby: 'modified',
-						order: 'desc',
-					},
+					RECENT_DRAFTS_QUERY,
 				] );
-				if ( draft?.id ) {
-					navigate( `#/posts/${ draft.id }/edit` );
-				}
-				setTitle( '' );
-				setContent( '' );
 			} catch ( err ) {
 				setError(
 					err?.message || __( 'Save failed', 'wp-admin-shell' )
 				);
-			} finally {
 				setSaving( false );
+				return;
 			}
+			if ( draft?.id ) {
+				// Navigate FIRST, then skip the post-navigate state
+				// resets — `navigate()` triggers a hashchange that
+				// unmounts this component, so any setState after this
+				// point fires on an unmounted node. The success path
+				// returns without touching local state.
+				navigate( `#/posts/${ draft.id }/edit` );
+				return;
+			}
+			// No draft id (defensive) — reset form + spinner in place.
+			setTitle( '' );
+			setContent( '' );
+			setSaving( false );
 		},
 		[ title, content, isSaving, saveEntityRecord, invalidateResolution ]
 	);

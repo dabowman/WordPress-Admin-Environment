@@ -56,6 +56,16 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	private static $synthetic_manifests = array();
 
 	/**
+	 * Synthetic manifests queued for forwarding to the manifest
+	 * registry. Drained by `flush_pending_registrations()`, called from
+	 * the `init` priority-8 manifest-discovery pass (after the registry
+	 * class is loaded) + lazily by `all()` as a safety net.
+	 *
+	 * @var array<string, array>
+	 */
+	private static $pending_registrations = array();
+
+	/**
 	 * Register a dashboard widget.
 	 *
 	 * Two flavors:
@@ -96,7 +106,14 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			$args = array();
 		}
 
-		$override = array();
+		// Merge top-level placement keys with nested dashboardWidget
+		// block — one source of truth flows to both override + manifest.
+		// Top-level keys win over nested when both supplied (admin.json-
+		// style: most-recent declaration wins per-property).
+		$inline_widget_block = isset( $args['dashboardWidget'] ) && is_array( $args['dashboardWidget'] )
+			? $args['dashboardWidget']
+			: array();
+		$override = $inline_widget_block;
 		foreach ( array( 'title', 'defaultSize', 'minSize', 'position', 'hidden' ) as $key ) {
 			if ( array_key_exists( $key, $args ) ) {
 				$override[ $key ] = $args[ $key ];
@@ -110,9 +127,6 @@ class WP_Admin_Shell_Dashboard_Widgets {
 		// manifest. The script handle is required for an app the kernel
 		// can mount; without it, treat the call as override-only.
 		if ( isset( $args['script'] ) && is_string( $args['script'] ) ) {
-			$widget_block = isset( $args['dashboardWidget'] ) && is_array( $args['dashboardWidget'] )
-				? $args['dashboardWidget']
-				: $override;
 			$manifest = array(
 				'id'      => $id,
 				'version' => 1,
@@ -127,24 +141,48 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			if ( isset( $args['capabilities'] ) && is_array( $args['capabilities'] ) ) {
 				$manifest['capabilities'] = array_values( $args['capabilities'] );
 			}
-			if ( ! empty( $widget_block ) ) {
+			if ( ! empty( $override ) ) {
 				// Strip override-only fields when promoting to manifest.
-				$manifest_widget = $widget_block;
+				$manifest_widget = $override;
 				unset( $manifest_widget['hidden'] );
 				if ( ! empty( $manifest_widget ) ) {
 					$manifest['dashboardWidget'] = $manifest_widget;
 				}
 			}
 			self::$synthetic_manifests[ $id ] = $manifest;
-			// Forward to the manifest registry so the kernel's
-			// existing app pipeline picks it up. Errors propagate.
-			$registry_result = WP_Admin_Shell_Manifest_Registry::instance()->register_app( $manifest );
-			if ( is_wp_error( $registry_result ) ) {
-				return $registry_result;
-			}
+			// Forward the manifest to the registry — but defer the
+			// actual register_app() call until the manifest-registry
+			// class is guaranteed loaded + the `init` priority-8
+			// manifest-discovery pass has run. Calling synchronously
+			// from a mu-plugin / early `plugins_loaded` would fatal on
+			// `Class "WP_Admin_Shell_Manifest_Registry" not found`.
+			// Mirrors the field-collections deferral pattern.
+			self::$pending_registrations[ $id ] = $manifest;
 		}
 
 		return $id;
+	}
+
+	/**
+	 * Flush queued synthetic-manifest registrations into the manifest
+	 * registry. Idempotent — already-registered ids no-op via the
+	 * registry's own duplicate-id rejection. Called from the
+	 * `wp_admin_shell_manifests_loaded` hook (and lazily by `all()` as
+	 * a safety net for code paths that observe the registry before
+	 * `init` fires).
+	 */
+	public static function flush_pending_registrations() {
+		if ( empty( self::$pending_registrations ) ) {
+			return;
+		}
+		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+			return;
+		}
+		$registry = WP_Admin_Shell_Manifest_Registry::instance();
+		foreach ( self::$pending_registrations as $id => $manifest ) {
+			$registry->register_app( $manifest );
+		}
+		self::$pending_registrations = array();
 	}
 
 	/**
@@ -170,8 +208,9 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	 * Reset the registry. Test-only.
 	 */
 	public static function reset() {
-		self::$overrides           = array();
-		self::$synthetic_manifests = array();
+		self::$overrides             = array();
+		self::$synthetic_manifests   = array();
+		self::$pending_registrations = array();
 	}
 }
 
@@ -207,6 +246,10 @@ function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
  * fills the slot only when no inline declaration claims it.
  */
 add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
+	// Lazy flush — if a plugin registered widgets before the `init`
+	// pass below ran, drain the queue now so the cascade reflects them.
+	WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+
 	$overrides = WP_Admin_Shell_Dashboard_Widgets::all();
 	if ( empty( $overrides ) ) {
 		return $doc;
@@ -221,3 +264,12 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 	}
 	return $doc;
 }, 5 );
+
+/**
+ * Flush queued synthetic-manifest registrations into the manifest
+ * registry at the same priority the shell's main file uses for
+ * convention-path manifest discovery (`init` priority 8). Plugin
+ * authors hooking earlier than this fire safely because `register()`
+ * only stashes the manifest — the registry call happens here.
+ */
+add_action( 'init', array( 'WP_Admin_Shell_Dashboard_Widgets', 'flush_pending_registrations' ), 7 );

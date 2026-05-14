@@ -7,26 +7,16 @@
  * as clickable links to the editor.
  */
 
-import { useMemo } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { navigate } from '../../runtime/routing/router';
+import { RECENT_DRAFTS_QUERY } from './query.mjs';
 
 export default function DashboardWidgetRecentPostsApp() {
-	const query = useMemo(
-		() => ( {
-			per_page: 5,
-			status: 'draft',
-			context: 'edit',
-			orderby: 'modified',
-			order: 'desc',
-		} ),
-		[]
-	);
-	const drafts = useEntityRecords( 'postType', 'post', query );
+	const drafts = useEntityRecords( 'postType', 'post', RECENT_DRAFTS_QUERY );
 
 	if ( drafts.isResolving && ! drafts.records ) {
 		return <Spinner />;

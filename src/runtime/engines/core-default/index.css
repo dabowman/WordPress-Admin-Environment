@@ -154,49 +154,15 @@
 	fill: currentColor;
 }
 
-/* Dashboard grid — `core:dashboard-grid` template renders an auto-fill
- * grid of widget tiles. Tile body is whatever the widget app renders;
- * the surrounding card chrome + header come from `core:dashboard-host`
- * (the app populating the dynamic-children store). These rules add the
- * card surface defaults so the host can stay DS-neutral when authors
- * supply their own widget chrome.
- *
- * Scoped under `[data-region-id$="dashboard-grid"]` so the rules only
- * apply inside an instantiated grid region, regardless of the shell's
- * region id. A shell with multiple grids hits all of them. */
+/* `core:dashboard-grid`-templated region: zero the inner `region__app`
+ * padding so the host's own grid container reaches the region edges.
+ * Touches engine-owned chrome (`region__app`), so it belongs engine-side.
+ * Scoped on `data-region-id$="dashboard-grid"` so the rule fires for any
+ * shell-chosen id ending in `dashboard-grid`. Tile chrome lives with the
+ * host app — `src/apps/dashboard-host/index.css`. */
 .wp-admin-shell-region[data-region-id$="dashboard-grid"]
 	.wp-admin-shell-region__app {
 	padding: 0;
-}
-
-.wp-admin-shell-dashboard-tile {
-	display: flex;
-	flex-direction: column;
-	min-block-size: 0;
-	background: var(
-		--wp-admin-shell--chrome--content--card-background,
-		var(--wpds-color-bg-surface-neutral)
-	);
-	border: 1px solid var(--wpds-color-stroke-surface-neutral);
-	border-radius: var(--wpds-border-radius-md);
-	overflow: hidden;
-}
-
-.wp-admin-shell-dashboard-tile__header {
-	display: flex;
-	align-items: center;
-	flex-shrink: 0;
-	padding: var(--wpds-dimension-padding-sm)
-		var(--wpds-dimension-padding-md);
-	border-block-end: 1px solid var(--wpds-color-stroke-surface-neutral);
-	font-weight: 600;
-}
-
-.wp-admin-shell-dashboard-tile__body {
-	flex: 1;
-	min-block-size: 0;
-	overflow: auto;
-	padding: var(--wpds-dimension-padding-md);
 }
 
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral

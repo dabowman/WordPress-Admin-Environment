@@ -125,13 +125,10 @@
 			"role": "region",
 			"platform": { "core:dynamic-children": true },
 			"default-style": {
-				"display": "grid",
-				"grid-template-columns": "repeat(auto-fill, minmax(280px, 1fr))",
-				"grid-auto-rows": "minmax(160px, auto)",
-				"gap": "var(--wpds-dimension-padding-lg)",
+				"display": "block",
 				"inline-size": "100%",
-				"padding": "var(--wpds-dimension-padding-md)",
-				"align-content": "start"
+				"block-size": "100%",
+				"overflow": "auto"
 			}
 		},
 
