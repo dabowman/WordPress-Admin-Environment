@@ -563,7 +563,218 @@ function wp_admin_shell_chromeless_bridge_script() {
 		);
 	} catch ( _err ) { /* swallow */ }
 
-	/* Sub-systems 11–14 land in P2.T4-C. */
+	/*
+	 * Sub-system 11 — command-palette harvest (STUB).
+	 *
+	 * Upstream `desktop-mode` ports ~500 LOC of `wp.data.select('core/
+	 * commands')` + `wp.element.renderToString` + a React-mounted
+	 * harvester for tier-3 loader commands (e.g. `core/block-editor/
+	 * selected-block-commands`). Plan §D2 explicitly accepts the WP-
+	 * minor breakage risk that comes with those private APIs. For now
+	 * the bridge ships a listener stub that acknowledges the subscribe
+	 * request and posts an empty list — the parent's `core:command-
+	 * palette` app isn't wired to consume iframe commands yet either,
+	 * so deferring the harvester does not regress any user-visible
+	 * surface. Full port follows the parent palette consumer wiring.
+	 */
+	try {
+		window.addEventListener( 'message', function ( e ) {
+			if ( e.source !== window.parent ) {
+				return;
+			}
+			var data = e.data;
+			if (
+				! data ||
+				typeof data !== 'object' ||
+				data.type !== 'wp-admin-shell-commands-subscribe'
+			) {
+				return;
+			}
+			post( {
+				type: 'wp-admin-shell-commands-list',
+				commands: [],
+				stub: true,
+			} );
+		} );
+	} catch ( _err ) { /* swallow */ }
+
+	/*
+	 * Sub-system 12 — screen-meta detection.
+	 *
+	 * Detects whether the current admin page renders Screen Options /
+	 * Help in `#screen-meta-links`. Posts `wp-admin-shell-screen-meta`
+	 * once with the list of available panels so the parent can show a
+	 * matching control on the window's titlebar. Tracks aria-expanded
+	 * via MutationObserver and posts `wp-admin-shell-screen-meta-state`
+	 * with the currently-open panel (or `null`) on every change.
+	 */
+	try {
+		var screenLinks = document.getElementById( 'screen-meta-links' );
+		if ( screenLinks ) {
+			var screenOptionsBtn = document.getElementById(
+				'show-settings-link'
+			);
+			var helpBtn = document.getElementById( 'contextual-help-link' );
+			var panels = [];
+			if ( screenOptionsBtn ) {
+				panels.push( 'screen-options' );
+			}
+			if ( helpBtn ) {
+				panels.push( 'help' );
+			}
+			if ( panels.length > 0 ) {
+				post( {
+					type: 'wp-admin-shell-screen-meta',
+					panels: panels,
+				} );
+				var getOpenPanel = function () {
+					if (
+						screenOptionsBtn &&
+						screenOptionsBtn.getAttribute( 'aria-expanded' ) ===
+							'true'
+					) {
+						return 'screen-options';
+					}
+					if (
+						helpBtn &&
+						helpBtn.getAttribute( 'aria-expanded' ) === 'true'
+					) {
+						return 'help';
+					}
+					return null;
+				};
+				var reportState = function () {
+					post( {
+						type: 'wp-admin-shell-screen-meta-state',
+						open: getOpenPanel(),
+					} );
+				};
+				reportState();
+				var observer = new MutationObserver( reportState );
+				if ( screenOptionsBtn ) {
+					observer.observe( screenOptionsBtn, {
+						attributes: true,
+						attributeFilter: [ 'aria-expanded' ],
+					} );
+				}
+				if ( helpBtn ) {
+					observer.observe( helpBtn, {
+						attributes: true,
+						attributeFilter: [ 'aria-expanded' ],
+					} );
+				}
+			}
+		}
+	} catch ( _err ) { /* swallow */ }
+
+	/*
+	 * Sub-system 13 — auth-check recovery via jQuery heartbeat-tick.
+	 *
+	 * When the user's session expires while a chromeless window is
+	 * open, core's `wp-auth-check.js` shows its login iframe inside
+	 * the page. After re-auth the auth cookie is fresh but every
+	 * per-page nonce cached in JS globals is stale (`wpApiSettings.
+	 * nonce`, `_wpUpdatesSettings.ajax_nonce`, etc.). The next mutating
+	 * action surfaces as "Cookie check failed" — misleading; the
+	 * cookie is fine.
+	 *
+	 * Watch jQuery's `heartbeat-tick`. If we see `wp-auth-check: false`
+	 * (modal opens) and then later see it flip back to `true` (user
+	 * re-authed), reload the iframe so its nonces regenerate from the
+	 * fresh session. Per-iframe scope — each chromeless window carries
+	 * its own jQuery + heartbeat stack + nonce cache. Siblings recover
+	 * on their own next tick.
+	 */
+	( function _installAuthCheckRecovery() {
+		var attached = false;
+		var sawLoggedOut = false;
+		function attach() {
+			if ( attached || ! window.jQuery ) {
+				return;
+			}
+			attached = true;
+			window
+				.jQuery( document )
+				.on(
+					'heartbeat-tick.wpAdminShellAuthRecover',
+					function ( ev, data ) {
+						if (
+							! data ||
+							typeof data !== 'object' ||
+							! ( 'wp-auth-check' in data )
+						) {
+							return;
+						}
+						if ( data[ 'wp-auth-check' ] === false ) {
+							sawLoggedOut = true;
+							return;
+						}
+						if (
+							sawLoggedOut &&
+							data[ 'wp-auth-check' ] === true
+						) {
+							sawLoggedOut = false;
+							post( { type: 'wp-admin-shell-reauth-detected' } );
+							try {
+								window.location.reload();
+							} catch ( _err ) { /* swallow */ }
+						}
+					}
+				);
+		}
+		attach();
+		if ( document.readyState === 'loading' ) {
+			document.addEventListener( 'DOMContentLoaded', attach, {
+				once: true,
+			} );
+		}
+		window.addEventListener( 'load', attach, { once: true } );
+	} )();
+
+	/*
+	 * Sub-system 14 — instrument-set listener (devtools header
+	 * injection slot).
+	 *
+	 * Maintains a mutable `window.__wpAdminShellInstrument = { headers,
+	 * observe }` slot the parent shell overwrites via
+	 * `wp-admin-shell-instrument-set`. Headers are pre-merged by the
+	 * parent (RFC 7230 §3.2.2 join applied there). `observe: true`
+	 * opts into deeper observability — request + response headers in
+	 * network reports — when devtools widgets request it.
+	 *
+	 * Integration of those headers into the fetch / XHR wraps defers
+	 * to a follow-up. The storage + listener alone close sub-system
+	 * 14's contract — a parent-side widget can push headers and read
+	 * them back via the iframe's `__wpAdminShellInstrument` global
+	 * even before the wrap consumes them.
+	 */
+	window.__wpAdminShellInstrument = window.__wpAdminShellInstrument || {
+		headers: {},
+		observe: false,
+	};
+	try {
+		window.addEventListener( 'message', function ( ev ) {
+			if (
+				ev.origin !== window.location.origin ||
+				ev.source !== window.parent
+			) {
+				return;
+			}
+			var d = ev && ev.data;
+			if (
+				! d ||
+				typeof d !== 'object' ||
+				d.type !== 'wp-admin-shell-instrument-set'
+			) {
+				return;
+			}
+			window.__wpAdminShellInstrument = {
+				headers:
+					d.headers && typeof d.headers === 'object' ? d.headers : {},
+				observe: !! d.observe,
+			};
+		} );
+	} catch ( _err ) { /* swallow */ }
 } )();
 JS;
 
