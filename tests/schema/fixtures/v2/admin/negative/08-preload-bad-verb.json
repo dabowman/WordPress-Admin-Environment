@@ -1,0 +1,13 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "bad-preload-verb",
+	"engine": "core:default",
+	"regions": {
+		"main": { "template": "core:main", "routing": { "route-key": "_self" } }
+	},
+	"preload": [
+		[ "/wp/v2/posts", "POST" ]
+	]
+}

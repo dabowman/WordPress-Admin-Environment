@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard-widgets registry tests (C4 — spec §13 #9).
+ * Dashboard-widgets registry tests (C4 — spec §13 #13).
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-dashboard-widgets-tests.php`
  *

@@ -10,7 +10,7 @@
  *
  * Output: ordered array of `{ id, title, defaultSize, minSize, position }`.
  *
- * Rules (mirror the schema + spec §13 #9):
+ * Rules (mirror the schema + spec §13 #13):
  *   - Every manifest whose `dashboardWidget` block is present + non-empty
  *     is a candidate widget.
  *   - `overrides[id].hidden === true` removes a widget regardless of

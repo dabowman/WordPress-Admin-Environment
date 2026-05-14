@@ -1,6 +1,6 @@
 <?php
 /**
- * Dashboard-widgets registry (C4 — spec §13 #9).
+ * Dashboard-widgets registry (C4 — spec §13 #13).
  *
  * Plugins register a widget app for the dashboard grid via
  * `wp_admin_shell_register_dashboard_widget()`. The registry stores
@@ -215,7 +215,7 @@ class WP_Admin_Shell_Dashboard_Widgets {
 }
 
 /**
- * Public API — spec §13 #9.
+ * Public API — spec §13 #13.
  *
  * @param string $id   App id.
  * @param array  $args Optional configuration. Recognized keys:

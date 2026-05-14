@@ -1,0 +1,19 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v2.json",
+	"version": 1,
+	"$wpds": "6.9",
+	"name": "preload-demo",
+	"engine": "core:default",
+	"regions": {
+		"main": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		}
+	},
+	"preload": [
+		"/wp/v2/users/me",
+		"/wp/v2/types?context=view",
+		[ "/wp/v2/settings", "OPTIONS" ],
+		[ "/wp/v2/settings", "GET" ]
+	]
+}
