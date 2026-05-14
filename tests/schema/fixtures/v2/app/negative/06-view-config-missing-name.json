@@ -1,0 +1,11 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v2.json",
+	"id": "core:posts",
+	"version": 1,
+	"title": "Posts",
+	"role": "main",
+	"script": "core-posts",
+	"viewConfig": {
+		"kind": "postType"
+	}
+}

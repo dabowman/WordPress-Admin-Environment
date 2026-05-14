@@ -91,6 +91,40 @@
 		"styles": {
 			"$ref": "#/$defs/styles",
 			"description": "WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-shell--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
+		},
+
+		"viewConfigs": {
+			"type": "object",
+			"additionalProperties": false,
+			"patternProperties": {
+				"^[A-Za-z][A-Za-z0-9_-]*$": {
+					"type": "object",
+					"additionalProperties": false,
+					"patternProperties": {
+						"^[A-Za-z][A-Za-z0-9_-]*$": {
+							"type": "object",
+							"additionalProperties": false,
+							"patternProperties": {
+								"^(_default|[A-Za-z0-9][A-Za-z0-9_/-]*)$": {
+									"$ref": "#/$defs/viewConfigEntry"
+								}
+							}
+						}
+					}
+				}
+			},
+			"description": "Cascade registry of view-configs, keyed by entity kind → entity name → variant or `_default`. Each leaf is a view-config document (fields, default view, default layouts, actions). The shell merges entries across the 6-origin cascade and runs the `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter on the resolved triple before serving. Apps consume via `useViewConfig(kind, name, variant?)`. Variant key `_default` represents the unqualified base view-config; any other key (slash-namespacing allowed via the loose CIAB ID schema) represents a named scoped sub-view. See spec §13 #7."
+		},
+
+		"fieldCollections": {
+			"type": "object",
+			"additionalProperties": false,
+			"patternProperties": {
+				"^[A-Za-z][A-Za-z0-9_/-]*$": {
+					"$ref": "#/$defs/fieldCollection"
+				}
+			},
+			"description": "Cascade registry of field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). View-configs reference a collection via `fieldsRef` and the runtime merges ref-wins with inline `fields` per-field override. See spec §13 #8."
 		}
 	},
 
@@ -429,6 +463,175 @@
 					"type": "object",
 					"additionalProperties": true,
 					"description": "Per-app style overrides, keyed by app id. Same shape as the top-level `styles` tree. Overrides scope to `[data-app-id=\"...\"]` selectors."
+				}
+			}
+		},
+
+		"viewConfigEntry": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "A single view-config document. Describes how an entity-driven app should render a list/edit surface for `(kind, name[, variant])`. The shape is intentionally JSON-only — React render callbacks (column renderers, action modals) stay in the consuming app and are keyed off the declared `fields[].id` and `actions[].id`. See spec §13 #7.",
+			"properties": {
+				"fieldsRef": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Reference to a `fieldCollections` entry id. The referenced collection's `fields` array provides the base set; this entry's inline `fields` overrides per-field by `id`. Cascade pattern: ref wins, inline overrides per-field."
+				},
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/viewConfigField" },
+					"description": "Field descriptors for DataViews columns. Each entry declares an id (matches the entity record key), a type (text/datetime/number/select), a label, and optional filterability/searchability hints. Render callbacks are not declared here — the consuming app provides them keyed by id."
+				},
+				"defaultView": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Initial DataViews `view` object: `{ type, search, filters, page, perPage, sort, fields, titleField, layout }`. Used as the starting `view` state for the consuming app."
+				},
+				"defaultLayouts": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "DataViews `defaultLayouts` prop. Keys are layout ids (`table`, `grid`, etc.); values are layout-specific config objects."
+				},
+				"actions": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/viewConfigAction" },
+					"description": "Row-level + bulk action descriptors. Each entry declares an id (the consuming app maps to a callback), label, icon name, primacy/destructiveness flags, bulk support, and eligibility predicates expressed in declarative form. Custom modal render functions stay in the app."
+				}
+			}
+		},
+
+		"viewConfigField": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "id", "type", "label" ],
+			"description": "A DataViews field descriptor in JSON form. Render callbacks (`render`, `Edit`) are out of scope — the consuming app provides them by mapping field id → renderer.",
+			"properties": {
+				"id": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Field identifier. Matches the entity record key on the row data. Used by the consuming app to look up its render callback for this column."
+				},
+				"type": {
+					"enum": [ "text", "datetime", "number", "integer", "boolean", "media", "select", "url", "email" ],
+					"description": "DataViews field type. Drives the default editor/renderer when the consuming app doesn't ship a custom one."
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Human-readable column header. Translatable."
+				},
+				"enableHiding": {
+					"type": "boolean",
+					"description": "When false, the column cannot be hidden from the table view. Default true."
+				},
+				"enableGlobalSearch": {
+					"type": "boolean",
+					"description": "When true, the column participates in DataViews' global search box. Default false."
+				},
+				"enableSorting": {
+					"type": "boolean",
+					"description": "When false, the column cannot be sorted. Default true for text/number/datetime."
+				},
+				"elements": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": [ "value", "label" ],
+						"properties": {
+							"value": { "type": [ "string", "number", "boolean" ] },
+							"label": { "type": "string", "minLength": 1 }
+						}
+					},
+					"description": "Enumerated values for select-type fields. Each entry is a `{ value, label }` pair."
+				},
+				"filterBy": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"operators": {
+							"type": "array",
+							"items": { "type": "string" },
+							"uniqueItems": true,
+							"description": "DataViews filter operator ids: `is`, `isAny`, `isNot`, `isNotAll`, etc."
+						}
+					},
+					"description": "Filter configuration for this column. Omit to disable filtering."
+				}
+			}
+		},
+
+		"viewConfigAction": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "id", "label" ],
+			"description": "A row or bulk action descriptor in JSON form. The consuming app maps `id` to the actual callback (and optional `RenderModal`).",
+			"properties": {
+				"id": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Action identifier. Stable across cascade overrides; consuming apps key their callback map off this value."
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Human-readable action label. Translatable."
+				},
+				"icon": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Icon name resolved via the kernel icon registry (engine-populated). Optional."
+				},
+				"isPrimary": {
+					"type": "boolean",
+					"description": "When true, the action surfaces as a top-level affordance (row icon button, primary toolbar button) rather than buried in an overflow menu."
+				},
+				"isDestructive": {
+					"type": "boolean",
+					"description": "When true, the action triggers destructive UI affordances (red button, confirmation modal). Consuming apps render via the legacy `Button as DestructiveButton` fallback."
+				},
+				"supportsBulk": {
+					"type": "boolean",
+					"description": "When true, the action operates on a selection of multiple items, not just a single row."
+				},
+				"eligibleWhen": {
+					"type": "object",
+					"additionalProperties": false,
+					"description": "Declarative eligibility predicate. Each property names a record field; the value is the required match (single value or array of valid values). Consuming app compiles to an `isEligible(item)` callback.",
+					"properties": {
+						"status": {
+							"type": [ "string", "array" ],
+							"description": "Item status(es) that make the action eligible. Examples: `\"publish\"`, `[\"publish\", \"future\"]`."
+						}
+					}
+				}
+			}
+		},
+
+		"fieldCollection": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "kind", "fields" ],
+			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. View-configs reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; view-configs add *purpose* (which fields appear in this list, which actions fire).",
+			"properties": {
+				"kind": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Entity kind, matching `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.). Sanitized as `[A-Za-z0-9_-]+`."
+				},
+				"name": {
+					"type": [ "string", "null" ],
+					"description": "Entity name (`post`, `page`, `user`, `comment`). Null = universal across all names of the kind. Sanitized as `[A-Za-z0-9_-]+`."
+				},
+				"fields": {
+					"type": "array",
+					"items": { "$ref": "#/$defs/viewConfigField" },
+					"description": "Field descriptors that view-configs may reference."
+				},
+				"fieldsModule": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the shell runtime does not resolve or load this value in the C2 phase; declaring it logs a one-time dev warning that the value is currently inert. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
 				}
 			}
 		}
