@@ -1,21 +1,16 @@
 /**
- * core:desktop-dock-app — MVP nav-derived dock (P2.T2).
+ * core:desktop-dock-app — dock host (P2.T3).
  *
- * Two groups rendered side-by-side:
+ * Thin shell around the dock-rail registry — looks up the active
+ * renderer by name (defaults to `'default'`) and renders it with the
+ * shared prop bundle. The bundled `default` renderer paints two
+ * groups: launcher tiles + live-window tiles.
  *
- *   1. Launcher tiles — read from `config.items`. Each item declares
- *      either `{ label, icon?, app, config? }` (opens that app) or
- *      `{ label, icon?, href }` (resolved through admin.json's `routes`
- *      map; `#/foo` looks up the matching route entry).
- *
- *   2. Live-window tiles — one per entry in `useWindowStack()`. Click
- *      calls `focusWindow(id)`, which auto-restores minimized windows
- *      (per `WindowManager.focusWindow`). Without this group, a
- *      minimized window has no UI affordance to come back.
- *
- * P2.T3 will replace this with the ported `dock-rail/*` registry — MVP
- * keeps the two flat groups so the round-trip smoke covers
- * launch + restore.
+ * Plugin authors register alternate renderers via
+ * `registerDockRailRenderer( name, Component )` and point a shell's
+ * `regions.dock.config.renderer` at the registered name. The renderer
+ * owns the visual treatment entirely — the host just hands it
+ * `{ items, stack, routes, manager }`.
  */
 
 import { Icon } from '@wordpress/icons';
@@ -26,6 +21,10 @@ import {
 	useWindowStack,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
 import { getAppWindowBlock } from '../../runtime/engines/core-desktop/windowing/appWindowBlock';
+import {
+	getDockRailRenderer,
+	registerDockRailRenderer,
+} from '../../runtime/engines/core-desktop/windowing/dockRailRegistry';
 import { resolveIcon } from '../../runtime/config/iconMap';
 
 function resolveDockItem( item, routes ) {
@@ -53,26 +52,26 @@ function resolveDockItem( item, routes ) {
 }
 
 function appIconName( appId, items, routes ) {
-	// Walk launcher items first — if a launcher exists for this app, reuse
-	// its icon for the live-window tile so the visual stays consistent.
 	for ( const item of items ) {
 		const resolved = resolveDockItem( item, routes );
 		if ( resolved && resolved.app === appId && item.icon ) {
 			return item.icon;
 		}
 	}
-	// Fall back to the app manifest's `window.icon` so apps opened by
-	// means other than a dock launcher still get a recognizable tile.
 	const block = getAppWindowBlock( appId );
 	return block.icon || null;
 }
 
-export default function DesktopDockApp( { config } ) {
-	const manager = useWindowManager();
-	const stack = useWindowStack();
-	const kernel = useKernel();
-	const items = Array.isArray( config?.items ) ? config.items : [];
-	const routes = kernel?.config?.routes || null;
+/**
+ * Bundled `'default'` renderer — launcher tiles + live-window tiles.
+ *
+ * @param {Object} root0
+ * @param {*}      root0.items   Launcher items from the region config.
+ * @param {*}      root0.stack   Live window stack.
+ * @param {*}      root0.routes  Resolved routes map.
+ * @param {*}      root0.manager WindowManager dispatcher.
+ */
+function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 	const topZ = stack.reduce( ( m, w ) => Math.max( m, w.zIndex ), 0 );
 
 	return (
@@ -97,9 +96,6 @@ export default function DesktopDockApp( { config } ) {
 								return;
 							}
 							const block = getAppWindowBlock( resolved.app );
-							// Multi-instance apps always open fresh.
-							// Singleton apps focus an existing window
-							// instead of stacking duplicates.
 							if ( ! block.multiInstance ) {
 								const existing = stack.find(
 									( w ) => w.app === resolved.app
@@ -220,5 +216,48 @@ export default function DesktopDockApp( { config } ) {
 				</>
 			) }
 		</div>
+	);
+}
+
+// Register the bundled default at module-load so a shell using
+// `regions.dock.config.renderer = 'default'` (or omitting the field)
+// resolves the right component.
+registerDockRailRenderer( 'default', DefaultDockRailRenderer );
+
+/**
+ * @param {Object} root0
+ * @param {*}      root0.config
+ */
+export default function DesktopDockApp( { config } ) {
+	const manager = useWindowManager();
+	const stack = useWindowStack();
+	const kernel = useKernel();
+	const items = Array.isArray( config?.items ) ? config.items : [];
+	const routes = kernel?.config?.routes || null;
+	const rendererName =
+		typeof config?.renderer === 'string' && config.renderer
+			? config.renderer
+			: 'default';
+	const Renderer = getDockRailRenderer( rendererName );
+
+	if ( ! Renderer ) {
+		// Shouldn't happen — the engine registers `'default'` at
+		// module-load above. Defensive empty render keeps the engine
+		// painting if the registry is somehow empty.
+		return (
+			<div
+				className="wp-admin-shell-desktop-dock"
+				aria-label="Application dock"
+			/>
+		);
+	}
+
+	return (
+		<Renderer
+			items={ items }
+			stack={ stack }
+			routes={ routes }
+			manager={ manager }
+		/>
 	);
 }
