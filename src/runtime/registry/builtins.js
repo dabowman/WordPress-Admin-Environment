@@ -49,6 +49,10 @@ import DesktopDockApp from '../../apps/desktop-dock-app';
 import DesktopWindowFrameApp from '../../apps/desktop-window-frame';
 import DesktopIframeApp from '../../apps/desktop-iframe';
 
+import DashboardHostApp from '../../apps/dashboard-host';
+import DashboardWidgetRecentPostsApp from '../../apps/dashboard-widget-recent-posts';
+import DashboardWidgetQuickDraftApp from '../../apps/dashboard-widget-quick-draft';
+
 import coreDefault from '../engines/core-default';
 import coreSinglePane from '../engines/core-single-pane';
 import coreDesktop from '../engines/core-desktop';
@@ -84,6 +88,9 @@ const APP_COMPONENTS = {
 	'core:desktop-dock-app': DesktopDockApp,
 	'core:desktop-window-frame': DesktopWindowFrameApp,
 	'core:desktop-iframe': DesktopIframeApp,
+	'core:dashboard-host': DashboardHostApp,
+	'core:dashboard-widget-recent-posts': DashboardWidgetRecentPostsApp,
+	'core:dashboard-widget-quick-draft': DashboardWidgetQuickDraftApp,
 };
 
 const NON_ROUTABLE_APPS = new Set( [

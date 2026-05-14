@@ -83,6 +83,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-view-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-view-config-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';

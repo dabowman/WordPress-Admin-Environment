@@ -24,7 +24,8 @@
 		"core:persists-across-navigation",
 		"core:dirty-state",
 		"core:block-navigation-on-dirty",
-		"core:trigger"
+		"core:trigger",
+		"core:dynamic-children"
 	],
 
 	"templates": {
@@ -117,6 +118,20 @@
 				"border-radius": "var(--wpds-border-radius-lg)",
 				"box-shadow": "var(--wpds-elevation-sm)",
 				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+			}
+		},
+
+		"core:dashboard-grid": {
+			"role": "region",
+			"platform": { "core:dynamic-children": true },
+			"default-style": {
+				"display": "grid",
+				"grid-template-columns": "repeat(auto-fill, minmax(280px, 1fr))",
+				"grid-auto-rows": "minmax(160px, auto)",
+				"gap": "var(--wpds-dimension-padding-lg)",
+				"inline-size": "100%",
+				"padding": "var(--wpds-dimension-padding-md)",
+				"align-content": "start"
 			}
 		},
 

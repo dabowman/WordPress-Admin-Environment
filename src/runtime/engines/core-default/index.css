@@ -154,6 +154,51 @@
 	fill: currentColor;
 }
 
+/* Dashboard grid — `core:dashboard-grid` template renders an auto-fill
+ * grid of widget tiles. Tile body is whatever the widget app renders;
+ * the surrounding card chrome + header come from `core:dashboard-host`
+ * (the app populating the dynamic-children store). These rules add the
+ * card surface defaults so the host can stay DS-neutral when authors
+ * supply their own widget chrome.
+ *
+ * Scoped under `[data-region-id$="dashboard-grid"]` so the rules only
+ * apply inside an instantiated grid region, regardless of the shell's
+ * region id. A shell with multiple grids hits all of them. */
+.wp-admin-shell-region[data-region-id$="dashboard-grid"]
+	.wp-admin-shell-region__app {
+	padding: 0;
+}
+
+.wp-admin-shell-dashboard-tile {
+	display: flex;
+	flex-direction: column;
+	min-block-size: 0;
+	background: var(
+		--wp-admin-shell--chrome--content--card-background,
+		var(--wpds-color-bg-surface-neutral)
+	);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--wpds-border-radius-md);
+	overflow: hidden;
+}
+
+.wp-admin-shell-dashboard-tile__header {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	padding: var(--wpds-dimension-padding-sm)
+		var(--wpds-dimension-padding-md);
+	border-block-end: 1px solid var(--wpds-color-stroke-surface-neutral);
+	font-weight: 600;
+}
+
+.wp-admin-shell-dashboard-tile__body {
+	flex: 1;
+	min-block-size: 0;
+	overflow: auto;
+	padding: var(--wpds-dimension-padding-md);
+}
+
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
 .wp-admin-shell-region__forbidden {

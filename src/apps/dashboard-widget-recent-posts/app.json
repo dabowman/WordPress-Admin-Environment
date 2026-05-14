@@ -1,0 +1,77 @@
+{
+	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"id": "core:dashboard-widget-recent-posts",
+	"version": 1,
+	"title": "Recent Drafts",
+	"description": "Lists the five most recently modified post drafts with click-to-edit links.",
+	"designSystem": "@wordpress/ui",
+	"role": "region",
+	"capabilities": [ "edit_posts" ],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"dashboardWidget": {
+		"title": "Recent Drafts",
+		"defaultSize": { "w": 1, "h": 1 },
+		"minSize": { "w": 1, "h": 1 },
+		"position": "auto"
+	},
+	"documentation": {
+		"purpose": "Quick-access list of the five most recently modified drafts. Pairs with `core:simple-editor`'s edit route so writers can resume in one click.",
+		"data": {
+			"reads": [
+				{
+					"source": "postType/post",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Five most recent drafts (status: draft, orderby: modified desc, per_page: 5).",
+					"query": {
+						"status": "draft",
+						"per_page": 5,
+						"context": "edit",
+						"orderby": "modified",
+						"order": "desc"
+					}
+				}
+			]
+		},
+		"url": {
+			"navigates": [ "#/posts/{id}/edit" ]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "drafts.isResolving && !drafts.records",
+				"renders": "Spinner."
+			},
+			{
+				"id": "empty",
+				"when": "drafts.records.length === 0",
+				"renders": "`No drafts yet. Start writing!` copy."
+			},
+			{
+				"id": "ready",
+				"when": "drafts.records.length > 0",
+				"renders": "Stack of five `<Button>` links + modified-date timestamps."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click a draft title",
+				"effect": "`navigate('#/posts/{id}/edit')`."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Tile content layout."
+			},
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading state — no WPDS 0.12 port."
+			}
+		]
+	}
+}

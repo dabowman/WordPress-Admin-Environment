@@ -125,6 +125,17 @@
 				}
 			},
 			"description": "Cascade registry of field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). View-configs reference a collection via `fieldsRef` and the runtime merges ref-wins with inline `fields` per-field override. See spec §13 #8."
+		},
+
+		"dashboardWidgets": {
+			"type": "object",
+			"additionalProperties": false,
+			"patternProperties": {
+				"^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$": {
+					"$ref": "#/$defs/dashboardWidgetOverride"
+				}
+			},
+			"description": "Per-widget overrides keyed by app id. Each entry layers on top of the app manifest's `dashboardWidget` block — admin.json wins per-property. Use to hide widgets the shell ships with (`hidden: true`), to pin a widget to a specific cell, or to grow its size. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` contribute through the plugin origin and are overrideable by site/role/user origins via this block. See spec §13 #12."
 		}
 	},
 
@@ -608,6 +619,49 @@
 							"description": "Item status(es) that make the action eligible. Examples: `\"publish\"`, `[\"publish\", \"future\"]`."
 						}
 					}
+				}
+			}
+		},
+
+		"dashboardWidgetSize": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "w", "h" ],
+			"properties": {
+				"w": { "type": "integer", "minimum": 1 },
+				"h": { "type": "integer", "minimum": 1 }
+			},
+			"description": "Grid cell {w, h}. Same shape as admin-app-v2.json#dashboardWidgetSize."
+		},
+
+		"dashboardWidgetPosition": {
+			"oneOf": [
+				{ "const": "auto" },
+				{
+					"type": "object",
+					"additionalProperties": false,
+					"required": [ "row", "col" ],
+					"properties": {
+						"row": { "type": "integer", "minimum": 1 },
+						"col": { "type": "integer", "minimum": 1 }
+					}
+				}
+			],
+			"description": "`auto` or explicit `{row, col}`. Same shape as admin-app-v2.json#dashboardWidgetPosition."
+		},
+
+		"dashboardWidgetOverride": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Per-widget admin.json override entry. Every field is optional; resolver merges against the app manifest's `dashboardWidget` block per-property with admin.json winning. Includes the `hidden` switch which is admin.json-only (manifests can't hide themselves).",
+			"properties": {
+				"title": { "type": "string", "minLength": 1 },
+				"defaultSize": { "$ref": "#/$defs/dashboardWidgetSize" },
+				"minSize": { "$ref": "#/$defs/dashboardWidgetSize" },
+				"position": { "$ref": "#/$defs/dashboardWidgetPosition" },
+				"hidden": {
+					"type": "boolean",
+					"description": "When true, the host skips this widget. Use site/role/user origins to hide widgets you don't want on this install. Default false."
 				}
 			}
 		},
