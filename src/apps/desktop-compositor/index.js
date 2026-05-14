@@ -69,7 +69,11 @@ function buildWindowDecl( win, parentId ) {
 					overflow: 'auto',
 				},
 				app: win.app,
-				config: win.config,
+				// `windowId` lets body apps reach the manager (e.g.
+				// desktop-iframe's focus-request handler). Authors
+				// shouldn't override it — undefined falls through to
+				// the win.config user-supplied value.
+				config: { ...win.config, windowId: win.id },
 			},
 		},
 	};

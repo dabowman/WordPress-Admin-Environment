@@ -23,6 +23,12 @@
 import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
 
+import {
+	useWindowManager,
+	useWindowEntry,
+} from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
+import { getAppWindowBlock } from '../../runtime/engines/core-desktop/windowing/appWindowBlock';
+
 import './index.css';
 
 /**
@@ -64,6 +70,13 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 	const src = rawUrl ? buildChromelessSrc( rawUrl ) : '';
 	const [ isLoading, setIsLoading ] = useState( true );
 	const iframeRef = useRef( null );
+	const manager = useWindowManager();
+	const windowId =
+		config && typeof config.windowId === 'string' ? config.windowId : null;
+	// Watch the window entry just so the frame's parent re-renders are
+	// observable here. Subscription is incidental — the bridge handlers
+	// reach the manager imperatively.
+	useWindowEntry( windowId || '' );
 
 	const onIframeLoad = useCallback( ( event ) => {
 		setIsLoading( false );
@@ -81,10 +94,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 		}
 	}, [] );
 
-	// MVP postMessage listener stub. P2.T4-A/B/C extend this with
-	// concrete handlers for the 14 bridge sub-systems (network /
-	// menu-changed / external-link / auth-check / command-palette /
-	// screen-meta / instrument-set / …).
+	// Bridge message handlers (P2.T4-A/B observability + T4-B routing).
 	useEffect( () => {
 		const onMessage = ( e ) => {
 			const data = e.data;
@@ -104,10 +114,66 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 			if ( ! iframe || e.source !== iframe.contentWindow ) {
 				return;
 			}
+
+			if ( type === 'wp-admin-shell-iframe-ready' ) {
+				// Handshake hello → ack flow (sub-system 8). Posting
+				// from parent after iframe-ready guarantees the iframe
+				// has its listener attached.
+				try {
+					iframe.contentWindow.postMessage(
+						{ type: 'wp-admin-shell-bridge-hello' },
+						window.location.origin
+					);
+				} catch ( _err ) {
+					/* swallow */
+				}
+				return;
+			}
+
+			if ( type === 'wp-admin-shell-focus-request' ) {
+				if ( windowId ) {
+					manager.focusWindow( windowId );
+				}
+				return;
+			}
+
+			if ( type === 'wp-admin-shell-admin-link' ) {
+				// Open the admin link as a new iframe window inside the
+				// shell so the user stays in the desktop metaphor.
+				const url = typeof data.url === 'string' ? data.url : '';
+				if ( ! url ) {
+					return;
+				}
+				const block = getAppWindowBlock( 'core:desktop-iframe' );
+				manager.openWindow( {
+					app: 'core:desktop-iframe',
+					config: { url },
+					title:
+						typeof data.label === 'string' && data.label
+							? data.label
+							: url,
+					size: block.defaultSize,
+				} );
+				return;
+			}
+
+			if ( type === 'wp-admin-shell-external-link' ) {
+				// External destinations leave the iframe sandbox — hand
+				// to the browser. Future: spawn a generic-iframe window
+				// so the user stays in-shell. For MVP, native new tab.
+				const url = typeof data.url === 'string' ? data.url : '';
+				if ( url ) {
+					window.open( url, '_blank', 'noopener,noreferrer' );
+				}
+				return;
+			}
+
 			if ( process.env.NODE_ENV !== 'production' ) {
+				// Unhandled types still log so future sub-systems are
+				// easy to spot in dev.
 				// eslint-disable-next-line no-console
 				console.debug(
-					'[core:desktop-iframe] bridge message',
+					'[core:desktop-iframe] unhandled bridge message',
 					type,
 					data
 				);
@@ -115,7 +181,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 		};
 		window.addEventListener( 'message', onMessage );
 		return () => window.removeEventListener( 'message', onMessage );
-	}, [] );
+	}, [ manager, windowId ] );
 
 	if ( ! rawUrl ) {
 		return null;

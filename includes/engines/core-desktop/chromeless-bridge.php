@@ -146,6 +146,58 @@ function wp_admin_shell_chromeless_bridge_script() {
 	}
 
 	/*
+	 * Sub-system 6 — auth-check force on 401/403.
+	 *
+	 * When an admin-side request returns 401/403 the session is likely
+	 * toast. Force `wp.heartbeat.connectNow()` instead of waiting up to
+	 * 60s for the next tick to surface core's auth-check modal. 5s
+	 * cooldown debounces storms when many requests fail at once.
+	 * Same-origin gate so we don't react to third-party 403s; skip
+	 * heartbeat / wp-login URLs to avoid recursion.
+	 */
+	var authCheckCooldownUntil = 0;
+	function maybeForceAuthCheck( status, url ) {
+		if ( status !== 401 && status !== 403 ) {
+			return;
+		}
+		var urlStr = String( url || '' );
+		if ( ! urlStr ) {
+			return;
+		}
+		try {
+			var resolved = new URL( urlStr, window.location.href );
+			if ( resolved.origin !== window.location.origin ) {
+				return;
+			}
+			if (
+				resolved.pathname.indexOf( '/wp-admin/admin-ajax.php' ) !== -1 &&
+				/(?:^|&|\?)action=heartbeat(?:&|$)/.test( resolved.search )
+			) {
+				return;
+			}
+			if ( resolved.pathname.indexOf( '/wp-login.php' ) !== -1 ) {
+				return;
+			}
+		} catch ( _err ) {
+			return;
+		}
+		var now = Date.now();
+		if ( now < authCheckCooldownUntil ) {
+			return;
+		}
+		authCheckCooldownUntil = now + 5000;
+		try {
+			if (
+				window.wp &&
+				window.wp.heartbeat &&
+				typeof window.wp.heartbeat.connectNow === 'function'
+			) {
+				window.wp.heartbeat.connectNow();
+			}
+		} catch ( _err ) { /* swallow */ }
+	}
+
+	/*
 	 * Sub-system 3 — fetch() wrap.
 	 *
 	 * Every completed request posts `wp-admin-shell-iframe-network`
@@ -181,17 +233,19 @@ function wp_admin_shell_chromeless_bridge_script() {
 								( ( window.performance && performance.now )
 									? performance.now()
 									: Date.now() ) - startedAt;
+							var status = response && typeof response.status === 'number'
+								? response.status
+								: 0;
 							post( {
 								type: 'wp-admin-shell-iframe-network',
 								transport: 'fetch',
 								method: method,
 								url: url,
-								status: response && typeof response.status === 'number'
-									? response.status
-									: 0,
+								status: status,
 								duration: Math.round( duration ),
 								failed: response ? ! response.ok : true,
 							} );
+							maybeForceAuthCheck( status, url );
 							return response;
 						},
 						function ( err ) {
@@ -260,15 +314,17 @@ function wp_admin_shell_chromeless_bridge_script() {
 						( ( window.performance && performance.now )
 							? performance.now()
 							: Date.now() ) - startedAt;
+					var status = typeof this.status === 'number' ? this.status : 0;
 					post( {
 						type: 'wp-admin-shell-iframe-network',
 						transport: 'xhr',
 						method: info.method || 'GET',
 						url: info.url || '',
-						status: typeof this.status === 'number' ? this.status : 0,
+						status: status,
 						duration: Math.round( duration ),
-						failed: failed || this.status >= 400 || this.status === 0,
+						failed: failed || status >= 400 || status === 0,
 					} );
+					maybeForceAuthCheck( status, info.url || '' );
 				}.bind( this );
 				try {
 					this.addEventListener( 'load', function () { settle( false ); } );
@@ -329,7 +385,185 @@ function wp_admin_shell_chromeless_bridge_script() {
 		/* beacon-wrap failure — beacon observability degrades. */
 	}
 
-	/* Sub-systems 6–14 land in P2.T4-B / P2.T4-C commits. */
+	/*
+	 * Sub-system 7 — menu-changed signal.
+	 *
+	 * Fires on admin pages whose completion commonly mutates the WP
+	 * menu globals (plugin activate/deactivate, install, theme switch).
+	 * The parent shell uses our admin.json, not WP's $menu, but plugin
+	 * authors who extend the shell via `wp_admin_shell_register_app()`
+	 * during one of those flows want a hook to refetch state. Payload
+	 * deliberately omits the full $menu serialization upstream ships
+	 * (~140 LOC) — the shell isn't a $menu mirror, so the signal alone
+	 * is the contract.
+	 */
+	try {
+		var pagenow = '';
+		if ( typeof window.pagenow === 'string' ) {
+			pagenow = window.pagenow;
+		} else if ( document.body && document.body.className ) {
+			// pagenow-* body class is set by WP for every admin page.
+			var match = /(?:^|\s)pagenow-([a-z0-9_-]+)(?:\s|$)/.exec(
+				document.body.className
+			);
+			if ( match ) {
+				pagenow = match[ 1 ];
+			}
+		}
+		var menuMutatingPages = [
+			'plugins',
+			'plugin-install',
+			'update',
+			'themes',
+		];
+		if ( menuMutatingPages.indexOf( pagenow ) !== -1 ) {
+			post( {
+				type: 'wp-admin-shell-menu-changed',
+				pagenow: pagenow,
+			} );
+		}
+	} catch ( _err ) { /* swallow */ }
+
+	/*
+	 * Sub-system 8 — bridge handshake (minimal MVP).
+	 *
+	 * Parent ↔ iframe handshake: parent posts
+	 * `wp-admin-shell-bridge-hello` after the iframe-ready signal, and
+	 * the iframe replies with `wp-admin-shell-bridge-ack`. Full
+	 * topic-based publish / subscribe channel system from upstream
+	 * (~200 LOC) defers to a follow-up — the ack is enough to satisfy
+	 * the "is this iframe reachable" probe parent widgets need.
+	 */
+	try {
+		window.addEventListener( 'message', function ( e ) {
+			if ( e.source !== window.parent ) {
+				return;
+			}
+			var data = e.data;
+			if ( ! data || typeof data !== 'object' ) {
+				return;
+			}
+			if ( data.type === 'wp-admin-shell-bridge-hello' ) {
+				post( {
+					type: 'wp-admin-shell-bridge-ack',
+					url: window.location.href,
+				} );
+			}
+		} );
+	} catch ( _err ) { /* swallow */ }
+
+	/*
+	 * Sub-system 9 — link interception.
+	 *
+	 *   - `<a target="_blank">` / external host → post
+	 *     `wp-admin-shell-external-link`; parent decides whether to
+	 *     open as a closeable sub-tab or hand to the OS.
+	 *   - Same-origin wp-admin links inside the iframe → post
+	 *     `wp-admin-shell-admin-link`; parent decides whether to open
+	 *     as a new window, route through the dock, or let the iframe
+	 *     navigate in place. Modifier-key clicks (cmd/ctrl/middle)
+	 *     pass through native so "open in new tab" still works.
+	 */
+	try {
+		document.addEventListener(
+			'click',
+			function ( e ) {
+				// Pass through modifier-key clicks.
+				if (
+					e.defaultPrevented ||
+					e.button !== 0 ||
+					e.metaKey ||
+					e.ctrlKey ||
+					e.shiftKey ||
+					e.altKey
+				) {
+					return;
+				}
+				var link =
+					e.target instanceof Element
+						? e.target.closest( 'a' )
+						: null;
+				if ( ! link ) {
+					return;
+				}
+				var href = link.getAttribute( 'href' );
+				if ( ! href || href.charAt( 0 ) === '#' ) {
+					return;
+				}
+				var target = link.getAttribute( 'target' );
+				var absolute;
+				try {
+					absolute = new URL(
+						href,
+						window.location.href
+					).toString();
+				} catch ( _err ) {
+					return;
+				}
+				var parsed;
+				try {
+					parsed = new URL( absolute );
+				} catch ( _err ) {
+					return;
+				}
+				var isExternal =
+					parsed.origin !== window.location.origin ||
+					target === '_blank';
+				var label =
+					( link.textContent || '' ).trim() ||
+					link.getAttribute( 'title' ) ||
+					link.getAttribute( 'aria-label' ) ||
+					absolute;
+				if ( isExternal ) {
+					e.preventDefault();
+					post( {
+						type: 'wp-admin-shell-external-link',
+						url: absolute,
+						label: label.slice( 0, 80 ),
+					} );
+					return;
+				}
+				// Same-origin admin link — only intercept if it points
+				// into wp-admin (skip frontend links the user can stay
+				// in the iframe for).
+				if (
+					parsed.pathname.indexOf( '/wp-admin/' ) === -1
+				) {
+					return;
+				}
+				e.preventDefault();
+				post( {
+					type: 'wp-admin-shell-admin-link',
+					url: absolute,
+					label: label.slice( 0, 80 ),
+				} );
+			},
+			true
+		);
+	} catch ( _err ) { /* swallow */ }
+
+	/*
+	 * Sub-system 10 — focus-request bridge.
+	 *
+	 * Pointerdown events don't cross the iframe boundary, so a click
+	 * inside an iframe doesn't surface to the parent's focusin
+	 * listener. Without this, the only way to raise an iframe window
+	 * would be clicking its title bar. Post a focus-request on every
+	 * pointerdown; parent's WindowManager treats it as a focusWindow()
+	 * call. Capture phase so the signal fires before any
+	 * stopPropagation inside the page's own handlers.
+	 */
+	try {
+		document.addEventListener(
+			'pointerdown',
+			function () {
+				post( { type: 'wp-admin-shell-focus-request' } );
+			},
+			true
+		);
+	} catch ( _err ) { /* swallow */ }
+
+	/* Sub-systems 11–14 land in P2.T4-C. */
 } )();
 JS;
 
