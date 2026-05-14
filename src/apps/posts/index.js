@@ -178,7 +178,7 @@ function buildActions(
 										( r ) => r.status === 'rejected'
 									).length;
 									if ( failed > 0 ) {
-										createNotice?.(
+										createNotice(
 											'error',
 											sprintf(
 												/* translators: 1: failed item count, 2: total item count */

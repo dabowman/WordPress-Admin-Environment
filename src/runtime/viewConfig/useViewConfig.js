@@ -88,11 +88,15 @@ function readInline( key, kind, name, variant ) {
  */
 export function useViewConfig( kind, name, variant = null, options = {} ) {
 	const { fallback = null } = options;
-	const key = cacheKey( kind, name, variant );
+	// Mirror the PHP resolver's `_default → null` normalization
+	// (`WP_Admin_Shell_View_Config::resolve` after sanitize). Keeps
+	// cache keys + REST query args symmetric with the server.
+	const normalizedVariant = variant === '_default' ? null : variant;
+	const key = cacheKey( kind, name, normalizedVariant );
 
 	const initial = useMemo(
-		() => readInline( key, kind, name, variant ),
-		[ key, kind, name, variant ]
+		() => readInline( key, kind, name, normalizedVariant ),
+		[ key, kind, name, normalizedVariant ]
 	);
 
 	const [ doc, setDoc ] = useState( initial );
@@ -115,7 +119,7 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 
 		const pending =
 			inflight.get( key ) ||
-			fetchViewConfig( kind, name, variant ).finally( () => {
+			fetchViewConfig( kind, name, normalizedVariant ).finally( () => {
 				inflight.delete( key );
 			} );
 		inflight.set( key, pending );
@@ -144,7 +148,7 @@ export function useViewConfig( kind, name, variant = null, options = {} ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ key, kind, name, variant, initial ] );
+	}, [ key, kind, name, normalizedVariant, initial ] );
 
 	const config = useMemo( () => {
 		if ( doc && Object.keys( doc ).length > 0 ) {
