@@ -30,20 +30,42 @@ PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7)
 
 The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
-### i18n regression — accepted CIAB-parity loss
+### Translation recipe
 
-PostsApp regresses on label translation as of the C2 migration. Before C2, all DataViews column labels and row-action labels were authored inline as `__('Title', 'wp-admin-shell')` calls in `index.js` — `@wordpress/i18n` translated them at render time using the active locale. After C2, the cascade primitive ships from `app.json#viewConfig` (and any admin.json `viewConfigs` overrides). JSON can't carry `__()` calls, so the manifest baseline reaches DataViews with **raw English labels** regardless of the user's locale.
+View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#viewConfig` and admin.json `viewConfigs` overrides reach DataViews with raw strings in whatever locale the spec was authored in. PostsApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
-This is an **accepted regression**, not a bug. Spec §13 #7 codifies the contract: view-configs are *locale-agnostic primitives*, matching CIAB's `next_admin_entity_view_config_*` design. Translation is the consumer's responsibility, not the cascade's.
+```js
+const FIELD_LABELS = {
+    title:  __( 'Title',  'wp-admin-shell' ),
+    status: __( 'Status', 'wp-admin-shell' ),
+    author: __( 'Author', 'wp-admin-shell' ),
+    date:   __( 'Date',   'wp-admin-shell' ),
+};
 
-Two paths exist to restore locale awareness (neither wired in PostsApp today):
+const ACTION_LABELS = {
+    edit:  __( 'Edit',          'wp-admin-shell' ),
+    view:  __( 'View',          'wp-admin-shell' ),
+    trash: __( 'Move to Trash', 'wp-admin-shell' ),
+};
+```
 
-1. **Server-side filter callback.** Plugins authoring against `wp_admin_shell_view_config_postType_post` can wrap labels in `__()` from inside the PHP filter — that's where translation calls actually work. Best for plugins shipping a localized override of the bundled spec.
-2. **Render-time id→string mapping in the app.** `buildFields` / `buildActions` could keep a small `LABELS = { title: __('Title'), status: __('Status'), ... }` table and prefer those over the JSON spec's raw labels when the id matches. Static-analysis-friendly (translation tools scan `__()` literals); preserves the JSON spec's locale-agnostic shape.
+`buildFields` and `buildActions` consult the table first:
 
-Path 2 is the cheapest fix and will land before any other entity-CRUD app (TaxonomyApp, UsersApp, CommentsApp, PluginsApp, ThemesApp) migrates to the C2 primitive — otherwise each migration repeats the regression.
+```js
+compiled.label = FIELD_LABELS[ spec.id ] ?? spec.label;   // fields
+compiled.label = ACTION_LABELS[ spec.id ] ?? spec.label;  // actions
+```
 
-Action callbacks are unaffected — `RenderModal` and inline button labels still live in JSX inside `index.js` and translate normally.
+**Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin that adds a `meta:hero_color` column controls its own label via the spec; a plugin that swaps the bundled `title` column relabels it via either an `app.json` LABELS contribution (future) or a `wp_admin_shell_view_config_postType_post` filter that wraps the label in `__()` PHP-side.
+
+This pattern is the documented recovery for the C2 i18n regression and is the gating contract for the entity-CRUD migration sweep — TaxonomyApp / UsersApp / CommentsApp / PluginsApp / ThemesApp ship the same shape.
+
+Two adjacent paths remain available for richer cases:
+
+1. **Server-side filter.** `wp_admin_shell_view_config_postType_post` PHP callback wraps labels in `__()`. Best for plugins shipping a localized override of the bundled spec without forking the React app.
+2. **Render-time helper that owns both halves.** A future shared utility (`compileLabels(spec, LABELS)`) could deduplicate across entity-CRUD apps. Premature today; revisit after the migration sweep lands.
+
+Action callback copy (modal text inside `RenderModal`, inline button labels) lives as JSX `__()` literals and translates normally — only the spec-supplied DataViews `label` field needed the recipe.
 
 ## Rebuild guide
 

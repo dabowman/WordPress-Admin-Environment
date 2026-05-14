@@ -1,5 +1,5 @@
 import './index.css';
-import { useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -36,6 +36,25 @@ const STATUS_LABELS = {
 	private: __( 'Private', 'wp-admin-shell' ),
 	future: __( 'Scheduled', 'wp-admin-shell' ),
 	trash: __( 'Trash', 'wp-admin-shell' ),
+};
+
+// View-config primitives ship as locale-agnostic JSON (spec §13 #7) — labels
+// reach DataViews in whatever locale the spec was authored in. Recover the
+// pre-C2 translation behavior by mapping known field/action ids to `__()`-
+// wrapped strings at compile time. Unknown ids (plugin extension columns /
+// actions) fall through to `spec.label` so third-party authors can still
+// label their own additions.
+const FIELD_LABELS = {
+	title: __( 'Title', 'wp-admin-shell' ),
+	status: __( 'Status', 'wp-admin-shell' ),
+	author: __( 'Author', 'wp-admin-shell' ),
+	date: __( 'Date', 'wp-admin-shell' ),
+};
+
+const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	view: __( 'View', 'wp-admin-shell' ),
+	trash: __( 'Move to Trash', 'wp-admin-shell' ),
 };
 
 /**
@@ -118,7 +137,7 @@ function buildActions(
 		.map( ( spec ) => {
 			const compiled = {
 				id: spec.id,
-				label: spec.label,
+				label: ACTION_LABELS[ spec.id ] ?? spec.label,
 				isPrimary: !! spec.isPrimary,
 				isDestructive: !! spec.isDestructive,
 				supportsBulk: !! spec.supportsBulk,
@@ -215,7 +234,7 @@ function buildFields( fieldSpecs, fieldRenderers ) {
 			const compiled = {
 				id: spec.id,
 				type: spec.type,
-				label: spec.label,
+				label: FIELD_LABELS[ spec.id ] ?? spec.label,
 			};
 			if ( spec.enableGlobalSearch !== undefined ) {
 				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
@@ -259,6 +278,20 @@ export default function PostsApp( { config } ) {
 		...VIEW_DEFAULTS,
 		...viewConfig.defaultView,
 	} ) );
+
+	// Resync `view` when the underlying triple flips on the same hook
+	// instance (e.g. config.postType `post` → `page`). The useState
+	// initializer runs once, so without this effect the second triple
+	// inherits the first triple's perPage / sort / filters. Keyed only on
+	// the triple — not viewConfig — to avoid clobbering in-session view
+	// edits whenever the cascade re-resolves the doc shape.
+	useEffect( () => {
+		setView( {
+			...VIEW_DEFAULTS,
+			...( viewConfig.defaultView || {} ),
+		} );
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ postType, variant ] );
 
 	const queryArgs = useMemo( () => {
 		const args = {
