@@ -107,21 +107,31 @@ class WP_Admin_Shell_View_Config {
 
 	/**
 	 * Walk registered app manifests, extract each `viewConfig` baseline,
-	 * inject into the core origin's `viewConfigs[$kind][$name][$variant|'_default']`.
+	 * inject into the resolved tree's `viewConfigs[$kind][$name][$variant|'_default']`.
 	 *
 	 * Spec §13 #7 contract: an app's `viewConfig` block (declared on its
-	 * `app.json`) carries through the core origin so plugin / site / role /
-	 * user origins can override per-field via the cascade. Manifest
-	 * registry already discovers app.json at init priority 8; this filter
-	 * fires when the core origin's doc is being prepared (resolver phase
-	 * 1), so manifests are available.
+	 * `app.json`) is a *fallback* baseline — it fills triples nothing in
+	 * the cascade declared. When admin.json (or site/role/user origins)
+	 * declares the same triple, that declaration is **authoritative** for
+	 * the triple; the manifest does not contribute.
 	 *
-	 * Inline declarations on the existing core origin doc win over
-	 * manifest baselines — only injects when the triple is absent.
-	 * Matches the additive contribution pattern used by
-	 * `class-wp-admin-shell-field-collections.php`.
+	 * **Why this isn't a cascade origin.** Earlier wiring ran this on
+	 * `wp_admin_shell_data_core` (pre-merge). That made manifest baselines
+	 * cascade participants — admin.json then deep-merged on top, so
+	 * removing a field from admin.json couldn't actually remove it
+	 * (keyed-array merge by id reinstates the manifest entry). Authors
+	 * expect "I declared this triple; what I write is what wins." Moving
+	 * the injection to the post-merge `wp_admin_shell_data` filter
+	 * preserves that mental model: declared triples are authoritative,
+	 * undeclared triples fall through to the manifest. Plugins that want
+	 * to extend (not replace) a manifest baseline use the per-triple
+	 * filter `wp_admin_shell_view_config_{$kind}_{$name}` (and the
+	 * variant-qualified flavor) which runs against the resolved doc.
 	 *
-	 * @param array $doc Pre-merge core-origin document.
+	 * Manifest registry discovers app.json at init priority 8, so the
+	 * registry is populated by the time the resolver runs.
+	 *
+	 * @param array $doc Post-merge resolved document.
 	 * @return array
 	 */
 	public static function inject_app_baselines( $doc ) {
@@ -241,13 +251,16 @@ class WP_Admin_Shell_View_Config {
 }
 
 /**
- * Cascade contribution — app manifest baselines enter the resolver
- * through the `core` origin so plugin / site / role / user origins can
- * override via admin.json (spec §13 #7). Priority 5 so plugin authors
- * using add_filter('wp_admin_shell_data_core', ...) directly land after
- * this baseline.
+ * Post-merge baseline fallback — app manifest `viewConfig` blocks fill
+ * triples nothing in the cascade declared (spec §13 #7). Runs on the
+ * final `wp_admin_shell_data` filter at priority 5 so admin.json /
+ * site / role / user declarations always win for the triples they
+ * touch; the manifest only fills gaps.
  *
- * Lazy: only wired once the manifest registry is loadable. The function
- * is no-op when no app declares a `viewConfig` block.
+ * See `inject_app_baselines()` docblock for the design rationale —
+ * earlier wiring against `wp_admin_shell_data_core` made manifest
+ * baselines cascade participants, which the merge engine then
+ * deep-merged with admin.json (additive over keyed arrays + objects)
+ * making "remove a column from admin.json" impossible.
  */
-add_filter( 'wp_admin_shell_data_core', array( 'WP_Admin_Shell_View_Config', 'inject_app_baselines' ), 5 );
+add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_View_Config', 'inject_app_baselines' ), 5 );

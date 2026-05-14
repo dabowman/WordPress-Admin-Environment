@@ -245,7 +245,7 @@
 					"defaultView": {
 						"type": "table",
 						"page": 1,
-						"perPage": 25,
+						"perPage": 10,
 						"fields": [ "title", "status", "author", "date" ],
 						"titleField": "title",
 						"sort": { "field": "date", "direction": "desc" }

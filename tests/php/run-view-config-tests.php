@@ -450,11 +450,100 @@ WPAS_View_Config_Test_Runner::assert_true(
 	isset( $with_variant['viewConfigs']['postType']['product']['services'] )
 );
 
+// End-to-end: admin.json is authoritative for the triples it declares,
+// manifest baseline must NOT deep-merge on top. Regression guard for
+// the bug where authors removing fields/layouts from admin.json saw
+// the manifest values re-appear via cascade additive merge.
+$origins_authoritative = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => array(
+		'viewConfigs' => array(
+			'postType' => array(
+				'recipe' => array(
+					'_default' => array(
+						// Author declares a single field. Manifest declares
+						// four. Post-merge tree must show one, not five.
+						'fields' => array(
+							array( 'id' => 'title', 'type' => 'text', 'label' => 'Recipe' ),
+						),
+						'defaultLayouts' => array( 'table' => array() ),
+					),
+				),
+			),
+		),
+	),
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+
+// Register a fresh baseline app with the 3-field manifest under a
+// distinct id (the earlier 1-field `baseline-app` registration would
+// be re-used due to first-registration-wins).
+$reg->register_app( array(
+	'id'         => 'plugin:wpas-test/recipe-fat-baseline-app',
+	'version'    => 1,
+	'title'      => 'Recipe Fat Baseline App',
+	'role'       => 'main',
+	'script'     => 'wpas-test',
+	'viewConfig' => array(
+		'kind'   => 'postType',
+		'name'   => 'recipe-fat',
+		'fields' => array(
+			array( 'id' => 'title',    'type' => 'text', 'label' => 'Manifest Title' ),
+			array( 'id' => 'cuisine',  'type' => 'text', 'label' => 'Cuisine' ),
+			array( 'id' => 'servings', 'type' => 'number', 'label' => 'Servings' ),
+		),
+		'defaultLayouts' => array( 'table' => array(), 'grid' => array() ),
+	),
+) );
+
+$resolved = WP_Admin_Shell_Resolver::resolve_with( $origins_authoritative );
+$recipe   = $resolved['viewConfigs']['postType']['recipe']['_default'];
+
+WPAS_View_Config_Test_Runner::assert_eq(
+	'admin.json triple is authoritative — fields count NOT additive over manifest',
+	count( $recipe['fields'] ),
+	1
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'admin.json triple is authoritative — field label survives (not "Manifest Title")',
+	$recipe['fields'][0]['label'],
+	'Recipe'
+);
+WPAS_View_Config_Test_Runner::assert_true(
+	'admin.json triple is authoritative — defaultLayouts shrunk to one entry',
+	count( $recipe['defaultLayouts'] ) === 1 && isset( $recipe['defaultLayouts']['table'] )
+);
+
+// Manifest baseline still fills the gap when nothing in the cascade
+// declared a competing triple.
+$origins_fallback = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => array(),  // no viewConfigs declared
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_fallback = WP_Admin_Shell_Resolver::resolve_with( $origins_fallback );
+WPAS_View_Config_Test_Runner::assert_true(
+	'undeclared triple falls back to manifest baseline',
+	isset( $resolved_fallback['viewConfigs']['postType']['recipe-fat']['_default'] )
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'manifest fallback ships all manifest-declared fields',
+	count( $resolved_fallback['viewConfigs']['postType']['recipe-fat']['_default']['fields'] ),
+	3
+);
+
 // Clean up synthetic manifest registrations so later tests in the
 // same `wp eval-file` run see the bundled-only registry. No public
 // unregister exists in production code; `deregister()` is test-only.
 $reg->deregister( 'plugin:wpas-test/baseline-app' );
 $reg->deregister( 'plugin:wpas-test/services-variant-app' );
+$reg->deregister( 'plugin:wpas-test/recipe-fat-baseline-app' );
 
 // Field-collection duplicate-id rejection.
 WP_Admin_Shell_Field_Collections::reset();
