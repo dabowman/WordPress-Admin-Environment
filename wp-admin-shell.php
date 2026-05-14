@@ -83,6 +83,8 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-view-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-view-config-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';
@@ -154,6 +156,46 @@ function wp_admin_shell_register_template( $engine_id, $template_id, $template )
  */
 function wp_admin_shell_register_shell( $slug, $admin_json ) {
 	return WP_Admin_Shell_Shells::register( $slug, $admin_json );
+}
+
+/**
+ * Register a nav menu item — CIAB compatibility shim (spec §13 #9).
+ *
+ * Mechanical port of CIAB's `next_admin_register_menu_item()`. Plugins
+ * that previously called `next_admin_register_menu_item()` rename to
+ * `wp_admin_shell_register_menu_item()` and drop their inline
+ * `current_user_can()` gates — the `capability` arg flows through the
+ * shell's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
+ * `parent`, `parent_type`, `position`) carry over 1:1; the shell adds
+ * an optional `region` arg (defaults to the first `core:navigation`
+ * region in the resolved tree).
+ *
+ * @param string $id   Menu-item id (must be unique within the registry).
+ * @param array  $args Args. See `WP_Admin_Shell_Menu_Items::register`.
+ * @return string|WP_Error Id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_menu_item( $id, $args ) {
+	return WP_Admin_Shell_Menu_Items::register( $id, $args );
+}
+
+/**
+ * Register an admin route — CIAB compatibility shim (spec §13 #10).
+ *
+ * Mechanical port of CIAB's `next_admin_register_admin_route()`. The
+ * arg signature collapses CIAB's positional
+ * (`$path, $content_module, $route_module, $before_load, $static_data, $gc_time`)
+ * into `($path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ])`.
+ * `app` replaces `content_module`, `static_data` is folded into `config`
+ * for forward compatibility, and `gc_time` is accepted but ignored
+ * (TanStack-specific cache GC, no shell equivalent — emits a one-time
+ * `WP_DEBUG` notice).
+ *
+ * @param string $path Route path (`/posts`, `/posts/{id}`, `/media/*`).
+ * @param array  $args Args. See `WP_Admin_Shell_Admin_Routes::register`.
+ * @return string|WP_Error Path on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_admin_route( $path, $args ) {
+	return WP_Admin_Shell_Admin_Routes::register( $path, $args );
 }
 
 /**
