@@ -418,6 +418,31 @@
 					]
 				}
 			}
+		},
+		"taxonomy": {
+			"post_tag": {
+				"_default": {
+					"fields": [
+						{ "id": "name",        "type": "text",    "label": "Tag", "enableGlobalSearch": true, "enableHiding": false },
+						{ "id": "slug",        "type": "text",    "label": "Slug" },
+						{ "id": "count",       "type": "integer", "label": "Posts" },
+						{ "id": "description", "type": "text",    "label": "Description" }
+					],
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [ "slug", "count" ],
+						"titleField": "name",
+						"sort": { "field": "name", "direction": "asc" }
+					},
+					"defaultLayouts": { "table": {} },
+					"actions": [
+						{ "id": "edit",   "label": "Edit",   "isPrimary": true, "icon": "pencil" },
+						{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
+					]
+				}
+			}
 		}
 	},
 

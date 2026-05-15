@@ -296,11 +296,11 @@ wp-admin-shell/
 
 | Source | Component | Native? | Cap floor | Notes |
 |---|---|---|---|---|
-| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType`; consumes view-config `(postType, {postType}[, variant])` |
+| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType`. C2 view-config consumer (`useViewConfig('postType', config.postType, variant?)`). |
 | `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
 | `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. Native `@wordpress/edit-post` mount deferred to v2.x — see `SiteEditorApp.js` for blockers. |
 | `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
-| `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
+| `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms. C2 view-config consumer (`useViewConfig('taxonomy', config.taxonomy, variant?)`); manifest baseline binds `(taxonomy, category)`, other taxonomies consume cascade-only entries (`developer-admin.json` ships `(taxonomy, post_tag)`). |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
 | `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard; consumes view-config `(root, user)` |
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord. Reads spec via `useViewConfig('root','comment')` (C2). |

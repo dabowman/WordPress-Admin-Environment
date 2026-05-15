@@ -1,4 +1,4 @@
-import { useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -10,131 +10,156 @@ import {
 	TextareaControl,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { plus, trash, pencil } from '@wordpress/icons';
+import { decodeEntities } from '@wordpress/html-entities';
+import { plus } from '@wordpress/icons';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
 	post_tag: __( 'Tags', 'wp-admin-shell' ),
 };
 
-export default function TaxonomyApp( { config = {} } ) {
-	const taxonomy = config.taxonomy || 'category';
-	const heading =
-		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
+// View-config primitives ship as locale-agnostic JSON (spec §13 #7). Recover
+// translation for the ids the app authors by mapping known field/action ids
+// to `__()`-wrapped strings at module load. Unknown ids (plugin extension
+// columns / actions) fall through to `spec.label`.
+const FIELD_LABELS = {
+	name: __( 'Name', 'wp-admin-shell' ),
+	slug: __( 'Slug', 'wp-admin-shell' ),
+	count: __( 'Count', 'wp-admin-shell' ),
+	description: __( 'Description', 'wp-admin-shell' ),
+};
 
-	const [ view, setView ] = useState( {
-		type: 'table',
-		search: '',
-		filters: [],
-		page: 1,
-		perPage: 20,
-		sort: { field: 'name', direction: 'asc' },
-		fields: [ 'name', 'slug', 'count', 'description' ],
-		titleField: 'name',
-		layout: {},
-	} );
+const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	delete: __( 'Delete', 'wp-admin-shell' ),
+};
 
-	const queryArgs = useMemo( () => {
-		const args = {
-			per_page: view.perPage,
-			page: view.page,
-			order: view.sort?.direction || 'asc',
-			orderby: view.sort?.field || 'name',
-			context: 'edit',
-			hide_empty: false,
-		};
-		if ( view.search ) {
-			args.search = view.search;
-		}
-		return args;
-	}, [ view ] );
+const VIEW_DEFAULTS = {
+	type: 'table',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 20,
+	sort: { field: 'name', direction: 'asc' },
+	fields: [],
+	layout: {},
+};
 
-	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
-		'taxonomy',
+function stripTags( html ) {
+	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
+}
+
+/**
+ * Field id → render callback. View-config declares the shape; the React
+ * layer owns the row renderer. Unknown ids fall through to DataViews'
+ * default renderer for the declared field type.
+ *
+ * @param {Object}   deps
+ * @param {Function} deps.onEditTerm Open the edit modal for a raw term record.
+ */
+function buildFieldRenderers( { onEditTerm } ) {
+	return {
+		name: ( { item } ) => (
+			<Button
+				variant="minimal"
+				onClick={ () => onEditTerm( item.rawRecord ) }
+			>
+				{ item.name }
+			</Button>
+		),
+		slug: ( { item } ) => <Text>{ item.slug }</Text>,
+		count: ( { item } ) => <Text>{ item.count }</Text>,
+		description: ( { item } ) => (
+			<Text>{ stripTags( item.description ) }</Text>
+		),
+	};
+}
+
+function compileEligibility( eligibleWhen ) {
+	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
+		return undefined;
+	}
+	const entries = Object.entries( eligibleWhen );
+	if ( entries.length === 0 ) {
+		return undefined;
+	}
+	return ( item ) =>
+		entries.every( ( [ field, expected ] ) => {
+			const actual = item?.[ field ];
+			if ( Array.isArray( expected ) ) {
+				return expected.includes( actual );
+			}
+			return actual === expected;
+		} );
+}
+
+function buildFields( fieldSpecs, fieldRenderers ) {
+	return fieldSpecs
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				type: spec.type,
+				label: FIELD_LABELS[ spec.id ] ?? spec.label,
+			};
+			if ( spec.enableGlobalSearch !== undefined ) {
+				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
+			}
+			if ( spec.enableHiding !== undefined ) {
+				compiled.enableHiding = !! spec.enableHiding;
+			}
+			if ( spec.enableSorting !== undefined ) {
+				compiled.enableSorting = !! spec.enableSorting;
+			}
+			if ( Array.isArray( spec.elements ) ) {
+				compiled.elements = spec.elements;
+			}
+			if ( spec.filterBy ) {
+				compiled.filterBy = spec.filterBy;
+			}
+			if ( fieldRenderers[ spec.id ] ) {
+				compiled.render = fieldRenderers[ spec.id ];
+			}
+			return compiled;
+		} );
+}
+
+function buildActions(
+	actions,
+	{
 		taxonomy,
-		queryArgs
-	);
+		onEditTerm,
+		deleteEntityRecord,
+		invalidateResolution,
+		createSuccessNotice,
+		createErrorNotice,
+	}
+) {
+	const callbacks = {
+		edit: ( items ) => onEditTerm( items[ 0 ].rawRecord ),
+	};
 
-	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
-		useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } =
-		useDispatch( noticesStore );
+	return actions
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				label: ACTION_LABELS[ spec.id ] ?? spec.label,
+				isPrimary: !! spec.isPrimary,
+				isDestructive: !! spec.isDestructive,
+				supportsBulk: !! spec.supportsBulk,
+				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
+				isEligible: compileEligibility( spec.eligibleWhen ),
+			};
 
-	const [ editTerm, setEditTerm ] = useState( null );
-	const [ isCreating, setIsCreating ] = useState( false );
-
-	const data = useMemo( () => {
-		if ( ! records ) {
-			return [];
-		}
-		return records.map( ( t ) => ( {
-			id: t.id,
-			name: t.name,
-			slug: t.slug,
-			count: t.count,
-			description: t.description || '',
-			parent: t.parent || 0,
-			rawRecord: t,
-		} ) );
-	}, [ records ] );
-
-	const fields = useMemo(
-		() => [
-			{
-				id: 'name',
-				type: 'text',
-				label: __( 'Name', 'wp-admin-shell' ),
-				enableGlobalSearch: true,
-				enableHiding: false,
-				render: ( { item } ) => (
-					<Button
-						variant="minimal"
-						onClick={ () => setEditTerm( item.rawRecord ) }
-					>
-						{ item.name }
-					</Button>
-				),
-			},
-			{
-				id: 'slug',
-				type: 'text',
-				label: __( 'Slug', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.slug }</Text>,
-			},
-			{
-				id: 'count',
-				type: 'integer',
-				label: __( 'Count', 'wp-admin-shell' ),
-				render: ( { item } ) => <Text>{ item.count }</Text>,
-			},
-			{
-				id: 'description',
-				type: 'text',
-				label: __( 'Description', 'wp-admin-shell' ),
-				render: ( { item } ) => (
-					<Text>{ stripTags( item.description ) }</Text>
-				),
-			},
-		],
-		[]
-	);
-
-	const actions = useMemo(
-		() => [
-			{
-				id: 'edit',
-				label: __( 'Edit', 'wp-admin-shell' ),
-				icon: pencil,
-				isPrimary: true,
-				callback: ( items ) => setEditTerm( items[ 0 ].rawRecord ),
-			},
-			{
-				id: 'delete',
-				label: __( 'Delete', 'wp-admin-shell' ),
-				icon: trash,
-				isDestructive: true,
-				supportsBulk: true,
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
+			if ( spec.id === 'delete' ) {
+				compiled.RenderModal = ( {
+					items,
+					closeModal,
+					onActionPerformed,
+				} ) => (
 					<Stack
 						direction="column"
 						gap="md"
@@ -159,6 +184,8 @@ export default function TaxonomyApp( { config = {} } ) {
 								isDestructive
 								onClick={ async () => {
 									try {
+										// Terms have no trash — `force: true`
+										// is required or the request 400s.
 										await Promise.all(
 											items.map( ( item ) =>
 												deleteEntityRecord(
@@ -198,15 +225,116 @@ export default function TaxonomyApp( { config = {} } ) {
 							</DestructiveButton>
 						</Stack>
 					</Stack>
-				),
-			},
-		],
+				);
+			} else if ( callbacks[ spec.id ] ) {
+				compiled.callback = callbacks[ spec.id ];
+			}
+
+			return compiled;
+		} );
+}
+
+export default function TaxonomyApp( { config = {} } ) {
+	const taxonomy = config.taxonomy || 'category';
+	const variant = config.variant || null;
+	const heading =
+		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
+
+	const { config: viewConfig } = useViewConfig(
+		'taxonomy',
+		taxonomy,
+		variant
+	);
+
+	const [ view, setView ] = useState( () => ( {
+		...VIEW_DEFAULTS,
+		...viewConfig.defaultView,
+	} ) );
+
+	// Resync `view` when the underlying triple flips on the same hook
+	// instance (e.g. config.taxonomy `category` → `post_tag`). The useState
+	// initializer runs once, so without this effect the second triple
+	// inherits the first triple's perPage / sort / filters. Keyed only on
+	// the triple — not viewConfig — to avoid clobbering in-session view
+	// edits whenever the cascade re-resolves the doc shape.
+	useEffect( () => {
+		setView( {
+			...VIEW_DEFAULTS,
+			...( viewConfig.defaultView || {} ),
+		} );
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ taxonomy, variant ] );
+
+	const queryArgs = useMemo( () => {
+		const args = {
+			per_page: view.perPage,
+			page: view.page,
+			order: view.sort?.direction || 'asc',
+			orderby: view.sort?.field || 'name',
+			context: 'edit',
+			hide_empty: false,
+		};
+		if ( view.search ) {
+			args.search = view.search;
+		}
+		return args;
+	}, [ view ] );
+
+	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
+		'taxonomy',
+		taxonomy,
+		queryArgs
+	);
+
+	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
+
+	const [ editTerm, setEditTerm ] = useState( null );
+	const [ isCreating, setIsCreating ] = useState( false );
+
+	const data = useMemo( () => {
+		if ( ! records ) {
+			return [];
+		}
+		return records.map( ( t ) => ( {
+			id: t.id,
+			name: decodeEntities( t.name || '' ),
+			slug: t.slug,
+			count: t.count,
+			description: t.description || '',
+			parent: t.parent || 0,
+			rawRecord: t,
+		} ) );
+	}, [ records ] );
+
+	const fields = useMemo(
+		() =>
+			buildFields(
+				viewConfig.fields ?? [],
+				buildFieldRenderers( { onEditTerm: setEditTerm } )
+			),
+		[ viewConfig ]
+	);
+
+	const actions = useMemo(
+		() =>
+			buildActions( viewConfig.actions ?? [], {
+				taxonomy,
+				onEditTerm: setEditTerm,
+				deleteEntityRecord,
+				invalidateResolution,
+				createSuccessNotice,
+				createErrorNotice,
+			} ),
 		[
+			viewConfig,
+			taxonomy,
 			deleteEntityRecord,
 			invalidateResolution,
 			createSuccessNotice,
 			createErrorNotice,
-			taxonomy,
 		]
 	);
 
@@ -250,7 +378,7 @@ export default function TaxonomyApp( { config = {} } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ { table: {} } }
+				defaultLayouts={ viewConfig.defaultLayouts ?? { table: {} } }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }
@@ -286,10 +414,6 @@ export default function TaxonomyApp( { config = {} } ) {
 			) }
 		</div>
 	);
-}
-
-function stripTags( html ) {
-	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
 function TermEditModal( {
