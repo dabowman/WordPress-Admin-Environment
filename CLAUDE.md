@@ -303,7 +303,7 @@ wp-admin-shell/
 | `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
 | `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard; consumes view-config `(root, user)` |
-| `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord |
+| `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord. Reads spec via `useViewConfig('root','comment')` (C2). |
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
 | `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
