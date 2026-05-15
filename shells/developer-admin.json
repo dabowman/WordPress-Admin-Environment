@@ -382,6 +382,17 @@
 						{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
 					]
 				}
+			},
+			"plugin": {
+				"_default": {
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 25,
+						"fields": [ "status", "version", "name", "author" ],
+						"sort": { "field": "name", "direction": "asc" }
+					}
+				}
 			}
 		}
 	},

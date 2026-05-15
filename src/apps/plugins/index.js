@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from '@wordpress/element';
+import { useEffect, useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
@@ -6,7 +6,8 @@ import { useDispatch } from '@wordpress/data';
 import { Button, Notice, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { trash, external, check, closeSmall } from '@wordpress/icons';
+import { resolveIcon } from '../../runtime/config/iconMap';
+import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -14,7 +15,206 @@ const STATUS_LABELS = {
 	'network-active': __( 'Network active', 'wp-admin-shell' ),
 };
 
+const FIELD_LABELS = {
+	name: __( 'Plugin', 'wp-admin-shell' ),
+	status: __( 'Status', 'wp-admin-shell' ),
+	version: __( 'Version', 'wp-admin-shell' ),
+	author: __( 'Author', 'wp-admin-shell' ),
+};
+
+const ACTION_LABELS = {
+	activate: __( 'Activate', 'wp-admin-shell' ),
+	deactivate: __( 'Deactivate', 'wp-admin-shell' ),
+	visit: __( 'Visit plugin site', 'wp-admin-shell' ),
+	delete: __( 'Delete', 'wp-admin-shell' ),
+};
+
+const VIEW_DEFAULTS = {
+	type: 'table',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 50,
+	sort: { field: 'name', direction: 'asc' },
+	fields: [],
+	layout: {},
+};
+
+function buildFieldRenderers() {
+	return {
+		name: ( { item } ) => (
+			<Stack direction="column" gap="xs">
+				<Text variant="body-md">
+					<strong>{ item.name }</strong>
+				</Text>
+				<Text variant="body-sm">
+					{ item.description.length > 160
+						? `${ item.description.slice( 0, 160 ) }…`
+						: item.description }
+				</Text>
+			</Stack>
+		),
+		status: ( { item } ) => (
+			<Text variant="body-sm">
+				{ STATUS_LABELS[ item.status ] || item.status }
+			</Text>
+		),
+		version: ( { item } ) => (
+			<Text variant="body-sm">{ item.version }</Text>
+		),
+		author: ( { item } ) => <Text variant="body-sm">{ item.author }</Text>,
+	};
+}
+
+function compileEligibility( eligibleWhen ) {
+	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
+		return undefined;
+	}
+	const entries = Object.entries( eligibleWhen );
+	if ( entries.length === 0 ) {
+		return undefined;
+	}
+	return ( item ) =>
+		entries.every( ( [ field, expected ] ) => {
+			const actual = item?.[ field ];
+			if ( Array.isArray( expected ) ) {
+				return expected.includes( actual );
+			}
+			return actual === expected;
+		} );
+}
+
+function buildFields( fieldSpecs, fieldRenderers ) {
+	return fieldSpecs
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				type: spec.type,
+				label: FIELD_LABELS[ spec.id ] ?? spec.label,
+			};
+			if ( spec.enableGlobalSearch !== undefined ) {
+				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
+			}
+			if ( spec.enableHiding !== undefined ) {
+				compiled.enableHiding = !! spec.enableHiding;
+			}
+			if ( spec.enableSorting !== undefined ) {
+				compiled.enableSorting = !! spec.enableSorting;
+			}
+			if ( Array.isArray( spec.elements ) ) {
+				compiled.elements = spec.elements;
+			} else if ( spec.id === 'status' && ! spec.elements ) {
+				compiled.elements = Object.entries( STATUS_LABELS ).map(
+					( [ value, label ] ) => ( { value, label } )
+				);
+			}
+			if ( spec.filterBy ) {
+				compiled.filterBy = spec.filterBy;
+			}
+			if ( fieldRenderers[ spec.id ] ) {
+				compiled.render = fieldRenderers[ spec.id ];
+			}
+			return compiled;
+		} );
+}
+
+function buildActions( actions, { setPluginStatus, deletePlugins } ) {
+	const callbacks = {
+		activate: ( items ) => setPluginStatus( items, 'active' ),
+		deactivate: ( items ) => setPluginStatus( items, 'inactive' ),
+		visit: ( items ) => {
+			window.open(
+				items[ 0 ].pluginUri,
+				'_blank',
+				'noopener,noreferrer'
+			);
+		},
+	};
+
+	// `eligibleWhen` JSON only handles equality / membership; presence
+	// checks (e.g. `pluginUri` exists) need code. Per-id overrides win
+	// over the declarative spec.
+	const eligibilityOverrides = {
+		visit: ( item ) => !! item.pluginUri,
+	};
+
+	return actions
+		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
+		.map( ( spec ) => {
+			const compiled = {
+				id: spec.id,
+				label: ACTION_LABELS[ spec.id ] ?? spec.label,
+				isPrimary: !! spec.isPrimary,
+				isDestructive: !! spec.isDestructive,
+				supportsBulk: !! spec.supportsBulk,
+				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
+				isEligible:
+					eligibilityOverrides[ spec.id ] ??
+					compileEligibility( spec.eligibleWhen ),
+			};
+
+			if ( spec.id === 'delete' ) {
+				compiled.RenderModal = ( {
+					items,
+					closeModal,
+					onActionPerformed,
+				} ) => (
+					<Stack
+						direction="column"
+						gap="lg"
+						style={ {
+							padding: 'var(--wpds-dimension-padding-lg)',
+						} }
+					>
+						<Text variant="body-md">
+							{ items.length === 1
+								? __(
+										'Permanently delete this plugin? This cannot be undone.',
+										'wp-admin-shell'
+								  )
+								: __(
+										'Permanently delete these plugins? This cannot be undone.',
+										'wp-admin-shell'
+								  ) }
+						</Text>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							<Button
+								tone="neutral"
+								variant="outline"
+								onClick={ closeModal }
+							>
+								{ __( 'Cancel', 'wp-admin-shell' ) }
+							</Button>
+							<DestructiveButton
+								variant="primary"
+								isDestructive
+								onClick={ async () => {
+									await deletePlugins( items );
+									onActionPerformed?.( items );
+									closeModal();
+								} }
+							>
+								{ __( 'Delete', 'wp-admin-shell' ) }
+							</DestructiveButton>
+						</Stack>
+					</Stack>
+				);
+			} else if ( callbacks[ spec.id ] ) {
+				compiled.callback = callbacks[ spec.id ];
+			}
+
+			return compiled;
+		} );
+}
+
+function stripTags( html ) {
+	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
+}
+
 export default function PluginsApp() {
+	const { config: viewConfig } = useViewConfig( 'root', 'plugin' );
+
 	const pluginsQuery = useMemo( () => ( { context: 'edit' } ), [] );
 	const { records, isResolving } = useEntityRecords(
 		'root',
@@ -86,16 +286,37 @@ export default function PluginsApp() {
 		[ refresh ]
 	);
 
-	const [ view, setView ] = useState( {
-		type: 'table',
-		search: '',
-		filters: [],
-		page: 1,
-		perPage: 50,
-		sort: { field: 'name', direction: 'asc' },
-		fields: [ 'name', 'status', 'version', 'author' ],
-		layout: {},
+	const [ view, setView ] = useState( () => {
+		const seed = {
+			...VIEW_DEFAULTS,
+			...( viewConfig.defaultView || {} ),
+		};
+		// Title-dedup: when defaultView declares a `titleField`, drop it
+		// from the visible-fields list so DataViews doesn't render the
+		// title column twice.
+		if ( seed.titleField ) {
+			seed.fields = ( seed.fields || [] ).filter(
+				( id ) => id !== seed.titleField
+			);
+		}
+		return seed;
 	} );
+
+	// `(root, plugin)` is a single triple today, but keep the resync in
+	// case a future variant is wired in. PostsApp's recipe.
+	useEffect( () => {
+		const seed = {
+			...VIEW_DEFAULTS,
+			...( viewConfig.defaultView || {} ),
+		};
+		if ( seed.titleField ) {
+			seed.fields = ( seed.fields || [] ).filter(
+				( id ) => id !== seed.titleField
+			);
+		}
+		setView( seed );
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [] );
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -139,140 +360,17 @@ export default function PluginsApp() {
 	}, [ records, view ] );
 
 	const fields = useMemo(
-		() => [
-			{
-				id: 'name',
-				type: 'text',
-				label: __( 'Plugin', 'wp-admin-shell' ),
-				enableGlobalSearch: true,
-				enableHiding: false,
-				render: ( { item } ) => (
-					<Stack direction="column" gap="xs">
-						<Text variant="body-md">
-							<strong>{ item.name }</strong>
-						</Text>
-						<Text variant="body-sm">
-							{ item.description.length > 160
-								? `${ item.description.slice( 0, 160 ) }…`
-								: item.description }
-						</Text>
-					</Stack>
-				),
-			},
-			{
-				id: 'status',
-				type: 'text',
-				label: __( 'Status', 'wp-admin-shell' ),
-				elements: Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				),
-				render: ( { item } ) => (
-					<Text variant="body-sm">
-						{ STATUS_LABELS[ item.status ] || item.status }
-					</Text>
-				),
-				filterBy: { operators: [ 'isAny' ] },
-			},
-			{
-				id: 'version',
-				type: 'text',
-				label: __( 'Version', 'wp-admin-shell' ),
-				render: ( { item } ) => (
-					<Text variant="body-sm">{ item.version }</Text>
-				),
-			},
-			{
-				id: 'author',
-				type: 'text',
-				label: __( 'Author', 'wp-admin-shell' ),
-				render: ( { item } ) => (
-					<Text variant="body-sm">{ item.author }</Text>
-				),
-			},
-		],
-		[]
+		() => buildFields( viewConfig.fields ?? [], buildFieldRenderers() ),
+		[ viewConfig ]
 	);
 
 	const actions = useMemo(
-		() => [
-			{
-				id: 'activate',
-				label: __( 'Activate', 'wp-admin-shell' ),
-				icon: check,
-				isPrimary: true,
-				supportsBulk: true,
-				isEligible: ( item ) => item.status === 'inactive',
-				callback: ( items ) => setPluginStatus( items, 'active' ),
-			},
-			{
-				id: 'deactivate',
-				label: __( 'Deactivate', 'wp-admin-shell' ),
-				icon: closeSmall,
-				supportsBulk: true,
-				isEligible: ( item ) =>
-					item.status === 'active' ||
-					item.status === 'network-active',
-				callback: ( items ) => setPluginStatus( items, 'inactive' ),
-			},
-			{
-				id: 'visit',
-				label: __( 'Visit plugin site', 'wp-admin-shell' ),
-				icon: external,
-				isEligible: ( item ) => !! item.pluginUri,
-				callback: ( items ) =>
-					window.open( items[ 0 ].pluginUri, '_blank' ),
-			},
-			{
-				id: 'delete',
-				label: __( 'Delete', 'wp-admin-shell' ),
-				icon: trash,
-				isDestructive: true,
-				supportsBulk: true,
-				isEligible: ( item ) => item.status === 'inactive',
-				RenderModal: ( { items, closeModal, onActionPerformed } ) => (
-					<Stack
-						direction="column"
-						gap="lg"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text variant="body-md">
-							{ items.length === 1
-								? __(
-										'Permanently delete this plugin? This cannot be undone.',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Permanently delete these plugins? This cannot be undone.',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button
-								tone="neutral"
-								variant="outline"
-								onClick={ closeModal }
-							>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									await deletePlugins( items );
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Delete', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				),
-			},
-		],
-		[ deletePlugins, setPluginStatus ]
+		() =>
+			buildActions( viewConfig.actions ?? [], {
+				setPluginStatus,
+				deletePlugins,
+			} ),
+		[ viewConfig, setPluginStatus, deletePlugins ]
 	);
 
 	const paginationInfo = useMemo(
@@ -305,15 +403,11 @@ export default function PluginsApp() {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isLoading }
-				defaultLayouts={ { table: {} } }
+				defaultLayouts={ viewConfig.defaultLayouts ?? { table: {} } }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id }
 			/>
 		</div>
 	);
-}
-
-function stripTags( html ) {
-	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }

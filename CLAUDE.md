@@ -307,7 +307,7 @@ wp-admin-shell/
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
 | `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
-| `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST |
+| `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST. Consumes view-config `(root, plugin)` via `useViewConfig` (C2 / Track F.4). |
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
 | `core:site-health` | SiteHealthApp | ✅ | `view_site_health_checks` | `/wp-site-health/v1/tests/{id}` runner |
