@@ -308,7 +308,7 @@ wp-admin-shell/
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
 | `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
 | `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'` entity; activate/deactivate via REST. Consumes view-config `(root, plugin)` via `useViewConfig` (C2 / Track F.4). |
-| `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity |
+| `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'` entity. Consumes view-config `(root, theme)` via `useViewConfig`; grid layout default with screenshot tiles + Activate / Details actions. |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
 | `core:site-health` | SiteHealthApp | ✅ | `view_site_health_checks` | `/wp-site-health/v1/tests/{id}` runner |
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount deferred to v2.x; five blockers (preferences-store / commands / full-screen CSS / hash-router collisions, edit-site not in BUNDLED_PACKAGES) documented in `SiteEditorApp.js`. |
