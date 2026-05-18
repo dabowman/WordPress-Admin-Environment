@@ -31,7 +31,7 @@ A WordPress plugin that replaces wp-admin with a configurable, React-based admin
 
 ## Before modifying code
 
-1. Load skills (symlinked in `.claude/skills/`): `/wordpress-rest-api`, `/wordpress-dataviews`, `/gutenberg-contributor`.
+1. Load skills (`/dvdbwmn-wordpress:wordpress` WordPress index skill): `/wordpress-rest-api`, `/wordpress-dataviews`, `/gutenberg-contributor`.
 2. Read `docs/wp-admin-shell-design-spec.md` — **master spec** (2026-05-01, URL-routing refined 2026-05-04). Authoritative. When prose and schema disagree, schema wins.
 3. Read the three v2 schemas: `docs/schemas/admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json` (JSON Schema 2020-12, fully inline-documented). Canonical `$id`s point at `schemas.wp.org/admin/v1.json` etc.; see `docs/v2-readiness.md` "Schema hosting" for the beta-cycle raw-GitHub URL.
 4. Read `docs/plans/wp-admin-shell-v2-migration-directive.md` — active v2 plan (V2.M1 manifests → M2 region vocab → M3 routing → M4 selection-bus + slot removal + app manifests → M5 second engine + tokens.json + ship).
