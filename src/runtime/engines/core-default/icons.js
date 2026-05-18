@@ -38,6 +38,8 @@ import {
 	tag,
 	update,
 	trash,
+	check,
+	closeSmall,
 } from '@wordpress/icons';
 
 export const iconTable = {
@@ -72,6 +74,8 @@ export const iconTable = {
 	tag,
 	update,
 	trash,
+	check,
+	closeSmall,
 };
 
 export const fallbackIcon = wordpress;
