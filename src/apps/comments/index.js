@@ -399,27 +399,54 @@ export default function CommentsApp( { config = {} } ) {
 
 	const setCommentsStatus = useCallback(
 		async ( items, targetStatus, label ) => {
-			try {
-				await Promise.all(
-					items.map( ( item ) =>
-						saveEntityRecord( 'root', 'comment', {
-							id: item.id,
-							status: targetStatus,
-						} )
-					)
-				);
-				invalidateResolution( 'getEntityRecords', [
-					'root',
-					'comment',
-					queryArgs,
-				] );
+			// `allSettled` so one failure in a bulk action doesn't collapse
+			// the rest — symmetric with the trash modal. Partial failure
+			// surfaces as an error notice with the failed/total count.
+			const results = await Promise.allSettled(
+				items.map( ( item ) =>
+					saveEntityRecord( 'root', 'comment', {
+						id: item.id,
+						status: targetStatus,
+					} )
+				)
+			);
+			invalidateResolution( 'getEntityRecords', [
+				'root',
+				'comment',
+				queryArgs,
+			] );
+			const failed = results.filter(
+				( r ) => r.status === 'rejected'
+			).length;
+			if ( failed === 0 ) {
 				createSuccessNotice(
 					label || __( 'Updated.', 'wp-admin-shell' ),
 					{ type: 'snackbar' }
 				);
-			} catch ( err ) {
+			} else if ( failed === items.length ) {
+				// Everything failed — surface the first rejection's message
+				// so authors get a real reason, not a generic count.
+				const firstError = results.find(
+					( r ) => r.status === 'rejected'
+				);
 				createErrorNotice(
-					err?.message || __( 'Action failed.', 'wp-admin-shell' ),
+					firstError?.reason?.message ||
+						__( 'Action failed.', 'wp-admin-shell' ),
+					{ isDismissible: true }
+				);
+			} else {
+				createErrorNotice(
+					sprintf(
+						/* translators: 1: failed item count, 2: total item count */
+						_n(
+							'%1$d of %2$d comment failed to update.',
+							'%1$d of %2$d comments failed to update.',
+							items.length,
+							'wp-admin-shell'
+						),
+						failed,
+						items.length
+					),
 					{ isDismissible: true }
 				);
 			}
