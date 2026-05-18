@@ -68,27 +68,28 @@ function compileEligibility( eligibleWhen ) {
 		} );
 }
 
-function buildFieldRenderers() {
-	return {
-		name: ( { item } ) => <Text>{ item.name }</Text>,
-		screenshot: ( { item } ) =>
-			item.screenshot ? (
-				<img
-					src={ item.screenshot }
-					alt={ item.name || '' }
-					loading="lazy"
-				/>
-			) : null,
-		status: ( { item } ) => (
-			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
-		),
-		description: ( { item } ) => (
-			<Text>{ ( item.description || '' ).slice( 0, 140 ) }</Text>
-		),
-		version: ( { item } ) => <Text>{ item.version || '' }</Text>,
-		author: ( { item } ) => <Text>{ item.author || '' }</Text>,
-	};
-}
+// Module-scoped — renderers are stateless and capture no props, so we avoid
+// rebuilding the object on every render. A future refactor that introduces
+// props-capturing renderers should re-introduce a per-instance builder.
+const FIELD_RENDERERS = {
+	name: ( { item } ) => <Text>{ item.name }</Text>,
+	screenshot: ( { item } ) =>
+		item.screenshot ? (
+			<img
+				src={ item.screenshot }
+				alt={ item.name || '' }
+				loading="lazy"
+			/>
+		) : null,
+	status: ( { item } ) => (
+		<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+	),
+	description: ( { item } ) => (
+		<Text>{ ( item.description || '' ).slice( 0, 140 ) }</Text>
+	),
+	version: ( { item } ) => <Text>{ item.version || '' }</Text>,
+	author: ( { item } ) => <Text>{ item.author || '' }</Text>,
+};
 
 function buildFields( fieldSpecs, fieldRenderers ) {
 	return fieldSpecs
@@ -311,7 +312,7 @@ export default function ThemesApp( { config = {} } ) {
 	}, [ themes ] );
 
 	const fields = useMemo(
-		() => buildFields( viewConfig.fields ?? [], buildFieldRenderers() ),
+		() => buildFields( viewConfig.fields ?? [], FIELD_RENDERERS ),
 		[ viewConfig ]
 	);
 
