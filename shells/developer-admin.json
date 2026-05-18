@@ -393,6 +393,30 @@
 						"sort": { "field": "name", "direction": "asc" }
 					}
 				}
+			},
+			"comment": {
+				"_default": {
+					"fields": [
+						{ "id": "author",  "type": "text",     "label": "Author",  "enableGlobalSearch": true },
+						{ "id": "content", "type": "text",     "label": "Comment", "enableGlobalSearch": true },
+						{ "id": "status",  "type": "text",     "label": "Status",  "filterBy": { "operators": [ "isAny" ] } },
+						{ "id": "date",    "type": "datetime", "label": "Date" }
+					],
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 10,
+						"fields": [ "author", "content", "status", "date" ],
+						"sort": { "field": "date", "direction": "desc" }
+					},
+					"defaultLayouts": { "table": {}, "grid": {} },
+					"actions": [
+						{ "id": "approve",   "label": "Approve",        "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } },
+						{ "id": "unapprove", "label": "Unapprove",      "supportsBulk": true, "eligibleWhen": { "status": "approved" } },
+						{ "id": "spam",      "label": "Mark as spam",   "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "approved", "trash" ] } },
+						{ "id": "trash",     "label": "Move to trash",  "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } }
+					]
+				}
 			}
 		}
 	},
