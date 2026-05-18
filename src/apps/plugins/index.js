@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from '@wordpress/element';
+import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
@@ -302,21 +302,10 @@ export default function PluginsApp() {
 		return seed;
 	} );
 
-	// `(root, plugin)` is a single triple today, but keep the resync in
-	// case a future variant is wired in. PostsApp's recipe.
-	useEffect( () => {
-		const seed = {
-			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
-		};
-		if ( seed.titleField ) {
-			seed.fields = ( seed.fields || [] ).filter(
-				( id ) => id !== seed.titleField
-			);
-		}
-		setView( seed );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [] );
+	// No variant axis on `(root, plugin)` today — the PostsApp resync
+	// useEffect would be a same-tick noop. When a variant is wired in
+	// (e.g. `mu-plugins` / `dropins`), add it back keyed on the variant
+	// prop so a triple flip reseeds `view`.
 
 	const data = useMemo( () => {
 		if ( ! records ) {
