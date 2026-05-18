@@ -3,7 +3,7 @@
 	"id": "core:themes",
 	"version": 1,
 	"title": "Themes",
-	"description": "Theme grid with activate / preview / details. Reads via `core-data` `'root','theme'` entity.",
+	"description": "DataViews grid + table view of installed themes. Reads via `core-data` `'root','theme'` entity.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"capabilities": [
@@ -11,9 +11,44 @@
 	],
 	"config-schema": {
 		"type": "object",
+		"properties": {
+			"variant": {
+				"type": "string",
+				"description": "Optional view-config variant id to consume. When set, useViewConfig reads `viewConfigs.root.theme.<variant>` instead of the `_default` triple."
+			}
+		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
+	"viewConfig": {
+		"kind": "root",
+		"name": "theme",
+		"defaultView": {
+			"type": "grid",
+			"search": "",
+			"filters": [],
+			"page": 1,
+			"perPage": 50,
+			"sort": { "field": "status", "direction": "asc" },
+			"fields": [ "status", "description", "version", "author" ],
+			"titleField": "name",
+			"mediaField": "screenshot",
+			"layout": {}
+		},
+		"defaultLayouts": { "grid": {}, "table": {} },
+		"fields": [
+			{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+			{ "id": "screenshot", "type": "media", "label": "Screenshot", "enableSorting": false, "enableHiding": false },
+			{ "id": "status", "type": "text", "label": "Status", "elements": [ { "value": "active", "label": "Active" }, { "value": "inactive", "label": "Inactive" } ], "filterBy": { "operators": [ "isAny" ] } },
+			{ "id": "description", "type": "text", "label": "Description", "enableSorting": false },
+			{ "id": "version", "type": "text", "label": "Version" },
+			{ "id": "author", "type": "text", "label": "Author" }
+		],
+		"actions": [
+			{ "id": "activate", "label": "Activate", "isPrimary": true, "icon": "check", "eligibleWhen": { "status": "inactive" } },
+			{ "id": "details", "label": "Details", "isPrimary": true }
+		]
+	},
 	"window": {
 		"defaultSize": {
 			"w": 1024,
@@ -27,10 +62,22 @@
 		"icon": "layout"
 	},
 	"documentation": {
-		"purpose": "Grid view of installed themes with screenshot + activate / details actions. The active theme floats to the front; the remainder sorts alphabetically. Activation uses a custom `/wp-admin-shell/v1/activate-theme` endpoint with a graceful fall-back to wp-admin's `themes.php?action=activate` link if the endpoint is missing. Details modal surfaces description + version + author + theme-site link.",
+		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the shell's custom `/wp-admin-shell/v1/activate-theme` endpoint with a wp-admin fallback. The Details action opens a modal with full description + version + author + theme-site link.",
 		"rebuilds": "themes",
 		"data": {
 			"reads": [
+				{
+					"source": "viewConfigs.root.theme._default",
+					"via": "kernel-config",
+					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig(kind, name, variant?)`; baseline ships in `app.json#viewConfig` and is injected post-merge by `inject_app_baselines`.",
+					"fields": [
+						"fields",
+						"defaultView",
+						"defaultLayouts",
+						"actions",
+						"fieldsRef"
+					]
+				},
 				{
 					"source": "root/theme",
 					"via": "core-data",
@@ -72,31 +119,31 @@
 		"states": [
 			{
 				"id": "loading",
-				"when": "isLoading || !themes",
-				"renders": "Centered `Spinner` covering the panel."
+				"when": "isResolving && !records",
+				"renders": "DataViews built-in loading indicator over an empty grid."
 			},
 			{
 				"id": "ready",
-				"when": "themes !== null",
-				"renders": "Header (count) + 3-column grid of theme cards. Active card has an Active badge; non-active cards show Activate button."
+				"when": "records !== null && records.length > 0",
+				"renders": "Grid layout with screenshot tiles; status='active' floats first via the default sort by status asc. Activate action surfaces as an icon button on non-active rows; Details opens a modal."
 			},
 			{
 				"id": "details-open",
-				"when": "details !== null",
-				"renders": "Modal with large screenshot + description + version / author + Theme site / Activate buttons."
+				"when": "User clicked Details on a row",
+				"renders": "DataViews RenderModal with large screenshot + full description + version / author + Theme site / Activate buttons."
 			}
 		],
 		"interactions": [
 			{
-				"trigger": "Click Details on a theme card",
-				"effect": "Open the details modal with that theme."
+				"trigger": "Activate row action",
+				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme`. On failure: `window.location.href` to `themes.php?action=activate&stylesheet=...` so the user falls back to wp-admin.",
+				"guards": [
+					"item.status === 'inactive'"
+				]
 			},
 			{
-				"trigger": "Click Activate on a theme card",
-				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme` + close any open modal. On failure: `window.location.href` to `themes.php?action=activate&stylesheet=...` so the user falls back to wp-admin.",
-				"guards": [
-					"theme.stylesheet !== activeStylesheet"
-				]
+				"trigger": "Details row action",
+				"effect": "Open the details modal with that theme's metadata + inline Activate button + Theme site link."
 			},
 			{
 				"trigger": "Click Theme site in details",
@@ -107,9 +154,13 @@
 			}
 		],
 		"a11y": {
-			"focus-management": "Legacy `Modal` traps focus while open. After close (via Esc or backdrop click) focus returns to the trigger button."
+			"focus-management": "DataViews owns focus inside the grid + modal. The RenderModal contract restores focus to the action trigger on close."
 		},
 		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import `DataViews` from `@wordpress/dataviews/wp` — never bare `@wordpress/dataviews`."
+			},
 			{
 				"concern": "no-core-rest-theme-switch",
 				"note": "WordPress core REST does not expose a theme-switch operation. The shell ships a custom `/wp-admin-shell/v1/activate-theme` endpoint; rebuilds must provide the equivalent or implement the wp-admin link fall-back."
@@ -117,28 +168,20 @@
 			{
 				"concern": "graceful-fallback",
 				"note": "If the custom endpoint 404s (older shell version or stripped feature), the app navigates to wp-admin's `themes.php` flow so the user can complete the action — preserves the right outcome even without the optimized path."
-			},
-			{
-				"concern": "modal-fallback",
-				"note": "Uses legacy `Modal` from `@wordpress/components`; WPDS Dialog 0.12 lacks size variants."
-			},
-			{
-				"concern": "grid-fallback",
-				"note": "Uses `__experimentalGrid` — no WPDS 0.12 port."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, Card, Stack, Text",
-				"purpose": "Theme card layout, header, action buttons."
+				"import": "@wordpress/dataviews/wp#DataViews",
+				"purpose": "Grid + table view with filtering, sorting, pagination, selection, per-row + bulk actions, action modals."
 			},
 			{
-				"import": "@wordpress/components#__experimentalGrid, CardMedia, Spinner, Modal",
-				"purpose": "Grid layout, screenshot media slot, loading spinner, details modal — all WPDS 0.12 gaps."
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Details modal layout and action buttons."
 			},
 			{
-				"import": "@wordpress/icons#check, external",
-				"purpose": "Action icons."
+				"import": "@wordpress/icons#check",
+				"purpose": "Activate action icon (registered in the core-default engine icon table)."
 			}
 		]
 	}
