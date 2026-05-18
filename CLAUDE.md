@@ -296,13 +296,13 @@ wp-admin-shell/
 
 | Source | Component | Native? | Cap floor | Notes |
 |---|---|---|---|---|
-| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType` |
+| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType`; consumes view-config `(postType, {postType}[, variant])` |
 | `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save |
 | `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. Native `@wordpress/edit-post` mount deferred to v2.x — see `SiteEditorApp.js` for blockers. |
 | `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
 | `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms |
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
-| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard |
+| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard; consumes view-config `(root, user)` |
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord |
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel (legacy entry; kept registered) |
