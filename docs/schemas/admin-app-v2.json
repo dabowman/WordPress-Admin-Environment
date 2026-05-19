@@ -117,7 +117,11 @@
 
 		"viewConfig": {
 			"$ref": "#/$defs/appViewConfig",
-			"description": "Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with admin.json `viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard) omit this field. See spec §13 #7."
+			"description": "v2 legacy alias of `view`. Schema accepts either field name during the v2→v3 transition. New manifests use `view`."
+		},
+		"view": {
+			"$ref": "#/$defs/appViewConfig",
+			"description": "Optional primary view definition the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with admin.json `settings.views` overrides and filter-driven overrides; the consuming app reads the resolved value via `useScreenView(screenId)`. Apps that don't render a single entity (command palette, dashboard) omit this field. See spec §13 #7."
 		},
 
 		"documentation": {

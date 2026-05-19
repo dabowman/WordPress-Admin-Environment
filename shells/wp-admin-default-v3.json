@@ -137,7 +137,11 @@
 								"status": "trash"
 							}
 						}
-					]
+					],
+					"defaultLayouts": {
+						"table": {},
+						"grid": {}
+					}
 				},
 				"page": {
 					"fields": [
@@ -198,7 +202,10 @@
 							"isDestructive": true,
 							"supportsBulk": true
 						}
-					]
+					],
+					"defaultLayouts": {
+						"table": {}
+					}
 				}
 			},
 			"root": {
@@ -247,7 +254,10 @@
 							"isDestructive": true,
 							"supportsBulk": true
 						}
-					]
+					],
+					"defaultLayouts": {
+						"table": {}
+					}
 				},
 				"comment": {
 					"fields": [
@@ -329,7 +339,10 @@
 							"id": "reply",
 							"label": "Reply"
 						}
-					]
+					],
+					"defaultLayouts": {
+						"table": {}
+					}
 				},
 				"plugin": {
 					"fields": [
@@ -392,7 +405,10 @@
 								"status": "inactive"
 							}
 						}
-					]
+					],
+					"defaultLayouts": {
+						"table": {}
+					}
 				},
 				"theme": {
 					"fields": [
@@ -434,7 +450,11 @@
 							"id": "details",
 							"label": "Details"
 						}
-					]
+					],
+					"defaultLayouts": {
+						"grid": {},
+						"table": {}
+					}
 				}
 			}
 		}
