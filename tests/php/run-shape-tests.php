@@ -97,7 +97,13 @@ foreach ( $shells as $slug ) {
 
 	$config = wp_admin_shell_get_active_config();
 
-	$is_v2 = isset( $config['engine'] ) && ! isset( $config['settings'] );
+	// v1 nests its shell metadata under settings.shell/regions/applications.
+	// v2 + v3 keep that surface at the root; v3 may *also* carry
+	// settings.views / settings.fields (registries), which v1 never does.
+	$is_v1 = isset( $config['settings']['shell'] )
+		|| isset( $config['settings']['regions'] )
+		|| isset( $config['settings']['applications'] );
+	$is_v2 = ! $is_v1;
 
 	// Engine. v2 puts it at the root; v1 nests under settings.shell.layoutEngine.
 	$engine = $is_v2
