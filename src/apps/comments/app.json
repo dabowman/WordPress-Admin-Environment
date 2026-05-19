@@ -20,7 +20,7 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"viewConfig": {
+	"view": {
 		"kind": "root",
 		"name": "comment",
 		"defaultView": {

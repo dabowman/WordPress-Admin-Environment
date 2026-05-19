@@ -148,6 +148,31 @@ class WP_Admin_Shell_V3_Compiler {
 		// navigate?, label?}` entries.
 		$resolved['commands'] = self::compile_commands( $resolved );
 
+		// 5. stamp per-screen resolved view doc onto each screen so the
+		// JS `useScreenView` hook's synchronous fast path works without
+		// REST round-trips or client-side kind/name inference. Without
+		// this stamp, entity-CRUD apps render with empty fields.
+		if ( class_exists( 'WP_Admin_Shell_View_Config' ) ) {
+			foreach ( $screens as $screen_id => $screen ) {
+				if ( ! is_array( $screen ) ) {
+					continue;
+				}
+				$resolved_view = WP_Admin_Shell_View_Config::resolve_screen_view( $screen_id, $resolved );
+				if ( ! is_array( $resolved_view ) || empty( $resolved_view ) ) {
+					continue;
+				}
+				// Preserve any author-declared inline overlay alongside
+				// the stamped `_resolved` snapshot — the JS fast path
+				// reads `screen.view._resolved` first.
+				$existing_view = isset( $resolved['screens'][ $screen_id ]['view'] )
+					&& is_array( $resolved['screens'][ $screen_id ]['view'] )
+						? $resolved['screens'][ $screen_id ]['view']
+						: array();
+				$existing_view['_resolved']            = $resolved_view;
+				$resolved['screens'][ $screen_id ]['view'] = $existing_view;
+			}
+		}
+
 		return $resolved;
 	}
 

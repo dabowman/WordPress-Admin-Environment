@@ -33,7 +33,7 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"viewConfig": {
+	"view": {
 		"kind": "postType",
 		"name": "post",
 		"defaultView": {

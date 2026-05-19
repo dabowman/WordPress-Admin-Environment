@@ -487,7 +487,7 @@
 			}
 		},
 		"posts": {
-			"label": "All Posts",
+			"label": "Posts",
 			"icon": "post",
 			"description": "Write, edit, and organize posts.",
 			"path": "/posts",
@@ -1084,7 +1084,7 @@
 		},
 		{
 			"id": "navigate-posts-new",
-			"shortcut": "Mod+Shift+N",
+			"shortcut": "Mod+Alt+N",
 			"navigate": "/posts/new",
 			"label": "New Post"
 		},

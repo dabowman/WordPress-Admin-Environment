@@ -24,7 +24,7 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"viewConfig": {
+	"view": {
 		"kind": "taxonomy",
 		"name": "category",
 		"defaultView": {
