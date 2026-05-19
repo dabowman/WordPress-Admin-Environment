@@ -8,6 +8,19 @@
  *   - keyed arrays    → merge by id/slug/name (override matches, append novel)
  *   - plain arrays    → replace
  *
+ * `null` is treated as a TOMBSTONE marker (theme.json convention; v3 admin
+ * schema spec §10). When a higher origin sets a key to `null`, the key is
+ * REMOVED from the merged result regardless of nesting depth. For keyed
+ * array entries the tombstone shape is an entry carrying the id field
+ * plus `'__tombstone' => true` — this integrates with the existing
+ * entry-as-record convention (same shape that already carries `__origin`
+ * tags) and lets `merge_keyed_arrays` detect tombstones uniformly without
+ * forcing callers to switch from list-form to assoc-form arrays.
+ *
+ * Tombstones don't propagate downward — they only nullify the specific
+ * path they appear at. A later origin can resurrect a tombstoned key by
+ * writing a non-null value at the same path.
+ *
  * The merge engine ALSO carries a small origin-tag layer (`tag_origin` /
  * `merge_with_restrict`) used by the restrict-only enforcement step in
  * spec §4.4.1. Tags are stripped before the resolver returns the merged
@@ -87,6 +100,15 @@ class WP_Admin_Shell_Merge {
 
 		$out = $base;
 		foreach ( $over as $k => $v ) {
+			// Null tombstone: REMOVE the key entirely from the merged
+			// result regardless of whether the base declares it. Mirrors
+			// theme.json convention; v3 spec §10. Removal happens at the
+			// exact path the null appears — it does not cascade further
+			// into the subtree.
+			if ( $v === null ) {
+				unset( $out[ $k ] );
+				continue;
+			}
 			$out[ $k ] = self::merge_internal( $base[ $k ] ?? null, $v, $authoritative );
 		}
 		return $out;
@@ -153,15 +175,19 @@ class WP_Admin_Shell_Merge {
 	// ── Internals ─────────────────────────────────────────────────────
 
 	private static function merge_keyed_arrays( $base, $over, $key, $authoritative = false ) {
-		$over_index = array();
-		$over_order = array();
+		$over_index     = array();
+		$over_order     = array();
+		$over_tombstone = array(); // id => true when entry carries `__tombstone`
 		foreach ( $over as $entry ) {
 			if ( ! is_array( $entry ) || ! isset( $entry[ $key ] ) ) {
 				continue;
 			}
-			$id = $entry[ $key ];
-			$over_index[ $id ] = $entry;
-			$over_order[]      = $id;
+			$id                  = $entry[ $key ];
+			$over_index[ $id ]   = $entry;
+			$over_order[]        = $id;
+			if ( ! empty( $entry['__tombstone'] ) ) {
+				$over_tombstone[ $id ] = true;
+			}
 		}
 
 		$result  = array();
@@ -175,6 +201,15 @@ class WP_Admin_Shell_Merge {
 			$id           = $entry[ $key ];
 			$base_origin  = $entry[ self::ORIGIN_KEY ] ?? null;
 			$is_tombstone = $base_origin === '__removed';
+
+			if ( isset( $over_tombstone[ $id ] ) ) {
+				// Higher origin tombstoned this entry — drop it from
+				// the merged list entirely. (v3 spec §10.) The id is
+				// still marked emitted so Pass 2 doesn't re-add the
+				// tombstone marker itself.
+				$emitted[ $id ] = true;
+				continue;
+			}
 
 			if ( isset( $over_index[ $id ] ) ) {
 				if ( $is_tombstone ) {
@@ -202,9 +237,13 @@ class WP_Admin_Shell_Merge {
 			$emitted[ $id ] = true;
 		}
 
-		// Pass 2: append novel-in-over entries.
+		// Pass 2: append novel-in-over entries (skip tombstones — they
+		// can't introduce new entries, only remove existing ones).
 		foreach ( $over_order as $id ) {
 			if ( isset( $emitted[ $id ] ) ) {
+				continue;
+			}
+			if ( isset( $over_tombstone[ $id ] ) ) {
 				continue;
 			}
 			$result[] = $over_index[ $id ];

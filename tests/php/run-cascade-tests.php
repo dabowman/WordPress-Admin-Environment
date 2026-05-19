@@ -117,6 +117,122 @@ $merged = WP_Admin_Shell_Merge::merge(
 );
 $T::assert_eq( 'plain arrays: replace', $merged['tags'], array( 'c' ) );
 
+// 4a. Null tombstones (v3 spec §10) — theme.json convention adopted for admin.json.
+
+// Top-level block removal.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
+	array( 'screens' => array( 'posts' => null ) )
+);
+$T::assert_eq( 'tombstone: top-level block removed',
+	$merged,
+	array( 'screens' => array() )
+);
+
+// Nested field removal — siblings preserved.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts', 'icon' => 'post' ) ) ),
+	array( 'screens' => array( 'posts' => array( 'icon' => null ) ) )
+);
+$T::assert_eq( 'tombstone: nested field removed, sibling preserved',
+	$merged,
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) )
+);
+
+// Deep nested tombstone — only the leaf path is nullified.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'a' => array( 'b' => array( 'c' => array( 'd' => 'leaf', 'e' => 'sibling' ) ) ) ),
+	array( 'a' => array( 'b' => array( 'c' => array( 'd' => null ) ) ) )
+);
+$T::assert_eq( 'tombstone: deep nested leaf removed, parent + sibling preserved',
+	$merged,
+	array( 'a' => array( 'b' => array( 'c' => array( 'e' => 'sibling' ) ) ) )
+);
+
+// Keyed array entry removal by id via `__tombstone` marker.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'commands' => array(
+		array( 'id' => 'open-palette', 'shortcut' => 'Mod+K' ),
+		array( 'id' => 'save',         'shortcut' => 'Mod+S' ),
+	) ),
+	array( 'commands' => array(
+		array( 'id' => 'open-palette', '__tombstone' => true ),
+	) )
+);
+$ids = array_column( $merged['commands'], 'id' );
+$T::assert_eq( 'tombstone: keyed-array entry removed, siblings preserved',
+	$ids,
+	array( 'save' )
+);
+
+// Tombstone with no matching base entry is a harmless no-op (no
+// new entry materializes from the tombstone marker itself).
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'commands' => array(
+		array( 'id' => 'save', 'shortcut' => 'Mod+S' ),
+	) ),
+	array( 'commands' => array(
+		array( 'id' => 'never-existed', '__tombstone' => true ),
+	) )
+);
+$ids = array_column( $merged['commands'], 'id' );
+$T::assert_eq( 'tombstone: orphan tombstone is a no-op',
+	$ids,
+	array( 'save' )
+);
+
+// Tombstone field on a key with no lower-origin value is a no-op.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
+	array( 'screens' => array( 'posts' => array( 'unset-me' => null ) ) )
+);
+$T::assert_eq( 'tombstone: nullify-an-absent-key is a no-op',
+	$merged,
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) )
+);
+
+// Three-origin resurrection: middle origin tombstones, highest origin
+// re-asserts. Highest-origin write wins (tombstones don't propagate).
+$step1 = WP_Admin_Shell_Merge::merge(
+	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
+	array( 'screens' => array( 'posts' => null ) )
+);
+$T::assert_eq( 'tombstone: middle-origin tombstone removes value',
+	$step1,
+	array( 'screens' => array() )
+);
+$step2 = WP_Admin_Shell_Merge::merge(
+	$step1,
+	array( 'screens' => array( 'posts' => array( 'label' => 'Renamed' ) ) )
+);
+$T::assert_eq( 'tombstone: highest-origin resurrects after middle tombstone',
+	$step2,
+	array( 'screens' => array( 'posts' => array( 'label' => 'Renamed' ) ) )
+);
+
+// Authoritative-merge path also honors null tombstones (so trusted
+// origins can express "I want this gone" without enumerating the rest).
+$merged = WP_Admin_Shell_Merge::merge_authoritative(
+	array( 'styles' => array( 'a' => 1, 'b' => 2 ) ),
+	array( 'styles' => array( 'a' => null ) )
+);
+$T::assert_eq( 'tombstone: authoritative merge honors null',
+	$merged,
+	array( 'styles' => array( 'b' => 2 ) )
+);
+
+// Tombstone on plain (non-keyed) array entry: the whole array is
+// replaced anyway (plain arrays replace), so this exercises that
+// keyed-array detection won't mistakenly fire on a plain list.
+$merged = WP_Admin_Shell_Merge::merge(
+	array( 'tags' => array( 'a', 'b', 'c' ) ),
+	array( 'tags' => array( 'x' ) )
+);
+$T::assert_eq( 'tombstone: plain-array replace still works alongside tombstone path',
+	$merged['tags'],
+	array( 'x' )
+);
+
 // 5. Restrict-only.
 $base    = $T::load( '01-base-plugin.json' );
 $middle  = $T::load( '02-plugin-removes-plugins.json' );

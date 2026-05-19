@@ -241,7 +241,34 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 	}
 }
 
-// ── Schema 5: tokens-v1.json ───────────────────────────────────────
+// ── Schemas 5-7: v3 manifest schemas ───────────────────────────────
+
+const v3Schemas = [
+	{ key: 'admin',  schemaFile: 'admin-v3.json' },
+	{ key: 'app',    schemaFile: 'admin-app-v3.json' },
+	{ key: 'engine', schemaFile: 'admin-engine-v3.json' },
+];
+
+for ( const { key, schemaFile } of v3Schemas ) {
+	console.log( `\n— ${ schemaFile } —` );
+	const validate = compileSchema( schemaFile );
+
+	if ( key === 'admin' ) {
+		console.log( '\n  v3 default workspace:' );
+		const fixture = resolve( projectRoot, 'docs/v3/wp-admin-default.v3.json' );
+		if ( existsSync( fixture ) ) {
+			const doc   = readJson( fixture );
+			const valid = validate( doc );
+			ok(
+				'docs/v3/wp-admin-default.v3.json',
+				valid,
+				valid ? '' : formatErrors( validate.errors )
+			);
+		}
+	}
+}
+
+// ── Schema 8: tokens-v1.json ───────────────────────────────────────
 
 console.log( '\n— tokens-v1.json —' );
 {
