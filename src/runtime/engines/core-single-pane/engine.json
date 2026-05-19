@@ -184,5 +184,45 @@
 		"theme": {
 			"density": "compact"
 		}
+	},
+
+	"defaultRegions": {
+		"appbar": {
+			"template": "core:appbar",
+			"regions": {
+				"start": {
+					"role": "region",
+					"app": "core:site-hub"
+				},
+				"end": {
+					"role": "region",
+					"app": "core:toolbar-actions"
+				}
+			}
+		},
+		"nav-drawer": {
+			"template": "core:nav-drawer",
+			"app": "core:navigation"
+		},
+		"pane": {
+			"template": "core:pane",
+			"routing": { "route-key": "_self" }
+		},
+		"command-palette": {
+			"template": "core:overlay",
+			"routing": { "route-key": "palette" },
+			"platform": {
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
 	}
 }

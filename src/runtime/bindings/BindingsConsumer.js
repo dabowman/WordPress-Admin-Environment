@@ -3,11 +3,19 @@ import { useEffect } from '@wordpress/element';
 import { useKernel } from '../kernel-context';
 import { parseShortcut } from './parseShortcut.mjs';
 import { trigger } from './triggerStore.mjs';
+import { navigate } from '../routing/router';
 
 /**
- * Reads the resolved admin.json `bindings` block and registers each
- * shortcut against the document. When a binding fires, looks up the
- * `invoke` app id in the trigger store and calls its open handler.
+ * Reads the resolved admin.json `commands` block (v3) and registers each
+ * shortcut against the document. When a binding fires:
+ *   - `invoke` commands look up the app id in the trigger store and
+ *     call its open handler (v2 binding semantics preserved).
+ *   - `navigate` commands push the target path onto the URL bar.
+ *
+ * The PHP v3 compiler forwards any legacy v2 `bindings[]` into
+ * `commands[]` so this reader has a single source of truth. The
+ * fallback to `config.bindings` is defensive — covers tests / fixtures
+ * that bypass the compiler.
  *
  * Spec §8 precedence: app shortcuts win when focus is inside the app's
  * DOM. We approximate this by skipping the binding when the active
@@ -19,23 +27,32 @@ import { trigger } from './triggerStore.mjs';
  */
 export function BindingsConsumer() {
 	const { config } = useKernel();
-	const bindings = Array.isArray( config?.bindings ) ? config.bindings : null;
+	// v3-compiled output always lives in `commands`; fall back to v2
+	// `bindings` for fixtures / tests that bypass the compiler.
+	let commands = null;
+	if ( Array.isArray( config?.commands ) ) {
+		commands = config.commands;
+	} else if ( Array.isArray( config?.bindings ) ) {
+		commands = config.bindings;
+	}
 
 	useEffect( () => {
 		if (
-			! bindings ||
-			bindings.length === 0 ||
+			! commands ||
+			commands.length === 0 ||
 			typeof window === 'undefined'
 		) {
 			return undefined;
 		}
 
-		const compiled = bindings
+		const compiled = commands
 			.map( ( entry ) => ( {
 				match: parseShortcut( entry?.shortcut ),
-				invoke: entry?.invoke,
+				invoke: typeof entry?.invoke === 'string' ? entry.invoke : null,
+				navigate:
+					typeof entry?.navigate === 'string' ? entry.navigate : null,
 			} ) )
-			.filter( ( e ) => e.match && typeof e.invoke === 'string' );
+			.filter( ( e ) => e.match && ( e.invoke || e.navigate ) );
 
 		if ( compiled.length === 0 ) {
 			return undefined;
@@ -47,7 +64,15 @@ export function BindingsConsumer() {
 			}
 			for ( const entry of compiled ) {
 				if ( entry.match( event ) ) {
-					if ( trigger( entry.invoke ) ) {
+					let handled = false;
+					if ( entry.invoke ) {
+						handled = trigger( entry.invoke );
+					}
+					if ( ! handled && entry.navigate ) {
+						navigate( entry.navigate );
+						handled = true;
+					}
+					if ( handled ) {
 						event.preventDefault();
 						event.stopPropagation();
 					}
@@ -58,7 +83,7 @@ export function BindingsConsumer() {
 
 		document.addEventListener( 'keydown', onKey );
 		return () => document.removeEventListener( 'keydown', onKey );
-	}, [ bindings ] );
+	}, [ commands ] );
 
 	return null;
 }

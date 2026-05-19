@@ -142,5 +142,37 @@
 		}
 	},
 
-	"script": "wp-admin-shell-engine-core-desktop"
+	"script": "wp-admin-shell-engine-core-desktop",
+
+	"defaultRegions": {
+		"wallpaper": {
+			"template": "core:desktop-wallpaper"
+		},
+		"workspace": {
+			"template": "core:desktop-workspace",
+			"routing": { "route-key": "_self" }
+		},
+		"dock": {
+			"template": "core:desktop-dock",
+			"app": "core:desktop-dock-app"
+		},
+		"command-palette": {
+			"role": "dialog",
+			"routing": { "route-key": "palette" },
+			"platform": {
+				"core:modal": true,
+				"core:dismiss-on": [ "Escape", "backdrop-click" ],
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
+	}
 }

@@ -215,5 +215,41 @@
 			},
 			"density": "default"
 		}
+	},
+
+	"defaultRegions": {
+		"sidebar": {
+			"template": "core:sidebar",
+			"regions": {
+				"hub": {
+					"role": "region",
+					"app": "core:site-hub"
+				},
+				"nav": {
+					"role": "navigation",
+					"app": "core:navigation"
+				}
+			}
+		},
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		},
+		"command-palette": {
+			"template": "core:overlay",
+			"routing": { "route-key": "palette" },
+			"platform": {
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
 	}
 }

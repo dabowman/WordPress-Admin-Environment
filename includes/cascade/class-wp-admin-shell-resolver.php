@@ -120,7 +120,20 @@ class WP_Admin_Shell_Resolver {
 		}
 
 		$merged = apply_filters( 'wp_admin_shell_data', $merged );
-		return WP_Admin_Shell_Merge::strip_origin_tags( $merged );
+		$merged = WP_Admin_Shell_Merge::strip_origin_tags( $merged );
+
+		// v3 compiler pass — runs AFTER cascade merge and the
+		// `wp_admin_shell_data` filter so plugin authors can still
+		// observe / mutate the v3-shaped doc. Compiler is a no-op for v2
+		// shells (detect → passthrough); for v3 shells it synthesizes
+		// `routes`, `regions`, `default-route`, and normalizes
+		// `commands` so the existing kernel + router consume the
+		// resolved tree unchanged.
+		if ( class_exists( 'WP_Admin_Shell_V3_Compiler' ) ) {
+			$merged = WP_Admin_Shell_V3_Compiler::compile( $merged );
+		}
+
+		return $merged;
 	}
 
 	/**
@@ -158,6 +171,7 @@ class WP_Admin_Shell_Resolver {
 		$has_plugin_engine =
 			( is_array( $plugin_doc ) && (
 				isset( $plugin_doc['engine'] ) ||
+				isset( $plugin_doc['workspace']['engine'] ) ||
 				isset( $plugin_doc['settings']['shell']['layoutEngine'] )
 			) );
 		$core_doc = $has_plugin_engine
@@ -195,7 +209,12 @@ class WP_Admin_Shell_Resolver {
 		if ( ! is_array( $plugin_doc ) ) {
 			return array();
 		}
-		$engine_id = $plugin_doc['engine'] ?? null;
+		// v3 nests the engine under workspace.engine; v2 keeps it at root.
+		// Read the v3 location first so v3 shells resolve correctly, then
+		// fall back to v2.
+		$engine_id = $plugin_doc['workspace']['engine']
+			?? $plugin_doc['engine']
+			?? null;
 		if ( ! is_string( $engine_id ) || $engine_id === '' ) {
 			return array();
 		}
