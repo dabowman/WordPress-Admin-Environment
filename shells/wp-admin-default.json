@@ -4,14 +4,1082 @@
 	"$wpds": "6.9",
 	"name": "wp-admin-default",
 	"title": "WordPress",
-	"description": "Default shell. Mirrors stock wp-admin: every screen rendered as an iframe of its wp-admin counterpart, with capability gates so each user sees exactly what they would see in core.",
+	"description": "Default shell. Reconstructs stock wp-admin from the shell's native apps + view-configs, falling back to iframes only for screens with no REST surface (customizer, classic widgets/menus, plugin install/editor, import/export, personal-data tools). Drafts/pending/trash/spam variants ship as view-config entries; capability-pruned nav + 4-layer cap gating remove inaccessible screens per role.",
 	"engine": "core:default",
-
+	"preload": [
+		"/wp/v2/users/me?context=edit",
+		"/wp/v2/types?context=view",
+		"/wp/v2/taxonomies?context=view",
+		"/wp/v2/statuses?context=view",
+		"/wp/v2/themes?status=active",
+		[
+			"/wp/v2/settings",
+			"GET"
+		],
+		[
+			"/wp/v2/settings",
+			"OPTIONS"
+		]
+	],
+	"fieldCollections": {
+		"wp-admin/post-fields": {
+			"kind": "postType",
+			"name": null,
+			"fields": [
+				{
+					"id": "title",
+					"type": "text",
+					"label": "Title",
+					"enableGlobalSearch": true,
+					"enableHiding": false
+				},
+				{
+					"id": "status",
+					"type": "text",
+					"label": "Status",
+					"filterBy": {
+						"operators": [
+							"isAny"
+						]
+					},
+					"elements": [
+						{
+							"value": "publish",
+							"label": "Published"
+						},
+						{
+							"value": "future",
+							"label": "Scheduled"
+						},
+						{
+							"value": "draft",
+							"label": "Draft"
+						},
+						{
+							"value": "pending",
+							"label": "Pending Review"
+						},
+						{
+							"value": "private",
+							"label": "Private"
+						},
+						{
+							"value": "trash",
+							"label": "Trash"
+						}
+					]
+				},
+				{
+					"id": "author",
+					"type": "text",
+					"label": "Author",
+					"filterBy": {
+						"operators": [
+							"isAny"
+						]
+					}
+				},
+				{
+					"id": "date",
+					"type": "datetime",
+					"label": "Date"
+				}
+			]
+		},
+		"wp-admin/user-fields": {
+			"kind": "root",
+			"name": "user",
+			"fields": [
+				{
+					"id": "name",
+					"type": "text",
+					"label": "Name",
+					"enableGlobalSearch": true,
+					"enableHiding": false
+				},
+				{
+					"id": "username",
+					"type": "text",
+					"label": "Username",
+					"enableGlobalSearch": true
+				},
+				{
+					"id": "email",
+					"type": "email",
+					"label": "Email",
+					"enableGlobalSearch": true
+				},
+				{
+					"id": "roles",
+					"type": "text",
+					"label": "Role",
+					"filterBy": {
+						"operators": [
+							"isAny"
+						]
+					},
+					"elements": [
+						{
+							"value": "administrator",
+							"label": "Administrator"
+						},
+						{
+							"value": "editor",
+							"label": "Editor"
+						},
+						{
+							"value": "author",
+							"label": "Author"
+						},
+						{
+							"value": "contributor",
+							"label": "Contributor"
+						},
+						{
+							"value": "subscriber",
+							"label": "Subscriber"
+						}
+					]
+				},
+				{
+					"id": "registered_date",
+					"type": "datetime",
+					"label": "Registered"
+				}
+			]
+		},
+		"wp-admin/comment-fields": {
+			"kind": "root",
+			"name": "comment",
+			"fields": [
+				{
+					"id": "author",
+					"type": "text",
+					"label": "Author",
+					"enableGlobalSearch": true
+				},
+				{
+					"id": "content",
+					"type": "text",
+					"label": "Comment",
+					"enableGlobalSearch": true,
+					"enableSorting": false
+				},
+				{
+					"id": "status",
+					"type": "text",
+					"label": "Status",
+					"filterBy": {
+						"operators": [
+							"isAny"
+						]
+					},
+					"elements": [
+						{
+							"value": "approved",
+							"label": "Approved"
+						},
+						{
+							"value": "hold",
+							"label": "Pending"
+						},
+						{
+							"value": "spam",
+							"label": "Spam"
+						},
+						{
+							"value": "trash",
+							"label": "Trash"
+						}
+					]
+				},
+				{
+					"id": "date",
+					"type": "datetime",
+					"label": "Submitted"
+				}
+			]
+		},
+		"wp-admin/term-fields": {
+			"kind": "taxonomy",
+			"name": null,
+			"fields": [
+				{
+					"id": "name",
+					"type": "text",
+					"label": "Name",
+					"enableGlobalSearch": true,
+					"enableHiding": false
+				},
+				{
+					"id": "slug",
+					"type": "text",
+					"label": "Slug",
+					"enableGlobalSearch": true
+				},
+				{
+					"id": "description",
+					"type": "text",
+					"label": "Description",
+					"enableSorting": false
+				},
+				{
+					"id": "count",
+					"type": "integer",
+					"label": "Count"
+				}
+			]
+		}
+	},
+	"viewConfigs": {
+		"postType": {
+			"post": {
+				"_default": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"status",
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {},
+						"grid": {}
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Edit",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "view",
+							"label": "View",
+							"icon": "external",
+							"eligibleWhen": {
+								"status": "publish"
+							}
+						},
+						{
+							"id": "trash",
+							"label": "Move to Trash",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash",
+							"eligibleWhen": {
+								"status": [
+									"publish",
+									"future",
+									"draft",
+									"pending",
+									"private"
+								]
+							}
+						},
+						{
+							"id": "restore",
+							"label": "Restore",
+							"supportsBulk": true,
+							"eligibleWhen": {
+								"status": "trash"
+							}
+						}
+					]
+				},
+				"drafts": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "draft"
+							}
+						]
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Edit",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "trash",
+							"label": "Move to Trash",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				},
+				"pending": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "pending"
+							}
+						]
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Review",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "trash",
+							"label": "Move to Trash",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				},
+				"trash": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "trash"
+							}
+						]
+					},
+					"actions": [
+						{
+							"id": "restore",
+							"label": "Restore",
+							"isPrimary": true,
+							"supportsBulk": true
+						},
+						{
+							"id": "delete",
+							"label": "Delete Permanently",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				}
+			},
+			"page": {
+				"_default": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"status",
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {}
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Edit",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "view",
+							"label": "View",
+							"icon": "external",
+							"eligibleWhen": {
+								"status": "publish"
+							}
+						},
+						{
+							"id": "trash",
+							"label": "Move to Trash",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash",
+							"eligibleWhen": {
+								"status": [
+									"publish",
+									"future",
+									"draft",
+									"pending",
+									"private"
+								]
+							}
+						}
+					]
+				},
+				"drafts": {
+					"fieldsRef": "wp-admin/post-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"date"
+						],
+						"titleField": "title",
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "draft"
+							}
+						]
+					}
+				}
+			}
+		},
+		"root": {
+			"user": {
+				"_default": {
+					"fieldsRef": "wp-admin/user-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"username",
+							"email",
+							"roles",
+							"registered_date"
+						],
+						"titleField": "name",
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {}
+					},
+					"actions": [
+						{
+							"id": "delete",
+							"label": "Delete",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				},
+				"administrators": {
+					"fieldsRef": "wp-admin/user-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"username",
+							"email",
+							"registered_date"
+						],
+						"titleField": "name",
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						},
+						"filters": [
+							{
+								"field": "roles",
+								"operator": "is",
+								"value": "administrator"
+							}
+						]
+					}
+				}
+			},
+			"comment": {
+				"_default": {
+					"fieldsRef": "wp-admin/comment-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"content",
+							"status",
+							"date"
+						],
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {}
+					},
+					"actions": [
+						{
+							"id": "approve",
+							"label": "Approve",
+							"supportsBulk": true,
+							"eligibleWhen": {
+								"status": [
+									"hold",
+									"spam",
+									"trash"
+								]
+							}
+						},
+						{
+							"id": "unapprove",
+							"label": "Unapprove",
+							"supportsBulk": true,
+							"eligibleWhen": {
+								"status": "approved"
+							}
+						},
+						{
+							"id": "spam",
+							"label": "Mark as Spam",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"eligibleWhen": {
+								"status": [
+									"hold",
+									"approved",
+									"trash"
+								]
+							}
+						},
+						{
+							"id": "trash",
+							"label": "Move to Trash",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash",
+							"eligibleWhen": {
+								"status": [
+									"hold",
+									"approved",
+									"spam"
+								]
+							}
+						}
+					]
+				},
+				"pending": {
+					"fieldsRef": "wp-admin/comment-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"content",
+							"date"
+						],
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "hold"
+							}
+						]
+					}
+				},
+				"spam": {
+					"fieldsRef": "wp-admin/comment-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"content",
+							"date"
+						],
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "spam"
+							}
+						]
+					},
+					"actions": [
+						{
+							"id": "unapprove",
+							"label": "Not Spam",
+							"supportsBulk": true,
+							"isPrimary": true
+						},
+						{
+							"id": "delete",
+							"label": "Delete Permanently",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				},
+				"trash": {
+					"fieldsRef": "wp-admin/comment-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"author",
+							"content",
+							"date"
+						],
+						"sort": {
+							"field": "date",
+							"direction": "desc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "trash"
+							}
+						]
+					},
+					"actions": [
+						{
+							"id": "approve",
+							"label": "Restore",
+							"supportsBulk": true,
+							"isPrimary": true
+						},
+						{
+							"id": "delete",
+							"label": "Delete Permanently",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				}
+			},
+			"plugin": {
+				"_default": {
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 50,
+						"fields": [
+							"name",
+							"status",
+							"version",
+							"author"
+						],
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						}
+					},
+					"fields": [
+						{
+							"id": "name",
+							"type": "text",
+							"label": "Plugin",
+							"enableGlobalSearch": true,
+							"enableHiding": false
+						},
+						{
+							"id": "status",
+							"type": "text",
+							"label": "Status",
+							"filterBy": {
+								"operators": [
+									"isAny"
+								]
+							},
+							"elements": [
+								{
+									"value": "active",
+									"label": "Active"
+								},
+								{
+									"value": "inactive",
+									"label": "Inactive"
+								},
+								{
+									"value": "network-active",
+									"label": "Network Active"
+								}
+							]
+						},
+						{
+							"id": "version",
+							"type": "text",
+							"label": "Version"
+						},
+						{
+							"id": "author",
+							"type": "text",
+							"label": "Author"
+						}
+					],
+					"actions": [
+						{
+							"id": "activate",
+							"label": "Activate",
+							"isPrimary": true,
+							"supportsBulk": true,
+							"icon": "check",
+							"eligibleWhen": {
+								"status": "inactive"
+							}
+						},
+						{
+							"id": "deactivate",
+							"label": "Deactivate",
+							"supportsBulk": true,
+							"icon": "closeSmall",
+							"eligibleWhen": {
+								"status": [
+									"active",
+									"network-active"
+								]
+							}
+						},
+						{
+							"id": "visit",
+							"label": "Visit plugin site",
+							"icon": "external"
+						},
+						{
+							"id": "delete",
+							"label": "Delete",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash",
+							"eligibleWhen": {
+								"status": "inactive"
+							}
+						}
+					]
+				},
+				"active": {
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 50,
+						"fields": [
+							"name",
+							"version",
+							"author"
+						],
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "isAny",
+								"value": [
+									"active",
+									"network-active"
+								]
+							}
+						]
+					}
+				},
+				"inactive": {
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 50,
+						"fields": [
+							"name",
+							"version",
+							"author"
+						],
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						},
+						"filters": [
+							{
+								"field": "status",
+								"operator": "is",
+								"value": "inactive"
+							}
+						]
+					}
+				}
+			},
+			"theme": {
+				"_default": {
+					"defaultView": {
+						"type": "grid",
+						"page": 1,
+						"perPage": 50,
+						"fields": [
+							"status",
+							"description",
+							"version",
+							"author"
+						],
+						"titleField": "name",
+						"mediaField": "screenshot",
+						"sort": {
+							"field": "status",
+							"direction": "asc"
+						}
+					},
+					"defaultLayouts": {
+						"grid": {},
+						"table": {}
+					},
+					"fields": [
+						{
+							"id": "name",
+							"type": "text",
+							"label": "Name",
+							"enableGlobalSearch": true,
+							"enableHiding": false
+						},
+						{
+							"id": "screenshot",
+							"type": "media",
+							"label": "Screenshot",
+							"enableSorting": false,
+							"enableHiding": false
+						},
+						{
+							"id": "status",
+							"type": "text",
+							"label": "Status",
+							"filterBy": {
+								"operators": [
+									"isAny"
+								]
+							},
+							"elements": [
+								{
+									"value": "active",
+									"label": "Active"
+								},
+								{
+									"value": "inactive",
+									"label": "Inactive"
+								}
+							]
+						},
+						{
+							"id": "description",
+							"type": "text",
+							"label": "Description",
+							"enableSorting": false
+						},
+						{
+							"id": "version",
+							"type": "text",
+							"label": "Version"
+						},
+						{
+							"id": "author",
+							"type": "text",
+							"label": "Author"
+						}
+					],
+					"actions": [
+						{
+							"id": "activate",
+							"label": "Activate",
+							"isPrimary": true,
+							"icon": "check",
+							"eligibleWhen": {
+								"status": "inactive"
+							}
+						},
+						{
+							"id": "details",
+							"label": "Theme Details",
+							"isPrimary": true
+						}
+					]
+				}
+			}
+		},
+		"taxonomy": {
+			"category": {
+				"_default": {
+					"fieldsRef": "wp-admin/term-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"description",
+							"slug",
+							"count"
+						],
+						"titleField": "name",
+						"sort": {
+							"field": "name",
+							"direction": "asc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {}
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Edit",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "delete",
+							"label": "Delete",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				}
+			},
+			"post_tag": {
+				"_default": {
+					"fieldsRef": "wp-admin/term-fields",
+					"defaultView": {
+						"type": "table",
+						"page": 1,
+						"perPage": 20,
+						"fields": [
+							"description",
+							"slug",
+							"count"
+						],
+						"titleField": "name",
+						"sort": {
+							"field": "count",
+							"direction": "desc"
+						}
+					},
+					"defaultLayouts": {
+						"table": {}
+					},
+					"actions": [
+						{
+							"id": "edit",
+							"label": "Edit",
+							"isPrimary": true,
+							"icon": "pencil"
+						},
+						{
+							"id": "delete",
+							"label": "Delete",
+							"isDestructive": true,
+							"supportsBulk": true,
+							"icon": "trash"
+						}
+					]
+				}
+			}
+		}
+	},
+	"dashboardWidgets": {
+		"core:dashboard-widget-recent-posts": {
+			"position": {
+				"row": 1,
+				"col": 1
+			},
+			"defaultSize": {
+				"w": 1,
+				"h": 1
+			}
+		},
+		"core:dashboard-widget-quick-draft": {
+			"position": {
+				"row": 1,
+				"col": 2
+			},
+			"defaultSize": {
+				"w": 1,
+				"h": 1
+			}
+		}
+	},
 	"regions": {
 		"sidebar": {
 			"template": "core:sidebar",
 			"regions": {
-				"hub": { "role": "region", "app": "core:site-hub" },
+				"hub": {
+					"role": "region",
+					"app": "core:site-hub"
+				},
 				"nav": {
 					"role": "navigation",
 					"app": "core:navigation",
@@ -30,6 +1098,12 @@
 										"capability": "read"
 									},
 									{
+										"label": "Widgets",
+										"icon": "layout",
+										"href": "#/dashboard/widgets",
+										"capability": "read"
+									},
+									{
 										"label": "Updates",
 										"icon": "dashboard",
 										"href": "#/dashboard/updates",
@@ -37,7 +1111,9 @@
 									}
 								]
 							},
-							{ "separator": true },
+							{
+								"separator": true
+							},
 							{
 								"screen": "posts",
 								"label": "Posts",
@@ -49,6 +1125,24 @@
 										"icon": "post",
 										"href": "#/posts",
 										"capability": "edit_posts"
+									},
+									{
+										"label": "Drafts",
+										"icon": "drafts",
+										"href": "#/posts/drafts",
+										"capability": "edit_posts"
+									},
+									{
+										"label": "Pending Review",
+										"icon": "drafts",
+										"href": "#/posts/pending",
+										"capability": "edit_others_posts"
+									},
+									{
+										"label": "Trash",
+										"icon": "trash",
+										"href": "#/posts/trash",
+										"capability": "delete_posts"
 									},
 									{
 										"label": "Add New Post",
@@ -103,6 +1197,12 @@
 										"capability": "edit_pages"
 									},
 									{
+										"label": "Drafts",
+										"icon": "drafts",
+										"href": "#/pages/drafts",
+										"capability": "edit_pages"
+									},
+									{
 										"label": "Add New Page",
 										"icon": "plus",
 										"href": "#/pages/new",
@@ -111,12 +1211,40 @@
 								]
 							},
 							{
+								"screen": "comments",
 								"label": "Comments",
 								"icon": "comment",
-								"href": "#/comments",
-								"capability": "moderate_comments"
+								"description": "Moderate comments.",
+								"items": [
+									{
+										"label": "All",
+										"icon": "comment",
+										"href": "#/comments",
+										"capability": "moderate_comments"
+									},
+									{
+										"label": "Pending",
+										"icon": "comment",
+										"href": "#/comments/pending",
+										"capability": "moderate_comments"
+									},
+									{
+										"label": "Spam",
+										"icon": "trash",
+										"href": "#/comments/spam",
+										"capability": "moderate_comments"
+									},
+									{
+										"label": "Trash",
+										"icon": "trash",
+										"href": "#/comments/trash",
+										"capability": "moderate_comments"
+									}
+								]
 							},
-							{ "separator": true },
+							{
+								"separator": true
+							},
 							{
 								"screen": "appearance",
 								"label": "Appearance",
@@ -130,6 +1258,12 @@
 										"capability": "switch_themes"
 									},
 									{
+										"label": "Add New Theme",
+										"icon": "plus",
+										"href": "#/appearance/themes/new",
+										"capability": "install_themes"
+									},
+									{
 										"label": "Editor",
 										"icon": "styles",
 										"href": "#/appearance/editor",
@@ -139,6 +1273,18 @@
 										"label": "Customize",
 										"icon": "styles",
 										"href": "#/appearance/customize",
+										"capability": "edit_theme_options"
+									},
+									{
+										"label": "Menus",
+										"icon": "navigation",
+										"href": "#/appearance/menus",
+										"capability": "edit_theme_options"
+									},
+									{
+										"label": "Widgets",
+										"icon": "layout",
+										"href": "#/appearance/widgets",
 										"capability": "edit_theme_options"
 									}
 								]
@@ -153,6 +1299,18 @@
 										"label": "Installed Plugins",
 										"icon": "plugins",
 										"href": "#/plugins",
+										"capability": "activate_plugins"
+									},
+									{
+										"label": "Active",
+										"icon": "check",
+										"href": "#/plugins/active",
+										"capability": "activate_plugins"
+									},
+									{
+										"label": "Inactive",
+										"icon": "closeSmall",
+										"href": "#/plugins/inactive",
 										"capability": "activate_plugins"
 									},
 									{
@@ -182,10 +1340,22 @@
 										"capability": "list_users"
 									},
 									{
+										"label": "Administrators",
+										"icon": "people",
+										"href": "#/users/administrators",
+										"capability": "list_users"
+									},
+									{
 										"label": "Add New User",
 										"icon": "plus",
 										"href": "#/users/new",
 										"capability": "create_users"
+									},
+									{
+										"label": "Profile",
+										"icon": "user",
+										"href": "#/profile",
+										"capability": "read"
 									}
 								]
 							},
@@ -283,7 +1453,9 @@
 									}
 								]
 							},
-							{ "separator": true },
+							{
+								"separator": true
+							},
 							{
 								"label": "Profile",
 								"icon": "user",
@@ -301,169 +1473,282 @@
 				}
 			}
 		},
-
 		"content": {
 			"template": "core:main",
-			"routing": { "route-key": "_self" }
+			"routing": {
+				"route-key": "_self"
+			}
 		},
-
 		"command-palette": {
 			"template": "core:overlay",
 			"app": "core:command-palette",
 			"platform": {
 				"core:triggerable": true,
-				"core:trigger": { "shortcut": "Mod+K" }
+				"core:trigger": {
+					"shortcut": "Mod+K"
+				}
 			}
 		},
-
-		"notices-banner": { "role": "region", "app": "core:notices-banner" },
-		"notices-snackbar": { "role": "region", "app": "core:notices-snackbar" }
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
+		}
 	},
-
 	"routes": {
 		"/dashboard/home": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "index.php" }
+			"app": "core:dashboard"
+		},
+		"/dashboard/widgets": {
+			"app": "core:dashboard-host"
 		},
 		"/dashboard/updates": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "update-core.php" }
+			"config": {
+				"url": "update-core.php"
+			}
 		},
-
 		"/posts": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "edit.php" }
+			"app": "core:posts",
+			"config": {
+				"postType": "post"
+			}
+		},
+		"/posts/drafts": {
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"variant": "drafts"
+			}
+		},
+		"/posts/pending": {
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"variant": "pending"
+			}
+		},
+		"/posts/trash": {
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"variant": "trash"
+			}
 		},
 		"/posts/new": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "post-new.php" }
+			"app": "core:editor",
+			"config": {
+				"postType": "post"
+			}
+		},
+		"/posts/{id}/edit": {
+			"app": "core:editor",
+			"config": {
+				"postType": "post"
+			}
 		},
 		"/posts/categories": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "edit-tags.php?taxonomy=category" }
+			"app": "core:taxonomy",
+			"config": {
+				"taxonomy": "category"
+			}
 		},
 		"/posts/tags": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "edit-tags.php?taxonomy=post_tag" }
+			"app": "core:taxonomy",
+			"config": {
+				"taxonomy": "post_tag"
+			}
 		},
-
+		"/editor/{postType}/{id}": {
+			"app": "core:editor"
+		},
 		"/media": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "upload.php" }
+			"app": "core:media"
 		},
 		"/media/new": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "media-new.php" }
+			"app": "core:media",
+			"config": {
+				"openUpload": true
+			}
 		},
-
 		"/pages": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "edit.php?post_type=page" }
+			"app": "core:posts",
+			"config": {
+				"postType": "page"
+			}
+		},
+		"/pages/drafts": {
+			"app": "core:posts",
+			"config": {
+				"postType": "page",
+				"variant": "drafts"
+			}
 		},
 		"/pages/new": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "post-new.php?post_type=page" }
+			"app": "core:editor",
+			"config": {
+				"postType": "page"
+			}
 		},
-
+		"/pages/{id}/edit": {
+			"app": "core:editor",
+			"config": {
+				"postType": "page"
+			}
+		},
 		"/comments": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "edit-comments.php" }
+			"app": "core:comments"
 		},
-
+		"/comments/pending": {
+			"app": "core:comments",
+			"config": {
+				"variant": "pending"
+			}
+		},
+		"/comments/spam": {
+			"app": "core:comments",
+			"config": {
+				"variant": "spam"
+			}
+		},
+		"/comments/trash": {
+			"app": "core:comments",
+			"config": {
+				"variant": "trash"
+			}
+		},
 		"/appearance/themes": {
+			"app": "core:themes"
+		},
+		"/appearance/themes/new": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "themes.php" }
+			"config": {
+				"url": "theme-install.php"
+			}
 		},
 		"/appearance/editor": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "site-editor.php" }
+			"app": "core:site-editor"
 		},
 		"/appearance/customize": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "customize.php" }
+			"config": {
+				"url": "customize.php"
+			}
 		},
-
-		"/plugins": {
+		"/appearance/menus": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "plugins.php" }
+			"config": {
+				"url": "nav-menus.php"
+			}
+		},
+		"/appearance/widgets": {
+			"app": "core:iframe-fallback",
+			"config": {
+				"url": "widgets.php"
+			}
+		},
+		"/plugins": {
+			"app": "core:plugins"
+		},
+		"/plugins/active": {
+			"app": "core:plugins",
+			"config": {
+				"variant": "active"
+			}
+		},
+		"/plugins/inactive": {
+			"app": "core:plugins",
+			"config": {
+				"variant": "inactive"
+			}
 		},
 		"/plugins/new": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "plugin-install.php" }
+			"config": {
+				"url": "plugin-install.php"
+			}
 		},
 		"/plugins/editor": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "plugin-editor.php" }
+			"config": {
+				"url": "plugin-editor.php"
+			}
 		},
-
 		"/users": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "users.php" }
+			"app": "core:users"
+		},
+		"/users/administrators": {
+			"app": "core:users",
+			"config": {
+				"variant": "administrators"
+			}
 		},
 		"/users/new": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "user-new.php" }
+			"config": {
+				"url": "user-new.php"
+			}
 		},
-
 		"/profile": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "profile.php" }
+			"app": "core:profile"
 		},
-
 		"/tools": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "tools.php" }
+			"app": "core:tools"
 		},
 		"/tools/import": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "import.php" }
+			"config": {
+				"url": "import.php"
+			}
 		},
 		"/tools/export": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "export.php" }
+			"config": {
+				"url": "export.php"
+			}
 		},
 		"/tools/site-health": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "site-health.php" }
+			"app": "core:site-health"
 		},
 		"/tools/export-data": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "export-personal-data.php" }
+			"config": {
+				"url": "export-personal-data.php"
+			}
 		},
 		"/tools/erase-data": {
 			"app": "core:iframe-fallback",
-			"config": { "url": "erase-personal-data.php" }
+			"config": {
+				"url": "erase-personal-data.php"
+			}
 		},
-
+		"/settings": {
+			"app": "core:settings"
+		},
 		"/settings/general": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-general.php" }
+			"app": "core:settings"
 		},
 		"/settings/writing": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-writing.php" }
+			"app": "core:settings"
 		},
 		"/settings/reading": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-reading.php" }
+			"app": "core:settings"
 		},
 		"/settings/discussion": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-discussion.php" }
+			"app": "core:settings"
 		},
 		"/settings/media": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-media.php" }
+			"app": "core:settings"
 		},
 		"/settings/permalinks": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-permalink.php" }
+			"app": "core:settings"
 		},
 		"/settings/privacy": {
-			"app": "core:iframe-fallback",
-			"config": { "url": "options-privacy.php" }
+			"app": "core:settings"
 		}
 	},
-
 	"default-route": "/dashboard/home"
 }

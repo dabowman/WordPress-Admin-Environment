@@ -221,9 +221,9 @@ WPAS_Manifest_Test_Runner::assert_true(
 	null !== $engine
 );
 WPAS_Manifest_Test_Runner::assert_eq(
-	'core:default has 5 templates',
+	'core:default has 6 templates',
 	count( $engine['templates'] ?? array() ),
-	5
+	6
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'core:sidebar template ships',
