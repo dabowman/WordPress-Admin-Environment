@@ -7,7 +7,7 @@ import { Button, Notice, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -212,8 +212,13 @@ function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
-export default function PluginsApp() {
-	const { config: viewConfig } = useViewConfig( 'root', 'plugin' );
+/**
+ * @param {Object} root0          Mount-supplied props.
+ * @param {Object} [root0.config] App config — `config.screenId` keys the per-screen view lookup.
+ */
+export default function PluginsApp( { config = {} } = {} ) {
+	const screenId = config.screenId || null;
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const pluginsQuery = useMemo( () => ( { context: 'edit' } ), [] );
 	const { records, isResolving } = useEntityRecords(

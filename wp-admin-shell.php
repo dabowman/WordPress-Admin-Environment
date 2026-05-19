@@ -87,6 +87,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashbo
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-view-config-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';
@@ -403,6 +404,15 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		// `compileStyles` consumes this when resolving non-`styles.*`
 		// curly-brace aliases in admin.json `styles`.
 		'tokens'        => WP_Admin_Shell_Tokens::resolve(),
+		// v3 — flattened engine-modes catalog. The active engine's
+		// `modes` block is walked for `extends` chains (depth-limited),
+		// then the `wp_admin_shell_engine_modes_{engineId}` filter runs
+		// so plugins can contribute additional modes. Empty object when
+		// no engine is resolved (degenerate; the shell would fail to
+		// mount upstream of this anyway).
+		'engineModes'   => $active_engine_manifest
+			? WP_Admin_Shell_Modes::resolve_engine_modes( $active_engine_manifest )
+			: WP_Admin_Shell_Modes::synthesize_default_catalog(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '

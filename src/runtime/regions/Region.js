@@ -35,6 +35,8 @@ import { shouldRenderRegion } from '../capabilities/shouldRenderRegion.mjs';
 import { getPlatformServices } from './platformServices.mjs';
 import { registerTrigger } from '../bindings/triggerStore.mjs';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
+import { useMode } from '../modes/useMode';
+import { readRegionState } from '../modes/resolveMode.mjs';
 
 export function Region( { region } ) {
 	if ( ! shouldRenderRegion( region, window.wpAdminShell?.capabilities ) ) {
@@ -148,12 +150,21 @@ function GenericRegion( { region } ) {
 		routesBlock
 	);
 
+	// v3 mode resolution. Returns `{ modal, regions, modeId, screenId }`
+	// for the active screen. Per-region state lives at
+	// `regions[ region.id ]`; absent → render normally. Modal modes leave
+	// chrome alone (`regions: null`).
+	const mode = useMode();
+	const regionState = readRegionState( region.id, mode );
+
 	if ( services.isModal ) {
 		return (
 			<ModalRegion
 				region={ region }
 				services={ services }
 				matched={ matched }
+				regionState={ regionState }
+				modeId={ mode.modeId }
 			/>
 		);
 	}
@@ -162,20 +173,24 @@ function GenericRegion( { region } ) {
 			region={ region }
 			services={ services }
 			matched={ matched }
+			regionState={ regionState }
+			modeId={ mode.modeId }
 		/>
 	);
 }
 
-function PersistentRegion( { region, matched } ) {
+function PersistentRegion( { region, matched, regionState, modeId } ) {
 	const role = region.role || 'region';
-	const className = regionClassName( region );
+	const className = regionClassName( region, regionState );
 	const style = toReactStyle( region.style );
+	const stateAttrs = regionStateDataAttrs( regionState, modeId );
 	return (
 		<div
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
 			style={ style }
+			{ ...stateAttrs }
 		>
 			{ renderRegionApp( region, matched ) }
 			<RegionChildren region={ region } />
@@ -183,7 +198,7 @@ function PersistentRegion( { region, matched } ) {
 	);
 }
 
-function ModalRegion( { region, services, matched } ) {
+function ModalRegion( { region, services, matched, regionState, modeId } ) {
 	const labelId = useId();
 	const focusOnMountRef = useFocusOnMount();
 	const focusReturnRef = useFocusReturn();
@@ -253,7 +268,8 @@ function ModalRegion( { region, services, matched } ) {
 	}, [ isOpen, services.autofocusSelector ] );
 
 	const role = region.role || 'dialog';
-	const className = regionClassName( region );
+	const className = regionClassName( region, regionState );
+	const stateAttrs = regionStateDataAttrs( regionState, modeId );
 
 	if ( ! isOpen ) {
 		// Render an inert subtree so children that need to mount for
@@ -267,6 +283,7 @@ function ModalRegion( { region, services, matched } ) {
 				data-region-id={ region.id }
 				aria-hidden="true"
 				style={ { display: 'none' } }
+				{ ...stateAttrs }
 			>
 				{ renderRegionApp( region, matched ) }
 				<RegionChildren region={ region } />
@@ -294,6 +311,7 @@ function ModalRegion( { region, services, matched } ) {
 				className={ `${ className } is-modal` }
 				data-region-id={ region.id }
 				style={ dialogStyle }
+				{ ...stateAttrs }
 			>
 				{ region.id ? (
 					<span id={ labelId } className="screen-reader-text">
@@ -336,12 +354,66 @@ function kebabToCamel( key ) {
 	return String( key ).replace( /-([a-z])/g, ( _, c ) => c.toUpperCase() );
 }
 
-function regionClassName( region ) {
-	if ( ! region.id ) {
-		return 'wp-admin-shell-region';
+function regionClassName( region, regionState ) {
+	const classes = [ 'wp-admin-shell-region' ];
+	if ( region.id ) {
+		const slug = String( region.id ).replace( /\//g, '__' );
+		classes.push( `wp-admin-shell-region--${ slug }` );
 	}
-	const slug = String( region.id ).replace( /\//g, '__' );
-	return `wp-admin-shell-region wp-admin-shell-region--${ slug }`;
+	// v3 mode state — each boolean-true key becomes a modifier class so
+	// engine CSS can target both `[data-mode-*]` attributes and BEM
+	// modifiers. Unknown keys also project to classes (engines that ship
+	// custom region-state vocabulary work without kernel changes).
+	if ( regionState && typeof regionState === 'object' ) {
+		for ( const [ key, value ] of Object.entries( regionState ) ) {
+			if ( value === true ) {
+				classes.push( `wp-admin-shell-region--${ kebab( key ) }` );
+			}
+		}
+	}
+	return classes.join( ' ' );
+}
+
+/**
+ * Project a region-state object onto `data-mode-*` attributes. Each
+ * boolean key becomes `data-mode-<kebab-key>="true"` (boolean-true only;
+ * boolean-false attributes would falsely target CSS selectors). Other
+ * scalar values (string, number) project as-is so engines can ship
+ * non-boolean vocabulary (e.g. `data-mode-density="comfortable"`).
+ *
+ * `modeId` always projects to `data-mode="<modeId>"` so engine CSS can
+ * target full-mode states without enumerating each region-state key.
+ *
+ * Returns `undefined` when there's nothing to emit so React skips the
+ * attribute pass entirely.
+ *
+ * @param {Object|null} regionState
+ * @param {string|null} modeId
+ */
+function regionStateDataAttrs( regionState, modeId ) {
+	const attrs = {};
+	if ( modeId && modeId !== 'default' ) {
+		attrs[ 'data-mode' ] = modeId;
+	}
+	if ( regionState && typeof regionState === 'object' ) {
+		for ( const [ key, value ] of Object.entries( regionState ) ) {
+			if ( value === true ) {
+				attrs[ `data-mode-${ kebab( key ) }` ] = 'true';
+			} else if (
+				typeof value === 'string' ||
+				typeof value === 'number'
+			) {
+				attrs[ `data-mode-${ kebab( key ) }` ] = String( value );
+			}
+		}
+	}
+	return Object.keys( attrs ).length ? attrs : undefined;
+}
+
+function kebab( s ) {
+	return String( s )
+		.replace( /([a-z0-9])([A-Z])/g, '$1-$2' )
+		.toLowerCase();
 }
 
 /**

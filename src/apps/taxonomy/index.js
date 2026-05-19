@@ -13,7 +13,7 @@ import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
@@ -236,34 +236,30 @@ function buildActions(
 
 export default function TaxonomyApp( { config = {} } ) {
 	const taxonomy = config.taxonomy || 'category';
-	const variant = config.variant || null;
+	const screenId = config.screenId || null;
 	const heading =
 		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
 
-	const { config: viewConfig } = useViewConfig(
-		'taxonomy',
-		taxonomy,
-		variant
-	);
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
 		...viewConfig.defaultView,
 	} ) );
 
-	// Resync `view` when the underlying triple flips on the same hook
-	// instance (e.g. config.taxonomy `category` → `post_tag`). The useState
-	// initializer runs once, so without this effect the second triple
-	// inherits the first triple's perPage / sort / filters. Keyed only on
-	// the triple — not viewConfig — to avoid clobbering in-session view
-	// edits whenever the cascade re-resolves the doc shape.
+	// Resync `view` when the screen flips on the same hook instance
+	// (e.g. /categories → /tags both mount TaxonomyApp). The useState
+	// initializer runs once, so without this effect the second screen
+	// inherits the first's perPage / sort / filters. Keyed only on
+	// screenId + taxonomy — not viewConfig — to avoid clobbering
+	// in-session view edits whenever the cascade re-resolves the doc.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
 			...( viewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ taxonomy, variant ] );
+	}, [ screenId, taxonomy ] );
 
 	const queryArgs = useMemo( () => {
 		const args = {

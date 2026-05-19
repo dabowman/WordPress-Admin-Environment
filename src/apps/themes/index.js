@@ -9,7 +9,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
@@ -157,9 +157,9 @@ function buildActions( actions, { activate, renderDetailsModal } ) {
 }
 
 export default function ThemesApp( { config = {} } ) {
-	const variant = config.variant || null;
+	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useViewConfig( 'root', 'theme', variant );
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const themesQuery = useMemo(
 		() => ( { context: 'edit', status: 'active,inactive' } ),
@@ -178,18 +178,18 @@ export default function ThemesApp( { config = {} } ) {
 		...( viewConfig.defaultView || {} ),
 	} ) );
 
-	// Resync `view` when the variant flips on the same hook instance —
-	// useState initializer runs once, so without this effect a variant switch
-	// inherits the prior triple's perPage / sort / filters. Keyed only on the
-	// variant axis (this app's variable input) so cascade re-resolves don't
-	// clobber in-session view edits.
+	// Resync `view` when the screen flips on the same hook instance —
+	// useState initializer runs once, so without this effect a sibling
+	// screen inherits the prior screen's perPage / sort / filters. Keyed
+	// only on screenId so cascade re-resolves don't clobber in-session
+	// view edits.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
 			...( viewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ variant ] );
+	}, [ screenId ] );
 
 	const activate = useCallback(
 		async ( theme ) => {

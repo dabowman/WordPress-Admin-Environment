@@ -10,7 +10,7 @@ import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -266,24 +266,20 @@ function buildFields( fieldSpecs, fieldRenderers ) {
 
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
-	const variant = config.variant || null;
+	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useViewConfig(
-		'postType',
-		postType,
-		variant
-	);
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
 		...viewConfig.defaultView,
 	} ) );
 
-	// Resync `view` when the underlying triple flips on the same hook
-	// instance (e.g. config.postType `post` → `page`). The useState
-	// initializer runs once, so without this effect the second triple
-	// inherits the first triple's perPage / sort / filters. Keyed only on
-	// the triple — not viewConfig — to avoid clobbering in-session view
+	// Resync `view` when the screen flips on the same hook instance
+	// (e.g. /posts → /posts/drafts both mount PostsApp). The useState
+	// initializer runs once, so without this effect the second screen
+	// inherits the first's perPage / sort / filters. Keyed on screenId
+	// + postType — not viewConfig — to avoid clobbering in-session view
 	// edits whenever the cascade re-resolves the doc shape.
 	useEffect( () => {
 		setView( {
@@ -291,7 +287,7 @@ export default function PostsApp( { config } ) {
 			...( viewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ postType, variant ] );
+	}, [ screenId, postType ] );
 
 	const queryArgs = useMemo( () => {
 		const args = {

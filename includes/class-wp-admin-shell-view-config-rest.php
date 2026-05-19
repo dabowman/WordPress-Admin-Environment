@@ -1,18 +1,18 @@
 <?php
 /**
- * /wp-admin-shell/v1/view-config — resolved view-config for `(kind, name, variant)`.
- * /wp-admin-shell/v1/view-config/variants — discovery: list variants for `(kind, name)`.
+ * /wp-admin-shell/v1/screen-view — resolved per-screen view doc.
  *
- * GET /view-config?kind=postType&name=post[&variant=services]
- *   Returns the cascade-resolved view-config doc with `fieldsRef`
- *   resolved against `fieldCollections` (ref wins, inline overrides
- *   per-field). Runs `wp_admin_shell_view_config_{kind}_{name}` and the
- *   variant-qualified filter before responding.
+ * GET /screen-view?screen=<id>
+ *   Returns the resolved view doc for the given screen: the global
+ *   `settings.views.<kind>.<name>` definition merged with the screen's
+ *   inline `screens.<id>.view` partial. `fieldsRef` is resolved against
+ *   `settings.fields` (ref wins, inline overrides per-field). Runs
+ *   `wp_admin_shell_view_config_{kind}_{name}` on the resolved global
+ *   before deep-merging the screen overlay.
  *
- * GET /view-config/variants?kind=postType&name=post
- *   Returns `{ kind, name, variants: [null, "services", ...] }` —
- *   `null` represents the base view-config; remaining entries are
- *   the registered named variants.
+ * v3 replacement for v2's `/view-config?kind=&name=&variant=` +
+ * `/view-config/variants` endpoints. Variants no longer exist as a
+ * registry concept; screen ids carry that role now.
  *
  * @package WP_Admin_Shell
  */
@@ -26,51 +26,17 @@ class WP_Admin_Shell_View_Config_REST {
 	public static function register() {
 		register_rest_route(
 			self::REST_NAMESPACE,
-			'/view-config',
+			'/screen-view',
 			array(
 				array(
 					'methods'             => 'GET',
-					'callback'            => array( __CLASS__, 'get_view_config' ),
+					'callback'            => array( __CLASS__, 'get_screen_view' ),
 					'permission_callback' => array( __CLASS__, 'permission_check' ),
 					'args'                => array(
-						'kind'    => array(
+						'screen' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
-						),
-						'name'    => array(
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
-						),
-						'variant' => array(
-							'type'              => 'string',
-							'required'          => false,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_variant' ),
-						),
-					),
-				),
-			)
-		);
-
-		register_rest_route(
-			self::REST_NAMESPACE,
-			'/view-config/variants',
-			array(
-				array(
-					'methods'             => 'GET',
-					'callback'            => array( __CLASS__, 'get_variants' ),
-					'permission_callback' => array( __CLASS__, 'permission_check' ),
-					'args'                => array(
-						'kind' => array(
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
-						),
-						'name' => array(
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => 'sanitize_key',
 						),
 					),
 				),
@@ -79,67 +45,31 @@ class WP_Admin_Shell_View_Config_REST {
 	}
 
 	/**
-	 * Permission floor: must be logged in. Individual view-configs may
-	 * carry their own capability requirements via the consuming app's
-	 * `capabilities[]` floor — those gate the shell mount, not the
-	 * REST read. Read-only access is information-only.
+	 * Permission floor: must be logged in. Individual screens may carry
+	 * their own capability requirements; those gate the screen mount,
+	 * not the view-doc read. Read-only access is information-only.
 	 */
 	public static function permission_check() {
 		return is_user_logged_in();
 	}
 
-	public static function get_view_config( $request ) {
-		$kind    = $request->get_param( 'kind' );
-		$name    = $request->get_param( 'name' );
-		$variant = $request->get_param( 'variant' );
-		$variant = $variant === '' ? null : $variant;
+	public static function get_screen_view( $request ) {
+		$screen = $request->get_param( 'screen' );
 
-		// Reject empty-after-sanitize. WP's `required` arg-validator only
-		// checks the param is present; the sanitize_callback strips
-		// disallowed characters and may collapse `kind=$$$` to ''. Empty
-		// segments would otherwise mask a malformed request as a clean
-		// 200 with `config: {}`.
-		if ( $kind === '' || $name === '' ) {
+		if ( ! is_string( $screen ) || $screen === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_view_config_invalid_segment',
-				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
+				'wp_admin_shell_screen_view_invalid_id',
+				__( 'screen must be a non-empty kebab-case identifier.', 'wp-admin-shell' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		$doc = WP_Admin_Shell_View_Config::resolve( $kind, $name, $variant );
-
-		$response = array(
-			'kind'   => $kind,
-			'name'   => $name,
-			'config' => $doc,
-		);
-		if ( $variant !== null ) {
-			$response['variant'] = $variant;
-		}
-
-		return rest_ensure_response( $response );
-	}
-
-	public static function get_variants( $request ) {
-		$kind = $request->get_param( 'kind' );
-		$name = $request->get_param( 'name' );
-
-		if ( $kind === '' || $name === '' ) {
-			return new WP_Error(
-				'wp_admin_shell_view_config_invalid_segment',
-				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$variants = WP_Admin_Shell_View_Config::variants_for( $kind, $name );
+		$doc = WP_Admin_Shell_View_Config::resolve_screen_view( $screen );
 
 		return rest_ensure_response(
 			array(
-				'kind'     => $kind,
-				'name'     => $name,
-				'variants' => $variants,
+				'screen' => $screen,
+				'view'   => $doc,
 			)
 		);
 	}

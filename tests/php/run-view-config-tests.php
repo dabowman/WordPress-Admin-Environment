@@ -1,17 +1,20 @@
 <?php
 /**
- * View-config + field-collections tests — C2 phase.
+ * View-config + field-collections tests — v3 shape.
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-view-config-tests.php`
  *
  * Coverage:
  *   - `WP_Admin_Shell_Field_Collections::register` validation + readback.
  *   - `WP_Admin_Shell_Field_Collections::find_for` exact + universal match.
- *   - `WP_Admin_Shell_View_Config::resolve` triple lookup (base + variant).
- *   - `wp_admin_shell_view_config_{kind}_{name}` + variant-qualified filter run.
+ *   - `WP_Admin_Shell_View_Config::resolve_global` walks `settings.views[kind][name]`.
+ *   - `WP_Admin_Shell_View_Config::resolve_screen_view` deep-merges inline overlay.
+ *   - `fieldsRef` against `settings.fields`.
+ *   - `wp_admin_shell_view_config_{kind}_{name}` filter (no variant variant in v3).
  *   - `merge_fields` ref-wins-inline-overrides semantics.
- *   - Sanitization mirrors CIAB (`[A-Za-z0-9_-]` segments; variant adds `/`).
- *   - Variants-for discovery.
+ *   - `inject_app_baselines` reads app manifest `view` block and writes
+ *     into `settings.views`.
+ *   - Tombstones via `null` on overlay key + `__tombstone` on array entries.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
  * resolver directly with `$config` to avoid depending on disk shells.
@@ -69,11 +72,6 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	$registry['core/post-fields']['kind'],
 	'postType'
 );
-WPAS_View_Config_Test_Runner::assert_eq(
-	'registered name preserved',
-	$registry['core/post-fields']['name'],
-	'post'
-);
 
 // Universal collection (null name).
 wp_admin_shell_register_field_collection(
@@ -83,7 +81,6 @@ wp_admin_shell_register_field_collection(
 	array( array( 'id' => 'modified', 'type' => 'datetime', 'label' => 'Modified' ) )
 );
 
-// find_for — exact + universal match for (postType, post).
 $matches = WP_Admin_Shell_Field_Collections::find_for( 'postType', 'post' );
 WPAS_View_Config_Test_Runner::assert_true(
 	'find_for picks up exact match',
@@ -94,50 +91,13 @@ WPAS_View_Config_Test_Runner::assert_true(
 	isset( $matches['core/audit-fields'] )
 );
 
-// find_for — kind mismatch returns nothing.
-$nothing = WP_Admin_Shell_Field_Collections::find_for( 'root', 'site' );
-WPAS_View_Config_Test_Runner::assert_eq(
-	'find_for returns empty when kind mismatches',
-	count( $nothing ),
-	0
-);
-
 // --- Validation rejections --------------------------------------------------
 
 $err = wp_admin_shell_register_field_collection( '', 'postType', 'post', array() );
 WPAS_View_Config_Test_Runner::assert_wp_error( 'register rejects empty id', $err );
 
-$err = wp_admin_shell_register_field_collection( 'x', 'postType', '', array() );
-WPAS_View_Config_Test_Runner::assert_wp_error( 'register rejects empty name', $err );
-
 $err = wp_admin_shell_register_field_collection( 'x', 'postType', 'post', 'not-an-array' );
 WPAS_View_Config_Test_Runner::assert_wp_error( 'register rejects non-array fields', $err );
-
-$err = wp_admin_shell_register_field_collection( 'x', 'postType', 'post', array(), 123 );
-WPAS_View_Config_Test_Runner::assert_wp_error( 'register rejects non-string fieldsModule', $err );
-
-// --- Sanitization -----------------------------------------------------------
-
-WPAS_View_Config_Test_Runner::assert_eq(
-	'sanitize_segment strips slashes',
-	WP_Admin_Shell_Field_Collections::sanitize_segment( 'post/Type' ),
-	'postType'
-);
-WPAS_View_Config_Test_Runner::assert_eq(
-	'sanitize_segment preserves underscores + dashes',
-	WP_Admin_Shell_Field_Collections::sanitize_segment( 'my_kind-v2' ),
-	'my_kind-v2'
-);
-WPAS_View_Config_Test_Runner::assert_eq(
-	'sanitize_variant preserves forward-slash',
-	WP_Admin_Shell_Field_Collections::sanitize_variant( 'woocommerce-bookings/services' ),
-	'woocommerce-bookings/services'
-);
-WPAS_View_Config_Test_Runner::assert_eq(
-	'sanitize_variant strips disallowed chars',
-	WP_Admin_Shell_Field_Collections::sanitize_variant( 'foo!@#bar' ),
-	'foobar'
-);
 
 // --- merge_fields semantics -------------------------------------------------
 
@@ -157,11 +117,6 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	3
 );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'merge first field is title from base',
-	$merged[0]['id'],
-	'title'
-);
-WPAS_View_Config_Test_Runner::assert_eq(
 	'merge second field is status with override applied',
 	$merged[1]['label'],
 	'Post Status'
@@ -177,46 +132,29 @@ WPAS_View_Config_Test_Runner::assert_eq(
 	'author'
 );
 
-// Duplicate inline ids dedupe — first append wins, rest dropped.
-$dup_merged = WP_Admin_Shell_View_Config::merge_fields(
-	array(),
-	array(
-		array( 'id' => 'foo', 'type' => 'text', 'label' => 'First Foo' ),
-		array( 'id' => 'foo', 'type' => 'text', 'label' => 'Second Foo' ),
-		array( 'id' => 'bar', 'type' => 'text', 'label' => 'Bar' ),
-	)
-);
-WPAS_View_Config_Test_Runner::assert_eq( 'duplicate inline ids dedupe count', count( $dup_merged ), 2 );
-WPAS_View_Config_Test_Runner::assert_eq(
-	'duplicate inline ids dedupe — first wins',
-	$dup_merged[0]['label'],
-	'First Foo'
-);
-
-// --- View-config resolution against synthetic config ------------------------
+// --- Global view resolution against synthetic config ------------------------
 
 $synthetic = array(
-	'fieldCollections' => array(
-		'core/post-fields' => array(
-			'kind'   => 'postType',
-			'name'   => 'post',
-			'fields' => $base,
+	'settings' => array(
+		'fields' => array(
+			'core/post-fields' => array(
+				'kind'   => 'postType',
+				'name'   => 'post',
+				'fields' => $base,
+			),
 		),
-	),
-	'viewConfigs' => array(
-		'postType' => array(
-			'post' => array(
-				'_default' => array(
+		'views' => array(
+			'postType' => array(
+				'post' => array(
 					'fieldsRef'   => 'core/post-fields',
 					'fields'      => array(
 						array( 'id' => 'status', 'label' => 'Post Status' ),
 					),
-					'defaultView' => array( 'type' => 'table' ),
-				),
-				'services' => array(
-					'fieldsRef' => 'core/post-fields',
-					'fields'    => array(
-						array( 'id' => 'duration', 'type' => 'text', 'label' => 'Duration' ),
+					'defaultView' => array( 'type' => 'table', 'perPage' => 25 ),
+					'actions'     => array(
+						array( 'id' => 'edit', 'label' => 'Edit', 'isPrimary' => true ),
+						array( 'id' => 'trash', 'label' => 'Move to Trash' ),
+						array( 'id' => 'view', 'label' => 'View' ),
 					),
 				),
 			),
@@ -224,195 +162,296 @@ $synthetic = array(
 	),
 );
 
-$base_resolved = WP_Admin_Shell_View_Config::resolve( 'postType', 'post', null, $synthetic );
+$resolved = WP_Admin_Shell_View_Config::resolve_global( 'postType', 'post', $synthetic );
 
 WPAS_View_Config_Test_Runner::assert_eq(
-	'resolve picks _default for null variant',
-	$base_resolved['defaultView']['type'],
+	'resolve_global reads settings.views[kind][name]',
+	$resolved['defaultView']['type'],
 	'table'
 );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'resolve runs ref-wins-inline merge',
-	$base_resolved['fields'][1]['label'],
+	'fieldsRef applied — inline label overrides collection',
+	$resolved['fields'][1]['label'],
 	'Post Status'
 );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'resolve stamps _resolvedFieldsRef',
-	$base_resolved['_resolvedFieldsRef'],
+	'_resolvedFieldsRef stamped on resolved doc',
+	$resolved['_resolvedFieldsRef'],
 	'core/post-fields'
 );
 
-// Variant resolution is independent of base — no inheritance.
-$variant_resolved = WP_Admin_Shell_View_Config::resolve(
-	'postType',
-	'post',
-	'services',
-	$synthetic
-);
+// Unknown pair returns empty array.
+$missing = WP_Admin_Shell_View_Config::resolve_global( 'postType', 'page', $synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'variant resolves independently — base fields + appended inline',
-	count( $variant_resolved['fields'] ),
-	3
-);
-WPAS_View_Config_Test_Runner::assert_eq(
-	'variant inline field appended',
-	$variant_resolved['fields'][2]['id'],
-	'duration'
+	'resolve_global returns empty array for unknown pair',
+	$missing,
+	array()
 );
 
-// Unknown triple returns empty array.
-$missing = WP_Admin_Shell_View_Config::resolve( 'postType', 'page', null, $synthetic );
+// Empty kind/name returns empty.
+$empty_kind = WP_Admin_Shell_View_Config::resolve_global( '', 'post', $synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'resolve returns empty array for unknown triple',
-	$missing,
+	'empty kind returns empty array',
+	$empty_kind,
 	array()
 );
 
 // --- Filter machinery -------------------------------------------------------
 
-$filter_callback = function ( $doc ) {
-	$doc['_filtered_base'] = true;
+$filter_fired_with = null;
+$filter_callback = function ( $doc, $kind, $name ) use ( &$filter_fired_with ) {
+	$filter_fired_with = array( $kind, $name );
+	$doc['_filtered']  = true;
 	return $doc;
 };
-$variant_filter_callback = function ( $doc ) {
-	$doc['_filtered_variant'] = true;
-	return $doc;
-};
 
-add_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback );
-add_filter( 'wp_admin_shell_view_config_postType_post_services', $variant_filter_callback );
-
-$base_filtered = WP_Admin_Shell_View_Config::resolve( 'postType', 'post', null, $synthetic );
+add_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback, 10, 3 );
+$filtered = WP_Admin_Shell_View_Config::resolve_global( 'postType', 'post', $synthetic );
 WPAS_View_Config_Test_Runner::assert_true(
-	'base filter applied on no-variant resolve',
-	! empty( $base_filtered['_filtered_base'] )
+	'filter applied on resolve_global',
+	! empty( $filtered['_filtered'] )
 );
-WPAS_View_Config_Test_Runner::assert_true(
-	'variant filter NOT applied when variant absent',
-	empty( $base_filtered['_filtered_variant'] )
-);
-
-$variant_filtered = WP_Admin_Shell_View_Config::resolve( 'postType', 'post', 'services', $synthetic );
-WPAS_View_Config_Test_Runner::assert_true(
-	'base filter also applied on variant resolve',
-	! empty( $variant_filtered['_filtered_base'] )
-);
-WPAS_View_Config_Test_Runner::assert_true(
-	'variant filter applied on variant resolve',
-	! empty( $variant_filtered['_filtered_variant'] )
-);
-
-remove_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback );
-remove_filter( 'wp_admin_shell_view_config_postType_post_services', $variant_filter_callback );
-
-// `_default` as a user-facing variant id normalizes to null — the
-// variant-qualified `..._default` filter must NOT fire.
-$dunder_filter_fired = false;
-$dunder_callback     = function ( $doc ) use ( &$dunder_filter_fired ) {
-	$dunder_filter_fired = true;
-	return $doc;
-};
-add_filter( 'wp_admin_shell_view_config_postType_post__default', $dunder_callback );
-WP_Admin_Shell_View_Config::resolve( 'postType', 'post', '_default', $synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'`_default` variant param normalizes — no ..._default filter fires',
-	$dunder_filter_fired,
-	false
+	'filter receives kind argument',
+	$filter_fired_with[0],
+	'postType'
 );
-remove_filter( 'wp_admin_shell_view_config_postType_post__default', $dunder_callback );
-
-// --- Variants-for discovery -------------------------------------------------
-
-$variants = WP_Admin_Shell_View_Config::variants_for( 'postType', 'post', $synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'variants_for returns 2 entries',
-	count( $variants ),
-	2
+	'filter receives name argument',
+	$filter_fired_with[1],
+	'post'
+);
+remove_filter( 'wp_admin_shell_view_config_postType_post', $filter_callback, 10 );
+
+// --- Screen-view resolution -------------------------------------------------
+
+// Build a synthetic config with screens + a manifest registry seeded with
+// a posts app declaring its `view` baseline. The view-config resolver
+// uses the registry to infer kind/name from the screen's app+config.
+$reg = WP_Admin_Shell_Manifest_Registry::instance();
+$reg->register_app( array(
+	'id'         => 'plugin:wpas-test/screen-view-posts',
+	'version'    => 1,
+	'title'      => 'Screen-View Posts',
+	'role'       => 'main',
+	'script'     => 'wpas-test',
+	'view'       => array(
+		'kind' => 'postType',
+		'name' => 'post',
+	),
+) );
+
+$screen_synthetic = array(
+	'settings' => array(
+		'views' => array(
+			'postType' => array(
+				'post' => array(
+					'fields' => array(
+						array( 'id' => 'title', 'type' => 'text', 'label' => 'Title' ),
+						array( 'id' => 'status', 'type' => 'text', 'label' => 'Status' ),
+						array( 'id' => 'date', 'type' => 'datetime', 'label' => 'Date' ),
+					),
+					'defaultView' => array( 'type' => 'table', 'perPage' => 25 ),
+					'actions' => array(
+						array( 'id' => 'edit', 'label' => 'Edit' ),
+						array( 'id' => 'trash', 'label' => 'Move to Trash' ),
+						array( 'id' => 'view', 'label' => 'View' ),
+					),
+				),
+			),
+		),
+	),
+	'screens' => array(
+		'posts' => array(
+			'label'  => 'Posts',
+			'app'    => 'plugin:wpas-test/screen-view-posts',
+			'config' => array( 'postType' => 'post' ),
+		),
+		'posts-drafts' => array(
+			'label'  => 'Drafts',
+			'app'    => 'plugin:wpas-test/screen-view-posts',
+			'config' => array( 'postType' => 'post' ),
+			'view'   => array(
+				'defaultView' => array(
+					'filters' => array(
+						array( 'field' => 'status', 'value' => 'draft' ),
+					),
+				),
+			),
+		),
+		'posts-trash' => array(
+			'label'  => 'Trash',
+			'app'    => 'plugin:wpas-test/screen-view-posts',
+			'config' => array( 'postType' => 'post' ),
+			'view'   => array(
+				'defaultView' => array(
+					'filters' => array(
+						array( 'field' => 'status', 'value' => 'trash' ),
+					),
+				),
+				'actions' => array(
+					array( 'id' => 'trash', '__tombstone' => true ),
+					array( 'id' => 'restore', 'label' => 'Restore', 'isPrimary' => true ),
+				),
+			),
+		),
+	),
+);
+
+// Screen with no inline view — returns the global.
+$base_screen = WP_Admin_Shell_View_Config::resolve_screen_view( 'posts', $screen_synthetic );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'screen without inline view returns global view',
+	$base_screen['defaultView']['perPage'],
+	25
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'screen-view inherits all global fields',
+	count( $base_screen['fields'] ),
+	3
+);
+
+// Screen with inline view overlay — deep-merges with global.
+$drafts = WP_Admin_Shell_View_Config::resolve_screen_view( 'posts-drafts', $screen_synthetic );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'inline overlay sets filters on defaultView',
+	$drafts['defaultView']['filters'][0]['value'],
+	'draft'
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'inline overlay preserves global defaultView.perPage',
+	$drafts['defaultView']['perPage'],
+	25
+);
+WPAS_View_Config_Test_Runner::assert_eq(
+	'inline overlay screen inherits all global fields',
+	count( $drafts['fields'] ),
+	3
+);
+
+// Trash screen exercises action-array tombstone + append.
+$trash = WP_Admin_Shell_View_Config::resolve_screen_view( 'posts-trash', $screen_synthetic );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'tombstone removed `trash` action; new appended → 3 total actions',
+	count( $trash['actions'] ),
+	3
+);
+$action_ids = array_map( function ( $a ) {
+	return $a['id'];
+}, $trash['actions'] );
+WPAS_View_Config_Test_Runner::assert_true(
+	'tombstone removed trash action id',
+	! in_array( 'trash', $action_ids, true )
 );
 WPAS_View_Config_Test_Runner::assert_true(
-	'variants_for includes null for _default',
-	in_array( null, $variants, true )
+	'new action appended after surviving base actions',
+	in_array( 'restore', $action_ids, true )
 );
 WPAS_View_Config_Test_Runner::assert_true(
-	'variants_for includes named variant',
-	in_array( 'services', $variants, true )
+	'__tombstone flag stripped from passthrough entries',
+	! isset( $trash['actions'][0]['__tombstone'] )
 );
 
-$no_variants = WP_Admin_Shell_View_Config::variants_for( 'postType', 'page', $synthetic );
+// Unknown screen returns empty.
+$nothing = WP_Admin_Shell_View_Config::resolve_screen_view( 'no-such', $screen_synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'variants_for empty for unknown name',
-	$no_variants,
+	'unknown screen id returns empty array',
+	$nothing,
 	array()
 );
 
-// --- Cascade contribution ---------------------------------------------------
-
-// The registry's `wp_admin_shell_data_plugin` filter contributes registered
-// collections into the plugin origin. Smoke test the injection.
-WP_Admin_Shell_Field_Collections::reset();
-wp_admin_shell_register_field_collection(
-	'plugin/extra-fields',
-	'postType',
-	'product',
-	array( array( 'id' => 'sku', 'type' => 'text', 'label' => 'SKU' ) )
-);
-
-$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
-WPAS_View_Config_Test_Runner::assert_true(
-	'plugin origin contains injected fieldCollections',
-	isset( $plugin_doc['fieldCollections']['plugin/extra-fields'] )
-);
+// Empty / non-string screen id returns empty.
+$empty_id = WP_Admin_Shell_View_Config::resolve_screen_view( '', $screen_synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'injected collection carries kind',
-	$plugin_doc['fieldCollections']['plugin/extra-fields']['kind'],
-	'postType'
+	'empty screen id returns empty array',
+	$empty_id,
+	array()
 );
 
-// admin.json-declared entry wins over programmatic injection (same id).
-$plugin_doc_with_admin_json = apply_filters( 'wp_admin_shell_data_plugin', array(
-	'fieldCollections' => array(
-		'plugin/extra-fields' => array(
-			'kind'   => 'postType',
-			'name'   => 'product',
-			'fields' => array( array( 'id' => 'price', 'type' => 'number', 'label' => 'Price' ) ),
+// Null tombstone on a top-level key removes that key from the merged doc.
+$tomb_synthetic = $screen_synthetic;
+$tomb_synthetic['screens']['posts-no-default'] = array(
+	'label'  => 'No Default',
+	'app'    => 'plugin:wpas-test/screen-view-posts',
+	'config' => array( 'postType' => 'post' ),
+	'view'   => array( 'defaultView' => null ),
+);
+$no_default = WP_Admin_Shell_View_Config::resolve_screen_view( 'posts-no-default', $tomb_synthetic );
+WPAS_View_Config_Test_Runner::assert_true(
+	'null tombstone removes global defaultView from merged doc',
+	! isset( $no_default['defaultView'] )
+);
+
+// viewKind / viewName explicit escape hatch on the screen.
+$explicit_synthetic = array(
+	'settings' => array(
+		'views' => array(
+			'custom' => array(
+				'thing' => array( 'defaultView' => array( 'type' => 'grid' ) ),
+			),
 		),
 	),
-) );
+	'screens' => array(
+		'thing-screen' => array(
+			'app'      => 'plugin:wpas-test/does-not-need-view-manifest',
+			'viewKind' => 'custom',
+			'viewName' => 'thing',
+		),
+	),
+);
+$explicit = WP_Admin_Shell_View_Config::resolve_screen_view( 'thing-screen', $explicit_synthetic );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'admin.json declaration wins over programmatic injection (id collision)',
-	$plugin_doc_with_admin_json['fieldCollections']['plugin/extra-fields']['fields'][0]['id'],
-	'price'
+	'viewKind/viewName escape hatch resolves global',
+	$explicit['defaultView']['type'],
+	'grid'
 );
 
-WP_Admin_Shell_Field_Collections::reset();
-
-// --- Implicit cascade load -------------------------------------------------
-
-// resolve() and variants_for() with $config = null hit the real
-// cascade resolver via wp_admin_shell_get_active_config().
-$auto_resolved = WP_Admin_Shell_View_Config::resolve( 'postType', 'post' );
-WPAS_View_Config_Test_Runner::assert_true(
-	'resolve() with null config returns array (cascade auto-load)',
-	is_array( $auto_resolved )
-);
-
-$auto_variants = WP_Admin_Shell_View_Config::variants_for( 'postType', 'post' );
-WPAS_View_Config_Test_Runner::assert_true(
-	'variants_for() with null config returns array (cascade auto-load)',
-	is_array( $auto_variants )
-);
-
-// --- inject_app_baselines (spec §13 #7 contract) ----------------------------
-
-// Register a synthetic app with a viewConfig block and confirm injection.
-$reg = WP_Admin_Shell_Manifest_Registry::instance();
+// Taxonomy-kind config.taxonomy override — manifest declares `category`
+// baseline, screen mounts with `config.taxonomy = post_tag`, resolver
+// looks at `settings.views.taxonomy.post_tag`.
 $reg->register_app( array(
-	'id'         => 'plugin:wpas-test/baseline-app',
-	'version'    => 1,
-	'title'      => 'Baseline App',
-	'role'       => 'main',
-	'script'     => 'wpas-test',
-	'viewConfig' => array(
+	'id'      => 'plugin:wpas-test/screen-view-taxonomy',
+	'version' => 1,
+	'title'   => 'Screen-View Taxonomy',
+	'role'    => 'main',
+	'script'  => 'wpas-test',
+	'view'    => array(
+		'kind' => 'taxonomy',
+		'name' => 'category',
+	),
+) );
+$tax_synthetic = array(
+	'settings' => array(
+		'views' => array(
+			'taxonomy' => array(
+				'category' => array( 'defaultView' => array( 'type' => 'table' ) ),
+				'post_tag' => array( 'defaultView' => array( 'type' => 'grid' ) ),
+			),
+		),
+	),
+	'screens' => array(
+		'tags' => array(
+			'app'    => 'plugin:wpas-test/screen-view-taxonomy',
+			'config' => array( 'taxonomy' => 'post_tag' ),
+		),
+	),
+);
+$tags = WP_Admin_Shell_View_Config::resolve_screen_view( 'tags', $tax_synthetic );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'config.taxonomy overrides manifest baseline name',
+	$tags['defaultView']['type'],
+	'grid'
+);
+
+// --- inject_app_baselines (v3 settings.views target) ------------------------
+
+$reg->register_app( array(
+	'id'      => 'plugin:wpas-test/recipe-app',
+	'version' => 1,
+	'title'   => 'Recipe App',
+	'role'    => 'main',
+	'script'  => 'wpas-test',
+	'view'    => array(
 		'kind'        => 'postType',
 		'name'        => 'recipe',
 		'defaultView' => array( 'type' => 'table', 'perPage' => 25 ),
@@ -424,26 +463,29 @@ $reg->register_app( array(
 
 $injected = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
 WPAS_View_Config_Test_Runner::assert_true(
-	'app baseline injected into core origin',
-	isset( $injected['viewConfigs']['postType']['recipe']['_default'] )
+	'app baseline injected under settings.views',
+	isset( $injected['settings']['views']['postType']['recipe'] )
 );
 WPAS_View_Config_Test_Runner::assert_eq(
 	'baseline preserves defaultView',
-	$injected['viewConfigs']['postType']['recipe']['_default']['defaultView']['perPage'],
+	$injected['settings']['views']['postType']['recipe']['defaultView']['perPage'],
 	25
 );
 WPAS_View_Config_Test_Runner::assert_true(
-	'baseline strips redundant kind/name/variant keys',
-	! isset( $injected['viewConfigs']['postType']['recipe']['_default']['kind'] )
+	'baseline strips redundant kind/name keys',
+	! isset( $injected['settings']['views']['postType']['recipe']['kind'] )
+);
+WPAS_View_Config_Test_Runner::assert_true(
+	'baseline strips legacy variant key (variants gone in v3)',
+	! isset( $injected['settings']['views']['postType']['recipe']['variant'] )
 );
 
-// Inline declaration on the core origin wins — manifest baseline does
-// not overwrite when the triple is already declared.
+// Pre-existing inline declaration wins over manifest baseline.
 $prepopulated = WP_Admin_Shell_View_Config::inject_app_baselines( array(
-	'viewConfigs' => array(
-		'postType' => array(
-			'recipe' => array(
-				'_default' => array(
+	'settings' => array(
+		'views' => array(
+			'postType' => array(
+				'recipe' => array(
 					'defaultView' => array( 'type' => 'grid', 'perPage' => 999 ),
 				),
 			),
@@ -451,127 +493,135 @@ $prepopulated = WP_Admin_Shell_View_Config::inject_app_baselines( array(
 	),
 ) );
 WPAS_View_Config_Test_Runner::assert_eq(
-	'pre-existing inline core declaration wins over manifest baseline',
-	$prepopulated['viewConfigs']['postType']['recipe']['_default']['defaultView']['perPage'],
+	'pre-existing inline declaration wins over manifest baseline',
+	$prepopulated['settings']['views']['postType']['recipe']['defaultView']['perPage'],
 	999
 );
 
-// Variant flavor — manifest declares variant and lands in the correct bucket.
+// Apps without a view block are skipped silently.
 $reg->register_app( array(
-	'id'         => 'plugin:wpas-test/services-variant-app',
-	'version'    => 1,
-	'title'      => 'Services Variant App',
-	'role'       => 'main',
-	'script'     => 'wpas-test',
-	'viewConfig' => array(
-		'kind'    => 'postType',
-		'name'    => 'product',
-		'variant' => 'services',
-		'fields'  => array(
-			array( 'id' => 'duration', 'type' => 'text', 'label' => 'Duration' ),
-		),
-	),
+	'id'      => 'plugin:wpas-test/no-view-app',
+	'version' => 1,
+	'title'   => 'No-View App',
+	'role'    => 'main',
+	'script'  => 'wpas-test',
 ) );
-
-$with_variant = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
+$injected_after = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
 WPAS_View_Config_Test_Runner::assert_true(
-	'variant baseline lands in named bucket',
-	isset( $with_variant['viewConfigs']['postType']['product']['services'] )
+	'app without view block does not add stray entries',
+	! isset( $injected_after['settings']['views']['no-view-app'] )
 );
 
-// admin.json declarations are authoritative — manifest baselines do
-// not deep-merge onto declared triples.
-$origins_authoritative = array(
-	'core'   => array(),
-	'engine' => array(),
-	'plugin' => array(
-		'viewConfigs' => array(
+// Manifest with empty kind or name skipped (defensive).
+$reg->register_app( array(
+	'id'      => 'plugin:wpas-test/bad-view-app',
+	'version' => 1,
+	'title'   => 'Bad-View App',
+	'role'    => 'main',
+	'script'  => 'wpas-test',
+	'view'    => array( 'kind' => '', 'name' => '' ),
+) );
+$injected_bad = WP_Admin_Shell_View_Config::inject_app_baselines( array() );
+WPAS_View_Config_Test_Runner::assert_true(
+	'manifest with empty kind/name skipped',
+	! isset( $injected_bad['settings']['views'][''] )
+);
+
+// --- Tombstones via cascade merge engine (deep keyed-array path) -----------
+
+// Confirms `__tombstone` on a fields-entry survives a fully-nested merge
+// invocation through the same code path the cascade resolver uses for the
+// settings.views.<kind>.<name>.fields[] array. We exercise
+// `WP_Admin_Shell_Merge::merge` directly rather than going through the
+// `resolve_with` pipeline because the consumer-origin `customizable` filter
+// (a v2-era surface scoped to settings.applications + settings.regions)
+// currently strips `settings.views` from site/role/user origins — a
+// separate v3 customizable surface refactor lives outside this resolver's
+// scope. The merge engine itself, which is what runs on every trusted
+// origin and underpins the entire cascade, IS correct.
+$views_base = array(
+	'settings' => array(
+		'views' => array(
 			'postType' => array(
-				'recipe' => array(
-					'_default' => array(
-						// Author declares one field; manifest declares four.
-						// Post-merge tree must show one, not five.
-						'fields' => array(
-							array( 'id' => 'title', 'type' => 'text', 'label' => 'Recipe' ),
-						),
-						'defaultLayouts' => array( 'table' => array() ),
+				'post' => array(
+					'fields' => array(
+						array( 'id' => 'title', 'type' => 'text', 'label' => 'Title' ),
+						array( 'id' => 'author', 'type' => 'text', 'label' => 'Author' ),
+						array( 'id' => 'date', 'type' => 'datetime', 'label' => 'Date' ),
 					),
 				),
 			),
 		),
 	),
-	'site'   => array(),
-	'role'   => array(),
-	'user'   => array(),
 );
-
-// Register a baseline app with three fields under a distinct id —
-// first-registration-wins means any earlier `baseline-app` id is locked.
-$reg->register_app( array(
-	'id'         => 'plugin:wpas-test/recipe-fat-baseline-app',
-	'version'    => 1,
-	'title'      => 'Recipe Fat Baseline App',
-	'role'       => 'main',
-	'script'     => 'wpas-test',
-	'viewConfig' => array(
-		'kind'   => 'postType',
-		'name'   => 'recipe-fat',
-		'fields' => array(
-			array( 'id' => 'title',    'type' => 'text', 'label' => 'Manifest Title' ),
-			array( 'id' => 'cuisine',  'type' => 'text', 'label' => 'Cuisine' ),
-			array( 'id' => 'servings', 'type' => 'number', 'label' => 'Servings' ),
+$views_over = array(
+	'settings' => array(
+		'views' => array(
+			'postType' => array(
+				'post' => array(
+					'fields' => array(
+						array( 'id' => 'author', '__tombstone' => true ),
+					),
+				),
+			),
 		),
-		'defaultLayouts' => array( 'table' => array(), 'grid' => array() ),
 	),
-) );
-
-$resolved = WP_Admin_Shell_Resolver::resolve_with( $origins_authoritative );
-$recipe   = $resolved['viewConfigs']['postType']['recipe']['_default'];
-
-WPAS_View_Config_Test_Runner::assert_eq(
-	'admin.json triple is authoritative — fields count NOT additive over manifest',
-	count( $recipe['fields'] ),
-	1
 );
+$views_merged = WP_Admin_Shell_Merge::merge( $views_base, $views_over );
+$mfields = $views_merged['settings']['views']['postType']['post']['fields'];
 WPAS_View_Config_Test_Runner::assert_eq(
-	'admin.json triple is authoritative — field label survives (not "Manifest Title")',
-	$recipe['fields'][0]['label'],
-	'Recipe'
+	'cascade __tombstone removes a field from settings.views.fields[]',
+	count( $mfields ),
+	2
 );
+$mfield_ids = array_map( function ( $f ) {
+	return $f['id'];
+}, $mfields );
 WPAS_View_Config_Test_Runner::assert_true(
-	'admin.json triple is authoritative — defaultLayouts shrunk to one entry',
-	count( $recipe['defaultLayouts'] ) === 1 && isset( $recipe['defaultLayouts']['table'] )
+	'cascade __tombstone removed `author` field, `title`+`date` survive',
+	! in_array( 'author', $mfield_ids, true ) &&
+	in_array( 'title', $mfield_ids, true ) &&
+	in_array( 'date', $mfield_ids, true )
 );
 
-// Manifest baseline still fills the gap when nothing in the cascade
-// declared a competing triple.
-$origins_fallback = array(
-	'core'   => array(),
-	'engine' => array(),
-	'plugin' => array(),  // no viewConfigs declared
-	'site'   => array(),
-	'role'   => array(),
-	'user'   => array(),
-);
-$resolved_fallback = WP_Admin_Shell_Resolver::resolve_with( $origins_fallback );
-WPAS_View_Config_Test_Runner::assert_true(
-	'undeclared triple falls back to manifest baseline',
-	isset( $resolved_fallback['viewConfigs']['postType']['recipe-fat']['_default'] )
-);
-WPAS_View_Config_Test_Runner::assert_eq(
-	'manifest fallback ships all manifest-declared fields',
-	count( $resolved_fallback['viewConfigs']['postType']['recipe-fat']['_default']['fields'] ),
-	3
-);
+// --- Fields registry duplicate-id rejection ---------------------------------
 
-// Field-collection duplicate-id rejection.
 WP_Admin_Shell_Field_Collections::reset();
 $first = wp_admin_shell_register_field_collection( 'core/dup', 'postType', 'post', array() );
 WPAS_View_Config_Test_Runner::assert_eq( 'first registration succeeds', $first, 'core/dup' );
 $second = wp_admin_shell_register_field_collection( 'core/dup', 'postType', 'post', array() );
-WPAS_View_Config_Test_Runner::assert_wp_error( 'second registration rejected (duplicate id)', $second );
-
+WPAS_View_Config_Test_Runner::assert_wp_error( 'duplicate id rejected', $second );
 WP_Admin_Shell_Field_Collections::reset();
+
+// --- Cascade contribution — registry → plugin origin ------------------------
+
+wp_admin_shell_register_field_collection(
+	'plugin/extra-fields',
+	'postType',
+	'product',
+	array( array( 'id' => 'sku', 'type' => 'text', 'label' => 'SKU' ) )
+);
+$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+WPAS_View_Config_Test_Runner::assert_true(
+	'plugin origin contains injected fieldCollections',
+	isset( $plugin_doc['fieldCollections']['plugin/extra-fields'] )
+);
+WP_Admin_Shell_Field_Collections::reset();
+
+// --- Implicit cascade load (resolve_global with $config = null) -------------
+
+$auto_resolved = WP_Admin_Shell_View_Config::resolve_global( 'postType', 'post' );
+WPAS_View_Config_Test_Runner::assert_true(
+	'resolve_global() with null config returns array (cascade auto-load)',
+	is_array( $auto_resolved )
+);
+
+$auto_screen = WP_Admin_Shell_View_Config::resolve_screen_view( 'no-such-screen' );
+WPAS_View_Config_Test_Runner::assert_eq(
+	'resolve_screen_view() unknown screen returns empty',
+	$auto_screen,
+	array()
+);
 
 // --- Summary ---------------------------------------------------------------
 

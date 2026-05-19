@@ -8,7 +8,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 /**
  * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
@@ -318,19 +318,19 @@ function buildActions(
 }
 
 export default function CommentsApp( { config = {} } ) {
-	const variant = config.variant || null;
+	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useViewConfig( 'root', 'comment', variant );
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
 		...viewConfig.defaultView,
 	} ) );
 
-	// Resync `view` when the variant flips on the same hook instance.
-	// `useState`'s initializer runs once, so without this effect a
-	// second variant inherits the first's perPage / sort / filters.
-	// Keyed only on the triple — not viewConfig — to avoid clobbering
+	// Resync `view` when the screen flips on the same hook instance.
+	// `useState`'s initializer runs once, so without this effect a sibling
+	// screen would inherit the previous screen's perPage / sort / filters.
+	// Keyed only on screenId — not viewConfig — to avoid clobbering
 	// in-session view edits whenever the cascade re-resolves the doc.
 	useEffect( () => {
 		setView( {
@@ -338,7 +338,7 @@ export default function CommentsApp( { config = {} } ) {
 			...( viewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ variant ] );
+	}, [ screenId ] );
 
 	const queryArgs = useMemo( () => {
 		const args = {

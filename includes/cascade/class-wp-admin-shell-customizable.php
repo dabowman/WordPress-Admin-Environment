@@ -104,6 +104,18 @@ class WP_Admin_Shell_Customizable {
 			);
 		}
 
+		// v3 top-level blocks. The cascade is uniformly deep-merge across
+		// every block per `docs/v3/schema-sketch.md` §Cascade semantics.
+		// Pass-through here so site/role/user can override per-field;
+		// restrict-only enforcement lives elsewhere (the merge engine's
+		// authoritative pass for trusted origins, the permissions tier
+		// check for the `permissions` block on screens).
+		foreach ( array( 'menu', 'screens', 'commands', 'workspace', 'preload', 'regions', 'routes' ) as $block ) {
+			if ( array_key_exists( $block, $downstream ) ) {
+				$out[ $block ] = $downstream[ $block ];
+			}
+		}
+
 		// Root-level scalars (name/title/description/version) are never
 		// writable by a downstream origin — they identify the shell.
 

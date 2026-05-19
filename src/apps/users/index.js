@@ -7,7 +7,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useScreenView } from '../../runtime/viewConfig/useScreenView';
 
 // View-config primitives ship as locale-agnostic JSON (spec §13 #7) — labels
 // reach DataViews in whatever locale the spec was authored in. Recover the
@@ -298,10 +298,11 @@ function buildFields( fieldSpecs, fieldRenderers ) {
 /**
  * core:users — DataViews list of WordPress users.
  *
- * Reads its DataViews spec via `useViewConfig('root', 'user')`. The
- * baseline ships in `app.json#viewConfig` and is injected post-merge by
- * `inject_app_baselines`; admin.json `viewConfigs.root.user._default`
- * wins on per-entry override; the per-triple filter
+ * Reads its DataViews spec via `useScreenView(screenId)`. The baseline
+ * ships in `app.json#view` and is injected into `settings.views.root.user`
+ * post-merge by `inject_app_baselines`; admin.json
+ * `settings.views.root.user` wins on per-entry override; per-screen
+ * `screens[screenId].view` deep-merges on top; the per-pair filter
  * `wp_admin_shell_view_config_root_user` runs last.
  *
  * Reads via useEntityRecords('root', 'user') with `context: 'edit'` so
@@ -311,28 +312,30 @@ function buildFields( fieldSpecs, fieldRenderers ) {
  *
  * Plugin-contributed actions land via the core:users.row-actions data
  * slot (M4.5).
+ * @param {Object} root0          Mount-supplied props.
+ * @param {Object} [root0.config] App config from the resolved screen — `config.screenId` keys the per-screen view lookup.
  */
-export default function UsersApp() {
-	const { config: viewConfig } = useViewConfig( 'root', 'user' );
+export default function UsersApp( { config = {} } = {} ) {
+	const screenId = config.screenId || null;
+	const { config: viewConfig } = useScreenView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
 		...viewConfig.defaultView,
 	} ) );
 
-	// Resync `view` when the triple flips on the same hook instance
-	// (UsersApp ships a single triple today, but the recipe matches
-	// PostsApp's so a future variant config — e.g. `?role=author` — picks
-	// up without rewriting. Keyed only on the triple — not viewConfig —
-	// to avoid clobbering in-session view edits whenever the cascade
-	// re-resolves the doc shape.)
+	// Resync `view` when the screen flips on the same hook instance.
+	// Mirrors PostsApp's recipe — keyed on screenId so a sibling screen
+	// using the same hook instance picks up its own defaults. Keyed only
+	// on screenId — not viewConfig — to avoid clobbering in-session view
+	// edits whenever the cascade re-resolves the doc shape.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
 			...( viewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [] );
+	}, [ screenId ] );
 
 	const queryArgs = useMemo( () => {
 		const sortField = view.sort?.field || 'name';

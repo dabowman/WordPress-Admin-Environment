@@ -130,6 +130,26 @@
 		"default-styles": {
 			"$ref": "#/$defs/defaultStyles",
 			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
+		},
+
+		"modes": {
+			"type": "object",
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"label":       { "type": "string" },
+						"description": { "type": "string" },
+						"extends":     { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+						"modal":       { "type": "boolean" },
+						"regions":     { "type": "object" },
+						"chrome":      { "type": "object" }
+					}
+				}
+			},
+			"additionalProperties": false,
+			"description": "Forward-compat opt-in (v3 contract): catalog of named chrome modes a screen may request via `screens[id].mode`. v2 engines may declare this block to preview v3 mode behavior; the v2 runtime treats absence as a default-only catalog. Schema enforces only shape; the resolver enforces extends-chain depth limit + circular-ref detection at runtime. See docs/v3/core-default-engine.v3.md."
 		}
 	},
 

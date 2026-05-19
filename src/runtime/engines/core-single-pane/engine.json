@@ -27,6 +27,44 @@
 		"core:trigger"
 	],
 
+	"modes": {
+		"default": {
+			"label": "Default",
+			"description": "Single-pane chrome — appbar plus pane; drawer closed.",
+			"regions": {
+				"appbar":     { "hidden": false, "compact": false },
+				"nav-drawer": { "hidden": false, "drawerOpen": false },
+				"pane":       { "hidden": false, "fullWidth": false },
+				"detail":     { "hidden": false }
+			}
+		},
+		"focus": {
+			"label": "Focus",
+			"description": "Hide the nav drawer toggle entirely; pane expands. Authoring + editor surfaces.",
+			"regions": {
+				"appbar":     { "compact": true },
+				"nav-drawer": { "hidden": true },
+				"pane":       { "fullWidth": true },
+				"detail":     { "hidden": true }
+			}
+		},
+		"takeover": {
+			"label": "Takeover",
+			"description": "Full viewport — appbar + drawer hidden.",
+			"regions": {
+				"appbar":     { "hidden": true },
+				"nav-drawer": { "hidden": true },
+				"pane":       { "fullWidth": true },
+				"detail":     { "hidden": true }
+			}
+		},
+		"modal": {
+			"label": "Modal Overlay",
+			"description": "Single-pane uses exclusive modal — opening a second dismisses the first.",
+			"modal": true
+		}
+	},
+
 	"templates": {
 		"core:appbar": {
 			"role": "banner",

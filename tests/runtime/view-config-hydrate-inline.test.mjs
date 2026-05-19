@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 /**
- * hydrateInlineViewConfig — pure inline-snapshot reader.
+ * hydrateInlineScreenView — pure inline-snapshot reader.
  *
- * Mirrors the synchronous path inside `useViewConfig`: read a triple
- * from a pre-serialized `window.wpAdminShell.config` snapshot, apply
- * the ref-wins-inline `fieldsRef` merge when present, stamp
- * `_resolvedFieldsRef` on the output.
- *
- * Extracting the helper to its own module made the hook's first-paint
- * path testable without React + DOM, and addresses a code-review gap:
- * before the extraction, mergeFields was the only piece of the JS
- * client under test.
+ * Mirrors the synchronous path inside `useScreenView`: read a resolved
+ * per-screen view from a pre-serialized `window.wpAdminShell.config`
+ * snapshot. v3 boot stamps the resolved doc into `screens[id].view._resolved`
+ * for the fast path; the helper also supports a client-side merge against
+ * `settings.views` + `settings.fields` for incremental rollout / tests.
  */
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname   = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
-const { hydrateInlineViewConfig } = await import(
+const { hydrateInlineScreenView } = await import(
 	resolve( projectRoot, 'src/runtime/viewConfig/hydrateInline.mjs' )
 );
 
@@ -41,129 +37,214 @@ function eq( label, actual, expected ) {
 	ok( label, a === e, a === e ? '' : `expected ${ e }, got ${ a }` );
 }
 
-// Missing snapshot / missing viewConfigs / missing bucket → null.
-eq( 'null inline → null', hydrateInlineViewConfig( null, 'postType', 'post', null ), null );
+// Missing snapshot / missing screens / missing id → null.
+eq( 'null inline → null', hydrateInlineScreenView( null, 'posts' ), null );
+eq( 'snapshot without screens → null', hydrateInlineScreenView( {}, 'posts' ), null );
+eq( 'empty screen id → null', hydrateInlineScreenView( { screens: { posts: {} } }, '' ), null );
 eq(
-	'snapshot without viewConfigs → null',
-	hydrateInlineViewConfig( {}, 'postType', 'post', null ),
-	null
-);
-eq(
-	'kind absent → null',
-	hydrateInlineViewConfig(
-		{ viewConfigs: { root: { site: { _default: {} } } } },
-		'postType',
-		'post',
-		null
-	),
-	null
-);
-eq(
-	'variant absent in bucket → null',
-	hydrateInlineViewConfig(
-		{ viewConfigs: { postType: { post: { _default: { x: 1 } } } } },
-		'postType',
-		'post',
-		'services'
-	),
+	'unknown screen id → null',
+	hydrateInlineScreenView( { screens: { posts: {} } }, 'pages' ),
 	null
 );
 
-// Plain triple read — no fieldsRef.
-const plainSnapshot = {
-	viewConfigs: {
-		postType: {
-			post: {
-				_default: {
-					defaultView: { type: 'table' },
+// Fast path: server pre-stamped resolved doc on the screen entry.
+const fastPath = {
+	screens: {
+		posts: {
+			view: {
+				_resolved: {
+					defaultView: { type: 'table', perPage: 25 },
 					fields: [ { id: 'title', type: 'text', label: 'Title' } ],
 				},
 			},
 		},
 	},
 };
-const plain = hydrateInlineViewConfig( plainSnapshot, 'postType', 'post', null );
-ok( 'plain triple returns doc', plain !== null );
-eq(
-	'plain triple defaultView preserved',
-	plain.defaultView,
-	{ type: 'table' }
-);
-ok( 'plain triple has no _resolvedFieldsRef stamp', plain._resolvedFieldsRef === undefined );
+const fast = hydrateInlineScreenView( fastPath, 'posts' );
+ok( 'pre-stamped fast path returns _resolved doc', fast !== null );
+eq( 'fast path defaultView preserved', fast.defaultView, { type: 'table', perPage: 25 } );
 
-// fieldsRef path — collection present, merge happens.
-const withRef = {
-	fieldCollections: {
-		'core/post-fields': {
-			kind: 'postType',
-			name: 'post',
-			fields: [
-				{ id: 'title', type: 'text', label: 'Title' },
-				{ id: 'status', type: 'text', label: 'Status' },
-			],
-		},
-	},
-	viewConfigs: {
-		postType: {
-			post: {
-				_default: {
-					fieldsRef: 'core/post-fields',
-					fields: [ { id: 'status', label: 'Post Status' } ],
-					defaultView: { type: 'table' },
+// Client-side merge fallback: settings.views + screen overlay.
+const slowPath = {
+	settings: {
+		views: {
+			postType: {
+				post: {
+					fields: [
+						{ id: 'title', type: 'text', label: 'Title' },
+						{ id: 'status', type: 'select', label: 'Status' },
+					],
+					defaultView: { type: 'table', perPage: 25 },
 				},
 			},
 		},
 	},
+	manifests: {
+		apps: {
+			'core:posts': { view: { kind: 'postType', name: 'post' } },
+		},
+	},
+	screens: {
+		posts: {
+			app: 'core:posts',
+			config: { postType: 'post' },
+		},
+		'posts-drafts': {
+			app: 'core:posts',
+			config: { postType: 'post' },
+			view: {
+				defaultView: { filters: [ { field: 'status', value: 'draft' } ] },
+			},
+		},
+	},
 };
-const merged = hydrateInlineViewConfig( withRef, 'postType', 'post', null );
-ok( 'fieldsRef merge runs when collection present', merged.fields.length === 2 );
+const baseScreen = hydrateInlineScreenView( slowPath, 'posts' );
+ok( 'screen with no inline view returns global view', baseScreen !== null );
 eq(
-	'fieldsRef merge applies inline label override',
-	merged.fields[ 1 ],
-	{ id: 'status', type: 'text', label: 'Post Status' }
+	'global fields reach the resolved doc',
+	baseScreen.fields.length,
+	2
 );
-eq( 'fieldsRef merge stamps _resolvedFieldsRef', merged._resolvedFieldsRef, 'core/post-fields' );
 
-// fieldsRef path — collection missing from snapshot. Should return the
-// doc as-is (no merge, no stamp). The REST fallback fetches the merged
-// doc; the inline hot-path only does what it can synchronously.
-const missingCollection = {
-	viewConfigs: {
-		postType: {
-			post: {
-				_default: {
-					fieldsRef: 'core/missing',
+const draftsScreen = hydrateInlineScreenView( slowPath, 'posts-drafts' );
+ok( 'screen with inline view overlay returns merged doc', draftsScreen !== null );
+eq(
+	'inline view filter overrides global defaultView',
+	draftsScreen.defaultView.filters,
+	[ { field: 'status', value: 'draft' } ]
+);
+eq(
+	'merged view preserves global perPage when overlay omits it',
+	draftsScreen.defaultView.perPage,
+	25
+);
+eq(
+	'merged view inherits global fields',
+	draftsScreen.fields.length,
+	2
+);
+
+// Inline actions overlay merges by id with tombstone support.
+const actionsOverlay = {
+	settings: {
+		views: {
+			postType: {
+				post: {
+					actions: [
+						{ id: 'edit', label: 'Edit' },
+						{ id: 'trash', label: 'Move to Trash' },
+						{ id: 'view', label: 'View' },
+					],
+				},
+			},
+		},
+	},
+	manifests: {
+		apps: { 'core:posts': { view: { kind: 'postType', name: 'post' } } },
+	},
+	screens: {
+		'posts-trash': {
+			app: 'core:posts',
+			config: { postType: 'post' },
+			view: {
+				actions: [
+					{ id: 'trash', __tombstone: true },
+					{ id: 'restore', label: 'Restore', isPrimary: true },
+				],
+			},
+		},
+	},
+};
+const trashScreen = hydrateInlineScreenView( actionsOverlay, 'posts-trash' );
+ok( 'overlay merge yielded a resolved doc', trashScreen !== null );
+const trashActions = trashScreen.actions;
+eq( 'tombstone removed base action; new appended', trashActions.length, 3 );
+ok(
+	'tombstone removed `trash` action',
+	! trashActions.some( ( a ) => a.id === 'trash' )
+);
+ok(
+	'new action appended after surviving base actions',
+	trashActions[ trashActions.length - 1 ].id === 'restore'
+);
+
+// fieldsRef applied when present on overlay.
+const refSnapshot = {
+	settings: {
+		views: {
+			postType: {
+				post: {
 					fields: [ { id: 'title', type: 'text', label: 'Title' } ],
 				},
 			},
 		},
+		fields: {
+			'core/post-fields': {
+				kind: 'postType',
+				name: 'post',
+				fields: [
+					{ id: 'title', type: 'text', label: 'Title' },
+					{ id: 'author', type: 'text', label: 'Author' },
+				],
+			},
+		},
 	},
-};
-const unmerged = hydrateInlineViewConfig( missingCollection, 'postType', 'post', null );
-ok( 'missing collection returns doc unmerged', unmerged._resolvedFieldsRef === undefined );
-eq( 'missing collection preserves inline fields', unmerged.fields.length, 1 );
-
-// Variant lookup.
-const withVariant = {
-	viewConfigs: {
-		postType: {
-			product: {
-				_default: { defaultView: { type: 'table' } },
-				services: { defaultView: { type: 'grid' } },
+	manifests: { apps: { 'core:posts': { view: { kind: 'postType', name: 'post' } } } },
+	screens: {
+		'posts-ref': {
+			app: 'core:posts',
+			config: { postType: 'post' },
+			view: {
+				fieldsRef: 'core/post-fields',
+				fields: [ { id: 'title', label: 'Headline' } ],
 			},
 		},
 	},
 };
+const refScreen = hydrateInlineScreenView( refSnapshot, 'posts-ref' );
+eq( 'fieldsRef collection supplies base fields', refScreen.fields.length, 2 );
 eq(
-	'variant lookup picks the named bucket',
-	hydrateInlineViewConfig( withVariant, 'postType', 'product', 'services' ).defaultView,
-	{ type: 'grid' }
+	'inline field overrides collection field',
+	refScreen.fields.find( ( f ) => f.id === 'title' ).label,
+	'Headline'
 );
-eq(
-	'null variant picks _default',
-	hydrateInlineViewConfig( withVariant, 'postType', 'product', null ).defaultView,
-	{ type: 'table' }
-);
+eq( 'fieldsRef stamps _resolvedFieldsRef', refScreen._resolvedFieldsRef, 'core/post-fields' );
+
+// Null tombstone removes a key.
+const tombstoneSnapshot = {
+	settings: {
+		views: {
+			postType: { post: { defaultView: { type: 'table', perPage: 25 } } },
+		},
+	},
+	manifests: { apps: { 'core:posts': { view: { kind: 'postType', name: 'post' } } } },
+	screens: {
+		'posts-no-default': {
+			app: 'core:posts',
+			config: { postType: 'post' },
+			view: { defaultView: null },
+		},
+	},
+};
+const stripped = hydrateInlineScreenView( tombstoneSnapshot, 'posts-no-default' );
+ok( 'null tombstone strips global key', stripped.defaultView === undefined );
+
+// viewKind / viewName escape hatch on the screen.
+const explicitSnapshot = {
+	settings: {
+		views: { custom: { thing: { defaultView: { type: 'table' } } } },
+	},
+	screens: {
+		'thing-screen': {
+			app: 'plugin:foo/thing',
+			viewKind: 'custom',
+			viewName: 'thing',
+		},
+	},
+};
+const explicit = hydrateInlineScreenView( explicitSnapshot, 'thing-screen' );
+ok( 'viewKind/viewName escape hatch resolves', explicit !== null );
+eq( 'escape-hatch view doc reaches consumer', explicit.defaultView, { type: 'table' } );
 
 console.log( `\nTOTAL: ${ pass } passed, ${ fail } failed of ${ pass + fail }\n` );
 process.exit( fail > 0 ? 1 : 0 );

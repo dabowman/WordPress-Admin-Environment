@@ -27,6 +27,41 @@
 		"core:dynamic-children"
 	],
 
+	"modes": {
+		"default": {
+			"label": "Default",
+			"description": "Wallpapered workspace + dock; windows mount as runtime child regions.",
+			"regions": {
+				"workspace": { "hidden": false, "fullWidth": false },
+				"dock":      { "hidden": false, "compact": false, "pinned": true },
+				"wallpaper": { "hidden": false }
+			}
+		},
+		"focus": {
+			"label": "Focus",
+			"description": "Collapse the dock to a hover-revealed strip so the active window owns the viewport.",
+			"regions": {
+				"workspace": { "fullWidth": true },
+				"dock":      { "compact": true, "pinned": false },
+				"wallpaper": { "hidden": false }
+			}
+		},
+		"takeover": {
+			"label": "Takeover",
+			"description": "Full viewport — dock + wallpaper hidden.",
+			"regions": {
+				"workspace": { "fullWidth": true },
+				"dock":      { "hidden": true },
+				"wallpaper": { "hidden": true }
+			}
+		},
+		"modal": {
+			"label": "Modal Overlay",
+			"description": "Overlay window with engine-managed LIFO stack.",
+			"modal": true
+		}
+	},
+
 	"templates": {
 		"core:desktop-workspace": {
 			"role": "main",

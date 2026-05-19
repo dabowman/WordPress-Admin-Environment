@@ -174,3 +174,61 @@
 .wp-admin-shell-region__forbidden p {
 	color: var(--wpds-color-fg-content-neutral-weak);
 }
+
+/* ==========================================================================
+   v3 mode region state.
+
+   Modes are paint-only: hidden regions stay mounted (per-region state
+   like sidebar drilldown depth + scroll position + dirty editor state
+   survives the transition). The runtime emits `data-mode-*` attributes
+   and modifier classes on the region wrapper; engine CSS reacts.
+
+   Engines OWN transitions — keep them smooth and interruptible. The
+   schema does not specify timing, easing, or which animations engines
+   ship. core:default's choice: 180ms ease on transform/opacity/size.
+   ========================================================================== */
+
+.wp-admin-shell-layout .wp-admin-shell-region {
+	transition:
+		inline-size 180ms ease,
+		flex-basis 180ms ease,
+		opacity 180ms ease,
+		transform 180ms ease,
+		padding-inline 180ms ease,
+		padding-block 180ms ease;
+}
+
+/* Hidden — paint-only suppression. `display: none` removes the wrapper
+ * from the flow without unmounting the React subtree (React still keeps
+ * state, useState references, refs, and effects across the flip — only
+ * the DOM is hidden). */
+.wp-admin-shell-layout .wp-admin-shell-region[data-mode-hidden="true"] {
+	display: none;
+}
+
+/* Compact — toolbar shrinks to back link + save indicator chrome;
+ * sidebar collapses to icon-rail width. Engines tune per-region. */
+.wp-admin-shell-layout
+	.wp-admin-shell-region--toolbar[data-mode-compact="true"] {
+	padding-block: var(--wpds-dimension-padding-xs);
+}
+
+.wp-admin-shell-layout
+	.wp-admin-shell-region--sidebar[data-mode-compact="true"] {
+	inline-size: 64px;
+}
+
+/* Minimal — stricter than compact. Currently only toolbar consumes it. */
+.wp-admin-shell-layout
+	.wp-admin-shell-region--toolbar[data-mode-minimal="true"] {
+	padding-block: var(--wpds-dimension-padding-2xs);
+}
+
+/* Full-width — content / main region expands to claim the space normally
+ * occupied by sibling chrome regions. The flex-basis flip works with the
+ * default flex-row arrangement; engines using grid layouts override. */
+.wp-admin-shell-layout
+	.wp-admin-shell-region[data-mode-full-width="true"] {
+	flex: 1 1 100%;
+	max-inline-size: 100%;
+}
