@@ -1,0 +1,364 @@
+# app.json Reference
+
+`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a shell. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_shell_register_app()`.
+
+Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, and the configuration schema it accepts when `admin.json` passes values. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
+
+## In this article
+
+- [JSON Schema](#json-schema)
+- [id](#id)
+- [version](#version)
+- [title](#title)
+- [description](#description)
+- [designSystem](#designsystem)
+- [role](#role)
+- [platform](#platform)
+- [capabilities](#capabilities)
+- [config-schema](#config-schema)
+- [extension-points](#extension-points)
+- [script](#script)
+- [style](#style)
+- [window](#window)
+- [dashboardWidget](#dashboardwidget)
+- [viewConfig](#viewconfig)
+- [documentation](#documentation)
+
+## JSON Schema
+
+`app.json` manifests validate against a published JSON Schema. Reference it from the top of every file so IDEs can offer completion and inline error reporting:
+
+```json
+{
+	"$schema": "https://schemas.wp.org/admin-app/v1.json",
+	"id": "plugin:acme/orders",
+	"version": 1,
+	"title": "Orders",
+	"role": "main",
+	"script": "acme-orders"
+}
+```
+
+The schema is also available in-repo at `docs/schemas/admin-app-v2.json` for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+
+**Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
+
+**Conditional rule:** `platform.core:block-navigation-on-dirty: true` requires `platform.core:dirty-state: true`. Apps that don't track dirty state cannot block navigation on it.
+
+## id
+
+Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Shell plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case.
+
+Examples: `core:command-palette`, `core:posts`, `plugin:woocommerce/orders`, `plugin:acme/team-dashboard`.
+
+The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have `admin.json` route to their version.
+
+| Property | Description                                                                                                  | Type   | Default |
+|----------|--------------------------------------------------------------------------------------------------------------|--------|---------|
+| id       | Namespaced app id matching `^(core:[a-z][a-z0-9-]*\|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$`.                | string | —       |
+
+## version
+
+Manifest schema version this document conforms to. v1 is the current shape. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
+
+| Property | Description                                       | Type    | Default |
+|----------|---------------------------------------------------|---------|---------|
+| version  | Manifest version. Must be `1` for the current shape. | integer | —       |
+
+## title
+
+Human-readable name of the app, shown in command palettes, navigation menus, error messages, and developer tooling. Translatable. Should be short — typically two or three words.
+
+| Property | Description                       | Type   | Default |
+|----------|-----------------------------------|--------|---------|
+| title    | Short display name. Translatable. | string | —       |
+
+## description
+
+Optional human-readable description of what the app does. Used in `admin.json` authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph.
+
+| Property    | Description                            | Type   | Default |
+|-------------|----------------------------------------|--------|---------|
+| description | One-sentence to one-paragraph summary. | string | —       |
+
+## designSystem
+
+Design system the app's render tree emits components from. Free-form string by convention: `@wordpress/ui` (WPDS — what every `core:*` app uses), `mui` (Material Design), `chakra`, `radix`, `custom`. Apps are bound to their design system because they import its component primitives directly; mounting a `@wordpress/ui` app inside a Material engine produces visually inconsistent results. The kernel emits a dev-mode warning when the active engine's declared `designSystem` differs from a mounted app's. Apps that don't declare a value are treated as DS-unknown and skip the mismatch check.
+
+| Property      | Description                                       | Type   | Default |
+|---------------|---------------------------------------------------|--------|---------|
+| designSystem  | Free-form DS identifier, e.g. `@wordpress/ui`.    | string | —       |
+
+## role
+
+The app's primary ARIA role when mounted into a region. Drives engine specialization: engines that recognize the role apply specialized chrome (e.g., a `navigation` app gets sidebar treatment in the wp-default engine). Roles outside an engine's specializes-roles list fall through to the engine's default arrangement.
+
+Common values: `main`, `dialog`, `navigation`, `complementary`, `banner`, `contentinfo`, `region`, `search`. Any valid WAI-ARIA 1.2 role is accepted. Avoid widget roles (`button`, `checkbox`, etc.) — those describe controls, not regions or apps.
+
+| Property | Description                                | Type   | Default |
+|----------|--------------------------------------------|--------|---------|
+| role     | WAI-ARIA 1.2 landmark or `dialog`/`region`. | string | —       |
+
+## platform
+
+Platform service requests. The app declares which engine-provided services it needs — modality, focus management, dismissal handling, dirty-state tracking, keyboard triggerability. Each field maps to a service the browser/OS would provide if this were a website running in a browser. Engines declare in their own manifest which services they implement; an app requesting a service the active engine does not honor still mounts, but the unhonored request is a no-op (with a logged warning in development).
+
+```json
+{
+	"platform": {
+		"core:modal": true,
+		"core:dismiss-on": [ "Escape", "backdrop-click" ],
+		"core:autofocus-target": "input[type='search']",
+		"core:triggerable": true
+	}
+}
+```
+
+### Platform request fields
+
+| Property                          | Description                                                                                                                                                                  | Type    | Default |
+|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| core:modal                        | Render with focus trapped, ARIA modal applied, backdrop scrim when the engine supports it. Browser analog: `<dialog>.showModal()`.                                          | boolean | `false` |
+| core:dismiss-on                   | Triggers that unmount the region. Array of `Escape`, `backdrop-click`, `outside-click`, `navigation`.                                                                        | array   | —       |
+| core:autofocus-target             | CSS selector inside the rendered DOM that should receive focus on mount. Browser analog: HTML `autofocus`.                                                                  | string  | —       |
+| core:triggerable                  | App accepts being invoked by an `admin.json#bindings` keystroke. Browser analog: HTML `commandfor`/`command`.                                                                | boolean | `false` |
+| core:persists-across-navigation   | Region survives URL-driven changes to other regions. Use for navigation sidebars, status bars, persistent panels.                                                            | boolean | `false` |
+| core:dirty-state                  | App may report unsaved-changes state via the runtime's dirty-state API. Browser analog: `beforeunload`.                                                                      | boolean | `false` |
+| core:block-navigation-on-dirty    | Engines show a confirmation dialog before unmounting while dirty. Requires `core:dirty-state: true`.                                                                         | boolean | `false` |
+
+## capabilities
+
+WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — `admin.json` cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`).
+
+Examples: `[ "edit_posts" ]`, `[ "manage_options", "upload_files" ]`.
+
+| Property     | Description                                                                                  | Type             | Default |
+|--------------|----------------------------------------------------------------------------------------------|------------------|---------|
+| capabilities | Array of WordPress capability names. The user must hold all of them for the app to mount.   | array of string  | `[]`    |
+
+## config-schema
+
+JSON Schema document describing the shape of the `config` object that `admin.json` passes to this app at mount time (either via a region's `config` field or via a route's `config` field). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error.
+
+```json
+{
+	"config-schema": {
+		"type": "object",
+		"properties": {
+			"post-type": { "type": "string", "default": "post" },
+			"per-page": { "type": "integer", "minimum": 5, "maximum": 100, "default": 20 }
+		},
+		"required": [ "post-type" ]
+	}
+}
+```
+
+| Property      | Description                                                              | Type   | Default |
+|---------------|--------------------------------------------------------------------------|--------|---------|
+| config-schema | Inline JSON Schema (draft 2020-12) used to validate the passed `config`. | object | —       |
+
+## extension-points
+
+Documentary listing of slot/fill points, filter hooks, and other React or PHP extension surfaces this app exposes to plugins. Not load-bearing: the runtime does not read or enforce this field. Included for IDE tooling, ecosystem documentation, and machine-readable discovery of app extensibility.
+
+Keys are extension-point identifiers (e.g., `PluginSidebar`, `PluginDocumentSettingPanel`); values are the WordPress package or hook namespace where the extension is registered.
+
+| Property         | Description                                                                                  | Type   | Default |
+|------------------|----------------------------------------------------------------------------------------------|--------|---------|
+| extension-points | Map of extension-point id → package/hook namespace consumers register against.               | object | —       |
+
+## script
+
+WordPress script handle for this app's JavaScript bundle. Must already be registered with WordPress (via `wp_register_script`) before the manifest references it. The runtime enqueues this handle when the app mounts, supporting WordPress's standard dependency resolution and code-splitting. Same pattern as `block.json`'s `editorScript`.
+
+| Property | Description                                                              | Type   | Default |
+|----------|--------------------------------------------------------------------------|--------|---------|
+| script   | Registered script handle matching `^[a-z][a-z0-9-]*$`.                   | string | —       |
+
+## style
+
+Optional WordPress style handle for this app's CSS. Enqueued alongside the script when the app mounts. Apps with no dedicated styles (relying entirely on WPDS tokens for theming) may omit this field.
+
+| Property | Description                                                       | Type   | Default |
+|----------|-------------------------------------------------------------------|--------|---------|
+| style    | Registered style handle matching `^[a-z][a-z0-9-]*$`.             | string | —       |
+
+## window
+
+Optional window-mount hints for engines that mount this app inside a window-frame region (windowed / MDI / desktop-style engines). Default engines (sidebar + toolbar + content) ignore the block entirely. Engines consult these fields on mount and apply sensible defaults if any field is missing.
+
+```json
+{
+	"window": {
+		"defaultSize": { "w": 960, "h": 720 },
+		"minSize": { "w": 480, "h": 360 },
+		"multiInstance": true,
+		"icon": "post"
+	}
+}
+```
+
+### Window fields
+
+| Property        | Description                                                                                                                          | Type    | Default |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| defaultSize     | Preferred initial window size in CSS pixels. `{ w, h }` — both required when set; integers `>= 1`.                                    | object  | —       |
+| minSize         | Minimum window size in CSS pixels. `{ w, h }` — both required when set; integers `>= 1`. The compositor enforces this floor when the user resizes. | object  | engine policy (typically `{ w: 320, h: 240 }`) |
+| chrome          | Engine-defined window chrome style identifier. Unrecognized values fall back to the engine's default chrome.                          | string  | engine default |
+| multiInstance   | When `true`, the app may be opened as multiple simultaneous windows with independent state. When `false`, re-opening focuses the existing window. | boolean | `false` |
+| icon            | Icon registry name (resolved by the active engine's icon table). Used for window-frame titlebar, taskbar/dock entry, overview switcher. | string  | generic app icon |
+
+## dashboardWidget
+
+Optional dashboard-widget hints. When present, the app may be mounted as a tile inside a `core:dashboard-grid` region by `core:dashboard-host`. The block carries default placement + sizing hints; `admin.json`'s top-level `dashboardWidgets[appId]` overrides per-id (admin.json wins per-property).
+
+Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this block.
+
+```json
+{
+	"dashboardWidget": {
+		"title": "Recent Drafts",
+		"defaultSize": { "w": 2, "h": 1 },
+		"minSize": { "w": 1, "h": 1 },
+		"position": "auto"
+	}
+}
+```
+
+### Dashboard widget fields
+
+| Property      | Description                                                                                                                                          | Type             | Default       |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|
+| title         | Tile-header title. Translatable. Falls back to the manifest's top-level `title` when omitted.                                                       | string           | `title`       |
+| defaultSize   | Initial `{ w, h }` size in grid cells. Both `w` and `h` required when set; integers `>= 1`.                                                          | object           | `{ w: 1, h: 1 }` |
+| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `admin.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
+| position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
+
+## viewConfig
+
+Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with `admin.json#viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard) omit this field.
+
+```json
+{
+	"viewConfig": {
+		"kind": "postType",
+		"name": "post",
+		"fieldsRef": "core/post-fields",
+		"defaultView": { "type": "table", "perPage": 25 }
+	}
+}
+```
+
+### View-config fields
+
+`kind` and `name` are required.
+
+| Property        | Description                                                                                                                                                  | Type    | Default |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| kind            | Entity kind, matching `@wordpress/core-data` kinds (`postType`, `root`, `taxonomy`, etc.). Pattern: `^[A-Za-z][A-Za-z0-9_-]*$`. Required.                     | string  | —       |
+| name            | Entity name (`post`, `page`, `user`, `comment`). Pattern: `^[A-Za-z][A-Za-z0-9_-]*$`. Required.                                                              | string  | —       |
+| variant         | Optional variant identifier. Pattern: `^[A-Za-z0-9][A-Za-z0-9_/-]*$`. Slash namespacing allowed (e.g. `woocommerce-bookings/services`). Omitted = base view-config. | string  | —       |
+| fieldsRef       | Reference to a `fieldCollections` entry id. See `admin.json#fieldCollections`.                                                                               | string  | —       |
+| fields          | Field descriptors. Each entry requires `id`, `type`, `label`. See `admin.json#viewConfigs`.                                                                   | array   | —       |
+| defaultView     | Initial DataViews `view` object.                                                                                                                              | object  | —       |
+| defaultLayouts  | DataViews `defaultLayouts` prop.                                                                                                                              | object  | —       |
+| actions         | Action descriptors. Each entry requires `id`, `label`. See `admin.json#viewConfigs`.                                                                          | array   | —       |
+
+## documentation
+
+Documentation contract: machine-readable description of what the app does at runtime, intended for reviewers, ecosystem tooling, and authors rebuilding the app on a different design system or framework. Not load-bearing: the runtime does not read or enforce any field here.
+
+The contract pairs with a sibling `app.md` prose document — structured facts live here, narrative explanation lives in markdown.
+
+### Top-level documentation fields
+
+| Property               | Description                                                                                                                                                    | Type   | Default |
+|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| purpose                | One-paragraph plain-English description of what the app does and who it serves. Longer than `description`. Translatable.                                       | string | —       |
+| rebuilds               | Slug of the tier-2 screen specification under `docs/screens/` this app rebuilds (e.g. `dashboard-home`, `posts`). Omitted for shell-only apps.                  | string | —       |
+| data                   | Data dependencies. Splits into `reads` and `writes`.                                                                                                            | object | —       |
+| url                    | URL participation contract. Splits into `reads-slots`, `writes-slots`, `navigates`.                                                                             | object | —       |
+| states                 | User-visible runtime states the app cycles through (`loading`, `empty`, `error`, `ready`, `saving`, `saved`, `with-edits`, `permission-denied`).                | array  | —       |
+| interactions           | User actions the app responds to. Each entry is a trigger → effect pair, with optional guards.                                                                  | array  | —       |
+| a11y                   | Accessibility contract: focus management, app-owned keyboard shortcuts, screen-reader affordances.                                                              | object | —       |
+| constraints            | Framework-, WPDS-, or WordPress-specific gotchas a reimplementation must account for.                                                                            | array  | —       |
+| design-system-leakage  | Specific `@wordpress/*` imports the app cannot do without. A rebuild on a non-WPDS DS must provide functional equivalents for every entry.                       | array  | —       |
+
+### documentation.data.reads (entry shape)
+
+Each read entry requires `source` and `via`.
+
+| Property   | Description                                                                                                                                                            | Type   | Default |
+|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| source     | REST endpoint (`/wp/v2/posts`), `core-data` entity path (`postType/post`, `root/site`), external URL, or window-global property (`window.wpAdminShell.user`). Required. | string | —       |
+| via        | One of `core-data`, `api-fetch`, `window-global`, `external`, `commands`, `kernel-config`. Required.                                                                  | string | —       |
+| context    | REST context: `view`, `edit`, or `embed`. `edit` is required for any field whose `raw` value will be edited.                                                          | string | —       |
+| purpose    | What this read is for in the app's flow.                                                                                                                               | string | —       |
+| fields     | Notable fields read from the record (e.g. `[ "title.raw", "status", "author", "date" ]`).                                                                              | array  | —       |
+| query      | Notable query args the app passes. Dynamic args document the keys, not the values.                                                                                     | object | —       |
+
+### documentation.data.writes (entry shape)
+
+Each write entry requires `source`, `via`, and `operation`.
+
+| Property   | Description                                                                                                                                                            | Type   | Default |
+|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| source     | REST endpoint or `core-data` entity path. Required.                                                                                                                    | string | —       |
+| via        | One of `core-data`, `api-fetch`, `external`. Required.                                                                                                                 | string | —       |
+| operation  | Mutation kind: `create`, `update`, `partial-update`, `delete`, `trash`, `bulk-delete`, `bulk-update`, `upload`, `custom`. Required.                                    | string | —       |
+| purpose    | What this write is for (e.g. `Approve a pending comment`).                                                                                                              | string | —       |
+| invalidates| Cache keys or entity queries that must be invalidated after the write. `core-data`'s `useEntityRecord` short-circuits the same store; `useEntityRecords` queries do not — list the entity paths explicit invalidation must hit. | array  | —       |
+
+### documentation.url
+
+| Property      | Description                                                                                                              | Type             | Default |
+|---------------|--------------------------------------------------------------------------------------------------------------------------|------------------|---------|
+| reads-slots   | Named URL query slots the app reads. `_self` = primary hash path; named slots are e.g. `screen`, `detail`.               | array of string  | —       |
+| writes-slots  | Named URL query slots the app writes through the router (e.g. NavigationApp writes `screen` for drill-down state).       | array of string  | —       |
+| navigates     | Route patterns the app navigates to via `navigate()` or anchor hrefs. Patterns use `{param}` placeholders.                | array of string  | —       |
+
+### documentation.states (entry shape)
+
+Each state entry requires `id` and `renders`.
+
+| Property | Description                                                                                          | Type   | Default |
+|----------|------------------------------------------------------------------------------------------------------|--------|---------|
+| id       | State identifier, kebab-case (`loading`, `empty`, `error`, `ready`, `saving`, etc.). Required.       | string | —       |
+| when     | Condition that puts the app into this state (e.g. `records === null`, `hasEdits && isSaving`).        | string | —       |
+| renders  | Short prose describing what the user sees. Reimplementations target this output, not the component. Required. | string | —       |
+
+### documentation.interactions (entry shape)
+
+Each interaction entry requires `trigger` and `effect`.
+
+| Property | Description                                                                                                  | Type   | Default |
+|----------|--------------------------------------------------------------------------------------------------------------|--------|---------|
+| trigger  | User input or system event (e.g. `Click row title`, `Press Cmd+S`, `Submit Quick Draft form`). Required.     | string | —       |
+| effect   | State change, navigation, or mutation that results (e.g. `Navigate to #/posts/{id}/edit`). Required.          | string | —       |
+| guards   | Capability checks, eligibility checks, or invariants enforced before the effect runs.                         | array  | —       |
+
+### documentation.a11y
+
+| Property         | Description                                                                                                          | Type   | Default |
+|------------------|----------------------------------------------------------------------------------------------------------------------|--------|---------|
+| focus-management | How the app manages focus on mount, route changes, modal open/close, and post-action transitions.                    | string | —       |
+| keyboard         | App-owned keyboard shortcuts. Each entry is `{ keys, action }` — both fields required. Shell-level bindings are out of scope. | array  | —       |
+| screen-reader    | Live regions, `aria-live` announcements, `aria-current` usage, and other screen-reader-specific affordances.          | string | —       |
+
+### documentation.constraints (entry shape)
+
+Each constraint requires `concern` and `note`.
+
+| Property | Description                                                                                                                              | Type   | Default |
+|----------|------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| concern  | Short identifier for the constraint (e.g. `null-guard-records`, `dataviews-import-path`, `self-delete-guard`). Required.                  | string | —       |
+| note     | What the constraint is and what a reimplementation must do to honor it. Required.                                                         | string | —       |
+
+### documentation.design-system-leakage (entry shape)
+
+Each leakage entry requires `import` and `purpose`.
+
+| Property | Description                                                                                                                              | Type   | Default |
+|----------|------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| import   | Bare-import path the app loads (e.g. `@wordpress/dataviews/wp`, `@wordpress/ui#Button`, `@wordpress/icons#trash`). Required.              | string | —       |
+| purpose  | What the import provides and why the app needs it. Required.                                                                              | string | —       |
