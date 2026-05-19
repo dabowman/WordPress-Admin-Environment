@@ -387,6 +387,43 @@ function navigateScreen( screenId ) {
 }
 
 /**
+ * Combined navigation: write a new primary path + `?screen=<id>`
+ * drilldown slot in a single URL update so the second write doesn't
+ * wipe the first's query params.
+ *
+ * @param {string|null} screenId
+ * @param {string|null} ownPath  Container item's own href (e.g. `#/posts`).
+ */
+function navigateContainer( screenId, ownPath ) {
+	if ( typeof window === 'undefined' ) {
+		return;
+	}
+	// Determine the new primary path. If the container has no path
+	// of its own, keep the current primary.
+	const currentHash = window.location.hash || '';
+	const currentQueryIdx = currentHash.indexOf( '?' );
+	const currentPrimary =
+		currentQueryIdx === -1
+			? currentHash
+			: currentHash.slice( 0, currentQueryIdx );
+	const nextPrimary = ownPath || currentPrimary || '#';
+
+	// Build the query slots, preserving anything except the screen
+	// slot (which we set explicitly below).
+	const currentSearch =
+		currentQueryIdx === -1 ? '' : currentHash.slice( currentQueryIdx + 1 );
+	const params = new URLSearchParams( currentSearch );
+	if ( screenId ) {
+		params.set( 'screen', screenId );
+	} else {
+		params.delete( 'screen' );
+	}
+	const next = params.toString();
+	const target = next ? `${ nextPrimary }?${ next }` : nextPrimary;
+	navigate( target );
+}
+
+/**
  * Root-level item renderer. Items with nested `items` become drilldown
  * affordances (chevron + click pushes `?screen=<id>` and slides in the
  * sub-screen). Everything else renders as a leaf.
@@ -414,12 +451,13 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 		// Container items WITHOUT a route binding (pure groups) only
 		// drill down.
 		const ownTarget = item.href ? hashPrimary( item.href ) : null;
-		const ownPath   = item.href || null;
+		const ownPath = item.href || null;
 		const hasActiveChild = item.items.some( ( child ) => {
 			const target = child.href ? hashPrimary( child.href ) : null;
 			return !! target && currentPrimary === target;
 		} );
-		const isActive = ( !! ownTarget && currentPrimary === ownTarget ) || hasActiveChild;
+		const isActive =
+			( !! ownTarget && currentPrimary === ownTarget ) || hasActiveChild;
 
 		return (
 			<SidebarNavigationItem
@@ -435,10 +473,11 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 							`[id="screen-${ item.id }"]`
 						);
 					}
-					navigateScreen( item.id );
-					if ( ownPath ) {
-						navigate( ownPath );
-					}
+					// Single URL write combining the container's own
+					// route (if any) with `?screen=<id>` drilldown slot.
+					// Sequential writes wipe each other — `navigate()`
+					// clears any prior query slots.
+					navigateContainer( item.id, ownPath );
 				} }
 			>
 				{ item.label || item.id }
