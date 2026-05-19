@@ -409,10 +409,17 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 
 	const hasChildren = Array.isArray( item.items ) && item.items.length > 0;
 	if ( hasChildren ) {
+		// Match wp-admin: clicking a container item with a screen
+		// binding navigates to that screen AND opens the drilldown.
+		// Container items WITHOUT a route binding (pure groups) only
+		// drill down.
+		const ownTarget = item.href ? hashPrimary( item.href ) : null;
+		const ownPath   = item.href || null;
 		const hasActiveChild = item.items.some( ( child ) => {
 			const target = child.href ? hashPrimary( child.href ) : null;
 			return !! target && currentPrimary === target;
 		} );
+		const isActive = ( !! ownTarget && currentPrimary === ownTarget ) || hasActiveChild;
 
 		return (
 			<SidebarNavigationItem
@@ -420,7 +427,7 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 				uid={ `screen-${ item.id }` }
 				icon={ resolveIcon( item.icon ) }
 				withChevron
-				isActive={ hasActiveChild }
+				isActive={ isActive }
 				onClick={ () => {
 					if ( navState ) {
 						navState.navigate(
@@ -429,6 +436,9 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 						);
 					}
 					navigateScreen( item.id );
+					if ( ownPath ) {
+						navigate( ownPath );
+					}
 				} }
 			>
 				{ item.label || item.id }
