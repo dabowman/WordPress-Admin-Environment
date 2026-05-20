@@ -82,9 +82,14 @@ $T::assert_eq(
 	'ingested-woocommerce'
 );
 $T::assert_eq(
-	'screen id: empty slug fallback',
+	'screen id: empty slug returns empty (mirrors derive_path empty-handling)',
 	WP_Admin_Shell_Classic_Menu_Bridge::derive_screen_id( '' ),
-	'ingested-unknown'
+	''
+);
+$T::assert_eq(
+	'path: empty slug returns empty (mirrors derive_screen_id empty-handling)',
+	WP_Admin_Shell_Classic_Menu_Bridge::derive_path( '' ),
+	''
 );
 
 // --- Path derivation -----------------------------------------------------
@@ -133,7 +138,9 @@ $T::assert_true(
 	! WP_Admin_Shell_Classic_Menu_Bridge::is_core_slug( 'edit.php?post_type=product' )
 );
 
-// Filter-expanded skip list.
+// Filter-expanded skip list. Memoization means the core-slug list is
+// snapshotted on first call — register the filter, then reset() to
+// drain the memo, then probe.
 add_filter(
 	'wp_admin_shell_classic_menu_core_slugs',
 	function ( $slugs ) {
@@ -141,11 +148,13 @@ add_filter(
 		return $slugs;
 	}
 );
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
 $T::assert_true(
 	'is_core_slug: filter expansion adds custom slug to skip list',
 	WP_Admin_Shell_Classic_Menu_Bridge::is_core_slug( 'edit.php?post_type=product' )
 );
 remove_all_filters( 'wp_admin_shell_classic_menu_core_slugs' );
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
 
 // --- Icon mapping --------------------------------------------------------
 
@@ -553,6 +562,49 @@ $T::assert_true(
 );
 
 WP_Admin_Shell_Menu_Items::reset();
+
+// --- Real id collision — manual entry at the bridge's target id ----------
+// Reviewer flagged: prior coexistence test placed entries in different
+// containers and never exercised the collision path. This test puts a
+// manual register at `menu.ingested.items.ingested-my-plugin-page` (same
+// id the bridge would synthesize) and asserts first-write wins (manual
+// menu-items at priority 5 lands before bridge at priority 6).
+
+wpas_cmb_reset_globals();
+$GLOBALS['menu'] = array(
+	array( 'My Plugin', 'manage_options', 'my-plugin-page', 'My Plugin', '', '', 'dashicons-admin-tools' ),
+);
+WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+
+// Manual registration claims the same id the bridge would assign.
+// Note: register_menu_item writes to top-level menu by default; to
+// collide on the same `menu.ingested.items[ingested-my-plugin-page]`
+// path the manual entry needs parent=ingested. The menu-items shim
+// supports `parent` via the `to` arg shape. Simpler: pre-seed the doc.
+$pre_seeded = array(
+	'menu' => array(
+		'ingested' => array(
+			'label' => 'Plugins',
+			'items' => array(
+				'ingested-my-plugin-page' => array(
+					'label' => 'Custom override label',
+					'icon'  => 'star',
+				),
+			),
+		),
+	),
+);
+$collision_doc = apply_filters( 'wp_admin_shell_data_plugin', $pre_seeded );
+$T::assert_true(
+	'real collision: pre-seeded ingested-my-plugin-page survives the bridge pass',
+	isset( $collision_doc['menu']['ingested']['items']['ingested-my-plugin-page'] )
+);
+$T::assert_eq(
+	'real collision: first-write wins — original label preserved',
+	$collision_doc['menu']['ingested']['items']['ingested-my-plugin-page']['label'],
+	'Custom override label'
+);
 
 // --- Restore globals -----------------------------------------------------
 

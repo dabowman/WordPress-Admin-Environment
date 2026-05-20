@@ -180,12 +180,26 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 * @return array<int, array>
 	 */
 	public static function scan() {
-		$menu    = isset( $GLOBALS['menu'] ) && is_array( $GLOBALS['menu'] )
+		// Request-scoped memo. `contribute()` and the cache-signal hook
+		// both call scan(); without the memo we'd walk $GLOBALS twice
+		// per request and dispatch the core-slug filter 30+ times.
+		// The signature snapshot guards against late mutations to the
+		// globals (rare; mainly test harnesses).
+		static $cache_signature = null;
+		static $cache_result    = null;
+		$menu_globals    = isset( $GLOBALS['menu'] ) && is_array( $GLOBALS['menu'] )
 			? $GLOBALS['menu']
 			: array();
-		$submenu = isset( $GLOBALS['submenu'] ) && is_array( $GLOBALS['submenu'] )
+		$submenu_globals = isset( $GLOBALS['submenu'] ) && is_array( $GLOBALS['submenu'] )
 			? $GLOBALS['submenu']
 			: array();
+		$signature = md5( serialize( array( $menu_globals, $submenu_globals ) ) );
+		if ( $cache_signature === $signature && is_array( $cache_result ) ) {
+			return $cache_result;
+		}
+
+		$menu    = $menu_globals;
+		$submenu = $submenu_globals;
 
 		$records = array();
 
@@ -222,14 +236,14 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				'slug'           => $slug,
 				'label'          => $label,
 				'capability'     => $capability,
-				'icon'           => $icon !== null ? $icon : 'menu',
+				'icon'           => $icon ?? 'menu',
 				'path'           => self::derive_path( $slug ),
 				'children'       => array(),
 				'parent_is_core' => false,
 			);
 
 			if ( isset( $submenu[ $slug ] ) && is_array( $submenu[ $slug ] ) ) {
-				$record['children'] = self::scan_children( $submenu[ $slug ], $slug );
+				$record['children'] = self::scan_children( $submenu[ $slug ] );
 			}
 
 			$records[] = $record;
@@ -253,7 +267,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				continue; // Orphan submenu.
 			}
 
-			$ingested_children = self::scan_children( $children_array, $parent_slug );
+			$ingested_children = self::scan_children( $children_array );
 			if ( empty( $ingested_children ) ) {
 				continue;
 			}
@@ -270,27 +284,58 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				'slug'           => $parent_slug,
 				'label'          => $parent_label,
 				'capability'     => '', // Container only — no bound screen.
-				'icon'           => $icon !== null ? $icon : 'menu',
+				'icon'           => $icon ?? 'menu',
 				'path'           => '',
 				'children'       => $ingested_children,
 				'parent_is_core' => true,
 			);
 		}
 
+		$cache_signature = $signature;
+		$cache_result    = $records;
 		return $records;
 	}
+
+	/**
+	 * Request-scoped memo of the filtered core-slug set. `is_core_slug()`
+	 * runs per menu/submenu entry; without this, the filter dispatches
+	 * 30+ times per scan() walk. Also `array_filter( …, 'is_string' )`
+	 * shape-validates the filter result so a callback returning
+	 * `[ 'edit.php', 42, false ]` doesn't poison the in_array lookup
+	 * with non-string entries.
+	 *
+	 * @return string[]
+	 */
+	private static function core_slugs() {
+		if ( self::$core_slugs_cache !== null ) {
+			return self::$core_slugs_cache;
+		}
+		$filtered = apply_filters(
+			'wp_admin_shell_classic_menu_core_slugs',
+			self::$CORE_SLUGS
+		);
+		if ( ! is_array( $filtered ) ) {
+			$filtered = self::$CORE_SLUGS;
+		}
+		self::$core_slugs_cache = array_values( array_filter( $filtered, 'is_string' ) );
+		return self::$core_slugs_cache;
+	}
+
+	/**
+	 * Class-static memo backing `core_slugs()`. Reset()-able.
+	 * @var string[]|null
+	 */
+	private static $core_slugs_cache = null;
 
 	/**
 	 * Walk one submenu array (`$GLOBALS['submenu'][<parent>]`) and
 	 * return ingested child records. Skips entries whose slug matches
 	 * `is_core_slug` so we don't double-bridge wp-admin built-ins.
 	 *
-	 * @param array<int, array> $children    The submenu rows under one parent.
-	 * @param string            $parent_slug Parent slug (for diagnostics only).
+	 * @param array<int, array> $children The submenu rows under one parent.
 	 * @return array<int, array>
 	 */
-	private static function scan_children( $children, $parent_slug ) {
-		unset( $parent_slug ); // Reserved for future use — drop-during-pass parent.
+	private static function scan_children( $children ) {
 		$out = array();
 		foreach ( $children as $child ) {
 			if ( ! is_array( $child ) || ! isset( $child[2] ) ) {
@@ -326,13 +371,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		if ( ! is_string( $slug ) || $slug === '' ) {
 			return false;
 		}
-		$core_slugs = apply_filters(
-			'wp_admin_shell_classic_menu_core_slugs',
-			self::$CORE_SLUGS
-		);
-		if ( ! is_array( $core_slugs ) ) {
-			$core_slugs = self::$CORE_SLUGS;
-		}
+		$core_slugs = self::core_slugs();
 		if ( in_array( $slug, $core_slugs, true ) ) {
 			return true;
 		}
@@ -357,7 +396,11 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 */
 	public static function derive_path( $slug ) {
 		if ( ! is_string( $slug ) || $slug === '' ) {
-			return '/admin';
+			// Empty/invalid slug — return empty string so callers can
+			// reject upstream. Mirrors `derive_screen_id` empty-handling
+			// (both return falsy values for invalid input rather than
+			// the previous mixed `/admin` + `ingested-unknown` sentinels).
+			return '';
 		}
 		if ( isset( self::$CORE_PATH_MAP[ $slug ] ) ) {
 			return self::$CORE_PATH_MAP[ $slug ];
@@ -383,7 +426,10 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 */
 	public static function derive_screen_id( $slug ) {
 		if ( ! is_string( $slug ) || $slug === '' ) {
-			return 'ingested-unknown';
+			// Empty/invalid slug — return empty string. Mirrors
+			// derive_path()'s empty-handling. contribute() guards
+			// upstream so this is defensive.
+			return '';
 		}
 		// Strip `admin.php?page=` prefix when present — saves a few
 		// chars on the common-case path.
@@ -392,7 +438,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		}
 		$slugified = self::slugify( $slug );
 		if ( $slugified === '' ) {
-			return 'ingested-unknown';
+			return '';
 		}
 		return 'ingested-' . $slugified;
 	}
@@ -484,15 +530,15 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			// already exists (admin.json wins, OR previous filter pass).
 			if ( ! isset( $doc['screens'][ $id ] ) ) {
 				if ( $record['parent_is_core'] ) {
-					// Synthesized container — no bound screen needed.
-					// The menu container alone is enough; we still
-					// create a screen so the icon/label can be
-					// inherited by the menu item via the binding pass.
+					// Synthesized container — hidden stub. Authors
+					// override the icon at `menu.ingested.items[<id>]`
+					// (menu-side), not on the hidden screen — writing
+					// icon here makes it drift from the menu item when
+					// admin.json overrides one but not the other.
 					// Capability omitted — the children carry their
 					// own caps.
 					$doc['screens'][ $id ] = array(
 						'label'  => $record['label'],
-						'icon'   => $record['icon'],
 						'hidden' => true,
 					);
 				} else {
@@ -611,13 +657,35 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 
 	/**
 	 * Reset bridge state. Test-only. The bridge holds no persistent
-	 * state (scan() reads globals on every call), but the function is
-	 * kept for symmetry with the other 3c.x registries + so tests can
-	 * call it without thinking about which registries do / don't have
-	 * state.
+	 * state (scan() reads globals on every call), but two static memos
+	 * live inside scan() + core_slugs() to avoid re-walking globals and
+	 * re-running the filter chain on every call within a single request.
+	 * Tests mutate $GLOBALS between scenarios + change the filter
+	 * registration, so the memos must be drained on reset().
 	 */
 	public static function reset() {
-		// No-op — kept for API symmetry with the other 3c.x classes.
+		// Re-invoke scan() once with empty globals so its static memo
+		// cache hits a known-empty signature. Subsequent calls in the
+		// test rebuild from real $GLOBALS state.
+		$saved_menu    = isset( $GLOBALS['menu'] ) ? $GLOBALS['menu'] : null;
+		$saved_submenu = isset( $GLOBALS['submenu'] ) ? $GLOBALS['submenu'] : null;
+		$GLOBALS['menu']    = array();
+		$GLOBALS['submenu'] = array();
+		self::scan();
+		if ( $saved_menu === null ) {
+			unset( $GLOBALS['menu'] );
+		} else {
+			$GLOBALS['menu'] = $saved_menu;
+		}
+		if ( $saved_submenu === null ) {
+			unset( $GLOBALS['submenu'] );
+		} else {
+			$GLOBALS['submenu'] = $saved_submenu;
+		}
+		// Drain the filtered core-slug memo so tests can register a
+		// new `wp_admin_shell_classic_menu_core_slugs` filter between
+		// scenarios and see it take effect on the next scan.
+		self::$core_slugs_cache = null;
 	}
 }
 

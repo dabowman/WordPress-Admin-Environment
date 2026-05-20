@@ -112,6 +112,12 @@ class WP_Admin_Shell_V3_Compiler {
 			// V3-shaped screens block exists, so we have to do it
 			// explicitly here for the synthesized v2 case.
 			$resolved = self::stamp_screen_data_view_resolved( $resolved );
+
+			// Translate `iframe:<slug>` refs on the v2 path too —
+			// v2 shells declared `iframe:update-core.php` directly on
+			// routes, and `synthesize_v2_screens_from_routes` copies
+			// the ref into the synthesized screen.
+			$resolved = self::translate_iframe_app_refs( $resolved );
 			return $resolved;
 		}
 
@@ -172,6 +178,80 @@ class WP_Admin_Shell_V3_Compiler {
 		// without REST round-trips or client-side kind/name inference.
 		// Without this stamp, entity-CRUD apps render with empty fields.
 		$resolved = self::stamp_screen_data_view_resolved( $resolved );
+
+		// 6. translate `iframe:<slug>` app refs → `core:iframe-fallback`
+		// with `config.url: <slug>`. The JS runtime's `resolveAppInstance`
+		// only knows `core:*` / `plugin:*`; without this pass every
+		// `iframe:<slug>` reference renders nothing. Covers screens
+		// (shorthand + long-form apps[]), synthesized routes, and the
+		// classic-menu-bridge ingested entries that all emit
+		// `iframe:<original-slug>` for cleanliness.
+		$resolved = self::translate_iframe_app_refs( $resolved );
+
+		return $resolved;
+	}
+
+	/**
+	 * Rewrite `iframe:<slug>` app refs to `core:iframe-fallback` plus a
+	 * `config.url` carrying the slug. Walks screens (shorthand `app` +
+	 * long-form `apps[i].app`) and the synthesized routes block.
+	 *
+	 * The rewrite is idempotent — running this twice on the same doc
+	 * leaves the second pass as a no-op because no `iframe:` refs
+	 * remain. Authors can still emit `iframe:<slug>` shorthand in
+	 * shells, manifests, and PHP shims; the compiler unifies them onto
+	 * the single core:iframe-fallback mount path.
+	 *
+	 * @param array $resolved
+	 * @return array
+	 */
+	private static function translate_iframe_app_refs( $resolved ) {
+		$rewrite = static function ( $entry ) {
+			if ( ! is_array( $entry ) ) {
+				return $entry;
+			}
+			$app = isset( $entry['app'] ) && is_string( $entry['app'] ) ? $entry['app'] : '';
+			if ( $app === '' || strpos( $app, 'iframe:' ) !== 0 ) {
+				return $entry;
+			}
+			$slug         = substr( $app, 7 );
+			$entry['app'] = 'core:iframe-fallback';
+			if ( ! isset( $entry['config'] ) || ! is_array( $entry['config'] ) ) {
+				$entry['config'] = array();
+			}
+			// Author-supplied config.url wins — the rewrite only fills
+			// the slot when empty so explicit overrides on the entry
+			// (or admin.json's per-screen config) survive.
+			if ( ! isset( $entry['config']['url'] ) || $entry['config']['url'] === '' ) {
+				$entry['config']['url'] = $slug;
+			}
+			return $entry;
+		};
+
+		if ( isset( $resolved['screens'] ) && is_array( $resolved['screens'] ) ) {
+			foreach ( $resolved['screens'] as $screen_id => $screen ) {
+				if ( ! is_array( $screen ) ) {
+					continue;
+				}
+				// Shorthand `app` + `config` form.
+				$resolved['screens'][ $screen_id ] = $rewrite( $screen );
+				// Long-form apps[].
+				if (
+					isset( $resolved['screens'][ $screen_id ]['apps'] ) &&
+					is_array( $resolved['screens'][ $screen_id ]['apps'] )
+				) {
+					foreach ( $resolved['screens'][ $screen_id ]['apps'] as $i => $apps_entry ) {
+						$resolved['screens'][ $screen_id ]['apps'][ $i ] = $rewrite( $apps_entry );
+					}
+				}
+			}
+		}
+
+		if ( isset( $resolved['routes'] ) && is_array( $resolved['routes'] ) ) {
+			foreach ( $resolved['routes'] as $route_key => $route_entry ) {
+				$resolved['routes'][ $route_key ] = $rewrite( $route_entry );
+			}
+		}
 
 		return $resolved;
 	}
