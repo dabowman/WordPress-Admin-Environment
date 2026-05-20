@@ -1,33 +1,41 @@
 <?php
 /**
- * Dashboard-widgets registry (C4 — spec §13 #13).
+ * Dashboard-widgets registry (v3 reshape — 3c.1).
  *
  * Plugins register a widget app for the dashboard grid via
- * `wp_admin_shell_register_dashboard_widget()`. The registry stores
- * per-id placement/sizing overrides and contributes them to the
- * cascade through the synthetic `plugin` origin so site/role/user
- * origins can extend or replace via the same admin.json
- * `dashboardWidgets` block.
+ * `wp_admin_shell_register_dashboard_widget()`. In v3 the registry
+ * contributes a screen-app entry under the target screen
+ * (`dashboard-widgets` by default) instead of writing into the v2
+ * top-level `dashboardWidgets` block. The cascade pipeline then
+ * merges these entries with any admin.json `screens[id].apps[]`
+ * declarations via the normal id-keyed array merge.
  *
- * Schema: see `docs/schemas/admin-v2.json#/$defs/dashboardWidgetOverride`.
+ * Schema:
+ *   - `screens[id].apps[]` entries shape: see
+ *     `docs/schemas/admin-v3.json#/$defs/appsEntry`.
+ *   - Manifest `slotHints` shape: see
+ *     `docs/schemas/admin-app-v3.json#/$defs/slotHints`.
  *
- * Plugins don't need to use this API just to author a widget. The
- * grid host (`core:dashboard-host`) considers ANY registered app
- * whose `app.json` declares a `dashboardWidget` block to be a
- * candidate widget — the manifest is the eligibility check. This
- * function exists to:
+ * Two flavors preserved verbatim from v2:
  *
- *   1. Programmatically register a widget when the plugin can't
- *      ship an `app.json` (e.g. a mu-plugin contributing a widget
- *      without a full app manifest path).
- *   2. Override placement / size for an already-registered app
- *      without writing admin.json — useful for plugin authors that
- *      want to opt their app into the grid.
+ *   1. **Override flavor.** `$args` carries placement/size only
+ *      (`position`, `defaultSize`, `minSize`, `title`, `hidden`).
+ *      The app must already be registered (manifest exists). The
+ *      registry contributes a `screens[<target>].apps[]` entry
+ *      pointing at the app id with `slot: 'grid'` + the supplied
+ *      size/position. `hidden: true` translates to an array
+ *      tombstone via the cascade's `__tombstone` marker.
  *
- * For case (1), the function registers a synthetic app manifest
- * that nests the dashboardWidget block; for case (2) it adds an
- * entry to the cascade-contributed `dashboardWidgets` block keyed
- * by the existing app id.
+ *   2. **Standalone flavor.** `$args` additionally carries `script`
+ *      (and optional `role`, `title`, `capabilities`, `slotHints`).
+ *      The function registers a synthetic app manifest so the host
+ *      can mount the widget without a separate
+ *      `wp_admin_shell_register_app()` call. The synthetic manifest
+ *      carries `slotHints` derived from the placement args.
+ *
+ * v2 back-compat — the v3 compiler translates the legacy
+ * top-level `dashboardWidgets` block to screen-app entries at
+ * resolve time (see `WP_Admin_Shell_V3_Compiler::translate_v2_dashboard_widgets`).
  *
  * @package WP_Admin_Shell
  */
@@ -37,29 +45,33 @@ defined( 'ABSPATH' ) || exit;
 class WP_Admin_Shell_Dashboard_Widgets {
 
 	/**
-	 * Per-widget override docs keyed by app id.
-	 *
-	 * @var array<string, array>
+	 * Default target screen id when callers don't override via
+	 * `$args['screen']`.
 	 */
-	private static $overrides = array();
+	const DEFAULT_TARGET_SCREEN = 'dashboard-widgets';
 
 	/**
-	 * Synthetic app-manifest contributions: app id → manifest doc.
-	 * Used when a plugin registers a widget without first registering
-	 * an app via `wp_admin_shell_register_app()`. The registry
-	 * synthesizes a minimal manifest carrying the dashboardWidget
-	 * block + supplied app metadata so the host's eligibility check
-	 * passes.
+	 * Per-widget registration records.
 	 *
-	 * @var array<string, array>
+	 * Each record carries enough information to (a) synthesize a
+	 * `screens[<target>].apps[]` entry at cascade time and (b)
+	 * preserve introspection — `get()` / `all()` return these.
+	 *
+	 * @var array<string, array{
+	 *     app_id: string,
+	 *     entry_id: string,
+	 *     target_screen: string,
+	 *     args: array,
+	 * }>
 	 */
-	private static $synthetic_manifests = array();
+	private static $registrations = array();
 
 	/**
 	 * Synthetic manifests queued for forwarding to the manifest
 	 * registry. Drained by `flush_pending_registrations()`, called from
-	 * the `init` priority-8 manifest-discovery pass (after the registry
-	 * class is loaded) + lazily by `all()` as a safety net.
+	 * the `init` priority-7 manifest-discovery pass (after the registry
+	 * class is loaded) + lazily by the `wp_admin_shell_data_plugin`
+	 * filter contribution.
 	 *
 	 * @var array<string, array>
 	 */
@@ -68,21 +80,8 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	/**
 	 * Register a dashboard widget.
 	 *
-	 * Two flavors:
-	 *
-	 *   - **Override flavor.** `$args` carries placement/size only
-	 *     (`position`, `defaultSize`, `minSize`, `title`, `hidden`).
-	 *     The app must already be registered separately. The args
-	 *     contribute to the `dashboardWidgets[id]` cascade entry.
-	 *
-	 *   - **Standalone flavor.** `$args` additionally carries `script`
-	 *     (and optional `role`, `title`, `capabilities`,
-	 *     `dashboardWidget`). The function registers a synthetic app
-	 *     manifest so the host can mount the widget without a
-	 *     separate `wp_admin_shell_register_app()` call.
-	 *
 	 * @param string $id   App id (namespaced — `core:` or `plugin:slug/name`).
-	 * @param array  $args Configuration. See above.
+	 * @param array  $args Configuration. See class docblock.
 	 * @return string|WP_Error App id on success, WP_Error on failure.
 	 */
 	public static function register( $id, $args = array() ) {
@@ -106,22 +105,31 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			$args = array();
 		}
 
-		// Merge top-level placement keys with nested dashboardWidget
-		// block — one source of truth flows to both override + manifest.
-		// Top-level keys win over nested when both supplied (admin.json-
-		// style: most-recent declaration wins per-property).
-		$inline_widget_block = isset( $args['dashboardWidget'] ) && is_array( $args['dashboardWidget'] )
-			? $args['dashboardWidget']
+		$target_screen = isset( $args['screen'] ) && is_string( $args['screen'] ) && $args['screen'] !== ''
+			? $args['screen']
+			: self::DEFAULT_TARGET_SCREEN;
+
+		// Merge top-level placement keys with nested slotHints — one
+		// source of truth flows to both the screen-app entry and the
+		// synthetic manifest's slotHints. Top-level keys win over
+		// nested when both supplied.
+		$inline_hints = isset( $args['slotHints'] ) && is_array( $args['slotHints'] )
+			? $args['slotHints']
 			: array();
-		$override = $inline_widget_block;
-		foreach ( array( 'title', 'defaultSize', 'minSize', 'position', 'hidden' ) as $key ) {
+		$placement = $inline_hints;
+		foreach ( array( 'defaultSize', 'minSize', 'position' ) as $key ) {
 			if ( array_key_exists( $key, $args ) ) {
-				$override[ $key ] = $args[ $key ];
+				$placement[ $key ] = $args[ $key ];
 			}
 		}
-		if ( ! empty( $override ) ) {
-			self::$overrides[ $id ] = $override;
-		}
+
+		self::$registrations[ $id ] = array(
+			'app_id'        => $id,
+			'entry_id'      => self::derive_entry_id( $id ),
+			'target_screen' => $target_screen,
+			'args'          => $args,
+			'placement'     => $placement,
+		);
 
 		// Standalone flavor: $args carries 'script' → synthesize a
 		// manifest. The script handle is required for an app the kernel
@@ -141,22 +149,26 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			if ( isset( $args['capabilities'] ) && is_array( $args['capabilities'] ) ) {
 				$manifest['capabilities'] = array_values( $args['capabilities'] );
 			}
-			if ( ! empty( $override ) ) {
-				// Strip override-only fields when promoting to manifest.
-				$manifest_widget = $override;
-				unset( $manifest_widget['hidden'] );
-				if ( ! empty( $manifest_widget ) ) {
-					$manifest['dashboardWidget'] = $manifest_widget;
+			if ( ! empty( $placement ) ) {
+				// Strip placement-only fields when promoting to slotHints.
+				// `position` / `defaultSize` / `minSize` all belong in
+				// slotHints; `title` is not a slotHints field.
+				$hints = array();
+				foreach ( array( 'defaultSize', 'minSize', 'position' ) as $key ) {
+					if ( isset( $placement[ $key ] ) ) {
+						$hints[ $key ] = $placement[ $key ];
+					}
+				}
+				if ( ! empty( $hints ) ) {
+					$manifest['slotHints'] = $hints;
 				}
 			}
-			self::$synthetic_manifests[ $id ] = $manifest;
 			// Forward the manifest to the registry — but defer the
 			// actual register_app() call until the manifest-registry
-			// class is guaranteed loaded + the `init` priority-8
+			// class is guaranteed loaded + the `init` priority-7
 			// manifest-discovery pass has run. Calling synchronously
 			// from a mu-plugin / early `plugins_loaded` would fatal on
 			// `Class "WP_Admin_Shell_Manifest_Registry" not found`.
-			// Mirrors the field-collections deferral pattern.
 			self::$pending_registrations[ $id ] = $manifest;
 		}
 
@@ -167,9 +179,7 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	 * Flush queued synthetic-manifest registrations into the manifest
 	 * registry. Idempotent — already-registered ids no-op via the
 	 * registry's own duplicate-id rejection. Called from the
-	 * `wp_admin_shell_manifests_loaded` hook (and lazily by `all()` as
-	 * a safety net for code paths that observe the registry before
-	 * `init` fires).
+	 * `init` priority-7 hook + lazily by `wp_admin_shell_data_plugin`.
 	 */
 	public static function flush_pending_registrations() {
 		if ( empty( self::$pending_registrations ) ) {
@@ -186,30 +196,110 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	}
 
 	/**
-	 * Read every override doc.
+	 * Read every registration record.
 	 *
 	 * @return array<string, array>
 	 */
 	public static function all() {
-		return self::$overrides;
+		return self::$registrations;
 	}
 
 	/**
-	 * Look up one override by id.
+	 * Look up one registration by app id.
 	 *
 	 * @param string $id App id.
 	 * @return array|null
 	 */
 	public static function get( $id ) {
-		return self::$overrides[ $id ] ?? null;
+		return self::$registrations[ $id ] ?? null;
+	}
+
+	/**
+	 * Build the `appsEntry`-shaped entry a registration contributes
+	 * into `screens[<target>].apps[]`.
+	 *
+	 * @param array $record Registration record from `self::$registrations`.
+	 * @return array `{ id, app, slot, size?, position? }` plus optional
+	 *               `__tombstone` when the record carries `hidden: true`.
+	 */
+	public static function build_screen_app_entry( $record ) {
+		$entry = array(
+			'id'   => $record['entry_id'],
+			'app'  => $record['app_id'],
+			'slot' => 'grid',
+		);
+
+		if ( ! empty( $record['args']['hidden'] ) ) {
+			// Hidden translates to a cascade-tombstone — the array
+			// merger drops a matching entry from the resolved doc.
+			$entry['__tombstone'] = true;
+			return $entry;
+		}
+
+		$placement = isset( $record['placement'] ) && is_array( $record['placement'] )
+			? $record['placement']
+			: array();
+
+		if ( isset( $placement['defaultSize'] ) && is_array( $placement['defaultSize'] ) ) {
+			$entry['size'] = $placement['defaultSize'];
+		}
+		if ( isset( $placement['position'] ) ) {
+			$entry['position'] = $placement['position'];
+		}
+		if ( isset( $record['args']['title'] ) && is_string( $record['args']['title'] ) ) {
+			$entry['title'] = $record['args']['title'];
+		}
+
+		return $entry;
+	}
+
+	/**
+	 * Derive an entry id from an app id.
+	 *
+	 * Strategy: drop the namespace prefix (`core:` or `plugin:<slug>/`)
+	 * and lowercase + kebab-case the suffix. The result matches the
+	 * v3 appsEntry id pattern `^[a-z][a-z0-9-]*$`.
+	 *
+	 * Examples:
+	 *   - `core:dashboard-widget-recent-posts` → `dashboard-widget-recent-posts`
+	 *   - `plugin:acme/sales-stats`            → `sales-stats`
+	 *
+	 * @param string $app_id
+	 * @return string
+	 */
+	public static function derive_entry_id( $app_id ) {
+		// Strip namespace prefix.
+		if ( strpos( $app_id, 'core:' ) === 0 ) {
+			$suffix = substr( $app_id, 5 );
+		} elseif ( strpos( $app_id, 'plugin:' ) === 0 ) {
+			$suffix = substr( $app_id, 7 );
+			// plugin:slug/name → name (drop the slug for entry-id brevity).
+			$slash = strrpos( $suffix, '/' );
+			if ( $slash !== false ) {
+				$suffix = substr( $suffix, $slash + 1 );
+			}
+		} else {
+			$suffix = $app_id;
+		}
+		$suffix = strtolower( $suffix );
+		// Collapse non-[a-z0-9] runs to a single `-`.
+		$suffix = preg_replace( '/[^a-z0-9]+/', '-', $suffix );
+		$suffix = trim( $suffix, '-' );
+		if ( $suffix === '' ) {
+			return 'widget';
+		}
+		// Ensure leading char is a letter (pattern requirement).
+		if ( ! preg_match( '/^[a-z]/', $suffix ) ) {
+			$suffix = 'w-' . $suffix;
+		}
+		return $suffix;
 	}
 
 	/**
 	 * Reset the registry. Test-only.
 	 */
 	public static function reset() {
-		self::$overrides             = array();
-		self::$synthetic_manifests   = array();
+		self::$registrations         = array();
 		self::$pending_registrations = array();
 	}
 }
@@ -219,15 +309,16 @@ class WP_Admin_Shell_Dashboard_Widgets {
  *
  * @param string $id   App id.
  * @param array  $args Optional configuration. Recognized keys:
- *                     - `title`        (string) Override the widget title.
- *                     - `defaultSize`  (array)  `{ w, h }` cells.
- *                     - `minSize`      (array)  `{ w, h }` cells.
+ *                     - `title`        (string) Override the widget title at the entry layer.
+ *                     - `defaultSize`  (array)  `{ w, h }` cells — fed as `size` on the screen-app entry.
+ *                     - `minSize`      (array)  `{ w, h }` cells — forwarded into synthetic manifest's `slotHints.minSize` (standalone only).
  *                     - `position`     (string|array) `'auto'` or `{ row, col }`.
- *                     - `hidden`       (bool)   Hide the widget on this install.
+ *                     - `hidden`       (bool)   Tombstone the entry — removes a matching admin.json entry from the merged screen.
+ *                     - `screen`       (string) Target screen id (default: `dashboard-widgets`).
  *                     - `script`       (string) Triggers standalone flavor: synthesize an app manifest.
  *                     - `role`         (string) For standalone flavor — ARIA role (default `region`).
  *                     - `capabilities` (array)  For standalone flavor — required caps.
- *                     - `dashboardWidget` (array) For standalone flavor — manifest dashboardWidget block.
+ *                     - `slotHints`    (array)  For standalone flavor — manifest slotHints block (alternative to flat defaultSize/minSize/position).
  * @return string|WP_Error
  */
 function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
@@ -235,40 +326,54 @@ function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
 }
 
 /**
- * Cascade contribution — registered overrides enter the resolver
- * through the `plugin` origin so site/role/user overrides can extend
- * or replace via admin.json's `dashboardWidgets` block. Priority 5
- * (same as field-collections) so plugin authors using
+ * Cascade contribution — registered entries enter the resolver through
+ * the `plugin` origin so site/role/user origins can extend or replace
+ * via admin.json's `screens[<target>].apps[]` array. Priority 5 (same
+ * as field-collections) so plugin authors using
  * `add_filter('wp_admin_shell_data_plugin', …)` directly win.
  *
- * Per-id collision rule: an admin.json declaration for the same app id
- * wins entirely over the programmatic contribution. The contribution
- * fills the slot only when no inline declaration claims it.
+ * Per-entry-id collision rule: an admin.json declaration with the same
+ * entry id wins via the cascade's standard id-keyed array merge — the
+ * higher origin's entry deep-merges over the lower one.
+ *
+ * Tombstones: when a record carries `hidden: true`, the contributed
+ * entry shape includes `__tombstone: true`, which signals
+ * `WP_Admin_Shell_Merge::merge_keyed_arrays` to drop the matching id
+ * from the merged screen.
  */
 add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 	// Lazy flush — if a plugin registered widgets before the `init`
-	// pass below ran, drain the queue now so the cascade reflects them.
+	// pass below ran, drain the queue now so the manifest registry
+	// reflects them.
 	WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
 
-	$overrides = WP_Admin_Shell_Dashboard_Widgets::all();
-	if ( empty( $overrides ) ) {
+	$records = WP_Admin_Shell_Dashboard_Widgets::all();
+	if ( empty( $records ) ) {
 		return $doc;
 	}
-	if ( ! isset( $doc['dashboardWidgets'] ) || ! is_array( $doc['dashboardWidgets'] ) ) {
-		$doc['dashboardWidgets'] = array();
+
+	if ( ! isset( $doc['screens'] ) || ! is_array( $doc['screens'] ) ) {
+		$doc['screens'] = array();
 	}
-	foreach ( $overrides as $id => $override ) {
-		if ( ! isset( $doc['dashboardWidgets'][ $id ] ) ) {
-			$doc['dashboardWidgets'][ $id ] = $override;
+
+	foreach ( $records as $record ) {
+		$target = $record['target_screen'];
+		if ( ! isset( $doc['screens'][ $target ] ) || ! is_array( $doc['screens'][ $target ] ) ) {
+			$doc['screens'][ $target ] = array();
 		}
+		if ( ! isset( $doc['screens'][ $target ]['apps'] ) || ! is_array( $doc['screens'][ $target ]['apps'] ) ) {
+			$doc['screens'][ $target ]['apps'] = array();
+		}
+		$doc['screens'][ $target ]['apps'][] = WP_Admin_Shell_Dashboard_Widgets::build_screen_app_entry( $record );
 	}
+
 	return $doc;
 }, 5 );
 
 /**
  * Flush queued synthetic-manifest registrations into the manifest
  * registry at the same priority the shell's main file uses for
- * convention-path manifest discovery (`init` priority 8). Plugin
+ * convention-path manifest discovery (`init` priority 7). Plugin
  * authors hooking earlier than this fire safely because `register()`
  * only stashes the manifest — the registry call happens here.
  */
