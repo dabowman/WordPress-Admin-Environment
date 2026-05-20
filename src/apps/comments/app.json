@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app-v3.json",
 	"id": "core:comments",
 	"version": 1,
 	"title": "Comments",
@@ -14,38 +14,63 @@
 		"properties": {
 			"variant": {
 				"type": "string",
-				"description": "Optional view-config variant id (e.g. 'pending'). When set, useViewConfig reads `viewConfigs.root.comment.<variant>` instead of the `_default` triple."
+				"description": "Optional DataView variant id (e.g. 'pending'). v2 back-compat: when the v3 compiler synthesizes a screen from a v2 route, `config.variant` flows into `dataViewVariant` and reaches `settings.dataViews.root.comment.<variant>`."
 			}
 		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"view": {
+	"dataView": {
 		"kind": "root",
 		"name": "comment",
-		"defaultView": {
-			"type": "table",
-			"search": "",
-			"filters": [],
-			"page": 1,
-			"perPage": 20,
-			"sort": { "field": "date", "direction": "desc" },
-			"fields": [ "author", "content", "status", "date" ],
-			"layout": {}
-		},
-		"defaultLayouts": { "table": {}, "grid": {} },
-		"fields": [
-			{ "id": "author",  "type": "text",     "label": "Author",  "enableGlobalSearch": true },
-			{ "id": "content", "type": "text",     "label": "Comment", "enableGlobalSearch": true },
-			{ "id": "status",  "type": "text",     "label": "Status",  "filterBy": { "operators": [ "isAny" ] } },
-			{ "id": "date",    "type": "datetime", "label": "Date" }
-		],
-		"actions": [
-			{ "id": "approve",   "label": "Approve",       "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } },
-			{ "id": "unapprove", "label": "Unapprove",     "supportsBulk": true, "eligibleWhen": { "status": "approved" } },
-			{ "id": "spam",      "label": "Mark as spam",  "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "approved", "trash" ] } },
-			{ "id": "trash",     "label": "Move to trash", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } }
-		]
+		"variants": {
+			"_default": {
+				"defaultView": {
+					"type": "table",
+					"search": "",
+					"filters": [],
+					"page": 1,
+					"perPage": 20,
+					"sort": { "field": "date", "direction": "desc" },
+					"fields": [ "author", "content", "status", "date" ],
+					"layout": {}
+				},
+				"defaultLayouts": { "table": {}, "grid": {} },
+				"fields": [
+					{ "id": "author",  "type": "text",     "label": "Author",  "enableGlobalSearch": true },
+					{ "id": "content", "type": "text",     "label": "Comment", "enableGlobalSearch": true },
+					{ "id": "status",  "type": "text",     "label": "Status",  "filterBy": { "operators": [ "isAny" ] } },
+					{ "id": "date",    "type": "datetime", "label": "Date" }
+				],
+				"actions": [
+					{ "id": "approve",   "label": "Approve",       "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } },
+					{ "id": "unapprove", "label": "Unapprove",     "supportsBulk": true, "eligibleWhen": { "status": "approved" } },
+					{ "id": "spam",      "label": "Mark as spam",  "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "approved", "trash" ] } },
+					{ "id": "trash",     "label": "Move to trash", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } }
+				]
+			},
+			"pending": {
+				"extends": "_default",
+				"defaultView": {
+					"fields": [ "author", "content", "date" ],
+					"filters": [ { "field": "status", "operator": "is", "value": "hold" } ]
+				}
+			},
+			"spam": {
+				"extends": "_default",
+				"defaultView": {
+					"fields": [ "author", "content", "date" ],
+					"filters": [ { "field": "status", "operator": "is", "value": "spam" } ]
+				}
+			},
+			"trash": {
+				"extends": "_default",
+				"defaultView": {
+					"fields": [ "author", "content", "date" ],
+					"filters": [ { "field": "status", "operator": "is", "value": "trash" } ]
+				}
+			}
+		}
 	},
 	"window": {
 		"defaultSize": {
@@ -65,9 +90,9 @@
 		"data": {
 			"reads": [
 				{
-					"source": "viewConfigs.root.comment._default",
+					"source": "settings.dataViews.root.comment.{variant|_default}",
 					"via": "kernel-config",
-					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig(kind, name)`; baseline ships in `app.json#viewConfig` and is injected post-merge by `inject_app_baselines`.",
+					"purpose": "Resolved DataView doc — fields, default view, default layouts, actions. Read via `useDataView(screenId)`; baseline ships in `app.json#dataView` (with variants family) and is injected post-merge by `inject_app_baselines`.",
 					"fields": [
 						"fields",
 						"defaultView",
@@ -204,8 +229,8 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/dataviews/wp#DataViews",
-				"purpose": "Table view + per-row actions."
+				"import": "@wordpress/dataviews/wp",
+				"purpose": "DataViews + DataForm components, field descriptor shape. Table view + per-row actions."
 			},
 			{
 				"import": "@wordpress/ui#Button, Stack, Text",

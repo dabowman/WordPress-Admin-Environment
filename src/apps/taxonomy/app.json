@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app-v3.json",
 	"id": "core:taxonomy",
 	"version": 1,
 	"title": "Taxonomy",
@@ -18,37 +18,41 @@
 			},
 			"variant": {
 				"type": "string",
-				"description": "Optional view-config variant id to consume. When set, useViewConfig reads `viewConfigs.taxonomy.<taxonomy>.<variant>` instead of the `_default` triple."
+				"description": "Optional DataView variant id. v2 back-compat: when the v3 compiler synthesizes a screen from a v2 route, `config.variant` flows into `dataViewVariant` and reaches `settings.dataViews.taxonomy.<taxonomy>.<variant>`."
 			}
 		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"view": {
+	"dataView": {
 		"kind": "taxonomy",
 		"name": "category",
-		"defaultView": {
-			"type": "table",
-			"search": "",
-			"filters": [],
-			"page": 1,
-			"perPage": 20,
-			"sort": { "field": "name", "direction": "asc" },
-			"fields": [ "slug", "count", "description" ],
-			"titleField": "name",
-			"layout": {}
-		},
-		"defaultLayouts": { "table": {} },
-		"fields": [
-			{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
-			{ "id": "slug", "type": "text", "label": "Slug" },
-			{ "id": "count", "type": "integer", "label": "Count" },
-			{ "id": "description", "type": "text", "label": "Description" }
-		],
-		"actions": [
-			{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil" },
-			{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
-		]
+		"variants": {
+			"_default": {
+				"defaultView": {
+					"type": "table",
+					"search": "",
+					"filters": [],
+					"page": 1,
+					"perPage": 20,
+					"sort": { "field": "name", "direction": "asc" },
+					"fields": [ "slug", "count", "description" ],
+					"titleField": "name",
+					"layout": {}
+				},
+				"defaultLayouts": { "table": {} },
+				"fields": [
+					{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+					{ "id": "slug", "type": "text", "label": "Slug" },
+					{ "id": "count", "type": "integer", "label": "Count" },
+					{ "id": "description", "type": "text", "label": "Description" }
+				],
+				"actions": [
+					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil" },
+					{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
+				]
+			}
+		}
 	},
 	"window": {
 		"defaultSize": {
@@ -68,9 +72,9 @@
 		"data": {
 			"reads": [
 				{
-					"source": "viewConfigs.taxonomy.{config.taxonomy}._default",
+					"source": "settings.dataViews.taxonomy.{config.taxonomy}.{variant|_default}",
 					"via": "kernel-config",
-					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig(kind, name)`; baseline ships in `app.json#viewConfig` for `(taxonomy, category)` and is injected post-merge by `inject_app_baselines`. Other taxonomies (`post_tag`, custom) consume cascade-only entries or filter overrides.",
+					"purpose": "Resolved DataView doc — fields, default view, default layouts, actions. Read via `useDataView(screenId)`; baseline ships in `app.json#dataView` bound to `(taxonomy, category)` and is injected post-merge by `inject_app_baselines`. Other taxonomies (`post_tag`, custom) consume cascade-only entries or filter overrides.",
 					"fields": [
 						"fields",
 						"defaultView",
@@ -223,8 +227,8 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/dataviews/wp#DataViews",
-				"purpose": "Table view with sort/pagination/actions."
+				"import": "@wordpress/dataviews/wp",
+				"purpose": "DataViews + DataForm components, field descriptor shape. Table view with sort/pagination/actions."
 			},
 			{
 				"import": "@wordpress/ui#Button, Stack, Text, InputControl, Icon",

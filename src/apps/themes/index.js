@@ -9,7 +9,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useScreenView } from '../../runtime/viewConfig/useScreenView';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
@@ -159,7 +159,7 @@ function buildActions( actions, { activate, renderDetailsModal } ) {
 export default function ThemesApp( { config = {} } ) {
 	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useScreenView( screenId );
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const themesQuery = useMemo(
 		() => ( { context: 'edit', status: 'active,inactive' } ),
@@ -175,7 +175,7 @@ export default function ThemesApp( { config = {} } ) {
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
-		...( viewConfig.defaultView || {} ),
+		...( dataViewConfig.defaultView || {} ),
 	} ) );
 
 	// Resync `view` when the screen flips on the same hook instance —
@@ -186,7 +186,7 @@ export default function ThemesApp( { config = {} } ) {
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ screenId ] );
@@ -312,17 +312,17 @@ export default function ThemesApp( { config = {} } ) {
 	}, [ themes ] );
 
 	const fields = useMemo(
-		() => buildFields( viewConfig.fields ?? [], FIELD_RENDERERS ),
-		[ viewConfig ]
+		() => buildFields( dataViewConfig.fields ?? [], FIELD_RENDERERS ),
+		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				activate,
 				renderDetailsModal,
 			} ),
-		[ viewConfig, activate, renderDetailsModal ]
+		[ dataViewConfig, activate, renderDetailsModal ]
 	);
 
 	const paginationInfo = useMemo(
@@ -345,7 +345,7 @@ export default function ThemesApp( { config = {} } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
+				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id }

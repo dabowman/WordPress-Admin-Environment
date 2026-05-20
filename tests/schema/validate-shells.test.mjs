@@ -200,9 +200,16 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 	}
 
 	if ( key === 'app' ) {
-		console.log( '\n  Bundled app manifests:' );
+		console.log( '\n  Bundled app manifests (v2 shape):' );
 		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
-			const doc   = readJson( path );
+			const doc = readJson( path );
+			// Bundled manifests opting into the v3 shape declare their
+			// `$schema` accordingly; v3 manifests carry `dataView` / no
+			// `view` so they fail under admin-app-v2.json. The v3 sweep
+			// below validates them under admin-app-v3.json instead.
+			if ( typeof doc?.$schema === 'string' && doc.$schema.includes( 'admin-app-v3' ) ) {
+				continue;
+			}
 			const valid = validate( doc );
 			const rel   = path.slice( projectRoot.length + 1 );
 			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
@@ -274,6 +281,19 @@ for ( const { key, schemaFile } of v3Schemas ) {
 				valid,
 				valid ? '' : formatErrors( validate.errors )
 			);
+		}
+	}
+
+	if ( key === 'app' ) {
+		console.log( '\n  Bundled app manifests (v3 shape):' );
+		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
+			const doc = readJson( path );
+			if ( typeof doc?.$schema !== 'string' || ! doc.$schema.includes( 'admin-app-v3' ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 

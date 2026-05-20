@@ -13,7 +13,7 @@ import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useScreenView } from '../../runtime/viewConfig/useScreenView';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
@@ -240,23 +240,23 @@ export default function TaxonomyApp( { config = {} } ) {
 	const heading =
 		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
 
-	const { config: viewConfig } = useScreenView( screenId );
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
-		...viewConfig.defaultView,
+		...dataViewConfig.defaultView,
 	} ) );
 
 	// Resync `view` when the screen flips on the same hook instance
 	// (e.g. /categories → /tags both mount TaxonomyApp). The useState
 	// initializer runs once, so without this effect the second screen
 	// inherits the first's perPage / sort / filters. Keyed only on
-	// screenId + taxonomy — not viewConfig — to avoid clobbering
+	// screenId + taxonomy — not dataViewConfig — to avoid clobbering
 	// in-session view edits whenever the cascade re-resolves the doc.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ screenId, taxonomy ] );
@@ -308,15 +308,15 @@ export default function TaxonomyApp( { config = {} } ) {
 	const fields = useMemo(
 		() =>
 			buildFields(
-				viewConfig.fields ?? [],
+				dataViewConfig.fields ?? [],
 				buildFieldRenderers( { onEditTerm: setEditTerm } )
 			),
-		[ viewConfig ]
+		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				taxonomy,
 				onEditTerm: setEditTerm,
 				deleteEntityRecord,
@@ -325,7 +325,7 @@ export default function TaxonomyApp( { config = {} } ) {
 				createErrorNotice,
 			} ),
 		[
-			viewConfig,
+			dataViewConfig,
 			taxonomy,
 			deleteEntityRecord,
 			invalidateResolution,
@@ -374,7 +374,9 @@ export default function TaxonomyApp( { config = {} } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ viewConfig.defaultLayouts ?? { table: {} } }
+				defaultLayouts={
+					dataViewConfig.defaultLayouts ?? { table: {} }
+				}
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }
