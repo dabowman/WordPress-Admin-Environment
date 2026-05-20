@@ -161,6 +161,8 @@ Weight: `--wpds-font-weight-regular: 400`, `--wpds-font-weight-medium: 499`
 ### Density variants
 Selector `[data-wpds-theme-provider-id][data-wpds-density={default|compact|comfortable}]` redefines all 14 gap+padding tokens. Compact tightens (e.g. `gap-lg: 12px`), comfortable loosens (e.g. `gap-lg: 20px`).
 
+> **Note** — `data-wpds-theme-provider-id` here is the attribute the upstream `@wordpress/theme.ThemeProvider` emits on its own wrapper, distinct from the shell-host outer wrapper which carries `data-shell-theme-id` (DS-neutral). Both wrappers coexist in the rendered DOM tree.
+
 ### No dark-mode variants
 No `.is-dark` class, no `prefers-color-scheme` query. Dark scheme not yet implemented in `theme/style.css`.
 

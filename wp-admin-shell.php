@@ -406,10 +406,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		// curly-brace aliases in admin.json `styles`. Token serialization
 		// is skipped entirely when the resolved styles tree references
 		// zero token aliases — the DTCG layer is dead weight for shells
-		// that only set seeds + slot overrides.
+		// that only set seeds + slot overrides. The empty-path cast to
+		// stdClass keeps the JS shape stable: `wp_json_encode( array() )`
+		// emits `[]`, but the kernel + downstream typedef `tokens` as an
+		// object — `(object) array()` serializes as `{}`.
 		'tokens'        => wp_admin_shell_styles_reference_tokens( $config )
 			? WP_Admin_Shell_Tokens::resolve()
-			: array(),
+			: (object) array(),
 		// v3 — flattened engine-modes catalog. The active engine's
 		// `modes` block is walked for `extends` chains (depth-limited),
 		// then the `wp_admin_shell_engine_modes_{engineId}` filter runs
@@ -585,6 +588,15 @@ function wpas_collect_nav_item_caps( $items, &$declared ) {
  * touching the DTCG tokens table). Used to skip token serialization when
  * the shell ships seeds + slot overrides only — the DTCG layer would be
  * dead weight on the wire.
+ *
+ * Contract: DTCG aliases are valid ONLY under `admin.json#styles`. App
+ * manifests (`app.json#dataView`, etc.), engine `default-style` blocks,
+ * and any other config surface MUST NOT carry `{tokens.*}` references —
+ * the detector deliberately does not scan them, so a stray alias outside
+ * `styles` would silently emit `var(--token-…)` fallbacks at runtime.
+ * Author tokens under `styles` (top-level, per-region, or per-app) and
+ * cross-reference from other config surfaces via `{styles.path}` if
+ * needed.
  *
  * @param array $config Resolved admin.json config.
  * @return bool

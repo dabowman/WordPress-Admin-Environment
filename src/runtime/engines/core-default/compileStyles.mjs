@@ -65,7 +65,14 @@ const CHROME_WPDS_BINDINGS = {
 	canvas: {
 		selector: '.wp-admin-shell-layout',
 		bindings: {
-			background: '--wpds-color-bg-surface-neutral',
+			// `background` is intentionally NOT bound. `--wpds-color-bg-
+			// surface-neutral` is the surface ramp `core:main` / `core:detail`
+			// cards consume as their final fallback — binding canvas.background
+			// to it would darken cards under the shell scope. The canvas
+			// itself paints via the chrome slot directly (engine `index.css`
+			// reads `--wp-admin-shell--chrome--canvas--background`); the WPDS
+			// bridge only needs to retheme @wordpress/ui foreground content
+			// rendered directly under `.wp-admin-shell-layout`.
 			foreground: '--wpds-color-fg-content-neutral',
 		},
 	},
