@@ -104,9 +104,9 @@
 		"settings": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "Reusable definition registries that other parts of the workspace reference by id. Mirrors theme.json's `settings` pattern. v3 ships two registries: `views` (entity-shape definitions for DataViews-style apps) and `fields` (named field collections). Cascades deep-merge per-registry, per-entry. See schema-sketch.md §Settings.",
+			"description": "Reusable definition registries that other parts of the workspace reference by id. Mirrors theme.json's `settings` pattern. v3 ships two registries: `dataViews` (entity-shape configuration for `@wordpress/dataviews`-driven apps) and `dataFields` (named field collections). Cascades deep-merge per-registry, per-entry. See schema-sketch.md §Settings.",
 			"properties": {
-				"views": {
+				"dataViews": {
 					"type": "object",
 					"additionalProperties": false,
 					"patternProperties": {
@@ -115,22 +115,28 @@
 							"additionalProperties": false,
 							"patternProperties": {
 								"^[A-Za-z][A-Za-z0-9_-]*$": {
-									"$ref": "#/$defs/settingsView"
+									"type": "object",
+									"additionalProperties": false,
+									"patternProperties": {
+										"^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$": {
+											"$ref": "#/$defs/settingsDataView"
+										}
+									}
 								}
 							}
 						}
 					},
-					"description": "Global view-config registry keyed by entity kind → entity name. The kind matches `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.); the name is the specific entity (`post`, `page`, `user`, `comment`, `plugin`, `theme`). Each leaf is a view-config document (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). v3 collapses v2's `_default`/variant nesting — variants are expressed as separate screens that declare an inline `view` delta against this global definition. Filter `wp_admin_shell_view_config_{kind}_{name}` runs on the resolved doc before serving."
+					"description": "Global DataView registry keyed by `kind → name → variant`. Three axes: the kind matches `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.); the name is the specific entity (`post`, `page`, `user`, `comment`, `plugin`, `theme`); the variant id is author-defined kebab-case (`drafts`, `pending`, `trash`, `active`, etc.) with `_default` reserved for the implicit unqualified base. Each leaf is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). Variants resolve independently per CIAB convention — there is no implicit `_default` merge; authors who want the v2 _default-merge convention declare `\"extends\": \"_default\"` on the variant entry. Filter `wp_admin_shell_data_view_config_{kind}_{name}` runs on the resolved doc per triple, plus `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` whenever the variant ≠ `_default`. See `docs/plans/2026-05-20-dataview-registry-restoration.md` and spec §13 #7."
 				},
-				"fields": {
+				"dataFields": {
 					"type": "object",
 					"additionalProperties": false,
 					"patternProperties": {
 						"^[A-Za-z][A-Za-z0-9_/-]*$": {
-							"$ref": "#/$defs/fieldCollection"
+							"$ref": "#/$defs/dataFieldCollection"
 						}
 					},
-					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). Views reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. Same shape as v2 `fieldCollections`, moved under `settings.fields` for the registries grouping. See schema-sketch.md §Fields."
+					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). DataViews reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. Renamed from v2 `fieldCollections`; moved under `settings.dataFields` for the registries grouping (paired with `settings.dataViews`). The per-descriptor word `field` stays — matches `@wordpress/dataviews` upstream. See schema-sketch.md §Fields and spec §13 #8."
 				}
 			}
 		},
@@ -142,7 +148,7 @@
 			"patternProperties": {
 				"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/screen" }
 			},
-			"description": "The map of every screen the workspace exposes, keyed by stable kebab-case id. Each entry defines what a screen IS (label, icon, apps, path, slot, mode, permissions, view, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. Cascade deep-merges per-screen, per-field. `screens[id].apps[]` merges by entry `id`. `hidden: true` at any origin hides the screen from menus while still routable; tombstone via `null` to remove entirely. Implicit binding from menu items keyed by the same id flows label/icon/permissions automatically."
+			"description": "The map of every screen the workspace exposes, keyed by stable kebab-case id. Each entry defines what a screen IS (label, icon, apps, path, slot, mode, permissions, dataView, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. Cascade deep-merges per-screen, per-field. `screens[id].apps[]` merges by entry `id`. `hidden: true` at any origin hides the screen from menus while still routable; tombstone via `null` to remove entirely. Implicit binding from menu items keyed by the same id flows label/icon/permissions automatically."
 		},
 
 		"menu": {
@@ -280,9 +286,33 @@
 					"items": { "$ref": "#/$defs/appsEntry" },
 					"description": "Long form: multiple apps that mount when the screen activates. Each entry declares its own id (required), app, config, and optional screen-internal slot. The engine's layout algorithm arranges entries based on declared slots and available regions. Mutually exclusive with shorthand `app`/`config`. Cascade merges by entry `id`. Use for multi-pane / split-view compositions and dashboard-style screens with widgets. See schema-sketch.md §Multi-pane / split-view."
 				},
-				"view": {
-					"$ref": "#/$defs/settingsView",
-					"description": "Inline override of the global view-config at `settings.views.<kind>.<name>` for this screen only. Same shape as a settings view entry; deep-merges with the global definition per-field. Used by screen variants that share an entity shape but tweak one aspect (e.g. drafts/pending/trash screens that override `defaultView.filters` against the same posts view). Tombstone individual fields via `null`."
+				"dataView": {
+					"$ref": "#/$defs/settingsDataView",
+					"description": "Inline overlay of the DataView configuration for this screen only. Same shape as a `settings.dataViews` registry entry; deep-merges on top of the resolved `(kind, name, variant)` triple looked up from `settings.dataViews`. Used to tweak one aspect of a registry triple per-screen (e.g. drop one field, override `defaultView.fields`) without forking the registry entry. Tombstone individual fields via `null`. The triple identity is resolved from `dataViewRef` first, then explicit `dataViewKind`/`dataViewName`/`dataViewVariant`, then inferred from the screen's primary `app` manifest's `dataView` block + `screen.config.{postType,taxonomy,variant}` (v2 back-compat path). Screens that don't address a registry triple may carry only an inline `dataView` doc (no overlay base) — escape hatch for one-off screens."
+				},
+				"dataViewRef": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*/[A-Za-z][A-Za-z0-9_-]*/(_default|[A-Za-z0-9][A-Za-z0-9_/-]*)$",
+					"description": "Pointer into the `settings.dataViews` registry — `kind/name/variant`. Replaces the inferred-from-app-manifest lookup. When present, the resolved DataView doc is the registry triple plus any inline `dataView` overlay. Optional; absent triggers fallback inference from `dataViewKind`/`dataViewName`/`dataViewVariant`, then from the screen's primary `app` manifest's `dataView` block + `screen.config.{postType,taxonomy,variant}`. Mutually compatible with `dataView` overlay — overlay layers on top of the referenced triple via deep-merge with tombstones."
+				},
+				"dataViewKind": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+					"description": "Explicit DataView triple kind segment — alternative to `dataViewRef` when authors want to keep kind/name/variant in three separate fields (matches the field shape on the app manifest's `dataView` block). Matches `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.). Combined with `dataViewName` (required when this is set) and optional `dataViewVariant` (defaults to `_default`)."
+				},
+				"dataViewName": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+					"description": "Explicit DataView triple name segment — alternative to `dataViewRef`. Names the entity (`post`, `page`, `user`, `comment`, etc.) under the kind declared in `dataViewKind`."
+				},
+				"dataViewVariant": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$",
+					"description": "Explicit DataView triple variant segment — alternative to `dataViewRef`. Author-defined variant id (`drafts`, `pending`, `trash`, etc.) or `_default` for the unqualified base. Optional when `dataViewKind` + `dataViewName` are set; defaults to `_default`."
 				},
 				"permissions": {
 					"$ref": "#/$defs/permissions",
@@ -506,19 +536,25 @@
 			}
 		},
 
-		"settingsView": {
+		"settingsDataView": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "A view-config document — describes how an entity-driven app should render a list/edit surface for a `(kind, name)` pair (defined globally in `settings.views.<kind>.<name>`) or as a per-screen inline override (in `screens[id].view`). The shape is intentionally JSON-only — React render callbacks (column renderers, action modals) stay in the consuming app and are keyed off the declared `fields[].id` and `actions[].id`. See spec §13 #7.",
+			"description": "A DataView configuration document — describes how a `@wordpress/dataviews`-driven app should render a list/edit surface for a `(kind, name, variant)` triple (defined globally in `settings.dataViews.<kind>.<name>.<variant>`) or as a per-screen inline overlay (in `screens[id].dataView`). The shape is intentionally JSON-only — React render callbacks (column renderers, action modals) stay in the consuming app and are keyed off the declared `fields[].id` and `actions[].id`. Plugin engines shipping non-WPDS grids MAY ignore the block or interpret per their own conventions — the block is package-bound to `@wordpress/dataviews` when the active engine + apps consume it. See spec §13 #7 and `docs/plans/2026-05-20-dataview-registry-restoration.md`.",
 			"properties": {
+				"extends": {
+					"type": "string",
+					"minLength": 1,
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$",
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
+				},
 				"fieldsRef": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reference to a `settings.fields` entry id. The referenced collection's `fields` array provides the base set; this entry's inline `fields` overrides per-field by `id`. Cascade pattern: ref wins, inline overrides per-field."
+					"description": "Reference to a `settings.dataFields` entry id. The referenced collection's `fields` array provides the base set; this entry's inline `fields` overrides per-field by `id`. Cascade pattern: ref wins, inline overrides per-field."
 				},
 				"fields": {
 					"type": "array",
-					"items": { "$ref": "#/$defs/viewConfigField" },
+					"items": { "$ref": "#/$defs/dataViewField" },
 					"description": "Field descriptors for DataViews columns. Each entry declares an id (matches the entity record key), a type (text/datetime/number/select), a label, and optional filterability/searchability hints. Render callbacks are not declared here — the consuming app provides them keyed by id."
 				},
 				"defaultView": {
@@ -533,21 +569,21 @@
 				},
 				"actions": {
 					"type": "array",
-					"items": { "$ref": "#/$defs/viewConfigAction" },
+					"items": { "$ref": "#/$defs/dataViewAction" },
 					"description": "Row-level + bulk action descriptors. Each entry declares an id (the consuming app maps to a callback), label, icon name, primacy/destructiveness flags, bulk support, and eligibility predicates expressed in declarative form. Custom modal render functions stay in the app."
 				},
 				"_resolvedFieldsRef": {
 					"type": "string",
-					"description": "Output-only debug stamp. The PHP resolver and JS hydration helper write this on the *resolved* view-config doc when a `fieldsRef` was resolved against a `settings.fields` entry; carries the source ref id so downstream debug snapshots can trace where columns came from. Authors do not declare it on inputs — Ajv accepts it on resolved-tree snapshots only."
+					"description": "Output-only debug stamp. The PHP resolver and JS hydration helper write this on the *resolved* DataView doc when a `fieldsRef` was resolved against a `settings.dataFields` entry; carries the source ref id so downstream debug snapshots can trace where columns came from. Authors do not declare it on inputs — Ajv accepts it on resolved-tree snapshots only."
 				}
 			}
 		},
 
-		"viewConfigField": {
+		"dataViewField": {
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "id", "type", "label" ],
-			"description": "A DataViews field descriptor in JSON form. Render callbacks (`render`, `Edit`) are out of scope — the consuming app provides them by mapping field id → renderer.",
+			"description": "A `@wordpress/dataviews` field descriptor in JSON form. Render callbacks (`render`, `Edit`) are out of scope — the consuming app provides them by mapping field id → renderer. Per-descriptor word `field` matches `@wordpress/dataviews` upstream; only the registry-level term `fields` was renamed to `dataFields`.",
 			"properties": {
 				"id": {
 					"type": "string",
@@ -604,11 +640,11 @@
 			}
 		},
 
-		"viewConfigAction": {
+		"dataViewAction": {
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "id", "label" ],
-			"description": "A row or bulk action descriptor in JSON form. The consuming app maps `id` to the actual callback (and optional `RenderModal`).",
+			"description": "A `@wordpress/dataviews` row or bulk action descriptor in JSON form. The consuming app maps `id` to the actual callback (and optional `RenderModal`).",
 			"properties": {
 				"id": {
 					"type": "string",
@@ -651,11 +687,11 @@
 			}
 		},
 
-		"fieldCollection": {
+		"dataFieldCollection": {
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "fields" ],
-			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. View-configs reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; view-configs add *purpose* (which fields appear in this list, which actions fire). Same shape as v2 `fieldCollections`, moved under `settings.fields`.",
+			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. DataView entries reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; DataView entries add *purpose* (which fields appear in this list, which actions fire). Renamed from v2 `fieldCollections`; moved under `settings.dataFields`. The per-descriptor word `field` matches `@wordpress/dataviews` upstream and is unchanged.",
 			"properties": {
 				"kind": {
 					"type": "string",
@@ -668,8 +704,8 @@
 				},
 				"fields": {
 					"type": "array",
-					"items": { "$ref": "#/$defs/viewConfigField" },
-					"description": "Field descriptors that view-configs may reference."
+					"items": { "$ref": "#/$defs/dataViewField" },
+					"description": "Field descriptors that DataView entries may reference."
 				},
 				"fieldsModule": {
 					"type": "string",

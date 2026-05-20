@@ -242,6 +242,16 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 }
 
 // ── Schemas 5-7: v3 manifest schemas ───────────────────────────────
+//
+// NOTE: The canonical v3 default workspace fixture
+// `docs/v3/wp-admin-default.v3.json` and `shells/wp-admin-default-v3.json`
+// are reshaped in Stage 3 of the data-view registry restoration
+// (`docs/plans/2026-05-20-dataview-registry-restoration.md`). Until that
+// stage lands the canonical fixture will fail validation because it still
+// uses `settings.views` / `screens[id].view` instead of `settings.dataViews`
+// / `screens[id].dataView` + `dataViewRef`. This is expected at the
+// Stage 2 schema-only step. The v3 positive + negative fixtures below
+// exercise the new shape directly so the schema is still covered.
 
 const v3Schemas = [
 	{ key: 'admin',  schemaFile: 'admin-v3.json' },
@@ -263,6 +273,31 @@ for ( const { key, schemaFile } of v3Schemas ) {
 				'docs/v3/wp-admin-default.v3.json',
 				valid,
 				valid ? '' : formatErrors( validate.errors )
+			);
+		}
+	}
+
+	const positiveDir = resolve( FIXTURES_DIR, 'v3', key, 'positive' );
+	const negativeDir = resolve( FIXTURES_DIR, 'v3', key, 'negative' );
+
+	if ( existsSync( positiveDir ) ) {
+		console.log( `\n  Positive (must validate):` );
+		for ( const file of listJson( positiveDir ) ) {
+			const doc   = readJson( join( positiveDir, file ) );
+			const valid = validate( doc );
+			ok( `v3/${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( existsSync( negativeDir ) ) {
+		console.log( `\n  Negative (must fail):` );
+		for ( const file of listJson( negativeDir ) ) {
+			const doc   = readJson( join( negativeDir, file ) );
+			const valid = validate( doc );
+			ok(
+				`v3/${ key }/negative/${ file }`,
+				! valid,
+				valid ? 'expected validation failure but doc accepted' : ''
 			);
 		}
 	}
