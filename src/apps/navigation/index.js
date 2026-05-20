@@ -305,17 +305,23 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 	const navState = useSidebarNavigation();
 	const { record: site } = useEntityRecord( 'root', 'site' );
 
-	// Sub-screen state lives in the URL slot `?screen=<id>` so it
-	// deep-links and survives refresh. Primary path stays content-only.
-	// Fall back to inferring the drilldown from the active primary path:
-	// if the URL matches a child whose parent container has children,
-	// keep that container open so clicking a leaf doesn't snap the nav
-	// back to root.
+	// Sub-screen state in `?screen=<id>` URL slot:
+	//   - Explicit screen id ("posts") → that drilldown.
+	//   - `__root` sentinel → user explicitly closed the drilldown via
+	//     back; suppress inference even if the URL primary path matches
+	//     a child item. The sentinel clears on the next leaf-click
+	//     because plain <a href="#/..."> overwrites the entire hash.
+	//   - Absent → infer from primary path. If the URL matches a child
+	//     whose parent container has children, keep that container open
+	//     so clicking a leaf doesn't snap the nav back to root.
 	const explicitScreen = route.params?.screen || null;
-	const inferredScreen = explicitScreen
-		? null
-		: findContainerForPrimary( items, currentPrimary );
-	const activeScreen = explicitScreen || inferredScreen;
+	const userClosedDrilldown = explicitScreen === '__root';
+	const inferredScreen =
+		! explicitScreen && ! userClosedDrilldown
+			? findContainerForPrimary( items, currentPrimary )
+			: null;
+	const activeScreen =
+		( explicitScreen && explicitScreen !== '__root' ) || inferredScreen;
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
 	if ( screenDef ) {
@@ -327,7 +333,7 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 				<SidebarNavigationScreen
 					title={ screenDef.label || screenDef.id }
 					description={ screenDef.description }
-					onBack={ () => navigateScreen( null ) }
+					onBack={ () => navigateScreen( '__root' ) }
 					content={
 						<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
 							{ children.map( ( child, i ) =>
