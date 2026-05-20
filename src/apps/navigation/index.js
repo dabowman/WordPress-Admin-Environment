@@ -321,7 +321,9 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 			? findContainerForPrimary( items, currentPrimary )
 			: null;
 	const activeScreen =
-		( explicitScreen && explicitScreen !== '__root' ) || inferredScreen;
+		explicitScreen && explicitScreen !== '__root'
+			? explicitScreen
+			: inferredScreen;
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
 	if ( screenDef ) {
