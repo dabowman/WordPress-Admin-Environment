@@ -4,6 +4,9 @@ import { __, sprintf } from '@wordpress/i18n';
 
 import { resolveIcon } from '../../runtime/config/iconMap';
 import { useKernel } from '../../runtime/kernel-context';
+import { navigate } from '../../runtime/routing/router';
+import { trigger } from '../../runtime/bindings/triggerStore.mjs';
+import { compileCommands } from './compileCommands.mjs';
 
 /**
  * core:command-palette — registers shell-aware commands with
@@ -11,62 +14,72 @@ import { useKernel } from '../../runtime/kernel-context';
  * surface them. The palette UI itself is owned by the commands
  * package; this app contributes the command set + does not render UI.
  *
- * Commands are derived from the routes block (`config.routes`). Each
- * route entry becomes a "Go to <pattern>" command. Authors who want
- * richer labels can attach `title` / `icon` to a route entry — those
- * fields aren't in the schema today, but the runtime reads them if
- * present so a future v2.x schema bump can add them without a
- * separate migration.
+ * Two sources feed the palette in v3:
+ *   1. `config.commands[]` — labelled first-class commands (the v3
+ *      replacement for v2's `bindings` array). Each entry with a
+ *      `label` becomes a palette entry; callback fires `invoke`
+ *      then `navigate` in the same order `BindingsConsumer` uses
+ *      for keyboard shortcuts. Keyboard-only commands (no label)
+ *      stay out of the palette and are handled by the keystroke
+ *      path alone.
+ *   2. `config.screens[]` — every non-hidden screen with a `path` +
+ *      `label` becomes a "Go to <label>" entry. Hidden screens
+ *      skipped (`hidden: true`). Parameterized paths (`{id}` / `/*`)
+ *      skipped. Screens already covered by a `commands[]` `navigate`
+ *      pointing at the same path skipped to avoid duplicates.
+ *
+ * The pure-ESM compiler lives in `compileCommands.mjs` so the
+ * branching logic (label-required filter, hasInvoke/hasNavigate gate,
+ * path dedup, hidden skip, parameterized skip) is unit-testable on a
+ * bare Node runtime. This file is the thin React wiring layer.
  */
 export default function CommandPaletteApp() {
 	const { config } = useKernel();
-	const routes =
-		config?.routes && typeof config.routes === 'object'
-			? config.routes
+	const commandsBlock = Array.isArray( config?.commands )
+		? config.commands
+		: null;
+	const screensBlock =
+		config?.screens && typeof config.screens === 'object'
+			? config.screens
 			: null;
 
 	const commands = useMemo( () => {
-		if ( ! routes ) {
-			return [];
-		}
-		const out = [];
-		for ( const [ pattern, entry ] of Object.entries( routes ) ) {
-			if ( ! entry || typeof entry.app !== 'string' ) {
-				continue;
-			}
-			// Skip patterns with parameter or wildcard segments —
-			// "Go to /posts/{id}" isn't a valid invocation; the user
-			// can't pick the captured value from a command list.
-			if ( pattern.includes( '{' ) || pattern.endsWith( '/*' ) ) {
-				continue;
-			}
-			const label = entry.title
-				? entry.title
-				: sprintf(
-						/* translators: %s: route pattern (e.g. /posts) */
-						__( 'Go to %s', 'wp-admin-shell' ),
-						pattern
-				  );
-			// URL-encode the literal pattern so distinct routes (e.g. `/foo-bar`
-			// vs `/foo/bar`) produce distinct command names. A naive
-			// alphanumeric-only collapse would map both to `foo-bar` and trip
-			// `@wordpress/commands` duplicate-name registration.
-			out.push( {
-				name: `core/admin-shell/goto-${ encodeURIComponent(
-					pattern
-				) }`,
-				label,
-				icon: resolveIcon( entry.icon ),
-				callback: ( { close } ) => {
-					if ( typeof window !== 'undefined' ) {
-						window.location.hash = '#' + pattern;
-					}
-					close();
-				},
-			} );
-		}
-		return out;
-	}, [ routes ] );
+		const descriptors = compileCommands( {
+			commands: commandsBlock,
+			screens: screensBlock,
+			goToLabel: ( target ) =>
+				sprintf(
+					/* translators: %s: screen label or path */
+					__( 'Go to %s', 'wp-admin-shell' ),
+					target
+				),
+		} );
+		return descriptors.map( ( desc ) => ( {
+			name: desc.name,
+			label: desc.label,
+			icon: desc.icon ? resolveIcon( desc.icon ) : undefined,
+			callback: ( { close } ) => {
+				const action = desc.action;
+				let handled = false;
+				if ( action.kind === 'invoke' || action.kind === 'compound' ) {
+					const appId =
+						action.kind === 'invoke' ? action.appId : action.invoke;
+					handled = trigger( appId );
+				}
+				if (
+					! handled &&
+					( action.kind === 'navigate' || action.kind === 'compound' )
+				) {
+					navigate(
+						action.kind === 'navigate'
+							? action.path
+							: action.navigate
+					);
+				}
+				close();
+			},
+		} ) );
+	}, [ commandsBlock, screensBlock ] );
 
 	const hook = useCallback(
 		() => ( { commands, isLoading: false } ),
