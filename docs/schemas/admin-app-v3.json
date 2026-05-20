@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/admin-app/v3.json",
 	"title": "WP Admin Shell — App Manifest (v3)",
-	"description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when admin.json passes values, the slots it exposes for in-screen sub-mounts, the size/position hints it prefers when slotted into a grid-style container, and a baseline view-config the app ships for the entity it renders. Manifests deliberately do not declare layout, geometry, keystroke bindings, menu placement, or which install they belong to — those are install decisions and live in admin.json (workspace v3). v3 reshapes two v2 blocks: the v2 `dashboardWidget` block has been dissolved into screen-level `apps[]` placements paired with `slotHints` here, and the v2 `viewConfig` block has been renamed to `view` (shape unchanged). See WP Admin Shell Design Spec §4.1 and `docs/v3/schema-sketch.md`.",
+	"description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when admin.json passes values, the slots it exposes for in-screen sub-mounts, the size/position hints it prefers when slotted into a grid-style container, and a baseline DataView family the app ships for the entity it renders. Manifests deliberately do not declare layout, geometry, keystroke bindings, menu placement, or which install they belong to — those are install decisions and live in admin.json (workspace v3). v3 reshapes two v2 blocks: the v2 `dashboardWidget` block has been dissolved into screen-level `apps[]` placements paired with `slotHints` here, and the v2 `viewConfig` block has been renamed to `dataView` and gained a `variants: { <id>: ... }` family (the v2 3-axis registry, restored after the initial v3 reshape collapsed it). See WP Admin Shell Design Spec §4.1, `docs/v3/schema-sketch.md`, and `docs/plans/2026-05-20-dataview-registry-restoration.md`.",
 
 	"type": "object",
 	"required": [ "id", "version", "title", "role", "script" ],
@@ -127,9 +127,9 @@
 			"description": "Size and position defaults the app prefers when it is mounted into a grid-style slot exposed by another app or engine. Consumed by slot hosts (e.g., the dashboard-host's `grid` slot, a tiling engine's tiling pane) when laying out children — the host honors the hints unless its own admin.json placement overrides them. Apps that never mount inside a sizable slot omit this block. Generic across slot types: a host that doesn't understand grid sizing simply ignores the block. New in v3 — replaces the v2 `dashboardWidget` block, which fused these hints with widget-specific metadata. Widget identity (title, hidden-state) now lives on the `screens[id].apps[i]` entry that places the widget; this block carries only the intrinsic defaults the app ships."
 		},
 
-		"view": {
-			"$ref": "#/$defs/appView",
-			"description": "Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders and declares the fields, default DataViews view, default layouts, and actions the app expects. The runtime merges this baseline with admin.json `settings.views.<kind>.<name>` overrides (global) and `screens[id].view` overrides (per-screen), and a filter `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` runs last. The consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Renamed from v2 `viewConfig`; shape unchanged. See `docs/v3/schema-sketch.md` § Settings and spec §13 #7."
+		"dataView": {
+			"$ref": "#/$defs/appDataView",
+			"description": "Optional primary DataView family the app ships as its baseline. Names the entity `(kind, name)` this app primarily renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). The runtime injects manifest-declared variants as baselines into `settings.dataViews[kind][name][<variant>]` at the `core` origin; admin.json / site / role / user wins per-triple. Filter `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. The consuming app reads the resolved value via `useDataView`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Plugin engines shipping non-WPDS grids MAY ignore the block. Renamed from v2 `viewConfig` / v3-initial `view`; the variant family was lost in the v3-initial reshape and restored here. See `docs/v3/schema-sketch.md` § Settings, spec §13 #7, and `docs/plans/2026-05-20-dataview-registry-restoration.md`."
 		},
 
 		"documentation": {
@@ -374,11 +374,11 @@
 			}
 		},
 
-		"appView": {
+		"appDataView": {
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "name" ],
-			"description": "An app-shipped view-config baseline. Same shape as the v2 `appViewConfig` $def — only the field name on the app manifest changed (v2 `viewConfig` → v3 `view`). Names the entity `(kind, name[, variant])` the app renders and the fields / default view / default layouts / actions the app expects. Cascade-overrideable: admin.json `settings.views.<kind>.<name>` (global registry) and `screens[id].view` (per-screen override) win per-field; filter `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` runs last. See `docs/v3/schema-sketch.md` § Settings.",
+			"description": "An app-shipped DataView family baseline. Names the entity `(kind, name)` the app renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration document. The runtime injects each variant as a baseline into `settings.dataViews[kind][name][<variant>]` at the `core` origin so admin.json / site / role / user origins can override per-triple. Filter `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. Renamed from v2 `appViewConfig` / v3-initial `appView`; the v3-initial reshape dropped the `variants` family and is restored here. See `docs/v3/schema-sketch.md` § Settings and `docs/plans/2026-05-20-dataview-registry-restoration.md`.",
 			"properties": {
 				"kind": {
 					"type": "string",
@@ -392,16 +392,42 @@
 					"pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
 					"description": "Entity name (`post`, `page`, `user`, `comment`)."
 				},
-				"variant": {
+				"variants": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"_default": {
+							"allOf": [
+								{ "$ref": "#/$defs/appDataViewVariant" },
+								{ "not": { "required": [ "extends" ] } }
+							]
+						}
+					},
+					"patternProperties": {
+						"^[A-Za-z0-9][A-Za-z0-9_-]*$": {
+							"$ref": "#/$defs/appDataViewVariant"
+						}
+					},
+					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; admin.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge — CIAB independent-resolution rule). `_default` itself MUST NOT declare `extends` (schema-enforced)."
+				}
+			}
+		},
+
+		"appDataViewVariant": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Per-variant entry inside an app manifest's `dataView.variants`. Complete `@wordpress/dataviews` configuration document — same shape as a `settings.dataViews[kind][name][variant]` registry entry in admin-v3.json. Declared here independently because each manifest validates against one schema; the per-variant shape is small enough that redeclaration costs less than a cross-schema $ref.",
+			"properties": {
+				"extends": {
 					"type": "string",
 					"minLength": 1,
-					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$",
-					"description": "Optional variant identifier. Forward-slash namespacing allowed (e.g. `woocommerce-bookings/services`). Omitted = base view-config. Variants in v3 are typically expressed as separate screens with their own inline `view` overrides rather than nested registry entries, but the variant identifier remains valid for filter targeting and programmatic registration."
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`."
 				},
 				"fieldsRef": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reference to a `settings.fields[id]` entry (a named field collection). The resolver merges the referenced collection's fields with this view's inline `fields` array ref-wins-inline-overrides — collection provides the base, inline `fields` shallow-merges per-id, inline-only ids append after the base. Same semantics as v2."
+					"description": "Reference to a `settings.dataFields[id]` entry (a named field collection). The resolver merges the referenced collection's fields with this variant's inline `fields` array ref-wins-inline-overrides — collection provides the base, inline `fields` shallow-merges per-id, inline-only ids append after the base."
 				},
 				"fields": {
 					"type": "array",
@@ -410,7 +436,7 @@
 						"additionalProperties": true,
 						"required": [ "id", "type", "label" ]
 					},
-					"description": "Field descriptors. Each entry passes through to DataViews; the schema only validates the required identity triple. See admin v3 workspace schema `viewConfigField` $def for the full DataViews field shape."
+					"description": "Field descriptors. Each entry passes through to `@wordpress/dataviews`; the schema only validates the required identity triple. See admin v3 workspace schema `dataViewField` $def for the full DataViews field shape."
 				},
 				"defaultView": {
 					"type": "object",
@@ -429,7 +455,7 @@
 						"additionalProperties": true,
 						"required": [ "id", "label" ]
 					},
-					"description": "Action descriptors. See admin v3 workspace schema `viewConfigAction` $def for the full DataViews action shape."
+					"description": "Action descriptors. See admin v3 workspace schema `dataViewAction` $def for the full DataViews action shape."
 				}
 			}
 		},

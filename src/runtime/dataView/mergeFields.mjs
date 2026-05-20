@@ -5,9 +5,9 @@
  * through. Inline-only ids append after the base list to preserve the
  * collection's field order.
  *
- * Mirror of the PHP `WP_Admin_Shell_View_Config::merge_fields`. Lives
- * in `.mjs` so the inline-config hydration path inside the React hook
- * shares the same logic without going through the bundler twice.
+ * Mirror of the PHP `WP_Admin_Shell_Data_View_Config::merge_fields`.
+ * Lives in `.mjs` so the inline-config hydration path inside the React
+ * hook shares the same logic without going through the bundler twice.
  *
  * @param {Array} base   Collection fields.
  * @param {Array} inline Inline-declared fields.

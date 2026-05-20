@@ -1,18 +1,19 @@
 <?php
 /**
- * /wp-admin-shell/v1/field-collections — field collections matching `(kind, name)`.
+ * /wp-admin-shell/v1/field-collections — data-field collections matching `(kind, name)`.
  *
  * GET /field-collections?kind=postType&name=post
  *   Returns `{ kind, name, collections: { id: { kind, name, fields, fieldsModule? }, ... } }`.
  *   Includes exact-name matches plus universal collections (where the
- *   collection's `name === null`).
+ *   collection's `name === null`). v3 reads `settings.dataFields[]` (the
+ *   renamed home of v2's top-level `fieldCollections` block).
  *
  * @package WP_Admin_Shell
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Field_Collections_REST {
+class WP_Admin_Shell_Data_Field_Collections_REST {
 
 	const REST_NAMESPACE = 'wp-admin-shell/v1';
 
@@ -29,12 +30,12 @@ class WP_Admin_Shell_Field_Collections_REST {
 						'kind' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
 						),
 						'name' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
 						),
 					),
 				),
@@ -60,13 +61,13 @@ class WP_Admin_Shell_Field_Collections_REST {
 
 		$config = wp_admin_shell_get_active_config();
 
-		// Pull cascade-merged field-collections from the resolved tree.
-		// Includes both programmatically-registered (via the
-		// `wp_admin_shell_data_plugin` injector in field-collections.php)
-		// and admin.json-authored entries; cascade ordering already
-		// resolved by the resolver.
-		$all = isset( $config['fieldCollections'] ) && is_array( $config['fieldCollections'] )
-			? $config['fieldCollections']
+		// Pull cascade-merged data-field collections from the resolved
+		// tree at `settings.dataFields`. Includes both programmatically-
+		// registered (via the `wp_admin_shell_data_plugin` injector in
+		// data-field-collections.php) and admin.json-authored entries;
+		// cascade ordering already resolved by the resolver.
+		$all = isset( $config['settings']['dataFields'] ) && is_array( $config['settings']['dataFields'] )
+			? $config['settings']['dataFields']
 			: array();
 
 		$matches = array();
@@ -93,4 +94,4 @@ class WP_Admin_Shell_Field_Collections_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Field_Collections_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Shell_Data_Field_Collections_REST', 'register' ) );

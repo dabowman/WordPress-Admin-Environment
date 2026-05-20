@@ -10,7 +10,7 @@ import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useScreenView } from '../../runtime/viewConfig/useScreenView';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -268,23 +268,23 @@ export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useScreenView( screenId );
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
-		...viewConfig.defaultView,
+		...dataViewConfig.defaultView,
 	} ) );
 
 	// Resync `view` when the screen flips on the same hook instance
 	// (e.g. /posts → /posts/drafts both mount PostsApp). The useState
 	// initializer runs once, so without this effect the second screen
 	// inherits the first's perPage / sort / filters. Keyed on screenId
-	// + postType — not viewConfig — to avoid clobbering in-session view
+	// + postType — not dataViewConfig — to avoid clobbering in-session view
 	// edits whenever the cascade re-resolves the doc shape.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ screenId, postType ] );
@@ -354,20 +354,20 @@ export default function PostsApp( { config } ) {
 	const fields = useMemo(
 		() =>
 			buildFields(
-				viewConfig.fields ?? [],
+				dataViewConfig.fields ?? [],
 				buildFieldRenderers( postType )
 			),
-		[ viewConfig, postType ]
+		[ dataViewConfig, postType ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				postType,
 				deleteEntityRecord,
 				createNotice,
 			} ),
-		[ viewConfig, postType, deleteEntityRecord, createNotice ]
+		[ dataViewConfig, postType, deleteEntityRecord, createNotice ]
 	);
 
 	const paginationInfo = useMemo(
@@ -390,7 +390,7 @@ export default function PostsApp( { config } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
+				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

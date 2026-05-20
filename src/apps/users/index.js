@@ -7,7 +7,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useScreenView } from '../../runtime/viewConfig/useScreenView';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 // View-config primitives ship as locale-agnostic JSON (spec §13 #7) — labels
 // reach DataViews in whatever locale the spec was authored in. Recover the
@@ -298,12 +298,13 @@ function buildFields( fieldSpecs, fieldRenderers ) {
 /**
  * core:users — DataViews list of WordPress users.
  *
- * Reads its DataViews spec via `useScreenView(screenId)`. The baseline
- * ships in `app.json#view` and is injected into `settings.views.root.user`
- * post-merge by `inject_app_baselines`; admin.json
- * `settings.views.root.user` wins on per-entry override; per-screen
- * `screens[screenId].view` deep-merges on top; the per-pair filter
- * `wp_admin_shell_view_config_root_user` runs last.
+ * Reads its DataViews spec via `useDataView(screenId)`. The baseline
+ * ships in `app.json#dataView` and is injected into
+ * `settings.dataViews.root.user` post-merge by `inject_app_baselines`;
+ * admin.json `settings.dataViews.root.user` wins on per-entry override;
+ * per-screen `screens[screenId].dataView` deep-merges on top; the
+ * per-triple filter
+ * `wp_admin_shell_data_view_config_root_user[_<variant>]` runs last.
  *
  * Reads via useEntityRecords('root', 'user') with `context: 'edit'` so
  * email + roles come back in the response. Bulk delete supported via
@@ -317,22 +318,22 @@ function buildFields( fieldSpecs, fieldRenderers ) {
  */
 export default function UsersApp( { config = {} } = {} ) {
 	const screenId = config.screenId || null;
-	const { config: viewConfig } = useScreenView( screenId );
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
-		...viewConfig.defaultView,
+		...dataViewConfig.defaultView,
 	} ) );
 
 	// Resync `view` when the screen flips on the same hook instance.
 	// Mirrors PostsApp's recipe — keyed on screenId so a sibling screen
 	// using the same hook instance picks up its own defaults. Keyed only
-	// on screenId — not viewConfig — to avoid clobbering in-session view
+	// on screenId — not dataViewConfig — to avoid clobbering in-session view
 	// edits whenever the cascade re-resolves the doc shape.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ screenId ] );
@@ -391,7 +392,7 @@ export default function UsersApp( { config = {} } = {} ) {
 	// would render a second column for the same field. PostsApp recipe.
 	const visibleView = useMemo( () => {
 		const titleField =
-			view.titleField || viewConfig.defaultView?.titleField;
+			view.titleField || dataViewConfig.defaultView?.titleField;
 		if ( ! titleField || ! Array.isArray( view.fields ) ) {
 			return view;
 		}
@@ -400,16 +401,16 @@ export default function UsersApp( { config = {} } = {} ) {
 			return view;
 		}
 		return { ...view, fields };
-	}, [ view, viewConfig ] );
+	}, [ view, dataViewConfig ] );
 
 	const fields = useMemo(
-		() => buildFields( viewConfig.fields ?? [], buildFieldRenderers() ),
-		[ viewConfig ]
+		() => buildFields( dataViewConfig.fields ?? [], buildFieldRenderers() ),
+		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				deleteEntityRecord,
 				invalidateResolution,
 				queryArgs,
@@ -417,7 +418,7 @@ export default function UsersApp( { config = {} } = {} ) {
 				createErrorNotice,
 			} ),
 		[
-			viewConfig,
+			dataViewConfig,
 			deleteEntityRecord,
 			invalidateResolution,
 			queryArgs,
@@ -446,7 +447,7 @@ export default function UsersApp( { config = {} } = {} ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
+				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

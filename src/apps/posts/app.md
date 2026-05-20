@@ -10,29 +10,29 @@ PostsApp is the canonical DataViews host in the shell. Every bundled shell that 
 
 Four pieces of state drive the app:
 
-1. **`viewConfig`** — pulled via `useViewConfig('postType', config.postType)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#viewConfig` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `viewConfigs[postType][post]._default` or the `wp_admin_shell_view_config_postType_post` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
-2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `viewConfig.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. Owned by the app; DataViews calls `onChangeView(next)` whenever the user changes anything.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.postType.post.<variant|_default>` or the `wp_admin_shell_data_view_config_postType_post[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. Owned by the app; DataViews calls `onChangeView(next)` whenever the user changes anything.
 3. **`queryArgs`** — derived from `view + config.status` via `useMemo`. Maps DataViews concepts (filter operators, sort direction) to REST query arguments. The `_embed=author` arg lets one round trip cover the author column without a second request per row.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('postType', config.postType, queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
 
 `data` is a `useMemo` projection of `records` into the row shape DataViews wants (`{ id, title, status, date, author, link, rawRecord }`). The original record is kept on `rawRecord` so future row actions can read fields the projection doesn't surface.
 
-The trash-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`. The action's `id` (`trash`) is what `buildActions()` keys off; plugins overriding the view-config can keep / rename / drop the action via their filter, and the React layer simply skips ids it has no callback for.
+The trash-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`. The action's `id` (`trash`) is what `buildActions()` keys off; plugins overriding the dataView can keep / rename / drop the action via their filter, and the React layer simply skips ids it has no callback for.
 
-## View-config integration (C2)
+## DataView integration (C2 / v3 restored)
 
-PostsApp is the first app to consume the C2 view-config primitive (spec §13 #7). The cascade flow:
+PostsApp is the canonical consumer of the dataView primitive (spec §13 #7). The cascade flow:
 
-1. **Baseline** lives in `app.json#viewConfig` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
-2. **Admin.json overrides** under `viewConfigs.postType.post._default` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins swap columns, change default page size, hide the trash action, etc., without forking the app.
-3. **Filter overrides** run last via `wp_admin_shell_view_config_postType_post`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
-4. **PostsApp consumes** via `useViewConfig('postType', postType, variant?)` → `{ config, isLoading }`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config` REST. `_resolvedFieldsRef` is stamped on the doc when a `fieldsRef` resolved against a `fieldCollections` entry so downstream debug can trace where columns came from.
+1. **Baseline** lives in `app.json#dataView` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple. The manifest baseline ships `_default` plus the `drafts` / `pending` / `trash` variant family; each variant gets injected as its own triple.
+2. **Admin.json overrides** under `settings.dataViews.postType.post.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins swap columns, change default page size, hide the trash action, etc., without forking the app.
+3. **Filter overrides** run last via `wp_admin_shell_data_view_config_postType_post` (always fires) plus `wp_admin_shell_data_view_config_postType_post_<variant>` (fires when `variant !== '_default'`). Useful for dynamic mutations (per-request, per-user) that JSON can't express.
+4. **PostsApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminShell.config` snapshot synchronously when present (per-screen `_resolved` stamp is the fast path); otherwise falls through to `/wp-admin-shell/v1/data-view?screen=<id>` REST. `_resolvedFieldsRef` is stamped on the doc when a `fieldsRef` resolved against a `settings.dataFields` entry so downstream debug can trace where columns came from.
 
-The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
+The renderer tables (`buildFieldRenderers`, `buildActions`, `RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any dataView override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping. Field collections referenced via `fieldsRef` resolve client-side too, sharing the same `mergeFields` ref-wins-inline-overrides logic as the PHP resolver.
 
 ### Translation recipe
 
-View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#viewConfig` and admin.json `viewConfigs` overrides reach DataViews with raw strings in whatever locale the spec was authored in. PostsApp recovers translation by keeping two id→`__()` tables in `index.js`:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and admin.json `settings.dataViews` overrides reach DataViews with raw strings in whatever locale the spec was authored in. PostsApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
 ```js
 const FIELD_LABELS = {
@@ -56,13 +56,13 @@ compiled.label = FIELD_LABELS[ spec.id ] ?? spec.label;   // fields
 compiled.label = ACTION_LABELS[ spec.id ] ?? spec.label;  // actions
 ```
 
-**Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin that adds a `meta:hero_color` column controls its own label via the spec; a plugin that swaps the bundled `title` column relabels it via either an `app.json` LABELS contribution (future) or a `wp_admin_shell_view_config_postType_post` filter that wraps the label in `__()` PHP-side.
+**Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin that adds a `meta:hero_color` column controls its own label via the spec; a plugin that swaps the bundled `title` column relabels it via either an `app.json` LABELS contribution (future) or a `wp_admin_shell_data_view_config_postType_post` filter that wraps the label in `__()` PHP-side.
 
 This pattern is the documented recovery for the C2 i18n regression and is the gating contract for the entity-CRUD migration sweep — TaxonomyApp / UsersApp / CommentsApp / PluginsApp / ThemesApp ship the same shape.
 
 Two adjacent paths remain available for richer cases:
 
-1. **Server-side filter.** `wp_admin_shell_view_config_postType_post` PHP callback wraps labels in `__()`. Best for plugins shipping a localized override of the bundled spec without forking the React app.
+1. **Server-side filter.** `wp_admin_shell_data_view_config_postType_post` PHP callback wraps labels in `__()`. Best for plugins shipping a localized override of the bundled spec without forking the React app.
 2. **Render-time helper that owns both halves.** A future shared utility (`compileLabels(spec, LABELS)`) could deduplicate across entity-CRUD apps. Premature today; revisit after the migration sweep lands.
 
 Action callback copy (modal text inside `RenderModal`, inline button labels) lives as JSX `__()` literals and translates normally — only the spec-supplied DataViews `label` field needed the recipe.

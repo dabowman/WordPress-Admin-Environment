@@ -89,9 +89,9 @@ $v2_doc = array(
 );
 $compiled_v2 = WP_Admin_Shell_V3_Compiler::compile( $v2_doc );
 $T::eq(
-	'v2 doc passthrough preserves routes',
-	$compiled_v2['routes'],
-	array( '/posts' => array( 'app' => 'core:posts' ) )
+	'v2 doc passthrough preserves route app',
+	$compiled_v2['routes']['/posts']['app'],
+	'core:posts'
 );
 $T::eq(
 	'v2 doc passthrough preserves engine',
@@ -102,6 +102,58 @@ $T::eq(
 	'v2 doc passthrough preserves regions',
 	$compiled_v2['regions'],
 	array( 'content' => array( 'template' => 'core:main' ) )
+);
+
+// v2 back-compat — v3 compiler synthesizes screens from v2 routes
+// so v3-built apps reading `screenId` / `useDataView(screenId)` still
+// work when activated against a v2 shell. The synthesis injects
+// `screenId` into the route's config so apps reading
+// `props.config.screenId` find the synth'd identity.
+$T::ok(
+	'v2 synthesis: screenId injected into route config',
+	isset( $compiled_v2['routes']['/posts']['config']['screenId'] )
+);
+$T::ok(
+	'v2 synthesis: screens block created',
+	isset( $compiled_v2['screens'] ) && is_array( $compiled_v2['screens'] )
+);
+$synthesized_screen_id = $compiled_v2['routes']['/posts']['config']['screenId'];
+$T::ok(
+	'v2 synthesis: synthesized screen entry exists',
+	isset( $compiled_v2['screens'][ $synthesized_screen_id ] )
+);
+$T::eq(
+	'v2 synthesis: synthesized screen carries route app',
+	$compiled_v2['screens'][ $synthesized_screen_id ]['app'],
+	'core:posts'
+);
+
+// v2 back-compat — route with config.variant flows into the
+// synthesized screen's `config.variant`. The resolver's step-3
+// manifest-inference path reads `screen.config.variant` directly
+// (verified by the data-view test suite), so no separate
+// `dataViewVariant` stamp is needed at the synthesizer.
+$v2_variant_doc = array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'regions' => array(),
+	'routes'  => array(
+		'/posts/drafts' => array(
+			'app'    => 'core:posts',
+			'config' => array( 'postType' => 'post', 'variant' => 'drafts' ),
+		),
+	),
+);
+$compiled_v2_variant     = WP_Admin_Shell_V3_Compiler::compile( $v2_variant_doc );
+$variant_synth_screen_id = $compiled_v2_variant['routes']['/posts/drafts']['config']['screenId'];
+$T::eq(
+	'v2 variant synthesis: config.variant preserved on synthesized screen',
+	$compiled_v2_variant['screens'][ $variant_synth_screen_id ]['config']['variant'],
+	'drafts'
+);
+$T::ok(
+	'v2 variant synthesis: no dataViewVariant stamp (resolver reads config.variant)',
+	! isset( $compiled_v2_variant['screens'][ $variant_synth_screen_id ]['dataViewVariant'] )
 );
 
 // ── 3. v2 bindings → commands forwarding ────────────────────────────

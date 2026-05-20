@@ -22,419 +22,623 @@
 		}
 	},
 	"settings": {
-		"views": {
+		"dataViews": {
 			"postType": {
 				"post": {
-					"fields": [
-						{
-							"id": "title",
-							"type": "text",
-							"label": "Title",
-							"enableGlobalSearch": true
+					"_default": {
+						"fields": [
+							{
+								"id": "title",
+								"type": "text",
+								"label": "Title",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
+							},
+							{
+								"id": "categories",
+								"type": "text",
+								"label": "Categories"
+							},
+							{
+								"id": "tags",
+								"type": "text",
+								"label": "Tags"
+							},
+							{
+								"id": "comments",
+								"type": "integer",
+								"label": "Comments"
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Date"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "publish",
+										"label": "Published"
+									},
+									{
+										"value": "draft",
+										"label": "Draft"
+									},
+									{
+										"value": "pending",
+										"label": "Pending Review"
+									},
+									{
+										"value": "future",
+										"label": "Scheduled"
+									},
+									{
+										"value": "private",
+										"label": "Private"
+									},
+									{
+										"value": "trash",
+										"label": "Trash"
+									}
+								]
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							},
+							"fields": [
+								"title",
+								"author",
+								"categories",
+								"tags",
+								"comments",
+								"date"
+							]
 						},
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
-						},
-						{
-							"id": "categories",
-							"type": "text",
-							"label": "Categories"
-						},
-						{
-							"id": "tags",
-							"type": "text",
-							"label": "Tags"
-						},
-						{
-							"id": "comments",
-							"type": "integer",
-							"label": "Comments"
-						},
-						{
-							"id": "date",
-							"type": "datetime",
-							"label": "Date"
-						},
-						{
-							"id": "status",
-							"type": "select",
-							"label": "Status",
-							"elements": [
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View"
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						}
+					},
+					"drafts": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "publish",
-									"label": "Published"
-								},
-								{
-									"value": "draft",
-									"label": "Draft"
-								},
-								{
-									"value": "pending",
-									"label": "Pending Review"
-								},
-								{
-									"value": "future",
-									"label": "Scheduled"
-								},
-								{
-									"value": "private",
-									"label": "Private"
-								},
-								{
-									"value": "trash",
-									"label": "Trash"
+									"field": "status",
+									"operator": "is",
+									"value": "draft"
 								}
 							]
 						}
-					],
-					"defaultView": {
-						"type": "table",
-						"perPage": 25,
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"fields": [
-							"title",
-							"author",
-							"categories",
-							"tags",
-							"comments",
-							"date"
-						]
 					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true
-						},
-						{
-							"id": "view",
-							"label": "View"
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true
-						},
-						{
-							"id": "restore",
-							"label": "Restore",
-							"eligibleWhen": {
-								"status": "trash"
-							}
-						},
-						{
-							"id": "delete",
-							"label": "Delete Permanently",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": "trash"
-							}
+					"pending": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "pending"
+								}
+							]
 						}
-					]
+					},
+					"trash": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "trash"
+								}
+							]
+						},
+						"actions": [
+							{
+								"id": "restore",
+								"label": "Restore",
+								"isPrimary": true,
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
+							},
+							{
+								"id": "delete-permanent",
+								"label": "Delete Permanently",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
+							}
+						]
+					}
 				},
 				"page": {
-					"fields": [
-						{
-							"id": "title",
-							"type": "text",
-							"label": "Title",
-							"enableGlobalSearch": true
-						},
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
-						},
-						{
-							"id": "parent",
-							"type": "text",
-							"label": "Parent"
-						},
-						{
-							"id": "date",
-							"type": "datetime",
-							"label": "Date"
-						},
-						{
-							"id": "status",
-							"type": "select",
-							"label": "Status"
-						}
-					],
-					"defaultView": {
-						"type": "table",
-						"perPage": 25,
-						"sort": {
-							"field": "title",
-							"direction": "asc"
-						},
+					"_default": {
 						"fields": [
-							"title",
-							"author",
-							"parent",
-							"date"
-						]
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true
+							{
+								"id": "title",
+								"type": "text",
+								"label": "Title",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
+							},
+							{
+								"id": "parent",
+								"type": "text",
+								"label": "Parent"
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Date"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"sort": {
+								"field": "title",
+								"direction": "asc"
+							},
+							"fields": [
+								"status",
+								"author",
+								"date"
+							],
+							"titleField": "title"
 						},
-						{
-							"id": "view",
-							"label": "View"
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View"
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
 						}
-					]
+					}
 				}
 			},
 			"root": {
 				"user": {
-					"fields": [
-						{
-							"id": "name",
-							"type": "text",
-							"label": "Name",
-							"enableGlobalSearch": true
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Name",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "username",
+								"type": "text",
+								"label": "Username",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "email",
+								"type": "email",
+								"label": "Email",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "roles",
+								"type": "text",
+								"label": "Role",
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								},
+								"elements": [
+									{
+										"value": "administrator",
+										"label": "Administrator"
+									},
+									{
+										"value": "editor",
+										"label": "Editor"
+									},
+									{
+										"value": "author",
+										"label": "Author"
+									},
+									{
+										"value": "contributor",
+										"label": "Contributor"
+									},
+									{
+										"value": "subscriber",
+										"label": "Subscriber"
+									}
+								]
+							},
+							{
+								"id": "registered_date",
+								"type": "datetime",
+								"label": "Registered"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"fields": [
+								"username",
+								"email",
+								"roles",
+								"registered_date"
+							],
+							"titleField": "name"
 						},
-						{
-							"id": "username",
-							"type": "text",
-							"label": "Username"
-						},
-						{
-							"id": "email",
-							"type": "email",
-							"label": "Email"
-						},
-						{
-							"id": "roles",
-							"type": "text",
-							"label": "Role"
-						},
-						{
-							"id": "posts",
-							"type": "integer",
-							"label": "Posts"
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
 						}
-					],
-					"defaultView": {
-						"type": "table",
-						"perPage": 25
 					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true
-						},
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"supportsBulk": true
+					"administrators": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "roles",
+									"operator": "isAny",
+									"value": [
+										"administrator"
+									]
+								}
+							]
 						}
-					]
+					}
 				},
 				"comment": {
-					"fields": [
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
-						},
-						{
-							"id": "content",
-							"type": "text",
-							"label": "Comment",
-							"enableGlobalSearch": true
-						},
-						{
-							"id": "post",
-							"type": "text",
-							"label": "In response to"
-						},
-						{
-							"id": "date",
-							"type": "datetime",
-							"label": "Submitted on"
-						},
-						{
-							"id": "status",
-							"type": "select",
-							"label": "Status",
-							"elements": [
-								{
-									"value": "approved",
-									"label": "Approved"
+					"_default": {
+						"fields": [
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "content",
+								"type": "text",
+								"label": "Comment",
+								"enableGlobalSearch": true,
+								"enableSorting": false
+							},
+							{
+								"id": "status",
+								"type": "text",
+								"label": "Status",
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
 								},
+								"elements": [
+									{
+										"value": "approved",
+										"label": "Approved"
+									},
+									{
+										"value": "hold",
+										"label": "Pending"
+									},
+									{
+										"value": "spam",
+										"label": "Spam"
+									},
+									{
+										"value": "trash",
+										"label": "Trash"
+									}
+								]
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Submitted"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"fields": [
+								"author",
+								"content",
+								"status",
+								"date"
+							]
+						},
+						"actions": [
+							{
+								"id": "approve",
+								"label": "Approve",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"spam",
+										"trash"
+									]
+								}
+							},
+							{
+								"id": "spam",
+								"label": "Mark as Spam",
+								"supportsBulk": true,
+								"isDestructive": true
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"supportsBulk": true,
+								"isDestructive": true
+							},
+							{
+								"id": "reply",
+								"label": "Reply"
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
+					},
+					"pending": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "hold",
-									"label": "Pending"
-								},
-								{
-									"value": "spam",
-									"label": "Spam"
-								},
-								{
-									"value": "trash",
-									"label": "Trash"
+									"field": "status",
+									"operator": "is",
+									"value": "hold"
 								}
 							]
 						}
-					],
-					"defaultView": {
-						"type": "table",
-						"perPage": 25
 					},
-					"actions": [
-						{
-							"id": "approve",
-							"label": "Approve",
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": [
-									"hold",
-									"spam",
-									"trash"
-								]
-							}
-						},
-						{
-							"id": "spam",
-							"label": "Mark as Spam",
-							"supportsBulk": true,
-							"isDestructive": true
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"supportsBulk": true,
-							"isDestructive": true
-						},
-						{
-							"id": "reply",
-							"label": "Reply"
+					"spam": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "spam"
+								}
+							]
 						}
-					]
+					},
+					"trash": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "trash"
+								}
+							]
+						}
+					}
 				},
 				"plugin": {
-					"fields": [
-						{
-							"id": "name",
-							"type": "text",
-							"label": "Plugin",
-							"enableGlobalSearch": true
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Plugin",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description"
+							},
+							{
+								"id": "version",
+								"type": "text",
+								"label": "Version"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "active",
+										"label": "Active"
+									},
+									{
+										"value": "inactive",
+										"label": "Inactive"
+									}
+								]
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 50,
+							"fields": [
+								"name",
+								"status",
+								"version"
+							],
+							"titleField": "name"
 						},
-						{
-							"id": "description",
-							"type": "text",
-							"label": "Description"
-						},
-						{
-							"id": "version",
-							"type": "text",
-							"label": "Version"
-						},
-						{
-							"id": "status",
-							"type": "select",
-							"label": "Status",
-							"elements": [
+						"actions": [
+							{
+								"id": "activate",
+								"label": "Activate",
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							},
+							{
+								"id": "deactivate",
+								"label": "Deactivate",
+								"eligibleWhen": {
+									"status": "active"
+								}
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
+					},
+					"active": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "active",
-									"label": "Active"
-								},
-								{
-									"value": "inactive",
-									"label": "Inactive"
+									"field": "status",
+									"operator": "is",
+									"value": "active"
 								}
 							]
 						}
-					],
-					"defaultView": {
-						"type": "table",
-						"perPage": 50
 					},
-					"actions": [
-						{
-							"id": "activate",
-							"label": "Activate",
-							"eligibleWhen": {
-								"status": "inactive"
-							}
-						},
-						{
-							"id": "deactivate",
-							"label": "Deactivate",
-							"eligibleWhen": {
-								"status": "active"
-							}
-						},
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"eligibleWhen": {
-								"status": "inactive"
-							}
+					"inactive": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "inactive"
+								}
+							]
 						}
-					]
+					}
 				},
 				"theme": {
-					"fields": [
-						{
-							"id": "name",
-							"type": "text",
-							"label": "Theme"
-						},
-						{
-							"id": "screenshot",
-							"type": "media",
-							"label": "Screenshot"
-						},
-						{
-							"id": "version",
-							"type": "text",
-							"label": "Version"
-						},
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
-						}
-					],
-					"defaultView": {
-						"type": "grid",
-						"perPage": 24
-					},
-					"actions": [
-						{
-							"id": "activate",
-							"label": "Activate",
-							"isPrimary": true,
-							"eligibleWhen": {
-								"status": "inactive"
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Theme"
+							},
+							{
+								"id": "screenshot",
+								"type": "media",
+								"label": "Screenshot"
+							},
+							{
+								"id": "version",
+								"type": "text",
+								"label": "Version"
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
 							}
+						],
+						"defaultView": {
+							"type": "grid",
+							"perPage": 24,
+							"fields": [
+								"status",
+								"description",
+								"version",
+								"author"
+							],
+							"titleField": "name"
 						},
-						{
-							"id": "details",
-							"label": "Details"
+						"actions": [
+							{
+								"id": "activate",
+								"label": "Activate",
+								"isPrimary": true,
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							},
+							{
+								"id": "details",
+								"label": "Details"
+							}
+						],
+						"defaultLayouts": {
+							"grid": {},
+							"table": {}
 						}
-					]
+					}
 				}
 			}
 		}
@@ -487,7 +691,7 @@
 			}
 		},
 		"posts": {
-			"label": "All Posts",
+			"label": "Posts",
 			"icon": "post",
 			"description": "Write, edit, and organize posts.",
 			"path": "/posts",
@@ -495,6 +699,7 @@
 			"config": {
 				"postType": "post"
 			},
+			"dataViewRef": "postType/post/_default",
 			"permissions": {
 				"capabilities": [
 					"edit_posts"
@@ -509,16 +714,7 @@
 			"config": {
 				"postType": "post"
 			},
-			"view": {
-				"defaultView": {
-					"filters": [
-						{
-							"field": "status",
-							"value": "draft"
-						}
-					]
-				}
-			},
+			"dataViewRef": "postType/post/drafts",
 			"permissions": {
 				"capabilities": [
 					"edit_posts"
@@ -533,16 +729,7 @@
 			"config": {
 				"postType": "post"
 			},
-			"view": {
-				"defaultView": {
-					"filters": [
-						{
-							"field": "status",
-							"value": "pending"
-						}
-					]
-				}
-			},
+			"dataViewRef": "postType/post/pending",
 			"permissions": {
 				"capabilities": [
 					"edit_others_posts"
@@ -557,29 +744,7 @@
 			"config": {
 				"postType": "post"
 			},
-			"view": {
-				"defaultView": {
-					"filters": [
-						{
-							"field": "status",
-							"value": "trash"
-						}
-					]
-				},
-				"actions": [
-					{
-						"id": "restore",
-						"label": "Restore",
-						"isPrimary": true
-					},
-					{
-						"id": "delete",
-						"label": "Delete Permanently",
-						"isDestructive": true,
-						"supportsBulk": true
-					}
-				]
-			},
+			"dataViewRef": "postType/post/trash",
 			"permissions": {
 				"capabilities": [
 					"delete_posts"
@@ -653,6 +818,7 @@
 			"config": {
 				"postType": "page"
 			},
+			"dataViewRef": "postType/page/_default",
 			"permissions": {
 				"capabilities": [
 					"edit_pages"
@@ -692,6 +858,7 @@
 			"description": "Moderate comments.",
 			"path": "/comments",
 			"app": "core:comments",
+			"dataViewRef": "root/comment/_default",
 			"permissions": {
 				"capabilities": [
 					"moderate_comments"
@@ -715,6 +882,7 @@
 			"icon": "themes",
 			"path": "/themes",
 			"app": "core:themes",
+			"dataViewRef": "root/theme/_default",
 			"permissions": {
 				"capabilities": [
 					"switch_themes"
@@ -763,6 +931,7 @@
 			"description": "Install, activate, and manage plugins.",
 			"path": "/plugins",
 			"app": "core:plugins",
+			"dataViewRef": "root/plugin/_default",
 			"permissions": {
 				"capabilities": [
 					"activate_plugins"
@@ -775,6 +944,7 @@
 			"description": "Manage accounts and roles.",
 			"path": "/users",
 			"app": "core:users",
+			"dataViewRef": "root/user/_default",
 			"permissions": {
 				"capabilities": [
 					"list_users"
@@ -1084,7 +1254,7 @@
 		},
 		{
 			"id": "navigate-posts-new",
-			"shortcut": "Mod+Shift+N",
+			"shortcut": "Mod+Alt+N",
 			"navigate": "/posts/new",
 			"label": "New Post"
 		},

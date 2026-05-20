@@ -12,8 +12,8 @@ The non-trash status changes use a **partial saveEntityRecord** pattern: instead
 
 Four pieces of state drive the app:
 
-1. **`viewConfig`** — pulled via `useViewConfig('root', 'comment', variant)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#viewConfig` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `viewConfigs.root.comment._default` or the `wp_admin_shell_view_config_root_comment` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `FIELD_RENDERERS` and the `callbacks` table inside `buildActions()` map ids to behavior.
-2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `viewConfig.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. A view-state resync `useEffect` keyed on `variant` reseeds when the triple flips on the same hook instance — the `useState` initializer runs once and would otherwise carry the previous variant's perPage/sort/filters into a flipped triple.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.root.comment.<variant|_default>` or the `wp_admin_shell_data_view_config_root_comment[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `FIELD_RENDERERS` and the `callbacks` table inside `buildActions()` map ids to behavior.
+2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. A view-state resync `useEffect` keyed on `variant` (or `screenId`) reseeds when the triple flips on the same hook instance — the `useState` initializer runs once and would otherwise carry the previous variant's perPage/sort/filters into a flipped triple.
 3. **`queryArgs`** — derived from `view` via `useMemo`. Maps DataViews concepts (filter operators, sort direction, sort field) to REST query arguments. The comments REST endpoint expects `date_gmt` as the orderby alias for the `date` column, so the mapper translates that one field explicitly.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('root', 'comment', queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
 
@@ -25,20 +25,20 @@ Trash uses the same `allSettled` pattern via the `RenderModal` path: `deleteEnti
 
 The comment content cell uses `dangerouslySetInnerHTML` rather than text-only rendering. This is **safe** because `record.content.rendered` is the output of WordPress core's `wp_filter_comment_content` (kses + the comment-text filter chain) — author-supplied raw HTML has been sanitized server-side before it reaches the REST response. Rendering as HTML preserves the formatted view comment moderators expect.
 
-## View-config integration (C2)
+## DataView integration (C2 / v3 restored)
 
-CommentsApp consumes the C2 view-config primitive (spec §13 #7). The cascade flow:
+CommentsApp consumes the dataView primitive (spec §13 #7). The cascade flow:
 
-1. **Baseline** lives in `app.json#viewConfig` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
-2. **Admin.json overrides** under `viewConfigs.root.comment._default` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins can swap columns, change default page size, hide actions, or add custom moderation actions without forking the app.
-3. **Filter overrides** run last via `wp_admin_shell_view_config_root_comment`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
-4. **CommentsApp consumes** via `useViewConfig('root', 'comment', variant?)` → `{ config, isLoading }`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config` REST.
+1. **Baseline** lives in `app.json#dataView` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
+2. **Admin.json overrides** under `settings.dataViews.root.comment.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins can swap columns, change default page size, hide actions, or add custom moderation actions without forking the app.
+3. **Filter overrides** run last via `wp_admin_shell_data_view_config_root_comment` (always fires) plus `wp_admin_shell_data_view_config_root_comment_<variant>` (fires when `variant !== '_default'`). Useful for dynamic mutations (per-request, per-user) that JSON can't express.
+4. **CommentsApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminShell.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-shell/v1/data-view?screen=<id>` REST.
 
-The renderer tables (`FIELD_RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any view-config override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping.
+The renderer tables (`FIELD_RENDERERS` keyed by field id, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. Any dataView override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping.
 
 ### Eligibility predicates
 
-The four bundled actions ship declarative `eligibleWhen` maps in `app.json#viewConfig.actions`:
+The four bundled actions ship declarative `eligibleWhen` maps in `app.json#dataView.actions`:
 
 ```json
 { "id": "approve",   "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } }
@@ -51,7 +51,7 @@ The four bundled actions ship declarative `eligibleWhen` maps in `app.json#viewC
 
 ### Translation recipe
 
-View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#viewConfig` and admin.json `viewConfigs` overrides reach DataViews with raw strings in whatever locale the spec was authored in. CommentsApp recovers translation by keeping two id→`__()` tables in `index.js`:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and admin.json `settings.dataViews` overrides reach DataViews with raw strings in whatever locale the spec was authored in. CommentsApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
 ```js
 const FIELD_LABELS = {
@@ -76,7 +76,7 @@ compiled.label = FIELD_LABELS[ spec.id ] ?? spec.label;
 compiled.label = ACTION_LABELS[ spec.id ] ?? spec.label;
 ```
 
-**Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin adding a new moderation action via `wp_admin_shell_view_config_root_comment` filter controls its own label via the spec (wrapped in `__()` PHP-side); a plugin swapping a bundled label relabels via either an `app.json` LABELS contribution (future) or the same filter.
+**Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin adding a new moderation action via `wp_admin_shell_data_view_config_root_comment` filter controls its own label via the spec (wrapped in `__()` PHP-side); a plugin swapping a bundled label relabels via either an `app.json` LABELS contribution (future) or the same filter.
 
 A parallel `STATUS_SUCCESS_LABELS` table holds the snackbar copy keyed by action id (`approve` → "Approved.", `unapprove` → "Set to pending.", `spam` → "Marked as spam."). Inline `__()` literals inside the trash `RenderModal` (modal copy, button labels) translate normally — only spec-supplied DataViews fields needed the recipe.
 

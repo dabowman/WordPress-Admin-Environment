@@ -9,7 +9,7 @@ PR #49 against `main` (branch: `feat/wp-admin-shell-v3`).
 | Phase | Status | Commits |
 |---|---|---|
 | **3a** — schemas + cascade null-tombstone | ✅ Shipped | `586ade2` |
-| **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` |
+| **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` ⚠️ view-config resolver was lossy (collapsed CIAB 3-axis registry); restoration plan in `docs/plans/2026-05-20-dataview-registry-restoration.md` corrects this. |
 | **3c slice** — minimum end-to-end (compiler + engine defaultRegions + v3 default workspace mounting) | ✅ Shipped | `7980ca7`, `9e6b73a`, `6389449`, `14ed501`, `c945b15`, `8b0948c`, `ac8d058`, `5ccde5e`, `eff4ed5` |
 | **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🔲 Pending | — |
 | **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🔲 Pending | — |
@@ -22,7 +22,7 @@ Detailed spec lives in `docs/v3/schema-sketch.md`. Phase 1 + 2 decisions to pres
 
 ```
 workspace      install metadata (engine + default-screen + branding + notices + persistent widgets)
-settings       registries — views, fields
+settings       registries — dataViews, dataFields
 screens        id-keyed map of every screen
 menu           nested tree, items keyed at every depth
 commands       shortcuts + palette entries with explicit id
@@ -36,9 +36,9 @@ routes         escape hatch (non-screen URL bindings)
 
 - "shell" (user-facing concept) → **workspace**.
 - Plugin name + PHP class names keep "WP Admin Shell" (runtime).
-- v2 `viewConfig` field on app manifests → **`view`**.
-- v2 `viewConfigs` admin.json block → **`settings.views`**.
-- v2 `fieldCollections` → **`settings.fields`**.
+- v2 `viewConfig` field on app manifests → **`dataView`**. The block ships the app's `(kind, name)` plus a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration. The 3-axis registry is preserved (CIAB-compatible).
+- v2 `viewConfigs` admin.json block → **`settings.dataViews`**, keyed `kind → name → variant`. 3-axis (not flattened).
+- v2 `fieldCollections` → **`settings.dataFields`** at top level. Per-descriptor word `field` stays unchanged.
 - v2 `default-route` → **`workspace.default-screen`**.
 - v2 `bindings` → **`commands`** (with explicit `id` field).
 - v2 `dashboardWidgets` → dissolved into screen `apps[]` with `slot` field.
@@ -105,7 +105,7 @@ Scopes:
 - Mode: `screens[id].mode` (default `default`).
 - Per-screen `preload[]` for screen-specific REST hydration.
 - Permissions block (see above).
-- Inline `view` overlay deep-merges with `settings.views.<kind>.<name>` global.
+- Inline `dataView` overlay deep-merges with the resolved `(kind, name, variant)` triple from `settings.dataViews`. The triple is selected via `dataViewRef`, explicit `dataViewVariant`, or by inferring from `screen.app`'s manifest.
 - `regions` override block for per-screen mode tweaks.
 
 ### Workspace widgets (persistent across screens)
@@ -128,7 +128,7 @@ Scopes:
 - `wp_admin_shell_register_menu_renderer($id, $callback)` — plugin-contributed menu renderers.
 - `wp_admin_shell_register_workspace($slug, $array)` — programmatic workspace registration.
 
-Existing v2 hooks survive (`wp_admin_shell_data_{origin}`, `wp_admin_shell_view_config_{kind}_{name}`, etc.).
+Existing v2 hooks survive (`wp_admin_shell_data_{origin}`, etc.). The view-config filter is renamed to `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]`; per-variant suffix restored. The v2 name `wp_admin_shell_view_config_{kind}_{name}` fires alongside with a `_deprecated_hook` notice for one release cycle.
 
 ## Open / deferred decisions
 
@@ -136,9 +136,9 @@ Items that surfaced during design but were deliberately deferred:
 
 1. **v2 shells decision.** Phase 3b's PostsApp rewrite (`useScreenView(screenId)`) broke v2 shells because v2 routes don't inject `screenId`. Three options:
    - **(C1) Drop v2 shells entirely** — migrate 5 remaining bundled shells (`content-author`, `client-portal`, `developer-admin`, `v2-demo`, `single-pane-demo`, `desktop-demo`) to v3 shape. Aligns with no-back-compat policy.
-   - **(C2) v2 back-compat layer** — synthesize `screenId` from route paths for v2 shells.
+   - **(C2) v2 back-compat layer** — v3 compiler synthesizes `dataViewVariant` from `route.config.variant` — v2 shells render under v3-built apps without modification.
    - **(C3) Leave v2 broken** — users migrate at their own pace.
-   Lean (C1).
+   Lean: C2 for transition (Phase 3a–3d intermediate); C1 for endpoint (Phase 3d.1 cleanup).
 
 2. **Mode-transition animation contract.** Spec note that transitions are smooth + interruptible across engines; per-engine specifics stay engine-owned. Spec doc needs the formalization.
 
@@ -146,7 +146,7 @@ Items that surfaced during design but were deliberately deferred:
 
 4. **Cascade audit log surface.** Site-admin-visible UI for cascade rejections (loosening attempts, unknown caps, path collisions). REST endpoint? Settings page?
 
-5. **Variant URL routing.** Inline view variants currently use the URL path (each variant a separate screen). Query-driven variants (single screen flipping between drafts/pending via tabs) deferred to post-v3.
+5. **Variant URL routing.** **Resolved (closed by dataview-registry restoration).** Variant selection happens via `dataViewRef` (path-driven: each variant is a separate screen) OR state inside one screen (`useDataView({kind, name, variant})` driven by tab/query state). Both shapes are legal; conventions for choosing TBD.
 
 6. **App-internal slot/fill** vs schema declaration. Apps still expose slot/fill internally (PluginSidebar pattern); whether to surface these in the schema is post-v3.
 
@@ -208,10 +208,27 @@ Each migration: rename to `<name>.v3.json`, restructure to v3 shape using `wp-ad
 
 CLI command `wp admin-shell migrate-shell <slug>` that reads a v2 shell file and writes a v3-shape equivalent. Handles:
 - routes block → screens entries.
-- viewConfigs → settings.views.
-- fieldCollections → settings.fields.
+- viewConfigs → settings.dataViews (3-axis preserved; each `(kind, name, variant|_default)` entry maps 1:1).
+- fieldCollections → settings.dataFields.
 - bindings → commands (synthesizes ids).
 - regions block → workspace.widgets where applicable.
+- routes' `config.variant` flows through as `screen.config.variant` on the synthesized screen — the v3 compiler does this automatically + the resolver's step-3 manifest-inference path reads it. The migration helper only needs to drop the routes block; screens are synthesized at boot via the v3 compiler's `synthesize_v2_screens_from_routes`.
+
+### 3d.5 — Pre-v3.1 shim-removal hardening (~1-2 days)
+
+Three items to address before the v3.1 cut removes the deprecation shims landed by the dataview-registry restoration (PR #50). All informational at v3-cut; load-bearing at v3.1-cut.
+
+1. **v2 `viewConfigs` block migration warning.** v2 admin.json's top-level `viewConfigs` block becomes dead data under v3 — per-route-variant back-compat works via manifest inference, but admin-customized `viewConfigs` overrides silently drop on upgrade. Options (pick one):
+   - Add the CLI command described in 3d.2 above with a `--dry-run` mode so site admins can preview the rewrite.
+   - Add an admin notice on shell-load detecting a non-empty `viewConfigs` in any cascade origin, pointing at upgrade docs.
+   - Add a server-side log entry (via `_doing_it_wrong`) when the resolver encounters orphan `viewConfigs` data.
+
+2. **JS deprecation `console.warn` gating asymmetry.** The JS shims (`useScreenView`, `useViewConfig`, `hydrateInlineScreenView`) only warn when `process.env.NODE_ENV !== 'production'`. The PHP `_deprecated_hook` fires unconditionally (gated by `WP_DEBUG_LOG` only). Plugin authors testing in production builds get no JS signal + then break at v3.1-cut. Resolve by either:
+   - Dropping the production gate — one-shot guard already in place, cost is one warn per page load.
+   - Adding a server-side companion notice (PHP detects a v2-name filter attached + emits admin notice + logs).
+   - Gating on a separate `wpAdminShell.debug` flag in `window` config so site admins can opt in regardless of build mode.
+
+3. **Filter ordering documentation.** Legacy `wp_admin_shell_view_config_*` fires AFTER the new-name `wp_admin_shell_data_view_config_*` filter (`includes/cascade/class-wp-admin-shell-data-view-config.php:117 → 128`). Plugin authors migrating may expect their v2-name filter to run first. Document in the upgrade guide that v2-name filters are downstream and may see modifications applied by v3 plugins.
 
 ### 3d.3 — Test surface rewrites (~5-10 days)
 
@@ -238,6 +255,7 @@ Tracked separately from "remaining work" — these are bugs found during the Pha
 - Some entity apps (users / comments / plugins / themes) had missing `defaultView.fields` + mismatched field IDs. Fixed in `8b0948c`.
 - DataViews silently returns null when `defaultLayouts[view.type]` is empty. Fixed by adding `defaultLayouts` to view defs in `c945b15`.
 - Drilldown auto-inference from URL primary path landed in `ac8d058`; back-button suppression sentinel landed in `5ccde5e`; operator-precedence bug fixed in `eff4ed5`.
+- View-config primitive collapsed CIAB 3-axis registry to 2-axis (PR #...) — restored via `docs/plans/2026-05-20-dataview-registry-restoration.md`.
 
 ## How to preserve through PR feedback
 

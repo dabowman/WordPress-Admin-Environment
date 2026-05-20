@@ -200,9 +200,16 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 	}
 
 	if ( key === 'app' ) {
-		console.log( '\n  Bundled app manifests:' );
+		console.log( '\n  Bundled app manifests (v2 shape):' );
 		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
-			const doc   = readJson( path );
+			const doc = readJson( path );
+			// Bundled manifests opting into the v3 shape declare their
+			// `$schema` accordingly; v3 manifests carry `dataView` / no
+			// `view` so they fail under admin-app-v2.json. The v3 sweep
+			// below validates them under admin-app-v3.json instead.
+			if ( typeof doc?.$schema === 'string' && doc.$schema.includes( 'admin-app-v3' ) ) {
+				continue;
+			}
 			const valid = validate( doc );
 			const rel   = path.slice( projectRoot.length + 1 );
 			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
@@ -242,6 +249,16 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 }
 
 // ── Schemas 5-7: v3 manifest schemas ───────────────────────────────
+//
+// NOTE: The canonical v3 default workspace fixture
+// `docs/v3/wp-admin-default.v3.json` and `shells/wp-admin-default-v3.json`
+// are reshaped in Stage 3 of the data-view registry restoration
+// (`docs/plans/2026-05-20-dataview-registry-restoration.md`). Until that
+// stage lands the canonical fixture will fail validation because it still
+// uses `settings.views` / `screens[id].view` instead of `settings.dataViews`
+// / `screens[id].dataView` + `dataViewRef`. This is expected at the
+// Stage 2 schema-only step. The v3 positive + negative fixtures below
+// exercise the new shape directly so the schema is still covered.
 
 const v3Schemas = [
 	{ key: 'admin',  schemaFile: 'admin-v3.json' },
@@ -263,6 +280,44 @@ for ( const { key, schemaFile } of v3Schemas ) {
 				'docs/v3/wp-admin-default.v3.json',
 				valid,
 				valid ? '' : formatErrors( validate.errors )
+			);
+		}
+	}
+
+	if ( key === 'app' ) {
+		console.log( '\n  Bundled app manifests (v3 shape):' );
+		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
+			const doc = readJson( path );
+			if ( typeof doc?.$schema !== 'string' || ! doc.$schema.includes( 'admin-app-v3' ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			const rel   = path.slice( projectRoot.length + 1 );
+			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	const positiveDir = resolve( FIXTURES_DIR, 'v3', key, 'positive' );
+	const negativeDir = resolve( FIXTURES_DIR, 'v3', key, 'negative' );
+
+	if ( existsSync( positiveDir ) ) {
+		console.log( `\n  Positive (must validate):` );
+		for ( const file of listJson( positiveDir ) ) {
+			const doc   = readJson( join( positiveDir, file ) );
+			const valid = validate( doc );
+			ok( `v3/${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+		}
+	}
+
+	if ( existsSync( negativeDir ) ) {
+		console.log( `\n  Negative (must fail):` );
+		for ( const file of listJson( negativeDir ) ) {
+			const doc   = readJson( join( negativeDir, file ) );
+			const valid = validate( doc );
+			ok(
+				`v3/${ key }/negative/${ file }`,
+				! valid,
+				valid ? 'expected validation failure but doc accepted' : ''
 			);
 		}
 	}

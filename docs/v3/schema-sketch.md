@@ -6,7 +6,7 @@ Working draft. Reshapes admin.json around user-task surfaces instead of runtime-
 
 1. **User intent = top-level shape.** Each top-level block corresponds to a recognizable authoring task ("add a screen", "organize the menu", "brand the admin", "bind a shortcut"). No top-level block exists only to mirror the runtime.
 
-2. **Theme.json pattern: global definition + inline override.** `view` declared at the top level applies globally to its `(kind, name)`. Inline `screens[id].view` overrides for that screen only. Same pattern as `theme.json#settings.color` (global) vs `theme.json#styles.blocks.core/heading.color` (per-block).
+2. **Theme.json pattern: global definition + inline override.** `dataView` declared at the top level (`settings.dataViews.<kind>.<name>.<variant>`) applies globally to its triple. Inline `screens[id].dataView` overlay deep-merges on top of the resolved triple for that screen only. Same pattern as `theme.json#settings.color` (global) vs `theme.json#styles.blocks.core/heading.color` (per-block).
 
 3. **id-keyed everywhere.** Sparse cascade overrides require named keys, not array positions. Power users authoring `screens.posts.menu.position` should not have to know what index Posts sits at in some array.
 
@@ -40,12 +40,15 @@ Working draft. Reshapes admin.json around user-task surfaces instead of runtime-
   },
 
   "settings": {
-    "views": {
+    "dataViews": {
       "postType": {
-        "post": { "fields": [ ... ], "actions": [ ... ] }
+        "post": {
+          "_default": { "fieldsRef": "core/post-fields", "defaultView": { ... }, "actions": [ ... ] },
+          "drafts":   { "extends": "_default", "defaultView": { "filters": [ ... ] } }
+        }
       }
     },
-    "fields": {
+    "dataFields": {
       "core/post-fields": { "kind": "postType", "name": "post", "fields": [ ... ] }
     }
   },
@@ -82,8 +85,8 @@ Working draft. Reshapes admin.json around user-task surfaces instead of runtime-
 | Block | Role | Cascade behavior |
 |-------|------|-----------------|
 | `workspace` | Install metadata: engine, default landing screen, branding, notices, persistent widgets (toolbar / sidebar-footer / status-bar). | Deep-merge per-field. `widgets.<slot>` arrays merge by `id`. |
-| `settings` | Reusable definition registries referenced from elsewhere by id. Contains `views` (entity-shape definitions) and `fields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
-| `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, view, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
+| `settings` | Reusable definition registries referenced from elsewhere by id. Contains `dataViews` (3-axis `@wordpress/dataviews` configuration keyed by `kind → name → variant`) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
+| `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
 | `commands` | First-class palette entries + keyboard shortcuts. Each command has an explicit `id` field. | Merge by `id`. |
 | `styles` | Tokens, slot overrides, chrome. Unchanged from v2 — theme-developer surface intact. | Deep-merge per-field. |
@@ -110,7 +113,8 @@ A screen has two scopes of placement:
       "app": "core:posts",
       "config": { "postType": "post" },
 
-      "view": { /* optional inline override of settings.views.postType.post */ },
+      "dataViewRef": "postType/post/_default",
+      "dataView": { /* optional inline overlay deep-merged on top of the resolved triple */ },
 
       "permissions": { "capabilities": [ "edit_posts" ] },
       "mode": "default",
@@ -133,8 +137,18 @@ A screen has two scopes of placement:
       "path": "/posts/drafts",
       "app": "core:posts",
       "config": { "postType": "post" },
-      "view": {
-        "defaultView": { "filters": [ { "field": "status", "value": "draft" } ] }
+      "dataViewRef": "postType/post/drafts",
+      "permissions": { "capabilities": [ "edit_posts" ] }
+    },
+
+    "posts-drafts-compact": {
+      "label": "Drafts (compact)",
+      "path": "/posts/drafts/compact",
+      "app": "core:posts",
+      "config": { "postType": "post" },
+      "dataViewRef": "postType/post/drafts",
+      "dataView": {
+        "defaultView": { "fields": [ "date" ] }
       },
       "permissions": { "capabilities": [ "edit_posts" ] }
     },
@@ -185,7 +199,7 @@ Resolver normalizes the shorthand to `apps: [ { "id": "main", "app": "...", "con
 - **`path` populates `_self` URL slot by default.** A screen with `path: "/posts"` mounts when `#/posts` matches. Routable in the workspace's primary region (region with `routing.route-key: "_self"`).
 - **`slot` on a screen** is workspace-scope: which URL slot does this screen live in (`_self`, `palette`, `detail`, `inspector`, etc.).
 - **`slot` on an `apps[]` entry** is screen-scope: where inside the screen does this app render. The slot vocabulary is the union of kernel-reserved slots, engine-declared slots, and slots exposed by other apps in the screen.
-- **Inline `view` deep-merges** with the global `settings.views.<kind>.<name>` definition. Per-screen override pattern.
+- **Screen→registry pointer via `dataViewRef`.** Names a `kind/name/variant` triple in `settings.dataViews`. Optional inline `dataView` overlay layers on top (deep-merge with tombstones). When `dataViewRef` is absent, the resolver falls back to explicit `dataViewKind`/`dataViewName`/`dataViewVariant` or infers `(kind, name)` from the screen's app manifest with `variant: "_default"`.
 - **`mode`** selects an engine-defined chrome mode (see Modes section). Default: `"default"`.
 - **`permissions`** declares access (see Permissions section). Default when absent: admin-only.
 - **`preload[]`** lists REST paths to hydrate when the screen activates. Additive with workspace-level `preload[]`.
@@ -436,55 +450,73 @@ Useful for palette-only screens, drill-target screens reached only via in-app li
 
 ## Settings
 
-The `settings` block holds reusable definition registries that other parts of the workspace reference by id. Mirrors theme.json's `settings` pattern. v3 ships two registries: `views` (entity-shape definitions for DataViews) and `fields` (named field collections).
+The `settings` block holds reusable definition registries that other parts of the workspace reference by id. Mirrors theme.json's `settings` pattern. v3 ships two registries: `dataViews` (the `@wordpress/dataviews` configuration for an entity, keyed by `kind → name → variant`) and `dataFields` (named field collections referenced by views via `fieldsRef`).
+
+Engines that ship alternative grid implementations MAY ignore the `dataView` block or interpret it per their own conventions; apps that don't render an entity list omit `dataView` entirely.
 
 ```json
 {
   "settings": {
-    "views": {
+    "dataViews": {
       "postType": {
         "post": {
-          "fields": [
-            { "id": "title",  "type": "text",     "label": "Title", "enableGlobalSearch": true },
-            { "id": "status", "type": "select",   "label": "Status", "elements": [ ... ] },
-            { "id": "author", "type": "text",     "label": "Author" },
-            { "id": "date",   "type": "datetime", "label": "Date" }
-          ],
-          "defaultView": {
-            "type": "table",
-            "perPage": 25,
-            "sort": { "field": "date", "direction": "desc" }
+          "_default": {
+            "fieldsRef": "core/post-fields",
+            "defaultView": {
+              "type": "table",
+              "perPage": 20,
+              "fields": [ "status", "author", "date" ],
+              "titleField": "title",
+              "sort": { "field": "date", "direction": "desc" }
+            },
+            "defaultLayouts": { "table": {}, "grid": {} },
+            "actions": [
+              { "id": "edit",  "label": "Edit",          "isPrimary": true, "icon": "pencil" },
+              { "id": "view",  "label": "View",          "icon": "external", "eligibleWhen": { "status": "publish" } },
+              { "id": "trash", "label": "Move to Trash", "isDestructive": true, "supportsBulk": true,
+                "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } }
+            ]
           },
-          "actions": [
-            { "id": "edit",  "label": "Edit",          "isPrimary": true },
-            { "id": "trash", "label": "Move to Trash", "isDestructive": true, "supportsBulk": true }
-          ]
+          "drafts": {
+            "extends": "_default",
+            "defaultView": {
+              "fields": [ "author", "date" ],
+              "filters": [ { "field": "status", "operator": "is", "value": "draft" } ]
+            }
+          }
         }
       }
     },
 
-    "fields": {
+    "dataFields": {
       "core/post-fields": {
         "kind": "postType",
-        "name": "post",
-        "fields": [ { "id": "seo-score", "type": "integer", "label": "SEO Score" } ]
+        "name": null,
+        "fields": [
+          { "id": "title",  "type": "text",     "label": "Title", "enableGlobalSearch": true },
+          { "id": "status", "type": "text",     "label": "Status" },
+          { "id": "author", "type": "text",     "label": "Author" },
+          { "id": "date",   "type": "datetime", "label": "Date" }
+        ]
       }
     }
   }
 }
 ```
 
-### Views
+### DataViews
 
-- **Global definition lives in `settings.views.<kind>.<name>`.** Applies wherever the entity is rendered.
-- **Inline override on screens via `screens[id].view`.** Deep-merges with the global definition. Per-screen tweak pattern.
-- **Variants are separate screens, not nested registry entries.** `posts`, `posts-drafts`, `posts-pending`, `posts-trash` each declare their own inline view delta. Eliminates v2's `_default` / variant nesting.
-- **Tombstones via `null`.** A higher origin sets `settings.views.postType.post.fields.author: null` to remove the author column globally. Or `screens.posts.view.fields.author: null` to remove it only on the Posts screen.
+- **Registry lives at `settings.dataViews.<kind>.<name>.<variant>`.** Three axes; each leaf is a complete `@wordpress/dataviews` configuration (`fieldsRef`, `defaultView`, `defaultLayouts`, `actions`, etc.). The `_default` variant is the unqualified base; other variant ids are author-defined.
+- **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge (CIAB independent-resolution rule). Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
+- **Inline override on screens via `screens[id].dataView`.** Deep-merges on top of the resolved triple. Per-screen tweak pattern that survives alongside `dataViewRef`.
+- **Per-base + per-variant filter hooks.** `wp_admin_shell_data_view_config_{kind}_{name}` fires for every triple; `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` fires additionally whenever the variant is non-`_default`.
+- **Tombstones via `null`.** A higher origin sets `settings.dataViews.postType.post._default.fields.author: null` to remove the author column from the base globally. Or `screens.posts.dataView.fields.author: null` to remove it only on the Posts screen.
 
-### Fields
+### DataFields
 
-- **Named field collections.** Plugins / apps ship reusable field bundles registered through `settings.fields[id]`. Views reference via `fieldsRef`.
-- **Same shape as v2 `fieldCollections`.** Moved under `settings.fields` for the registries grouping.
+- **Named field collections.** Plugins / apps ship reusable field bundles registered through `settings.dataFields[id]`. Views reference a collection via `fieldsRef` and the resolver merges ref-wins-inline-overrides — collection provides the base, inline `fields` shallow-merges per-id, inline-only ids append after the base.
+- **Same shape as v2 `fieldCollections`.** Moved under `settings.dataFields` for the registries grouping; the registry name changed, the per-entry shape did not.
+- **Per-descriptor field word stays `field`** — matches `@wordpress/dataviews` upstream convention (`{ id, type, label, elements, enableSorting, ... }`).
 - **Cascade-extensible.** Plugin origin contributes; site/role/user can override or hide fields per collection.
 
 ## Commands shape
@@ -546,7 +578,7 @@ The cascade resolver merges every origin (core / engine / plugin / site / role /
 - **Arrays: merge by `id`.** Entries with a matching `id` field deep-merge per-field. New ids append. Order is preserved from lower origin; appended entries land at the end unless a `position` field sorts them. Same approach theme.json takes for `settings.color.palette`.
 - **Arrays without `id` field**: replaced wholesale (the higher origin's array wins).
 
-Applies to: `screens`, `menu` tree (recursively at every depth), `settings.views.{kind}.{name}.fields`, `settings.views.{kind}.{name}.actions`, `settings.views.{kind}.{name}.defaultView`, `permissions.capabilities`, `permissions.roles`, `commands`, etc.
+Applies to: `screens`, `menu` tree (recursively at every depth), `settings.dataViews.{kind}.{name}.{variant}.fields`, `settings.dataViews.{kind}.{name}.{variant}.actions`, `settings.dataViews.{kind}.{name}.{variant}.defaultView`, `permissions.capabilities`, `permissions.roles`, `commands`, etc.
 
 ### Tombstones
 
@@ -560,7 +592,7 @@ Higher origin removes a lower-origin entry or field by setting its value to `nul
 { "screens": { "posts-trash": null } }
 ```
 
-Tombstones work at every depth. `screens.posts.view.fields.author: null` removes the author column from the posts view.
+Tombstones work at every depth. `screens.posts.dataView.fields.author: null` removes the author column from the posts screen; `settings.dataViews.postType.post._default.fields.author: null` removes it from the registry base globally.
 
 ### Path collisions
 
@@ -829,9 +861,9 @@ wp_admin_shell_register_menu_renderer( 'plugin:my/breadcrumb-nav', $callback );
 
 The engine's render path consults the renderer registry. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup.
 
-### Plugin-contributed view-config overrides
+### Plugin-contributed dataView overrides
 
-Preserved from v2: the `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved view-config doc after cascade resolution. Used by plugins to extend entity-shape definitions.
+Preserved from v2 with the v3 rename: the `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_shell_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant. CIAB plugins migrate via `s/next_admin_entity_view_config_/wp_admin_shell_data_view_config_/g`.
 
 ## Open design questions
 
@@ -841,7 +873,7 @@ Remaining (lower-priority, defer to Phase 3 / spec authoring):
 
 2. **Cascade audit log surface.** Site-admin-visible UI for cascade rejections (loosening attempts, unknown caps, path collisions). REST endpoint? Settings page? Both?
 
-3. **Variant URL routing.** Inline view variants on screens use the URL path; what about variants invoked from a single screen via state (e.g. tabs in the Posts page switching `_default` vs `drafts`)? Convention-driven (path) for v3; explore query-driven variants later.
+3. **Variant URL routing.** Variants can be selected per-screen via `dataViewRef` (path-addressed: each variant is a separate screen) OR via state inside one screen (single screen, runtime `useDataView({kind, name, variant})` driven by tab state). Both shapes are legal; conventions for choosing between them TBD.
 
 4. **App-internal slot-fill contributions.** Apps already accept plugin contributions via slot/fill within their own React tree (PluginSidebar pattern). Whether the schema declares these or leaves them as app-internal concerns.
 
@@ -849,8 +881,8 @@ Remaining (lower-priority, defer to Phase 3 / spec authoring):
 
 | Intent | v1/v2 places touched | v3 places touched |
 |--------|----------------------|-------------------|
-| Add screen for custom post type | `routes` + `regions.sidebar.nav.config.items[]` + `viewConfigs.postType.product` + `fieldCollections` (opt) | `screens.<id>` + entry in `menu` tree at desired depth |
-| Add column to existing screen | `viewConfigs.postType.post.fields[]` (filter or admin.json) | `settings.views.postType.post.fields[]` (global) OR `screens.posts.view.fields[]` (per-screen) |
+| Add screen for custom post type | `routes` + `regions.sidebar.nav.config.items[]` + `viewConfigs.postType.product` + `fieldCollections` (opt) | `screens.<id>` + entry in `menu` tree + (opt) `settings.dataViews.postType.product._default` |
+| Add column to existing screen | `viewConfigs.postType.post.fields[]` (filter or admin.json) | `settings.dataViews.postType.post.<variant>.fields[]` (global per-variant) OR `screens.posts.dataView.fields[]` (per-screen) |
 | Reorganize / rename sidebar | nested array surgery in `regions.sidebar.nav.config.items[]` | edit nested `menu` tree by id (cascade-friendly at every depth) |
 | Restrict a screen by capability/role | one of four places | `screens.<id>.permissions` (single block, OR-semantic) |
 | Replace built-in screen | route override + nav item override | `screens.<id>.app` (single field) — menu item survives, still bound by id |

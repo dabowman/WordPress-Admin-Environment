@@ -2,10 +2,10 @@
 /**
  * mergeFields — pure ref-wins-inline-overrides merge.
  *
- * Mirrors the PHP `WP_Admin_Shell_View_Config::merge_fields` semantics
- * on the JS side. The inline-hydration path in `useScreenView` reuses
- * the same merge so first-paint renders against the inline cascade
- * snapshot without waiting on /screen-view REST.
+ * Mirrors the PHP `WP_Admin_Shell_Data_View_Config::merge_fields`
+ * semantics on the JS side. The inline-hydration path in `useDataView`
+ * reuses the same merge so first-paint renders against the inline
+ * cascade snapshot without waiting on /data-view REST.
  */
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ const __dirname   = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
 const { mergeFields } = await import(
-	resolve( projectRoot, 'src/runtime/viewConfig/mergeFields.mjs' )
+	resolve( projectRoot, 'src/runtime/dataView/mergeFields.mjs' )
 );
 
 let pass = 0;
