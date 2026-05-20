@@ -24,6 +24,8 @@
  * kind-based dispatch for platform-service dispatch.
  */
 
+import { SlotFillProvider } from '@wordpress/components';
+
 import { Region } from '../../regions/Region';
 import { getRegionKind } from '../../regions/regionKind';
 
@@ -72,36 +74,40 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-layout" data-engine="core:default">
-			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
+		<SlotFillProvider>
+			<div className="wp-admin-shell-layout" data-engine="core:default">
+				{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
-			<div className="wp-admin-shell-layout__body">
-				{ sidebar && <Region key={ sidebar.id } region={ sidebar } /> }
+				<div className="wp-admin-shell-layout__body">
+					{ sidebar && (
+						<Region key={ sidebar.id } region={ sidebar } />
+					) }
 
-				<div
-					className={ `wp-admin-shell-areas${
-						preview ? ' has-preview' : ''
-					}` }
-				>
-					{ content && (
-						<Region key={ content.id } region={ content } />
-					) }
-					{ preview && (
-						<Region key={ preview.id } region={ preview } />
-					) }
+					<div
+						className={ `wp-admin-shell-areas${
+							preview ? ' has-preview' : ''
+						}` }
+					>
+						{ content && (
+							<Region key={ content.id } region={ content } />
+						) }
+						{ preview && (
+							<Region key={ preview.id } region={ preview } />
+						) }
+					</div>
 				</div>
+
+				{ stragglers.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+
+				{ buckets.drawer.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+				{ buckets.overlay.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
 			</div>
-
-			{ stragglers.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-
-			{ buckets.drawer.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-			{ buckets.overlay.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-		</div>
+		</SlotFillProvider>
 	);
 }

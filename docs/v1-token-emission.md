@@ -4,7 +4,7 @@
 > `<style id="wp-admin-shell-tokens">` tag via `emitTokens.js` +
 > `compatBridge.js`. Both files were deleted in the v2 ThemeProvider
 > overhaul. v2 emission is via `<ThemeProviderHost>` (real
-> `@wordpress/theme.ThemeProvider` + sibling `<style data-wpds-shell-detail>`
+> `@wordpress/theme.ThemeProvider` + sibling `<style data-shell-theme-detail>`
 > for tier-3 / chrome-bridge / region-app scoped overrides). The
 > compat-alias family is now emitted by `@wordpress/theme` itself
 > (`use-theme-provider-styles.ts:120-129`). For the current model see

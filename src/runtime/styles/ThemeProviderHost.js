@@ -1,18 +1,21 @@
 /**
- * ThemeProviderHost — single seam between the kernel and whichever
+ * ThemeProviderHost — DS-neutral seam between the kernel and whichever
  * ThemeProvider the active engine ships.
  *
  * Responsibilities:
  *   1. Pick the inner ThemeProvider — engine's `ThemeProvider` field if
- *      declared, otherwise the platform default (`WpdsThemeProvider`).
+ *      declared. When absent, render children pass-through (no inner
+ *      provider): the kernel does not impose a design-system default.
+ *      A bundled engine's ThemeProvider is the engine's contribution;
+ *      a non-WPDS engine ships its own and the kernel is unaffected.
  *   2. Mount it with seed/density/cursor inputs. Wrap children in a
- *      `<div data-wpds-theme-provider-id={id}>` so scoped detail CSS has
- *      a stable target.
+ *      `<div data-shell-theme-id={id}>` so scoped detail CSS has a
+ *      stable target.
  *   3. Emit tier-3 slot overrides + chrome → WPDS bridge + region/app
  *      scoped overrides as a sibling `<style>` block. Engines never
  *      reimplement these.
- *   4. Catch renders errors from the inner provider via an error
- *      boundary; on failure fall back to the platform default with a
+ *   4. Catch render errors from the inner provider via an error
+ *      boundary; on failure render children pass-through with a
  *      console warning. Shell stays usable when an extension engine
  *      ships a broken ThemeProvider.
  *
@@ -23,9 +26,14 @@
  *     overrides to a region or application subtree.
  */
 
-import { useId, useMemo, createElement, Component } from '@wordpress/element';
+import {
+	useId,
+	useMemo,
+	createElement,
+	Component,
+	Fragment,
+} from '@wordpress/element';
 
-import { WpdsThemeProvider } from './WpdsThemeProvider';
 import { useKernel } from '../kernel-context';
 
 const EMPTY_COMPILED = Object.freeze( {
@@ -41,7 +49,9 @@ const EMPTY_TOKENS = Object.freeze( {} );
  *
  * @param {Object}  props
  * @param {Object}  [props.engineSource] Active engine source. When absent
- *                                       (e.g. tests), falls back to WPDS.
+ *                                       or its `ThemeProvider` field is
+ *                                       missing, children render through
+ *                                       a Fragment (no inner provider).
  * @param {Object}  props.styles
  * @param {Object}  props.tokens
  * @param {boolean} [props.isRoot]
@@ -147,7 +157,7 @@ function ProviderShell( {
 	const wrapper = createElement(
 		'div',
 		{
-			'data-wpds-theme-provider-id': id,
+			'data-shell-theme-id': id,
 			className: 'wp-admin-shell-theme-root',
 			style: { display: 'contents' },
 		},
@@ -162,14 +172,14 @@ function ProviderShell( {
 	};
 
 	const detailStyleNode = detailCss
-		? createElement( 'style', { 'data-wpds-shell-detail': id }, detailCss )
+		? createElement( 'style', { 'data-shell-theme-detail': id }, detailCss )
 		: null;
 
 	return createElement(
 		ThemeProviderErrorBoundary,
 		{ engineSource, innerProps, wrapper, detailStyleNode },
 		// children prop unused — boundary renders the engine provider
-		// internally so it can swap to the default on error.
+		// internally so it can swap to pass-through on error.
 		null
 	);
 }
@@ -179,8 +189,10 @@ function ProviderShell( {
  * Engine-supplied providers ship outside the kernel's review process
  * (extensions can register their own engines via
  * `wp_admin_shell_register_engine`); a thrown render here would crash
- * the entire shell. Catch + log + fall back to WPDS so the shell still
- * paints.
+ * the entire shell. Catch + log + render children pass-through so the
+ * shell still paints. The kernel does not impose a DS-specific
+ * fallback provider — engines that crash get no recovery beyond the
+ * structural pass-through, by design.
  */
 class ThemeProviderErrorBoundary extends Component {
 	constructor( props ) {
@@ -196,7 +208,7 @@ class ThemeProviderErrorBoundary extends Component {
 		// eslint-disable-next-line no-console
 		console.error(
 			'wp-admin-shell: engine ThemeProvider threw during render. ' +
-				'Falling back to WPDS default. ' +
+				'Rendering pass-through (no inner provider). ' +
 				( error?.message || error )
 		);
 	}
@@ -207,7 +219,10 @@ class ThemeProviderErrorBoundary extends Component {
 		const Provider =
 			! this.state.failed && engineSource?.ThemeProvider
 				? engineSource.ThemeProvider
-				: WpdsThemeProvider;
+				: null;
+		if ( ! Provider ) {
+			return createElement( Fragment, null, detailStyleNode, wrapper );
+		}
 		return createElement( Provider, innerProps, detailStyleNode, wrapper );
 	}
 }
@@ -233,7 +248,7 @@ function buildScopedDetailCss( { engineSource, styles, tokens, providerId } ) {
 	const compile = engineSource?.compileStyles;
 	const compiled = compile ? compile( styles, tokens ) : EMPTY_COMPILED;
 	const lines = [];
-	const scopeSel = `[data-wpds-theme-provider-id="${ providerId }"]`;
+	const scopeSel = `[data-shell-theme-id="${ providerId }"]`;
 
 	const topVars = compiled.top || {};
 	if ( Object.keys( topVars ).length > 0 ) {

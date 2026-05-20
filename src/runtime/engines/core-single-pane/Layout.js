@@ -26,6 +26,7 @@
 
 import { useState, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import { SlotFillProvider } from '@wordpress/components';
 
 import { Region } from '../../regions/Region';
 import { isModal } from '../../regions/platformServices.mjs';
@@ -77,69 +78,74 @@ export default function CoreSinglePaneLayout( { regions } ) {
 	const hasNav = buckets.navigation.length > 0;
 
 	return (
-		<div
-			className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
-			data-engine="core:single-pane"
-		>
-			<div className="wp-admin-shell-single-pane__appbar">
+		<SlotFillProvider>
+			<div
+				className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
+				data-engine="core:single-pane"
+			>
+				<div className="wp-admin-shell-single-pane__appbar">
+					{ hasNav && (
+						<button
+							type="button"
+							className="wp-admin-shell-single-pane__nav-toggle"
+							aria-label="Toggle navigation"
+							aria-expanded={ navOpen }
+							onClick={ toggleNav }
+						>
+							<span aria-hidden="true">☰</span>
+						</button>
+					) }
+					{ buckets.banner.map( ( region ) => (
+						<Region key={ region.id } region={ region } />
+					) ) }
+				</div>
+
+				<div className="wp-admin-shell-single-pane__body">
+					{ buckets.main && (
+						<Region
+							key={ buckets.main.id }
+							region={ buckets.main }
+						/>
+					) }
+				</div>
+
 				{ hasNav && (
-					<button
-						type="button"
-						className="wp-admin-shell-single-pane__nav-toggle"
-						aria-label="Toggle navigation"
-						aria-expanded={ navOpen }
-						onClick={ toggleNav }
+					<div
+						className={ `wp-admin-shell-single-pane__nav-drawer${
+							navOpen ? ' is-open' : ''
+						}` }
+						aria-hidden={ ! navOpen }
 					>
-						<span aria-hidden="true">☰</span>
-					</button>
+						<button
+							type="button"
+							tabIndex={ -1 }
+							aria-label={ __(
+								'Close navigation',
+								'wp-admin-shell'
+							) }
+							className="wp-admin-shell-single-pane__nav-backdrop"
+							onClick={ toggleNav }
+						/>
+						<div className="wp-admin-shell-single-pane__nav-pane">
+							{ buckets.navigation.map( ( region ) => (
+								<Region key={ region.id } region={ region } />
+							) ) }
+						</div>
+					</div>
 				) }
-				{ buckets.banner.map( ( region ) => (
+
+				{ buckets.complementary.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+
+				{ buckets.modal.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+
+				{ buckets.other.map( ( region ) => (
 					<Region key={ region.id } region={ region } />
 				) ) }
 			</div>
-
-			<div className="wp-admin-shell-single-pane__body">
-				{ buckets.main && (
-					<Region key={ buckets.main.id } region={ buckets.main } />
-				) }
-			</div>
-
-			{ hasNav && (
-				<div
-					className={ `wp-admin-shell-single-pane__nav-drawer${
-						navOpen ? ' is-open' : ''
-					}` }
-					aria-hidden={ ! navOpen }
-				>
-					<button
-						type="button"
-						tabIndex={ -1 }
-						aria-label={ __(
-							'Close navigation',
-							'wp-admin-shell'
-						) }
-						className="wp-admin-shell-single-pane__nav-backdrop"
-						onClick={ toggleNav }
-					/>
-					<div className="wp-admin-shell-single-pane__nav-pane">
-						{ buckets.navigation.map( ( region ) => (
-							<Region key={ region.id } region={ region } />
-						) ) }
-					</div>
-				</div>
-			) }
-
-			{ buckets.complementary.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-
-			{ buckets.modal.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-
-			{ buckets.other.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-		</div>
+		</SlotFillProvider>
 	);
 }

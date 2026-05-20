@@ -62,6 +62,13 @@ const NON_TOKEN_KEYS = new Set( [
  * `@wordpress/ui` re-theming.
  */
 const CHROME_WPDS_BINDINGS = {
+	canvas: {
+		selector: '.wp-admin-shell-layout',
+		bindings: {
+			background: '--wpds-color-bg-surface-neutral',
+			foreground: '--wpds-color-fg-content-neutral',
+		},
+	},
 	sidebar: {
 		selector: '.wp-admin-shell-nav, .wp-admin-shell-site-hub',
 		bindings: {

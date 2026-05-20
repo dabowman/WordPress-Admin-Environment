@@ -26,6 +26,8 @@
  * instance via `useWindowManager()`.
  */
 
+import { SlotFillProvider } from '@wordpress/components';
+
 import { Region } from '../../regions/Region';
 import { WindowManagerProvider } from './windowing/WindowManagerContext';
 
@@ -40,30 +42,32 @@ export default function CoreDesktopLayout( { regions } ) {
 	);
 
 	return (
-		<WindowManagerProvider>
-			<div
-				className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
-				data-engine="core:desktop"
-			>
-				{ wallpaper && (
-					<div className="wp-admin-shell-desktop__wallpaper-slot">
-						<Region region={ wallpaper } />
-					</div>
-				) }
-				{ workspace && (
-					<div className="wp-admin-shell-desktop__workspace-slot">
-						<Region region={ workspace } />
-					</div>
-				) }
-				{ dock && (
-					<div className="wp-admin-shell-desktop__dock-slot">
-						<Region region={ dock } />
-					</div>
-				) }
-				{ overlays.map( ( region ) => (
-					<Region key={ region.id } region={ region } />
-				) ) }
-			</div>
-		</WindowManagerProvider>
+		<SlotFillProvider>
+			<WindowManagerProvider>
+				<div
+					className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
+					data-engine="core:desktop"
+				>
+					{ wallpaper && (
+						<div className="wp-admin-shell-desktop__wallpaper-slot">
+							<Region region={ wallpaper } />
+						</div>
+					) }
+					{ workspace && (
+						<div className="wp-admin-shell-desktop__workspace-slot">
+							<Region region={ workspace } />
+						</div>
+					) }
+					{ dock && (
+						<div className="wp-admin-shell-desktop__dock-slot">
+							<Region region={ dock } />
+						</div>
+					) }
+					{ overlays.map( ( region ) => (
+						<Region key={ region.id } region={ region } />
+					) ) }
+				</div>
+			</WindowManagerProvider>
+		</SlotFillProvider>
 	);
 }

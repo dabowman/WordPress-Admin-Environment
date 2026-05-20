@@ -1,4 +1,5 @@
 import Layout from './Layout';
+import { WpdsThemeProvider } from '../core-default/WpdsThemeProvider';
 import { compileStyles } from './compileStyles.mjs';
 import { iconTable, fallbackIcon } from './icons';
 import { registerIcons } from '../../config/iconMap';
@@ -16,11 +17,11 @@ registerIcons( iconTable, { fallback: fallbackIcon } );
  *   - P2.T5 (this commit): `compileStyles` hook maps admin.json
  *     `styles.chrome.*` slot overrides into CSS variables scoped to the
  *     kernel's ThemeProvider wrapper. `engine.json#default-styles`
- *     carries the desktop palette so consuming shells inherit. No
- *     `ThemeProvider` field — kernel falls back to `WpdsThemeProvider`,
- *     so bundled apps inside windows continue to render with the WPDS
- *     contract they were authored against. The WPDS-to-WPD aesthetic
- *     bridge from the original plan defers to a follow-up.
+ *     carries the desktop palette so consuming shells inherit.
+ *     `ThemeProvider: WpdsThemeProvider` declares the WPDS contract
+ *     explicitly so bundled apps inside windows render with WPDS tokens
+ *     they were authored against. The kernel no longer ships a WPDS
+ *     fallback — each bundled engine declares its provider directly.
  *   - P2.T3 ports the dock-rail registry.
  *   - P2.T4 wires the chromeless iframe bridge.
  */
@@ -29,6 +30,7 @@ const coreDesktop = {
 	id: 'core:desktop',
 	title: 'Desktop',
 	Component: Layout,
+	ThemeProvider: WpdsThemeProvider,
 	compileStyles,
 	iconTable,
 };

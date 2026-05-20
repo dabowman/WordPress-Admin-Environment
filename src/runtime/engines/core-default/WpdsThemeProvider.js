@@ -1,10 +1,13 @@
 /**
- * WpdsThemeProvider — platform-default ThemeProvider backed by
+ * WpdsThemeProvider — shared bundled-engine ThemeProvider backed by
  * `@wordpress/theme.ThemeProvider`.
  *
- * Used by `core:default` and `core:single-pane` engines, and by
- * ThemeProviderHost as the fallback when an engine declines to ship its
- * own provider.
+ * Lives under `core:default` because it is that engine's contribution.
+ * `core:single-pane` and `core:desktop` import the same module from this
+ * sibling location — they are all WPDS-flavored engines and share the
+ * one provider implementation. The kernel does not reference this file;
+ * a non-WPDS engine (Material, Tailwind, brand-locked) ships its own
+ * `ThemeProvider` from its own engine bundle and is unaffected.
  *
  * Unlocks the real `@wordpress/theme` private API by piggybacking on
  * `@wordpress/edit-site`'s allowlist entry — the package's
@@ -61,8 +64,6 @@ const RealThemeProvider = ( () => {
 		return null;
 	}
 } )();
-
-export const wpdsThemeProviderAvailable = !! RealThemeProvider;
 
 /**
  * Tier-1 seed extraction. `styles.theme` is the canonical seed source —

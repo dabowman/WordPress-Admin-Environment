@@ -403,8 +403,13 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		// V2.M5 — DTCG primitives layer. Site → theme → plugin → core
 		// origins merged here. Empty object when no origin contributes.
 		// `compileStyles` consumes this when resolving non-`styles.*`
-		// curly-brace aliases in admin.json `styles`.
-		'tokens'        => WP_Admin_Shell_Tokens::resolve(),
+		// curly-brace aliases in admin.json `styles`. Token serialization
+		// is skipped entirely when the resolved styles tree references
+		// zero token aliases — the DTCG layer is dead weight for shells
+		// that only set seeds + slot overrides.
+		'tokens'        => wp_admin_shell_styles_reference_tokens( $config )
+			? WP_Admin_Shell_Tokens::resolve()
+			: array(),
 		// v3 — flattened engine-modes catalog. The active engine's
 		// `modes` block is walked for `extends` chains (depth-limited),
 		// then the `wp_admin_shell_engine_modes_{engineId}` filter runs
@@ -571,6 +576,46 @@ function wpas_collect_nav_item_caps( $items, &$declared ) {
 			wpas_collect_nav_item_caps( $item['items'], $declared );
 		}
 	}
+}
+
+/**
+ * Scan the resolved styles tree for any token alias. Returns true if any
+ * string leaf matches the alias pattern `{<path>}` where `<path>` does
+ * NOT start with `styles.` (within-doc aliases are resolved without
+ * touching the DTCG tokens table). Used to skip token serialization when
+ * the shell ships seeds + slot overrides only — the DTCG layer would be
+ * dead weight on the wire.
+ *
+ * @param array $config Resolved admin.json config.
+ * @return bool
+ */
+function wp_admin_shell_styles_reference_tokens( $config ) {
+	if ( ! is_array( $config ) || empty( $config['styles'] ) || ! is_array( $config['styles'] ) ) {
+		return false;
+	}
+	return wp_admin_shell_tree_has_token_alias( $config['styles'] );
+}
+
+function wp_admin_shell_tree_has_token_alias( $node ) {
+	if ( is_string( $node ) ) {
+		if ( ! preg_match( '/^\{([^}]+)\}$/', $node, $m ) ) {
+			return false;
+		}
+		// Within-doc aliases (`{styles.path}`) resolve from admin.json
+		// directly; they don't reach the tokens table. Only "foreign"
+		// aliases (`{color.brand.500}`, `{size.lg}`, etc.) need the
+		// DTCG tree.
+		return strpos( $m[1], 'styles.' ) !== 0;
+	}
+	if ( ! is_array( $node ) ) {
+		return false;
+	}
+	foreach ( $node as $value ) {
+		if ( wp_admin_shell_tree_has_token_alias( $value ) ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**

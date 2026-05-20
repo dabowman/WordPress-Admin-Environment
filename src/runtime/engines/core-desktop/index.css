@@ -17,9 +17,12 @@
 	overflow: hidden;
 	background: var(
 		--wp-admin-shell--chrome--canvas--background,
-		#0a0a1a
+		var( --wpds-color-bg-surface-neutral-strong )
 	);
-	color: var( --wp-admin-shell--chrome--canvas--foreground, #f0f0f5 );
+	color: var(
+		--wp-admin-shell--chrome--canvas--foreground,
+		var( --wpds-color-fg-content-neutral )
+	);
 	font-family: var( --wpds-font-family-sans, -apple-system, system-ui, sans-serif );
 }
 
@@ -70,7 +73,10 @@
 .wp-admin-shell-desktop-dock__separator {
 	inline-size: 1px;
 	block-size: 36px;
-	background: rgba( 255, 255, 255, 0.18 );
+	background: var(
+		--wp-admin-shell--chrome--dock--separator,
+		rgba( 255, 255, 255, 0.18 )
+	);
 	margin-inline: 4px;
 }
 
@@ -117,7 +123,10 @@
 
 .wp-admin-shell-desktop-dock__tile:hover,
 .wp-admin-shell-desktop-dock__tile:focus-visible {
-	background: rgba( 255, 255, 255, 0.12 );
+	background: var(
+		--wp-admin-shell--chrome--dock--tile-hover,
+		rgba( 255, 255, 255, 0.12 )
+	);
 	outline: none;
 }
 
@@ -150,14 +159,17 @@
 	flex-direction: column;
 	background: var(
 		--wp-admin-shell--chrome--window-frame--background,
-		#2a2a3a
+		var( --wpds-color-bg-surface-neutral-strong )
 	);
 	color: var(
 		--wp-admin-shell--chrome--window-frame--foreground,
-		#f0f0f5
+		var( --wpds-color-fg-content-neutral )
 	);
 	border: 1px solid
-		var( --wp-admin-shell--chrome--window-frame--border, #404050 );
+		var(
+			--wp-admin-shell--chrome--window-frame--border,
+			var( --wpds-color-stroke-surface-neutral )
+		);
 	border-block-end: 0;
 	border-start-start-radius: 8px;
 	border-start-end-radius: 8px;
@@ -195,15 +207,24 @@
 }
 
 .wp-admin-shell-desktop-window-frame__control--close {
-	background: #ff5f57;
+	background: var(
+		--wp-admin-shell--chrome--window-frame--control-close,
+		#ff5f57
+	);
 }
 
 .wp-admin-shell-desktop-window-frame__control--minimize {
-	background: #febc2e;
+	background: var(
+		--wp-admin-shell--chrome--window-frame--control-minimize,
+		#febc2e
+	);
 }
 
 .wp-admin-shell-desktop-window-frame__control--maximize {
-	background: #28c840;
+	background: var(
+		--wp-admin-shell--chrome--window-frame--control-maximize,
+		#28c840
+	);
 }
 
 /*
@@ -371,14 +392,17 @@
 	[ data-region-id*='/body' ] {
 	background: var(
 		--wp-admin-shell--chrome--window-frame--body-background,
-		#1c1c28
+		var( --wpds-color-bg-surface-neutral )
 	);
 	color: var(
 		--wp-admin-shell--chrome--window-frame--body-foreground,
-		#f0f0f5
+		var( --wpds-color-fg-content-neutral )
 	);
 	border: 1px solid
-		var( --wp-admin-shell--chrome--window-frame--border, #404050 );
+		var(
+			--wp-admin-shell--chrome--window-frame--border,
+			var( --wpds-color-stroke-surface-neutral )
+		);
 	border-block-start: 0;
 	border-end-start-radius: 8px;
 	border-end-end-radius: 8px;

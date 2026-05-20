@@ -62,9 +62,8 @@ Each engine ships its own:
   host wraps around the engine's tree.
 - `EngineSource.compileStyles` hook (optional) — emits `{top, scoped,
   subtrees}` CSS-variable buckets the host renders as a sibling
-  `<style>` block scoped to a wrapper `<div data-wpds-theme-provider-id>`.
-  The attribute name is the cross-engine scope hook, not WPDS-specific
-  despite the legacy name.
+  `<style>` block scoped to a wrapper `<div data-shell-theme-id>`. The
+  attribute is the DS-neutral cross-engine scope hook.
 - Own token namespace — `core:default` and `core:single-pane` use
   `--wpds-*`; `core:desktop` uses `--wp-admin-shell--chrome--*` slots
   consumed by inline CSS variable fallbacks. A Material engine would

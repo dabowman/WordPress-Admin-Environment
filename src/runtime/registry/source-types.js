@@ -86,15 +86,16 @@
 
 /**
  * Optional ThemeProvider supplied by an engine. When present, the kernel
- * mounts this provider around the engine's render tree instead of the
- * platform-default (WPDS-backed) provider. Engines can use this to ship
- * an entirely different design system (Material, Tailwind tokens, brand-
- * locked palette, etc.) without touching kernel code.
+ * mounts this provider around the engine's render tree. Engines can use
+ * this to ship an entirely different design system (Material, Tailwind
+ * tokens, brand-locked palette, etc.) without touching kernel code.
+ * When omitted, the kernel renders children pass-through (no inner
+ * provider) — the kernel does not impose a DS-specific default.
  *
  * Contract:
  *   - Children must be rendered inside a wrapper carrying
- *     `data-wpds-theme-provider-id={id}` (or an equivalent attribute the
- *     engine declares) so shell-level scoped detail CSS can target them.
+ *     `data-shell-theme-id={id}` (or an equivalent attribute the engine
+ *     declares) so shell-level scoped detail CSS can target them.
  *   - The `density` prop must be honored according to the engine's own
  *     DS vocabulary — the kernel passes through whatever string the
  *     author authored on `styles.theme.density` without normalization.

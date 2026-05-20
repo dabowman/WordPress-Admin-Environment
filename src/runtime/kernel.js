@@ -4,7 +4,6 @@ import { createRegistry } from './registry/createRegistry';
 import { registerBuiltins } from './registry/builtins';
 import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
-import { SlotFillProvider } from '@wordpress/components';
 import { ThemeProviderHost } from './styles/ThemeProviderHost';
 import { shouldRenderRegion } from './capabilities/shouldRenderRegion.mjs';
 import { attachShellSwitcherToWindow } from './shell-switching';
@@ -58,11 +57,11 @@ export function kernel( config ) {
 	} );
 
 	// Token cascade: `<ThemeProviderHost>` mounts the active engine's
-	// `ThemeProvider` (or the WPDS-backed default when the engine
-	// declines to ship one), wraps children in a scoped
-	// `<div data-wpds-theme-provider-id>`, and emits tier-3 slot
-	// overrides + chrome → WPDS bridge + region/app scoped overrides as
-	// a sibling `<style>` block. Engines pluggable here; kernel agnostic.
+	// `ThemeProvider` when declared (pass-through otherwise — kernel does
+	// not impose a DS-specific default), wraps children in a scoped
+	// `<div data-shell-theme-id>`, and emits tier-3 slot overrides +
+	// chrome → WPDS bridge + region/app scoped overrides as a sibling
+	// `<style>` block. Engines pluggable here; kernel agnostic.
 	const shellTokens =
 		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {};
 
@@ -160,20 +159,18 @@ export function kernel( config ) {
 		<KernelProvider
 			value={ { registry, config, engineSource, dynamicChildrenStore } }
 		>
-			<SlotFillProvider>
-				<RouterProvider defaultRoute={ config[ 'default-route' ] }>
-					<ThemeProviderHost
-						engineSource={ engineSource }
-						isRoot
-						styles={ shellStyles }
-						tokens={ shellTokens }
-					>
-						<NavigationGuard />
-						<BindingsConsumer />
-						<Engine config={ config } regions={ regions } />
-					</ThemeProviderHost>
-				</RouterProvider>
-			</SlotFillProvider>
+			<RouterProvider defaultRoute={ config[ 'default-route' ] }>
+				<ThemeProviderHost
+					engineSource={ engineSource }
+					isRoot
+					styles={ shellStyles }
+					tokens={ shellTokens }
+				>
+					<NavigationGuard />
+					<BindingsConsumer />
+					<Engine config={ config } regions={ regions } />
+				</ThemeProviderHost>
+			</RouterProvider>
 		</KernelProvider>
 	);
 }
