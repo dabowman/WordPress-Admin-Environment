@@ -310,11 +310,18 @@ class WP_Admin_Shell_V3_Compiler {
 	 * v2 → v3 dashboard-widgets back-compat translation.
 	 *
 	 * When a resolved doc carries the legacy top-level `dashboardWidgets`
-	 * block AND a `dashboard-widgets` screen exists, fold each
-	 * `dashboardWidgets[<app-id>]` entry into the screen's `apps[]` with
-	 * `slot: 'grid'`. The original block stays on the doc for one cycle
-	 * so admins migrating manually can still introspect it; the v3
-	 * dashboard-host ignores it.
+	 * block, fold each `dashboardWidgets[<app-id>]` entry into the
+	 * target screen's `apps[]` with `slot: 'grid'`. Target screen
+	 * preference, first match wins:
+	 *
+	 *   1. Explicit `screens['dashboard-widgets']` (the v3 default name).
+	 *   2. Any screen whose primary app is `core:dashboard-host` (covers
+	 *      v2 → v3 synthesis where the route path generates a `route-…`
+	 *      screen id).
+	 *
+	 * Without a target, the function is a no-op — the original block
+	 * stays on the doc for one cycle so admins migrating manually can
+	 * still introspect it; the v3 dashboard-host ignores it.
 	 *
 	 * Per-app collision: when the target screen's `apps[]` already lists
 	 * the same app id (e.g. a v3-shaped author already wrote the entry),
@@ -330,12 +337,9 @@ class WP_Admin_Shell_V3_Compiler {
 		if ( empty( $resolved['dashboardWidgets'] ) || ! is_array( $resolved['dashboardWidgets'] ) ) {
 			return $resolved;
 		}
-		$target_screen = WP_Admin_Shell_Dashboard_Widgets::DEFAULT_TARGET_SCREEN;
 
-		if (
-			empty( $resolved['screens'][ $target_screen ] )
-			|| ! is_array( $resolved['screens'][ $target_screen ] )
-		) {
+		$target_screen = self::pick_v2_target_screen( $resolved );
+		if ( $target_screen === null ) {
 			return $resolved;
 		}
 
@@ -414,6 +418,42 @@ class WP_Admin_Shell_V3_Compiler {
 
 		$resolved['screens'][ $target_screen ]['apps'] = $apps;
 		return $resolved;
+	}
+
+	/**
+	 * Pick the target screen for v2 → v3 dashboard-widgets translation.
+	 *
+	 * Resolution order:
+	 *   1. `screens['dashboard-widgets']` if present (v3 default).
+	 *   2. Any screen whose primary app id is `core:dashboard-host`
+	 *      (covers v2 routes synthesized to `route-<path>` screen ids).
+	 *
+	 * Returns the screen id or null when neither path resolves.
+	 *
+	 * @param array $resolved
+	 * @return string|null
+	 */
+	private static function pick_v2_target_screen( $resolved ) {
+		$default = WP_Admin_Shell_Dashboard_Widgets::DEFAULT_TARGET_SCREEN;
+		if (
+			isset( $resolved['screens'][ $default ] )
+			&& is_array( $resolved['screens'][ $default ] )
+		) {
+			return $default;
+		}
+		if ( ! isset( $resolved['screens'] ) || ! is_array( $resolved['screens'] ) ) {
+			return null;
+		}
+		foreach ( $resolved['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$primary = self::primary_app( $screen );
+			if ( $primary && $primary['app'] === 'core:dashboard-host' ) {
+				return (string) $screen_id;
+			}
+		}
+		return null;
 	}
 
 	/**

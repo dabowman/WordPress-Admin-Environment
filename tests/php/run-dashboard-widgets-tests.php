@@ -486,6 +486,39 @@ $T::assert_true(
 	! isset( $compiled_no_screen['screens']['dashboard-widgets'] )
 );
 
+// v2 shell back-compat: route-only shell where dashboard-host mounts
+// at /dashboard/widgets. The compiler synthesizes a `route-dashboard-widgets`
+// screen from the route, and the dashboardWidgets translator should
+// target THAT screen (no literal `dashboard-widgets` screen exists).
+$v2_pure_route = array(
+	'version'          => 1,
+	'engine'           => 'core:default',
+	'routes'           => array(
+		'/dashboard/widgets' => array( 'app' => 'core:dashboard-host' ),
+	),
+	'dashboardWidgets' => array(
+		'core:dashboard-widget-recent-posts' => array(
+			'defaultSize' => array( 'w' => 2, 'h' => 1 ),
+		),
+	),
+);
+$compiled_pure_route = WP_Admin_Shell_V3_Compiler::compile( $v2_pure_route );
+$T::assert_true(
+	'v2 back-compat: synthesized route-* screen receives translation when its primary is core:dashboard-host',
+	isset( $compiled_pure_route['screens']['route-dashboard-widgets']['apps'] )
+);
+$pure_apps = $compiled_pure_route['screens']['route-dashboard-widgets']['apps'];
+$T::assert_eq(
+	'v2 back-compat: pure-route screen has the translated entry',
+	count( $pure_apps ),
+	1
+);
+$T::assert_eq(
+	'v2 back-compat: pure-route translated entry app id',
+	$pure_apps[0]['app'],
+	'core:dashboard-widget-recent-posts'
+);
+
 // --- Reset cleanup ---------------------------------------------------------
 
 WP_Admin_Shell_Dashboard_Widgets::reset();
