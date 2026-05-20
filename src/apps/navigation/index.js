@@ -307,7 +307,15 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 
 	// Sub-screen state lives in the URL slot `?screen=<id>` so it
 	// deep-links and survives refresh. Primary path stays content-only.
-	const activeScreen = route.params?.screen || null;
+	// Fall back to inferring the drilldown from the active primary path:
+	// if the URL matches a child whose parent container has children,
+	// keep that container open so clicking a leaf doesn't snap the nav
+	// back to root.
+	const explicitScreen = route.params?.screen || null;
+	const inferredScreen = explicitScreen
+		? null
+		: findContainerForPrimary( items, currentPrimary );
+	const activeScreen = explicitScreen || inferredScreen;
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
 	if ( screenDef ) {
@@ -541,6 +549,45 @@ function findScreen( items, screenId ) {
 	for ( const item of items ) {
 		if ( item.id === screenId && Array.isArray( item.items ) ) {
 			return item;
+		}
+	}
+	return null;
+}
+
+/**
+ * Find the top-level container item whose subtree contains a child
+ * whose href maps to the active primary URL path. Used to keep a
+ * drilldown open after clicking through to a sub-item (the sub-item's
+ * `<a href>` overwrites the hash, so the `?screen=<id>` slot is lost
+ * unless we infer it from the path).
+ *
+ * Top-level containers only — drilldowns don't nest more than one
+ * level in the v3 default workspace.
+ *
+ * @param {Array}  items          Pruned top-level menu siblings.
+ * @param {string} currentPrimary Active primary URL path.
+ * @return {string|null} Container item id, or null when no match.
+ */
+function findContainerForPrimary( items, currentPrimary ) {
+	if ( ! currentPrimary ) {
+		return null;
+	}
+	for ( const item of items ) {
+		if (
+			! item ||
+			! Array.isArray( item.items ) ||
+			item.items.length === 0
+		) {
+			continue;
+		}
+		for ( const child of item.items ) {
+			if ( ! child || typeof child.href !== 'string' ) {
+				continue;
+			}
+			const target = hashPrimary( child.href );
+			if ( target && target === currentPrimary ) {
+				return item.id;
+			}
 		}
 	}
 	return null;
