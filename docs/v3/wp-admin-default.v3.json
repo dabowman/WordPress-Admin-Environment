@@ -672,7 +672,22 @@
 			"label": "Widgets",
 			"icon": "grid",
 			"path": "/dashboard/widgets",
-			"app": "core:dashboard-host",
+			"apps": [
+				{
+					"id": "host",
+					"app": "core:dashboard-host"
+				},
+				{
+					"id": "recent-posts",
+					"app": "core:dashboard-widget-recent-posts",
+					"slot": "grid"
+				},
+				{
+					"id": "quick-draft",
+					"app": "core:dashboard-widget-quick-draft",
+					"slot": "grid"
+				}
+			],
 			"permissions": {
 				"capabilities": [
 					"edit_dashboard"
