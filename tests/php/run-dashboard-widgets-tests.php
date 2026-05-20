@@ -602,9 +602,12 @@ $v2_empty_doc = array(
 	'dashboardWidgets' => array(),
 );
 $compiled_empty = WP_Admin_Shell_V3_Compiler::compile( $v2_empty_doc );
+// Empty-block early-return contract: translator skips work (no `unset`)
+// when there's nothing to translate. The empty array survives the compile
+// pass as-is so downstream code can still type-check on it.
 $T::assert_true(
-	'v2 translation: empty dashboardWidgets block left alone (no entries to translate)',
-	isset( $compiled_empty['dashboardWidgets'] ) || ! isset( $compiled_empty['dashboardWidgets'] )
+	'v2 translation: empty dashboardWidgets block survives compile as empty array',
+	isset( $compiled_empty['dashboardWidgets'] ) && $compiled_empty['dashboardWidgets'] === array()
 );
 
 // --- Entry-id collision across plugin namespaces ---------------------------
