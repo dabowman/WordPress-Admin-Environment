@@ -1,0 +1,257 @@
+# v3 roadmap
+
+Tracks remaining work + locked design decisions for the v3 schema reshape. Living doc — updated as PR feedback lands and phases ship.
+
+## Status snapshot
+
+PR #49 against `main` (branch: `feat/wp-admin-shell-v3`).
+
+| Phase | Status | Commits |
+|---|---|---|
+| **3a** — schemas + cascade null-tombstone | ✅ Shipped | `586ade2` |
+| **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` |
+| **3c slice** — minimum end-to-end (compiler + engine defaultRegions + v3 default workspace mounting) | ✅ Shipped | `7980ca7`, `9e6b73a`, `6389449`, `14ed501`, `c945b15`, `8b0948c`, `ac8d058`, `5ccde5e`, `eff4ed5` |
+| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🔲 Pending | — |
+| **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🔲 Pending | — |
+
+## Locked design decisions
+
+Detailed spec lives in `docs/v3/schema-sketch.md`. Phase 1 + 2 decisions to preserve verbatim through any refactor:
+
+### Top-level shape
+
+```
+workspace      install metadata (engine + default-screen + branding + notices + persistent widgets)
+settings       registries — views, fields
+screens        id-keyed map of every screen
+menu           nested tree, items keyed at every depth
+commands       shortcuts + palette entries with explicit id
+styles         theme.json-shaped surface
+preload        REST hydration
+regions        escape hatch (advanced compositions)
+routes         escape hatch (non-screen URL bindings)
+```
+
+### Conceptual renames
+
+- "shell" (user-facing concept) → **workspace**.
+- Plugin name + PHP class names keep "WP Admin Shell" (runtime).
+- v2 `viewConfig` field on app manifests → **`view`**.
+- v2 `viewConfigs` admin.json block → **`settings.views`**.
+- v2 `fieldCollections` → **`settings.fields`**.
+- v2 `default-route` → **`workspace.default-screen`**.
+- v2 `bindings` → **`commands`** (with explicit `id` field).
+- v2 `dashboardWidgets` → dissolved into screen `apps[]` with `slot` field.
+
+### Cascade semantics
+
+- Deep-merge per-field uniformly across all blocks.
+- Arrays merge by `id` (entries with matching id deep-merge; new ids append; tombstones via `__tombstone: true`).
+- Tombstones via `null` at any nesting depth (theme.json convention).
+- Path collisions → resolve-time error.
+- Restrict-only enforcement preserved (AND-fields tighten by add; OR-fields tighten by remove).
+
+### Permissions (OR-semantic with trust tiers)
+
+`screens[id].permissions` block:
+- `capabilities[]` array — user passes if they hold ANY listed cap.
+- `roles[]` array — user passes if they belong to ANY listed role.
+- Between fields: OR (user passes via cap OR role).
+- App manifest's `capabilities[]` AND-floor is the hard backstop, untouchable by any origin.
+- Trust-tier cascade rule:
+  - `core` / `engine` / `plugin` / `site`: may add OR remove from OR-set.
+  - `role` / `user`: may only REMOVE (shrink-only).
+- Unknown cap/role → fail-closed (deny + dev-mode warning).
+- Magic `"super-admin"` role triggers `is_super_admin()`.
+- Default when block absent: admin-only (`administrator` role + `super-admin` magic).
+
+### Modes (engine-declared chrome catalog)
+
+- Engine ships `modes` block keyed by name. Four standard names: `default`, `focus`, `takeover`, `modal`.
+- Each mode maps to per-region states (`hidden`, `compact`, `minimal`, `fullWidth`, etc.).
+- `extends` field enables mode inheritance (depth limit 10, circular-ref detection).
+- Plugin-contributed modes via `wp_admin_shell_engine_modes_{engineId}` filter.
+- Region hiding is paint-only (CSS `display: none`); mount tree stable across mode flips.
+- Modal stack: LIFO engine-managed.
+- Transitions: engine-owned, undocumented (~180ms smooth + interruptible).
+
+### Slots (3 tiers, 2 scopes)
+
+Tiers:
+- **Kernel-reserved**: `_self`, `palette`. Always available.
+- **Engine-declared**: `detail`, `inspector`, `toolbar`, `sidebar-footer`, `status-bar`, `window`, `banner`, `snackbar`, `dashboard-grid`. Declared in `engine.json#slots` with `scope` field.
+- **App-declared**: apps that host sub-mounts (e.g. `core:dashboard-host`) declare `slots` in their manifest.
+
+Scopes:
+- **Workspace-scope** on screens: `screens[id].slot` = which URL slot the screen mounts in.
+- **Screen-scope** on apps array: `screens[id].apps[i].slot` = which sub-region inside the screen mounts the app.
+
+`slot` and `mode` are orthogonal — declare both when both apply.
+
+### Menu (nested tree)
+
+- No separate groups/items split. Every entry is a menu item.
+- Items with `items` map are containers; children render as drilldowns / nested folders / accordion sections per engine `menu-renderer`.
+- Implicit screen binding: item key matching a screen id flows `label` / `icon` / `permissions` from the screen.
+- Free-floating items (external links, separators, group headers): declare their own `label` / `icon` / `href` / `separator: true`.
+- Drilldown state in URL slot `?screen=<id>`. `__root` sentinel = user explicitly closed drilldown via back button. Path-based inference reopens drilldown when URL primary matches a child's href.
+- Drill-down children do NOT inherit parent icon — each item explicit.
+
+### Screens
+
+- Single-app shorthand: `app` + `config` on the screen.
+- Multi-app long form: `apps[]` array; each entry `{ id (required), app, config, slot, size?, position? }`. Resolver normalizes shorthand to long form internally.
+- Mount in slot: `screens[id].slot` (workspace-scope; default `_self`).
+- Mode: `screens[id].mode` (default `default`).
+- Per-screen `preload[]` for screen-specific REST hydration.
+- Permissions block (see above).
+- Inline `view` overlay deep-merges with `settings.views.<kind>.<name>` global.
+- `regions` override block for per-screen mode tweaks.
+
+### Workspace widgets (persistent across screens)
+
+- `workspace.widgets.<slot>: [{ id, app, ... }]` keyed by engine-declared workspace slot.
+- Cascade merge by `id` per slot array.
+- Persist mounts across screen navigation (subject to active screen's mode).
+- No widget registry — widgets are just apps in slots.
+- Implicit eligibility — any app, any slot.
+- App-manifest `slotHints` provides defaults (size/position) for grid-style slot hosts.
+
+### Programmatic API
+
+- `wp_admin_shell_register_workspace($slug, array $admin_json)` — accepts v3 shape only. Returns `true` or `WP_Error`.
+- Convention discovery at `{plugin}/workspaces/{slug}.json` runs alongside.
+
+### Plugin extension hooks (additions for v3)
+
+- `wp_admin_shell_engine_modes_{engineId}` — plugin-contributed modes.
+- `wp_admin_shell_register_menu_renderer($id, $callback)` — plugin-contributed menu renderers.
+- `wp_admin_shell_register_workspace($slug, $array)` — programmatic workspace registration.
+
+Existing v2 hooks survive (`wp_admin_shell_data_{origin}`, `wp_admin_shell_view_config_{kind}_{name}`, etc.).
+
+## Open / deferred decisions
+
+Items that surfaced during design but were deliberately deferred:
+
+1. **v2 shells decision.** Phase 3b's PostsApp rewrite (`useScreenView(screenId)`) broke v2 shells because v2 routes don't inject `screenId`. Three options:
+   - **(C1) Drop v2 shells entirely** — migrate 5 remaining bundled shells (`content-author`, `client-portal`, `developer-admin`, `v2-demo`, `single-pane-demo`, `desktop-demo`) to v3 shape. Aligns with no-back-compat policy.
+   - **(C2) v2 back-compat layer** — synthesize `screenId` from route paths for v2 shells.
+   - **(C3) Leave v2 broken** — users migrate at their own pace.
+   Lean (C1).
+
+2. **Mode-transition animation contract.** Spec note that transitions are smooth + interruptible across engines; per-engine specifics stay engine-owned. Spec doc needs the formalization.
+
+3. **Per-renderer menu capability declarations.** Each engine `menu-renderer` should document what it supports (max nesting depth, separator rendering, drilldown vs accordion). Spec contract table.
+
+4. **Cascade audit log surface.** Site-admin-visible UI for cascade rejections (loosening attempts, unknown caps, path collisions). REST endpoint? Settings page?
+
+5. **Variant URL routing.** Inline view variants currently use the URL path (each variant a separate screen). Query-driven variants (single screen flipping between drafts/pending via tabs) deferred to post-v3.
+
+6. **App-internal slot/fill** vs schema declaration. Apps still expose slot/fill internally (PluginSidebar pattern); whether to surface these in the schema is post-v3.
+
+7. **Multi-app layout algorithm.** Engine's layout algorithm for arranging multi-app screens isn't formalized. Currently relies on engine-specific region templates + slot mapping.
+
+## Phase 3c proper — remaining apps + bridges
+
+Detailed deliverables waiting for implementation:
+
+### 3c.1 — Dashboard-host rewrite (~2-3 days)
+
+- Read `screens[id].apps[]` with `slot: "grid"` instead of v2 `dashboardWidgets` block.
+- Use the app-declared `grid` slot from `app.json#slots` exposure.
+- Size + position hints from app-manifest `slotHints` + per-screen `screens[id].apps[i].{size,position}` override.
+- `wp_admin_shell_register_dashboard_widget()` API survives — under the hood contributes a screen-app entry instead of a widgets-block entry.
+- Tests: rewrite `run-dashboard-widgets-tests.php` (~25 PHP assertions).
+
+### 3c.2 — Command palette rewrite (~<1 day)
+
+- Read `commands[]` array directly.
+- Generate "Go to X" palette entries from `screens[id]` map (path + label + icon).
+- Drop the routes-block iteration path used by v2.
+
+### 3c.3 — Classic wp-admin menu bridge (~5-8 days)
+
+- New PHP class `WP_Admin_Shell_Classic_Menu_Bridge`.
+- Walks `$GLOBALS['menu']` + `$GLOBALS['submenu']`. Ingests only third-party plugins (registration source path outside `wp-admin/` + `wp-includes/`).
+- For each registration, synthesize TWO entries:
+  - `screens[id]` describing the surface (label / icon / path / app / permissions).
+  - `menu.<container>.items[id]` describing placement.
+- Synthesized origin sits between `core` and `plugin` in cascade.
+- Default container `menu.ingested.items` (label "Plugins").
+- Icon mapping: data-URIs → icon-registry names; dashicons → registry names.
+- Slug→path mapping (`edit.php?post_type=product` → `/admin/edit-php-post-type-product` or known core mappings).
+- Hook timing: run after `admin_menu` fires on every shell-page load.
+- Tests: new `run-classic-menu-bridge-tests.php` (~20-30 PHP assertions).
+
+### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred)
+
+Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the first/primary app mounts via the synthesized route. Multi-app screens (e.g. `posts` + paired `core:editor` in detail slot) need:
+- Compiler synthesizes route configs for each `apps[]` entry, slotted into the appropriate URL slot.
+- Engine layout algorithm arranges visible regions.
+
+## Phase 3d — migration + final tests
+
+### 3d.1 — Migrate 5 remaining bundled shells (~2-3 days)
+
+In order of complexity:
+- `content-author.json` (smallest)
+- `client-portal.json`
+- `v2-demo.json`
+- `single-pane-demo.json` (engine: core:single-pane)
+- `developer-admin.json` (largest, multi-feature)
+- `desktop-demo.json` (engine: core:desktop)
+
+Each migration: rename to `<name>.v3.json`, restructure to v3 shape using `wp-admin-default-v3.json` as the canonical template.
+
+### 3d.2 — v2 → v3 migration helper (~2-3 days)
+
+CLI command `wp admin-shell migrate-shell <slug>` that reads a v2 shell file and writes a v3-shape equivalent. Handles:
+- routes block → screens entries.
+- viewConfigs → settings.views.
+- fieldCollections → settings.fields.
+- bindings → commands (synthesizes ids).
+- regions block → workspace.widgets where applicable.
+
+### 3d.3 — Test surface rewrites (~5-10 days)
+
+Currently 990 assertions green. After v2 shell deprecation:
+- Drop tests targeting v2-shape-only surfaces.
+- Add v3-shape coverage for migrated shells.
+- Add classic wp-admin menu bridge tests.
+- Add multi-app layout tests (if 3c.4 lands).
+
+Target: ~1000-1200 v3-shape assertions.
+
+### 3d.4 — Documentation sweep (~1-2 days)
+
+- Update `CLAUDE.md` status section + key rules to reflect v3 reality.
+- Update `docs/wp-admin-shell-design-spec.md` §5 / §6 / §13 for v3 architecture.
+- Update `docs/public/*-reference.md` to point at v3 schemas as the active surface.
+- Promote `docs/v3/schema-sketch.md` to canonical design doc OR consolidate into spec.
+
+## Known issues (smoke-testing surfaced)
+
+Tracked separately from "remaining work" — these are bugs found during the Phase 3c slice browser smoke that may need follow-up commits before PR merge.
+
+- v2 shells (default + 5 demos) currently render DataViews-less in entity-CRUD apps. Phase 3d migration resolves.
+- Some entity apps (users / comments / plugins / themes) had missing `defaultView.fields` + mismatched field IDs. Fixed in `8b0948c`.
+- DataViews silently returns null when `defaultLayouts[view.type]` is empty. Fixed by adding `defaultLayouts` to view defs in `c945b15`.
+- Drilldown auto-inference from URL primary path landed in `ac8d058`; back-button suppression sentinel landed in `5ccde5e`; operator-precedence bug fixed in `eff4ed5`.
+
+## How to preserve through PR feedback
+
+If review surfaces changes to the schema shape:
+1. Update `docs/v3/schema-sketch.md` first (single source of truth for design).
+2. Update this roadmap if a phase / open issue resolves.
+3. Make the implementation change to match.
+4. Update tests + commit.
+
+Schema-level conventions to preserve regardless of PR-review-driven refactors:
+- id-keyed everywhere (no array-positional addressing).
+- Theme.json patterns where they fit (global registry + inline overlay).
+- Nested menu tree (not flat).
+- OR-semantic permissions with trust tiers.
+- Engine-pluggable modes catalog with `extends`.
+- Three-tier slot vocabulary (kernel + engine + app).
+- v3 compiler synthesizes routes / regions / default-route from v3 shape; runtime kernel reads v2-shape internal output.
