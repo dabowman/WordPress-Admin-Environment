@@ -104,6 +104,7 @@ class WP_Admin_Shell_V3_Compiler {
 		if ( ! self::is_v3( $resolved ) ) {
 			$resolved = self::forward_v2_bindings_to_commands( $resolved );
 			$resolved = self::synthesize_v2_screens_from_routes( $resolved );
+			$resolved = self::translate_v2_dashboard_widgets( $resolved );
 
 			// Run the same `screens[id].dataView._resolved` stamp pass
 			// the v3 path does so synthesized screens light up the JS
@@ -113,6 +114,12 @@ class WP_Admin_Shell_V3_Compiler {
 			$resolved = self::stamp_screen_data_view_resolved( $resolved );
 			return $resolved;
 		}
+
+		// Also run on v3 docs to catch admins who upgrade their workspace
+		// shape but leave their v2 `dashboardWidgets` block in place
+		// during the migration window. Translation is idempotent — when
+		// no v2 block exists the function is a no-op.
+		$resolved = self::translate_v2_dashboard_widgets( $resolved );
 
 		// Promote workspace.engine → top-level engine. The kernel reads
 		// `config.engine`; v3 nests it under workspace.
@@ -297,6 +304,166 @@ class WP_Admin_Shell_V3_Compiler {
 			$slug = rtrim( $slug, '-' );
 		}
 		return 'route-' . $slug;
+	}
+
+	/**
+	 * v2 → v3 dashboard-widgets back-compat translation.
+	 *
+	 * When a resolved doc carries the legacy top-level `dashboardWidgets`
+	 * block, fold each `dashboardWidgets[<app-id>]` entry into the
+	 * target screen's `apps[]` with `slot: 'grid'`. Target screen
+	 * preference, first match wins:
+	 *
+	 *   1. Explicit `screens['dashboard-widgets']` (the v3 default name).
+	 *   2. Any screen whose primary app is `core:dashboard-host` (covers
+	 *      v2 → v3 synthesis where the route path generates a `route-…`
+	 *      screen id).
+	 *
+	 * Without a target, the function is a no-op — the original block
+	 * stays on the doc for one cycle so admins migrating manually can
+	 * still introspect it; the v3 dashboard-host ignores it.
+	 *
+	 * Per-app collision: when the target screen's `apps[]` already lists
+	 * the same app id (e.g. a v3-shaped author already wrote the entry),
+	 * the v2 block is skipped — author intent wins.
+	 *
+	 * In WP_DEBUG, a `_doing_it_wrong` notice surfaces so plugin authors
+	 * know to migrate.
+	 *
+	 * @param array $resolved
+	 * @return array
+	 */
+	private static function translate_v2_dashboard_widgets( $resolved ) {
+		if ( empty( $resolved['dashboardWidgets'] ) || ! is_array( $resolved['dashboardWidgets'] ) ) {
+			return $resolved;
+		}
+
+		$target_screen = self::pick_v2_target_screen( $resolved );
+		if ( $target_screen === null ) {
+			return $resolved;
+		}
+
+		if (
+			defined( 'WP_DEBUG' ) && WP_DEBUG
+			&& function_exists( '_doing_it_wrong' )
+		) {
+			_doing_it_wrong(
+				'admin.json#dashboardWidgets',
+				esc_html__(
+					'The top-level dashboardWidgets block is a v2 shape. Migrate to screens[dashboard-widgets].apps[] entries with slot:"grid".',
+					'wp-admin-shell'
+				),
+				'3.0.0'
+			);
+		}
+
+		$screen     = $resolved['screens'][ $target_screen ];
+		$apps       = isset( $screen['apps'] ) && is_array( $screen['apps'] ) ? $screen['apps'] : array();
+		$existing   = array(); // app-id → true
+		$existing_e = array(); // entry-id → true
+		foreach ( $apps as $existing_entry ) {
+			if ( ! is_array( $existing_entry ) ) {
+				continue;
+			}
+			if ( isset( $existing_entry['app'] ) ) {
+				$existing[ (string) $existing_entry['app'] ] = true;
+			}
+			if ( isset( $existing_entry['id'] ) ) {
+				$existing_e[ (string) $existing_entry['id'] ] = true;
+			}
+		}
+
+		foreach ( $resolved['dashboardWidgets'] as $app_id => $override ) {
+			if ( ! is_string( $app_id ) || $app_id === '' ) {
+				continue;
+			}
+			if ( ! is_array( $override ) ) {
+				$override = array();
+			}
+			// Skip widgets explicitly hidden by the v2 admin.json (the
+			// v2 contract treated hidden:true as "drop entirely"). No
+			// entry contributed.
+			if ( ! empty( $override['hidden'] ) ) {
+				continue;
+			}
+			// Author already wrote a v3-shape entry for this app — skip.
+			if ( isset( $existing[ $app_id ] ) ) {
+				continue;
+			}
+
+			$entry_id = WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( $app_id );
+			// Avoid colliding with a manually authored entry id.
+			if ( isset( $existing_e[ $entry_id ] ) ) {
+				continue;
+			}
+
+			$entry = array(
+				'id'   => $entry_id,
+				'app'  => $app_id,
+				'slot' => 'grid',
+			);
+			if ( isset( $override['defaultSize'] ) && is_array( $override['defaultSize'] ) ) {
+				$entry['size'] = $override['defaultSize'];
+			}
+			if ( isset( $override['position'] ) ) {
+				$entry['position'] = $override['position'];
+			}
+			// `title` is NOT a valid `appsEntry` field per admin-v3.json
+			// (`additionalProperties: false`). v2 override `title`s flow
+			// through the widget app's manifest title or admin.json
+			// per-screen overrides; do not stamp it here.
+			$apps[]                   = $entry;
+			$existing[ $app_id ]      = true;
+			$existing_e[ $entry_id ]  = true;
+		}
+
+		$resolved['screens'][ $target_screen ]['apps'] = $apps;
+
+		// Drop the v2 `dashboardWidgets` block from the resolved doc once
+		// translated. Downstream filters running after the compiler
+		// shouldn't react to the legacy shape; the `_doing_it_wrong`
+		// notice above warns authors. Note: we intentionally only unset
+		// when at least one v2 entry resolved — the early-return at the
+		// top of this function handles the empty-block case.
+		unset( $resolved['dashboardWidgets'] );
+
+		return $resolved;
+	}
+
+	/**
+	 * Pick the target screen for v2 → v3 dashboard-widgets translation.
+	 *
+	 * Resolution order:
+	 *   1. `screens['dashboard-widgets']` if present (v3 default).
+	 *   2. Any screen whose primary app id is `core:dashboard-host`
+	 *      (covers v2 routes synthesized to `route-<path>` screen ids).
+	 *
+	 * Returns the screen id or null when neither path resolves.
+	 *
+	 * @param array $resolved
+	 * @return string|null
+	 */
+	private static function pick_v2_target_screen( $resolved ) {
+		$default = WP_Admin_Shell_Dashboard_Widgets::DEFAULT_TARGET_SCREEN;
+		if (
+			isset( $resolved['screens'][ $default ] )
+			&& is_array( $resolved['screens'][ $default ] )
+		) {
+			return $default;
+		}
+		if ( ! isset( $resolved['screens'] ) || ! is_array( $resolved['screens'] ) ) {
+			return null;
+		}
+		foreach ( $resolved['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$primary = self::primary_app( $screen );
+			if ( $primary && $primary['app'] === 'core:dashboard-host' ) {
+				return (string) $screen_id;
+			}
+		}
+		return null;
 	}
 
 	/**

@@ -11,7 +11,7 @@ PR #49 against `main` (branch: `feat/wp-admin-shell-v3`).
 | **3a** — schemas + cascade null-tombstone | ✅ Shipped | `586ade2` |
 | **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` ⚠️ view-config resolver was lossy (collapsed CIAB 3-axis registry); restoration plan in `docs/plans/2026-05-20-dataview-registry-restoration.md` corrects this. |
 | **3c slice** — minimum end-to-end (compiler + engine defaultRegions + v3 default workspace mounting) | ✅ Shipped | `7980ca7`, `9e6b73a`, `6389449`, `14ed501`, `c945b15`, `8b0948c`, `ac8d058`, `5ccde5e`, `eff4ed5` |
-| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🔲 Pending | — |
+| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🟡 In progress (3c.1 + 3c.2 shipped; 3c.3 pending) | 3c.1: dashboard-host on `feat/v3-3c1-dashboard-host`; 3c.2 in `7d460a5` |
 | **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🔲 Pending | — |
 
 ## Locked design decisions
@@ -156,13 +156,15 @@ Items that surfaced during design but were deliberately deferred:
 
 Detailed deliverables waiting for implementation:
 
-### 3c.1 — Dashboard-host rewrite (~2-3 days)
+### 3c.1 — Dashboard-host rewrite — ✅ Shipped
 
-- Read `screens[id].apps[]` with `slot: "grid"` instead of v2 `dashboardWidgets` block.
-- Use the app-declared `grid` slot from `app.json#slots` exposure.
-- Size + position hints from app-manifest `slotHints` + per-screen `screens[id].apps[i].{size,position}` override.
-- `wp_admin_shell_register_dashboard_widget()` API survives — under the hood contributes a screen-app entry instead of a widgets-block entry.
-- Tests: rewrite `run-dashboard-widgets-tests.php` (~25 PHP assertions).
+- Reads `screens[id].apps[]` with `slot: "grid"` (replaces v2 `dashboardWidgets` block).
+- Uses the app-declared `grid` slot from `app.json#slots` exposure.
+- Size + position hints from app-manifest `slotHints` + per-entry `size`/`position` override.
+- `wp_admin_shell_register_dashboard_widget()` API survives — under the hood contributes a screen-app entry with `slot: "grid"` into the target screen (`dashboard-widgets` by default, configurable via `$args['screen']`).
+- v2 back-compat: v3 compiler folds legacy `dashboardWidgets` block into `screens[dashboard-widgets].apps[]` at resolve time with a `_doing_it_wrong` notice under `WP_DEBUG`.
+- New pure compiler `src/apps/dashboard-host/composeScreenWidgets.mjs` (replaces `src/runtime/dashboardGrid/composeWidgets.mjs`; legacy kept for v2 shells).
+- Tests: 45 PHP assertions in `run-dashboard-widgets-tests.php`, 25 JS assertions in `tests/runtime/compose-screen-widgets.test.mjs`.
 
 ### 3c.2 — Command palette rewrite (~<1 day) — ✅ Shipped
 

@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app-v3.json",
 	"id": "core:dashboard-widget-quick-draft",
 	"version": 1,
 	"title": "Quick Draft",
@@ -12,8 +12,7 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"dashboardWidget": {
-		"title": "Quick Draft",
+	"slotHints": {
 		"defaultSize": { "w": 1, "h": 1 },
 		"minSize": { "w": 1, "h": 1 },
 		"position": "auto"

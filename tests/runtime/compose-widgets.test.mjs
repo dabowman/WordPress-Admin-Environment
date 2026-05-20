@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /**
- * composeWidgets tests (C4).
+ * composeWidgets tests (legacy, v2 — C4).
  *
  * Pure-ESM helper that turns the manifest registry + admin.json
- * dashboardWidgets overrides into a flat tile list.
+ * dashboardWidgets overrides into a flat tile list. This is the v2
+ * pre-3c.1 shape — the dashboard-host no longer consumes it. Tests
+ * preserved for as long as the v2 schema + module remain bundled
+ * (deprecated; slated for removal alongside the v2 shells in 3d).
+ * The v3 replacement is `tests/runtime/compose-screen-widgets.test.mjs`.
  *
  * Run: `node tests/runtime/compose-widgets.test.mjs` (chained from
  * `npm run test:runtime`).
