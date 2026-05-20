@@ -1,6 +1,12 @@
 import { mergeFields } from './mergeFields.mjs';
 
 /**
+ * One-shot guards for deprecation-shim warnings — fire at most once per
+ * module load. Removed in v3.1.0 alongside the shims themselves.
+ */
+let warnedHydrateScreen = false;
+
+/**
  * Max `extends` chain depth — mirrors PHP `WP_Admin_Shell_Data_View_Config`.
  * Triples that exceed this short-circuit to the base entry.
  */
@@ -359,4 +365,30 @@ function inferTriple( inline, screen ) {
 			? cfg.variant
 			: '_default';
 	return { kind, name, variant };
+}
+
+/**
+ * Deprecation shim — v2 hydrate-helper name. Removed in v3.1.0.
+ * Forwards to {@link hydrateInlineScreenDataView} with a one-shot dev
+ * `console.warn`. Production builds are silent.
+ *
+ * @deprecated Use `hydrateInlineScreenDataView` instead. Removed in v3.1.
+ * @param {Object|null|undefined} inline
+ * @param {string}                screenId
+ * @returns {Object|null}
+ */
+export function hydrateInlineScreenView( inline, screenId ) {
+	if (
+		typeof process === 'undefined' ||
+		( typeof process === 'object' && process?.env?.NODE_ENV !== 'production' )
+	) {
+		if ( ! warnedHydrateScreen && typeof console !== 'undefined' ) {
+			warnedHydrateScreen = true;
+			// eslint-disable-next-line no-console
+			console.warn(
+				'hydrateInlineScreenView is deprecated and will be removed in v3.1. Use hydrateInlineScreenDataView from @wp-admin-shell/runtime/dataView/hydrateInline instead.'
+			);
+		}
+	}
+	return hydrateInlineScreenDataView( inline, screenId );
 }

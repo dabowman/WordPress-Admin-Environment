@@ -27,6 +27,10 @@
  *   - `list_variants()` returns sorted ids with `_default` first.
  *   - Cascade contribution — registered data-field collections enter
  *     `settings.dataFields` via `wp_admin_shell_data_plugin` filter.
+ *   - Legacy filter deprecation shim — v2 names (`wp_admin_shell_view_config_*`
+ *     + `_{variant}`) fire alongside the new names whenever a legacy filter
+ *     is registered, short-circuit otherwise, and `_default` skips the
+ *     variant suffix.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
  * resolver directly with `$config` to avoid depending on disk shells.
@@ -440,6 +444,90 @@ WPAS_Data_View_Test_Runner::assert_true(
 
 remove_filter( 'wp_admin_shell_data_view_config_postType_post', $base_callback, 10 );
 remove_filter( 'wp_admin_shell_data_view_config_postType_post_drafts', $variant_callback, 10 );
+
+// --- legacy filter deprecation shim ----------------------------------------
+//
+// v2-name filters (`wp_admin_shell_view_config_*` + `_{variant}`) fire
+// alongside the new names for one release cycle so CIAB-port plugins keep
+// working. First invocation per legacy handle emits `_deprecated_hook`.
+
+WP_Admin_Shell_Data_View_Config::reset();
+
+$legacy_base_calls    = array();
+$legacy_variant_calls = array();
+$legacy_base_callback = function ( $doc, $kind, $name, $variant ) use ( &$legacy_base_calls ) {
+	$legacy_base_calls[] = compact( 'kind', 'name', 'variant' );
+	$doc['_legacyBaseFiltered'] = true;
+	return $doc;
+};
+$legacy_variant_callback = function ( $doc, $kind, $name, $variant ) use ( &$legacy_variant_calls ) {
+	$legacy_variant_calls[] = compact( 'kind', 'name', 'variant' );
+	$doc['_legacyVariantFiltered'] = true;
+	return $doc;
+};
+
+add_filter( 'wp_admin_shell_view_config_postType_post', $legacy_base_callback, 10, 4 );
+add_filter( 'wp_admin_shell_view_config_postType_post_drafts', $legacy_variant_callback, 10, 4 );
+
+$legacy_drafts = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
+WPAS_Data_View_Test_Runner::assert_true(
+	'legacy base filter ran during resolve',
+	! empty( $legacy_drafts['_legacyBaseFiltered'] )
+);
+WPAS_Data_View_Test_Runner::assert_true(
+	'legacy variant filter ran during resolve',
+	! empty( $legacy_drafts['_legacyVariantFiltered'] )
+);
+WPAS_Data_View_Test_Runner::assert_eq(
+	'legacy base filter fired exactly once',
+	count( $legacy_base_calls ),
+	1
+);
+WPAS_Data_View_Test_Runner::assert_eq(
+	'legacy variant filter fired exactly once',
+	count( $legacy_variant_calls ),
+	1
+);
+
+// `_default` resolution skips the legacy variant filter (variant === '_default').
+$legacy_base_calls    = array();
+$legacy_variant_calls = array();
+$legacy_default = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'legacy base filter fires for _default',
+	count( $legacy_base_calls ),
+	1
+);
+WPAS_Data_View_Test_Runner::assert_eq(
+	'legacy variant filter skipped for _default',
+	count( $legacy_variant_calls ),
+	0
+);
+
+remove_filter( 'wp_admin_shell_view_config_postType_post', $legacy_base_callback, 10 );
+remove_filter( 'wp_admin_shell_view_config_postType_post_drafts', $legacy_variant_callback, 10 );
+
+// Triples with no legacy filter registered MUST NOT pay the `apply_filters`
+// cost (the shim short-circuits on `has_filter` check).
+$dispatch_probe = array();
+$probe = function ( $doc ) use ( &$dispatch_probe ) {
+	$dispatch_probe[] = true;
+	return $doc;
+};
+add_filter( 'wp_admin_shell_data_view_config_postType_post', $probe, 10, 4 );
+// No legacy filter attached this time around — only the new-name probe.
+$silent = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
+WPAS_Data_View_Test_Runner::assert_true(
+	'modern filter still ran when no legacy filter registered',
+	! empty( $dispatch_probe )
+);
+WPAS_Data_View_Test_Runner::assert_true(
+	'modern filter result clean of legacy markers when no legacy filter registered',
+	empty( $silent['_legacyBaseFiltered'] ) && empty( $silent['_legacyVariantFiltered'] )
+);
+remove_filter( 'wp_admin_shell_data_view_config_postType_post', $probe, 10 );
+
+WP_Admin_Shell_Data_View_Config::reset();
 
 // --- parse_data_view_ref ----------------------------------------------------
 

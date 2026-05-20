@@ -59,10 +59,20 @@ class WP_Admin_Shell_Data_View_Config {
 	private static $warned_chains = array();
 
 	/**
+	 * Deprecation-shim notice tracking — `_deprecated_hook` only fires
+	 * the first time the v2 filter name is invoked per request, per
+	 * filter handle. Removed in v3.1.0 along with the v2 alias filter.
+	 *
+	 * @var array<string, bool>
+	 */
+	private static $emitted_deprecation_notices = array();
+
+	/**
 	 * Reset internal state. Test-only.
 	 */
 	public static function reset() {
-		self::$warned_chains = array();
+		self::$warned_chains              = array();
+		self::$emitted_deprecation_notices = array();
 	}
 
 	/**
@@ -109,15 +119,54 @@ class WP_Admin_Shell_Data_View_Config {
 			$doc = array();
 		}
 
+		// Deprecation shim — fire v2 filter name alongside the new one so
+		// CIAB-port plugins compiled against `wp_admin_shell_view_config_*`
+		// keep working through one release cycle (removed in v3.1.0).
+		$legacy_base_filter = sprintf( 'wp_admin_shell_view_config_%s_%s', $kind, $name );
+		if ( has_filter( $legacy_base_filter ) ) {
+			self::maybe_emit_deprecation_notice( $legacy_base_filter, 'wp_admin_shell_data_view_config_*' );
+			$doc = apply_filters( $legacy_base_filter, $doc, $kind, $name, $variant );
+			if ( ! is_array( $doc ) ) {
+				$doc = array();
+			}
+		}
+
 		if ( $variant !== '_default' ) {
 			$variant_filter = sprintf( 'wp_admin_shell_data_view_config_%s_%s_%s', $kind, $name, $variant );
 			$doc            = apply_filters( $variant_filter, $doc, $kind, $name, $variant );
 			if ( ! is_array( $doc ) ) {
 				$doc = array();
 			}
+
+			$legacy_variant_filter = sprintf( 'wp_admin_shell_view_config_%s_%s_%s', $kind, $name, $variant );
+			if ( has_filter( $legacy_variant_filter ) ) {
+				self::maybe_emit_deprecation_notice( $legacy_variant_filter, 'wp_admin_shell_data_view_config_*' );
+				$doc = apply_filters( $legacy_variant_filter, $doc, $kind, $name, $variant );
+				if ( ! is_array( $doc ) ) {
+					$doc = array();
+				}
+			}
 		}
 
 		return $doc;
+	}
+
+	/**
+	 * Emit a one-shot `_deprecated_hook` notice per legacy filter handle
+	 * per request. Avoids spam when the same triple resolves many times in
+	 * one render pass. Removed in v3.1.0.
+	 *
+	 * @param string $legacy_handle The v2 filter name being dispatched.
+	 * @param string $replacement   The v3 replacement name (for the notice).
+	 */
+	private static function maybe_emit_deprecation_notice( $legacy_handle, $replacement ) {
+		if ( ! empty( self::$emitted_deprecation_notices[ $legacy_handle ] ) ) {
+			return;
+		}
+		self::$emitted_deprecation_notices[ $legacy_handle ] = true;
+		if ( function_exists( '_deprecated_hook' ) ) {
+			_deprecated_hook( $legacy_handle, '3.0.0-beta.3', $replacement );
+		}
 	}
 
 	/**

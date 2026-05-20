@@ -19,8 +19,8 @@ Multiple `admin.json` files can coexist on a site (one per shell). The active sh
 - [default-route](#default-route)
 - [bindings](#bindings)
 - [styles](#styles)
-- [viewConfigs](#viewconfigs)
-- [fieldCollections](#fieldcollections)
+- [viewConfigs](#viewconfigs) (v2 — see `settings.dataViews` in admin-v3)
+- [fieldCollections](#fieldcollections) (v2 — see `settings.dataFields` in admin-v3)
 - [preload](#preload)
 - [dashboardWidgets](#dashboardwidgets)
 
@@ -296,7 +296,9 @@ Per-app style overrides, keyed by app id. Same shape as the top-level `styles` t
 
 ## viewConfigs
 
-Cascade registry of view-configs, keyed by entity kind → entity name → variant or `_default`. Each leaf is a view-config document (fields, default view, default layouts, actions). The shell merges entries across the 6-origin cascade and runs the `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter on the resolved triple before serving. Apps consume the result via `useViewConfig(kind, name, variant?)`.
+> **v3 successor:** `settings.dataViews` in admin-v3. The 3-axis registry shape is preserved (same `kind → name → variant|_default` keying). Filter name renames to `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]`; per-variant suffix is restored. JS hook is `useDataView(screenId)` (or `useDataView({ kind, name, variant })` for the registry-direct entry point). v2 callers keep working through deprecation shims one release cycle.
+
+Cascade registry of view-configs, keyed by entity kind → entity name → variant or `_default`. Each leaf is a view-config document (fields, default view, default layouts, actions). The shell merges entries across the 6-origin cascade and runs the `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter on the resolved triple before serving. Apps consume the result via `useViewConfig(kind, name, variant?)` (deprecated; use `useDataView` going forward).
 
 Variant key `_default` is the unqualified base view-config; any other key represents a named scoped sub-view (slash namespacing is allowed: `woocommerce-bookings/services`).
 
@@ -361,6 +363,8 @@ Variant key `_default` is the unqualified base view-config; any other key repres
 | status   | Item status(es) that make the action eligible. Example: `"publish"` or `[ "publish", "future" ]`.   | string \| array  | —       |
 
 ## fieldCollections
+
+> **v3 successor:** `settings.dataFields` in admin-v3. Same per-entry shape, moved under `settings` alongside `settings.dataViews` for registry symmetry. PHP registration function renames to `wp_admin_shell_register_data_field_collection()`; the legacy `wp_admin_shell_register_field_collection()` survives as a deprecation wrapper for one release cycle.
 
 Cascade registry of field collections, keyed by collection id (slash namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair, or to all names of the kind when `name` is `null`. View-configs reference a collection via `fieldsRef` and the runtime merges ref-wins with inline `fields` per-field override.
 

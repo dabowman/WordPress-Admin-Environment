@@ -269,3 +269,71 @@ export function _resetDataViewCache() {
 	cache.clear();
 	inflight.clear();
 }
+
+/**
+ * Deprecation shim — v2 hook name. Removed in v3.1.0. Re-exports
+ * `useDataView` with a one-shot dev `console.warn`. Production builds
+ * are silent. Internal callers should use `useDataView` directly.
+ *
+ * @deprecated Use `useDataView` instead. Removed in v3.1.
+ * @param {string|Object} arg
+ * @param {Object}        [options]
+ * @return {{ config: Object, isLoading: boolean }}
+ */
+let warnedUseScreenView = false;
+export function useScreenView( arg, options ) {
+	if (
+		typeof process === 'undefined' ||
+		process?.env?.NODE_ENV !== 'production'
+	) {
+		if ( ! warnedUseScreenView && typeof console !== 'undefined' ) {
+			warnedUseScreenView = true;
+			// eslint-disable-next-line no-console
+			console.warn(
+				'useScreenView is deprecated and will be removed in v3.1. Use useDataView from @wp-admin-shell/runtime/dataView/useDataView instead.'
+			);
+		}
+	}
+	return useDataView( arg, options );
+}
+
+/**
+ * Deprecation shim — v2 hook name. Removed in v3.1.0. Identical to
+ * `useDataView`; the v2 surface accepted `(kind, name, variant?)` so
+ * callers using that positional shape are forwarded into the new
+ * `({kind,name,variant})` object form here.
+ *
+ * @deprecated Use `useDataView` instead. Removed in v3.1.
+ * @param {string|Object} kindOrArg
+ * @param {string}        [name]
+ * @param {string}        [variant]
+ * @param {Object}        [options]
+ * @return {{ config: Object, isLoading: boolean }}
+ */
+let warnedUseViewConfig = false;
+export function useViewConfig( kindOrArg, name, variant, options ) {
+	if (
+		typeof process === 'undefined' ||
+		process?.env?.NODE_ENV !== 'production'
+	) {
+		if ( ! warnedUseViewConfig && typeof console !== 'undefined' ) {
+			warnedUseViewConfig = true;
+			// eslint-disable-next-line no-console
+			console.warn(
+				'useViewConfig is deprecated and will be removed in v3.1. Use useDataView from @wp-admin-shell/runtime/dataView/useDataView instead.'
+			);
+		}
+	}
+	// Normalize call shape outside the hook call so React's rules-of-hooks
+	// holds (useDataView is always called once, with a stable arg).
+	let normalizedArg;
+	let normalizedOptions;
+	if ( typeof kindOrArg === 'string' && typeof name === 'string' ) {
+		normalizedArg = { kind: kindOrArg, name, variant };
+		normalizedOptions = options;
+	} else {
+		normalizedArg = kindOrArg;
+		normalizedOptions = name;
+	}
+	return useDataView( normalizedArg, normalizedOptions );
+}

@@ -12,8 +12,8 @@ Activation runs through an out-of-band custom endpoint because WordPress core RE
 
 Four pieces of state drive the app:
 
-1. **`viewConfig`** — pulled via `useViewConfig('root', 'theme', config.variant)`. Carries the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#viewConfig` and reaches the resolved cascade via `inject_app_baselines`. Sites and plugins override via admin.json `viewConfigs.root.theme._default` (or a named variant) or the `wp_admin_shell_view_config_root_theme` filter. **Field renderers and action callbacks live in the React layer** — the spec carries data only; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
-2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `viewConfig.defaultView`. Owned by the app; DataViews calls `onChangeView(next)` on every user-driven change.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Carries the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Sites and plugins override via admin.json `settings.dataViews.root.theme.<variant|_default>` or the `wp_admin_shell_data_view_config_root_theme[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec carries data only; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Owned by the app; DataViews calls `onChangeView(next)` on every user-driven change.
 3. **`themes`** — the raw entity records from `useEntityRecords('root', 'theme', { context: 'edit', status: 'active,inactive' })`.
 4. **`data`** — a `useMemo` projection of `themes` into the flat row shape DataViews wants (`{ id, name, screenshot, status, description, version, author, theme_uri, rawRecord }`). `id` is the stylesheet (themes are keyed by slug, not numeric id).
 
@@ -25,20 +25,20 @@ The Activate action calls a `useCallback` `activate(theme)` that:
 
 The Details action uses DataViews' `RenderModal` shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app renders the full description + version + author + Theme site link + an inline Activate button (visible only when `status !== 'active'`).
 
-## View-config integration (C2)
+## DataView integration (C2 / v3 restored)
 
-ThemesApp consumes the C2 view-config primitive (spec §13 #7). The cascade flow mirrors PostsApp's:
+ThemesApp consumes the dataView primitive (spec §13 #7). The cascade flow mirrors PostsApp's:
 
-1. **Baseline** lives in `app.json#viewConfig`. `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
-2. **Admin.json overrides** under `viewConfigs.root.theme.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline.
-3. **Filter overrides** run last via `wp_admin_shell_view_config_root_theme` (`..._{$variant}` when present). Useful for dynamic mutations that JSON can't express.
-4. **ThemesApp consumes** via `useViewConfig('root', 'theme', config.variant)` → `{ config, isLoading }`. The hook reads from `window.wpAdminShell.config.viewConfigs` synchronously when present; otherwise falls through to `/wp-admin-shell/v1/view-config`.
+1. **Baseline** lives in `app.json#dataView`. `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
+2. **Admin.json overrides** under `settings.dataViews.root.theme.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline.
+3. **Filter overrides** run last via `wp_admin_shell_data_view_config_root_theme` (`..._{$variant}` when present). Useful for dynamic mutations that JSON can't express.
+4. **ThemesApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminShell.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-shell/v1/data-view?screen=<id>`.
 
-The renderer tables (`buildFieldRenderers`, `buildActions`, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. View-config overrides that introduce an unfamiliar field id fall through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (declared but inert).
+The renderer tables (`buildFieldRenderers`, `buildActions`, action callbacks keyed by `spec.id`) stay app-side — they're the React half of the contract. DataView overrides that introduce an unfamiliar field id fall through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (declared but inert).
 
 ### Translation recipe
 
-View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#viewConfig` and admin.json overrides reach DataViews with raw strings in whatever locale the spec was authored in. ThemesApp recovers translation by keeping two id→`__()` tables in `index.js`:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and admin.json overrides reach DataViews with raw strings in whatever locale the spec was authored in. ThemesApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
 ```js
 const FIELD_LABELS = {

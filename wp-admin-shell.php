@@ -91,7 +91,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-v3-compiler.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';

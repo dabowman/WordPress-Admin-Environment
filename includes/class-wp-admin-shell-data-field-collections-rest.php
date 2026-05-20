@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Field_Collections_REST {
+class WP_Admin_Shell_Data_Field_Collections_REST {
 
 	const REST_NAMESPACE = 'wp-admin-shell/v1';
 
@@ -94,4 +94,4 @@ class WP_Admin_Shell_Field_Collections_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Field_Collections_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Shell_Data_Field_Collections_REST', 'register' ) );

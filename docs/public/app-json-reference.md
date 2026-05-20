@@ -21,7 +21,7 @@ Manifests contain only intrinsic, install-independent declarations: the app's AR
 - [style](#style)
 - [window](#window)
 - [dashboardWidget](#dashboardwidget)
-- [viewConfig](#viewconfig)
+- [viewConfig](#viewconfig) (v2 — see `dataView` in admin-app-v3)
 - [documentation](#documentation)
 
 ## JSON Schema
@@ -236,7 +236,9 @@ Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this bloc
 
 ## viewConfig
 
-Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with `admin.json#viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig`. Apps that don't render a single entity (command palette, dashboard) omit this field.
+> **v3 successor:** `dataView` block in admin-app-v3 — same `kind` + `name`, plus a nested `variants: { <id>: <doc> }` family so the manifest ships the complete variant set (`_default` plus drafts / pending / trash / etc.) in a single block. Consumed via `useDataView(screenId)` or `useDataView({ kind, name, variant })`. v2 callers keep working through deprecation shims one release cycle.
+
+Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with `admin.json#viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig` (deprecated; use `useDataView` going forward). Apps that don't render a single entity (command palette, dashboard) omit this field.
 
 ```json
 {

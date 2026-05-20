@@ -16,7 +16,7 @@
  *      a `slot` of `_self` (or no `slot`, which defaults to `_self`)
  *      becomes a `routes[path] = { app, config }` entry, with the
  *      screen's id injected into the config as `screenId` so apps can
- *      look up their per-screen view-config / mode / etc.
+ *      look up their per-screen dataView / mode / etc.
  *   3. Synthesize `regions` from the active engine manifest's
  *      `defaultRegions` block. When the workspace declares `regions`
  *      explicitly (the v2 escape hatch), workspace wins per-field over
@@ -347,7 +347,7 @@ class WP_Admin_Shell_V3_Compiler {
 	 *     (long form — first entry is primary).
 	 *   - config: screen.config (shorthand) deep-merged with
 	 *     screen.apps[0].config when apps[] is present. Always inject
-	 *     screenId so downstream apps can resolve per-screen view-config.
+	 *     screenId so downstream apps can resolve per-screen dataView.
 	 *   - Long-form (apps[]) screens: only the primary app gets a route;
 	 *     additional apps mount via the screen's slot composition,
 	 *     handled at render time by the kernel.
