@@ -256,6 +256,7 @@ Tracked separately from "remaining work" — these are bugs found during the Pha
 - DataViews silently returns null when `defaultLayouts[view.type]` is empty. Fixed by adding `defaultLayouts` to view defs in `c945b15`.
 - Drilldown auto-inference from URL primary path landed in `ac8d058`; back-button suppression sentinel landed in `5ccde5e`; operator-precedence bug fixed in `eff4ed5`.
 - View-config primitive collapsed CIAB 3-axis registry to 2-axis (PR #...) — restored via `docs/plans/2026-05-20-dataview-registry-restoration.md`.
+- **Breaking change — command palette emitted names** (PR #51). Pre-3c.2: `core/admin-shell/goto-<encoded-pattern>`. Post-3c.2: `core/admin-shell/palette-<encoded-id>` (unified across `commands[]` + `screens[]` for first-write-wins dedup). Any external consumer of `@wordpress/commands` keyed off the old names breaks. No known consumers — but plugin authors extending the palette via `useCommandLoader` with the same registration name should re-key off the new prefix. Document in v3.0 upgrade notes.
 
 ## How to preserve through PR feedback
 
