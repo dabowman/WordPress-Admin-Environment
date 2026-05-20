@@ -18,7 +18,7 @@
 			},
 			"variant": {
 				"type": "string",
-				"description": "Optional DataView variant id. v2 back-compat: when the v3 compiler synthesizes a screen from a v2 route, `config.variant` flows into `dataViewVariant` and reaches `settings.dataViews.taxonomy.<taxonomy>.<variant>`."
+				"description": "Optional DataView variant id. v2 back-compat: when the v3 compiler synthesizes a screen from a v2 route, `config.variant` stays on `screen.config.variant` and the resolver's step-3 manifest-inference path reads it directly to reach `settings.dataViews.taxonomy.<taxonomy>.<variant>`."
 			}
 		},
 		"additionalProperties": false

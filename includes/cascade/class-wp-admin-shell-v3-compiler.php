@@ -210,9 +210,11 @@ class WP_Admin_Shell_V3_Compiler {
 	/**
 	 * v2 → v3 back-compat synthesis. Walk the v2 `routes` block and
 	 * synthesize a virtual `screens` entry per route entry, copying
-	 * `app` / `config` through. When the route carries `config.variant`,
-	 * the synthesized screen records `dataViewVariant` so v3-built apps
-	 * reading `useDataView(screenId)` find the correct triple.
+	 * `app` / `config` through verbatim. Route `config.variant` stays on
+	 * the synthesized `screen.config.variant`; the data-view resolver's
+	 * step-3 manifest-inference path reads it directly to reach the
+	 * correct `(kind, name, variant)` triple. No separate `dataViewVariant`
+	 * key is stamped — the resolver's existing inference is the contract.
 	 *
 	 * Synthesized screen id derives from the route path — `/posts/drafts`
 	 * → `route-posts-drafts`. Path-collision-free because v2 paths are

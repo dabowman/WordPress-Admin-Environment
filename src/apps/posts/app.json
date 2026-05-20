@@ -18,7 +18,7 @@
 			},
 			"variant": {
 				"type": "string",
-				"description": "Optional DataView variant id to consume (e.g. 'drafts'). When the v3 compiler synthesizes screens from v2 routes, `config.variant` flows into `dataViewVariant` so v2-shape shells still reach the right `settings.dataViews.postType.<postType>.<variant>` triple."
+				"description": "Optional DataView variant id to consume (e.g. 'drafts'). When the v3 compiler synthesizes screens from v2 routes, `config.variant` stays on `screen.config.variant` and the resolver's step-3 manifest-inference path reads it directly — v2-shape shells still reach the right `settings.dataViews.postType.<postType>.<variant>` triple without a separate `dataViewVariant` stamp."
 			},
 			"contentWidth": {
 				"type": [
