@@ -98,8 +98,20 @@ class WP_Admin_Shell_V3_Compiler {
 
 		// v2 fast-path: legacy `bindings` block → forward into `commands`
 		// so the runtime's command consumer has a single source of truth.
+		// Then synthesize screens from any `routes[].config.variant`
+		// entries so v2 shells render under v3-built apps that read
+		// `screenId` / `dataViewVariant`.
 		if ( ! self::is_v3( $resolved ) ) {
-			return self::forward_v2_bindings_to_commands( $resolved );
+			$resolved = self::forward_v2_bindings_to_commands( $resolved );
+			$resolved = self::synthesize_v2_screens_from_routes( $resolved );
+
+			// Run the same `screens[id].dataView._resolved` stamp pass
+			// the v3 path does so synthesized screens light up the JS
+			// fast path equivalently. The compiler stamps only when the
+			// V3-shaped screens block exists, so we have to do it
+			// explicitly here for the synthesized v2 case.
+			$resolved = self::stamp_screen_data_view_resolved( $resolved );
+			return $resolved;
 		}
 
 		// Promote workspace.engine → top-level engine. The kernel reads
@@ -148,32 +160,141 @@ class WP_Admin_Shell_V3_Compiler {
 		// navigate?, label?}` entries.
 		$resolved['commands'] = self::compile_commands( $resolved );
 
-		// 5. stamp per-screen resolved view doc onto each screen so the
-		// JS `useScreenView` hook's synchronous fast path works without
-		// REST round-trips or client-side kind/name inference. Without
-		// this stamp, entity-CRUD apps render with empty fields.
-		if ( class_exists( 'WP_Admin_Shell_View_Config' ) ) {
-			foreach ( $screens as $screen_id => $screen ) {
-				if ( ! is_array( $screen ) ) {
-					continue;
-				}
-				$resolved_view = WP_Admin_Shell_View_Config::resolve_screen_view( $screen_id, $resolved );
-				if ( ! is_array( $resolved_view ) || empty( $resolved_view ) ) {
-					continue;
-				}
-				// Preserve any author-declared inline overlay alongside
-				// the stamped `_resolved` snapshot — the JS fast path
-				// reads `screen.view._resolved` first.
-				$existing_view = isset( $resolved['screens'][ $screen_id ]['view'] )
-					&& is_array( $resolved['screens'][ $screen_id ]['view'] )
-						? $resolved['screens'][ $screen_id ]['view']
-						: array();
-				$existing_view['_resolved']            = $resolved_view;
-				$resolved['screens'][ $screen_id ]['view'] = $existing_view;
-			}
-		}
+		// 5. stamp per-screen resolved DataView doc onto each screen so
+		// the JS `useDataView` hook's synchronous fast path works
+		// without REST round-trips or client-side kind/name inference.
+		// Without this stamp, entity-CRUD apps render with empty fields.
+		$resolved = self::stamp_screen_data_view_resolved( $resolved );
 
 		return $resolved;
+	}
+
+	/**
+	 * Stamp `screens[id].dataView._resolved` on every screen the
+	 * `WP_Admin_Shell_Data_View_Config` resolver can produce a doc for.
+	 * Runs after `routes` synthesis so the v2 → v3 back-compat
+	 * synthesized screens get stamped equivalently.
+	 *
+	 * @param array $resolved
+	 * @return array
+	 */
+	private static function stamp_screen_data_view_resolved( $resolved ) {
+		if ( ! class_exists( 'WP_Admin_Shell_Data_View_Config' ) ) {
+			return $resolved;
+		}
+		if ( ! isset( $resolved['screens'] ) || ! is_array( $resolved['screens'] ) ) {
+			return $resolved;
+		}
+
+		foreach ( $resolved['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$resolved_view = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( $screen_id, $resolved );
+			if ( ! is_array( $resolved_view ) || empty( $resolved_view ) ) {
+				continue;
+			}
+			// Preserve any author-declared inline overlay alongside
+			// the stamped `_resolved` snapshot — the JS fast path
+			// reads `screen.dataView._resolved` first.
+			$existing_view = isset( $resolved['screens'][ $screen_id ]['dataView'] )
+				&& is_array( $resolved['screens'][ $screen_id ]['dataView'] )
+					? $resolved['screens'][ $screen_id ]['dataView']
+					: array();
+			$existing_view['_resolved']                    = $resolved_view;
+			$resolved['screens'][ $screen_id ]['dataView'] = $existing_view;
+		}
+		return $resolved;
+	}
+
+	/**
+	 * v2 → v3 back-compat synthesis. Walk the v2 `routes` block and
+	 * synthesize a virtual `screens` entry per route entry, copying
+	 * `app` / `config` through. When the route carries `config.variant`,
+	 * the synthesized screen records `dataViewVariant` so v3-built apps
+	 * reading `useDataView(screenId)` find the correct triple.
+	 *
+	 * Synthesized screen id derives from the route path — `/posts/drafts`
+	 * → `route-posts-drafts`. Path-collision-free because v2 paths are
+	 * unique per resolver invariant.
+	 *
+	 * The synthesized screen also injects `screenId` into `config` so
+	 * downstream apps reading `config.screenId` find the synthesized id.
+	 *
+	 * @param array $resolved
+	 * @return array
+	 */
+	private static function synthesize_v2_screens_from_routes( $resolved ) {
+		if ( empty( $resolved['routes'] ) || ! is_array( $resolved['routes'] ) ) {
+			return $resolved;
+		}
+
+		$screens = isset( $resolved['screens'] ) && is_array( $resolved['screens'] )
+			? $resolved['screens']
+			: array();
+
+		foreach ( $resolved['routes'] as $path => $route ) {
+			if ( ! is_array( $route ) || ! isset( $route['app'] ) ) {
+				continue;
+			}
+			$path_str = (string) $path;
+			$screen_id = self::synth_screen_id_from_path( $path_str );
+			if ( $screen_id === '' ) {
+				continue;
+			}
+			// Don't clobber a screen that already exists (programmatic
+			// `wp_admin_shell_register_workspace` could have written one).
+			if ( isset( $screens[ $screen_id ] ) && is_array( $screens[ $screen_id ] ) ) {
+				continue;
+			}
+
+			$route_config = isset( $route['config'] ) && is_array( $route['config'] ) ? $route['config'] : array();
+			$variant      = isset( $route_config['variant'] ) && is_string( $route_config['variant'] ) && $route_config['variant'] !== ''
+				? $route_config['variant']
+				: '';
+
+			$screen_config = $route_config;
+			$screen_config['screenId'] = $screen_id;
+
+			$entry = array(
+				'app'    => (string) $route['app'],
+				'path'   => $path_str,
+				'config' => $screen_config,
+			);
+			if ( $variant !== '' ) {
+				$entry['dataViewVariant'] = $variant;
+			}
+
+			$screens[ $screen_id ] = $entry;
+
+			// Mirror the screenId into the live routes block so apps
+			// resolving config.screenId at mount time see it too.
+			$resolved['routes'][ $path ]['config'] = $screen_config;
+		}
+
+		$resolved['screens'] = $screens;
+		return $resolved;
+	}
+
+	/**
+	 * Stable synthesized-screen id derived from a route path. Replaces
+	 * non-alphanum chars with `-`, trims to 64 chars, and prefixes with
+	 * `route-`. Empty when the path produces nothing useful.
+	 *
+	 * @param string $path
+	 * @return string
+	 */
+	private static function synth_screen_id_from_path( $path ) {
+		$slug = strtolower( preg_replace( '#[^a-z0-9]+#i', '-', $path ) );
+		$slug = trim( $slug, '-' );
+		if ( $slug === '' ) {
+			return '';
+		}
+		if ( strlen( $slug ) > 56 ) {
+			$slug = substr( $slug, 0, 56 );
+			$slug = rtrim( $slug, '-' );
+		}
+		return 'route-' . $slug;
 	}
 
 	/**

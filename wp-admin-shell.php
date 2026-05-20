@@ -81,8 +81,8 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-field-collections.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-view-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
@@ -90,7 +90,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-v3-compiler.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-view-config-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
