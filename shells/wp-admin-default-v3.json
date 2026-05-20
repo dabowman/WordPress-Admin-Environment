@@ -180,11 +180,11 @@
 							"direction": "asc"
 						},
 						"fields": [
-							"title",
+							"status",
 							"author",
-							"parent",
 							"date"
-						]
+						],
+						"titleField": "title"
 					},
 					"actions": [
 						{
@@ -215,32 +215,69 @@
 							"id": "name",
 							"type": "text",
 							"label": "Name",
-							"enableGlobalSearch": true
+							"enableGlobalSearch": true,
+							"enableHiding": false
 						},
 						{
 							"id": "username",
 							"type": "text",
-							"label": "Username"
+							"label": "Username",
+							"enableGlobalSearch": true
 						},
 						{
 							"id": "email",
 							"type": "email",
-							"label": "Email"
+							"label": "Email",
+							"enableGlobalSearch": true
 						},
 						{
 							"id": "roles",
 							"type": "text",
-							"label": "Role"
+							"label": "Role",
+							"filterBy": {
+								"operators": [
+									"isAny"
+								]
+							},
+							"elements": [
+								{
+									"value": "administrator",
+									"label": "Administrator"
+								},
+								{
+									"value": "editor",
+									"label": "Editor"
+								},
+								{
+									"value": "author",
+									"label": "Author"
+								},
+								{
+									"value": "contributor",
+									"label": "Contributor"
+								},
+								{
+									"value": "subscriber",
+									"label": "Subscriber"
+								}
+							]
 						},
 						{
-							"id": "posts",
-							"type": "integer",
-							"label": "Posts"
+							"id": "registered_date",
+							"type": "datetime",
+							"label": "Registered"
 						}
 					],
 					"defaultView": {
 						"type": "table",
-						"perPage": 25
+						"perPage": 25,
+						"fields": [
+							"username",
+							"email",
+							"roles",
+							"registered_date"
+						],
+						"titleField": "name"
 					},
 					"actions": [
 						{
@@ -264,28 +301,25 @@
 						{
 							"id": "author",
 							"type": "text",
-							"label": "Author"
+							"label": "Author",
+							"enableGlobalSearch": true
 						},
 						{
 							"id": "content",
 							"type": "text",
 							"label": "Comment",
-							"enableGlobalSearch": true
-						},
-						{
-							"id": "post",
-							"type": "text",
-							"label": "In response to"
-						},
-						{
-							"id": "date",
-							"type": "datetime",
-							"label": "Submitted on"
+							"enableGlobalSearch": true,
+							"enableSorting": false
 						},
 						{
 							"id": "status",
-							"type": "select",
+							"type": "text",
 							"label": "Status",
+							"filterBy": {
+								"operators": [
+									"isAny"
+								]
+							},
 							"elements": [
 								{
 									"value": "approved",
@@ -304,11 +338,22 @@
 									"label": "Trash"
 								}
 							]
+						},
+						{
+							"id": "date",
+							"type": "datetime",
+							"label": "Submitted"
 						}
 					],
 					"defaultView": {
 						"type": "table",
-						"perPage": 25
+						"perPage": 25,
+						"fields": [
+							"author",
+							"content",
+							"status",
+							"date"
+						]
 					},
 					"actions": [
 						{
@@ -380,7 +425,13 @@
 					],
 					"defaultView": {
 						"type": "table",
-						"perPage": 50
+						"perPage": 50,
+						"fields": [
+							"name",
+							"status",
+							"version"
+						],
+						"titleField": "name"
 					},
 					"actions": [
 						{
@@ -435,7 +486,14 @@
 					],
 					"defaultView": {
 						"type": "grid",
-						"perPage": 24
+						"perPage": 24,
+						"fields": [
+							"status",
+							"description",
+							"version",
+							"author"
+						],
+						"titleField": "name"
 					},
 					"actions": [
 						{
