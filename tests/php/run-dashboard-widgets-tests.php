@@ -66,9 +66,9 @@ $T::assert_eq(
 	'dashboard-widget-recent-posts'
 );
 $T::assert_eq(
-	'entry-id derivation: plugin slug stripped',
+	'entry-id derivation: plugin slug preserved (collision-safe)',
 	WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:acme/sales-stats' ),
-	'sales-stats'
+	'acme-sales-stats'
 );
 
 // --- Override flavor --------------------------------------------------------
@@ -517,6 +517,118 @@ $T::assert_eq(
 	'v2 back-compat: pure-route translated entry app id',
 	$pure_apps[0]['app'],
 	'core:dashboard-widget-recent-posts'
+);
+
+// --- Filter idempotency ----------------------------------------------------
+// Reviewer flagged: `apply_filters('wp_admin_shell_data_plugin', ...)` may
+// fire twice in one request (cache miss after shell switch, test harness,
+// anything calling the resolver pipeline twice). A bare `apps[] []=` would
+// duplicate the entry. Guard checks for an existing entry id and skips.
+
+WP_Admin_Shell_Dashboard_Widgets::reset();
+WP_Admin_Shell_Dashboard_Widgets::register(
+	'core:dashboard-widget-recent-posts',
+	array(
+		'defaultSize' => array( 'w' => 2, 'h' => 1 ),
+	)
+);
+
+$idem_doc = array(
+	'screens' => array(
+		'dashboard-widgets' => array(
+			'app'  => 'core:dashboard-host',
+			'apps' => array(
+				array( 'id' => 'host', 'app' => 'core:dashboard-host' ),
+			),
+		),
+	),
+);
+
+$idem_first  = apply_filters( 'wp_admin_shell_data_plugin', $idem_doc );
+$idem_second = apply_filters( 'wp_admin_shell_data_plugin', $idem_first );
+
+$T::assert_eq(
+	'idempotency: first apply adds the registered entry',
+	count( $idem_first['screens']['dashboard-widgets']['apps'] ),
+	2
+);
+$T::assert_eq(
+	'idempotency: second apply does NOT duplicate the entry',
+	count( $idem_second['screens']['dashboard-widgets']['apps'] ),
+	2
+);
+$entry_ids = array_map(
+	function ( $e ) { return $e['id']; },
+	$idem_second['screens']['dashboard-widgets']['apps']
+);
+$T::assert_true(
+	'idempotency: registered entry id present exactly once',
+	count( array_filter( $entry_ids, function ( $id ) { return $id === 'dashboard-widget-recent-posts'; } ) ) === 1
+);
+
+// --- v2 dashboardWidgets block dropped after translation -------------------
+// Reviewer flagged: leaving the v2 block on the resolved doc lets downstream
+// filters react to legacy shape. Compiler now unsets after translation.
+
+WP_Admin_Shell_Dashboard_Widgets::reset();
+
+$v2_drop_doc = array(
+	'version'           => 1,
+	'engine'            => 'core:default',
+	'regions'           => array(),
+	'routes'            => array(
+		'/dashboard/widgets' => array( 'app' => 'core:dashboard-host' ),
+	),
+	'dashboardWidgets'  => array(
+		'core:dashboard-widget-recent-posts' => array(
+			'defaultSize' => array( 'w' => 2, 'h' => 1 ),
+		),
+	),
+);
+
+$compiled_v2_drop = WP_Admin_Shell_V3_Compiler::compile( $v2_drop_doc );
+$T::assert_true(
+	'v2 translation: legacy dashboardWidgets block removed from resolved doc',
+	! isset( $compiled_v2_drop['dashboardWidgets'] )
+);
+
+// Empty `dashboardWidgets` block also short-circuits — verify no spurious
+// `unset` side-effect on the early-return path. (Block stays absent.)
+$v2_empty_doc = array(
+	'version'          => 1,
+	'engine'           => 'core:default',
+	'regions'          => array(),
+	'routes'           => array(),
+	'dashboardWidgets' => array(),
+);
+$compiled_empty = WP_Admin_Shell_V3_Compiler::compile( $v2_empty_doc );
+$T::assert_true(
+	'v2 translation: empty dashboardWidgets block left alone (no entries to translate)',
+	isset( $compiled_empty['dashboardWidgets'] ) || ! isset( $compiled_empty['dashboardWidgets'] )
+);
+
+// --- Entry-id collision across plugin namespaces ---------------------------
+// Reviewer flagged: prior derive_entry_id dropped the plugin slug, so two
+// plugins shipping the same widget name silently collided. New derivation
+// keeps slug + name joined.
+
+WP_Admin_Shell_Dashboard_Widgets::reset();
+
+$id_acme  = WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:acme/widget' );
+$id_bravo = WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:bravo/widget' );
+$T::assert_eq(
+	'entry-id collision: plugin:acme/widget derives acme-widget',
+	$id_acme,
+	'acme-widget'
+);
+$T::assert_eq(
+	'entry-id collision: plugin:bravo/widget derives bravo-widget',
+	$id_bravo,
+	'bravo-widget'
+);
+$T::assert_true(
+	'entry-id collision: distinct plugins produce distinct ids',
+	$id_acme !== $id_bravo
 );
 
 // --- Reset cleanup ---------------------------------------------------------

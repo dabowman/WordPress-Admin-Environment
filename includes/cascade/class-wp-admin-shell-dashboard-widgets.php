@@ -246,9 +246,14 @@ class WP_Admin_Shell_Dashboard_Widgets {
 		if ( isset( $placement['position'] ) ) {
 			$entry['position'] = $placement['position'];
 		}
-		if ( isset( $record['args']['title'] ) && is_string( $record['args']['title'] ) ) {
-			$entry['title'] = $record['args']['title'];
-		}
+
+		// `title` is NOT a valid `appsEntry` field per admin-v3.json
+		// (`additionalProperties: false`). The widget's display title
+		// flows through the synthesized manifest's `title` field (set
+		// by `register()` when the standalone-flavor `script` arg is
+		// present) and is resolved by `composeScreenWidgets` via the
+		// manifest registry. Programmatic-only callers can override
+		// the title at the manifest layer or via admin.json.
 
 		return $entry;
 	}
@@ -260,9 +265,13 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	 * and lowercase + kebab-case the suffix. The result matches the
 	 * v3 appsEntry id pattern `^[a-z][a-z0-9-]*$`.
 	 *
+	 * For `plugin:<slug>/<name>` the slug + name are preserved (joined
+	 * with `-`) so two plugins shipping the same widget name (`acme/widget`
+	 * + `bravo/widget`) don't collide on the same entry id.
+	 *
 	 * Examples:
 	 *   - `core:dashboard-widget-recent-posts` → `dashboard-widget-recent-posts`
-	 *   - `plugin:acme/sales-stats`            → `sales-stats`
+	 *   - `plugin:acme/sales-stats`            → `acme-sales-stats`
 	 *
 	 * @param string $app_id
 	 * @return string
@@ -272,12 +281,10 @@ class WP_Admin_Shell_Dashboard_Widgets {
 		if ( strpos( $app_id, 'core:' ) === 0 ) {
 			$suffix = substr( $app_id, 5 );
 		} elseif ( strpos( $app_id, 'plugin:' ) === 0 ) {
+			// Keep the slug + name joined with `-` so `acme/widget` and
+			// `bravo/widget` produce distinct entry ids. The previous
+			// "drop the slug" shorthand silently collided across plugins.
 			$suffix = substr( $app_id, 7 );
-			// plugin:slug/name → name (drop the slug for entry-id brevity).
-			$slash = strrpos( $suffix, '/' );
-			if ( $slash !== false ) {
-				$suffix = substr( $suffix, $slash + 1 );
-			}
 		} else {
 			$suffix = $app_id;
 		}
@@ -364,6 +371,29 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 		if ( ! isset( $doc['screens'][ $target ]['apps'] ) || ! is_array( $doc['screens'][ $target ]['apps'] ) ) {
 			$doc['screens'][ $target ]['apps'] = array();
 		}
+
+		// Idempotency guard — if the resolver pipeline runs twice in one
+		// request (cache miss after shell switch, test harness, etc.), a
+		// bare `apps[] []=` would duplicate the entry. Check for an
+		// existing entry with the same id and skip when present.
+		// Admin.json-authored entries also win against this contribution
+		// via the same id — first-write wins.
+		$entry_id = $record['entry_id'];
+		$already_present = false;
+		foreach ( $doc['screens'][ $target ]['apps'] as $existing ) {
+			if (
+				is_array( $existing ) &&
+				isset( $existing['id'] ) &&
+				$existing['id'] === $entry_id
+			) {
+				$already_present = true;
+				break;
+			}
+		}
+		if ( $already_present ) {
+			continue;
+		}
+
 		$doc['screens'][ $target ]['apps'][] = WP_Admin_Shell_Dashboard_Widgets::build_screen_app_entry( $record );
 	}
 

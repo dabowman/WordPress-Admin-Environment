@@ -408,15 +408,25 @@ class WP_Admin_Shell_V3_Compiler {
 			if ( isset( $override['position'] ) ) {
 				$entry['position'] = $override['position'];
 			}
-			if ( isset( $override['title'] ) && is_string( $override['title'] ) ) {
-				$entry['title'] = $override['title'];
-			}
+			// `title` is NOT a valid `appsEntry` field per admin-v3.json
+			// (`additionalProperties: false`). v2 override `title`s flow
+			// through the widget app's manifest title or admin.json
+			// per-screen overrides; do not stamp it here.
 			$apps[]                   = $entry;
 			$existing[ $app_id ]      = true;
 			$existing_e[ $entry_id ]  = true;
 		}
 
 		$resolved['screens'][ $target_screen ]['apps'] = $apps;
+
+		// Drop the v2 `dashboardWidgets` block from the resolved doc once
+		// translated. Downstream filters running after the compiler
+		// shouldn't react to the legacy shape; the `_doing_it_wrong`
+		// notice above warns authors. Note: we intentionally only unset
+		// when at least one v2 entry resolved — the early-return at the
+		// top of this function handles the empty-block case.
+		unset( $resolved['dashboardWidgets'] );
+
 		return $resolved;
 	}
 
