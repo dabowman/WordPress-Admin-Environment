@@ -172,19 +172,22 @@ Detailed deliverables waiting for implementation:
 - Generate "Go to X" palette entries from `screens[id]` map (path + label + icon).
 - Drop the routes-block iteration path used by v2.
 
-### 3c.3 — Classic wp-admin menu bridge (~5-8 days)
+### 3c.3 — Classic wp-admin menu bridge ✅ Shipped
 
-- New PHP class `WP_Admin_Shell_Classic_Menu_Bridge`.
-- Walks `$GLOBALS['menu']` + `$GLOBALS['submenu']`. Ingests only third-party plugins (registration source path outside `wp-admin/` + `wp-includes/`).
-- For each registration, synthesize TWO entries:
-  - `screens[id]` describing the surface (label / icon / path / app / permissions).
-  - `menu.<container>.items[id]` describing placement.
-- Synthesized origin sits between `core` and `plugin` in cascade.
-- Default container `menu.ingested.items` (label "Plugins").
-- Icon mapping: data-URIs → icon-registry names; dashicons → registry names.
-- Slug→path mapping (`edit.php?post_type=product` → `/admin/edit-php-post-type-product` or known core mappings).
-- Hook timing: run after `admin_menu` fires on every shell-page load.
-- Tests: new `run-classic-menu-bridge-tests.php` (~20-30 PHP assertions).
+- New PHP class `WP_Admin_Shell_Classic_Menu_Bridge` at `includes/cascade/class-wp-admin-shell-classic-menu-bridge.php`.
+- Walks `$GLOBALS['menu']` + `$GLOBALS['submenu']` eagerly at filter time (inside `wp_admin_shell_data_plugin`, priority 6 — after menu-items / admin-routes / dashboard-widgets at 5 — so an explicit `wp_admin_shell_register_menu_item()` call wins via the idempotency guard).
+- Core detection: **static slug list** covering every default wp-admin top-level + well-known submenu script, plus `edit.php?post_type={post,page,attachment}`. Extensible via the new `wp_admin_shell_classic_menu_core_slugs` filter — plugins / sites adding a CPT screen natively expand the skip list this way.
+- For each ingested third-party entry the contribute() pass writes TWO additions to the resolved doc:
+  - `screens[ingested-<slugified>]` — label / icon / path (`/admin/<slugified>`) / app (`iframe:<original-slug>`) / `permissions.capabilities[<menu-cap>]`.
+  - `menu.ingested.items[ingested-<slugified>]` — placement under a hardcoded "Plugins" container at the menu root.
+- Submenu nesting: children of third-party parents nest under the parent's ingested id. Children of CORE wp-admin parents (e.g. plugins adding pages under `tools.php`) get a synthesized container record carrying the core parent's label, so the children still surface. Children that themselves match core slugs are skipped to avoid double-bridging.
+- Icon mapping: `dashicons-foo` → `foo` (resolved via engine icon registry); `data:image/svg+xml;…` → fallback `menu` (SVG harvesting deferred); empty / `none` / `div` → `menu`. No icon-registry registration at scan time.
+- Idempotency: bridge checks `isset( $doc['screens'][<id>] )` and `isset( $doc['menu'][ingested][items][<id>] )` before writing, so admin.json declarations win at every cascade origin AND repeat filter invocations don't duplicate.
+- Container preservation: bridge writes only to `menu.ingested.items`. An admin.json declaration like `menu.ingested.label = "Custom"` at site origin survives the bridge pass entirely.
+- v2 back-compat: not needed (3c.3 is v3-only). v2 shells continue using `add_menu_page()` directly.
+- Tests: new `tests/php/run-classic-menu-bridge-tests.php` (63 PHP assertions) covers screen/path derivation, core-slug detection + filter expansion, icon mapping, scan walks, submenu nesting (third-party + core parents), idempotency, admin.json-declared-screen-wins, container preservation, and coexistence with `wp_admin_shell_register_menu_item()`.
+- Spec docs: extension point #14 (`wp_admin_shell_classic_menu_core_slugs`) added to spec §13.
+- Out of scope (tracked as follow-ups): SVG icon harvesting + dynamic icon registration from data-URIs; multi-pane parent screens (deferred to 3c.4); removing the original entries from `$GLOBALS['menu']` (bridge is purely additive).
 
 ### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred)
 
