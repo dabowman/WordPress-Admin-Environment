@@ -258,46 +258,28 @@ class WP_Admin_Shell_Data_View_REST {
 	}
 
 	/**
-	 * Best-effort triple-identity surfacing for screen responses.
-	 * Re-uses the resolver's identity logic by walking the same priority
-	 * order; returns empty strings when nothing resolves so the client
+	 * Triple-identity surfacing for screen responses. Delegates to the
+	 * resolver's `infer_kind_name_variant` so all three priority layers
+	 * stay in sync — `dataViewRef`, explicit `dataViewKind/Name/Variant`,
+	 * and manifest inference (`screen.app` → manifest `dataView` +
+	 * `screen.config.{postType,taxonomy,variant}` overrides).
+	 *
+	 * Empty strings for kind/name when nothing resolves so the client
 	 * can detect a screen with no registry binding.
 	 *
 	 * @param array|null $screen Resolved screen entry.
 	 * @return array{ kind:string, name:string, variant:string }
 	 */
 	private static function screen_identity( $screen ) {
-		$default = array( 'kind' => '', 'name' => '', 'variant' => '_default' );
 		if ( ! is_array( $screen ) ) {
-			return $default;
+			return array( 'kind' => '', 'name' => '', 'variant' => '_default' );
 		}
-
-		if ( isset( $screen['dataViewRef'] ) && is_string( $screen['dataViewRef'] ) && $screen['dataViewRef'] !== '' ) {
-			$parsed = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( $screen['dataViewRef'] );
-			if ( $parsed !== null ) {
-				return array(
-					'kind'    => $parsed[0],
-					'name'    => $parsed[1],
-					'variant' => $parsed[2],
-				);
-			}
-		}
-
-		if (
-			isset( $screen['dataViewKind'] ) && is_string( $screen['dataViewKind'] ) &&
-			isset( $screen['dataViewName'] ) && is_string( $screen['dataViewName'] )
-		) {
-			$variant = isset( $screen['dataViewVariant'] ) && is_string( $screen['dataViewVariant'] ) && $screen['dataViewVariant'] !== ''
-				? $screen['dataViewVariant']
-				: '_default';
-			return array(
-				'kind'    => WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $screen['dataViewKind'] ),
-				'name'    => WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $screen['dataViewName'] ),
-				'variant' => WP_Admin_Shell_Data_View_Config::sanitize_variant_segment( $variant ),
-			);
-		}
-
-		return $default;
+		list( $kind, $name, $variant ) = WP_Admin_Shell_Data_View_Config::infer_kind_name_variant( $screen );
+		return array(
+			'kind'    => (string) $kind,
+			'name'    => (string) $name,
+			'variant' => $variant !== '' ? (string) $variant : '_default',
+		);
 	}
 }
 

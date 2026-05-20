@@ -129,7 +129,10 @@ $T::eq(
 );
 
 // v2 back-compat — route with config.variant flows into the
-// synthesized screen as `dataViewVariant`.
+// synthesized screen's `config.variant`. The resolver's step-3
+// manifest-inference path reads `screen.config.variant` directly
+// (verified by the data-view test suite), so no separate
+// `dataViewVariant` stamp is needed at the synthesizer.
 $v2_variant_doc = array(
 	'version' => 1,
 	'engine'  => 'core:default',
@@ -144,9 +147,13 @@ $v2_variant_doc = array(
 $compiled_v2_variant     = WP_Admin_Shell_V3_Compiler::compile( $v2_variant_doc );
 $variant_synth_screen_id = $compiled_v2_variant['routes']['/posts/drafts']['config']['screenId'];
 $T::eq(
-	'v2 variant synthesis: dataViewVariant stamped from config.variant',
-	$compiled_v2_variant['screens'][ $variant_synth_screen_id ]['dataViewVariant'],
+	'v2 variant synthesis: config.variant preserved on synthesized screen',
+	$compiled_v2_variant['screens'][ $variant_synth_screen_id ]['config']['variant'],
 	'drafts'
+);
+$T::ok(
+	'v2 variant synthesis: no dataViewVariant stamp (resolver reads config.variant)',
+	! isset( $compiled_v2_variant['screens'][ $variant_synth_screen_id ]['dataViewVariant'] )
 );
 
 // ── 3. v2 bindings → commands forwarding ────────────────────────────

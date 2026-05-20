@@ -175,17 +175,6 @@ class WP_Admin_Shell_Data_Field_Collections {
 	}
 
 	/**
-	 * Sanitize a variant segment. Same as kind/name but allows slash
-	 * for namespacing.
-	 *
-	 * @param string $value
-	 * @return string
-	 */
-	public static function sanitize_variant( $value ) {
-		return preg_replace( '#[^A-Za-z0-9_/-]#', '', $value );
-	}
-
-	/**
 	 * Mark the legacy-function notice as having fired this request.
 	 * Returns true the first time it's called per-request; false
 	 * thereafter. Test-aware: `reset()` clears the flag too.

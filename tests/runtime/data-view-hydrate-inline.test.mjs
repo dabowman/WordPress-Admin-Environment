@@ -420,6 +420,40 @@ const cycleSnapshot = {
 const cycled = hydrateInlineDataViewTriple( cycleSnapshot, 'postType', 'post', 'a' );
 ok( 'cycle detection returns an object (not null)', cycled !== null && typeof cycled === 'object' );
 ok( 'cycle output strips `extends` directive', ! ( 'extends' in cycled ) );
+eq(
+	'cycle output matches bare child entry body (no parent merge)',
+	cycled.defaultView,
+	{ perPage: 1 }
+);
+
+// Depth-cap: chain longer than 10 short-circuits without infinite
+// recursion. PHP mirror is run-data-view-tests.php (12-level chain).
+// The 12-level chain extends `v1 → v2 → ... → v12 → _default`; the
+// resolver short-circuits past the cap and returns the deepest
+// resolved doc encountered (the child of v1 minus its `extends`).
+const depthSnapshot = ( () => {
+	const variants = {
+		_default: { defaultView: { perPage: 100 } },
+	};
+	for ( let i = 1; i <= 12; i++ ) {
+		const parent = i === 12 ? '_default' : 'v' + ( i + 1 );
+		variants[ 'v' + i ] = {
+			extends: parent,
+			defaultView: { perPage: i },
+		};
+	}
+	return { settings: { dataViews: { postType: { post: variants } } } };
+} )();
+const deep = hydrateInlineDataViewTriple( depthSnapshot, 'postType', 'post', 'v1' );
+ok(
+	'depth-cap short-circuits without throwing',
+	deep !== null && typeof deep === 'object'
+);
+ok( 'depth-cap output strips `extends` directive', ! ( 'extends' in deep ) );
+ok(
+	'depth-cap surfaces v1 body (perPage stays 1, not _default 100)',
+	deep.defaultView.perPage === 1
+);
 
 // Self-reference: variant extends itself → short-circuit, return body.
 const selfRefSnapshot = {

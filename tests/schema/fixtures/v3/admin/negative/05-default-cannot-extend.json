@@ -1,0 +1,32 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v3.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "default-cannot-extend",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "posts"
+	},
+	"settings": {
+		"dataViews": {
+			"postType": {
+				"post": {
+					"_default": {
+						"extends": "other",
+						"defaultView": { "type": "table" }
+					},
+					"other": {
+						"defaultView": { "type": "grid" }
+					}
+				}
+			}
+		}
+	},
+	"screens": {
+		"posts": {
+			"label": "Posts",
+			"path": "/posts",
+			"app": "core:posts"
+		}
+	}
+}

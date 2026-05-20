@@ -248,11 +248,7 @@ class WP_Admin_Shell_V3_Compiler {
 				continue;
 			}
 
-			$route_config = isset( $route['config'] ) && is_array( $route['config'] ) ? $route['config'] : array();
-			$variant      = isset( $route_config['variant'] ) && is_string( $route_config['variant'] ) && $route_config['variant'] !== ''
-				? $route_config['variant']
-				: '';
-
+			$route_config  = isset( $route['config'] ) && is_array( $route['config'] ) ? $route['config'] : array();
 			$screen_config = $route_config;
 			$screen_config['screenId'] = $screen_id;
 
@@ -261,9 +257,13 @@ class WP_Admin_Shell_V3_Compiler {
 				'path'   => $path_str,
 				'config' => $screen_config,
 			);
-			if ( $variant !== '' ) {
-				$entry['dataViewVariant'] = $variant;
-			}
+
+			// Note: don't stamp `dataViewVariant` here. The resolver's
+			// step-2 path needs ALL THREE of dataViewKind/Name/Variant
+			// to fire; stamping just the variant would be dead.
+			// `route.config.variant` already copied into `screen.config`
+			// above; the resolver's step-3 manifest-inference path reads
+			// it from there as the v2 back-compat hook.
 
 			$screens[ $screen_id ] = $entry;
 

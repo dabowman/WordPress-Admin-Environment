@@ -519,7 +519,7 @@ class WP_Admin_Shell_Data_View_Config {
 	 *                                            Empty strings for kind/name when undetermined;
 	 *                                            variant defaults to `_default`.
 	 */
-	private static function infer_kind_name_variant( $screen ) {
+	public static function infer_kind_name_variant( $screen ) {
 		// 1. dataViewRef wins outright.
 		if ( isset( $screen['dataViewRef'] ) && is_string( $screen['dataViewRef'] ) && $screen['dataViewRef'] !== '' ) {
 			$parsed = self::parse_data_view_ref( $screen['dataViewRef'] );
@@ -769,14 +769,17 @@ class WP_Admin_Shell_Data_View_Config {
 	}
 
 	/**
-	 * Sanitize a variant id. Allows kebab-case + slash-namespacing +
-	 * the underscore prefix for the reserved `_default` token.
+	 * Sanitize a variant id. Allows kebab-case + the leading underscore
+	 * reserved for the `_default` token. Slashes are forbidden — the
+	 * `dataViewRef: "kind/name/variant"` pointer uses `/` as the path
+	 * separator, so allowing them inside a variant id would make refs
+	 * ambiguous to parse.
 	 *
 	 * @param string $value
 	 * @return string
 	 */
 	public static function sanitize_variant_segment( $value ) {
-		return preg_replace( '#[^A-Za-z0-9_/-]#', '', (string) $value );
+		return preg_replace( '#[^A-Za-z0-9_-]#', '', (string) $value );
 	}
 
 	/**

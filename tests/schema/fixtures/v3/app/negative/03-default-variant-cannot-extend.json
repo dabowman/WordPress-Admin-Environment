@@ -1,0 +1,21 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v3.json",
+	"id": "core:bad-default",
+	"version": 1,
+	"title": "Bad Default",
+	"description": "Manifest declaring _default with extends — invalid.",
+	"role": "main",
+	"dataView": {
+		"kind": "postType",
+		"name": "post",
+		"variants": {
+			"_default": {
+				"extends": "other",
+				"defaultView": { "type": "table" }
+			},
+			"other": {
+				"defaultView": { "type": "grid" }
+			}
+		}
+	}
+}

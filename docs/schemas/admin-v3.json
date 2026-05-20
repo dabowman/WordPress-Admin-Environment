@@ -117,8 +117,16 @@
 								"^[A-Za-z][A-Za-z0-9_-]*$": {
 									"type": "object",
 									"additionalProperties": false,
+									"properties": {
+										"_default": {
+											"allOf": [
+												{ "$ref": "#/$defs/settingsDataView" },
+												{ "not": { "required": [ "extends" ] } }
+											]
+										}
+									},
 									"patternProperties": {
-										"^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$": {
+										"^[A-Za-z0-9][A-Za-z0-9_-]*$": {
 											"$ref": "#/$defs/settingsDataView"
 										}
 									}
@@ -293,7 +301,7 @@
 				"dataViewRef": {
 					"type": "string",
 					"minLength": 1,
-					"pattern": "^[A-Za-z][A-Za-z0-9_-]*/[A-Za-z][A-Za-z0-9_-]*/(_default|[A-Za-z0-9][A-Za-z0-9_/-]*)$",
+					"pattern": "^[A-Za-z][A-Za-z0-9_-]*/[A-Za-z][A-Za-z0-9_-]*/(_default|[A-Za-z0-9][A-Za-z0-9_-]*)$",
 					"description": "Pointer into the `settings.dataViews` registry — `kind/name/variant`. Replaces the inferred-from-app-manifest lookup. When present, the resolved DataView doc is the registry triple plus any inline `dataView` overlay. Optional; absent triggers fallback inference from `dataViewKind`/`dataViewName`/`dataViewVariant`, then from the screen's primary `app` manifest's `dataView` block + `screen.config.{postType,taxonomy,variant}`. Mutually compatible with `dataView` overlay — overlay layers on top of the referenced triple via deep-merge with tombstones."
 				},
 				"dataViewKind": {
@@ -311,7 +319,7 @@
 				"dataViewVariant": {
 					"type": "string",
 					"minLength": 1,
-					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$",
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
 					"description": "Explicit DataView triple variant segment — alternative to `dataViewRef`. Author-defined variant id (`drafts`, `pending`, `trash`, etc.) or `_default` for the unqualified base. Optional when `dataViewKind` + `dataViewName` are set; defaults to `_default`."
 				},
 				"permissions": {
@@ -544,7 +552,7 @@
 				"extends": {
 					"type": "string",
 					"minLength": 1,
-					"pattern": "^[A-Za-z0-9][A-Za-z0-9_/-]*$|^_default$",
+					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
 					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
 				},
 				"fieldsRef": {

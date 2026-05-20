@@ -286,6 +286,10 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Cycle detection: returns base entry without infinite loop.
+// Strong assertion — verify the resolved doc carries the BARE child
+// entry's body (cycle-a's `perPage: 5`), not the would-be parent's
+// (`cycle-b`'s `perPage: 7`). Confirms cycle detection short-circuits
+// before merging anything from the cycle partner.
 $cycle_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'cycle-a', $synthetic );
 WPAS_Data_View_Test_Runner::assert_true(
 	'cycle-a returns a finite array (no infinite loop)',
@@ -294,6 +298,11 @@ WPAS_Data_View_Test_Runner::assert_true(
 WPAS_Data_View_Test_Runner::assert_true(
 	'cycle-a falls back to base entry without extends',
 	! isset( $cycle_resolved['extends'] )
+);
+WPAS_Data_View_Test_Runner::assert_eq(
+	'cycle-a surfaces bare child body (perPage stays 5, not 7 from cycle-b)',
+	$cycle_resolved['defaultView']['perPage'],
+	5
 );
 
 // Depth-cap: build a chain longer than MAX_EXTENDS_DEPTH (10) and confirm it short-circuits.
@@ -323,6 +332,20 @@ WPAS_Data_View_Test_Runner::assert_true(
 WPAS_Data_View_Test_Runner::assert_true(
 	'depth-cap — extends key stripped at cap',
 	! isset( $deep_resolved['extends'] )
+);
+// Strong assertion: depth-cap surfaces the child entry's body, not the
+// would-be root's. Confirms the cap short-circuits BEFORE the merge
+// would reach `level-0` (perPage 0). The exact partially-merged value
+// depends on where in the chain the cap fires, but it must be > 0 and
+// must NOT equal 0 (level-0) — that would mean depth-cap leaked all
+// the way to the root.
+WPAS_Data_View_Test_Runner::assert_true(
+	'depth-cap — perPage NOT 0 (cap fires before reaching root level-0)',
+	$deep_resolved['defaultView']['perPage'] !== 0
+);
+WPAS_Data_View_Test_Runner::assert_true(
+	'depth-cap — perPage equals child level-12 body (12)',
+	$deep_resolved['defaultView']['perPage'] === 12
 );
 
 // `_default` declaring `extends` → `extends` ignored.
