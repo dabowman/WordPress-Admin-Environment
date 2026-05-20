@@ -164,7 +164,7 @@ Detailed deliverables waiting for implementation:
 - `wp_admin_shell_register_dashboard_widget()` API survives — under the hood contributes a screen-app entry instead of a widgets-block entry.
 - Tests: rewrite `run-dashboard-widgets-tests.php` (~25 PHP assertions).
 
-### 3c.2 — Command palette rewrite (~<1 day)
+### 3c.2 — Command palette rewrite (~<1 day) — ✅ Shipped
 
 - Read `commands[]` array directly.
 - Generate "Go to X" palette entries from `screens[id]` map (path + label + icon).
