@@ -1,8 +1,10 @@
 # app.json Reference
 
-`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a shell. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_shell_register_app()`.
+`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a workspace. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_shell_register_app()`.
 
-Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, and the configuration schema it accepts when `admin.json` passes values. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
+Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `admin.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
+
+This reference covers the **v3 shape** (`admin-app-v3.json`). v2 manifests continue to validate through v3.0 — see [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md) for migration.
 
 ## In this article
 
@@ -21,7 +23,9 @@ Manifests contain only intrinsic, install-independent declarations: the app's AR
 - [style](#style)
 - [window](#window)
 - [dashboardWidget](#dashboardwidget)
-- [viewConfig](#viewconfig) (v2 — see `dataView` in admin-app-v3)
+- [slots](#slots)
+- [slotHints](#slothints)
+- [dataView](#dataview)
 - [documentation](#documentation)
 
 ## JSON Schema
@@ -30,16 +34,16 @@ Manifests contain only intrinsic, install-independent declarations: the app's AR
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-app/v1.json",
+	"$schema": "https://schemas.wp.org/admin-app/v3.json",
 	"id": "plugin:acme/orders",
-	"version": 1,
+	"version": 3,
 	"title": "Orders",
 	"role": "main",
 	"script": "acme-orders"
 }
 ```
 
-The schema is also available in-repo at `docs/schemas/admin-app-v2.json` for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin-app-v3.json`](../schemas/admin-app-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -59,11 +63,11 @@ The runtime registry rejects duplicate ids; plugins extending core apps must use
 
 ## version
 
-Manifest schema version this document conforms to. v1 is the current shape. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
+Manifest schema version this document conforms to. v3 is the current shape (admin-app-v3.json). Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load. v2 manifests (`version: 2`) keep validating through v3.0.
 
 | Property | Description                                       | Type    | Default |
 |----------|---------------------------------------------------|---------|---------|
-| version  | Manifest version. Must be `1` for the current shape. | integer | —       |
+| version  | Manifest version. Must be `3` for the current shape. | integer | —       |
 
 ## title
 
@@ -234,37 +238,95 @@ Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this bloc
 | minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `admin.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
 | position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
 
-## viewConfig
+## slots
 
-> **v3 successor:** `dataView` block in admin-app-v3 — same `kind` + `name`, plus a nested `variants: { <id>: <doc> }` family so the manifest ships the complete variant set (`_default` plus drafts / pending / trash / etc.) in a single block. Consumed via `useDataView(screenId)` or `useDataView({ kind, name, variant })`. v2 callers keep working through deprecation shims one release cycle.
-
-Optional primary view-config the app ships as its baseline. Names the entity `(kind, name[, variant])` this app renders. The runtime merges this baseline with `admin.json#viewConfigs` overrides and filter-driven overrides; the consuming app reads the resolved value via `useViewConfig` (deprecated; use `useDataView` going forward). Apps that don't render a single entity (command palette, dashboard) omit this field.
+Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) declare the named slots they expose to other apps in the same screen's `apps[]` array. Each entry under `slots` is a `{ description }` object naming a slot.
 
 ```json
 {
-	"viewConfig": {
-		"kind": "postType",
-		"name": "post",
-		"fieldsRef": "core/post-fields",
-		"defaultView": { "type": "table", "perPage": 25 }
+	"slots": {
+		"grid": { "description": "Widget grid tiles." }
 	}
 }
 ```
 
-### View-config fields
+A screen mounting `core:dashboard-host` (which declares a `grid` slot) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
 
-`kind` and `name` are required.
+| Property              | Description                                                                                                              | Type   | Default |
+|-----------------------|--------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| slots                 | Map of slot id → `{ description, scope? }`. Slot ids are kebab-case. Scope defaults to `"screen"`.                       | object | —       |
+
+## slotHints
+
+Optional. Default size + position hints for grid-style slot hosts. Cascade-overrideable per-entry from admin.json `screens[id].apps[].size` / `position`.
+
+```json
+{
+	"slotHints": {
+		"grid": {
+			"defaultSize": { "w": 2, "h": 1 },
+			"minSize":     { "w": 1, "h": 1 },
+			"position":    "auto"
+		}
+	}
+}
+```
+
+| Property      | Description                                                                                                                                          | Type             | Default       |
+|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|
+| defaultSize   | Initial `{ w, h }` size in grid cells. Both `w` and `h` required when set; integers `>= 1`.                                                          | object           | `{ w: 1, h: 1 }` |
+| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `admin.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
+| position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
+
+## dataView
+
+Optional. The app's baseline `dataView` family — the `(kind, name)` pair it primarily renders, plus a `variants: { <id>: <doc> }` family that ships the complete variant set (`_default` plus drafts / pending / trash / active / inactive / etc.) in a single block. The PHP resolver injects each declared variant into `settings.dataViews[kind][name][variant]` at the `core` origin so admin.json cascade origins (site, role, user) can override per-triple. Apps that don't render an entity list (command palette, dashboard host, simple editor, iframe wrappers) omit this block.
+
+See [`docs/dataview-config.md`](../dataview-config.md) for the consumer-facing reference: the 3-axis registry, the `extends` chain, filter hooks, REST endpoints, and the `useDataView` React hook.
+
+```json
+{
+	"dataView": {
+		"kind": "postType",
+		"name": "post",
+		"variants": {
+			"_default": {
+				"fieldsRef":   "core/post-fields",
+				"defaultView": { "type": "table", "perPage": 25 },
+				"actions":     [ { "id": "edit", "label": "Edit", "isPrimary": true } ]
+			},
+			"drafts": {
+				"extends":     "_default",
+				"defaultView": { "filters": [ { "field": "status", "operator": "is", "value": "draft" } ] }
+			}
+		}
+	}
+}
+```
+
+### dataView fields
+
+`kind` and `name` are required. `variants._default` is required when `variants` is declared.
 
 | Property        | Description                                                                                                                                                  | Type    | Default |
 |-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
 | kind            | Entity kind, matching `@wordpress/core-data` kinds (`postType`, `root`, `taxonomy`, etc.). Pattern: `^[A-Za-z][A-Za-z0-9_-]*$`. Required.                     | string  | —       |
 | name            | Entity name (`post`, `page`, `user`, `comment`). Pattern: `^[A-Za-z][A-Za-z0-9_-]*$`. Required.                                                              | string  | —       |
-| variant         | Optional variant identifier. Pattern: `^[A-Za-z0-9][A-Za-z0-9_/-]*$`. Slash namespacing allowed (e.g. `woocommerce-bookings/services`). Omitted = base view-config. | string  | —       |
-| fieldsRef       | Reference to a `fieldCollections` entry id. See `admin.json#fieldCollections`.                                                                               | string  | —       |
-| fields          | Field descriptors. Each entry requires `id`, `type`, `label`. See `admin.json#viewConfigs`.                                                                   | array   | —       |
-| defaultView     | Initial DataViews `view` object.                                                                                                                              | object  | —       |
-| defaultLayouts  | DataViews `defaultLayouts` prop.                                                                                                                              | object  | —       |
-| actions         | Action descriptors. Each entry requires `id`, `label`. See `admin.json#viewConfigs`.                                                                          | array   | —       |
+| variants        | Map of variant id → dataView doc. Must include `_default` (the unqualified base). Variants resolve independently — opt into inheritance via `extends`.        | object  | —       |
+
+### variant entry
+
+Each entry under `variants` is a complete dataView document. The shape mirrors `@wordpress/dataviews`' `<DataViews>` + `<DataForm>` props.
+
+| Property        | Description                                                                                                                                                  | Type    | Default |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| extends         | Optional. Variant id to inherit from. Recursive, cycle-safe, max depth 10. Resolution: shallow-merge per-field over the resolved parent doc.                  | string  | —       |
+| fieldsRef       | Reference to a `settings.dataFields` entry id (in admin.json) or a programmatically-registered collection.                                                    | string  | —       |
+| fields          | Field descriptors. Each entry requires `id`, `type`, `label`.                                                                                                | array   | —       |
+| titleField      | Field id used as the row title.                                                                                                                              | string  | —       |
+| defaultView     | Initial DataViews `view` object (`type`, `search`, `filters`, `page`, `perPage`, `sort`, `fields`, `titleField`, `layout`).                                  | object  | —       |
+| defaultLayouts  | DataViews `defaultLayouts` prop. Keys are layout ids (`table`, `grid`, etc.); values are layout-specific config objects.                                     | object  | —       |
+| actions         | Action descriptors. Each entry requires `id`, `label`.                                                                                                       | array   | —       |
 
 ## documentation
 

@@ -1,10 +1,12 @@
 # engine.json Reference
 
-`engine.json` is the manifest that describes a WP Admin Shell engine: the spatial layer of the shell that reads a region tree assembled by the runtime and renders it to DOM. The manifest declares which ARIA roles the engine specializes for, which platform services it implements, the catalog of region templates it ships, and the identifier of its default arrangement algorithm.
+`engine.json` is the manifest that describes a WP Admin Shell engine: the spatial + chrome layer of the shell that reads a region tree assembled by the runtime and renders it to DOM. The manifest declares which ARIA roles the engine specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm.
 
 The default engine `core:default` ships with the shell plugin alongside `core:single-pane` and `core:desktop`. Alternative engines (plugin-contributed) implement the same contract differently and may ship their own design system, chrome conventions, and arrangement algorithm.
 
 Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_shell_register_engine()`.
+
+This reference covers the **v3 shape** (`admin-engine-v3.json`). v2 manifests continue to validate through v3.0 — the v3 schema adds three new top-level blocks (`menu-renderer`, `slots`, `modes`) on top of the v2 surface.
 
 ## In this article
 
@@ -17,7 +19,11 @@ Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.
 - [specializes-roles](#specializes-roles)
 - [honored-platform](#honored-platform)
 - [templates](#templates)
+- [modes](#modes)
+- [slots](#slots)
+- [menu-renderer](#menu-renderer)
 - [default-arrangement](#default-arrangement)
+- [defaultRegions](#defaultregions)
 - [script](#script)
 - [style](#style)
 - [styles](#styles)
@@ -29,9 +35,9 @@ Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-engine/v1.json",
+	"$schema": "https://schemas.wp.org/admin-engine/v3.json",
 	"id": "plugin:acme/desktop",
-	"version": 1,
+	"version": 3,
 	"title": "Acme Desktop",
 	"specializes-roles": [ "main", "navigation", "complementary" ],
 	"honored-platform": [ "core:modal", "core:dismiss-on", "core:dynamic-children" ],
@@ -41,14 +47,19 @@ Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.
 			"platform": { "core:dynamic-children": true }
 		}
 	},
+	"modes": {
+		"default":  { "regions": {} },
+		"focus":    { "regions": { "sidebar": { "hidden": true } } },
+		"takeover": { "regions": { "sidebar": { "hidden": true }, "toolbar": { "hidden": true } } }
+	},
 	"default-arrangement": "floating-windows",
 	"script": "acme-desktop-engine"
 }
 ```
 
-The schema is also available in-repo at `docs/schemas/admin-engine-v2.json` for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin-engine-v3.json`](../schemas/admin-engine-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
-**Required fields:** `id`, `version`, `title`, `specializes-roles`, `honored-platform`, `templates` (must contain at least one template), `default-arrangement`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
+**Required fields:** `id`, `version`, `title`, `specializes-roles`, `honored-platform`, `templates` (must contain at least one template), `default-arrangement`, `script`, `modes`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
 ## id
 
@@ -62,11 +73,11 @@ Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro
 
 ## version
 
-Engine manifest schema version. v1 is the current shape. Bump only on breaking changes to this engine's manifest contract.
+Engine manifest schema version. v3 is the current shape (admin-engine-v3.json). Bump only on breaking changes to this engine's manifest contract. v2 manifests (`version: 2`) keep validating through v3.0.
 
 | Property | Description                                       | Type    | Default |
 |----------|---------------------------------------------------|---------|---------|
-| version  | Manifest version. Must be `1` for the current shape. | integer | —       |
+| version  | Manifest version. Must be `3` for the current shape. | integer | —       |
 
 ## title
 
@@ -183,6 +194,76 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 | core:dynamic-children             | Mounted app may add / remove child regions at runtime via `useDynamicChildren(regionId)`.                              | boolean | `false` |
 | core:trigger                      | Declarative trigger hint (`{ shortcut: "Mod+K" }`). The actual binding lives in `admin.json#bindings`.                | object  | —       |
 
+## modes
+
+**Required (v3).** The engine's catalog of chrome modes screens may request. Each mode declares per-region states (`hidden`, `compact`, `minimal`, `fullWidth`, etc.). Authors point a screen at a mode via `screens[id].mode`; the engine renders the region states accordingly.
+
+```json
+{
+	"modes": {
+		"default":  { "regions": {} },
+		"focus": {
+			"regions": {
+				"sidebar":  { "hidden": true },
+				"toolbar":  { "compact": true }
+			}
+		},
+		"takeover": {
+			"regions": {
+				"sidebar":  { "hidden": true },
+				"toolbar":  { "hidden": true },
+				"site-hub": { "hidden": true }
+			}
+		},
+		"modal":    { "regions": {} },
+		"focus-tight": {
+			"extends": "focus",
+			"regions": { "site-hub": { "hidden": true } }
+		}
+	}
+}
+```
+
+| Property      | Description                                                                                                                                                  | Type   | Default |
+|---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| modes         | Map of mode name → mode definition. Four standard names: `default`, `focus`, `takeover`, `modal`. Plugin engines may add their own.                          | object | —       |
+| modes.<name>.regions | Map of region id → state object. State keys (`hidden`, `compact`, etc.) are engine-defined.                                                          | object | —       |
+| modes.<name>.extends | Optional. Inherit from another mode in the catalog. Recursive, cycle-safe, max depth 10.                                                              | string | —       |
+
+Plugins may extend the catalog via the `wp_admin_shell_engine_modes_{engineId}` PHP filter — see [`docs/v3/schema-sketch.md`](../v3/schema-sketch.md#plugin-contributed-modes).
+
+## slots
+
+Engine-declared mount points beyond the kernel-reserved `_self` and `palette`. Each slot has a scope (`workspace`, `screen`, or `both`) that controls where it's allowed. The active engine's slots union with kernel-reserved slots and app-declared slots to form the resolved vocabulary for a workspace.
+
+```json
+{
+	"slots": {
+		"detail":         { "description": "Detail / inspector pane in a paired-region layout.",     "scope": "both" },
+		"inspector":      { "description": "Right-side property inspector.",                           "scope": "both" },
+		"toolbar":        { "description": "Persistent toolbar slot.",                                 "scope": "workspace" },
+		"sidebar-footer": { "description": "Bottom of sidebar.",                                       "scope": "workspace" },
+		"status-bar":     { "description": "Bottom-of-viewport status strip.",                         "scope": "workspace" }
+	}
+}
+```
+
+| Property             | Description                                                                                       | Type   | Default |
+|----------------------|---------------------------------------------------------------------------------------------------|--------|---------|
+| slots                | Map of slot id → `{ description, scope }`. Slot ids are kebab-case.                              | object | —       |
+| slots.<id>.scope     | `"workspace"`, `"screen"`, or `"both"`.                                                            | string | `"screen"` |
+| slots.<id>.description | Human-readable description for tooling.                                                          | string | —       |
+
+See [`docs/v3/schema-sketch.md#slots`](../v3/schema-sketch.md#slots) for the slot vocabulary design rationale.
+
+## menu-renderer
+
+Identifier of the strategy the engine uses to render the workspace `menu` tree. Common values: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`). Plugin engines may register a custom renderer via `wp_admin_shell_register_menu_renderer( $id, $callback )`.
+
+| Property        | Description                                                                                              | Type   | Default |
+|-----------------|----------------------------------------------------------------------------------------------------------|--------|---------|
+| menu-renderer   | Renderer id. Plugin renderers use `plugin:{slug}/{name}` namespace.                                       | string | —       |
+
 ## default-arrangement
 
 Identifier for the engine's spatial arrangement algorithm — a documentation marker, not configuration the runtime reads. The actual algorithm is implementation in the engine's script. Authors and tooling reference this name when describing how the engine behaves.
@@ -192,6 +273,37 @@ Conventional values: `wp-chrome` (sidebar + topbar + content), `tiling-dwindle` 
 | Property             | Description                                                                  | Type   | Default |
 |----------------------|------------------------------------------------------------------------------|--------|---------|
 | default-arrangement  | Kebab-case identifier for the arrangement algorithm.                          | string | —       |
+
+## defaultRegions
+
+Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in admin.json — see [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary).
+
+```json
+{
+	"defaultRegions": {
+		"sidebar": {
+			"template": "core:sidebar",
+			"app":      "core:navigation"
+		},
+		"main": {
+			"template": "core:main",
+			"routing":  { "route-key": "_self" }
+		},
+		"detail": {
+			"template": "core:detail",
+			"routing":  { "route-key": "detail", "mode": "mirror" }
+		},
+		"palette": {
+			"template": "core:overlay",
+			"app":      "core:command-palette"
+		}
+	}
+}
+```
+
+| Property         | Description                                                                                                                                                  | Type   | Default |
+|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| defaultRegions   | Map of region id → region declaration. Region declarations follow the runtime region vocabulary (template / role / layout / platform / routing / app / config / nested regions). | object | —       |
 
 ## script
 
