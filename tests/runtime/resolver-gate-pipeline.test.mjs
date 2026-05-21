@@ -45,12 +45,6 @@ function ok( label, condition, detail = '' ) {
 	}
 }
 
-const shell = JSON.parse(
-	readFileSync(
-		resolve( projectRoot, 'shells/wp-admin-default.json' ),
-		'utf8'
-	)
-);
 const engineManifest = JSON.parse(
 	readFileSync(
 		resolve(
@@ -61,12 +55,41 @@ const engineManifest = JSON.parse(
 	)
 );
 
+// Synthetic v2-shape region tree exercising the resolveRegion + gate
+// pipeline against real templates from core:default. Previously read
+// from `shells/wp-admin-default.json` — that v2 shell was retired in
+// Phase 3d.1 when every bundled shell moved to the v3 workspace/screens
+// shape (the v3 default no longer carries a top-level `regions` block;
+// regions get synthesized from the active engine's `defaultRegions`).
+// The test still wants a v2-shape input to keep `resolveRegion`
+// honest, so we inline the previous shell's minimal region set here.
+const baseRegions = {
+	sidebar: {
+		template: 'core:sidebar',
+		regions: {
+			hub: { role: 'region', app: 'core:site-hub' },
+			nav: { role: 'navigation', app: 'core:navigation' },
+		},
+	},
+	content: {
+		template: 'core:main',
+		routing: { 'route-key': '_self' },
+	},
+	'command-palette': {
+		template: 'core:overlay',
+		app: 'core:command-palette',
+		platform: {
+			'core:triggerable': true,
+			'core:trigger': { shortcut: 'Mod+K' },
+		},
+	},
+	'notices-banner': { role: 'region', app: 'core:notices-banner' },
+	'notices-snackbar': { role: 'region', app: 'core:notices-snackbar' },
+};
+
 // Synthetic gate: pin some regions to admin-only caps so the test
-// observes a difference between admin and subscriber cap-maps. The
-// bundled shell ships with no top-level region capabilities; adding
-// them in-test rather than mutating the source keeps the shell file
-// canonical for every other runner that reads it.
-const gatedRegions = JSON.parse( JSON.stringify( shell.regions ) );
+// observes a difference between admin and subscriber cap-maps.
+const gatedRegions = JSON.parse( JSON.stringify( baseRegions ) );
 gatedRegions.sidebar.capability = 'read';
 gatedRegions[ 'notices-snackbar' ].capability = 'manage_options';
 // 'content' has no capability — must always render.

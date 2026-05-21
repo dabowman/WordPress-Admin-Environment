@@ -107,7 +107,15 @@ function isV1ShellShape( doc ) {
 
 function isV2ShellShape( doc ) {
 	// v2 puts engine + regions at root with no `settings` partition.
+	// v3 docs declare `version: 3` + a `workspace` block — exclude those.
+	if ( doc?.version === 3 || doc?.workspace ) {
+		return false;
+	}
 	return typeof doc?.engine === 'string' && ! doc?.settings;
+}
+
+function isV3ShellShape( doc ) {
+	return doc?.version === 3 || Boolean( doc?.workspace );
 }
 
 // ── Schema 1: legacy admin-v1.json ─────────────────────────────────
@@ -250,15 +258,10 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 
 // ── Schemas 5-7: v3 manifest schemas ───────────────────────────────
 //
-// NOTE: The canonical v3 default workspace fixture
-// `docs/v3/wp-admin-default.v3.json` and `shells/wp-admin-default-v3.json`
-// are reshaped in Stage 3 of the data-view registry restoration
-// (`docs/plans/2026-05-20-dataview-registry-restoration.md`). Until that
-// stage lands the canonical fixture will fail validation because it still
-// uses `settings.views` / `screens[id].view` instead of `settings.dataViews`
-// / `screens[id].dataView` + `dataViewRef`. This is expected at the
-// Stage 2 schema-only step. The v3 positive + negative fixtures below
-// exercise the new shape directly so the schema is still covered.
+// Phase 3d.1 retired all v2 bundled shells; every shell in `shells/`
+// now validates under admin-v3.json. The canonical authoring fixture at
+// `docs/v3/wp-admin-default.v3.json` mirrors the active default at
+// `shells/wp-admin-default.json` byte-for-byte — both validate here.
 
 const v3Schemas = [
 	{ key: 'admin',  schemaFile: 'admin-v3.json' },
@@ -281,6 +284,16 @@ for ( const { key, schemaFile } of v3Schemas ) {
 				valid,
 				valid ? '' : formatErrors( validate.errors )
 			);
+		}
+
+		console.log( '\n  Bundled shells (v3 shape):' );
+		for ( const file of listJson( SHELLS_DIR ) ) {
+			const doc = readJson( join( SHELLS_DIR, file ) );
+			if ( ! isV3ShellShape( doc ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 

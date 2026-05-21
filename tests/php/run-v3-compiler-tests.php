@@ -448,7 +448,7 @@ $T::ok(
 
 // ── 13. End-to-end: bundled v3 default shell via full resolver ──────
 
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default-v3' );
+update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
 WP_Admin_Shell_Cache::flush();
 WP_Admin_Shell_Resolver::reset_request_memo();
 

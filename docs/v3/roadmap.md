@@ -203,17 +203,25 @@ Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the fir
 
 ## Phase 3d — migration + final tests
 
-### 3d.1 — Migrate 5 remaining bundled shells (~2-3 days)
+### 3d.1 — Migrate 5 remaining bundled shells — ✅ Shipped
 
-In order of complexity:
-- `content-author.json` (smallest)
-- `client-portal.json`
-- `v2-demo.json`
-- `single-pane-demo.json` (engine: core:single-pane)
-- `developer-admin.json` (largest, multi-feature)
-- `desktop-demo.json` (engine: core:desktop)
+All 6 remaining bundled shells migrated to v3 shape; the v2
+`shells/wp-admin-default.json` removed (its v3 counterpart took the slug back):
 
-Each migration: rename to `<name>.v3.json`, restructure to v3 shape using `wp-admin-default-v3.json` as the canonical template.
+- `shells/content-author.v3.json` (writer; collapsed nav).
+- `shells/client-portal.v3.json` (branded; Acme logo + red accent preserved).
+- `shells/v2-demo.v3.json` (canonical-shape demo, user-switchable).
+- `shells/single-pane-demo.v3.json` (engine: `core:single-pane`).
+- `shells/developer-admin.v3.json` (largest; viewConfigs → settings.dataViews,
+  fieldCollections → settings.dataFields, design + system drill-downs become
+  menu containers).
+- `shells/desktop-demo.v3.json` (engine: `core:desktop`; dock items preserved
+  through the `regions` escape hatch).
+- `shells/wp-admin-default.json` (was `-v3`; the `-v3` suffix dropped post-v2-removal).
+
+Schema sweep extended to validate v3-shaped shells; cap-gating-smoke PHP test
+short-circuits with SKIP on v3 shells (the v2 nav-items capability pruning it
+exercised is now a screen/menu concern — port deferred to 3d.3).
 
 ### 3d.2 — v2 → v3 migration helper (~2-3 days)
 
@@ -270,6 +278,7 @@ Tracked separately from "remaining work" — these are bugs found during the Pha
 - **Breaking change — command palette emitted names** (PR #51). Pre-3c.2: `core/admin-shell/goto-<encoded-pattern>`. Post-3c.2: `core/admin-shell/palette-<encoded-id>` (unified across `commands[]` + `screens[]` for first-write-wins dedup). Any external consumer of `@wordpress/commands` keyed off the old names breaks. No known consumers — but plugin authors extending the palette via `useCommandLoader` with the same registration name should re-key off the new prefix. Document in v3.0 upgrade notes.
 - **Inline `default-style` forces engine CSS into `!important`** (PR #55). The kernel applies template `default-style` blocks as inline `style="..."` on region wrappers. When engine CSS needs to override a default-style property (e.g. `display: none` collapsing a mirror-mode region whose template ships `display: flex`), inline-style specificity beats stylesheet declarations and only `!important` wins. Acceptable surgical fix today, but the root cause is the inline-style emission convention. **Future direction** (v3.0 polish queue): add a template-level field like `default-style.collapsible: true` so the kernel skips emitting the offending inline properties when `data-app-mounted="false"`, letting engine CSS win without `!important`. Out of scope for 3c.4 — file for a later polish pass.
 - **`routing.mode` enum naming bikeshed** (PR #55). `"mirror"` reads cleanly in code but is slightly opaque vocabulary. Alternatives like `"path"` or `"primary"` describe the slot source more directly. Bikeshed-grade; revisit if pre-v3.0 doc sweep surfaces a clearer term. Acceptable as-is.
+- **`desktop-demo.v3.json` dock items duplicate screens** (PR #56). The desktop-engine dock-app reads `config.items[]` directly with label/icon/href — same data the screens block carries. Preserved via the `regions.dock.config.items[]` escape hatch during 3d.1 migration; no v3-idiomatic mapping yet. **Future direction:** dock-app consumes the `menu` tree (or a filtered subset) the same way the navigation app does. Removes the duplication + keeps menu as single source of truth for label/icon/order. Out of scope for 3d.1; file for v3.0 polish or 3c.x desktop-engine follow-up.
 
 ## How to preserve through PR feedback
 

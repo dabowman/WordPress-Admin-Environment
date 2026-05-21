@@ -1,1754 +1,1317 @@
 {
-	"$schema": "../docs/schemas/admin-v2.json",
-	"version": 1,
+	"$schema": "../docs/schemas/admin-v3.json",
+	"version": 3,
 	"$wpds": "6.9",
 	"name": "wp-admin-default",
 	"title": "WordPress",
-	"description": "Default shell. Reconstructs stock wp-admin from the shell's native apps + view-configs, falling back to iframes only for screens with no REST surface (customizer, classic widgets/menus, plugin install/editor, import/export, personal-data tools). Drafts/pending/trash/spam variants ship as view-config entries; capability-pruned nav + 4-layer cap gating remove inaccessible screens per role.",
-	"engine": "core:default",
-	"preload": [
-		"/wp/v2/users/me?context=edit",
-		"/wp/v2/types?context=view",
-		"/wp/v2/taxonomies?context=view",
-		"/wp/v2/statuses?context=view",
-		"/wp/v2/themes?status=active",
-		[
-			"/wp/v2/settings",
-			"GET"
-		],
-		[
-			"/wp/v2/settings",
-			"OPTIONS"
-		]
-	],
-	"fieldCollections": {
-		"wp-admin/post-fields": {
-			"kind": "postType",
-			"name": null,
-			"fields": [
-				{
-					"id": "title",
-					"type": "text",
-					"label": "Title",
-					"enableGlobalSearch": true,
-					"enableHiding": false
-				},
-				{
-					"id": "status",
-					"type": "text",
-					"label": "Status",
-					"filterBy": {
-						"operators": [
-							"isAny"
-						]
-					},
-					"elements": [
-						{
-							"value": "publish",
-							"label": "Published"
-						},
-						{
-							"value": "future",
-							"label": "Scheduled"
-						},
-						{
-							"value": "draft",
-							"label": "Draft"
-						},
-						{
-							"value": "pending",
-							"label": "Pending Review"
-						},
-						{
-							"value": "private",
-							"label": "Private"
-						},
-						{
-							"value": "trash",
-							"label": "Trash"
-						}
-					]
-				},
-				{
-					"id": "author",
-					"type": "text",
-					"label": "Author",
-					"filterBy": {
-						"operators": [
-							"isAny"
-						]
-					}
-				},
-				{
-					"id": "date",
-					"type": "datetime",
-					"label": "Date"
-				}
-			]
+	"description": "The default workspace shipped by WP Admin Shell — a recreation of the wp-admin experience with capability-gated screens, classic-menu bridging, and iframe escape hatches for legacy plugin pages.",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "dashboard-home",
+		"branding": {
+			"title": "WordPress",
+			"logo": null
 		},
-		"wp-admin/user-fields": {
-			"kind": "root",
-			"name": "user",
-			"fields": [
-				{
-					"id": "name",
-					"type": "text",
-					"label": "Name",
-					"enableGlobalSearch": true,
-					"enableHiding": false
-				},
-				{
-					"id": "username",
-					"type": "text",
-					"label": "Username",
-					"enableGlobalSearch": true
-				},
-				{
-					"id": "email",
-					"type": "email",
-					"label": "Email",
-					"enableGlobalSearch": true
-				},
-				{
-					"id": "roles",
-					"type": "text",
-					"label": "Role",
-					"filterBy": {
-						"operators": [
-							"isAny"
-						]
-					},
-					"elements": [
-						{
-							"value": "administrator",
-							"label": "Administrator"
-						},
-						{
-							"value": "editor",
-							"label": "Editor"
-						},
-						{
-							"value": "author",
-							"label": "Author"
-						},
-						{
-							"value": "contributor",
-							"label": "Contributor"
-						},
-						{
-							"value": "subscriber",
-							"label": "Subscriber"
-						}
-					]
-				},
-				{
-					"id": "registered_date",
-					"type": "datetime",
-					"label": "Registered"
-				}
-			]
-		},
-		"wp-admin/comment-fields": {
-			"kind": "root",
-			"name": "comment",
-			"fields": [
-				{
-					"id": "author",
-					"type": "text",
-					"label": "Author",
-					"enableGlobalSearch": true
-				},
-				{
-					"id": "content",
-					"type": "text",
-					"label": "Comment",
-					"enableGlobalSearch": true,
-					"enableSorting": false
-				},
-				{
-					"id": "status",
-					"type": "text",
-					"label": "Status",
-					"filterBy": {
-						"operators": [
-							"isAny"
-						]
-					},
-					"elements": [
-						{
-							"value": "approved",
-							"label": "Approved"
-						},
-						{
-							"value": "hold",
-							"label": "Pending"
-						},
-						{
-							"value": "spam",
-							"label": "Spam"
-						},
-						{
-							"value": "trash",
-							"label": "Trash"
-						}
-					]
-				},
-				{
-					"id": "date",
-					"type": "datetime",
-					"label": "Submitted"
-				}
-			]
-		},
-		"wp-admin/term-fields": {
-			"kind": "taxonomy",
-			"name": null,
-			"fields": [
-				{
-					"id": "name",
-					"type": "text",
-					"label": "Name",
-					"enableGlobalSearch": true,
-					"enableHiding": false
-				},
-				{
-					"id": "slug",
-					"type": "text",
-					"label": "Slug",
-					"enableGlobalSearch": true
-				},
-				{
-					"id": "description",
-					"type": "text",
-					"label": "Description",
-					"enableSorting": false
-				},
-				{
-					"id": "count",
-					"type": "integer",
-					"label": "Count"
-				}
-			]
+		"notices": {
+			"banner": {
+				"app": "core:notices-banner"
+			},
+			"snackbar": {
+				"app": "core:notices-snackbar"
+			}
 		}
 	},
-	"viewConfigs": {
-		"postType": {
-			"post": {
-				"_default": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
+	"settings": {
+		"dataViews": {
+			"postType": {
+				"post": {
+					"_default": {
 						"fields": [
-							"status",
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {},
-						"grid": {}
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "view",
-							"label": "View",
-							"icon": "external",
-							"eligibleWhen": {
-								"status": "publish"
-							}
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash",
-							"eligibleWhen": {
-								"status": [
-									"publish",
-									"future",
-									"draft",
-									"pending",
-									"private"
-								]
-							}
-						},
-						{
-							"id": "restore",
-							"label": "Restore",
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": "trash"
-							}
-						}
-					]
-				},
-				"drafts": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
 							{
-								"field": "status",
-								"operator": "is",
-								"value": "draft"
-							}
-						]
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				},
-				"pending": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "pending"
-							}
-						]
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Review",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				},
-				"trash": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "trash"
-							}
-						]
-					},
-					"actions": [
-						{
-							"id": "restore",
-							"label": "Restore",
-							"isPrimary": true,
-							"supportsBulk": true
-						},
-						{
-							"id": "delete",
-							"label": "Delete Permanently",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				}
-			},
-			"page": {
-				"_default": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"status",
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {}
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "view",
-							"label": "View",
-							"icon": "external",
-							"eligibleWhen": {
-								"status": "publish"
-							}
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash",
-							"eligibleWhen": {
-								"status": [
-									"publish",
-									"future",
-									"draft",
-									"pending",
-									"private"
-								]
-							}
-						}
-					]
-				},
-				"drafts": {
-					"fieldsRef": "wp-admin/post-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"date"
-						],
-						"titleField": "title",
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "draft"
-							}
-						]
-					}
-				}
-			}
-		},
-		"root": {
-			"user": {
-				"_default": {
-					"fieldsRef": "wp-admin/user-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"username",
-							"email",
-							"roles",
-							"registered_date"
-						],
-						"titleField": "name",
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {}
-					},
-					"actions": [
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				},
-				"administrators": {
-					"fieldsRef": "wp-admin/user-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"username",
-							"email",
-							"registered_date"
-						],
-						"titleField": "name",
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						},
-						"filters": [
-							{
-								"field": "roles",
-								"operator": "is",
-								"value": "administrator"
-							}
-						]
-					}
-				}
-			},
-			"comment": {
-				"_default": {
-					"fieldsRef": "wp-admin/comment-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"content",
-							"status",
-							"date"
-						],
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {}
-					},
-					"actions": [
-						{
-							"id": "approve",
-							"label": "Approve",
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": [
-									"hold",
-									"spam",
-									"trash"
-								]
-							}
-						},
-						{
-							"id": "unapprove",
-							"label": "Unapprove",
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": "approved"
-							}
-						},
-						{
-							"id": "spam",
-							"label": "Mark as Spam",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"eligibleWhen": {
-								"status": [
-									"hold",
-									"approved",
-									"trash"
-								]
-							}
-						},
-						{
-							"id": "trash",
-							"label": "Move to Trash",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash",
-							"eligibleWhen": {
-								"status": [
-									"hold",
-									"approved",
-									"spam"
-								]
-							}
-						}
-					]
-				},
-				"pending": {
-					"fieldsRef": "wp-admin/comment-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"content",
-							"date"
-						],
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "hold"
-							}
-						]
-					}
-				},
-				"spam": {
-					"fieldsRef": "wp-admin/comment-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"content",
-							"date"
-						],
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "spam"
-							}
-						]
-					},
-					"actions": [
-						{
-							"id": "unapprove",
-							"label": "Not Spam",
-							"supportsBulk": true,
-							"isPrimary": true
-						},
-						{
-							"id": "delete",
-							"label": "Delete Permanently",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				},
-				"trash": {
-					"fieldsRef": "wp-admin/comment-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"author",
-							"content",
-							"date"
-						],
-						"sort": {
-							"field": "date",
-							"direction": "desc"
-						},
-						"filters": [
-							{
-								"field": "status",
-								"operator": "is",
-								"value": "trash"
-							}
-						]
-					},
-					"actions": [
-						{
-							"id": "approve",
-							"label": "Restore",
-							"supportsBulk": true,
-							"isPrimary": true
-						},
-						{
-							"id": "delete",
-							"label": "Delete Permanently",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				}
-			},
-			"plugin": {
-				"_default": {
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 50,
-						"fields": [
-							"name",
-							"status",
-							"version",
-							"author"
-						],
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						}
-					},
-					"fields": [
-						{
-							"id": "name",
-							"type": "text",
-							"label": "Plugin",
-							"enableGlobalSearch": true,
-							"enableHiding": false
-						},
-						{
-							"id": "status",
-							"type": "text",
-							"label": "Status",
-							"filterBy": {
-								"operators": [
-									"isAny"
-								]
+								"id": "title",
+								"type": "text",
+								"label": "Title",
+								"enableGlobalSearch": true
 							},
-							"elements": [
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
+							},
+							{
+								"id": "categories",
+								"type": "text",
+								"label": "Categories"
+							},
+							{
+								"id": "tags",
+								"type": "text",
+								"label": "Tags"
+							},
+							{
+								"id": "comments",
+								"type": "integer",
+								"label": "Comments"
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Date"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "publish",
+										"label": "Published"
+									},
+									{
+										"value": "draft",
+										"label": "Draft"
+									},
+									{
+										"value": "pending",
+										"label": "Pending Review"
+									},
+									{
+										"value": "future",
+										"label": "Scheduled"
+									},
+									{
+										"value": "private",
+										"label": "Private"
+									},
+									{
+										"value": "trash",
+										"label": "Trash"
+									}
+								]
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							},
+							"fields": [
+								"title",
+								"author",
+								"categories",
+								"tags",
+								"comments",
+								"date"
+							]
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View"
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						}
+					},
+					"drafts": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "active",
-									"label": "Active"
-								},
+									"field": "status",
+									"operator": "is",
+									"value": "draft"
+								}
+							]
+						}
+					},
+					"pending": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "inactive",
-									"label": "Inactive"
-								},
+									"field": "status",
+									"operator": "is",
+									"value": "pending"
+								}
+							]
+						}
+					},
+					"trash": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "network-active",
-									"label": "Network Active"
+									"field": "status",
+									"operator": "is",
+									"value": "trash"
 								}
 							]
 						},
-						{
-							"id": "version",
-							"type": "text",
-							"label": "Version"
-						},
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
-						}
-					],
-					"actions": [
-						{
-							"id": "activate",
-							"label": "Activate",
-							"isPrimary": true,
-							"supportsBulk": true,
-							"icon": "check",
-							"eligibleWhen": {
-								"status": "inactive"
-							}
-						},
-						{
-							"id": "deactivate",
-							"label": "Deactivate",
-							"supportsBulk": true,
-							"icon": "closeSmall",
-							"eligibleWhen": {
-								"status": [
-									"active",
-									"network-active"
-								]
-							}
-						},
-						{
-							"id": "visit",
-							"label": "Visit plugin site",
-							"icon": "external"
-						},
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash",
-							"eligibleWhen": {
-								"status": "inactive"
-							}
-						}
-					]
-				},
-				"active": {
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 50,
-						"fields": [
-							"name",
-							"version",
-							"author"
-						],
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						},
-						"filters": [
+						"actions": [
 							{
-								"field": "status",
-								"operator": "isAny",
-								"value": [
-									"active",
-									"network-active"
-								]
+								"id": "restore",
+								"label": "Restore",
+								"isPrimary": true,
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
+							},
+							{
+								"id": "delete-permanent",
+								"label": "Delete Permanently",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
 							}
 						]
 					}
 				},
-				"inactive": {
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 50,
+				"page": {
+					"_default": {
 						"fields": [
-							"name",
-							"version",
-							"author"
-						],
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						},
-						"filters": [
 							{
-								"field": "status",
-								"operator": "is",
-								"value": "inactive"
+								"id": "title",
+								"type": "text",
+								"label": "Title",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
+							},
+							{
+								"id": "parent",
+								"type": "text",
+								"label": "Parent"
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Date"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status"
 							}
-						]
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"sort": {
+								"field": "title",
+								"direction": "asc"
+							},
+							"fields": [
+								"status",
+								"author",
+								"date"
+							],
+							"titleField": "title"
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View"
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
 					}
 				}
 			},
-			"theme": {
-				"_default": {
-					"defaultView": {
-						"type": "grid",
-						"page": 1,
-						"perPage": 50,
+			"root": {
+				"user": {
+					"_default": {
 						"fields": [
-							"status",
-							"description",
-							"version",
-							"author"
-						],
-						"titleField": "name",
-						"mediaField": "screenshot",
-						"sort": {
-							"field": "status",
-							"direction": "asc"
-						}
-					},
-					"defaultLayouts": {
-						"grid": {},
-						"table": {}
-					},
-					"fields": [
-						{
-							"id": "name",
-							"type": "text",
-							"label": "Name",
-							"enableGlobalSearch": true,
-							"enableHiding": false
-						},
-						{
-							"id": "screenshot",
-							"type": "media",
-							"label": "Screenshot",
-							"enableSorting": false,
-							"enableHiding": false
-						},
-						{
-							"id": "status",
-							"type": "text",
-							"label": "Status",
-							"filterBy": {
-								"operators": [
-									"isAny"
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Name",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "username",
+								"type": "text",
+								"label": "Username",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "email",
+								"type": "email",
+								"label": "Email",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "roles",
+								"type": "text",
+								"label": "Role",
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								},
+								"elements": [
+									{
+										"value": "administrator",
+										"label": "Administrator"
+									},
+									{
+										"value": "editor",
+										"label": "Editor"
+									},
+									{
+										"value": "author",
+										"label": "Author"
+									},
+									{
+										"value": "contributor",
+										"label": "Contributor"
+									},
+									{
+										"value": "subscriber",
+										"label": "Subscriber"
+									}
 								]
 							},
-							"elements": [
+							{
+								"id": "registered_date",
+								"type": "datetime",
+								"label": "Registered"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"fields": [
+								"username",
+								"email",
+								"roles",
+								"registered_date"
+							],
+							"titleField": "name"
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"supportsBulk": true
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
+					},
+					"administrators": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
 								{
-									"value": "active",
-									"label": "Active"
-								},
-								{
-									"value": "inactive",
-									"label": "Inactive"
+									"field": "roles",
+									"operator": "isAny",
+									"value": [
+										"administrator"
+									]
 								}
 							]
-						},
-						{
-							"id": "description",
-							"type": "text",
-							"label": "Description",
-							"enableSorting": false
-						},
-						{
-							"id": "version",
-							"type": "text",
-							"label": "Version"
-						},
-						{
-							"id": "author",
-							"type": "text",
-							"label": "Author"
 						}
-					],
-					"actions": [
-						{
-							"id": "activate",
-							"label": "Activate",
-							"isPrimary": true,
-							"icon": "check",
-							"eligibleWhen": {
-								"status": "inactive"
-							}
-						},
-						{
-							"id": "details",
-							"label": "Theme Details",
-							"isPrimary": true
-						}
-					]
-				}
-			}
-		},
-		"taxonomy": {
-			"category": {
-				"_default": {
-					"fieldsRef": "wp-admin/term-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"description",
-							"slug",
-							"count"
-						],
-						"titleField": "name",
-						"sort": {
-							"field": "name",
-							"direction": "asc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {}
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				}
-			},
-			"post_tag": {
-				"_default": {
-					"fieldsRef": "wp-admin/term-fields",
-					"defaultView": {
-						"type": "table",
-						"page": 1,
-						"perPage": 20,
-						"fields": [
-							"description",
-							"slug",
-							"count"
-						],
-						"titleField": "name",
-						"sort": {
-							"field": "count",
-							"direction": "desc"
-						}
-					},
-					"defaultLayouts": {
-						"table": {}
-					},
-					"actions": [
-						{
-							"id": "edit",
-							"label": "Edit",
-							"isPrimary": true,
-							"icon": "pencil"
-						},
-						{
-							"id": "delete",
-							"label": "Delete",
-							"isDestructive": true,
-							"supportsBulk": true,
-							"icon": "trash"
-						}
-					]
-				}
-			}
-		}
-	},
-	"dashboardWidgets": {
-		"core:dashboard-widget-recent-posts": {
-			"position": {
-				"row": 1,
-				"col": 1
-			},
-			"defaultSize": {
-				"w": 1,
-				"h": 1
-			}
-		},
-		"core:dashboard-widget-quick-draft": {
-			"position": {
-				"row": 1,
-				"col": 2
-			},
-			"defaultSize": {
-				"w": 1,
-				"h": 1
-			}
-		}
-	},
-	"regions": {
-		"sidebar": {
-			"template": "core:sidebar",
-			"regions": {
-				"hub": {
-					"role": "region",
-					"app": "core:site-hub"
+					}
 				},
-				"nav": {
-					"role": "navigation",
-					"app": "core:navigation",
-					"config": {
-						"items": [
+				"comment": {
+					"_default": {
+						"fields": [
 							{
-								"screen": "dashboard",
-								"label": "Dashboard",
-								"icon": "dashboard",
-								"description": "Site overview and core updates.",
-								"items": [
+								"id": "author",
+								"type": "text",
+								"label": "Author",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "content",
+								"type": "text",
+								"label": "Comment",
+								"enableGlobalSearch": true,
+								"enableSorting": false
+							},
+							{
+								"id": "status",
+								"type": "text",
+								"label": "Status",
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								},
+								"elements": [
 									{
-										"label": "Home",
-										"icon": "home",
-										"href": "#/dashboard/home",
-										"capability": "read"
+										"value": "approved",
+										"label": "Approved"
 									},
 									{
-										"label": "Widgets",
-										"icon": "layout",
-										"href": "#/dashboard/widgets",
-										"capability": "read"
+										"value": "hold",
+										"label": "Pending"
 									},
 									{
-										"label": "Updates",
-										"icon": "dashboard",
-										"href": "#/dashboard/updates",
-										"capability": "update_core"
+										"value": "spam",
+										"label": "Spam"
+									},
+									{
+										"value": "trash",
+										"label": "Trash"
 									}
 								]
 							},
 							{
-								"separator": true
-							},
-							{
-								"screen": "posts",
-								"label": "Posts",
-								"icon": "post",
-								"description": "Manage posts, categories, and tags.",
-								"items": [
-									{
-										"label": "All Posts",
-										"icon": "post",
-										"href": "#/posts",
-										"capability": "edit_posts"
-									},
-									{
-										"label": "Drafts",
-										"icon": "drafts",
-										"href": "#/posts/drafts",
-										"capability": "edit_posts"
-									},
-									{
-										"label": "Pending Review",
-										"icon": "drafts",
-										"href": "#/posts/pending",
-										"capability": "edit_others_posts"
-									},
-									{
-										"label": "Trash",
-										"icon": "trash",
-										"href": "#/posts/trash",
-										"capability": "delete_posts"
-									},
-									{
-										"label": "Add New Post",
-										"icon": "plus",
-										"href": "#/posts/new",
-										"capability": "edit_posts"
-									},
-									{
-										"label": "Categories",
-										"icon": "category",
-										"href": "#/posts/categories",
-										"capability": "manage_categories"
-									},
-									{
-										"label": "Tags",
-										"icon": "category",
-										"href": "#/posts/tags",
-										"capability": "manage_categories"
-									}
-								]
-							},
-							{
-								"screen": "media",
-								"label": "Media",
-								"icon": "media",
-								"description": "Manage uploads.",
-								"items": [
-									{
-										"label": "Library",
-										"icon": "media",
-										"href": "#/media",
-										"capability": "upload_files"
-									},
-									{
-										"label": "Add New Media",
-										"icon": "plus",
-										"href": "#/media/new",
-										"capability": "upload_files"
-									}
-								]
-							},
-							{
-								"screen": "pages",
-								"label": "Pages",
-								"icon": "page",
-								"description": "Manage pages.",
-								"items": [
-									{
-										"label": "All Pages",
-										"icon": "page",
-										"href": "#/pages",
-										"capability": "edit_pages"
-									},
-									{
-										"label": "Drafts",
-										"icon": "drafts",
-										"href": "#/pages/drafts",
-										"capability": "edit_pages"
-									},
-									{
-										"label": "Add New Page",
-										"icon": "plus",
-										"href": "#/pages/new",
-										"capability": "edit_pages"
-									}
-								]
-							},
-							{
-								"screen": "comments",
-								"label": "Comments",
-								"icon": "comment",
-								"description": "Moderate comments.",
-								"items": [
-									{
-										"label": "All",
-										"icon": "comment",
-										"href": "#/comments",
-										"capability": "moderate_comments"
-									},
-									{
-										"label": "Pending",
-										"icon": "comment",
-										"href": "#/comments/pending",
-										"capability": "moderate_comments"
-									},
-									{
-										"label": "Spam",
-										"icon": "trash",
-										"href": "#/comments/spam",
-										"capability": "moderate_comments"
-									},
-									{
-										"label": "Trash",
-										"icon": "trash",
-										"href": "#/comments/trash",
-										"capability": "moderate_comments"
-									}
-								]
-							},
-							{
-								"separator": true
-							},
-							{
-								"screen": "appearance",
-								"label": "Appearance",
-								"icon": "brush",
-								"description": "Themes, Site Editor, and Customizer.",
-								"items": [
-									{
-										"label": "Themes",
-										"icon": "brush",
-										"href": "#/appearance/themes",
-										"capability": "switch_themes"
-									},
-									{
-										"label": "Add New Theme",
-										"icon": "plus",
-										"href": "#/appearance/themes/new",
-										"capability": "install_themes"
-									},
-									{
-										"label": "Editor",
-										"icon": "styles",
-										"href": "#/appearance/editor",
-										"capability": "edit_theme_options"
-									},
-									{
-										"label": "Customize",
-										"icon": "styles",
-										"href": "#/appearance/customize",
-										"capability": "edit_theme_options"
-									},
-									{
-										"label": "Menus",
-										"icon": "navigation",
-										"href": "#/appearance/menus",
-										"capability": "edit_theme_options"
-									},
-									{
-										"label": "Widgets",
-										"icon": "layout",
-										"href": "#/appearance/widgets",
-										"capability": "edit_theme_options"
-									}
-								]
-							},
-							{
-								"screen": "plugins",
-								"label": "Plugins",
-								"icon": "plugins",
-								"description": "Install, activate, and edit plugins.",
-								"items": [
-									{
-										"label": "Installed Plugins",
-										"icon": "plugins",
-										"href": "#/plugins",
-										"capability": "activate_plugins"
-									},
-									{
-										"label": "Active",
-										"icon": "check",
-										"href": "#/plugins/active",
-										"capability": "activate_plugins"
-									},
-									{
-										"label": "Inactive",
-										"icon": "closeSmall",
-										"href": "#/plugins/inactive",
-										"capability": "activate_plugins"
-									},
-									{
-										"label": "Add New Plugin",
-										"icon": "plus",
-										"href": "#/plugins/new",
-										"capability": "install_plugins"
-									},
-									{
-										"label": "Plugin File Editor",
-										"icon": "edit",
-										"href": "#/plugins/editor",
-										"capability": "edit_plugins"
-									}
-								]
-							},
-							{
-								"screen": "users",
-								"label": "Users",
-								"icon": "people",
-								"description": "Manage site users.",
-								"items": [
-									{
-										"label": "All Users",
-										"icon": "people",
-										"href": "#/users",
-										"capability": "list_users"
-									},
-									{
-										"label": "Administrators",
-										"icon": "people",
-										"href": "#/users/administrators",
-										"capability": "list_users"
-									},
-									{
-										"label": "Add New User",
-										"icon": "plus",
-										"href": "#/users/new",
-										"capability": "create_users"
-									},
-									{
-										"label": "Profile",
-										"icon": "user",
-										"href": "#/profile",
-										"capability": "read"
-									}
-								]
-							},
-							{
-								"screen": "tools",
-								"label": "Tools",
-								"icon": "wrench",
-								"description": "Import, export, site health, and personal data tools.",
-								"items": [
-									{
-										"label": "Available Tools",
-										"icon": "wrench",
-										"href": "#/tools",
-										"capability": "edit_posts"
-									},
-									{
-										"label": "Import",
-										"icon": "wrench",
-										"href": "#/tools/import",
-										"capability": "import"
-									},
-									{
-										"label": "Export",
-										"icon": "external",
-										"href": "#/tools/export",
-										"capability": "export"
-									},
-									{
-										"label": "Site Health",
-										"icon": "wrench",
-										"href": "#/tools/site-health",
-										"capability": "view_site_health_checks"
-									},
-									{
-										"label": "Export Personal Data",
-										"icon": "external",
-										"href": "#/tools/export-data",
-										"capability": "export_others_personal_data"
-									},
-									{
-										"label": "Erase Personal Data",
-										"icon": "wrench",
-										"href": "#/tools/erase-data",
-										"capability": "erase_others_personal_data"
-									}
-								]
-							},
-							{
-								"screen": "settings",
-								"label": "Settings",
-								"icon": "settings",
-								"description": "Site configuration.",
-								"items": [
-									{
-										"label": "General",
-										"icon": "settings",
-										"href": "#/settings/general",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Writing",
-										"icon": "edit",
-										"href": "#/settings/writing",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Reading",
-										"icon": "settings",
-										"href": "#/settings/reading",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Discussion",
-										"icon": "comment",
-										"href": "#/settings/discussion",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Media",
-										"icon": "media",
-										"href": "#/settings/media",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Permalinks",
-										"icon": "settings",
-										"href": "#/settings/permalinks",
-										"capability": "manage_options"
-									},
-									{
-										"label": "Privacy",
-										"icon": "settings",
-										"href": "#/settings/privacy",
-										"capability": "manage_privacy_options"
-									}
-								]
-							},
-							{
-								"separator": true
-							},
-							{
-								"label": "Profile",
-								"icon": "user",
-								"href": "#/profile",
-								"capability": "read"
-							},
-							{
-								"label": "View Site",
-								"icon": "external",
-								"href": "/",
-								"external": true
+								"id": "date",
+								"type": "datetime",
+								"label": "Submitted"
 							}
-						]
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 25,
+							"fields": [
+								"author",
+								"content",
+								"status",
+								"date"
+							]
+						},
+						"actions": [
+							{
+								"id": "approve",
+								"label": "Approve",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"spam",
+										"trash"
+									]
+								}
+							},
+							{
+								"id": "spam",
+								"label": "Mark as Spam",
+								"supportsBulk": true,
+								"isDestructive": true
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"supportsBulk": true,
+								"isDestructive": true
+							},
+							{
+								"id": "reply",
+								"label": "Reply"
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
+					},
+					"pending": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "hold"
+								}
+							]
+						}
+					},
+					"spam": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "spam"
+								}
+							]
+						}
+					},
+					"trash": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "trash"
+								}
+							]
+						}
+					}
+				},
+				"plugin": {
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Plugin",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description"
+							},
+							{
+								"id": "version",
+								"type": "text",
+								"label": "Version"
+							},
+							{
+								"id": "status",
+								"type": "select",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "active",
+										"label": "Active"
+									},
+									{
+										"value": "inactive",
+										"label": "Inactive"
+									}
+								]
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"perPage": 50,
+							"fields": [
+								"name",
+								"status",
+								"version"
+							],
+							"titleField": "name"
+						},
+						"actions": [
+							{
+								"id": "activate",
+								"label": "Activate",
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							},
+							{
+								"id": "deactivate",
+								"label": "Deactivate",
+								"eligibleWhen": {
+									"status": "active"
+								}
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							}
+						],
+						"defaultLayouts": {
+							"table": {}
+						}
+					},
+					"active": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "active"
+								}
+							]
+						}
+					},
+					"inactive": {
+						"extends": "_default",
+						"defaultView": {
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "inactive"
+								}
+							]
+						}
+					}
+				},
+				"theme": {
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Theme"
+							},
+							{
+								"id": "screenshot",
+								"type": "media",
+								"label": "Screenshot"
+							},
+							{
+								"id": "version",
+								"type": "text",
+								"label": "Version"
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
+							}
+						],
+						"defaultView": {
+							"type": "grid",
+							"perPage": 24,
+							"fields": [
+								"status",
+								"description",
+								"version",
+								"author"
+							],
+							"titleField": "name"
+						},
+						"actions": [
+							{
+								"id": "activate",
+								"label": "Activate",
+								"isPrimary": true,
+								"eligibleWhen": {
+									"status": "inactive"
+								}
+							},
+							{
+								"id": "details",
+								"label": "Details"
+							}
+						],
+						"defaultLayouts": {
+							"grid": {},
+							"table": {}
+						}
 					}
 				}
 			}
-		},
-		"content": {
-			"template": "core:main",
-			"routing": {
-				"route-key": "_self"
-			}
-		},
-		"command-palette": {
-			"template": "core:overlay",
-			"app": "core:command-palette",
-			"platform": {
-				"core:triggerable": true,
-				"core:trigger": {
-					"shortcut": "Mod+K"
-				}
-			}
-		},
-		"notices-banner": {
-			"role": "region",
-			"app": "core:notices-banner"
-		},
-		"notices-snackbar": {
-			"role": "region",
-			"app": "core:notices-snackbar"
 		}
 	},
-	"routes": {
-		"/dashboard/home": {
-			"app": "core:dashboard"
-		},
-		"/dashboard/widgets": {
-			"app": "core:dashboard-host"
-		},
-		"/dashboard/updates": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "update-core.php"
+	"screens": {
+		"dashboard": {
+			"label": "Dashboard",
+			"icon": "dashboard",
+			"description": "Site overview and core updates.",
+			"path": "/dashboard",
+			"app": "core:dashboard",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
 			}
 		},
-		"/posts": {
+		"dashboard-home": {
+			"label": "Home",
+			"icon": "home",
+			"description": "Site overview, recent activity, drafts at a glance.",
+			"path": "/dashboard/home",
+			"app": "core:dashboard",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			}
+		},
+		"dashboard-widgets": {
+			"label": "Widgets",
+			"icon": "grid",
+			"path": "/dashboard/widgets",
+			"apps": [
+				{
+					"id": "host",
+					"app": "core:dashboard-host"
+				},
+				{
+					"id": "recent-posts",
+					"app": "core:dashboard-widget-recent-posts",
+					"slot": "grid"
+				},
+				{
+					"id": "quick-draft",
+					"app": "core:dashboard-widget-quick-draft",
+					"slot": "grid"
+				}
+			],
+			"permissions": {
+				"capabilities": [
+					"edit_dashboard"
+				]
+			}
+		},
+		"dashboard-updates": {
+			"label": "Updates",
+			"icon": "update",
+			"path": "/dashboard/updates",
+			"app": "iframe:update-core.php",
+			"permissions": {
+				"capabilities": [
+					"update_core"
+				]
+			}
+		},
+		"posts": {
+			"label": "Posts",
+			"icon": "post",
+			"description": "Write, edit, and organize posts.",
+			"path": "/posts",
 			"app": "core:posts",
 			"config": {
 				"postType": "post"
+			},
+			"dataViewRef": "postType/post/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
 			}
 		},
-		"/posts/drafts": {
+		"posts-drafts": {
+			"label": "Drafts",
+			"icon": "drafts",
+			"path": "/posts/drafts",
 			"app": "core:posts",
 			"config": {
-				"postType": "post",
-				"variant": "drafts"
+				"postType": "post"
+			},
+			"dataViewRef": "postType/post/drafts",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
 			}
 		},
-		"/posts/pending": {
+		"posts-pending": {
+			"label": "Pending Review",
+			"icon": "drafts",
+			"path": "/posts/pending",
 			"app": "core:posts",
 			"config": {
-				"postType": "post",
-				"variant": "pending"
+				"postType": "post"
+			},
+			"dataViewRef": "postType/post/pending",
+			"permissions": {
+				"capabilities": [
+					"edit_others_posts"
+				]
 			}
 		},
-		"/posts/trash": {
+		"posts-trash": {
+			"label": "Trash",
+			"icon": "trash",
+			"path": "/posts/trash",
 			"app": "core:posts",
 			"config": {
-				"postType": "post",
-				"variant": "trash"
+				"postType": "post"
+			},
+			"dataViewRef": "postType/post/trash",
+			"permissions": {
+				"capabilities": [
+					"delete_posts"
+				]
 			}
 		},
-		"/posts/new": {
+		"posts-new": {
+			"label": "Add New Post",
+			"icon": "plus",
+			"path": "/posts/new",
 			"app": "core:editor",
 			"config": {
 				"postType": "post"
-			}
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
 		},
-		"/posts/{id}/edit": {
+		"post-edit": {
+			"label": "Edit Post",
+			"path": "/posts/{id}/edit",
 			"app": "core:editor",
 			"config": {
-				"postType": "post"
-			}
+				"postType": "post",
+				"postId": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
 		},
-		"/posts/categories": {
+		"categories": {
+			"label": "Categories",
+			"icon": "category",
+			"path": "/posts/categories",
 			"app": "core:taxonomy",
 			"config": {
 				"taxonomy": "category"
+			},
+			"permissions": {
+				"capabilities": [
+					"manage_categories"
+				]
 			}
 		},
-		"/posts/tags": {
+		"tags": {
+			"label": "Tags",
+			"icon": "tag",
+			"path": "/posts/tags",
 			"app": "core:taxonomy",
 			"config": {
 				"taxonomy": "post_tag"
+			},
+			"permissions": {
+				"capabilities": [
+					"manage_categories"
+				]
 			}
 		},
-		"/editor/{postType}/{id}": {
-			"app": "core:editor"
-		},
-		"/media": {
-			"app": "core:media"
-		},
-		"/media/new": {
-			"app": "core:media",
-			"config": {
-				"openUpload": true
-			}
-		},
-		"/pages": {
+		"pages": {
+			"label": "Pages",
+			"icon": "page",
+			"description": "Standalone pages — About, Contact, landing surfaces.",
+			"path": "/pages",
 			"app": "core:posts",
 			"config": {
 				"postType": "page"
+			},
+			"dataViewRef": "postType/page/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
 			}
 		},
-		"/pages/drafts": {
-			"app": "core:posts",
+		"page-edit": {
+			"label": "Edit Page",
+			"path": "/pages/{id}/edit",
+			"app": "core:editor",
 			"config": {
 				"postType": "page",
-				"variant": "drafts"
+				"postId": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"media": {
+			"label": "Media",
+			"icon": "media",
+			"description": "Upload, browse, and manage images and files.",
+			"path": "/media",
+			"app": "core:media",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
 			}
 		},
-		"/pages/new": {
-			"app": "core:editor",
-			"config": {
-				"postType": "page"
-			}
-		},
-		"/pages/{id}/edit": {
-			"app": "core:editor",
-			"config": {
-				"postType": "page"
-			}
-		},
-		"/comments": {
-			"app": "core:comments"
-		},
-		"/comments/pending": {
+		"comments": {
+			"label": "Comments",
+			"icon": "comments",
+			"description": "Moderate comments.",
+			"path": "/comments",
 			"app": "core:comments",
-			"config": {
-				"variant": "pending"
+			"dataViewRef": "root/comment/_default",
+			"permissions": {
+				"capabilities": [
+					"moderate_comments"
+				]
 			}
 		},
-		"/comments/spam": {
-			"app": "core:comments",
-			"config": {
-				"variant": "spam"
+		"appearance": {
+			"label": "Appearance",
+			"icon": "appearance",
+			"description": "Themes, customizer, widgets.",
+			"path": "/appearance",
+			"app": "core:appearance",
+			"permissions": {
+				"capabilities": [
+					"switch_themes"
+				]
 			}
 		},
-		"/comments/trash": {
-			"app": "core:comments",
-			"config": {
-				"variant": "trash"
+		"themes": {
+			"label": "Themes",
+			"icon": "themes",
+			"path": "/themes",
+			"app": "core:themes",
+			"dataViewRef": "root/theme/_default",
+			"permissions": {
+				"capabilities": [
+					"switch_themes"
+				]
 			}
 		},
-		"/appearance/themes": {
-			"app": "core:themes"
+		"site-editor": {
+			"label": "Editor",
+			"icon": "site-editor",
+			"description": "Block-based site editor (templates, parts, styles, navigation).",
+			"path": "/site-editor",
+			"app": "core:site-editor",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			},
+			"mode": "focus"
 		},
-		"/appearance/themes/new": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "theme-install.php"
+		"customize": {
+			"label": "Customize",
+			"icon": "customize",
+			"path": "/customize",
+			"app": "iframe:customize.php",
+			"permissions": {
+				"capabilities": [
+					"customize"
+				]
+			},
+			"mode": "takeover"
+		},
+		"widgets": {
+			"label": "Widgets",
+			"icon": "widgets",
+			"path": "/widgets",
+			"app": "iframe:widgets.php",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
 			}
 		},
-		"/appearance/editor": {
-			"app": "core:site-editor"
-		},
-		"/appearance/customize": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "customize.php"
-			}
-		},
-		"/appearance/menus": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "nav-menus.php"
-			}
-		},
-		"/appearance/widgets": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "widgets.php"
-			}
-		},
-		"/plugins": {
-			"app": "core:plugins"
-		},
-		"/plugins/active": {
+		"plugins": {
+			"label": "Plugins",
+			"icon": "plugins",
+			"description": "Install, activate, and manage plugins.",
+			"path": "/plugins",
 			"app": "core:plugins",
-			"config": {
-				"variant": "active"
+			"dataViewRef": "root/plugin/_default",
+			"permissions": {
+				"capabilities": [
+					"activate_plugins"
+				]
 			}
 		},
-		"/plugins/inactive": {
-			"app": "core:plugins",
-			"config": {
-				"variant": "inactive"
-			}
-		},
-		"/plugins/new": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "plugin-install.php"
-			}
-		},
-		"/plugins/editor": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "plugin-editor.php"
-			}
-		},
-		"/users": {
-			"app": "core:users"
-		},
-		"/users/administrators": {
+		"users": {
+			"label": "Users",
+			"icon": "users",
+			"description": "Manage accounts and roles.",
+			"path": "/users",
 			"app": "core:users",
-			"config": {
-				"variant": "administrators"
+			"dataViewRef": "root/user/_default",
+			"permissions": {
+				"capabilities": [
+					"list_users"
+				]
 			}
 		},
-		"/users/new": {
-			"app": "core:iframe-fallback",
+		"user-edit": {
+			"label": "Edit User",
+			"path": "/users/{id}/edit",
+			"app": "core:profile",
 			"config": {
-				"url": "user-new.php"
+				"userId": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_users"
+				]
 			}
 		},
-		"/profile": {
-			"app": "core:profile"
-		},
-		"/tools": {
-			"app": "core:tools"
-		},
-		"/tools/import": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "import.php"
+		"profile": {
+			"label": "Profile",
+			"icon": "profile",
+			"path": "/profile",
+			"app": "core:profile",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
 			}
 		},
-		"/tools/export": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "export.php"
+		"tools": {
+			"label": "Tools",
+			"icon": "tools",
+			"path": "/tools",
+			"app": "core:tools",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
 			}
 		},
-		"/tools/site-health": {
-			"app": "core:site-health"
-		},
-		"/tools/export-data": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "export-personal-data.php"
+		"site-health": {
+			"label": "Site Health",
+			"icon": "heart",
+			"path": "/tools/site-health",
+			"app": "core:site-health",
+			"permissions": {
+				"capabilities": [
+					"view_site_health_checks"
+				]
 			}
 		},
-		"/tools/erase-data": {
-			"app": "core:iframe-fallback",
-			"config": {
-				"url": "erase-personal-data.php"
+		"import": {
+			"label": "Import",
+			"icon": "import",
+			"path": "/tools/import",
+			"app": "iframe:import.php",
+			"permissions": {
+				"capabilities": [
+					"import"
+				]
 			}
 		},
-		"/settings": {
-			"app": "core:settings"
+		"export": {
+			"label": "Export",
+			"icon": "export",
+			"path": "/tools/export",
+			"app": "iframe:export.php",
+			"permissions": {
+				"capabilities": [
+					"export"
+				]
+			}
 		},
-		"/settings/general": {
-			"app": "core:settings"
+		"settings": {
+			"label": "Settings",
+			"icon": "settings",
+			"path": "/settings",
+			"app": "core:settings",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/writing": {
-			"app": "core:settings"
+		"settings-general": {
+			"label": "General",
+			"path": "/settings/general",
+			"app": "core:settings-general",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/reading": {
-			"app": "core:settings"
+		"settings-writing": {
+			"label": "Writing",
+			"path": "/settings/writing",
+			"app": "iframe:options-writing.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/discussion": {
-			"app": "core:settings"
+		"settings-reading": {
+			"label": "Reading",
+			"path": "/settings/reading",
+			"app": "iframe:options-reading.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/media": {
-			"app": "core:settings"
+		"settings-discussion": {
+			"label": "Discussion",
+			"path": "/settings/discussion",
+			"app": "iframe:options-discussion.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/permalinks": {
-			"app": "core:settings"
+		"settings-media": {
+			"label": "Media",
+			"path": "/settings/media",
+			"app": "iframe:options-media.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		},
-		"/settings/privacy": {
-			"app": "core:settings"
+		"settings-permalinks": {
+			"label": "Permalinks",
+			"path": "/settings/permalinks",
+			"app": "iframe:options-permalink.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
+		},
+		"settings-privacy": {
+			"label": "Privacy",
+			"path": "/settings/privacy",
+			"app": "iframe:options-privacy.php",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot": "palette",
+			"app": "core:command-palette",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			},
+			"mode": "modal"
 		}
 	},
-	"default-route": "/dashboard/home"
+	"menu": {
+		"dashboard": {
+			"position": 5,
+			"items": {
+				"dashboard-home": {
+					"position": 10
+				},
+				"dashboard-widgets": {
+					"position": 20
+				},
+				"dashboard-updates": {
+					"position": 30
+				}
+			}
+		},
+		"sep-1": {
+			"separator": true,
+			"position": 9
+		},
+		"posts": {
+			"position": 30,
+			"items": {
+				"posts-drafts": {
+					"position": 10
+				},
+				"posts-pending": {
+					"position": 20
+				},
+				"posts-trash": {
+					"position": 30
+				},
+				"posts-new": {
+					"position": 40
+				},
+				"categories": {
+					"position": 50
+				},
+				"tags": {
+					"position": 60
+				}
+			}
+		},
+		"pages": {
+			"position": 40
+		},
+		"media": {
+			"position": 50
+		},
+		"comments": {
+			"position": 60
+		},
+		"sep-2": {
+			"separator": true,
+			"position": 65
+		},
+		"appearance": {
+			"position": 70,
+			"items": {
+				"themes": {
+					"position": 10
+				},
+				"site-editor": {
+					"position": 20
+				},
+				"customize": {
+					"position": 30
+				},
+				"widgets": {
+					"position": 40
+				}
+			}
+		},
+		"plugins": {
+			"position": 80
+		},
+		"users": {
+			"position": 90
+		},
+		"tools": {
+			"position": 100,
+			"items": {
+				"site-health": {
+					"position": 10
+				},
+				"import": {
+					"position": 20
+				},
+				"export": {
+					"position": 30
+				}
+			}
+		},
+		"settings": {
+			"position": 110,
+			"items": {
+				"settings-general": {
+					"position": 10
+				},
+				"settings-writing": {
+					"position": 20
+				},
+				"settings-reading": {
+					"position": 30
+				},
+				"settings-discussion": {
+					"position": 40
+				},
+				"settings-media": {
+					"position": 50
+				},
+				"settings-permalinks": {
+					"position": 60
+				},
+				"settings-privacy": {
+					"position": 70
+				}
+			}
+		},
+		"sep-3": {
+			"separator": true,
+			"position": 115
+		},
+		"profile": {
+			"position": 120
+		},
+		"view-site": {
+			"label": "View Site",
+			"icon": "external",
+			"href": "{site_url}",
+			"external": true,
+			"position": 130
+		}
+	},
+	"commands": [
+		{
+			"id": "core-command-palette",
+			"shortcut": "Mod+K",
+			"invoke": "core:command-palette",
+			"label": "Open Command Palette"
+		},
+		{
+			"id": "navigate-posts-new",
+			"shortcut": "Mod+Alt+N",
+			"navigate": "/posts/new",
+			"label": "New Post"
+		},
+		{
+			"id": "navigate-posts",
+			"shortcut": "g p",
+			"navigate": "/posts",
+			"label": "Go to Posts"
+		},
+		{
+			"id": "navigate-media",
+			"shortcut": "g m",
+			"navigate": "/media",
+			"label": "Go to Media"
+		},
+		{
+			"id": "navigate-dashboard-home",
+			"shortcut": "g d",
+			"navigate": "/dashboard/home",
+			"label": "Go to Dashboard"
+		}
+	],
+	"preload": [
+		"/wp/v2/users/me",
+		"/wp/v2/types?context=view",
+		"/wp/v2/taxonomies?context=view",
+		[
+			"/wp/v2/posts",
+			"OPTIONS"
+		],
+		[
+			"/wp/v2/users",
+			"OPTIONS"
+		]
+	],
+	"styles": {
+		"theme": {
+			"color": {
+				"primary": "#3858e9",
+				"bg": "#1e1e1e"
+			},
+			"density": "default"
+		}
+	}
 }

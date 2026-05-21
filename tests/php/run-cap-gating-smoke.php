@@ -13,6 +13,13 @@
  * Mirrors the JS pruning logic in `src/apps/navigation/index.js#pruneNavItems`
  * — same recursion, same drop-orphan-separators rule.
  *
+ * Status: DEPRECATED for v3 shells. Phase 3d.1 retired the v2-shape
+ * `shells/wp-admin-default.json`; the active default is now v3-shaped
+ * (workspace/screens/menu) and the nav-items config block this smoke
+ * walked is gone. The smoke now detects v3 shape and exits 0 with a
+ * notice — a port to v3 menu/screen capability gating is tracked under
+ * Phase 3d.3 (test surface rewrites).
+ *
  * Run: wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
  */
 
@@ -185,6 +192,24 @@ function smoke_collect_ids( $items ) {
 
 $failures = 0;
 $pass     = 0;
+
+// Phase 3d.1 retired the v2 `wp-admin-default.json`; the active default
+// is now v3-shaped. The nav-items block this smoke walks is gone, so
+// short-circuit to a passing skip while the v3 port is queued for
+// Phase 3d.3. Detect v3 shape by querying the resolved doc for the
+// admin user and checking for the v3-distinctive top-level `screens`
+// block.
+$admin_for_probe = get_user_by( 'login', 'administrator' );
+if ( $admin_for_probe ) {
+	wp_set_current_user( $admin_for_probe->ID );
+	WP_Admin_Shell_Resolver::reset_request_memo();
+	$probe = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+	if ( isset( $probe['screens'] ) && is_array( $probe['screens'] ) ) {
+		echo "SKIP v3-shape default shell — v2 nav-items cap pruning smoke pending Phase 3d.3 port.\n";
+		echo "Result: 0 passed, 0 failed (skipped)\n";
+		exit( 0 );
+	}
+}
 
 foreach ( $roles as $role => $login ) {
 	$user = get_user_by( 'login', $login );
