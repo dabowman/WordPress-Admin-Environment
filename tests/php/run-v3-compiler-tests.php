@@ -501,6 +501,115 @@ update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
 WP_Admin_Shell_Cache::flush();
 WP_Admin_Shell_Resolver::reset_request_memo();
 
+// ── iframe: app-ref translator (compile pass 6) ─────────────────────
+// `resolveAppInstance` only knows `core:*` / `plugin:*`; the compiler
+// rewrites `iframe:<slug>` → `core:iframe-fallback` + `config.url`
+// across screens, apps[], and routes. Idempotent + leaves explicit
+// author-supplied `config.url` alone.
+
+$iframe_doc = array(
+	'version'  => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'updates' ),
+	'screens'  => array(
+		'updates' => array(
+			'label' => 'Updates',
+			'path'  => '/updates',
+			'app'   => 'iframe:update-core.php',
+		),
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'legacy', 'app' => 'iframe:tools.php', 'slot' => 'detail' ),
+			),
+		),
+		'preconfigured' => array(
+			'label'  => 'Preconfigured',
+			'path'   => '/preconfigured',
+			'app'    => 'iframe:options-general.php',
+			'config' => array( 'url' => 'options-discussion.php' ),
+		),
+	),
+);
+$compiled_iframe = WP_Admin_Shell_V3_Compiler::compile( $iframe_doc );
+
+$T::eq(
+	'iframe translator: screens.updates.app rewritten to core:iframe-fallback',
+	$compiled_iframe['screens']['updates']['app'],
+	'core:iframe-fallback'
+);
+$T::eq(
+	'iframe translator: screens.updates.config.url carries the slug',
+	$compiled_iframe['screens']['updates']['config']['url'],
+	'update-core.php'
+);
+$T::eq(
+	'iframe translator: screens.split.apps[1].app rewritten',
+	$compiled_iframe['screens']['split']['apps'][1]['app'],
+	'core:iframe-fallback'
+);
+$T::eq(
+	'iframe translator: screens.split.apps[1].config.url carries the slug',
+	$compiled_iframe['screens']['split']['apps'][1]['config']['url'],
+	'tools.php'
+);
+$T::ok(
+	'iframe translator: screens.split.apps[1].slot preserved',
+	$compiled_iframe['screens']['split']['apps'][1]['slot'] === 'detail'
+);
+$T::ok(
+	'iframe translator: screens.split.apps[0] (core:posts) unchanged',
+	$compiled_iframe['screens']['split']['apps'][0]['app'] === 'core:posts'
+);
+$T::eq(
+	'iframe translator: author-supplied config.url wins (no override)',
+	$compiled_iframe['screens']['preconfigured']['config']['url'],
+	'options-discussion.php'
+);
+$T::eq(
+	'iframe translator: routes block also rewritten (synthesized from screens)',
+	$compiled_iframe['routes']['/updates']['app'],
+	'core:iframe-fallback'
+);
+
+// Idempotency — running compile twice is a no-op on the second pass.
+$twice = WP_Admin_Shell_V3_Compiler::compile( $compiled_iframe );
+$T::eq(
+	'iframe translator: idempotent — second compile leaves app as core:iframe-fallback',
+	$twice['screens']['updates']['app'],
+	'core:iframe-fallback'
+);
+$T::eq(
+	'iframe translator: idempotent — config.url unchanged on second pass',
+	$twice['screens']['updates']['config']['url'],
+	'update-core.php'
+);
+
+// v2-path coverage — synthesize_v2_screens_from_routes copies iframe:
+// refs from routes into screens; translator catches both.
+$v2_iframe_doc = array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'regions' => array(),
+	'routes'  => array(
+		'/legacy-tools' => array( 'app' => 'iframe:tools.php' ),
+	),
+);
+$compiled_v2_iframe = WP_Admin_Shell_V3_Compiler::compile( $v2_iframe_doc );
+$T::eq(
+	'iframe translator (v2 path): routes block rewritten',
+	$compiled_v2_iframe['routes']['/legacy-tools']['app'],
+	'core:iframe-fallback'
+);
+// Synthesized screen also catches the rewrite.
+$synth_id = $compiled_v2_iframe['routes']['/legacy-tools']['config']['screenId'];
+$T::eq(
+	'iframe translator (v2 path): synthesized screen also rewritten',
+	$compiled_v2_iframe['screens'][ $synth_id ]['app'],
+	'core:iframe-fallback'
+);
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n— Summary —\n";
