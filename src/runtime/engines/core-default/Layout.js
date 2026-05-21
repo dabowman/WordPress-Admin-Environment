@@ -31,6 +31,7 @@ const SLOT_IDS = {
 	toolbar: 'toolbar',
 	sidebar: 'sidebar',
 	content: 'content',
+	detail: 'detail',
 	preview: 'preview',
 };
 
@@ -60,10 +61,11 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
 	const sidebar = findById( buckets.persistent, SLOT_IDS.sidebar );
 	const content = findById( buckets.persistent, SLOT_IDS.content );
+	const detail = findById( buckets.persistent, SLOT_IDS.detail );
 	const preview = findById( buckets.persistent, SLOT_IDS.preview );
 
 	const claimed = new Set(
-		[ toolbar, sidebar, content, preview ]
+		[ toolbar, sidebar, content, detail, preview ]
 			.filter( Boolean )
 			.map( ( region ) => region.id )
 	);
@@ -86,6 +88,7 @@ export default function CoreSiteEditorLayout( { regions } ) {
 					{ content && (
 						<Region key={ content.id } region={ content } />
 					) }
+					{ detail && <Region key={ detail.id } region={ detail } /> }
 					{ preview && (
 						<Region key={ preview.id } region={ preview } />
 					) }

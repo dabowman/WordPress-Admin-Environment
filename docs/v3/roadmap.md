@@ -189,11 +189,17 @@ Detailed deliverables waiting for implementation:
 - Spec docs: extension point #14 (`wp_admin_shell_classic_menu_core_slugs`) added to spec §13.
 - Out of scope (tracked as follow-ups): SVG icon harvesting + dynamic icon registration from data-URIs; multi-pane parent screens (deferred to 3c.4); removing the original entries from `$GLOBALS['menu']` (bridge is purely additive).
 
-### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred)
+### 3c.4 — Multi-app layout algorithm — ✅ Shipped
 
 Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the first/primary app mounts via the synthesized route. Multi-app screens (e.g. `posts` + paired `core:editor` in detail slot) need:
 - Compiler synthesizes route configs for each `apps[]` entry, slotted into the appropriate URL slot.
 - Engine layout algorithm arranges visible regions.
+
+**Implementation:** survey came in at ~4-6h actual vs 1-2d estimate. Routing infrastructure already worked end-to-end; only the compiler's `synthesize_routes` skipped non-primary entries. Now walks every `apps[]` entry — entries with a `slot` emit `@<slot>/<path>` slot-namespaced routes that engine regions declaring `routing.route-key: "<slot>"` pick up. Entries without a slot stay app-internal (e.g. dashboard host's `slot: "grid"` widgets mount inside the host, not via engine slots). Existing `routes` block (escape hatch) wins on collision.
+
+**Runtime contract:** `core:default` engine `defaultRegions` gains a `detail` region declaring `routing: { "route-key": "detail", "mode": "mirror" }`. The `mode` field selects between two slot-resolution strategies: `query` (default, preserves existing palette behavior — slot value comes from `?<key>=...` URL query param) and `mirror` (synthesizes the slot value as `@<route-key><primary>` from the URL primary path so the v3 compiler's `@<slot>/<primary>` route synthesis becomes findable without URL-query pollution). Engine peer regions opt into `mirror`. `<PersistentRegion>` emits `data-app-mounted="true|false"` ONLY on mirror-mode regions; engine CSS collapses empty mirror-mode containers via `[data-app-mounted="false"]:not([data-keep-visible-when-empty="true"])`. Single-app screens, the `_self` content region, and query-driven regions (palette) keep their existing always-rendered behavior.
+
+**Tests:** 14 PHP compiler-synthesis assertions + 11 Node routing assertions (pattern validity for `@<slot>/<path>`, `readSlot` mirror mode synthesis).
 
 ## Phase 3d — migration + final tests
 
@@ -262,6 +268,8 @@ Tracked separately from "remaining work" — these are bugs found during the Pha
 - Drilldown auto-inference from URL primary path landed in `ac8d058`; back-button suppression sentinel landed in `5ccde5e`; operator-precedence bug fixed in `eff4ed5`.
 - View-config primitive collapsed CIAB 3-axis registry to 2-axis (PR #...) — restored via `docs/plans/2026-05-20-dataview-registry-restoration.md`.
 - **Breaking change — command palette emitted names** (PR #51). Pre-3c.2: `core/admin-shell/goto-<encoded-pattern>`. Post-3c.2: `core/admin-shell/palette-<encoded-id>` (unified across `commands[]` + `screens[]` for first-write-wins dedup). Any external consumer of `@wordpress/commands` keyed off the old names breaks. No known consumers — but plugin authors extending the palette via `useCommandLoader` with the same registration name should re-key off the new prefix. Document in v3.0 upgrade notes.
+- **Inline `default-style` forces engine CSS into `!important`** (PR #55). The kernel applies template `default-style` blocks as inline `style="..."` on region wrappers. When engine CSS needs to override a default-style property (e.g. `display: none` collapsing a mirror-mode region whose template ships `display: flex`), inline-style specificity beats stylesheet declarations and only `!important` wins. Acceptable surgical fix today, but the root cause is the inline-style emission convention. **Future direction** (v3.0 polish queue): add a template-level field like `default-style.collapsible: true` so the kernel skips emitting the offending inline properties when `data-app-mounted="false"`, letting engine CSS win without `!important`. Out of scope for 3c.4 — file for a later polish pass.
+- **`routing.mode` enum naming bikeshed** (PR #55). `"mirror"` reads cleanly in code but is slightly opaque vocabulary. Alternatives like `"path"` or `"primary"` describe the slot source more directly. Bikeshed-grade; revisit if pre-v3.0 doc sweep surfaces a clearer term. Acceptable as-is.
 
 ## How to preserve through PR feedback
 

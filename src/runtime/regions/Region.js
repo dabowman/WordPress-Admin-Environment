@@ -184,11 +184,24 @@ function PersistentRegion( { region, matched, regionState, modeId } ) {
 	const className = regionClassName( region, regionState );
 	const style = toReactStyle( region.style );
 	const stateAttrs = regionStateDataAttrs( regionState, modeId );
+	// `data-app-mounted` lets engine CSS collapse multi-app peer
+	// regions (e.g. `detail`, `inspector`, `preview`) when no route
+	// matches. Emitted ONLY on regions that opt in via
+	// `routing.mode: "mirror"`. The `_self` content region and
+	// `query`-mode regions (palette etc.) keep their existing
+	// always-rendered behavior — collapse-when-empty is exclusively
+	// the multi-app peer-slot contract.
+	const isMirrorRouted = region?.routing?.mode === 'mirror';
+	const hasMountedApp = !! ( matched?.app || region.app );
+	const appMountedAttr = isMirrorRouted
+		? { 'data-app-mounted': hasMountedApp ? 'true' : 'false' }
+		: {};
 	return (
 		<div
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
+			{ ...appMountedAttr }
 			style={ style }
 			{ ...stateAttrs }
 		>

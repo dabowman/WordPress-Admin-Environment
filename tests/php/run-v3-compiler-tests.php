@@ -610,6 +610,230 @@ $T::eq(
 	'core:iframe-fallback'
 );
 
+// ── Multi-app layout — slot-keyed route synthesis (3c.4) ────────────
+// Non-primary `apps[]` entries with a `slot` produce slot-namespaced
+// routes (`@<slot>/<path>`) so engine regions declaring
+// `routing.route-key: "<slot>"` can pick them up.
+
+$multi_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'screens'   => array(
+		// Two-app screen: primary at /split, peer in detail slot.
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'peer',   'app' => 'core:editor', 'slot' => 'detail',
+					'config' => array( 'postId' => 1 ) ),
+			),
+		),
+		// Three-app screen: primary + detail + inspector.
+		'triple' => array(
+			'label' => 'Triple',
+			'path'  => '/triple',
+			'apps'  => array(
+				array( 'id' => 'main',      'app' => 'core:posts' ),
+				array( 'id' => 'detail',    'app' => 'core:editor',  'slot' => 'detail' ),
+				array( 'id' => 'inspector', 'app' => 'core:profile', 'slot' => 'inspector' ),
+			),
+		),
+		// Entry without a slot — app-internal composition (e.g.
+		// dashboard host's `slot: "grid"` style). Should NOT emit a
+		// slot route (the host app mounts widgets directly).
+		'no-slot-peer' => array(
+			'label' => 'No slot peer',
+			'path'  => '/no-slot-peer',
+			'apps'  => array(
+				array( 'id' => 'main', 'app' => 'core:dashboard-host' ),
+				array( 'id' => 'peer', 'app' => 'core:dashboard-widget-recent-posts' ),
+			),
+		),
+		// Single-app screen — backwards-compat smoke.
+		'single' => array(
+			'label' => 'Single',
+			'path'  => '/single',
+			'app'   => 'core:posts',
+		),
+	),
+);
+$compiled_multi = WP_Admin_Shell_V3_Compiler::compile( $multi_doc );
+
+$T::ok(
+	'multi-app: primary /split route synthesized',
+	isset( $compiled_multi['routes']['/split'] )
+);
+$T::eq(
+	'multi-app: primary route points at first apps[] entry',
+	$compiled_multi['routes']['/split']['app'],
+	'core:posts'
+);
+$T::ok(
+	'multi-app: slot-keyed @detail/split route synthesized',
+	isset( $compiled_multi['routes']['@detail/split'] )
+);
+$T::eq(
+	'multi-app: detail slot mounts core:editor',
+	$compiled_multi['routes']['@detail/split']['app'],
+	'core:editor'
+);
+$T::eq(
+	'multi-app: detail slot inherits screenId injection',
+	$compiled_multi['routes']['@detail/split']['config']['screenId'],
+	'split'
+);
+$T::eq(
+	'multi-app: detail slot preserves per-entry config',
+	$compiled_multi['routes']['@detail/split']['config']['postId'],
+	1
+);
+$T::ok(
+	'multi-app: triple — primary /triple synthesized',
+	isset( $compiled_multi['routes']['/triple'] )
+);
+$T::ok(
+	'multi-app: triple — @detail/triple synthesized',
+	isset( $compiled_multi['routes']['@detail/triple'] )
+);
+$T::ok(
+	'multi-app: triple — @inspector/triple synthesized',
+	isset( $compiled_multi['routes']['@inspector/triple'] )
+);
+$T::eq(
+	'multi-app: inspector slot mounts core:profile',
+	$compiled_multi['routes']['@inspector/triple']['app'],
+	'core:profile'
+);
+$T::ok(
+	'multi-app: no-slot peer does NOT emit a slot route',
+	! isset( $compiled_multi['routes']['@dashboard-widget-recent-posts/no-slot-peer'] )
+);
+$T::ok(
+	'multi-app: no-slot screen primary still routes',
+	isset( $compiled_multi['routes']['/no-slot-peer'] )
+);
+$T::ok(
+	'multi-app: single-app screen routes unchanged (no slot-key collateral)',
+	isset( $compiled_multi['routes']['/single'] )
+		&& ! isset( $compiled_multi['routes']['@detail/single'] )
+);
+
+// Existing routes (escape hatch) win on collision with synthesized
+// slot routes.
+$multi_with_override_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'routes'    => array(
+		'@detail/split' => array(
+			'app'    => 'core:dashboard',
+			'config' => array( 'overridden' => true ),
+		),
+	),
+	'screens'   => array(
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main', 'app' => 'core:posts' ),
+				array( 'id' => 'peer', 'app' => 'core:editor', 'slot' => 'detail' ),
+			),
+		),
+	),
+);
+$compiled_multi_override = WP_Admin_Shell_V3_Compiler::compile( $multi_with_override_doc );
+$T::eq(
+	'multi-app: existing @detail/<path> route wins on collision',
+	$compiled_multi_override['routes']['@detail/split']['app'],
+	'core:dashboard'
+);
+
+// _self defensive guard — a non-primary entry with slot=_self would
+// clobber the primary if synthesis didn't skip it. Assert it skips
+// cleanly (primary stays as the first entry's app).
+$multi_self_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'screens'   => array(
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'rogue',  'app' => 'core:editor', 'slot' => '_self' ),
+			),
+		),
+	),
+);
+$compiled_multi_self = WP_Admin_Shell_V3_Compiler::compile( $multi_self_doc );
+$T::eq(
+	'multi-app: _self guard — primary route stays on first apps[] entry',
+	$compiled_multi_self['routes']['/split']['app'],
+	'core:posts'
+);
+$T::ok(
+	'multi-app: _self guard — no @_self/split clobber route emitted',
+	! isset( $compiled_multi_self['routes']['@_self/split'] )
+);
+
+// Intra-slot collision — two non-primary entries claiming the same
+// slot. First-wins per `! isset` guard. Asserts the contract: later
+// entries silently lose to earlier siblings.
+$multi_collision_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'screens'   => array(
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'first',  'app' => 'core:editor',  'slot' => 'detail' ),
+				array( 'id' => 'second', 'app' => 'core:profile', 'slot' => 'detail' ),
+			),
+		),
+	),
+);
+$compiled_multi_collision = WP_Admin_Shell_V3_Compiler::compile( $multi_collision_doc );
+$T::eq(
+	'multi-app: intra-slot collision — first entry wins the slot route',
+	$compiled_multi_collision['routes']['@detail/split']['app'],
+	'core:editor'
+);
+
+// Parametric primary path — slot route key inherits the param
+// segment verbatim. interpolate() at match time substitutes the
+// captured value into the slot route's config too if needed.
+$multi_param_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'post-edit' ),
+	'screens'   => array(
+		'post-edit' => array(
+			'label' => 'Post Edit',
+			'path'  => '/posts/{id}/edit',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:editor' ),
+				array( 'id' => 'detail', 'app' => 'core:posts', 'slot' => 'detail',
+					'config' => array( 'postId' => '{id}' ) ),
+			),
+		),
+	),
+);
+$compiled_multi_param = WP_Admin_Shell_V3_Compiler::compile( $multi_param_doc );
+$T::ok(
+	'multi-app: parametric primary path keyed correctly',
+	isset( $compiled_multi_param['routes']['/posts/{id}/edit'] )
+);
+$T::ok(
+	'multi-app: parametric slot route inherits param segment',
+	isset( $compiled_multi_param['routes']['@detail/posts/{id}/edit'] )
+);
+$T::eq(
+	'multi-app: parametric slot route preserves {param} in config',
+	$compiled_multi_param['routes']['@detail/posts/{id}/edit']['config']['postId'],
+	'{id}'
+);
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n— Summary —\n";

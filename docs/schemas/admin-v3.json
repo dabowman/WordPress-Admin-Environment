@@ -823,7 +823,11 @@
 							"type": "string",
 							"minLength": 1,
 							"pattern": "^(_self|[a-z][a-z0-9-]*)$",
-							"description": "Names the URL slot whose value this region resolves to a route. `_self` reads the URL's primary path (typically only one region per shell uses `_self`). Any other value (e.g., `detail`, `inspector`) reads the same-named URL query parameter. See spec §5.4 and §6.4."
+							"description": "Names the URL slot whose value this region resolves to a route. `_self` reads the URL's primary path (typically only one region per shell uses `_self`). For any other value, the `mode` field selects the resolution strategy — `query` (default) reads the same-named URL query parameter; `mirror` synthesizes `@<route-key><primary>` from the URL primary path. See spec §5.4 and §6.4."
+						},
+						"mode": {
+							"enum": [ "query", "mirror" ],
+							"description": "Slot resolution mode. `query` (default) reads the URL query parameter of the same name (`?palette=open` → `\"open\"`). `mirror` synthesizes `@<route-key><primary>` from the URL primary path — pairs with the v3 compiler's `@<slot>/<primary>` route synthesis for multi-app screens (3c.4). Engine peer regions (`detail`, `inspector`, `preview`) opt into `mirror`; the `_self` content region and query-driven regions (palette) keep the default. Multi-app peer regions in `mirror` mode also collapse via engine CSS when no route matches. See spec §6.4."
 						}
 					},
 					"description": "URL participation declaration. A region with `route-key` is routable: the URL slot value at that key resolves to a route in the routes block, and the matching app mounts here. A region without `route-key` is non-routable (holds a fixed app or is purely chrome). See spec §5.4."

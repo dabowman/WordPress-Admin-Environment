@@ -232,3 +232,24 @@
 	flex: 1 1 100%;
 	max-inline-size: 100%;
 }
+
+/* Multi-app layout (3c.4) — mirror-mode peer regions (`detail`,
+ * `inspector`, `preview`, future) collapse when no route matches.
+ * The kernel emits `data-app-mounted="false"` only on
+ * `routing.mode: "mirror"` regions; engine CSS uses the attr to
+ * `display: none` the empty container.
+ *
+ * `!important` is required: region templates declare `default-style`
+ * blocks that the kernel applies as INLINE `style="..."` on the
+ * region wrapper. The `core:detail` template ships
+ * `display: flex` as part of its default style, so a CSS-rule
+ * `display: none` would lose to inline specificity. `!important`
+ * is the surgical override here.
+ *
+ * Authors opt out of collapse via `data-keep-visible-when-empty="true"`
+ * on the region declaration (e.g. an `inspector` region with a
+ * "select an item" placeholder app-less stub). */
+.wp-admin-shell-layout
+	.wp-admin-shell-region[data-app-mounted="false"]:not([data-keep-visible-when-empty="true"]) {
+	display: none !important;
+}
