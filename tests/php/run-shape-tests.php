@@ -184,9 +184,24 @@ foreach ( $shells as $slug ) {
 			if ( count( $apps_list ) < 2 ) {
 				continue;
 			}
-			$path = isset( $screen['path'] ) && is_string( $screen['path'] ) && $screen['path'] !== ''
+			// Mirror the compiler's early-continue. `synthesize_routes()`
+			// in `class-wp-admin-shell-v3-compiler.php` skips the ENTIRE
+			// screen iteration when `path === '' && slot === '_self'`,
+			// meaning no routes are emitted — not even for non-primary
+			// peer entries. Bundled shells all carry explicit paths so
+			// this never bites today, but a path-less primary with a
+			// slotted peer would make the test assert routes the compiler
+			// intentionally skipped. Mirror the guard here.
+			$screen_path = isset( $screen['path'] ) && is_string( $screen['path'] ) && $screen['path'] !== ''
 				? $screen['path']
-				: '/' . $screen_id;
+				: '';
+			$screen_slot = isset( $screen['slot'] ) && is_string( $screen['slot'] ) && $screen['slot'] !== ''
+				? $screen['slot']
+				: '_self';
+			if ( $screen_path === '' && $screen_slot === '_self' ) {
+				continue;
+			}
+			$path = $screen_path !== '' ? $screen_path : '/' . $screen_id;
 			// Walk non-primary entries (skip apps[0] — handled as primary).
 			for ( $i = 1; $i < count( $apps_list ); $i++ ) {
 				$entry = $apps_list[ $i ];
@@ -202,10 +217,14 @@ foreach ( $shells as $slug ) {
 				if ( $entry_slot === '' || $entry_slot === '_self' ) {
 					continue;
 				}
-				// `grid` is an app-declared slot used by dashboard-host;
-				// it mounts inside the host, not via engine slots, so it
-				// shouldn't emit a slot-namespaced route either. The host
-				// reads the widgets directly from the screen.apps block.
+				// `grid` is an app-internal slot used by dashboard-host.
+				// The compiler DOES synthesize `@grid/<path>` routes for
+				// these (the multi-app loop doesn't special-case `grid`),
+				// but they're ignored at the runtime layer — no engine
+				// region declares `routing.route-key: "grid"`, so the host
+				// reads the widget list directly from the screen.apps
+				// block instead. Skip the assertion here; the route's
+				// presence in the table is harmless.
 				if ( $entry_slot === 'grid' ) {
 					continue;
 				}

@@ -296,9 +296,50 @@ Three landings, all on `feat/v3-3d3-test-surface`:
    `run-cap-tests.php` had been failing 17/54 since the v3 default
    landed; the collector extension restores 54/54 green.
 
-Counts after the sweep: **1579 assertions** (885 PHP + 510 Node runtime
-+ 103 schema + 4 parity + 77 TS engine). Well above the
-~1000-1200 target.
+PR #60 review feedback addressed in a follow-up commit on
+`claude/pr-60-feedback-07odc`:
+
+- **Per-role user fixturing in cap-gating-smoke.** The original
+  `wpas_cap_smoke_user_for_role()` helper returned `null` when no user
+  for the role was present, and the e2e assertions guarded on `!== null`.
+  On a sparsely-populated wp-env (admin-only) the entire role-walk
+  silently degenerated to a single admin data point, making the
+  monotonic-visibility assertion vacuously true. The helper now creates
+  `wpas_smoke_<role>` fixtures via the same `ensure_user()` pattern
+  `run-cap-tests.php` uses, with `register_shutdown_function` cleanup.
+  Added one new assertion (≥3 roles walked) so a future regression in
+  user-creation surfaces as a failure rather than silent green.
+  38 → 39 assertions.
+- **`wp_admin_shell_resolve_capabilities()` also walks menu items.**
+  Menu items registered via `wp_admin_shell_register_menu_item()` can
+  carry their own `permissions.capabilities[]` block when they don't
+  inherit from a bound screen (standalone link items, etc.). Added a
+  recursive walk of `config['menu']` so those caps reach the runtime
+  cap-map. No new assertion count change (the bundled `wp-admin-default`
+  doesn't ship inline menu perms today; the walk is defensive against
+  plugin-registered menu items).
+- **Shape-test mirrors the v3-compiler's early-continue.** The multi-app
+  slot-route walk's fallback `path = '/<screen_id>'` differed from the
+  compiler's behavior when both `path === ''` and `slot === '_self'` —
+  the compiler skips the entire screen, the test would have asserted
+  routes that don't exist. Bundled shells all carry paths so this never
+  bit, but the test now mirrors the guard. `grid` slot exemption
+  comment also clarified — the compiler does synthesize `@grid/<path>`
+  routes; they're just unused by any engine region today.
+- **Cosmetic monotonic-loop init fix.** `$prev_count = -1` could
+  produce a misleading log line on a first-iteration non-monotonic
+  hit (e.g. "role  had -1 visible, X has Y"). Switched to `null` +
+  guard.
+- **Menu-pruning re-resolve assumption documented.** Inline comment on
+  the §10 menu-pruning section noting it resolves the menu once as
+  admin then walks per-role — correct for `wp-admin-default` (no
+  role/user-origin menu customization), but a future shell that
+  customizes menu shape per role would need the per-role re-resolve
+  pattern already used by the §9 screen-visibility walk above.
+
+Counts after the sweep + PR #60 feedback: **1580 assertions** (886 PHP
++ 510 Node runtime + 103 schema + 4 parity + 77 TS engine). Well above
+the ~1000-1200 target.
 
 Known coverage gap deferred to a future test-surface follow-up:
 `<PersistentRegion>` `data-app-mounted` attribute emission (kernel emits

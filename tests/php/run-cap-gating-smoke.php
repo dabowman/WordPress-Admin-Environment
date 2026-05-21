@@ -47,6 +47,7 @@ if ( ! class_exists( 'WP_Admin_Shell_Permissions' ) ) {
 class WPAS_Cap_Gating_Smoke_Test_Runner {
 	public static $pass = 0;
 	public static $fail = 0;
+	public static $created_user_ids = array();
 
 	public static function assert_eq( $label, $actual, $expected ) {
 		if ( $actual === $expected ) {
@@ -67,22 +68,59 @@ class WPAS_Cap_Gating_Smoke_Test_Runner {
 	public static function assert_false( $label, $actual ) {
 		self::assert_eq( $label, (bool) $actual, false );
 	}
+
+	/**
+	 * Create-or-recycle a test user for the given role. Mirrors the pattern
+	 * in `run-cap-tests.php` so the e2e walk doesn't silently degrade to
+	 * admin-only on a sparsely-populated wp-env. Returns the user id, or
+	 * null if creation fails (extremely unusual).
+	 */
+	public static function ensure_user( $login, $role ) {
+		$user = get_user_by( 'login', $login );
+		if ( $user ) {
+			$user->set_role( $role );
+			return (int) $user->ID;
+		}
+		$id = wp_create_user( $login, wp_generate_password( 16 ), $login . '@example.test' );
+		if ( is_wp_error( $id ) ) {
+			return null;
+		}
+		$u = get_user_by( 'id', $id );
+		$u->set_role( $role );
+		self::$created_user_ids[] = (int) $id;
+		return (int) $id;
+	}
+
+	public static function cleanup() {
+		foreach ( self::$created_user_ids as $id ) {
+			wp_delete_user( $id, 1 );
+		}
+		self::$created_user_ids = array();
+	}
 }
 
 $T = 'WPAS_Cap_Gating_Smoke_Test_Runner';
 
-// Helper — resolve user id for a role, or null when no fixture user exists.
+// Delete any users this run created, even on early exit / fatal.
+register_shutdown_function( array( $T, 'cleanup' ) );
+
+// Helper — return id of an existing user in $role, creating a per-role
+// fixture (`wpas_smoke_<role>`) if none is found. Falls back to null only
+// when creation itself fails.
 function wpas_cap_smoke_user_for_role( $role ) {
+	// Prefer an existing fixture (avoids churn on repeat runs).
 	$user = get_user_by( 'login', $role );
-	if ( $user ) {
+	if ( $user && in_array( $role, (array) $user->roles, true ) ) {
 		return (int) $user->ID;
 	}
-	// Fallback: find any user holding the role.
 	$users = get_users( array( 'role' => $role, 'number' => 1 ) );
 	if ( ! empty( $users ) ) {
 		return (int) $users[0]->ID;
 	}
-	return null;
+	// None present in this env — create one. Admin uses the wp-env default
+	// 'admin' user when available; everything else gets a `wpas_smoke_*`
+	// fixture so the cleanup hook can identify what to delete.
+	return WPAS_Cap_Gating_Smoke_Test_Runner::ensure_user( "wpas_smoke_$role", $role );
 }
 
 // ── 1. resolve() canonical shape ─────────────────────────────────────
@@ -433,19 +471,29 @@ if ( isset( $role_visible_counts['subscriber'] ) ) {
 		$role_visible_counts['subscriber'] < ( $role_visible_counts['administrator'] ?? PHP_INT_MAX )
 	);
 }
+// Guard against silent degeneration to admin-only on a sparsely-populated
+// wp-env: the monotonic-visibility assertion below is vacuous with one
+// data point. `ensure_user()` creates per-role fixtures so this is
+// usually 5, but if creation fails for any role we still want a failure
+// signal rather than green-on-a-vacuum.
+$T::assert_true(
+	'e2e: at least 3 roles actually walked (catches silent admin-only degeneration)',
+	count( $role_visible_counts ) >= 3
+);
+
 // Monotonic — each role at least as broad as the role below.
 $ordered_seen = array_intersect_key(
 	$role_visible_counts,
 	array_flip( $roles_to_walk )
 );
-$prev_count = -1;
+$prev_count = null;
 $monotonic  = true;
 $prev_role  = '';
 foreach ( $roles_to_walk as $role ) {
 	if ( ! isset( $ordered_seen[ $role ] ) ) {
 		continue;
 	}
-	if ( $ordered_seen[ $role ] < $prev_count ) {
+	if ( $prev_count !== null && $ordered_seen[ $role ] < $prev_count ) {
 		$monotonic = false;
 		echo "      role $prev_role had $prev_count visible, $role has " . $ordered_seen[ $role ] . " — non-monotonic\n";
 	}
@@ -498,7 +546,14 @@ function wpas_cap_smoke_count_menu_items( $menu, $screens, $user_id ) {
 	return $count;
 }
 
-// Re-resolve as admin to get the canonical menu shape.
+// Re-resolve once as admin to get the canonical menu shape, then walk
+// per-role using the admin-resolved tree. ASSUMPTION: `wp-admin-default`
+// declares no role/user-origin overrides to its menu shape — its menu is
+// admin-baseline across all roles, and per-role visibility differs only
+// via the inherited screen `permissions`. A future shell that customizes
+// the menu per role (e.g. via `wp_admin_shell_data_role` filter) would
+// break this assumption — that case needs the per-role re-resolve pattern
+// used by the screen-visibility walk above.
 wp_set_current_user( $admin_id );
 WP_Admin_Shell_Resolver::reset_request_memo();
 $admin_resolved = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );

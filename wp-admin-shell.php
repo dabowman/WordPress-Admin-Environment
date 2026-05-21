@@ -568,6 +568,16 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		}
 	}
 
+	// v3: menu items can carry their own `permissions.capabilities[]`
+	// when they don't inherit from a bound screen (e.g. standalone link
+	// items registered via `wp_admin_shell_register_menu_item()`). Walk
+	// the menu tree so those caps reach the runtime cap-map too — without
+	// this, `userCan()` would default-false on inline-permissioned menu
+	// items that have no screen binding.
+	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
+		wpas_collect_menu_item_caps( $config['menu'], $declared );
+	}
+
 	// Built-in source capability floors (mirrors registry/builtins.js
 	// `capabilities` arrays). Kept tight to the surface authors actually
 	// declare — adding every WP cap here would inflate the inline script.
@@ -580,6 +590,33 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		$out[ $cap ] = current_user_can( $cap );
 	}
 	return $out;
+}
+
+/**
+ * Walk a v3 menu tree (recursive `items` map) and collect every cap slug
+ * declared on `permissions.capabilities[]`. Mirrors the screen-perms walk
+ * for menu items that don't inherit perms from a bound screen.
+ */
+function wpas_collect_menu_item_caps( $menu, &$declared ) {
+	if ( ! is_array( $menu ) ) {
+		return;
+	}
+	foreach ( $menu as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		$caps = $item['permissions']['capabilities'] ?? array();
+		if ( is_array( $caps ) ) {
+			foreach ( $caps as $cap ) {
+				if ( is_string( $cap ) && $cap !== '' ) {
+					$declared[ $cap ] = true;
+				}
+			}
+		}
+		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
+			wpas_collect_menu_item_caps( $item['items'], $declared );
+		}
+	}
 }
 
 /**
