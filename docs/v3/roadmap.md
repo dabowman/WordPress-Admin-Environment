@@ -11,8 +11,8 @@ PR #49 against `main` (branch: `feat/wp-admin-shell-v3`).
 | **3a** — schemas + cascade null-tombstone | ✅ Shipped | `586ade2` |
 | **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` ⚠️ view-config resolver was lossy (collapsed CIAB 3-axis registry); restoration plan in `docs/plans/2026-05-20-dataview-registry-restoration.md` corrects this. |
 | **3c slice** — minimum end-to-end (compiler + engine defaultRegions + v3 default workspace mounting) | ✅ Shipped | `7980ca7`, `9e6b73a`, `6389449`, `14ed501`, `c945b15`, `8b0948c`, `ac8d058`, `5ccde5e`, `eff4ed5` |
-| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🟡 In progress (3c.1 + 3c.2 shipped; 3c.3 pending) | 3c.1: dashboard-host on `feat/v3-3c1-dashboard-host`; 3c.2 in `7d460a5` |
-| **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🔲 Pending | — |
+| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | ✅ Shipped (3c.1 / 3c.2 / 3c.3 / 3c.4 all landed) | 3c.1: dashboard-host on `feat/v3-3c1-dashboard-host`; 3c.2 in `7d460a5`; 3c.3 in `968a3da`; 3c.4 in `134637f` |
+| **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🟡 In progress (3d.1 / 3d.2 / 3d.3 / 3d.5 shipped; 3d.4 doc sweep pending) | 3d.1: `f624231`, 3d.2: `51249de`, 3d.3 on `feat/v3-3d3-test-surface`, 3d.5: `8f39e5f` |
 
 ## Locked design decisions
 
@@ -263,15 +263,48 @@ through the v3.0.x release cycle:
    reversal — legacy `wp_admin_shell_view_config_*` is downstream of
    the new-name filter and sees its modifications.
 
-### 3d.3 — Test surface rewrites (~5-10 days)
+### 3d.3 — Test surface rewrites — ✅ Shipped
 
-Currently 990 assertions green. After v2 shell deprecation:
-- Drop tests targeting v2-shape-only surfaces.
-- Add v3-shape coverage for migrated shells.
-- Add classic wp-admin menu bridge tests.
-- Add multi-app layout tests (if 3c.4 lands).
+Three landings, all on `feat/v3-3d3-test-surface`:
 
-Target: ~1000-1200 v3-shape assertions.
+1. **`run-cap-gating-smoke.php` ported to v3.** Replaces the v2 nav-items
+   capability pruning smoke (the v2 region tree it walked was retired
+   in 3d.1). The v3 equivalent exercises the screen + menu capability
+   gating surface via `WP_Admin_Shell_Permissions`: OR-semantic cap and
+   role evaluation, app-floor AND-required backstop, unknown-slug
+   fail-closed, super-admin magic, trust-tier shrink-only enforcement
+   with audit-log assertions, and an end-to-end role-walk over the
+   bundled `wp-admin-default` workspace asserting monotonic visibility
+   (subscriber ≤ author ≤ editor ≤ admin) without coupling tests to
+   exact-id authoring decisions. 5 → 38 assertions. The
+   `WP_Admin_Shell_Permissions` class was a latent coverage gap from
+   the 3b cascade work — defined but never `require_once`'d by the
+   main plugin file. The smoke port also adds the missing require.
+
+2. **`run-shape-tests.php` modernized for v3.** Dropped the dead v1
+   branch (no v1 shells ship since 3a). Added v3-specific top-level
+   `workspace` / `screens` block presence per shell, plus a multi-app
+   slot-route synthesis walk that asserts `@<slot>/<path>` routes
+   surface for every `screens[id].apps[]` entry declaring an engine
+   slot. 119 → 133 assertions (+14).
+
+3. **`wp_admin_shell_resolve_capabilities()` extended to walk v3
+   screens.** A side-effect of 3d.1 was that the cap-precompute
+   collector — which builds the runtime cap-map injected via
+   `wp_add_inline_script` — only walked v2 region.capability fields,
+   missing every cap declared at `screens[id].permissions.capabilities[]`.
+   `run-cap-tests.php` had been failing 17/54 since the v3 default
+   landed; the collector extension restores 54/54 green.
+
+Counts after the sweep: **1579 assertions** (885 PHP + 510 Node runtime
++ 103 schema + 4 parity + 77 TS engine). Well above the
+~1000-1200 target.
+
+Known coverage gap deferred to a future test-surface follow-up:
+`<PersistentRegion>` `data-app-mounted` attribute emission (kernel emits
+only for `routing.mode: "mirror"` regions) — exercised end-to-end via
+engine CSS collapse, but lacks a unit-level assertion. Needs JSDOM
+scaffold (issue #30).
 
 ### 3d.4 — Documentation sweep (~1-2 days)
 
