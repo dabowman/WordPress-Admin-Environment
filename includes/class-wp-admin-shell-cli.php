@@ -259,24 +259,48 @@ class WP_Admin_Shell_CLI {
 	 * patterns) before writing. Validation errors surface as
 	 * `WP_CLI::warning()`s and abort the write unless `--force` is set.
 	 *
+	 * **Source lookup precedence:** the CLI first checks for a file at
+	 * `<source>` (relative-to-cwd OR absolute), then falls back to
+	 * `shells/<source>.json` under the plugin root. Running the CLI
+	 * from a directory carrying a file named `<slug>` (without
+	 * `.json`) may match unexpectedly; pass an explicit absolute path
+	 * or use the slug form from an unrelated cwd to disambiguate.
+	 *
+	 * **`regions` block preservation:** v2 shells declaring a `regions`
+	 * block (rare) get the block copied verbatim into the v3 output
+	 * under the v3 `regions` escape hatch. v3's region shape may
+	 * diverge from v2's; the output passes the rewriter clean but
+	 * may fail Ajv validation post-merge. Hand-review any migrated
+	 * shell that carried a custom `regions` block.
+	 *
+	 * **`infer_kind_name` heuristic:** when a route's `app` manifest
+	 * doesn't declare a `dataView` block, the rewriter falls back to
+	 * reading `(postType, config.postType)` then `(taxonomy,
+	 * config.taxonomy)`. If both are set (unusual), `postType` wins.
+	 *
 	 * ## OPTIONS
 	 *
 	 * <slug-or-path>
 	 * : Either an active-shell slug (resolves via `shells/<slug>.json`)
-	 * or an absolute file path to a v2 admin.json document.
+	 * or an absolute file path to a v2 admin.json document. Cwd-relative
+	 * file matches take precedence over slug lookup — see "Source
+	 * lookup precedence" above.
 	 *
 	 * [--dry-run]
 	 * : Print the rewritten JSON to stdout; do not write any file.
 	 *
 	 * [--output=<path>]
 	 * : Explicit destination file path. Default: source-path with
-	 * `.json` replaced by `.v3.json`.
+	 * `.json` replaced by `.v3.json`. Source paths already ending in
+	 * `.v3.json` are kept as-is (no `.v3.v3.json` doubling).
 	 *
 	 * [--force]
-	 * : Overwrite an existing destination file. Without this flag,
-	 * existing files trigger an abort. Additionally, when set, the
-	 * write proceeds even when lightweight v3 schema validation
-	 * surfaces errors.
+	 * : Dual-purpose. (1) Overwrite an existing destination file
+	 * (default: abort if the destination exists). (2) Bypass
+	 * lightweight v3 schema validation errors and write anyway
+	 * (default: abort on validation errors). Both behaviors gated by
+	 * the same flag for ergonomic simplicity; pass `--force` only
+	 * when you've reviewed the destination + the validation warnings.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -316,7 +340,12 @@ class WP_Admin_Shell_CLI {
 			);
 		}
 
-		$v3 = WP_Admin_Shell_Migrate_Rewriter::rewrite( $v2 );
+		$warnings = array();
+		$v3       = WP_Admin_Shell_Migrate_Rewriter::rewrite( $v2, array(), $warnings );
+
+		foreach ( $warnings as $warn ) {
+			WP_CLI::warning( $warn );
+		}
 
 		$errors = WP_Admin_Shell_Migrate_Rewriter::lightweight_validate( $v3 );
 		foreach ( $errors as $err ) {

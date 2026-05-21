@@ -84,7 +84,7 @@ class WP_Admin_Shell_Migrate_Rewriter {
 	 * Main entry point: take a v2-shape admin.json array, return a
 	 * v3-shape array. Pure — no IO, no global writes.
 	 *
-	 * @param array $v2  Source doc.
+	 * @param array $v2       Source doc.
 	 * @param array $opts {
 	 *     Optional rewrite options.
 	 *
@@ -92,9 +92,17 @@ class WP_Admin_Shell_Migrate_Rewriter {
 	 *                              to `../docs/schemas/admin-v3.json`
 	 *                              (matches 3d.1 in-repo convention).
 	 * }
+	 * @param array $warnings Out-param. Receives a list of non-fatal
+	 *                        translation issues the caller should
+	 *                        surface (e.g. orphan `default-route`,
+	 *                        preserved `regions` block, etc.).
+	 *                        Empty array on clean migration.
 	 * @return array v3-shape doc.
 	 */
-	public static function rewrite( $v2, $opts = array() ) {
+	public static function rewrite( $v2, $opts = array(), &$warnings = null ) {
+		if ( $warnings === null ) {
+			$warnings = array();
+		}
 		if ( ! is_array( $v2 ) ) {
 			return array();
 		}
@@ -120,8 +128,19 @@ class WP_Admin_Shell_Migrate_Rewriter {
 		$default_route = isset( $v2['default-route'] ) && is_string( $v2['default-route'] )
 			? $v2['default-route']
 			: '';
-		if ( $default_route !== '' && isset( $path_to_screen_id[ $default_route ] ) ) {
-			$workspace['default-screen'] = $path_to_screen_id[ $default_route ];
+		if ( $default_route !== '' ) {
+			if ( isset( $path_to_screen_id[ $default_route ] ) ) {
+				$workspace['default-screen'] = $path_to_screen_id[ $default_route ];
+			} else {
+				// Orphan default-route — v2 carried a path that doesn't
+				// match any of the synthesized screen ids. The output
+				// drops `workspace.default-screen` silently; warn the
+				// caller so they can hand-pick a default post-migration.
+				$warnings[] = sprintf(
+					'default-route `%s` does not resolve to any synthesized screen — `workspace.default-screen` omitted from output.',
+					$default_route
+				);
+			}
 		}
 
 		// styles.branding.{logo,title} → workspace.branding.{logo,title}.
@@ -214,9 +233,12 @@ class WP_Admin_Shell_Migrate_Rewriter {
 		}
 
 		// regions — v2 escape hatch. Preserve under v3's same-named escape
-		// hatch block. Most shells won't carry one.
-		if ( isset( $v2['regions'] ) && is_array( $v2['regions'] ) ) {
+		// hatch block. Most shells won't carry one. v3's region shape may
+		// diverge from v2's (e.g. mirror-mode `routing.mode` declarations
+		// added in 3c.4); hand-review any preserved block.
+		if ( isset( $v2['regions'] ) && is_array( $v2['regions'] ) && ! empty( $v2['regions'] ) ) {
 			$out['regions'] = $v2['regions'];
+			$warnings[]     = 'regions block preserved verbatim under the v3 escape hatch — v3 region shape may diverge from v2; hand-review.';
 		}
 
 		return $out;
@@ -734,12 +756,22 @@ class WP_Admin_Shell_Migrate_CLI_Helpers {
 
 	/**
 	 * Default output path: replace the source's `.json` suffix with
-	 * `.v3.json`. Sources without `.json` get `.v3.json` appended.
+	 * `.v3.json`. Sources already carrying a `.v3.json` suffix keep it
+	 * (no `.v3.v3.json` doubling). Sources without `.json` get
+	 * `.v3.json` appended.
 	 *
 	 * @param string $source_path
 	 * @return string
 	 */
 	public static function default_output_path( $source_path ) {
+		// `.v3.json` already present — overwrite-in-place semantics for
+		// re-running the migration against its own output (test fixtures
+		// + idempotency-checks). The CLI's destination-collision guard
+		// catches the actual file-exists case; this only avoids the
+		// `.v3.v3.json` suffix.
+		if ( substr( $source_path, -8 ) === '.v3.json' ) {
+			return $source_path;
+		}
 		if ( substr( $source_path, -5 ) === '.json' ) {
 			return substr( $source_path, 0, -5 ) . '.v3.json';
 		}

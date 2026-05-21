@@ -483,6 +483,68 @@ $T::eq(
 	WP_Admin_Shell_Migrate_CLI_Helpers::default_output_path( '/tmp/shell' ),
 	'/tmp/shell.v3.json'
 );
+$T::eq(
+	'Helpers::default_output_path: .v3.json suffix preserved (no .v3.v3.json doubling)',
+	WP_Admin_Shell_Migrate_CLI_Helpers::default_output_path( '/tmp/shell.v3.json' ),
+	'/tmp/shell.v3.json'
+);
+
+// ── 12b. Warnings out-param (PR #58 follow-ups) ─────────────────────
+
+// Orphan default-route warning.
+$orphan_doc = array(
+	'version'       => 1,
+	'engine'        => 'core:default',
+	'default-route' => '/missing-path',
+	'routes'        => array(
+		'/posts' => array( 'app' => 'core:posts' ),
+	),
+);
+$orphan_warnings = array();
+$orphan_v3       = WP_Admin_Shell_Migrate_Rewriter::rewrite( $orphan_doc, array(), $orphan_warnings );
+$T::ok(
+	'orphan default-route: warning emitted',
+	count( $orphan_warnings ) === 1
+);
+$T::ok(
+	'orphan default-route: warning names the unresolved path',
+	strpos( $orphan_warnings[0], '/missing-path' ) !== false
+);
+$T::ok(
+	'orphan default-route: workspace.default-screen omitted from output',
+	! isset( $orphan_v3['workspace']['default-screen'] )
+);
+
+// Preserved regions block warning.
+$regions_doc = array(
+	'version' => 1,
+	'engine'  => 'core:default',
+	'regions' => array( 'sidebar' => array( 'app' => 'core:navigation' ) ),
+	'routes'  => array(),
+);
+$regions_warnings = array();
+WP_Admin_Shell_Migrate_Rewriter::rewrite( $regions_doc, array(), $regions_warnings );
+$T::ok(
+	'preserved regions: warning emitted',
+	count( $regions_warnings ) === 1
+);
+$T::ok(
+	'preserved regions: warning mentions hand-review',
+	strpos( $regions_warnings[0], 'hand-review' ) !== false
+);
+
+// Clean migration: no warnings.
+$clean_doc = array(
+	'version'       => 1,
+	'engine'        => 'core:default',
+	'default-route' => '/posts',
+	'routes'        => array(
+		'/posts' => array( 'app' => 'core:posts' ),
+	),
+);
+$clean_warnings = array();
+WP_Admin_Shell_Migrate_Rewriter::rewrite( $clean_doc, array(), $clean_warnings );
+$T::ok( 'clean migration: no warnings', count( $clean_warnings ) === 0 );
 
 // ── 13. Summary ────────────────────────────────────────────────────
 
