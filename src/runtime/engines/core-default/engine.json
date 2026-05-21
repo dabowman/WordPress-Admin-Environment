@@ -237,7 +237,7 @@
 		},
 		"detail": {
 			"template": "core:detail",
-			"routing": { "route-key": "detail" }
+			"routing": { "route-key": "detail", "mode": "mirror" }
 		},
 		"command-palette": {
 			"template": "core:overlay",

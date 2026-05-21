@@ -748,6 +748,92 @@ $T::eq(
 	'core:dashboard'
 );
 
+// _self defensive guard — a non-primary entry with slot=_self would
+// clobber the primary if synthesis didn't skip it. Assert it skips
+// cleanly (primary stays as the first entry's app).
+$multi_self_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'screens'   => array(
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'rogue',  'app' => 'core:editor', 'slot' => '_self' ),
+			),
+		),
+	),
+);
+$compiled_multi_self = WP_Admin_Shell_V3_Compiler::compile( $multi_self_doc );
+$T::eq(
+	'multi-app: _self guard — primary route stays on first apps[] entry',
+	$compiled_multi_self['routes']['/split']['app'],
+	'core:posts'
+);
+$T::ok(
+	'multi-app: _self guard — no @_self/split clobber route emitted',
+	! isset( $compiled_multi_self['routes']['@_self/split'] )
+);
+
+// Intra-slot collision — two non-primary entries claiming the same
+// slot. First-wins per `! isset` guard. Asserts the contract: later
+// entries silently lose to earlier siblings.
+$multi_collision_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'split' ),
+	'screens'   => array(
+		'split' => array(
+			'label' => 'Split',
+			'path'  => '/split',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:posts' ),
+				array( 'id' => 'first',  'app' => 'core:editor',  'slot' => 'detail' ),
+				array( 'id' => 'second', 'app' => 'core:profile', 'slot' => 'detail' ),
+			),
+		),
+	),
+);
+$compiled_multi_collision = WP_Admin_Shell_V3_Compiler::compile( $multi_collision_doc );
+$T::eq(
+	'multi-app: intra-slot collision — first entry wins the slot route',
+	$compiled_multi_collision['routes']['@detail/split']['app'],
+	'core:editor'
+);
+
+// Parametric primary path — slot route key inherits the param
+// segment verbatim. interpolate() at match time substitutes the
+// captured value into the slot route's config too if needed.
+$multi_param_doc = array(
+	'version'   => 3,
+	'workspace' => array( 'engine' => 'core:default', 'default-screen' => 'post-edit' ),
+	'screens'   => array(
+		'post-edit' => array(
+			'label' => 'Post Edit',
+			'path'  => '/posts/{id}/edit',
+			'apps'  => array(
+				array( 'id' => 'main',   'app' => 'core:editor' ),
+				array( 'id' => 'detail', 'app' => 'core:posts', 'slot' => 'detail',
+					'config' => array( 'postId' => '{id}' ) ),
+			),
+		),
+	),
+);
+$compiled_multi_param = WP_Admin_Shell_V3_Compiler::compile( $multi_param_doc );
+$T::ok(
+	'multi-app: parametric primary path keyed correctly',
+	isset( $compiled_multi_param['routes']['/posts/{id}/edit'] )
+);
+$T::ok(
+	'multi-app: parametric slot route inherits param segment',
+	isset( $compiled_multi_param['routes']['@detail/posts/{id}/edit'] )
+);
+$T::eq(
+	'multi-app: parametric slot route preserves {param} in config',
+	$compiled_multi_param['routes']['@detail/posts/{id}/edit']['config']['postId'],
+	'{id}'
+);
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n— Summary —\n";

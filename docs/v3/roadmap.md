@@ -189,7 +189,7 @@ Detailed deliverables waiting for implementation:
 - Spec docs: extension point #14 (`wp_admin_shell_classic_menu_core_slugs`) added to spec §13.
 - Out of scope (tracked as follow-ups): SVG icon harvesting + dynamic icon registration from data-URIs; multi-pane parent screens (deferred to 3c.4); removing the original entries from `$GLOBALS['menu']` (bridge is purely additive).
 
-### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred) — ✅ Shipped
+### 3c.4 — Multi-app layout algorithm — ✅ Shipped
 
 Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the first/primary app mounts via the synthesized route. Multi-app screens (e.g. `posts` + paired `core:editor` in detail slot) need:
 - Compiler synthesizes route configs for each `apps[]` entry, slotted into the appropriate URL slot.

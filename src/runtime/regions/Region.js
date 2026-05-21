@@ -185,17 +185,23 @@ function PersistentRegion( { region, matched, regionState, modeId } ) {
 	const style = toReactStyle( region.style );
 	const stateAttrs = regionStateDataAttrs( regionState, modeId );
 	// `data-app-mounted` lets engine CSS collapse slot-routed regions
-	// (e.g. `detail`) when no route matches AND the region has no
-	// static `app`. Multi-app screens (3c.4) toggle the attribute
-	// per-URL; single-app screens see `false` on slot regions like
-	// `detail` and CSS hides the empty container.
+	// (e.g. `detail`, `inspector`, `preview`) when no route matches.
+	// Emitted ONLY on regions declaring `routing.route-key` — those
+	// are the slot-routable regions that toggle per-URL. Non-routable
+	// regions (sidebar wrappers, container regions with child
+	// regions but no own app) never emit the attr, so the CSS hide
+	// rule can't accidentally collapse them.
+	const isRoutable = !! region?.routing?.[ 'route-key' ];
 	const hasMountedApp = !! ( matched?.app || region.app );
+	const appMountedAttr = isRoutable
+		? { 'data-app-mounted': hasMountedApp ? 'true' : 'false' }
+		: {};
 	return (
 		<div
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
-			data-app-mounted={ hasMountedApp ? 'true' : 'false' }
+			{ ...appMountedAttr }
 			style={ style }
 			{ ...stateAttrs }
 		>

@@ -641,6 +641,12 @@ class WP_Admin_Shell_V3_Compiler {
 				continue;
 			}
 
+			// Canonical primary-route key — shared by `_self` synthesis,
+			// the slot-routed-screen synthesis, and the multi-app peer
+			// synthesis. Single source of truth so each branch derives
+			// the same value.
+			$primary_route_key = $path !== '' ? $path : '/' . $screen_id;
+
 			$route_entry = array(
 				'app'    => $primary['app'],
 				'config' => array_merge(
@@ -650,9 +656,8 @@ class WP_Admin_Shell_V3_Compiler {
 			);
 
 			if ( $slot === '_self' ) {
-				$route_key = $path !== '' ? $path : '/' . $screen_id;
-				if ( ! isset( $routes[ $route_key ] ) ) {
-					$routes[ $route_key ] = $route_entry;
+				if ( ! isset( $routes[ $primary_route_key ] ) ) {
+					$routes[ $primary_route_key ] = $route_entry;
 				}
 			} else {
 				// Slot-routed screens. The kernel router reads slots via
@@ -667,7 +672,7 @@ class WP_Admin_Shell_V3_Compiler {
 				// Palette routes typically don't have a meaningful URL
 				// path beyond the slot identity — they mount when the
 				// `palette` slot is non-empty in the URL.
-				$slot_key = '@' . $slot . '/' . ( $path !== '' ? ltrim( $path, '/' ) : $screen_id );
+				$slot_key = '@' . $slot . '/' . ltrim( $primary_route_key, '/' );
 				if ( ! isset( $routes[ $slot_key ] ) ) {
 					$routes[ $slot_key ] = $route_entry;
 				}
@@ -683,8 +688,7 @@ class WP_Admin_Shell_V3_Compiler {
 			// dashboard host's `slot: "grid"` widgets) — those mount
 			// inside the host app, not via engine slots, so no route.
 			if ( isset( $screen['apps'] ) && is_array( $screen['apps'] ) ) {
-				$primary_path = $path !== '' ? $path : '/' . $screen_id;
-				$apps_list    = array_values( $screen['apps'] );
+				$apps_list = array_values( $screen['apps'] );
 				// Skip the first entry — already routed as the primary
 				// via primary_app() above.
 				for ( $i = 1; $i < count( $apps_list ); $i++ ) {
@@ -713,7 +717,7 @@ class WP_Admin_Shell_V3_Compiler {
 					$entry_config = isset( $entry['config'] ) && is_array( $entry['config'] )
 						? $entry['config']
 						: array();
-					$slot_route_key = '@' . $entry_slot . '/' . ltrim( $primary_path, '/' );
+					$slot_route_key = '@' . $entry_slot . '/' . ltrim( $primary_route_key, '/' );
 					if ( ! isset( $routes[ $slot_route_key ] ) ) {
 						$routes[ $slot_route_key ] = array(
 							'app'    => $entry_app,

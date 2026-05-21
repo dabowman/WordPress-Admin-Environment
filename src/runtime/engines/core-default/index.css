@@ -233,13 +233,15 @@
 	max-inline-size: 100%;
 }
 
-/* Multi-app layout (3c.4) — slot-routed regions like `detail` collapse
- * when no app mounts in them. The kernel emits `data-app-mounted="false"`
- * on persistent regions whose route doesn't match + has no static `app`.
- * Without this rule, the empty detail region keeps its `core:detail`
- * default-style `inline-size: min(720px, 50%)` and steals half the
- * content area on single-app screens. */
+/* Multi-app layout (3c.4) — slot-routed regions (`detail`, `inspector`,
+ * `preview`, future peers) collapse when no app mounts in them. The
+ * kernel emits `data-app-mounted="false"` on any persistent region
+ * whose route doesn't match AND has no static `app`. The rule covers
+ * every slot-routable region so adding new peer slots in defaultRegions
+ * doesn't need a parallel CSS update. Regions that should stay visible
+ * when empty (e.g. status surfaces with their own internal placeholder)
+ * opt out via `data-keep-visible-when-empty="true"`. */
 .wp-admin-shell-layout
-	.wp-admin-shell-region[data-region-id="detail"][data-app-mounted="false"] {
+	.wp-admin-shell-region[data-app-mounted="false"]:not([data-keep-visible-when-empty="true"]) {
 	display: none;
 }

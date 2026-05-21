@@ -24,7 +24,14 @@
  */
 
 const PARAM_RE = /\{([a-z][a-z0-9-]*)\}/g;
-const PATTERN_VALID_RE = /^\/[A-Za-z0-9_/{}\-*]*$/;
+// Two pattern shapes:
+//   - Primary path:   /posts, /posts/{id}, /media/*
+//   - Slot route-key: @<slot>/<path> where slot is a-z + 0-9 + hyphens
+// The slot prefix is the compiler's namespace for non-primary `apps[]`
+// entries (3c.4) — `@detail/<primary>`, `@inspector/<primary>`, etc.
+// Engine regions declaring `routing.mode: "mirror"` (or the default
+// "query" with no value) consult these via `useRouteForRegion`.
+const PATTERN_VALID_RE = /^(@[a-z][a-z0-9-]*)?\/[A-Za-z0-9_/{}\-*]*$/;
 
 export function isValidRoutePattern( pattern ) {
 	return typeof pattern === 'string' && PATTERN_VALID_RE.test( pattern );
@@ -205,13 +212,31 @@ export function parseHash( hash ) {
 /**
  * Read the URL slot value addressed by a region's `routing.route-key`.
  *
- *   route-key === '_self' → URL primary path
- *   any other key         → URL query parameter of the same name
+ * Three resolution modes:
+ *   - `_self`              → URL primary path (`/posts`). Always the
+ *                            content/main region's lookup.
+ *   - `query` (default)    → URL query parameter of the same name
+ *                            (`?palette=open` → "open"). Lets URL state
+ *                            drive what mounts in the slot — palette
+ *                            search input, modal trigger, etc.
+ *   - `mirror`             → synthesized `@<route-key>/<primary>` value
+ *                            (e.g. primary `/split` + route-key `detail`
+ *                            → `@detail/split`). Multi-app screens
+ *                            (3c.4) populate `screens[id].apps[i].slot`
+ *                            entries and the v3 compiler emits routes
+ *                            keyed at `@<slot>/<primary>`. Mirror mode
+ *                            is how the region's lookup finds them
+ *                            without the URL carrying redundant query
+ *                            params.
  *
- * Returns an empty string when the slot is unset; the matcher will then
- * return null (no route).
+ * Returns an empty string when the slot is unset; the matcher then
+ * returns null (no route → region renders empty / collapses).
+ *
+ * @param {Object} parsedUrl  Output of `parseHash`.
+ * @param {string} routeKey   Region's `routing.route-key`.
+ * @param {'query'|'mirror'} [mode] Resolution mode. Defaults to `query`.
  */
-export function readSlot( parsedUrl, routeKey ) {
+export function readSlot( parsedUrl, routeKey, mode ) {
 	if ( ! parsedUrl ) {
 		return '';
 	}
@@ -220,6 +245,13 @@ export function readSlot( parsedUrl, routeKey ) {
 	}
 	if ( ! routeKey ) {
 		return '';
+	}
+	if ( mode === 'mirror' ) {
+		const primary = parsedUrl.primary || '';
+		if ( primary === '' ) {
+			return '';
+		}
+		return '@' + routeKey + primary;
 	}
 	return parsedUrl.params?.[ routeKey ] || '';
 }
