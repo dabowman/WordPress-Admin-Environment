@@ -83,7 +83,7 @@ export default function CoreSiteEditorLayout( { regions } ) {
 				<div
 					className={ `wp-admin-shell-areas${
 						preview ? ' has-preview' : ''
-					}${ detail ? ' has-detail' : '' }` }
+					}` }
 				>
 					{ content && (
 						<Region key={ content.id } region={ content } />
