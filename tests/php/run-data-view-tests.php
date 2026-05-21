@@ -31,6 +31,10 @@
  *     + `_{variant}`) fire alongside the new names whenever a legacy filter
  *     is registered, short-circuit otherwise, and `_default` skips the
  *     variant suffix.
+ *   - v2 `viewConfigs` orphan migration warning (3d.5 Item 1) — emits
+ *     `_doing_it_wrong` once per request when the post-cascade resolved
+ *     doc still carries a non-empty top-level `viewConfigs` block;
+ *     one-shot guard suppresses repeats; empty / missing blocks silent.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
  * resolver directly with `$config` to avoid depending on disk shells.
@@ -1137,6 +1141,118 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	$auto_screen,
 	array()
 );
+
+// --- 3d.5 Item 1: v2 viewConfigs orphan migration warning -----------------
+//
+// v2 admin.json's top-level `viewConfigs` block is dead data under v3.
+// The resolver's low-priority post-merge hook should emit `_doing_it_wrong`
+// at most once per request when it sees a non-empty block in the
+// post-cascade resolved doc. Removed in v3.1.0.
+
+WP_Admin_Shell_Data_View_Config::reset();
+
+$doing_it_wrong_calls = array();
+$doing_it_wrong_capture = function ( $function, $message, $version ) use ( &$doing_it_wrong_calls ) {
+	$doing_it_wrong_calls[] = compact( 'function', 'message', 'version' );
+};
+add_action( 'doing_it_wrong_run', $doing_it_wrong_capture, 10, 3 );
+
+// Silence the actual notice — we just want the action fired.
+$original_doing_it_wrong_trigger = has_filter( 'doing_it_wrong_trigger_error' );
+add_filter( 'doing_it_wrong_trigger_error', '__return_false' );
+
+// Drive the hook directly with a synthesized doc carrying a non-empty
+// `viewConfigs` block — skips the rest of the cascade for a tight unit.
+$orphan_doc = array(
+	'viewConfigs' => array(
+		'postType' => array(
+			'post' => array(
+				'_default' => array( 'defaultView' => array( 'perPage' => 50 ) ),
+			),
+		),
+	),
+);
+$out = WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'warn_legacy_view_configs returns doc unchanged',
+	$out,
+	$orphan_doc
+);
+WPAS_Data_View_Test_Runner::assert_true(
+	'orphan viewConfigs triggered doing_it_wrong on first call',
+	count(
+		array_filter( $doing_it_wrong_calls, function ( $call ) {
+			return $call['function'] === 'wp_admin_shell viewConfigs';
+		} )
+	) === 1
+);
+
+// Second call within the same request — one-shot guard must suppress.
+$doing_it_wrong_calls = array();
+WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'second call within same request is one-shot suppressed',
+	count(
+		array_filter( $doing_it_wrong_calls, function ( $call ) {
+			return $call['function'] === 'wp_admin_shell viewConfigs';
+		} )
+	),
+	0
+);
+
+// After reset() — one-shot guard re-arms (test isolation).
+WP_Admin_Shell_Data_View_Config::reset();
+$doing_it_wrong_calls = array();
+WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'reset() re-arms the one-shot guard',
+	count(
+		array_filter( $doing_it_wrong_calls, function ( $call ) {
+			return $call['function'] === 'wp_admin_shell viewConfigs';
+		} )
+	),
+	1
+);
+
+// Empty `viewConfigs` block is silent.
+WP_Admin_Shell_Data_View_Config::reset();
+$doing_it_wrong_calls = array();
+WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( array( 'viewConfigs' => array() ) );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'empty viewConfigs block does not warn',
+	count( $doing_it_wrong_calls ),
+	0
+);
+
+// Missing `viewConfigs` block is silent.
+$doing_it_wrong_calls = array();
+WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( array( 'workspace' => array() ) );
+WPAS_Data_View_Test_Runner::assert_eq(
+	'missing viewConfigs block does not warn',
+	count( $doing_it_wrong_calls ),
+	0
+);
+
+// End-to-end — the hook fires when registered on `wp_admin_shell_data`.
+WP_Admin_Shell_Data_View_Config::reset();
+$doing_it_wrong_calls = array();
+$resolved = apply_filters( 'wp_admin_shell_data', $orphan_doc );
+WPAS_Data_View_Test_Runner::assert_true(
+	'end-to-end wp_admin_shell_data hook triggers the warning',
+	count(
+		array_filter( $doing_it_wrong_calls, function ( $call ) {
+			return $call['function'] === 'wp_admin_shell viewConfigs';
+		} )
+	) === 1
+);
+WPAS_Data_View_Test_Runner::assert_true(
+	'end-to-end hook returns doc with viewConfigs block intact (no auto-translation)',
+	isset( $resolved['viewConfigs']['postType']['post']['_default'] )
+);
+
+remove_action( 'doing_it_wrong_run', $doing_it_wrong_capture, 10 );
+remove_filter( 'doing_it_wrong_trigger_error', '__return_false' );
+WP_Admin_Shell_Data_View_Config::reset();
 
 // --- Summary ---------------------------------------------------------------
 

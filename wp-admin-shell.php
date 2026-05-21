@@ -384,6 +384,14 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
 		'shells'        => wp_admin_shell_get_available_shells(),
+		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
+		// production builds. PHP `_deprecated_hook` is gated by
+		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
+		// JS shims default to `NODE_ENV !== 'production'` so prod builds
+		// stay silent. Site admins with `WP_DEBUG` on get JS warnings
+		// even when consuming a minified shell bundle. Removed in v3.1
+		// when the shims themselves go away.
+		'debug'         => defined( 'WP_DEBUG' ) && WP_DEBUG,
 		'user'          => array(
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),

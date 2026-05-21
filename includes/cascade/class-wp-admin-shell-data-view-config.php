@@ -68,11 +68,24 @@ class WP_Admin_Shell_Data_View_Config {
 	private static $emitted_deprecation_notices = array();
 
 	/**
+	 * One-shot guard for the v2 `viewConfigs` migration warning. v3
+	 * doesn't read the top-level `viewConfigs` block — admin-customized
+	 * overrides on v2-shape shells silently drop on upgrade. The
+	 * `wp_admin_shell_data` hook below emits `_doing_it_wrong` at most
+	 * once per request when it sees a non-empty orphan block. Removed
+	 * in v3.1.0 alongside the v2-shape compatibility layer.
+	 *
+	 * @var bool
+	 */
+	private static $emitted_view_configs_orphan_notice = false;
+
+	/**
 	 * Reset internal state. Test-only.
 	 */
 	public static function reset() {
-		self::$warned_chains              = array();
-		self::$emitted_deprecation_notices = array();
+		self::$warned_chains                       = array();
+		self::$emitted_deprecation_notices         = array();
+		self::$emitted_view_configs_orphan_notice  = false;
 	}
 
 	/**
@@ -717,6 +730,50 @@ class WP_Admin_Shell_Data_View_Config {
 	}
 
 	/**
+	 * Warn when the resolved doc carries a non-empty top-level
+	 * `viewConfigs` block.
+	 *
+	 * v2 admin.json's top-level `viewConfigs` block becomes dead data
+	 * under v3 — the v3 resolver reads `settings.dataViews` (3-axis
+	 * registry) instead. v2-shape shells lurking in plugin / site / role
+	 * / user origins still serialize this block through the cascade, but
+	 * nothing downstream consumes it. Admin-customized overrides drop
+	 * silently on upgrade.
+	 *
+	 * Emits a one-shot `_doing_it_wrong` per request (the same resolved
+	 * doc is read many times per page render — only the first detection
+	 * matters). Removed in v3.1.0 alongside the v2-shape compatibility
+	 * layer.
+	 *
+	 * Hooked at low priority on `wp_admin_shell_data` so we see the
+	 * final resolved doc after every other filter has folded in. Does
+	 * NOT translate the block — that's the `wp admin-shell migrate-shell`
+	 * CLI's job (Phase 3d.2).
+	 *
+	 * @param array $doc Post-cascade resolved doc.
+	 * @return array Same doc, unchanged.
+	 */
+	public static function warn_legacy_view_configs( $doc ) {
+		if ( self::$emitted_view_configs_orphan_notice ) {
+			return $doc;
+		}
+		if ( ! is_array( $doc ) ) {
+			return $doc;
+		}
+		if ( empty( $doc['viewConfigs'] ) || ! is_array( $doc['viewConfigs'] ) ) {
+			return $doc;
+		}
+
+		self::$emitted_view_configs_orphan_notice = true;
+		_doing_it_wrong(
+			'wp_admin_shell viewConfigs',
+			esc_html__( 'The top-level `viewConfigs` block is a v2 shape that v3 no longer reads. Migrate to `settings.dataViews` via the `wp admin-shell migrate-shell` CLI (Phase 3d.2), or hand-merge each `(kind, name, variant|_default)` entry into the new path. The current `viewConfigs` block will be silently dropped at the v3.1 release.', 'wp-admin-shell' ),
+			'v3.0.0'
+		);
+		return $doc;
+	}
+
+	/**
 	 * Merge inline fields over a collection's base fields. Both arrays
 	 * are lists of field descriptors keyed by `id`. Inline overrides win
 	 * per-field (shallow merge); collection fields not redeclared carry
@@ -816,3 +873,9 @@ class WP_Admin_Shell_Data_View_Config {
 
 // Post-merge so admin.json (and downstream origins) are authoritative.
 add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'inject_app_baselines' ), 5 );
+
+// Low-priority orphan-`viewConfigs` migration warning. Runs after every
+// other filter has folded in so we see the final resolved doc. One-shot
+// per request via static guard. Removed in v3.1.0 alongside the v2-shape
+// compatibility layer.
+add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'warn_legacy_view_configs' ), 999 );

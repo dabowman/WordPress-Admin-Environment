@@ -1,4 +1,5 @@
 import { mergeFields } from './mergeFields.mjs';
+import { shouldWarnDeprecation } from './deprecation.mjs';
 
 /**
  * One-shot guards for deprecation-shim warnings — fire at most once per
@@ -367,10 +368,13 @@ function inferTriple( inline, screen ) {
 	return { kind, name, variant };
 }
 
+
 /**
  * Deprecation shim — v2 hydrate-helper name. Removed in v3.1.0.
- * Forwards to {@link hydrateInlineScreenDataView} with a one-shot dev
- * `console.warn`. Production builds are silent.
+ * Forwards to {@link hydrateInlineScreenDataView} with a one-shot
+ * `console.warn`. Warn gate: `NODE_ENV !== 'production'` OR
+ * `window.wpAdminShell.debug === true` (site admins with `WP_DEBUG` on
+ * get JS warnings even in prod builds).
  *
  * @deprecated Use `hydrateInlineScreenDataView` instead. Removed in v3.1.
  * @param {Object|null|undefined} inline
@@ -378,10 +382,7 @@ function inferTriple( inline, screen ) {
  * @returns {Object|null}
  */
 export function hydrateInlineScreenView( inline, screenId ) {
-	if (
-		typeof process === 'undefined' ||
-		( typeof process === 'object' && process?.env?.NODE_ENV !== 'production' )
-	) {
+	if ( shouldWarnDeprecation() ) {
 		if ( ! warnedHydrateScreen && typeof console !== 'undefined' ) {
 			warnedHydrateScreen = true;
 			// eslint-disable-next-line no-console
@@ -391,4 +392,13 @@ export function hydrateInlineScreenView( inline, screenId ) {
 		}
 	}
 	return hydrateInlineScreenDataView( inline, screenId );
+}
+
+/**
+ * Test helper — reset the one-shot warn guard (3d.5 Item 2 coverage).
+ *
+ * @returns {void}
+ */
+export function _resetHydrateDeprecationWarnGuard() {
+	warnedHydrateScreen = false;
 }
