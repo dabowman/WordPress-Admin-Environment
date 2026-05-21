@@ -271,9 +271,41 @@ export function _resetDataViewCache() {
 }
 
 /**
+ * Decide whether the deprecation `console.warn` shims should fire.
+ *
+ * Default — dev builds warn, production builds stay silent (preserves
+ * the no-console-spam-for-end-users guarantee).
+ *
+ * Opt-in — site admins running a production build with `WP_DEBUG`
+ * defined true see the warning regardless of build mode. PHP injects
+ * `window.wpAdminShell.debug` mirroring `WP_DEBUG` (3d.5 Item 2). Aligns
+ * the JS surface with PHP `_deprecated_hook`, which fires unconditionally
+ * once `WP_DEBUG_LOG` is on. Removed in v3.1 alongside the shims.
+ *
+ * @return {boolean} True when the shim should `console.warn`.
+ */
+function shouldWarnDeprecation() {
+	if (
+		typeof process === 'undefined' ||
+		process?.env?.NODE_ENV !== 'production'
+	) {
+		return true;
+	}
+	if (
+		typeof window !== 'undefined' &&
+		window.wpAdminShell?.debug === true
+	) {
+		return true;
+	}
+	return false;
+}
+
+/**
  * Deprecation shim — v2 hook name. Removed in v3.1.0. Re-exports
- * `useDataView` with a one-shot dev `console.warn`. Production builds
- * are silent. Internal callers should use `useDataView` directly.
+ * `useDataView` with a one-shot `console.warn`. Warn gate:
+ * `NODE_ENV !== 'production'` OR `window.wpAdminShell.debug === true`
+ * (site admins with `WP_DEBUG` on get JS warnings even in prod builds).
+ * Internal callers should use `useDataView` directly.
  *
  * @deprecated Use `useDataView` instead. Removed in v3.1.
  * @param {string|Object} arg
@@ -282,10 +314,7 @@ export function _resetDataViewCache() {
  */
 let warnedUseScreenView = false;
 export function useScreenView( arg, options ) {
-	if (
-		typeof process === 'undefined' ||
-		process?.env?.NODE_ENV !== 'production'
-	) {
+	if ( shouldWarnDeprecation() ) {
 		if ( ! warnedUseScreenView && typeof console !== 'undefined' ) {
 			warnedUseScreenView = true;
 			// eslint-disable-next-line no-console
@@ -301,7 +330,8 @@ export function useScreenView( arg, options ) {
  * Deprecation shim — v2 hook name. Removed in v3.1.0. Identical to
  * `useDataView`; the v2 surface accepted `(kind, name, variant?)` so
  * callers using that positional shape are forwarded into the new
- * `({kind,name,variant})` object form here.
+ * `({kind,name,variant})` object form here. Warn gate matches
+ * `useScreenView` — dev OR `wpAdminShell.debug === true`.
  *
  * @deprecated Use `useDataView` instead. Removed in v3.1.
  * @param {string|Object} kindOrArg
@@ -312,10 +342,7 @@ export function useScreenView( arg, options ) {
  */
 let warnedUseViewConfig = false;
 export function useViewConfig( kindOrArg, name, variant, options ) {
-	if (
-		typeof process === 'undefined' ||
-		process?.env?.NODE_ENV !== 'production'
-	) {
+	if ( shouldWarnDeprecation() ) {
 		if ( ! warnedUseViewConfig && typeof console !== 'undefined' ) {
 			warnedUseViewConfig = true;
 			// eslint-disable-next-line no-console
@@ -336,4 +363,13 @@ export function useViewConfig( kindOrArg, name, variant, options ) {
 		normalizedOptions = name;
 	}
 	return useDataView( normalizedArg, normalizedOptions );
+}
+
+/**
+ * Test helper — reset the one-shot warn guards (3d.5 Item 2 coverage).
+ * Not exported for production consumers.
+ */
+export function _resetDeprecationWarnGuards() {
+	warnedUseScreenView = false;
+	warnedUseViewConfig = false;
 }

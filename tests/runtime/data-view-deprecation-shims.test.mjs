@@ -7,7 +7,13 @@
  *     with identical return value.
  *   - The deprecation warning fires exactly once per session even when
  *     the shim is called multiple times.
- *   - In production (`NODE_ENV=production`), no console.warn fires.
+ *   - In production (`NODE_ENV=production`), no console.warn fires by
+ *     default.
+ *   - 3d.5 Item 2 — `window.wpAdminShell.debug === true` opt-in:
+ *     production builds re-emit the warn (matches PHP `_deprecated_hook`
+ *     unconditional dispatch). Only literal `=== true` opts in;
+ *     `debug=false`, absent, or no `wpAdminShell` keeps the silent
+ *     production default. One-shot guard still respected.
  *
  * The hook-shaped shims (`useScreenView`, `useViewConfig`) need a React
  * render environment for full coverage and are smoke-checked here for
@@ -103,10 +109,80 @@ ok( 'useScreenView is a function', typeof useScreenView === 'function' );
 ok( 'useViewConfig is a function', typeof useViewConfig === 'function' );
 ok( 'useDataView (canonical) is a function', typeof useDataView === 'function' );
 
-// 4. Restore NODE_ENV, restore warn, summarize.
+// --- 3d.5 Item 2 — debug-flag gating ----------------------------------------
+//
+// Default gate: NODE_ENV !== 'production' → warn fires.
+// Opt-in gate: NODE_ENV === 'production' AND wpAdminShell.debug === true →
+// warn still fires (site admins testing prod builds with WP_DEBUG on).
+// Otherwise (production + no debug flag): warn suppressed.
+
+const { _resetHydrateDeprecationWarnGuard } = await import(
+	'../../src/runtime/dataView/hydrateInline.mjs'
+);
+
+// 4a. Production + no debug flag → suppressed.
+process.env.NODE_ENV = 'production';
+const previousWindow = globalThis.window;
+globalThis.window = undefined;
+_resetHydrateDeprecationWarnGuard();
+const warnCountBeforeProd = warnCalls.length;
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+ok(
+	'production + no debug flag → console.warn suppressed',
+	warnCalls.length === warnCountBeforeProd
+);
+
+// 4b. Production + window.wpAdminShell.debug === true → warn fires.
+globalThis.window = { wpAdminShell: { debug: true } };
+_resetHydrateDeprecationWarnGuard();
+const warnCountBeforeDebug = warnCalls.length;
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+ok(
+	'production + wpAdminShell.debug=true → console.warn fires',
+	warnCalls.length === warnCountBeforeDebug + 1
+);
+
+// 4c. Production + wpAdminShell.debug not set → still suppressed.
+globalThis.window = { wpAdminShell: {} };
+_resetHydrateDeprecationWarnGuard();
+const warnCountBeforeMissing = warnCalls.length;
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+ok(
+	'production + wpAdminShell.debug absent → console.warn suppressed',
+	warnCalls.length === warnCountBeforeMissing
+);
+
+// 4d. Production + wpAdminShell.debug === false → still suppressed (strict
+//     equality check; only literal `true` opts in).
+globalThis.window = { wpAdminShell: { debug: false } };
+_resetHydrateDeprecationWarnGuard();
+const warnCountBeforeFalse = warnCalls.length;
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+ok(
+	'production + wpAdminShell.debug=false → console.warn suppressed',
+	warnCalls.length === warnCountBeforeFalse
+);
+
+// 4e. One-shot guard still respected with the debug flag set.
+globalThis.window = { wpAdminShell: { debug: true } };
+_resetHydrateDeprecationWarnGuard();
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+const warnCountAfterFirstDebug = warnCalls.length;
+hydrateInlineScreenView( fixtureSnapshot, 'posts' );
+ok(
+	'one-shot guard honors debug-flag path (no second warn)',
+	warnCalls.length === warnCountAfterFirstDebug
+);
+
+// Restore globals.
+globalThis.window = previousWindow;
+
+// 5. Restore NODE_ENV, restore warn, summarize.
 console.warn = originalWarn;
 if ( previousNodeEnv !== undefined ) {
 	process.env.NODE_ENV = previousNodeEnv;
+} else {
+	delete process.env.NODE_ENV;
 }
 
 console.log( '' );
