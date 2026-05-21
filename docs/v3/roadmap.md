@@ -233,21 +233,35 @@ CLI command `wp admin-shell migrate-shell <slug>` that reads a v2 shell file and
 - regions block → workspace.widgets where applicable.
 - routes' `config.variant` flows through as `screen.config.variant` on the synthesized screen — the v3 compiler does this automatically + the resolver's step-3 manifest-inference path reads it. The migration helper only needs to drop the routes block; screens are synthesized at boot via the v3 compiler's `synthesize_v2_screens_from_routes`.
 
-### 3d.5 — Pre-v3.1 shim-removal hardening (~1-2 days)
+### 3d.5 — Pre-v3.1 shim-removal hardening — Shipped
 
-Three items to address before the v3.1 cut removes the deprecation shims landed by the dataview-registry restoration (PR #50). All informational at v3-cut; load-bearing at v3.1-cut.
+All three items landed on `feat/v3-3d5-hardening`. The deprecation shims
+landed by PR #50 (dataview-registry restoration) are now safer to live
+through the v3.0.x release cycle:
 
-1. **v2 `viewConfigs` block migration warning.** v2 admin.json's top-level `viewConfigs` block becomes dead data under v3 — per-route-variant back-compat works via manifest inference, but admin-customized `viewConfigs` overrides silently drop on upgrade. Options (pick one):
-   - Add the CLI command described in 3d.2 above with a `--dry-run` mode so site admins can preview the rewrite.
-   - Add an admin notice on shell-load detecting a non-empty `viewConfigs` in any cascade origin, pointing at upgrade docs.
-   - Add a server-side log entry (via `_doing_it_wrong`) when the resolver encounters orphan `viewConfigs` data.
+1. **v2 `viewConfigs` block migration warning — shipped.**
+   `WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs()` hooks
+   `wp_admin_shell_data` at priority 999 and emits `_doing_it_wrong`
+   once per request when the post-cascade resolved doc still carries a
+   non-empty top-level `viewConfigs` block. One-shot guard suppresses
+   repeats. Does NOT auto-translate — that's the
+   `wp admin-shell migrate-shell` CLI's job (3d.2).
 
-2. **JS deprecation `console.warn` gating asymmetry.** The JS shims (`useScreenView`, `useViewConfig`, `hydrateInlineScreenView`) only warn when `process.env.NODE_ENV !== 'production'`. The PHP `_deprecated_hook` fires unconditionally (gated by `WP_DEBUG_LOG` only). Plugin authors testing in production builds get no JS signal + then break at v3.1-cut. Resolve by either:
-   - Dropping the production gate — one-shot guard already in place, cost is one warn per page load.
-   - Adding a server-side companion notice (PHP detects a v2-name filter attached + emits admin notice + logs).
-   - Gating on a separate `wpAdminShell.debug` flag in `window` config so site admins can opt in regardless of build mode.
+2. **JS deprecation warns gated on `wpAdminShell.debug` — shipped.**
+   PHP `wp-admin-shell.php` injects
+   `'debug' => defined('WP_DEBUG') && WP_DEBUG` into the inline-script
+   payload. The three JS shims (`useScreenView`, `useViewConfig`,
+   `hydrateInlineScreenView`) now warn when
+   `NODE_ENV !== 'production'` OR `window.wpAdminShell.debug === true`.
+   Site admins running production builds with `WP_DEBUG` on now see the
+   JS warning even though the bundle is minified. One-shot guards
+   preserved.
 
-3. **Filter ordering documentation.** Legacy `wp_admin_shell_view_config_*` fires AFTER the new-name `wp_admin_shell_data_view_config_*` filter (`includes/cascade/class-wp-admin-shell-data-view-config.php:117 → 128`). Plugin authors migrating may expect their v2-name filter to run first. Document in the upgrade guide that v2-name filters are downstream and may see modifications applied by v3 plugins.
+3. **Filter ordering documentation — shipped.** New
+   [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md) covers the full
+   migration timeline including the documented filter-ordering
+   reversal — legacy `wp_admin_shell_view_config_*` is downstream of
+   the new-name filter and sees its modifications.
 
 ### 3d.3 — Test surface rewrites (~5-10 days)
 
