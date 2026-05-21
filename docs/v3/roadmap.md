@@ -203,17 +203,25 @@ Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the fir
 
 ## Phase 3d — migration + final tests
 
-### 3d.1 — Migrate 5 remaining bundled shells (~2-3 days)
+### 3d.1 — Migrate 5 remaining bundled shells — ✅ Shipped
 
-In order of complexity:
-- `content-author.json` (smallest)
-- `client-portal.json`
-- `v2-demo.json`
-- `single-pane-demo.json` (engine: core:single-pane)
-- `developer-admin.json` (largest, multi-feature)
-- `desktop-demo.json` (engine: core:desktop)
+All 6 remaining bundled shells migrated to v3 shape; the v2
+`shells/wp-admin-default.json` removed (its v3 counterpart took the slug back):
 
-Each migration: rename to `<name>.v3.json`, restructure to v3 shape using `wp-admin-default-v3.json` as the canonical template.
+- `shells/content-author.v3.json` (writer; collapsed nav).
+- `shells/client-portal.v3.json` (branded; Acme logo + red accent preserved).
+- `shells/v2-demo.v3.json` (canonical-shape demo, user-switchable).
+- `shells/single-pane-demo.v3.json` (engine: `core:single-pane`).
+- `shells/developer-admin.v3.json` (largest; viewConfigs → settings.dataViews,
+  fieldCollections → settings.dataFields, design + system drill-downs become
+  menu containers).
+- `shells/desktop-demo.v3.json` (engine: `core:desktop`; dock items preserved
+  through the `regions` escape hatch).
+- `shells/wp-admin-default.json` (was `-v3`; the `-v3` suffix dropped post-v2-removal).
+
+Schema sweep extended to validate v3-shaped shells; cap-gating-smoke PHP test
+short-circuits with SKIP on v3 shells (the v2 nav-items capability pruning it
+exercised is now a screen/menu concern — port deferred to 3d.3).
 
 ### 3d.2 — v2 → v3 migration helper (~2-3 days)
 

@@ -204,12 +204,14 @@ Test layering matches `WP_Theme_JSON_*Test`'s pattern: schema validation, fixtur
 wp-admin-shell/
 ├── wp-admin-shell.php       # Plugin entry point (admin page, assets, settings, config loading)
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
-├── shells/                  # Bundled admin.json configurations (all in v2 shape — no settings.*, no kind/contains/source)
-│   ├── wp-admin-default.json  # DEFAULT install shell — wp-admin mirror w/ capability-gated nav items + iframe-fallback routes
-│   ├── developer-admin.json   # Demo: native v2 apps (users / comments / settings / site-editor) + drill-down design nav
-│   ├── content-author.json    # Demo: minimal writer shell (collapsed nav)
-│   ├── client-portal.json     # Demo: branded shell (logo, red accent, scoped nav)
-│   └── v2-demo.json           # Canonical-shape demo
+├── shells/                  # Bundled admin.json configurations (all in v3 shape — workspace/screens/menu)
+│   ├── wp-admin-default.json     # DEFAULT install shell — wp-admin mirror w/ capability-gated screens + iframe-fallback screens
+│   ├── developer-admin.v3.json   # Demo: native apps (users / comments / settings / site-editor) + drill-down design nav (menu containers)
+│   ├── content-author.v3.json    # Demo: minimal writer shell (collapsed nav)
+│   ├── client-portal.v3.json     # Demo: branded shell (logo, red accent, scoped nav)
+│   ├── v2-demo.v3.json           # Canonical-shape demo (legacy name; was v2-demo.json)
+│   ├── single-pane-demo.v3.json  # Demo: core:single-pane engine
+│   └── desktop-demo.v3.json      # Demo: core:desktop engine
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
 ├── includes/                # PHP
