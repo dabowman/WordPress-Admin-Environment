@@ -1,4 +1,5 @@
 import { mergeFields } from './mergeFields.mjs';
+import { shouldWarnDeprecation } from './deprecation.mjs';
 
 /**
  * One-shot guards for deprecation-shim warnings — fire at most once per
@@ -367,32 +368,6 @@ function inferTriple( inline, screen ) {
 	return { kind, name, variant };
 }
 
-/**
- * Decide whether the deprecation `console.warn` shim should fire.
- * Mirror of the `useDataView`-side gate (3d.5 Item 2).
- *
- * Default — dev builds warn, production builds stay silent.
- * Opt-in — site admins running a production build with `WP_DEBUG` on
- * see the warning regardless of build mode. PHP injects
- * `window.wpAdminShell.debug` mirroring `WP_DEBUG`. Removed in v3.1.
- *
- * @returns {boolean}
- */
-function shouldWarnDeprecation() {
-	if (
-		typeof process === 'undefined' ||
-		( typeof process === 'object' && process?.env?.NODE_ENV !== 'production' )
-	) {
-		return true;
-	}
-	if (
-		typeof window !== 'undefined' &&
-		window.wpAdminShell?.debug === true
-	) {
-		return true;
-	}
-	return false;
-}
 
 /**
  * Deprecation shim — v2 hydrate-helper name. Removed in v3.1.0.

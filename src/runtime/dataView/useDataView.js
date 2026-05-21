@@ -5,6 +5,7 @@ import {
 	hydrateInlineScreenDataView,
 	hydrateInlineDataViewTriple,
 } from './hydrateInline.mjs';
+import { shouldWarnDeprecation } from './deprecation.mjs';
 
 /**
  * Module-level cache for resolved DataView docs. Keyed independently
@@ -268,36 +269,6 @@ function devError( message ) {
 export function _resetDataViewCache() {
 	cache.clear();
 	inflight.clear();
-}
-
-/**
- * Decide whether the deprecation `console.warn` shims should fire.
- *
- * Default — dev builds warn, production builds stay silent (preserves
- * the no-console-spam-for-end-users guarantee).
- *
- * Opt-in — site admins running a production build with `WP_DEBUG`
- * defined true see the warning regardless of build mode. PHP injects
- * `window.wpAdminShell.debug` mirroring `WP_DEBUG` (3d.5 Item 2). Aligns
- * the JS surface with PHP `_deprecated_hook`, which fires unconditionally
- * once `WP_DEBUG_LOG` is on. Removed in v3.1 alongside the shims.
- *
- * @return {boolean} True when the shim should `console.warn`.
- */
-function shouldWarnDeprecation() {
-	if (
-		typeof process === 'undefined' ||
-		process?.env?.NODE_ENV !== 'production'
-	) {
-		return true;
-	}
-	if (
-		typeof window !== 'undefined' &&
-		window.wpAdminShell?.debug === true
-	) {
-		return true;
-	}
-	return false;
 }
 
 /**
