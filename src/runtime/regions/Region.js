@@ -184,16 +184,16 @@ function PersistentRegion( { region, matched, regionState, modeId } ) {
 	const className = regionClassName( region, regionState );
 	const style = toReactStyle( region.style );
 	const stateAttrs = regionStateDataAttrs( regionState, modeId );
-	// `data-app-mounted` lets engine CSS collapse slot-routed regions
-	// (e.g. `detail`, `inspector`, `preview`) when no route matches.
-	// Emitted ONLY on regions declaring `routing.route-key` — those
-	// are the slot-routable regions that toggle per-URL. Non-routable
-	// regions (sidebar wrappers, container regions with child
-	// regions but no own app) never emit the attr, so the CSS hide
-	// rule can't accidentally collapse them.
-	const isRoutable = !! region?.routing?.[ 'route-key' ];
+	// `data-app-mounted` lets engine CSS collapse multi-app peer
+	// regions (e.g. `detail`, `inspector`, `preview`) when no route
+	// matches. Emitted ONLY on regions that opt in via
+	// `routing.mode: "mirror"`. The `_self` content region and
+	// `query`-mode regions (palette etc.) keep their existing
+	// always-rendered behavior — collapse-when-empty is exclusively
+	// the multi-app peer-slot contract.
+	const isMirrorRouted = region?.routing?.mode === 'mirror';
 	const hasMountedApp = !! ( matched?.app || region.app );
-	const appMountedAttr = isRoutable
+	const appMountedAttr = isMirrorRouted
 		? { 'data-app-mounted': hasMountedApp ? 'true' : 'false' }
 		: {};
 	return (

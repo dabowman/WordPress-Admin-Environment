@@ -567,19 +567,22 @@ The list grows additively. New platform services join when real apps surface rea
 
 ### 5.4 `routing` — URL participation
 
-`routing` declares which slot of the URL the region reads from. v1 has one field:
+`routing` declares which slot of the URL the region reads from. Two fields:
 
 | Field | Purpose |
 |---|---|
-| `route-key` | The URL slot whose value resolves to a route, whose route's app mounts in this region. `_self` reads the URL's primary path. Any other value (e.g., `detail`) reads the URL query parameter of that name. |
+| `route-key` | The URL slot whose value resolves to a route, whose route's app mounts in this region. `_self` reads the URL's primary path. Any other value (e.g., `detail`) names a slot — the resolution strategy is selected by `mode`. |
+| `mode` | Slot resolution strategy. `query` (default) reads the URL query parameter of the same name (`?palette=open` → `"open"`). `mirror` synthesizes the slot value as `@<route-key><primary>` from the URL primary path — pairs with the v3 compiler's `@<slot>/<primary>` route synthesis for multi-app screens (§3c.4 / multi-app peer slots). Engine peer regions (`detail`, `inspector`, `preview`) opt into `mirror`; `_self` and query-driven regions (palette) keep the default. |
 
 A region with `route-key` is *routable*: the runtime takes the URL value at that slot, looks it up in the routes block (§6.2), and mounts the matching app in this region. Regions without `route-key` are non-routable — they hold a fixed `app` for the life of the shell, or are pure chrome with nested children.
 
-Multiple regions may be routable. `route-key: "_self"` is conventionally used by exactly one region per shell (the primary content region); other routable regions use named keys (`detail`, `inspector`, etc.) that match query-parameter names in the URL grammar (§6.4).
+Multiple regions may be routable. `route-key: "_self"` is conventionally used by exactly one region per shell (the primary content region); other routable regions use named keys (`detail`, `inspector`, etc.). In `query` mode the key matches a URL query parameter name (§6.4); in `mirror` mode the key forms the slot prefix for compiler-synthesized routes (e.g. `@detail/<primary>`).
+
+**Mirror-mode regions collapse when empty.** A `mode: "mirror"` region whose route doesn't match (and which has no static `region.app`) emits `data-app-mounted="false"` on its container so engine CSS can `display: none` it. Query-mode and `_self` regions keep their existing always-rendered behavior. Authors who want a mirror-mode region to stay visible when empty opt out via `data-keep-visible-when-empty="true"` on the engine's region declaration.
 
 **A region cannot have both a fixed `app` and `route-key`.** Either it holds an app for the life of the shell or it reads its app from the URL — never both. Mixing the two creates ambiguity about which app should be mounted at any given moment.
 
-**No HTML-attribute overload.** `route-key` is a shell-specific declaration that names the URL slot a region reads from. It is *not* the HTML `<a target>` attribute, which keeps its native browsing-context meaning (`_self`, `_blank`, etc.). Authors who want a link to mount an app in the detail region write the URL itself (`<a href="?detail=/posts/42/edit">Edit</a>`); the URL is the full source of truth and the browser handles the click natively.
+**No HTML-attribute overload.** `route-key` is a shell-specific declaration that names the URL slot a region reads from. It is *not* the HTML `<a target>` attribute, which keeps its native browsing-context meaning (`_self`, `_blank`, etc.). Authors who want a link to mount an app in the detail region write the URL itself (`<a href="?detail=/posts/42/edit">Edit</a>` for query-mode regions, or `<a href="#/split">Edit</a>` for mirror-mode regions where the slot is keyed off the primary path); the URL is the full source of truth and the browser handles the click natively.
 
 ### 5.5 Nested regions
 

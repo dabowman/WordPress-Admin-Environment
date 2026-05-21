@@ -376,7 +376,11 @@
 					"type": "object",
 					"additionalProperties": true,
 					"properties": {
-						"route-key": { "type": "string", "minLength": 1 }
+						"route-key": { "type": "string", "minLength": 1 },
+						"mode": {
+							"enum": [ "query", "mirror" ],
+							"description": "Slot resolution mode. `query` (default) reads the URL query parameter of the same name. `mirror` synthesizes `@<route-key><primary>` for multi-app peer slots (3c.4). See admin-v3.json#$defs/regionInstance.routing.mode for the full contract."
+						}
 					}
 				},
 				"platform": { "$ref": "#/$defs/regionPlatform" },
