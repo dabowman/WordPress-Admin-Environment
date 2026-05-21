@@ -235,6 +235,10 @@
 			"template": "core:main",
 			"routing": { "route-key": "_self" }
 		},
+		"detail": {
+			"template": "core:detail",
+			"routing": { "route-key": "detail" }
+		},
 		"command-palette": {
 			"template": "core:overlay",
 			"routing": { "route-key": "palette" },

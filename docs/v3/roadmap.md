@@ -189,11 +189,13 @@ Detailed deliverables waiting for implementation:
 - Spec docs: extension point #14 (`wp_admin_shell_classic_menu_core_slugs`) added to spec §13.
 - Out of scope (tracked as follow-ups): SVG icon harvesting + dynamic icon registration from data-URIs; multi-pane parent screens (deferred to 3c.4); removing the original entries from `$GLOBALS['menu']` (bridge is purely additive).
 
-### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred)
+### 3c.4 — Multi-app layout algorithm (~1-2 days, may be deferred) — ✅ Shipped
 
 Engine reads `screens[id].apps[]` and arranges multiple apps. Today only the first/primary app mounts via the synthesized route. Multi-app screens (e.g. `posts` + paired `core:editor` in detail slot) need:
 - Compiler synthesizes route configs for each `apps[]` entry, slotted into the appropriate URL slot.
 - Engine layout algorithm arranges visible regions.
+
+**Implementation:** survey came in at ~4-6h actual vs 1-2d estimate. Routing infrastructure already worked end-to-end; only the compiler's `synthesize_routes` skipped non-primary entries. Now walks every `apps[]` entry — entries with a `slot` emit `@<slot>/<path>` slot-namespaced routes that engine regions declaring `routing.route-key: "<slot>"` pick up. Entries without a slot stay app-internal (e.g. dashboard host's `slot: "grid"` widgets mount inside the host, not via engine slots). Existing `routes` block (escape hatch) wins on collision. `core:default` engine `defaultRegions` gains a `detail` region with `routing.route-key: "detail"`; `<PersistentRegion>` emits `data-app-mounted="false"` on regions without a route match + no static `app`; engine CSS collapses the empty detail container so single-app screens lose no content area. 14 new PHP assertions on the compiler synthesis path.
 
 ## Phase 3d — migration + final tests
 
