@@ -1,5 +1,5 @@
 {
-	"$schema": "https://schemas.wp.org/admin/v3.json",
+	"$schema": "../docs/schemas/admin-v3.json",
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "wp-admin-default",
