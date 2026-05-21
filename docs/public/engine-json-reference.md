@@ -226,7 +226,7 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 
 | Property      | Description                                                                                                                                                  | Type   | Default |
 |---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| modes         | Map of mode name → mode definition. Four standard names: `default`, `focus`, `takeover`, `modal`. Plugin engines may add their own.                          | object | —       |
+| modes         | Map of mode name → mode definition. Must contain a `default` key (schema-enforced). The other three conventional names (`focus`, `takeover`, `modal`) are unenforced conventions. Plugin engines may add their own.                          | object | —       |
 | modes.<name>.regions | Map of region id → state object. State keys (`hidden`, `compact`, etc.) are engine-defined.                                                          | object | —       |
 | modes.<name>.extends | Optional. Inherit from another mode in the catalog. Recursive, cycle-safe, max depth 10.                                                              | string | —       |
 
@@ -251,18 +251,18 @@ Engine-declared mount points beyond the kernel-reserved `_self` and `palette`. E
 | Property             | Description                                                                                       | Type   | Default |
 |----------------------|---------------------------------------------------------------------------------------------------|--------|---------|
 | slots                | Map of slot id → `{ description, scope }`. Slot ids are kebab-case.                              | object | —       |
-| slots.<id>.scope     | `"workspace"`, `"screen"`, or `"both"`.                                                            | string | `"screen"` |
+| slots.<id>.scope     | `"workspace"`, `"screen"`, or `"both"`. Required — no default.                                     | string | —       |
 | slots.<id>.description | Human-readable description for tooling.                                                          | string | —       |
 
 See [`docs/v3/schema-sketch.md#slots`](../v3/schema-sketch.md#slots) for the slot vocabulary design rationale.
 
 ## menu-renderer
 
-Identifier of the strategy the engine uses to render the workspace `menu` tree. Common values: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`). Plugin engines may register a custom renderer via `wp_admin_shell_register_menu_renderer( $id, $callback )`.
+Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_shell_register_menu_renderer( $id, $callback )`. Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
 
 | Property        | Description                                                                                              | Type   | Default |
 |-----------------|----------------------------------------------------------------------------------------------------------|--------|---------|
-| menu-renderer   | Renderer id. Plugin renderers use `plugin:{slug}/{name}` namespace.                                       | string | —       |
+| menu-renderer   | Renderer id. One of `sidebar-drilldown` / `sidebar-tree` / `dock` / `drawer` / `none` / `plugin:{slug}/{name}`. | string | `"none"` (when field omitted) |
 
 ## default-arrangement
 

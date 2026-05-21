@@ -147,7 +147,7 @@ Install-level chrome metadata: the engine, the default landing screen, branding,
 | Property         | Description                                                                                                                                          | Type    | Default |
 |------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
 | engine           | Identifier of the engine that renders this workspace. Common values: `core:default`, `core:single-pane`, `core:desktop`. Required.                    | string  | —       |
-| default-screen   | Screen id the workspace lands on when no URL hash is present. Falls through to the first permitted screen on capability denial. Required.             | string  | —       |
+| default-screen   | Screen id the workspace lands on when no URL hash is present. Optional — falls through to the first permitted screen with a `path` when omitted or denied by capability gating. | string  | —       |
 | branding         | `{ logo, title, icon }` — install-level branding shown by `core:site-hub` and similar chrome.                                                         | object  | —       |
 | notices          | `{ banner, snackbar }` — apps that render workspace-scope system notices.                                                                            | object  | —       |
 | widgets          | Map of `<slot>: [ { id, app, ... } ]` — apps that mount persistently across every screen, into engine-declared workspace slots.                       | object  | —       |
@@ -261,7 +261,7 @@ The map of every screen the workspace exposes. Each entry is keyed by a kebab-ca
 | Property | Description                                                                                                       | Type   | Default |
 |----------|-------------------------------------------------------------------------------------------------------------------|--------|---------|
 | id       | Cascade-merge key. Required.                                                                                      | string | —       |
-| app      | App id to mount. Required.                                                                                        | string | —       |
+| app      | App id to mount. Required on the originating entry; cascade overrides may omit `app` to deep-merge `config` / `slot` only against an existing id. | string | —       |
 | config   | Configuration passed to the app.                                                                                  | object | —       |
 | slot     | Screen-scope slot the app mounts in. Engine-declared (`detail`, `inspector`, etc.) or app-declared (`grid`).      | string | `_self` (the screen's primary region) |
 | size     | `{ w, h }` size hint when slotted into a grid-style container.                                                    | object | from app manifest `slotHints` |
