@@ -107,7 +107,15 @@ function isV1ShellShape( doc ) {
 
 function isV2ShellShape( doc ) {
 	// v2 puts engine + regions at root with no `settings` partition.
+	// v3 docs declare `version: 3` + a `workspace` block — exclude those.
+	if ( doc?.version === 3 || doc?.workspace ) {
+		return false;
+	}
 	return typeof doc?.engine === 'string' && ! doc?.settings;
+}
+
+function isV3ShellShape( doc ) {
+	return doc?.version === 3 || Boolean( doc?.workspace );
 }
 
 // ── Schema 1: legacy admin-v1.json ─────────────────────────────────
@@ -281,6 +289,16 @@ for ( const { key, schemaFile } of v3Schemas ) {
 				valid,
 				valid ? '' : formatErrors( validate.errors )
 			);
+		}
+
+		console.log( '\n  Bundled shells (v3 shape):' );
+		for ( const file of listJson( SHELLS_DIR ) ) {
+			const doc = readJson( join( SHELLS_DIR, file ) );
+			if ( ! isV3ShellShape( doc ) ) {
+				continue;
+			}
+			const valid = validate( doc );
+			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 
