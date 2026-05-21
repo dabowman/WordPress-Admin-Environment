@@ -547,6 +547,27 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		}
 	}
 
+	// v3: per-screen permissions block. screens[id].permissions has
+	// `capabilities[]` + `roles[]`; we collect the cap slugs so the
+	// runtime cap-map covers v3 screens the same way v2 region.capability
+	// strings were collected. Roles are evaluated separately (membership
+	// check, not a capability check).
+	if ( isset( $config['screens'] ) && is_array( $config['screens'] ) ) {
+		foreach ( $config['screens'] as $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$caps = $screen['permissions']['capabilities'] ?? array();
+			if ( is_array( $caps ) ) {
+				foreach ( $caps as $cap ) {
+					if ( is_string( $cap ) && $cap !== '' ) {
+						$declared[ $cap ] = true;
+					}
+				}
+			}
+		}
+	}
+
 	// Built-in source capability floors (mirrors registry/builtins.js
 	// `capabilities` arrays). Kept tight to the surface authors actually
 	// declare — adding every WP cap here would inflate the inline script.
