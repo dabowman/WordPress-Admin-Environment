@@ -1,9 +1,12 @@
-# WordPress Admin Shell — Design Spec v2
+# WordPress Admin Shell — Design Spec
 
-> **Status:** Living design document. Authoritative source for the WP Admin Shell architecture beyond MVP.
-> **Last revised:** 2026-05-01
-> **Replaces:** Earlier drafts of this document (most recent: 2026-04-29). The MVP spec ([`wp-admin-shell-mvp-spec.md`](./wp-admin-shell-mvp-spec.md)) remains the record of the proof-of-concept implementation that validated the approach. The previous architecture draft is preserved at [`wp-admin-shell-design-spec-2026-04-29.md`](./wp-admin-shell-design-spec-2026-04-29.md) for reference; some sections from it (token system details, cascade resolver internals, capability gating layers) carry forward unchanged and are referenced rather than restated.
-> **Major changes from prior draft:** The architecture has been substantially simplified. Three artifact types (app manifest, engine manifest, `admin.json`) replace the prior single-file shape. Region "kinds" are replaced by a three-layer vocabulary (`role` / `layout` / `platform`). Slots are removed in favor of recursive nested regions. The selection event bus is removed; app coordination is data-layer only. Navigation is URL-driven: every navigable surface in the shell is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes. The `tokens.json` layer moves from v2 to v1.
+> **Status:** Living design document. Authoritative source for the WP Admin Shell runtime architecture.
+> **Last revised:** 2026-05-21 (v3 schema reshape note added; runtime contracts unchanged from 2026-05-01 / 2026-05-04 URL-routing refinement).
+> **Schema-shape companion:** [`docs/v3/schema-sketch.md`](./v3/schema-sketch.md) is the canonical design doc for the v3 admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`). This spec covers the runtime contracts that survive the reshape unchanged — region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13). When this prose and the v3 schema disagree, the v3 schema wins; when this prose and runtime behavior disagree, runtime behavior wins.
+> **v2 → v3 migration:** [`docs/upgrade-v2-to-v3.md`](./upgrade-v2-to-v3.md) is the authoritative timeline for the v3.0 → v3.1 deprecation cycle.
+> **Replaces:** Earlier drafts of this document (most recent: 2026-04-29). The MVP spec ([`wp-admin-shell-mvp-spec.md`](./wp-admin-shell-mvp-spec.md)) remains the record of the proof-of-concept implementation that validated the approach. The previous architecture draft is preserved at [`archive/wp-admin-shell-design-spec-2026-04-29.md`](./archive/wp-admin-shell-design-spec-2026-04-29.md) for reference; some sections from it (token system details, cascade resolver internals, capability gating layers) carry forward unchanged and are referenced rather than restated.
+> **Major changes from 2026-04-29 draft:** The architecture has been substantially simplified. Three artifact types (app manifest, engine manifest, `admin.json`) replace the prior single-file shape. Region "kinds" are replaced by a three-layer vocabulary (`role` / `layout` / `platform`). Slots are removed in favor of recursive nested regions. The selection event bus is removed; app coordination is data-layer only. Navigation is URL-driven: every navigable surface in the shell is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes. The `tokens.json` layer moves from v2 to v1.
+> **v3 reshape note (2026-05 → ongoing):** admin.json was reshaped around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`routes` / `regions` / `viewConfigs` / `bindings`). The runtime region vocabulary, URL routing, capability gating, token system, and engine pluggability survive unchanged. The v3 schemas are at [`docs/schemas/admin-v3.json`](./schemas/admin-v3.json), [`admin-app-v3.json`](./schemas/admin-app-v3.json), [`admin-engine-v3.json`](./schemas/admin-engine-v3.json). The v3 PHP compiler (`WP_Admin_Shell_V3_Compiler`) synthesizes the internal region tree + routes from the v3 shape so the runtime kernel reads v2-shape internal output uniformly. Three new top-level engine blocks ship with v3: `menu-renderer`, `slots`, `modes`. The extension-point list (§13) grew from 13 → 14 to capture the classic wp-admin menu bridge (#14). The view-config primitive was renamed to `dataView` and the 3-axis CIAB registry restored — see §13 #7 + [`docs/dataview-config.md`](./dataview-config.md).
 
 ---
 
@@ -360,6 +363,8 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
 `admin.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
 
+> **v3 shape (active).** Authors write admin.json with the v3 top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/v3/schema-sketch.md`](./v3/schema-sketch.md) for the authoritative v3 shape and [`docs/schemas/admin-v3.json`](./schemas/admin-v3.json) for the schema. The example below shows the **v2 shape** the runtime kernel reads internally (after the v3 compiler synthesizes from `screens` / `menu`) — useful when reasoning about region declarations, but new shells should be authored in v3.
+
 ```jsonc
 {
   "$schema": "https://schemas.wp.org/admin/v1.json",
@@ -462,6 +467,8 @@ Notably absent compared to the prior draft:
 ## 5. Region vocabulary
 
 A region is declared by combining four optional concerns: role, layout, platform, routing. Each maps to a vocabulary with precedent: ARIA roles, CSS layout properties, browser/OS-analog platform services, and URL semantics. The shell adds a small remainder of fields (persistence, position) that have no clean external precedent.
+
+**Where region declarations live.** The runtime kernel reads a `regions` map keyed by region id. In v2 that map lives at the top of admin.json. In v3 the same map is synthesized by `WP_Admin_Shell_V3_Compiler::compile()` from `workspace.widgets[]` (persistent chrome bindings) + the active engine's `defaultRegions` (engine-shipped region tree) + per-screen `screens[id].regions` overrides (mode + per-region tweaks). Authors who need a region the v3 shape can't express still write a top-level `regions` block — admin.json's `regions` wins on per-region-id collision against compiler synthesis. The runtime contract on each region (role / layout / platform / routing / app / config / nested children) is identical across both shapes.
 
 A region declaration has this shape:
 
@@ -633,9 +640,12 @@ The router observes URL changes via the `hashchange` event (and the Navigation A
 
 ### 6.2 Routes block
 
-`admin.json`'s `routes` block maps URL patterns to app + config tuples. There is no `target` or destination-region field — the *URL slot* the route is matched against (primary path, named query parameter) determines which region mounts the app, via each region's `route-key` declaration (§5.4).
+The runtime kernel reads a flat `routes` block — URL patterns → app + config tuples. There is no `target` or destination-region field — the *URL slot* the route is matched against (primary path, named query parameter, or compiler-synthesized `@<slot>/<primary>`) determines which region mounts the app, via each region's `route-key` declaration (§5.4).
+
+In v3 the kernel still reads `routes`, but authors write `screens` (id-keyed map) instead, and `WP_Admin_Shell_V3_Compiler::compile()` synthesizes the runtime `routes` table from `screens[id].path` + `screens[id].apps[]`. v3 multi-app screens emit `@<slot>/<path>` slot-namespaced routes for every non-primary `apps[]` entry with a `slot`. Authors who need direct route declaration (escape hatch) still use a top-level `routes` block — admin.json's `routes` wins on per-pattern collision against compiler synthesis. v2 shells skip the screen layer and write `routes` directly; the v3 compiler's back-compat path passes them through unchanged.
 
 ```jsonc
+// Runtime-internal (synthesized in v3 / authored in v2)
 "routes": {
   "/posts/{id}": {
     "app": "core:editor",
@@ -643,6 +653,16 @@ The router observes URL changes via the `hashchange` event (and the Navigation A
       "post-type": "post",
       "post-id": "{id}"
     }
+  }
+}
+
+// v3 author shape (synthesizes the above)
+"screens": {
+  "post-edit": {
+    "label": "Edit Post",
+    "path": "/posts/{id}",
+    "app": "core:editor",
+    "config": { "post-type": "post", "post-id": "{id}" }
   }
 }
 ```
@@ -1054,11 +1074,15 @@ export default {
 
 **Migration of MVP `admin.json` files.** v0 (MVP flat shape: `branding`, `applications`, `navigation`, `toolbar` at root) is the only previous shape that actually shipped. The runtime accepts v0 files and normalizes them to the new shape internally — MVP `applications` map to apps in `regions` and `routes`; the MVP toolbar dropdown's shell-switcher is dropped per §6.4.1 of the prior draft. A `wp admin-shell upgrade-config <name>` command writes the normalized form back to disk for authors who want a clean v1 file.
 
+**v2 → v3 migration.** The v3 schema reshape is structural, not a rewrite — the runtime kernel is unchanged. v2 shells continue to validate through v3.0 (the schema sweep loads both v2 and v3 validators; the v3 PHP compiler synthesizes screens-from-routes for v2 shells). Mechanical mapping: `routes[]` → `screens[id]`, `viewConfigs` → `settings.dataViews`, `fieldCollections` → `settings.dataFields`, `bindings[]` → `commands[]`, `regions[]` → `workspace.widgets[]`, `branding` / `styles.*` → under `workspace`. The `wp admin-shell migrate-shell <slug>` CLI handles the transform; [`docs/upgrade-v2-to-v3.md`](./upgrade-v2-to-v3.md) is the authoritative timeline for the v3.0 → v3.1 deprecation cycle (filter renames, JS API renames, REST renames, deprecation tables). Filter `wp_admin_shell_view_config_*` → `wp_admin_shell_data_view_config_*[_{variant}]`; JS `useScreenView` + `useViewConfig` → overloaded `useDataView`; REST `/screen-view` → `/data-view`. All deprecation shims live for one release cycle (v3.0.x) with `_deprecated_hook` / `console.warn` / `X-WP-Deprecated` notices and break at v3.1.
+
 **Earlier draft.** The 2026-04-29 draft of this spec described a different v1 shape (`settings`/`styles` partition, region "kinds", selection event bus). That draft was never implemented. References to it in this document are historical only; there is no migration path from it because no shipping config used it.
 
 ---
 
 ## 15. Roadmap
+
+> **Current state (2026-05-21).** v1, v2.0.0-beta.1, and v2.0.0-beta.2 shipped (see CLAUDE.md Status block for tags). v3 schema reshape is in progress on `feat/wp-admin-shell-v3` — phases 3a / 3b / 3c slice / 3c.1 / 3c.2 / 3c.3 / 3c.4 / 3d.0 / 3d.1 / 3d.2 / 3d.5 shipped; 3d.3 + 3d.4 in flight. The roadmap sections below are the original v1 / v2 / v3 deliverables shape (≈3 months / 6–8 months / 9–12 months post-MVP). They are preserved for design intent; the live phase tracker is at [`docs/v3/roadmap.md`](./v3/roadmap.md).
 
 Three releases after MVP. Each builds on the prior.
 
@@ -1226,13 +1250,22 @@ This appendix preserves decisions made across the design process so context is n
 
 In-repo:
 
-- [`wp-admin-shell-mvp-spec.md`](./wp-admin-shell-mvp-spec.md) — MVP design spec
-- [`wp-admin-shell-design-spec-2026-04-29.md`](./wp-admin-shell-design-spec-2026-04-29.md) — prior architecture draft (preserved for context)
-- [`admin-customization-prior-art.md`](./admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context
-- [`shell-architecture-research.md`](./shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design
-- [`wordpress-design-tokens-catalog.md`](./wordpress-design-tokens-catalog.md) — WPDS surface inventory, three coexisting WP token systems, migration trajectory
-- [`wp-admin-screen-inventory.md`](./wp-admin-screen-inventory.md) — full surface map of `wp-admin` for porting prioritization
-- [`tokens-json-spec.md`](./tokens-json-spec.md) — planned standalone spec for the DTCG primitives layer (v2 deliverable)
+- [`v3/schema-sketch.md`](./v3/schema-sketch.md) — **v3 admin.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
+- [`v3/roadmap.md`](./v3/roadmap.md) — phase tracking, locked decisions, open questions.
+- [`upgrade-v2-to-v3.md`](./upgrade-v2-to-v3.md) — v2 → v3 deprecation timeline + mechanical migration mappings.
+- [`dataview-config.md`](./dataview-config.md) — author-facing guide for the v3 dataView primitive.
+- [`v3/core-default-engine.v3.md`](./v3/core-default-engine.v3.md) — engine contract worked example.
+- [`schemas/admin-v3.json`](./schemas/admin-v3.json), [`admin-app-v3.json`](./schemas/admin-app-v3.json), [`admin-engine-v3.json`](./schemas/admin-engine-v3.json) — v3 JSON Schemas (active).
+- [`schemas/admin-v2.json`](./schemas/admin-v2.json), [`admin-app-v2.json`](./schemas/admin-app-v2.json), [`admin-engine-v2.json`](./schemas/admin-engine-v2.json) — v2 schemas (still loaded by the schema sweep so v2 shells in plugin directories validate through v3.0).
+- [`public/admin-json-reference.md`](./public/admin-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
+- [`plans/2026-05-20-dataview-registry-restoration.md`](./plans/2026-05-20-dataview-registry-restoration.md) — design rationale for the dataView 3-axis registry.
+- [`wp-admin-shell-mvp-spec.md`](./wp-admin-shell-mvp-spec.md) — MVP design spec (historical).
+- [`archive/wp-admin-shell-design-spec-2026-04-29.md`](./archive/wp-admin-shell-design-spec-2026-04-29.md) — prior architecture draft (preserved for context).
+- [`admin-customization-prior-art.md`](./admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context.
+- [`shell-architecture-research.md`](./shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design.
+- [`wordpress-design-tokens-catalog.md`](./wordpress-design-tokens-catalog.md) — WPDS surface inventory, three coexisting WP token systems, migration trajectory.
+- [`wp-admin-screen-inventory.md`](./wp-admin-screen-inventory.md) — full surface map of `wp-admin` for porting prioritization.
+- [`tokens-json-spec.md`](./tokens-json-spec.md) — planned standalone spec for the DTCG primitives layer (v2 deliverable).
 
 External:
 
