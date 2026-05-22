@@ -468,6 +468,143 @@ $T::assert_eq(
 );
 remove_filter( 'wp_admin_shell_customizable_bypass', '__return_true' );
 
+// ── 3a. List-shape preservation through filter_v3_block ───────────────
+// Reviewer's finding #1: pre-fix, filter_v3_block flattened list-of-keyed-
+// objects into dot-paths and rehydrated them as assoc maps. Merge engine
+// then saw shape-mismatch base-vs-over and *replaced the entire base
+// list*. Catastrophic for commands[] consumers (compileCommands.mjs reads
+// a list); latent for preload[], routes[].
+
+echo "\n— List-shape preservation (filter_v3_block) —\n";
+
+// commands.<id>.shortcut allowlisted — survives + output is list-shape.
+$upstream = array(
+	'commands' => array(
+		array(
+			'id'           => 'save',
+			'shortcut'     => 'Mod+S',
+			'invoke'       => 'core/save',
+			'customizable' => array( 'shortcut' ),
+		),
+	),
+);
+$downstream = array(
+	'commands' => array(
+		array(
+			'id'       => 'save',
+			'shortcut' => 'Mod+Alt+S',
+		),
+	),
+);
+$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$T::assert_true(
+	'list-shape: commands[] survives as a list (NOT assoc map)',
+	is_array( $filtered['commands'] ?? null ) && ! WP_Admin_Shell_Merge::is_assoc( $filtered['commands'] )
+);
+$T::assert_eq(
+	'list-shape: commands[0].id preserved on the survived entry',
+	$filtered['commands'][0]['id'] ?? null,
+	'save'
+);
+$T::assert_eq(
+	'list-shape: commands[0].shortcut allowlisted value flows through',
+	$filtered['commands'][0]['shortcut'] ?? null,
+	'Mod+Alt+S'
+);
+
+// Merge the filtered downstream over the base — list shape must
+// round-trip the merge cleanly. Pre-fix, the assoc-map output here would
+// trip the merge engine's shape-mismatch branch (`base_is_assoc !==
+// over_is_assoc`) and the entire upstream commands list would be
+// *replaced* by the assoc map.
+$base_doc = array(
+	'commands' => array(
+		array( 'id' => 'save',   'shortcut' => 'Mod+S',     'invoke' => 'core/save' ),
+		array( 'id' => 'cancel', 'shortcut' => 'Escape',    'invoke' => 'core/cancel' ),
+		array( 'id' => 'find',   'shortcut' => 'Mod+F',     'invoke' => 'core/find' ),
+	),
+);
+$merged = WP_Admin_Shell_Merge::merge( $base_doc, $filtered );
+$T::assert_true(
+	'list-shape merge: merged commands stays a list',
+	is_array( $merged['commands'] ) && ! WP_Admin_Shell_Merge::is_assoc( $merged['commands'] )
+);
+$T::assert_eq(
+	'list-shape merge: all three base entries survive (no list-replacement bug)',
+	count( $merged['commands'] ),
+	3
+);
+$ids_after = array_column( $merged['commands'], 'id' );
+sort( $ids_after );
+$T::assert_eq(
+	'list-shape merge: cancel + find entries preserved alongside save',
+	$ids_after,
+	array( 'cancel', 'find', 'save' )
+);
+$save_after = null;
+foreach ( $merged['commands'] as $entry ) {
+	if ( $entry['id'] === 'save' ) {
+		$save_after = $entry;
+		break;
+	}
+}
+$T::assert_eq(
+	'list-shape merge: save entry got the new shortcut from consumer override',
+	$save_after['shortcut'] ?? null,
+	'Mod+Alt+S'
+);
+$T::assert_eq(
+	'list-shape merge: save entry retained its baseline invoke',
+	$save_after['invoke'] ?? null,
+	'core/save'
+);
+
+// Keyed-list nested under an assoc parent: `screens[id].apps[]`. The
+// downstream payload has `apps` as a list of `{id, app}` entries. After
+// filter_v3_block, the apps[] block should still be a list. Use
+// `customizable: true` on the screen entry to grant subtree access (the
+// path-allowlist tail matcher requires exact paths, so listing each
+// leaf would be verbose — `customizable: true` is the documented "all
+// fields writable downstream" shortcut).
+$upstream = array(
+	'screens' => array(
+		'posts' => array(
+			'label'        => 'Posts',
+			'customizable' => true,
+			'apps'         => array(
+				array( 'id' => 'list', 'app' => 'core:posts' ),
+			),
+		),
+	),
+);
+$downstream = array(
+	'screens' => array(
+		'posts' => array(
+			'apps' => array(
+				array( 'id' => 'list', 'app' => 'core:posts' ),
+				array( 'id' => 'preview', 'app' => 'core:editor' ),
+			),
+		),
+	),
+);
+$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$T::assert_true(
+	'nested keyed-list: screens.posts.apps[] stays a list',
+	is_array( $filtered['screens']['posts']['apps'] ?? null ) && ! WP_Admin_Shell_Merge::is_assoc( $filtered['screens']['posts']['apps'] )
+);
+$T::assert_eq(
+	'nested keyed-list: every consumer entry survives (with id field intact)',
+	count( $filtered['screens']['posts']['apps'] ),
+	2
+);
+$ids_nested = array_column( $filtered['screens']['posts']['apps'], 'id' );
+sort( $ids_nested );
+$T::assert_eq(
+	'nested keyed-list: id field preserved for round-trip merge',
+	$ids_nested,
+	array( 'list', 'preview' )
+);
+
 // ── 4. is_safe_href protocol-relative reject ──────────────────────────
 
 echo "\n— is_safe_href —\n";

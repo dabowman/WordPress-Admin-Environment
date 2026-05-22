@@ -229,6 +229,18 @@ class WP_Admin_Shell_Customizable {
 		$leaves   = array();
 		self::collect_leaves( $downstream_block, $block, $leaves );
 
+		// Capture every list-shape path the downstream block carried so we
+		// can rebuild list-shape in the output. Without this, the
+		// rehydrate step turns `commands: [{id:'save', shortcut:'…'}]`
+		// (list-of-keyed-objects) into `commands: {save: {shortcut:'…'}}`
+		// (assoc map). The merge engine then sees shape-mismatch base vs
+		// over and *replaces the entire base list*, silently corrupting
+		// the cascade. Catastrophic for `commands[]` consumers, latent
+		// risk for `preload[]` / `routes[]` lists too. See PR #61 review
+		// finding #1.
+		$list_shape_paths = array();
+		self::collect_list_shapes( $downstream_block, $block, $list_shape_paths );
+
 		$surviving = array();
 		foreach ( $leaves as $path => $value ) {
 			if ( self::path_matches_any_pattern( $path, self::DENY_PATTERNS ) ) {
@@ -255,7 +267,164 @@ class WP_Admin_Shell_Customizable {
 			$rel = substr( $path, $prefix_len );
 			self::dot_set( $out, $rel, $value );
 		}
+
+		// Restore list-of-keyed-objects shape at every path the downstream
+		// block carried as a list. Without this the rehydrated output is
+		// an assoc map keyed by id and the downstream merge step
+		// shape-mismatches against the list-shape upstream.
+		if ( ! empty( $list_shape_paths ) ) {
+			$out = self::restore_list_shapes( $out, $list_shape_paths, $block );
+		}
+
 		return $out;
+	}
+
+	/**
+	 * Walk the downstream block and record every path that holds a
+	 * list-of-keyed-objects. Returns a map of dotted path (including the
+	 * block name) → key-field name (`id` / `slug` / `name`).
+	 *
+	 * Mirrors the same id-detection used in `collect_leaves` so the
+	 * collected paths match exactly what gets flattened. Plain integer-
+	 * indexed lists are NOT captured — the rehydrate path uses the same
+	 * `0`, `1`, `2` keys for both list-form and map-form, so they
+	 * round-trip without intervention via `array_values()` at restore
+	 * time.
+	 */
+	private static function collect_list_shapes( $value, $path_prefix, &$out ) {
+		if ( ! is_array( $value ) || empty( $value ) ) {
+			return;
+		}
+		if ( WP_Admin_Shell_Merge::is_assoc( $value ) ) {
+			foreach ( $value as $k => $v ) {
+				self::collect_list_shapes( $v, $path_prefix . '.' . $k, $out );
+			}
+			return;
+		}
+		// List-form. Detect key field same way collect_leaves does so
+		// the resulting paths line up.
+		$key = null;
+		$first = reset( $value );
+		if ( is_array( $first ) ) {
+			foreach ( array( 'id', 'slug', 'name' ) as $k ) {
+				if ( array_key_exists( $k, $first ) ) {
+					$key = $k;
+					break;
+				}
+			}
+		}
+		if ( $key !== null ) {
+			// Record this path as a keyed-list — the rehydrated map at
+			// this path must be re-listified at restore time.
+			$out[ $path_prefix ] = $key;
+			foreach ( $value as $entry ) {
+				if ( ! is_array( $entry ) || ! isset( $entry[ $key ] ) ) {
+					continue;
+				}
+				$id = $entry[ $key ];
+				self::collect_list_shapes( $entry, $path_prefix . '.' . $id, $out );
+			}
+			return;
+		}
+		// Plain integer-indexed list. Track shape so restore can call
+		// `array_values()` to drop the numeric keys' association. Use a
+		// special sentinel key value for "no id field — just relist".
+		$out[ $path_prefix ] = self::LIST_INDEX_SENTINEL;
+		foreach ( $value as $i => $entry ) {
+			self::collect_list_shapes( $entry, $path_prefix . '.' . $i, $out );
+		}
+	}
+
+	/**
+	 * Walk the rehydrated output and convert every assoc map at a
+	 * captured list-shape path back into a list. For keyed lists, the
+	 * map's keys become the entries' `id`/`slug`/`name` field; for
+	 * integer-indexed lists, `array_values()` strips the numeric keys.
+	 *
+	 * @param array  $out             The rehydrated output tree.
+	 * @param array  $list_shape_paths Map of dotted path → key field or
+	 *                                LIST_INDEX_SENTINEL.
+	 * @param string $block_name      Block name (so paths can be
+	 *                                resolved relative to it).
+	 */
+	private static function restore_list_shapes( $out, $list_shape_paths, $block_name ) {
+		// Walk longest paths first — deeper paths must be relisted before
+		// their containing path is relisted, otherwise the parent walk
+		// would walk a still-map child and miss the relist.
+		$paths = array_keys( $list_shape_paths );
+		usort( $paths, function ( $a, $b ) {
+			return substr_count( $b, '.' ) - substr_count( $a, '.' );
+		} );
+
+		foreach ( $paths as $full_path ) {
+			$key_field = $list_shape_paths[ $full_path ];
+			// Strip the block-name prefix to get the relative path in $out.
+			$rel = ( $full_path === $block_name )
+				? ''
+				: substr( $full_path, strlen( $block_name ) + 1 );
+
+			$container_path = $rel === '' ? null : explode( '.', $rel );
+			$node           = self::dot_ref( $out, $container_path );
+			if ( ! is_array( $node ) || empty( $node ) || ! WP_Admin_Shell_Merge::is_assoc( $node ) ) {
+				continue;
+			}
+			$relisted = array();
+			if ( $key_field === self::LIST_INDEX_SENTINEL ) {
+				$relisted = array_values( $node );
+			} else {
+				foreach ( $node as $id => $body ) {
+					if ( is_array( $body ) ) {
+						$row                = $body;
+						$row[ $key_field ]  = $id;
+						$relisted[]         = $row;
+					}
+				}
+			}
+			self::dot_set_ref( $out, $container_path, $relisted );
+		}
+		return $out;
+	}
+
+	const LIST_INDEX_SENTINEL = "\0__list_index__\0";
+
+	/**
+	 * Resolve a value reference at a path; returns null if any segment
+	 * misses. Null `$path` segments means the root array itself.
+	 */
+	private static function dot_ref( $arr, $path_segments ) {
+		if ( $path_segments === null ) {
+			return $arr;
+		}
+		$cur = $arr;
+		foreach ( $path_segments as $seg ) {
+			if ( ! is_array( $cur ) || ! array_key_exists( $seg , $cur ) ) {
+				return null;
+			}
+			$cur = $cur[ $seg ];
+		}
+		return $cur;
+	}
+
+	/**
+	 * Assign a value at a path. Null `$path` segments replaces the root
+	 * entirely (used when the block itself is a list).
+	 */
+	private static function dot_set_ref( &$arr, $path_segments, $value ) {
+		if ( $path_segments === null ) {
+			$arr = $value;
+			return;
+		}
+		$cur = &$arr;
+		foreach ( $path_segments as $i => $seg ) {
+			if ( $i === count( $path_segments ) - 1 ) {
+				$cur[ $seg ] = $value;
+				return;
+			}
+			if ( ! isset( $cur[ $seg ] ) || ! is_array( $cur[ $seg ] ) ) {
+				$cur[ $seg ] = array();
+			}
+			$cur = &$cur[ $seg ];
+		}
 	}
 
 	/**
