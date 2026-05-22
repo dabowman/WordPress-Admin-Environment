@@ -3,9 +3,12 @@
  * Tests for the dataView cache LRU helper (`src/runtime/dataView/lruCache.mjs`).
  *
  * Item 7 of `docs/plans/2026-05-22-pr49-pre-merge-feedback.md` — caps the
- * persistent `cache` + `inflight` Maps so a long-running session bouncing
- * between many entity-CRUD apps × variants × screens doesn't grow the
- * cache without bound.
+ * persistent `cache` Map so a long-running session bouncing between many
+ * entity-CRUD apps × variants × screens doesn't grow without bound.
+ *
+ * `inflight` is intentionally unbounded — see `useDataView.js` for the
+ * rationale (self-limiting via `.finally`; bounding would risk dedup-
+ * misses on pathological concurrent-fetch storms).
  *
  * Insertion-order eviction (not access-order) — re-reading an entry
  * doesn't promote it. Updating an existing key's value also doesn't
@@ -17,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname   = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
-const { lruSet } = await import(
+const { lruSet, LRU_CAP: CAP } = await import(
 	resolve( projectRoot, 'src/runtime/dataView/lruCache.mjs' )
 );
 
@@ -34,7 +37,7 @@ function ok( label, condition, detail = '' ) {
 	}
 }
 
-const CAP = 64;
+ok( 'imported LRU_CAP equals 64 (default sizing)', CAP === 64 );
 
 // -------------------------------------------------------------------- 1
 // Overflow eviction.

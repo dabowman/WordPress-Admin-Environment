@@ -6,11 +6,11 @@ import {
 	hydrateInlineDataViewTriple,
 } from './hydrateInline.mjs';
 import { shouldWarnDeprecation } from './deprecation.mjs';
-import { lruSet } from './lruCache.mjs';
+import { lruSet, LRU_CAP } from './lruCache.mjs';
 
-// LRU cap sized for ~2× working set (entity-CRUD apps × variants × screens).
-// Tune after telemetry if eviction-rate becomes observable.
-const LRU_CAP = 64;
+// Re-export for callers that import the cap from this module (the LRU
+// test exercises lruCache.mjs directly).
+export { LRU_CAP };
 
 /**
  * Module-level cache for resolved DataView docs. Keyed independently
@@ -19,6 +19,16 @@ const LRU_CAP = 64;
  * collide. Survives across hook mounts. Bounded — see `LRU_CAP`.
  */
 const cache = new Map();
+
+/**
+ * In-flight fetch dedup map — `key` → unresolved promise. Self-limiting:
+ * each entry's `.finally` removes itself once the fetch settles, so the
+ * map only holds genuinely pending fetches. No LRU bound — bounding it
+ * would risk dropping a still-in-flight entry from the dedup map at >64
+ * concurrent fetches (pathological in practice), causing a concurrent
+ * caller for the same key to fire a duplicate fetch. The persistent
+ * `cache` is the load-bearing bound; `inflight` is self-draining.
+ */
 const inflight = new Map();
 
 /**
@@ -175,7 +185,11 @@ export function useDataView( arg, { fallback } = {} ) {
 			).finally( () => {
 				inflight.delete( key );
 			} );
-		lruSet( inflight, key, promise, LRU_CAP );
+		// `inflight` is unbounded by design — see the Map declaration above.
+		// The `.finally` cleanup keeps it self-limiting on actually-pending
+		// fetches; bounding it would risk dedup-misses on >64 concurrent
+		// in-flight fetches.
+		inflight.set( key, promise );
 
 		promise
 			.then( ( resolved ) => {
