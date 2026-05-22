@@ -6,12 +6,17 @@ import {
 	hydrateInlineDataViewTriple,
 } from './hydrateInline.mjs';
 import { shouldWarnDeprecation } from './deprecation.mjs';
+import { lruSet } from './lruCache.mjs';
+
+// LRU cap sized for ~2× working set (entity-CRUD apps × variants × screens).
+// Tune after telemetry if eviction-rate becomes observable.
+const LRU_CAP = 64;
 
 /**
  * Module-level cache for resolved DataView docs. Keyed independently
  * for screen lookups (`screen:<id>`) and triple lookups
  * (`triple:<kind>/<name>/<variant>`) so the two access paths never
- * collide. Survives across hook mounts.
+ * collide. Survives across hook mounts. Bounded — see `LRU_CAP`.
  */
 const cache = new Map();
 const inflight = new Map();
@@ -77,7 +82,7 @@ function readInlineScreen( screenId ) {
 		screenId
 	);
 	if ( hydrated ) {
-		cache.set( key, hydrated );
+		lruSet( cache, key, hydrated, LRU_CAP );
 		return hydrated;
 	}
 	return null;
@@ -101,7 +106,7 @@ function readInlineTriple( kind, name, variant ) {
 	}
 	const hydrated = hydrateInlineDataViewTriple( inline, kind, name, variant );
 	if ( hydrated && Object.keys( hydrated ).length > 0 ) {
-		cache.set( key, hydrated );
+		lruSet( cache, key, hydrated, LRU_CAP );
 		return hydrated;
 	}
 	return null;
@@ -170,14 +175,14 @@ export function useDataView( arg, { fallback } = {} ) {
 			).finally( () => {
 				inflight.delete( key );
 			} );
-		inflight.set( key, promise );
+		lruSet( inflight, key, promise, LRU_CAP );
 
 		promise
 			.then( ( resolved ) => {
 				if ( cancelled ) {
 					return;
 				}
-				cache.set( key, resolved );
+				lruSet( cache, key, resolved, LRU_CAP );
 				setDoc( resolved );
 				setIsLoading( false );
 			} )
