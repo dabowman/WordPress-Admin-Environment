@@ -304,6 +304,13 @@ class WP_Admin_Shell_Resolver {
 			return false;
 		}
 		$doc = json_decode( file_get_contents( $path ), true );
-		return is_array( $doc ) && ! empty( $doc['userSwitchable'] );
+		// Schema is canonical kebab (`user-switchable`); bundled shells
+		// ship the kebab form. Read the kebab form first; fall back to the
+		// legacy camelCase shape ONLY for back-compat with shells written
+		// before the casing was fixed.
+		return is_array( $doc ) && (
+			! empty( $doc['user-switchable'] ) ||
+			! empty( $doc['userSwitchable'] )
+		);
 	}
 }

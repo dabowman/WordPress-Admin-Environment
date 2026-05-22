@@ -99,6 +99,9 @@ class WP_Admin_Shell_Config {
 	}
 
 	public function get_user_switchable() {
-		return ! empty( $this->data['userSwitchable'] );
+		// Schema-canonical kebab; legacy camelCase fallback for shells
+		// authored before the casing was fixed.
+		return ! empty( $this->data['user-switchable'] ) ||
+			! empty( $this->data['userSwitchable'] );
 	}
 }

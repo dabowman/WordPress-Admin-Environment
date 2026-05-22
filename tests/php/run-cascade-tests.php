@@ -455,6 +455,26 @@ WP_Admin_Shell_Cache::flush();
 WP_Admin_Shell_Resolver::reset_request_memo();
 delete_option( 'wp_admin_shell_active_shell' );
 
+// ── user-switchable: schema-canonical kebab form ─────────────────────
+
+echo "\n— user-switchable kebab form —\n";
+
+// A bundled shell that ships `"user-switchable": true` in kebab form.
+// Pre-fix: production code read `userSwitchable` and silently treated
+// every shell as non-switchable (always-false). Post-fix: kebab wins.
+// `WP_Admin_Shell_Config::get_user_switchable()` exercises the same
+// reader path used by JS-side `window.wpAdminShell.shells` enumeration.
+$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'shells/desktop-demo.v3.json';
+if ( file_exists( $desktop_demo_path ) ) {
+	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
+	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-shell-config.php';
+	$cfg = new WP_Admin_Shell_Config( $desktop_demo_doc );
+	$T::assert_true(
+		'user-switchable: kebab "user-switchable: true" recognized via Config::get_user_switchable',
+		$cfg->get_user_switchable()
+	);
+}
+
 // ── Summary ─────────────────────────────────────────────────────────
 
 echo "\n— Summary —\n";
