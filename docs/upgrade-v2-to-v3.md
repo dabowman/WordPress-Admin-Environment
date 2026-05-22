@@ -219,6 +219,24 @@ per-origin `wp_admin_shell_data_{core,plugin,site,role,user}`, the menu/
 admin-route shims, the `wp_admin_shell_cache_signals` filter, and the new
 `wp_admin_shell_classic_menu_core_slugs` filter all keep their names.
 
+### Core callback priorities on `wp_admin_shell_data`
+
+The shell hooks the `wp_admin_shell_data` filter at fixed priorities so
+plugin authors targeting it at default priority 10 see a stable resolved
+shape. The ordering is contractual — do not assume any other interleaving:
+
+| Priority | Callback                                                       | What it does                                                                    |
+|---------:|----------------------------------------------------------------|---------------------------------------------------------------------------------|
+|        5 | `WP_Admin_Shell_Menu_Items::bind_screens`                      | Resolves menu items to their target screens; expands `screen` references.       |
+|        6 | `WP_Admin_Shell_Data_View_Config::inject_app_baselines`        | Folds each registered app's manifest `dataView` baseline into `settings.dataViews`. |
+|       10 | _Plugin authors' default_                                      | Observe / mutate the fully bound, baselined doc.                                |
+|      999 | `WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs`    | One-shot migration warning if the doc still carries a v2 `viewConfigs` block.   |
+
+Plugins contributing screens, menu items, or dataView baselines should
+prefer the per-origin `wp_admin_shell_data_{origin}` filters at priority
+5 — those fire BEFORE the cascade merge + before the priority-5/6
+callbacks above, so the contribution flows naturally through both passes.
+
 ## 4. Deprecation timetable
 
 | Surface                                                  | v3.0                                            | v3.1                |

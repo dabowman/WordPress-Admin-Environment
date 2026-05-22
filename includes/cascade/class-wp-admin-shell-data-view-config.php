@@ -872,7 +872,11 @@ class WP_Admin_Shell_Data_View_Config {
 }
 
 // Post-merge so admin.json (and downstream origins) are authoritative.
-add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'inject_app_baselines' ), 5 );
+// Priority 6 — sequenced AFTER `WP_Admin_Shell_Menu_Items::bind_screens` at
+// priority 5 so screens contributed by the menu-item shim are visible when
+// dataView baselines attach. See `docs/upgrade-v2-to-v3.md` filter-ordering
+// section.
+add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'inject_app_baselines' ), 6 );
 
 // Low-priority orphan-`viewConfigs` migration warning. Runs after every
 // other filter has folded in so we see the final resolved doc. One-shot
