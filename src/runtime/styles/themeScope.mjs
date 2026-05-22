@@ -16,6 +16,23 @@
  */
 
 /**
+ * DOM-attribute name for the scope wrapper that every `<ThemeProviderHost>`
+ * + `<ScopedThemeProvider>` emits. Engines that ship a `compileStyles`
+ * hook target the same attribute — keep this constant the single source
+ * of truth. Declared at the top of the module so `buildScopedDetailCss`
+ * (further down) can interpolate it into the scope selector instead of
+ * hardcoding the attribute string.
+ */
+export const THEME_SCOPE_ATTRIBUTE = 'data-theme-scope-id';
+
+/**
+ * DOM-attribute name for the sibling `<style>` block carrying the
+ * engine-compiled scoped CSS. Internal identifier only — tests + devtools
+ * use it to locate the emitted CSS.
+ */
+export const THEME_SCOPE_DETAIL_ATTRIBUTE = 'data-theme-scope-detail';
+
+/**
  * Extract a density value from a styles tree. Returns whatever string
  * the author authored (tier-1 `styles.theme.density`, tier-4 legacy
  * `styles.density`) or `undefined`. Validation of the value against a
@@ -137,7 +154,7 @@ export function buildScopedDetailCss( {
 		? compile( styles || {}, tokens || EMPTY_TOKENS )
 		: EMPTY_COMPILED;
 	const lines = [];
-	const scopeSel = `[data-theme-scope-id="${ providerId }"]`;
+	const scopeSel = `[${ THEME_SCOPE_ATTRIBUTE }="${ providerId }"]`;
 
 	const topVars = compiled.top || {};
 	if ( Object.keys( topVars ).length > 0 ) {
@@ -172,18 +189,3 @@ export function buildScopedDetailCss( {
 
 	return lines.join( '\n' );
 }
-
-/**
- * DOM-attribute name for the scope wrapper that every `<ThemeProviderHost>`
- * + `<ScopedThemeProvider>` emits. Engines that ship a `compileStyles`
- * hook target the same attribute — keep this constant the single source
- * of truth.
- */
-export const THEME_SCOPE_ATTRIBUTE = 'data-theme-scope-id';
-
-/**
- * DOM-attribute name for the sibling `<style>` block carrying the
- * engine-compiled scoped CSS. Internal identifier only — tests + devtools
- * use it to locate the emitted CSS.
- */
-export const THEME_SCOPE_DETAIL_ATTRIBUTE = 'data-theme-scope-detail';
