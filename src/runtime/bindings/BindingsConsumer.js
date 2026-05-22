@@ -1,9 +1,37 @@
-import { useEffect } from '@wordpress/element';
+import { useEffect, useMemo } from '@wordpress/element';
 
 import { useKernel } from '../kernel-context';
 import { parseShortcut } from './parseShortcut.mjs';
 import { trigger } from './triggerStore.mjs';
 import { navigate } from '../routing/router';
+
+/**
+ * Compile a `commands[]` / `bindings[]` array into the entry shape the
+ * keydown handler iterates: `{ match, invoke, navigate }`. Skips entries
+ * without a parseable shortcut or without at least one of
+ * invoke/navigate. Returns `[]` for nullish / empty inputs so the caller
+ * can use referential identity of the result for `useEffect` dep
+ * stability.
+ *
+ * Pure and side-effect-free — module-scope so the rebind test can
+ * exercise it without standing up a React tree.
+ *
+ * @param {Array<{shortcut?: string, invoke?: string, navigate?: string}>|null|undefined} commands Authored command/binding entries from the resolved config.
+ * @return {Array<{match: Function, invoke: string|null, navigate: string|null}>} Compiled entries, empty array for unusable input.
+ */
+export function buildCommandsArray( commands ) {
+	if ( ! Array.isArray( commands ) || commands.length === 0 ) {
+		return [];
+	}
+	return commands
+		.map( ( entry ) => ( {
+			match: parseShortcut( entry?.shortcut ),
+			invoke: typeof entry?.invoke === 'string' ? entry.invoke : null,
+			navigate:
+				typeof entry?.navigate === 'string' ? entry.navigate : null,
+		} ) )
+		.filter( ( e ) => e.match && ( e.invoke || e.navigate ) );
+}
 
 /**
  * Reads the resolved admin.json `commands` block (v3) and registers each
@@ -27,34 +55,23 @@ import { navigate } from '../routing/router';
  */
 export function BindingsConsumer() {
 	const { config } = useKernel();
-	// v3-compiled output always lives in `commands`; fall back to v2
-	// `bindings` for fixtures / tests that bypass the compiler.
-	let commands = null;
-	if ( Array.isArray( config?.commands ) ) {
-		commands = config.commands;
-	} else if ( Array.isArray( config?.bindings ) ) {
-		commands = config.bindings;
-	}
+	// Memoize the compiled command table on the underlying nested refs so
+	// the keydown handler binds once per real shortcut change, not once
+	// per router event. The outer config object ref churns on every
+	// resolved-tree update; `config.commands` / `config.bindings` are
+	// stable across renders that didn't touch them.
+	const compiled = useMemo( () => {
+		let source = null;
+		if ( Array.isArray( config?.commands ) ) {
+			source = config.commands;
+		} else if ( Array.isArray( config?.bindings ) ) {
+			source = config.bindings;
+		}
+		return buildCommandsArray( source );
+	}, [ config?.commands, config?.bindings ] );
 
 	useEffect( () => {
-		if (
-			! commands ||
-			commands.length === 0 ||
-			typeof window === 'undefined'
-		) {
-			return undefined;
-		}
-
-		const compiled = commands
-			.map( ( entry ) => ( {
-				match: parseShortcut( entry?.shortcut ),
-				invoke: typeof entry?.invoke === 'string' ? entry.invoke : null,
-				navigate:
-					typeof entry?.navigate === 'string' ? entry.navigate : null,
-			} ) )
-			.filter( ( e ) => e.match && ( e.invoke || e.navigate ) );
-
-		if ( compiled.length === 0 ) {
+		if ( compiled.length === 0 || typeof window === 'undefined' ) {
 			return undefined;
 		}
 
@@ -83,7 +100,7 @@ export function BindingsConsumer() {
 
 		document.addEventListener( 'keydown', onKey );
 		return () => document.removeEventListener( 'keydown', onKey );
-	}, [ commands ] );
+	}, [ compiled ] );
 
 	return null;
 }
