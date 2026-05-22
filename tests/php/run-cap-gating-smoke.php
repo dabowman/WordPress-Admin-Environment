@@ -1,261 +1,598 @@
 <?php
 /**
- * Cap-gating smoke for `wp-admin-default` against the v2 region tree.
+ * v3 cap-gating smoke — screen + menu visibility per role.
  *
- * The v2 shape carries nav items with inline `capability` fields under
- * `regions.sidebar.regions.nav.config.items[]`. The smoke walks the
- * resolved region tree, prunes nav items the current user can't reach
- * (`current_user_can($item['capability'])`), derives a stable id from
- * each surviving item's `href` (`#/dashboard/home` → `dashboard-home`),
- * and asserts the per-role visible-id set matches a hand-curated
- * expectation.
+ * Replaces the v2-shape nav-items capability pruning smoke (Phase 3d.1
+ * retired the v2 `shells/wp-admin-default.json`; the v3 equivalent is
+ * screen-level + menu-level capability gating).
  *
- * Mirrors the JS pruning logic in `src/apps/navigation/index.js#pruneNavItems`
- * — same recursion, same drop-orphan-separators rule.
+ * Coverage:
+ *   - `WP_Admin_Shell_Permissions::resolve()` produces canonical shape
+ *     when given a screen-permissions block.
+ *   - `WP_Admin_Shell_Permissions::user_passes()` evaluates OR-semantic
+ *     capability lists per role (any one cap passes).
+ *   - `WP_Admin_Shell_Permissions::user_passes()` evaluates OR-semantic
+ *     role membership lists (any one role passes).
+ *   - `WP_Admin_Shell_Permissions::user_passes()` combines caps + roles
+ *     (OR between the two fields too).
+ *   - App-floor AND-required caps are the absolute backstop (any missing
+ *     floor cap denies regardless of OR-set membership).
+ *   - Empty permissions block inflates to default admin-only via
+ *     `default_permissions()`.
+ *   - Unknown capability + role slugs fail closed.
+ *   - Magic `"super-admin"` role triggers `is_super_admin()`.
+ *   - `enforce_trust_tiers()` enforces restrict-only on role/user origins:
+ *     consumer origin can REMOVE from OR-set, attempts to ADD are
+ *     rejected + audit-logged.
+ *   - End-to-end: walk each role through the bundled `wp-admin-default`
+ *     workspace, count visible screens, assert role-level expectations
+ *     (no exact-id-list to avoid coupling tests to screen catalog
+ *     authoring decisions).
+ *   - Menu-tree pruning: items pointing at cap-restricted screens drop
+ *     from the rendered tree.
  *
- * Status: DEPRECATED for v3 shells. Phase 3d.1 retired the v2-shape
- * `shells/wp-admin-default.json`; the active default is now v3-shaped
- * (workspace/screens/menu) and the nav-items config block this smoke
- * walked is gone. The smoke now detects v3 shape and exits 0 with a
- * notice — a port to v3 menu/screen capability gating is tracked under
- * Phase 3d.3 (test surface rewrites).
- *
- * Run: wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php`
  */
 
-if ( ! class_exists( 'WP_Admin_Shell_Resolver' ) ) {
-	echo "Plugin not loaded.\n";
+defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
+
+$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
+require_once $plugin_dir . 'wp-admin-shell.php';
+
+if ( ! class_exists( 'WP_Admin_Shell_Permissions' ) ) {
+	echo "Plugin classes not loaded after require.\n";
 	exit( 1 );
 }
 
-$roles = array(
-	'subscriber'    => 'subscriber',
-	'contributor'   => 'contributor',
-	'author'        => 'author',
-	'editor'        => 'editor',
-	'administrator' => 'administrator',
-);
+class WPAS_Cap_Gating_Smoke_Test_Runner {
+	public static $pass = 0;
+	public static $fail = 0;
+	public static $created_user_ids = array();
 
-/** Hand-curated expected visible nav-item ids per role for `wp-admin-default`. */
-$expected = array(
-	'subscriber'    => array( 'dashboard-home', 'dashboard-widgets', 'profile', 'profile' ),
-	'contributor'   => array(
-		'dashboard-home', 'dashboard-widgets',
-		'posts', 'posts-drafts', 'posts-trash', 'posts-new',
-		'profile', 'profile',
-		'tools',
-	),
-	'author'        => array(
-		'dashboard-home', 'dashboard-widgets',
-		'posts', 'posts-drafts', 'posts-new', 'posts-trash',
-		'media', 'media-new',
-		'profile', 'profile',
-		'tools',
-	),
-	'editor'        => array(
-		'dashboard-home', 'dashboard-widgets',
-		'posts', 'posts-drafts', 'posts-pending', 'posts-trash', 'posts-new', 'posts-categories', 'posts-tags',
-		'media', 'media-new',
-		'pages', 'pages-drafts', 'pages-new',
-		'comments', 'comments-pending', 'comments-spam', 'comments-trash',
-		'profile', 'profile',
-		'tools',
-	),
-	'administrator' => array(
-		'dashboard-home', 'dashboard-widgets', 'dashboard-updates',
-		'posts', 'posts-drafts', 'posts-pending', 'posts-trash', 'posts-new', 'posts-categories', 'posts-tags',
-		'media', 'media-new',
-		'pages', 'pages-drafts', 'pages-new',
-		'comments', 'comments-pending', 'comments-spam', 'comments-trash',
-		'appearance-themes', 'appearance-themes-new', 'appearance-editor', 'appearance-customize', 'appearance-menus', 'appearance-widgets',
-		'plugins', 'plugins-active', 'plugins-inactive', 'plugins-new', 'plugins-editor',
-		'users', 'users-administrators', 'users-new',
-		'profile', 'profile',
-		'tools', 'tools-import', 'tools-export', 'tools-site-health', 'tools-export-data', 'tools-erase-data',
-		'settings-general', 'settings-writing', 'settings-reading', 'settings-discussion', 'settings-media', 'settings-permalinks', 'settings-privacy',
-	),
-);
-
-/**
- * Walk regions recursively, return the first nav-config items[] block we hit.
- *
- * @param array $regions
- * @return array
- */
-function smoke_find_nav_items( $regions ) {
-	if ( ! is_array( $regions ) ) {
-		return array();
-	}
-	foreach ( $regions as $region ) {
-		if ( ! is_array( $region ) ) {
-			continue;
-		}
-		if ( isset( $region['app'] ) && 'core:navigation' === $region['app'] ) {
-			return $region['config']['items'] ?? array();
-		}
-		if ( isset( $region['regions'] ) && is_array( $region['regions'] ) ) {
-			$found = smoke_find_nav_items( $region['regions'] );
-			if ( ! empty( $found ) ) {
-				return $found;
-			}
+	public static function assert_eq( $label, $actual, $expected ) {
+		if ( $actual === $expected ) {
+			self::$pass++;
+			echo "PASS  $label\n";
+		} else {
+			self::$fail++;
+			echo "FAIL  $label\n";
+			echo '      expected: ' . var_export( $expected, true ) . "\n";
+			echo '      actual:   ' . var_export( $actual, true ) . "\n";
 		}
 	}
-	return array();
+
+	public static function assert_true( $label, $actual ) {
+		self::assert_eq( $label, (bool) $actual, true );
+	}
+
+	public static function assert_false( $label, $actual ) {
+		self::assert_eq( $label, (bool) $actual, false );
+	}
+
+	/**
+	 * Create-or-recycle a test user for the given role. Mirrors the pattern
+	 * in `run-cap-tests.php` so the e2e walk doesn't silently degrade to
+	 * admin-only on a sparsely-populated wp-env. Returns the user id, or
+	 * null if creation fails (extremely unusual).
+	 */
+	public static function ensure_user( $login, $role ) {
+		$user = get_user_by( 'login', $login );
+		if ( $user ) {
+			$user->set_role( $role );
+			return (int) $user->ID;
+		}
+		$id = wp_create_user( $login, wp_generate_password( 16 ), $login . '@example.test' );
+		if ( is_wp_error( $id ) ) {
+			return null;
+		}
+		$u = get_user_by( 'id', $id );
+		$u->set_role( $role );
+		self::$created_user_ids[] = (int) $id;
+		return (int) $id;
+	}
+
+	public static function cleanup() {
+		foreach ( self::$created_user_ids as $id ) {
+			wp_delete_user( $id, 1 );
+		}
+		self::$created_user_ids = array();
+	}
 }
 
-/**
- * Mirrors `pruneNavItems` in src/apps/navigation/index.js.
- *
- * @param array $items
- * @return array
- */
-function smoke_prune_nav( $items ) {
-	if ( ! is_array( $items ) ) {
-		return array();
+$T = 'WPAS_Cap_Gating_Smoke_Test_Runner';
+
+// Delete any users this run created, even on early exit / fatal.
+register_shutdown_function( array( $T, 'cleanup' ) );
+
+// Helper — return id of an existing user in $role, creating a per-role
+// fixture (`wpas_smoke_<role>`) if none is found. Falls back to null only
+// when creation itself fails.
+function wpas_cap_smoke_user_for_role( $role ) {
+	// Prefer an existing fixture (avoids churn on repeat runs).
+	$user = get_user_by( 'login', $role );
+	if ( $user && in_array( $role, (array) $user->roles, true ) ) {
+		return (int) $user->ID;
 	}
-	$out = array();
-	foreach ( $items as $item ) {
+	$users = get_users( array( 'role' => $role, 'number' => 1 ) );
+	if ( ! empty( $users ) ) {
+		return (int) $users[0]->ID;
+	}
+	// None present in this env — create one. Admin uses the wp-env default
+	// 'admin' user when available; everything else gets a `wpas_smoke_*`
+	// fixture so the cleanup hook can identify what to delete.
+	return WPAS_Cap_Gating_Smoke_Test_Runner::ensure_user( "wpas_smoke_$role", $role );
+}
+
+// ── 1. resolve() canonical shape ─────────────────────────────────────
+
+$resolved = WP_Admin_Shell_Permissions::resolve(
+	array(
+		'capabilities' => array( 'edit_posts', 'edit_posts', '', 0 ),
+		'roles'        => array( 'editor', 'administrator' ),
+	),
+	array( 'manage_options' )
+);
+$T::assert_eq(
+	'resolve: capabilities deduped + non-string entries dropped',
+	$resolved['capabilities'],
+	array( 'edit_posts' )
+);
+$T::assert_eq(
+	'resolve: roles preserved with order',
+	$resolved['roles'],
+	array( 'editor', 'administrator' )
+);
+$T::assert_eq(
+	'resolve: appFloor surfaces',
+	$resolved['appFloor'],
+	array( 'manage_options' )
+);
+
+// Empty perms block (null) inflates to default admin-only.
+$default_perms = WP_Admin_Shell_Permissions::resolve( null );
+$T::assert_eq(
+	'resolve: null permissions defaults to admin-only roles',
+	$default_perms['roles'],
+	array( 'administrator', 'super-admin' )
+);
+$T::assert_eq(
+	'resolve: null permissions defaults to empty caps OR-set',
+	$default_perms['capabilities'],
+	array()
+);
+
+// Empty arrays inflate to admin-only too (fail-closed convention).
+$empty_perms = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array() )
+);
+$T::assert_eq(
+	'resolve: explicit empty arrays inflate to admin-only (fail-closed)',
+	$empty_perms['roles'],
+	array( 'administrator', 'super-admin' )
+);
+
+// ── 2. user_passes() — OR-set capability semantics ───────────────────
+
+$admin_id        = wpas_cap_smoke_user_for_role( 'administrator' );
+$editor_id       = wpas_cap_smoke_user_for_role( 'editor' );
+$author_id       = wpas_cap_smoke_user_for_role( 'author' );
+$contributor_id  = wpas_cap_smoke_user_for_role( 'contributor' );
+$subscriber_id   = wpas_cap_smoke_user_for_role( 'subscriber' );
+
+// Lower the bar — at least administrator must exist for the smoke to mean anything.
+if ( $admin_id === null ) {
+	echo "SKIP no administrator user found — cannot run smoke.\n";
+	echo "TOTAL: 0 passed, 0 failed (skipped)\n";
+	exit( 0 );
+}
+
+$caps_only_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array( 'edit_posts' ), 'roles' => array() )
+);
+
+$T::assert_true(
+	'user_passes: admin holds edit_posts → passes caps-only OR-set',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $caps_only_resolve )
+);
+
+if ( $subscriber_id !== null ) {
+	$T::assert_false(
+		'user_passes: subscriber lacks edit_posts → denied on caps-only OR-set',
+		WP_Admin_Shell_Permissions::user_passes( $subscriber_id, $caps_only_resolve )
+	);
+}
+
+// Multi-cap OR-set — any one cap suffices.
+$multi_cap_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array( 'manage_options', 'edit_posts' ), 'roles' => array() )
+);
+if ( $contributor_id !== null ) {
+	$T::assert_true(
+		'user_passes: contributor passes via OR (holds edit_posts even without manage_options)',
+		WP_Admin_Shell_Permissions::user_passes( $contributor_id, $multi_cap_resolve )
+	);
+}
+
+// ── 3. user_passes() — OR-set role semantics ─────────────────────────
+
+$roles_only_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'editor' ) )
+);
+if ( $editor_id !== null ) {
+	$T::assert_true(
+		'user_passes: editor passes role membership OR-set',
+		WP_Admin_Shell_Permissions::user_passes( $editor_id, $roles_only_resolve )
+	);
+}
+if ( $author_id !== null ) {
+	$T::assert_false(
+		'user_passes: author denied when role list is editor-only',
+		WP_Admin_Shell_Permissions::user_passes( $author_id, $roles_only_resolve )
+	);
+}
+
+// Multi-role OR-set.
+$multi_role_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'editor', 'author' ) )
+);
+if ( $author_id !== null ) {
+	$T::assert_true(
+		'user_passes: author passes when role list includes author',
+		WP_Admin_Shell_Permissions::user_passes( $author_id, $multi_role_resolve )
+	);
+}
+
+// ── 4. user_passes() — cap + role hybrid OR ───────────────────────────
+
+// User holds neither cap nor matching role → denied.
+$hybrid_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array( 'manage_options' ), 'roles' => array( 'editor' ) )
+);
+if ( $author_id !== null ) {
+	$T::assert_false(
+		'user_passes: author (no manage_options, not editor) denied by hybrid OR',
+		WP_Admin_Shell_Permissions::user_passes( $author_id, $hybrid_resolve )
+	);
+}
+if ( $editor_id !== null ) {
+	$T::assert_true(
+		'user_passes: editor passes hybrid via role match',
+		WP_Admin_Shell_Permissions::user_passes( $editor_id, $hybrid_resolve )
+	);
+}
+$T::assert_true(
+	'user_passes: admin passes hybrid via cap match',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $hybrid_resolve )
+);
+
+// ── 5. app-floor AND-required backstop ────────────────────────────────
+
+// OR-set permits via role, but app-floor demands a cap the role lacks.
+$floor_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'editor' ) ),
+	array( 'manage_options' )
+);
+if ( $editor_id !== null ) {
+	$T::assert_false(
+		'app-floor: editor OR-set passes but manage_options floor denies',
+		WP_Admin_Shell_Permissions::user_passes( $editor_id, $floor_resolve )
+	);
+}
+// Admin matches floor (manage_options) but fails the editor-only OR-set
+// (admin is in role 'administrator', not 'editor'). app-floor is a
+// backstop, not a bypass.
+$T::assert_false(
+	'app-floor: admin matches floor but fails OR-set when admin role excluded',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_resolve )
+);
+
+// Admin passes when admin role IS in the OR-set + floor matches.
+$floor_with_admin = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'administrator', 'editor' ) ),
+	array( 'manage_options' )
+);
+$T::assert_true(
+	'app-floor: admin passes when OR-set includes admin role + floor matches',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_with_admin )
+);
+
+// ── 6. unknown slugs fail closed ──────────────────────────────────────
+
+$unknown_cap = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array( 'this_cap_does_not_exist_xyz' ), 'roles' => array() )
+);
+$T::assert_false(
+	'unknown cap: no user can satisfy (fail-closed)',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $unknown_cap )
+);
+
+$unknown_role = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'this_role_does_not_exist_xyz' ) )
+);
+$T::assert_false(
+	'unknown role: no user can satisfy (fail-closed)',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $unknown_role )
+);
+
+// ── 7. super-admin magic ──────────────────────────────────────────────
+
+$super_admin_resolve = WP_Admin_Shell_Permissions::resolve(
+	array( 'capabilities' => array(), 'roles' => array( 'super-admin' ) )
+);
+// On single-site, is_super_admin is a synonym for "user can manage_options".
+// On multisite, it requires explicit grant. Assert behavior matches WP's
+// is_super_admin() — admins pass on single-site even without explicit grant.
+$expected_super_admin_admin = is_super_admin( $admin_id );
+$T::assert_eq(
+	'super-admin magic: admin user passes iff is_super_admin($admin_id)',
+	WP_Admin_Shell_Permissions::user_passes( $admin_id, $super_admin_resolve ),
+	$expected_super_admin_admin
+);
+
+if ( $subscriber_id !== null ) {
+	$T::assert_false(
+		'super-admin magic: subscriber never passes is_super_admin',
+		WP_Admin_Shell_Permissions::user_passes( $subscriber_id, $super_admin_resolve )
+	);
+}
+
+// ── 8. enforce_trust_tiers — restrict-only consumer origins ───────────
+
+WP_Admin_Shell_Permissions::reset_audit();
+
+$trust_per_origin = array(
+	'core'   => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'editor', 'author' ) ),
+	'plugin' => array( 'capabilities' => array( 'manage_options' ) ),
+	'role'   => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'editor' ) ),
+);
+
+$merged = WP_Admin_Shell_Permissions::enforce_trust_tiers( $trust_per_origin, 'screen.test' );
+
+$T::assert_eq(
+	'trust-tier: role origin shrinks caps to intersection (drops manage_options)',
+	$merged['capabilities'],
+	array( 'edit_posts' )
+);
+$T::assert_eq(
+	'trust-tier: role origin shrinks roles to intersection (drops author)',
+	$merged['roles'],
+	array( 'editor' )
+);
+$T::assert_eq(
+	'trust-tier: zero audit entries when consumer only removes',
+	count( WP_Admin_Shell_Permissions::get_audit() ),
+	0
+);
+
+// Consumer origin attempts to GROW the OR-set → rejection + audit.
+WP_Admin_Shell_Permissions::reset_audit();
+
+$trust_grow = array(
+	'core' => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'administrator' ) ),
+	'user' => array( 'capabilities' => array( 'edit_posts', 'manage_options' ), 'roles' => array( 'administrator', 'editor' ) ),
+);
+
+$merged_grow = WP_Admin_Shell_Permissions::enforce_trust_tiers( $trust_grow, 'screen.tested' );
+
+$T::assert_eq(
+	'trust-tier: user origin grow attempt rejected — caps stay at trusted baseline',
+	$merged_grow['capabilities'],
+	array( 'edit_posts' )
+);
+$T::assert_eq(
+	'trust-tier: user origin grow attempt rejected — roles stay at trusted baseline',
+	$merged_grow['roles'],
+	array( 'administrator' )
+);
+
+$audit = WP_Admin_Shell_Permissions::get_audit();
+$T::assert_eq(
+	'trust-tier: 2 audit entries (one for the cap, one for the role)',
+	count( $audit ),
+	2
+);
+$has_cap_audit  = false;
+$has_role_audit = false;
+foreach ( $audit as $entry ) {
+	if ( $entry['origin'] === 'user' && $entry['kind'] === 'capability' && $entry['attempted'] === 'add' ) {
+		$has_cap_audit = true;
+	}
+	if ( $entry['origin'] === 'user' && $entry['kind'] === 'role' && $entry['attempted'] === 'add' ) {
+		$has_role_audit = true;
+	}
+}
+$T::assert_true( 'trust-tier: audit entry recorded for cap grow attempt', $has_cap_audit );
+$T::assert_true( 'trust-tier: audit entry recorded for role grow attempt', $has_role_audit );
+
+// ── 9. End-to-end — bundled wp-admin-default screen visibility ────────
+
+// Walk each role through the resolver. Counts visible screens; we assert
+// monotonic visibility increases (admin >= editor >= author >= contributor
+// >= subscriber) rather than exact ids — the screen catalog is authoring
+// content, not test fixture.
+
+update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
+	WP_Admin_Shell_Cache::flush();
+}
+WP_Admin_Shell_Resolver::reset_request_memo();
+
+$role_visible_counts = array();
+$roles_to_walk       = array( 'subscriber', 'contributor', 'author', 'editor', 'administrator' );
+
+foreach ( $roles_to_walk as $role ) {
+	$user_id = wpas_cap_smoke_user_for_role( $role );
+	if ( $user_id === null ) {
+		continue;
+	}
+	wp_set_current_user( $user_id );
+	if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
+		WP_Admin_Shell_Cache::flush();
+	}
+	WP_Admin_Shell_Resolver::reset_request_memo();
+
+	$resolved_doc = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+	$screens      = isset( $resolved_doc['screens'] ) && is_array( $resolved_doc['screens'] )
+		? $resolved_doc['screens']
+		: array();
+
+	$visible = 0;
+	foreach ( $screens as $screen_id => $screen ) {
+		if ( ! is_array( $screen ) ) {
+			continue;
+		}
+		$perms     = $screen['permissions'] ?? null;
+		$app_floor = WP_Admin_Shell_Permissions::app_floor_for( $screen );
+		$rp        = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
+		if ( WP_Admin_Shell_Permissions::user_passes( $user_id, $rp ) ) {
+			$visible++;
+		}
+	}
+	$role_visible_counts[ $role ] = $visible;
+}
+
+// Reset to admin so the rest of the harness sees an admin context.
+wp_set_current_user( $admin_id );
+
+// Sanity checks on the counts.
+if ( isset( $role_visible_counts['administrator'] ) ) {
+	$T::assert_true(
+		'e2e: administrator sees ≥10 screens in wp-admin-default',
+		$role_visible_counts['administrator'] >= 10
+	);
+}
+if ( isset( $role_visible_counts['subscriber'] ) ) {
+	$T::assert_true(
+		'e2e: subscriber sees ≥1 screen (at minimum the dashboard / profile)',
+		$role_visible_counts['subscriber'] >= 1
+	);
+	$T::assert_true(
+		'e2e: subscriber < administrator (fewer privileged screens)',
+		$role_visible_counts['subscriber'] < ( $role_visible_counts['administrator'] ?? PHP_INT_MAX )
+	);
+}
+// Guard against silent degeneration to admin-only on a sparsely-populated
+// wp-env: the monotonic-visibility assertion below is vacuous with one
+// data point. `ensure_user()` creates per-role fixtures so this is
+// usually 5, but if creation fails for any role we still want a failure
+// signal rather than green-on-a-vacuum.
+$T::assert_true(
+	'e2e: at least 3 roles actually walked (catches silent admin-only degeneration)',
+	count( $role_visible_counts ) >= 3
+);
+
+// Monotonic — each role at least as broad as the role below.
+$ordered_seen = array_intersect_key(
+	$role_visible_counts,
+	array_flip( $roles_to_walk )
+);
+$prev_count = null;
+$monotonic  = true;
+$prev_role  = '';
+foreach ( $roles_to_walk as $role ) {
+	if ( ! isset( $ordered_seen[ $role ] ) ) {
+		continue;
+	}
+	if ( $prev_count !== null && $ordered_seen[ $role ] < $prev_count ) {
+		$monotonic = false;
+		echo "      role $prev_role had $prev_count visible, $role has " . $ordered_seen[ $role ] . " — non-monotonic\n";
+	}
+	$prev_count = $ordered_seen[ $role ];
+	$prev_role  = $role;
+}
+$T::assert_true(
+	'e2e: visible-screen counts monotonically non-decreasing subscriber → admin',
+	$monotonic
+);
+
+// ── 10. Menu-tree pruning sanity ──────────────────────────────────────
+// Items in the menu tree that bind to a cap-restricted screen the user
+// can't see must drop. The bridge between menu and screens is by item-id
+// → screen-id match. This walk approximates the runtime's pruneMenu()
+// behavior (resolveMenu in JS) without depending on it directly.
+
+function wpas_cap_smoke_count_menu_items( $menu, $screens, $user_id ) {
+	$count = 0;
+	if ( ! is_array( $menu ) ) {
+		return $count;
+	}
+	foreach ( $menu as $item_id => $item ) {
 		if ( ! is_array( $item ) ) {
 			continue;
 		}
+		// Separators always render.
 		if ( ! empty( $item['separator'] ) ) {
-			$out[] = $item;
+			$count++;
 			continue;
 		}
-		if ( isset( $item['screen'] ) || isset( $item['group'] ) ) {
-			$kids = smoke_prune_nav( $item['items'] ?? array() );
-			if ( count( $kids ) === 0 ) {
+		// External + free-floating items (no screen binding) render
+		// unconditionally for the smoke (no cap to check at item level).
+		$bound_screen = isset( $screens[ $item_id ] ) && is_array( $screens[ $item_id ] )
+			? $screens[ $item_id ]
+			: null;
+		if ( $bound_screen !== null ) {
+			$perms     = $bound_screen['permissions'] ?? null;
+			$app_floor = WP_Admin_Shell_Permissions::app_floor_for( $bound_screen );
+			$rp        = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
+			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $rp ) ) {
 				continue;
 			}
-			$item['items'] = $kids;
-			$out[]         = $item;
-			continue;
 		}
-		// External links pass through unconditionally — no in-shell cap to check.
-		if ( ! empty( $item['external'] ) ) {
-			$out[] = $item;
-			continue;
-		}
-		if ( ! empty( $item['capability'] ) && ! current_user_can( $item['capability'] ) ) {
-			continue;
-		}
-		$out[] = $item;
-	}
-	while ( count( $out ) && ! empty( $out[0]['separator'] ) ) {
-		array_shift( $out );
-	}
-	while ( count( $out ) && ! empty( $out[ count( $out ) - 1 ]['separator'] ) ) {
-		array_pop( $out );
-	}
-	return $out;
-}
-
-/**
- * Derive a stable id from an in-shell href like `#/dashboard/home` → `dashboard-home`.
- * Returns null for items without an in-shell href (separators, external links, etc.).
- *
- * @param array $item
- * @return string|null
- */
-function smoke_id_from_item( $item ) {
-	if ( ! is_array( $item ) || ! isset( $item['href'] ) ) {
-		return null;
-	}
-	if ( ! empty( $item['external'] ) ) {
-		return null;
-	}
-	$href = (string) $item['href'];
-	if ( strpos( $href, '#/' ) !== 0 ) {
-		return null;
-	}
-	$path = substr( $href, 2 );
-	if ( '' === $path ) {
-		return null;
-	}
-	return str_replace( '/', '-', $path );
-}
-
-/** Recurse pruned tree, return list of every reachable nav-item id. */
-function smoke_collect_ids( $items ) {
-	$ids = array();
-	foreach ( $items as $item ) {
-		$id = smoke_id_from_item( $item );
-		if ( null !== $id ) {
-			$ids[] = $id;
-		}
+		$count++;
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			$ids = array_merge( $ids, smoke_collect_ids( $item['items'] ) );
+			$count += wpas_cap_smoke_count_menu_items( $item['items'], $screens, $user_id );
 		}
 	}
-	return $ids;
+	return $count;
 }
 
-$failures = 0;
-$pass     = 0;
+// Re-resolve once as admin to get the canonical menu shape, then walk
+// per-role using the admin-resolved tree. ASSUMPTION: `wp-admin-default`
+// declares no role/user-origin overrides to its menu shape — its menu is
+// admin-baseline across all roles, and per-role visibility differs only
+// via the inherited screen `permissions`. A future shell that customizes
+// the menu per role (e.g. via `wp_admin_shell_data_role` filter) would
+// break this assumption — that case needs the per-role re-resolve pattern
+// used by the screen-visibility walk above.
+wp_set_current_user( $admin_id );
+WP_Admin_Shell_Resolver::reset_request_memo();
+$admin_resolved = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+$menu           = isset( $admin_resolved['menu'] ) && is_array( $admin_resolved['menu'] )
+	? $admin_resolved['menu']
+	: array();
+$screens        = isset( $admin_resolved['screens'] ) && is_array( $admin_resolved['screens'] )
+	? $admin_resolved['screens']
+	: array();
 
-// Phase 3d.1 retired the v2 `wp-admin-default.json`; the active default
-// is now v3-shaped. The nav-items block this smoke walks is gone, so
-// short-circuit to a passing skip while the v3 port is queued for
-// Phase 3d.3. Detect v3 shape by querying the resolved doc for the
-// admin user and checking for the v3-distinctive top-level `screens`
-// block.
-$admin_for_probe = get_user_by( 'login', 'administrator' );
-if ( $admin_for_probe ) {
-	wp_set_current_user( $admin_for_probe->ID );
-	WP_Admin_Shell_Resolver::reset_request_memo();
-	$probe = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
-	if ( isset( $probe['screens'] ) && is_array( $probe['screens'] ) ) {
-		echo "SKIP v3-shape default shell — v2 nav-items cap pruning smoke pending Phase 3d.3 port.\n";
-		echo "Result: 0 passed, 0 failed (skipped)\n";
-		exit( 0 );
-	}
+$admin_menu_count = wpas_cap_smoke_count_menu_items( $menu, $screens, $admin_id );
+$T::assert_true(
+	'e2e menu: admin sees ≥10 menu items in wp-admin-default',
+	$admin_menu_count >= 10
+);
+
+if ( $subscriber_id !== null ) {
+	$subscriber_menu_count = wpas_cap_smoke_count_menu_items( $menu, $screens, $subscriber_id );
+	$T::assert_true(
+		'e2e menu: subscriber sees ≥1 menu items',
+		$subscriber_menu_count >= 1
+	);
+	$T::assert_true(
+		'e2e menu: subscriber < admin (cap-restricted items pruned)',
+		$subscriber_menu_count < $admin_menu_count
+	);
 }
 
-foreach ( $roles as $role => $login ) {
-	$user = get_user_by( 'login', $login );
-	if ( ! $user ) {
-		echo "SKIP {$role}: no user '{$login}'\n";
-		continue;
-	}
-	wp_set_current_user( $user->ID );
-	WP_Admin_Shell_Resolver::reset_request_memo();
-
-	$resolved = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
-	$regions  = $resolved['regions'] ?? array();
-	$nav      = smoke_find_nav_items( $regions );
-
-	if ( empty( $nav ) ) {
-		echo "FAIL {$role}: no core:navigation items[] found in resolved regions\n";
-		++$failures;
-		continue;
-	}
-
-	$pruned   = smoke_prune_nav( $nav );
-	$got_ids  = smoke_collect_ids( $pruned );
-	sort( $got_ids );
-	$want_ids = $expected[ $role ];
-	sort( $want_ids );
-
-	$missing = array_values( array_diff( $want_ids, $got_ids ) );
-	$extra   = array_values( array_diff( $got_ids, $want_ids ) );
-
-	if ( count( $missing ) === 0 && count( $extra ) === 0 ) {
-		echo "PASS {$role}: " . count( $got_ids ) . " nav items\n";
-		++$pass;
-	} else {
-		echo "FAIL {$role}\n";
-		echo "  got:     " . implode( ', ', $got_ids ) . "\n";
-		echo "  want:    " . implode( ', ', $want_ids ) . "\n";
-		if ( $missing ) {
-			echo "  missing: " . implode( ', ', $missing ) . "\n";
-		}
-		if ( $extra ) {
-			echo "  extra:   " . implode( ', ', $extra ) . "\n";
-		}
-		++$failures;
-	}
+if ( $editor_id !== null ) {
+	$editor_menu_count = wpas_cap_smoke_count_menu_items( $menu, $screens, $editor_id );
+	$T::assert_true(
+		'e2e menu: editor sees > author when both exist',
+		$editor_menu_count > ( $author_id !== null
+			? wpas_cap_smoke_count_menu_items( $menu, $screens, $author_id )
+			: 0 )
+	);
 }
 
-echo "\n";
-echo "Result: {$pass} passed, {$failures} failed\n";
-exit( $failures > 0 ? 1 : 0 );
+// ── Final report ──────────────────────────────────────────────────────
+
+echo "\nTOTAL: " . $T::$pass . " passed, " . $T::$fail . " failed of " . ( $T::$pass + $T::$fail ) . "\n";
+exit( $T::$fail > 0 ? 1 : 0 );
