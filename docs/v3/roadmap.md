@@ -11,8 +11,13 @@ PR #49 against `main` (branch: `feat/wp-admin-shell-v3`).
 | **3a** — schemas + cascade null-tombstone | ✅ Shipped | `586ade2` |
 | **3b** — resolvers (view-config / menu / permissions / modes) | ✅ Shipped | `12ce8dd`, `9be3aa3` ⚠️ view-config resolver was lossy (collapsed CIAB 3-axis registry); restoration plan in `docs/plans/2026-05-20-dataview-registry-restoration.md` corrects this. |
 | **3c slice** — minimum end-to-end (compiler + engine defaultRegions + v3 default workspace mounting) | ✅ Shipped | `7980ca7`, `9e6b73a`, `6389449`, `14ed501`, `c945b15`, `8b0948c`, `ac8d058`, `5ccde5e`, `eff4ed5` |
-| **3c proper** — dashboard-host rewrite, command palette rewrite, classic wp-admin menu bridge | 🟡 In progress (3c.1 + 3c.2 shipped; 3c.3 pending) | 3c.1: dashboard-host on `feat/v3-3c1-dashboard-host`; 3c.2 in `7d460a5` |
-| **3d** — migrate 5 remaining bundled shells, v2→v3 migration helper, final test surface | 🔲 Pending | — |
+| **3c proper** — dashboard-host rewrite (3c.1), command palette rewrite (3c.2), classic wp-admin menu bridge (3c.3), multi-app layout (3c.4) | ✅ Shipped | 3c.1: `0cc48fb`; 3c.2: `7d460a5`; 3c.3: `968a3da`; 3c.4: `134637f` |
+| **3d.0** — dataview-registry restoration (3-axis CIAB shape; view-config → dataView) | ✅ Shipped | `61c41eb` (PR #50) |
+| **3d.1** — migrate 6 remaining bundled shells to v3 + retire v2 default | ✅ Shipped | `f624231` (PR #56) |
+| **3d.2** — v2 → v3 migration helper (`wp admin-shell migrate-shell <slug>`) | ✅ Shipped | `51249de` (PR #58) |
+| **3d.5** — pre-v3.1 shim-removal hardening (legacy-block warnings, debug-gated JS warns, filter-ordering docs) | ✅ Shipped | `8f39e5f` (PR #57) |
+| **3d.3** — test surface rewrites (drop v2-only tests, add v3-shape coverage, port `run-cap-gating-smoke.php` to v3 region walker) | 🟡 In progress | — |
+| **3d.4** — documentation sweep (CLAUDE.md status + master spec §5/§6/§13 + public reference docs + schema-sketch consolidation) | ✅ Shipped | this PR |
 
 ## Locked design decisions
 
@@ -273,12 +278,40 @@ Currently 990 assertions green. After v2 shell deprecation:
 
 Target: ~1000-1200 v3-shape assertions.
 
-### 3d.4 — Documentation sweep (~1-2 days)
+### 3d.4 — Documentation sweep — ✅ Shipped
 
-- Update `CLAUDE.md` status section + key rules to reflect v3 reality.
-- Update `docs/wp-admin-shell-design-spec.md` §5 / §6 / §13 for v3 architecture.
-- Update `docs/public/*-reference.md` to point at v3 schemas as the active surface.
-- Promote `docs/v3/schema-sketch.md` to canonical design doc OR consolidate into spec.
+Five-unit sweep on branch `feat/v3-3d4-doc-sweep`:
+
+1. **`CLAUDE.md` sweep.** Status block now enumerates phases 3a–3d.5
+   with shipped/in-progress markers; v1/v2 bullets marked historical;
+   v3 set as the active shape. Pre-reads reordered to surface v3 design
+   doc + roadmap + upgrade guide + dataview-config + public references
+   first; v2 plan archived. Test surface refreshed (~1300 assertions)
+   with new PHP test files surfaced (`run-classic-menu-bridge-tests.php`,
+   `run-v3-compiler-tests.php`, `run-mode-resolution-tests.php`,
+   `run-migrate-shell-cli-tests.php`). Project structure tree updated
+   with new PHP cascade classes + runtime modules. Navigation +
+   multi-area layout sections rewritten around v3 vocabulary.
+2. **Master spec sweep** (`docs/wp-admin-shell-design-spec.md`).
+   Header v3 reshape note added; §4.3 admin.json example prefixed
+   with v3 admonition; §5 documents where v3 region declarations
+   live (workspace.widgets + engine defaultRegions + per-screen
+   overrides); §6.2 routes-block clarified as runtime-internal with
+   v3 author-shape example; §14 gains v2 → v3 migration paragraph;
+   §15 roadmap gains v3 status header; §19 references surface v3
+   docs first.
+3. **schema-sketch.md promotion.** Reframed from "Working draft" to
+   "Canonical v3 schema design doc"; bidirectional cross-link with
+   master spec; open-questions section refreshed (variant URL routing
+   marked resolved by dataview-registry restoration).
+4. **Public reference docs sweep.** `admin-json-reference.md` fully
+   rewritten around v3 shape (workspace/settings/screens/menu/commands
+   blocks + v2-surfaces-deprecated table); `app-json-reference.md`
+   viewConfig → dataView with variants family + new slots / slotHints
+   sections; `engine-json-reference.md` gains the three v3-added
+   blocks (modes / slots / menu-renderer / defaultRegions). All point
+   at v3 schemas + cross-reference `docs/upgrade-v2-to-v3.md`.
+5. **Roadmap clean** — this entry.
 
 ## Known issues (smoke-testing surfaced)
 

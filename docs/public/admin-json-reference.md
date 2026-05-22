@@ -1,28 +1,30 @@
 # admin.json Reference
 
-`admin.json` is the install-decision file that describes a single WP Admin Shell shell: which engine renders it, which regions exist on this install, which apps live in those regions, how URLs route, what keystrokes do what, and what the install looks like through token overrides. Anything intrinsic to apps or engines belongs in their respective manifests (`app.json`, `engine.json`) — `admin.json` is the layer that combines them into a shipped admin experience.
+`admin.json` is the install-decision file that describes a single WP Admin Shell workspace: which engine renders it, the screens the workspace exposes, the menu hierarchy that surfaces those screens, the keyboard commands and palette entries, persistent chrome widgets, REST preloads, and the styles that brand the install. Anything intrinsic to apps or engines belongs in their respective manifests (`app.json`, `engine.json`) — `admin.json` is the layer that combines them into a shipped admin experience.
 
-Multiple `admin.json` files can coexist on a site (one per shell). The active shell is selected per-site, per-role, or per-user through the cascade.
+Multiple `admin.json` files can coexist on a site (one per workspace). The active workspace is selected per-site, per-role, or per-user through the cascade.
+
+This reference covers the **v3 shape**, the active schema. v2 shells continue to validate through the v3.0 release cycle via the [`v2 → v3 upgrade guide`](../upgrade-v2-to-v3.md) — call out the v2 path explicitly when you need it, but new shells should be authored in v3.
 
 ## In this article
 
 - [JSON Schema](#json-schema)
+- [Top-level shape](#top-level-shape)
 - [version](#version)
 - [$wpds](#wpds)
 - [name](#name)
 - [title](#title)
 - [description](#description)
 - [user-switchable](#user-switchable)
-- [engine](#engine)
-- [regions](#regions)
-- [routes](#routes)
-- [default-route](#default-route)
-- [bindings](#bindings)
+- [workspace](#workspace)
+- [settings](#settings)
+- [screens](#screens)
+- [menu](#menu)
+- [commands](#commands)
 - [styles](#styles)
-- [viewConfigs](#viewconfigs) (v2 — see `settings.dataViews` in admin-v3)
-- [fieldCollections](#fieldcollections) (v2 — see `settings.dataFields` in admin-v3)
 - [preload](#preload)
-- [dashboardWidgets](#dashboardwidgets)
+- [regions / routes](#regions--routes-escape-hatches)
+- [v2 surfaces (deprecated)](#v2-surfaces-deprecated)
 
 ## JSON Schema
 
@@ -30,37 +32,51 @@ Multiple `admin.json` files can coexist on a site (one per shell). The active sh
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin/v1.json",
-	"version": 1,
+	"$schema": "https://schemas.wp.org/admin/v3.json",
+	"version": 3,
 	"$wpds": "6.9",
-	"name": "my-shell",
-	"engine": "core:default",
-	"regions": {
-		"content": {
-			"template": "core:content",
-			"routing": { "route-key": "_self" }
+	"name": "my-workspace",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "dashboard-home"
+	},
+	"screens": {
+		"dashboard-home": {
+			"label": "Home",
+			"path": "/dashboard/home",
+			"app": "core:dashboard"
 		}
-	},
-	"routes": {
-		"/posts": { "app": "core:posts", "config": { "postType": "post" } }
-	},
-	"default-route": "/posts"
+	}
 }
 ```
 
-The schema is also available in-repo at `docs/schemas/admin-v2.json` for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin-v3.json`](../schemas/admin-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
-**Required fields:** `version`, `$wpds`, `name`, `engine`, `regions` (must contain at least one region). All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
+**Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
-**About `routes`:** technically optional, but required in practice for any shell whose regions read apps from the URL via `routing.route-key`. A shell composed entirely of fixed-app regions (every region declares a literal `app` field) can omit `routes` — though this is rare. All seven bundled shells (`wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `v2-demo`, `single-pane-demo`, `desktop-demo`) declare a `routes` block, because URL-driven mounting is the canonical pattern (spec §6).
+## Top-level shape
+
+| Block | Role | Cascade behavior |
+|-------|------|-----------------|
+| `workspace` | Install metadata: engine, default landing screen, branding, notices, persistent widgets (toolbar / sidebar-footer / status-bar). | Deep-merge per-field. `widgets.<slot>` arrays merge by `id`. |
+| `settings` | Reusable definition registries referenced from elsewhere by id. Contains `dataViews` (3-axis `@wordpress/dataviews` configuration keyed by `kind → name → variant`) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
+| `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
+| `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
+| `commands` | First-class palette entries + keyboard shortcuts. Each command has an explicit `id` field. | Merge by `id`. |
+| `styles` | Tokens, slot overrides, chrome. theme-developer surface intact from v2 (see [§9 of the design spec](../wp-admin-shell-design-spec.md#9-tokens-and-styling)). | Deep-merge per-field. |
+| `preload` | Workspace-boot REST preloads. Additional per-screen preloads live in `screens[id].preload`. | Additive concatenation; dedupe by `path+method`. |
+| `regions` | **Escape hatch** — direct region tree for engines that need it (windowed, MDI, multi-pane). | Deep-merge. Optional in v3; `screens` block synthesizes regions for the common case. |
+| `routes` | **Escape hatch** — direct URL→app mapping for non-screen compositions. | Deep-merge by route key. Optional in v3. |
+
+For the full design rationale around each block, see [`docs/v3/schema-sketch.md`](../v3/schema-sketch.md). This reference covers per-field shape.
 
 ## version
 
-`admin.json` schema version this document targets. v1 is the current shape. The runtime accepts higher versions with a warning and best-effort load. Earlier versions (v0 — the MVP flat shape with `branding` / `applications` / `navigation` / `toolbar` at root) are accepted and normalized to v1 internally.
+Schema version this document targets. Must be `3` for v3 shells. The runtime accepts v2 shells through the v3.0 release cycle and synthesizes screens-from-routes via the v3 compiler's back-compat path. v0 (MVP flat shape) is still normalized internally.
 
 | Property | Description                                              | Type    | Default |
 |----------|----------------------------------------------------------|---------|---------|
-| version  | Schema version. Must be `1` for the current shape.       | integer | —       |
+| version  | Schema version. Must be `3` for v3 shells.               | integer | —       |
 
 ## $wpds
 
@@ -70,13 +86,13 @@ This field is required because the WPDS surface is the shell's contract with app
 
 | Property | Description                                       | Type   | Default |
 |----------|---------------------------------------------------|--------|---------|
-| $wpds    | WordPress version string, e.g. `"6.9"`, `"7.0"`. | string | —       |
+| $wpds    | WordPress version string, e.g. `"6.9"`, `"7.0"`.  | string | —       |
 
 ## name
 
-Unique kebab-case identifier for this shell on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-shell activate <name>`), and the URL when a shell-switcher exists. Must be unique within the install — registering a second shell with the same name fails.
+Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-shell activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails.
 
-Examples: `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
+Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
 
 | Property | Description                                                | Type   | Default |
 |----------|------------------------------------------------------------|--------|---------|
@@ -84,15 +100,15 @@ Examples: `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
 
 ## title
 
-Human-readable label for this shell. Shown in the shell-switcher UI (when enabled), admin-page metadata, and plugin install screens. Translatable. Falls back to `name` when omitted.
+Human-readable label for this workspace. Shown in the workspace-switcher UI (when enabled), admin-page metadata, and plugin install screens. Translatable. Falls back to `name` when omitted.
 
 | Property | Description                                       | Type   | Default |
 |----------|---------------------------------------------------|--------|---------|
-| title    | Display name. Translatable.                        | string | `name`  |
+| title    | Display name. Translatable.                       | string | `name`  |
 
 ## description
 
-Optional human-readable description of what this shell is for. Translatable.
+Optional human-readable description of what this workspace is for. Translatable.
 
 | Property    | Description                            | Type   | Default |
 |-------------|----------------------------------------|--------|---------|
@@ -100,149 +116,245 @@ Optional human-readable description of what this shell is for. Translatable.
 
 ## user-switchable
 
-When `true`, individual users may select this shell as their personal default via the user-prefs UI (overriding the site or role default). When `false`, only site admins and role configuration can select this shell. Setting this true is forward-compatible — the cascade respects user-origin shell selection regardless of UI availability.
+When `true`, individual users may select this workspace as their personal default via the user-prefs UI (overriding the site or role default). When `false`, only site admins and role configuration can select this workspace. Setting this true is forward-compatible — the cascade respects user-origin workspace selection regardless of UI availability.
 
 | Property         | Description                                                | Type    | Default |
 |------------------|------------------------------------------------------------|---------|---------|
-| user-switchable  | Allow individual users to opt into this shell.             | boolean | `false` |
+| user-switchable  | Allow individual users to opt into this workspace.         | boolean | `false` |
 
-## engine
+## workspace
 
-Identifier of the engine that renders this shell. References an `id` from a registered engine manifest. The engine determines spatial arrangement, the region-template catalog available, and which platform services are honored. Switching engines requires editing this field (and probably reworking `regions` to use the new engine's templates) — engines are not live-switchable.
-
-Common values: `core:default` (flagship), `core:single-pane` (mobile-first), `core:desktop` (windowed).
-
-| Property | Description                                                  | Type   | Default |
-|----------|--------------------------------------------------------------|--------|---------|
-| engine   | Namespaced engine id, `core:{name}` or `plugin:{slug}/{name}`. | string | —       |
-
-## regions
-
-The shell's region tree. Each entry is keyed by a kebab-case region id, unique within this `admin.json`. Regions reference engine-shipped templates via `template`, declare from scratch via the full vocabulary (`role` / `layout` / `platform`), or both (template-with-overrides). Each region holds either a fixed app (`app` field) or reads its app from the URL via `routing.route-key`. Regions can declare nested child regions.
+Install-level chrome metadata: the engine, the default landing screen, branding, notices, and persistent widgets that survive screen navigation.
 
 ```json
 {
-	"regions": {
-		"sidebar": {
-			"template": "core:sidebar",
-			"app": "core:navigation"
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "dashboard-home",
+		"branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" },
+		"notices":  {
+			"banner":   { "app": "core:notices-banner" },
+			"snackbar": { "app": "core:notices-snackbar" }
 		},
-		"content": {
-			"template": "core:content",
-			"routing": { "route-key": "_self" }
+		"widgets": {
+			"toolbar":        [ { "id": "search",        "app": "core:toolbar-actions" } ],
+			"sidebar-footer": [ { "id": "user-menu",     "app": "core:user-menu" } ]
 		}
 	}
 }
 ```
 
-### Region object
+| Property         | Description                                                                                                                                          | Type    | Default |
+|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
+| engine           | Identifier of the engine that renders this workspace. Common values: `core:default`, `core:single-pane`, `core:desktop`. Required.                    | string  | —       |
+| default-screen   | Screen id the workspace lands on when no URL hash is present. Optional — falls through to the first permitted screen with a `path` when omitted or denied by capability gating. | string  | —       |
+| branding         | `{ logo, title, icon }` — install-level branding shown by `core:site-hub` and similar chrome.                                                         | object  | —       |
+| notices          | `{ banner, snackbar }` — apps that render workspace-scope system notices.                                                                            | object  | —       |
+| widgets          | Map of `<slot>: [ { id, app, ... } ]` — apps that mount persistently across every screen, into engine-declared workspace slots.                       | object  | —       |
+| styles           | Per-workspace style overrides (alternative location to top-level `styles`).                                                                          | object  | —       |
 
-Every region accepts the following fields. The schema enforces two conditional rules:
+## settings
 
-- A region cannot declare both a fixed `app` and a `routing.route-key` — the two represent incompatible mount modes.
-- A region with `config` must also declare `app`. Regions that read their app from the URL receive their config from the matching route entry, not from the region declaration.
+Reusable definition registries — `dataViews` (3-axis `@wordpress/dataviews` configuration) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern: global definitions referenced from elsewhere by id.
 
-| Property        | Description                                                                                                                                                                       | Type    | Default |
-|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
-| template        | Engine-shipped template id to instantiate. Inherits role, platform, and default-style from the template; locally declared values override.                                        | string  | —       |
-| role            | ARIA role. Required when no template is specified.                                                                                                                                | string  | —       |
-| layout          | CSS layout properties from the allowed subset (sizing, positioning, flexbox participation). See below.                                                                            | object  | —       |
-| platform        | Region-level platform service requests (`core:modal`, `core:dismiss-on`, etc.).                                                                                                  | object  | —       |
-| routing         | URL participation. `routing.route-key` names the URL slot whose value resolves to a route; `_self` reads the primary path.                                                       | object  | —       |
-| position        | Arrangement hint: `block-start`, `block-end`, `inline-start`, `inline-end`.                                                                                                       | string  | —       |
-| style           | Style override for this region. CSS properties + layout vocabulary; accepts literal CSS, token aliases, or inline DTCG objects.                                                  | object  | —       |
-| capability      | Install-level capability gate. The entire subtree is skipped pre-mount if the user lacks this cap.                                                                                | string  | —       |
-| app             | App id to mount in this region for the life of the shell. Mutually exclusive with `routing.route-key`.                                                                            | string  | —       |
-| config          | Configuration object passed to the mounted app at mount time. Validated against the app manifest's `config-schema`. Only meaningful when `app` is set.                            | object  | —       |
-| regions         | Nested child regions, addressable as `{parent-id}/{child-id}`. Children merge with template-supplied children when a `template` is in use.                                        | object  | —       |
-
-### Region layout allowlist
-
-Engines own layout context (`display`, grid templates); authors declare only sizing, positioning, and flexbox participation. Logical properties are preferred over physical so layouts work in vertical writing modes.
-
-| Property                                                                                                  | Description                       | Type             | Default |
-|-----------------------------------------------------------------------------------------------------------|-----------------------------------|------------------|---------|
-| inline-size, block-size                                                                                   | Logical width / height.           | string \| number | —       |
-| min-inline-size, min-block-size, max-inline-size, max-block-size                                          | Min / max bounds.                 | string \| number | —       |
-| aspect-ratio                                                                                              | CSS `aspect-ratio`.               | string \| number | —       |
-| position                                                                                                  | One of `static \| relative \| absolute \| fixed \| sticky`. | string           | —       |
-| inset, inset-block-start, inset-block-end, inset-inline-start, inset-inline-end                          | Inset values.                     | string \| number | —       |
-| translate                                                                                                 | CSS `translate`.                  | string           | —       |
-| flex-basis, flex-grow, flex-shrink                                                                        | Flex item participation.          | number / string  | —       |
-| align-self, justify-self                                                                                  | Self alignment.                   | string           | —       |
-| order                                                                                                     | Flex / grid `order`.              | integer          | —       |
-
-### Region platform requests
-
-Same vocabulary as the app manifest's `platform`. Region-level requests combine with the mounted app's requests; the strictest combined request wins.
-
-| Property                            | Description                                                                                  | Type    | Default |
-|-------------------------------------|----------------------------------------------------------------------------------------------|---------|---------|
-| core:modal                          | Focus-trap + ARIA modal + backdrop scrim when supported.                                     | boolean | `false` |
-| core:dismiss-on                     | Array of `Escape`, `backdrop-click`, `outside-click`, `navigation`.                          | array   | —       |
-| core:autofocus-target               | CSS selector for the element that should receive focus on mount.                             | string  | —       |
-| core:triggerable                    | Region may be invoked by an `admin.json#bindings` keystroke.                                | boolean | `false` |
-| core:persists-across-navigation     | Region survives URL-driven changes to other regions.                                         | boolean | `false` |
-| core:dirty-state                    | Region's app may report unsaved changes.                                                     | boolean | `false` |
-| core:block-navigation-on-dirty      | Show a confirm dialog before unmount when dirty. Requires `core:dirty-state`.                | boolean | `false` |
-| core:trigger                        | Declarative trigger hint (`{ shortcut: "Mod+K" }`); the actual binding lives in `bindings`. | object  | —       |
-
-## routes
-
-URL pattern → app + config map. Patterns use leading-slash form (`/posts`, `/posts/{id}`, `/media/*`). Parameter segments use `{name}` curly braces and capture into the route's config via interpolation. Wildcard suffixes `/*` capture the remaining path. Pattern resolution is most-specific-wins: `/posts/new` beats `/posts/{id}`.
-
-Routes are pure URL → app mappings. Which region mounts a route is determined by which URL slot the pattern matched against (the primary path, or a named query parameter), via each region's `routing.route-key` declaration. There is no `target` field on routes.
+See [`docs/dataview-config.md`](../dataview-config.md) for the author-facing reference covering dataView semantics, the cascade override decision matrix, the `(kind, name, variant)` triple, the `extends` chain, filter hooks, REST endpoints, and the `useDataView` React hook.
 
 ```json
 {
-	"routes": {
-		"/posts": { "app": "core:posts", "config": { "postType": "post" } },
-		"/posts/{id}/edit": { "app": "core:editor", "config": { "postId": "{id}" } }
+	"settings": {
+		"dataViews": {
+			"postType": {
+				"post": {
+					"_default": {
+						"fieldsRef": "core/post-fields",
+						"defaultView": { "type": "table", "perPage": 20 },
+						"actions":     [ { "id": "edit", "label": "Edit" } ]
+					},
+					"drafts": {
+						"extends": "_default",
+						"defaultView": { "filters": [ { "field": "status", "operator": "is", "value": "draft" } ] }
+					}
+				}
+			}
+		},
+		"dataFields": {
+			"core/post-fields": {
+				"kind":   "postType",
+				"name":   null,
+				"fields": [
+					{ "id": "title",  "type": "text",     "label": "Title", "enableGlobalSearch": true },
+					{ "id": "status", "type": "text",     "label": "Status" },
+					{ "id": "date",   "type": "datetime", "label": "Date" }
+				]
+			}
+		}
 	}
 }
 ```
 
-### Route object
+| Block               | Description                                                                                                                                          |
+|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| settings.dataViews  | 3-axis dataView registry. Keyed `kind → name → variant`. Each leaf is a complete dataView doc (`fields`, `defaultView`, `defaultLayouts`, `actions`, `titleField`, `fieldsRef`). Variants resolve independently unless `extends` is declared. |
+| settings.dataFields | Named field collections. Each entry binds an array of field descriptors to `(kind, name)` (or universal when `name === null`). Referenced from dataView docs via `fieldsRef`. |
 
-`app` is required.
+The v2 → v3 rename: `viewConfigs` → `settings.dataViews`, `fieldCollections` → `settings.dataFields`. The 3-axis registry shape (`kind → name → variant`) is preserved. Filter renames live in [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md).
 
-| Property | Description                                                                                                                                          | Type   | Default |
-|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| app      | App id to mount when this route matches. The user must satisfy the app's `capabilities[]`; otherwise the route renders a 403 view. Required.         | string | —       |
-| config   | Configuration passed to the mounted app. Validated against the app's `config-schema`. `{paramname}` substitutions resolve against captured params.   | object | —       |
+## screens
 
-## default-route
-
-Where the shell lands when no URL hash is present. Should match a pattern in `routes` (the runtime warns if not). On capability denial of the default route, the shell falls through to the first permitted route in `routes`.
-
-Examples: `/posts`, `/dashboard`.
-
-| Property      | Description                                                          | Type   | Default |
-|---------------|----------------------------------------------------------------------|--------|---------|
-| default-route | URL pattern to load on shell mount, matching `^/[A-Za-z0-9_/{}\-]*$`. | string | —       |
-
-## bindings
-
-Keyboard shortcut → app invocation map. Each entry binds a keystroke to an app id; the app's manifest must declare `platform.core:triggerable: true`. When the shortcut fires, the engine ensures the app's region is mounted (mounting it if ephemeral) and applies the app's platform requests.
-
-Conflict resolution: later entries override earlier ones (cascade-aware: user > role > site > plugin > core). Apps with internal shortcuts matching a binding win when focused; the binding wins otherwise.
+The map of every screen the workspace exposes. Each entry is keyed by a kebab-case screen id, unique within this `admin.json`. A screen declares what mounts (single-app shorthand `app` + `config`, or multi-app `apps[]`), where it mounts (`path` for URL routing, `slot` for non-`_self` URL slots), how it presents (`mode`), who can see it (`permissions`), and what data it surfaces (`dataViewRef` + optional `dataView` overlay).
 
 ```json
 {
-	"bindings": [
-		{ "shortcut": "Mod+K", "invoke": "core:command-palette" }
+	"screens": {
+		"posts": {
+			"label":      "Posts",
+			"icon":       "post",
+			"path":       "/posts",
+			"app":        "core:posts",
+			"config":     { "postType": "post" },
+			"dataViewRef": "postType/post/_default",
+			"permissions": { "capabilities": [ "edit_posts" ] },
+			"mode":        "default",
+			"preload":     [ "/wp/v2/categories?context=view" ]
+		},
+		"post-edit": {
+			"label":  "Edit Post",
+			"path":   "/posts/{id}/edit",
+			"app":    "core:editor",
+			"config": { "postType": "post", "postId": "{id}" },
+			"mode":   "focus"
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot":  "palette",
+			"mode":  "modal",
+			"app":   "core:command-palette"
+		}
+	}
+}
+```
+
+### Screen object
+
+| Property        | Description                                                                                                                                                  | Type             | Default |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------|
+| label           | Display label. Used by the menu (when bound) and by the screen header.                                                                                       | string           | —       |
+| icon            | Icon registry name resolved by the active engine's icon table.                                                                                                | string           | —       |
+| description     | Optional tooltip / drilldown subtitle.                                                                                                                       | string           | —       |
+| path            | URL pattern routing to this screen (default slot `_self`). Pattern syntax: static segments, `{param}` captures, `/*` wildcard suffix.                         | string           | —       |
+| slot            | Workspace-scope URL slot the screen mounts in. Defaults to `_self`; use `palette` for command-palette screens, engine-declared slots like `detail` otherwise. | string           | `_self` |
+| app             | Single-app shorthand. Mutually compatible with `apps[]` (the resolver normalizes to long form).                                                              | string           | —       |
+| apps            | Multi-app long form. Each entry `{ id (required), app, config, slot, size?, position?, routing? }`. Screen-scope slots are engine- or app-declared.          | array            | —       |
+| config          | Configuration object passed to the screen's primary app. `{paramname}` substitutions resolve against URL params.                                              | object           | —       |
+| dataViewRef     | Reference to a `settings.dataViews` triple, formatted `kind/name/variant`.                                                                                    | string           | —       |
+| dataViewKind / dataViewName / dataViewVariant | Explicit triple (alternative to `dataViewRef`).                                                                                                | string           | —       |
+| dataView        | Inline overlay that deep-merges on top of the resolved triple — id-keyed `fields[]` and `actions[]` merge with `null` tombstones.                            | object           | —       |
+| mode            | Engine-declared chrome mode. Defaults: `default`, `focus`, `takeover`, `modal`. Plugin-contributed modes accepted.                                            | string           | `default` |
+| regions         | Per-screen region overrides (escape hatch, e.g. tweak `hidden`/`compact` flags on individual engine regions).                                                | object           | —       |
+| permissions     | Access policy `{ capabilities: [], roles: [] }` with OR semantics. Default when absent: admin-only. See [Permissions](../v3/schema-sketch.md#permissions).    | object           | —       |
+| preload         | REST paths to hydrate when this screen activates. Additive with workspace-level `preload[]`.                                                                  | array            | —       |
+| hidden          | When `true` at any cascade origin, the screen is suppressed entirely.                                                                                        | boolean          | `false` |
+| styles          | Per-screen style overrides.                                                                                                                                  | object           | —       |
+
+### `apps[]` entry
+
+| Property | Description                                                                                                       | Type   | Default |
+|----------|-------------------------------------------------------------------------------------------------------------------|--------|---------|
+| id       | Cascade-merge key. Required.                                                                                      | string | —       |
+| app      | App id to mount. Required on the originating entry; cascade overrides may omit `app` to deep-merge `config` / `slot` only against an existing id. | string | —       |
+| config   | Configuration passed to the app.                                                                                  | object | —       |
+| slot     | Screen-scope slot the app mounts in. Engine-declared (`detail`, `inspector`, etc.) or app-declared (`grid`).      | string | `_self` (the screen's primary region) |
+| size     | `{ w, h }` size hint when slotted into a grid-style container.                                                    | object | from app manifest `slotHints` |
+| position | `"auto"` or `{ row, col }` (1-indexed CSS Grid coordinates).                                                       | string \| object | `"auto"` |
+| routing  | Per-app routing override. `routing.mode: "mirror"` makes the slot synthesize value from URL primary path.        | object | —       |
+
+## menu
+
+Engine-agnostic information-architecture tree. Each item is keyed by id, nested via `items`. Item keys matching a screen id implicitly bind to that screen — `label` / `icon` / `permissions` flow through from the screen automatically.
+
+```json
+{
+	"menu": {
+		"content": {
+			"label":    "Content",
+			"icon":     "post",
+			"position": 10,
+			"items": {
+				"posts": {
+					"position": 30,
+					"items": {
+						"posts-drafts":  { "position": 10 },
+						"posts-pending": { "position": 20 },
+						"categories":    { "position": 40 }
+					}
+				},
+				"pages":  { "position": 40 },
+				"media":  { "position": 50 }
+			}
+		},
+		"appearance": {
+			"label":    "Appearance",
+			"icon":     "appearance",
+			"position": 20,
+			"items": {
+				"themes":      { "position": 10 },
+				"site-editor": { "position": 20 }
+			}
+		},
+		"view-site": {
+			"label":    "View Site",
+			"icon":     "external",
+			"href":     "{site_url}",
+			"external": true,
+			"position": 99
+		}
+	}
+}
+```
+
+### Menu item object
+
+| Property      | Description                                                                                                | Type    | Default |
+|---------------|------------------------------------------------------------------------------------------------------------|---------|---------|
+| label         | Optional override of the bound screen's label. Required for items not bound to a screen.                   | string  | —       |
+| icon          | Optional override of the bound screen's icon. Required for items not bound to a screen.                    | string  | —       |
+| description   | Optional tooltip / drilldown subtitle.                                                                     | string  | —       |
+| position      | Sort order among siblings at this depth. Lower = earlier.                                                  | integer | registration order |
+| items         | Nested child items, keyed by id. Same shape recursively.                                                   | object  | —       |
+| href          | External link target. Token interpolation supported (e.g. `{site_url}`).                                   | string  | —       |
+| external      | When true with `href`, opens in a new browser tab.                                                          | boolean | `false` |
+| separator     | Renders as a visual separator. Other fields ignored.                                                       | boolean | `false` |
+| hidden        | Suppresses the item from rendering. Subtree is still in the tree for cascade addressing.                   | boolean | `false` |
+
+### Menu renderers
+
+The active engine's `menu-renderer` decides how nested items display: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), or `drawer` (`core:single-pane`). Renderers may impose a depth limit (default: 3).
+
+## commands
+
+First-class palette + keyboard-shortcut bindings. Each command has an explicit `id`; the cascade addresses commands by id and tombstones via `null`.
+
+```json
+{
+	"commands": [
+		{ "id": "open-palette",  "shortcut": "Mod+K",       "invoke":   "core:command-palette", "label": "Open Command Palette" },
+		{ "id": "new-post",      "shortcut": "Mod+Shift+N", "navigate": "/posts/new",            "label": "New Post" },
+		{ "id": "go-to-posts",   "shortcut": "g p",         "navigate": "/posts",                "label": "Go to Posts" }
 	]
 }
 ```
 
-### Binding object
+### Command object
 
-Both `shortcut` and `invoke` are required.
+| Property  | Description                                                                                                                                | Type   | Default |
+|-----------|--------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| id        | Cascade key. Required.                                                                                                                     | string | —       |
+| shortcut  | Keystroke spec, e.g. `Mod+K`. Follows `@wordpress/keyboard-shortcuts` syntax. Optional when the command is palette-only.                  | string | —       |
+| invoke    | App id to invoke. The app must declare `platform.core:triggerable: true`. Mutually exclusive with `navigate`.                              | string | —       |
+| navigate  | URL pattern to navigate to. Pure shortcut — no app mounts directly. Mutually exclusive with `invoke`.                                      | string | —       |
+| label     | Display label in the palette UI.                                                                                                            | string | —       |
 
-| Property | Description                                                                                                                                          | Type   | Default |
-|----------|------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| shortcut | Keystroke spec matching `^([A-Za-z]+\+)*[A-Za-z0-9]+$`. Follows `@wordpress/keyboard-shortcuts` syntax. Modifiers: `Mod`, `Shift`, `Alt`, `Ctrl`. `Mod` = Cmd on macOS, Ctrl elsewhere. Required. | string | —       |
-| invoke   | App id to invoke. The app must declare `platform.core:triggerable: true` in its manifest. Required.                                                  | string | —       |
+The v2 → v3 rename: `bindings[]` → `commands[]`. Each entry gains an explicit `id` (was implicit by `shortcut`).
 
 ## styles
 
@@ -294,96 +406,11 @@ Per-region style overrides, keyed by region id. Same shape as the top-level `sty
 
 Per-app style overrides, keyed by app id. Same shape as the top-level `styles` tree. Overrides scope to `[data-app-id="..."]` selectors.
 
-## viewConfigs
-
-> **v3 successor:** `settings.dataViews` in admin-v3. The 3-axis registry shape is preserved (same `kind → name → variant|_default` keying). Filter name renames to `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]`; per-variant suffix is restored. JS hook is `useDataView(screenId)` (or `useDataView({ kind, name, variant })` for the registry-direct entry point). v2 callers keep working through deprecation shims one release cycle.
-
-Cascade registry of view-configs, keyed by entity kind → entity name → variant or `_default`. Each leaf is a view-config document (fields, default view, default layouts, actions). The shell merges entries across the 6-origin cascade and runs the `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` filter on the resolved triple before serving. Apps consume the result via `useViewConfig(kind, name, variant?)` (deprecated; use `useDataView` going forward).
-
-Variant key `_default` is the unqualified base view-config; any other key represents a named scoped sub-view (slash namespacing is allowed: `woocommerce-bookings/services`).
-
-```json
-{
-	"viewConfigs": {
-		"postType": {
-			"post": {
-				"_default": {
-					"fieldsRef": "core/post-fields",
-					"defaultView": { "type": "table", "perPage": 25 }
-				}
-			}
-		}
-	}
-}
-```
-
-### View-config entry
-
-| Property         | Description                                                                                                                                                                  | Type   | Default |
-|------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| fieldsRef        | Reference to a `fieldCollections` entry id. The referenced collection's `fields` array is the base set; inline `fields` overrides per-field by `id`.                          | string | —       |
-| fields           | Field descriptors for DataViews columns. Render callbacks are not declared here — the consuming app provides them keyed by `id`.                                              | array  | —       |
-| defaultView      | Initial DataViews `view` object (`type`, `search`, `filters`, `page`, `perPage`, `sort`, `fields`, `titleField`, `layout`).                                                  | object | —       |
-| defaultLayouts   | DataViews `defaultLayouts` prop. Keys are layout ids (`table`, `grid`, etc.); values are layout-specific config objects.                                                     | object | —       |
-| actions          | Row-level + bulk action descriptors. Each entry declares an `id` (mapped to a callback by the consuming app), `label`, `icon`, primacy / destructiveness flags, bulk support. | array  | —       |
-
-### View-config field
-
-`id`, `type`, and `label` are required.
-
-| Property               | Description                                                                                       | Type    | Default          |
-|------------------------|---------------------------------------------------------------------------------------------------|---------|------------------|
-| id                     | Field identifier. Matches the entity record key. Required.                                        | string  | —                |
-| type                   | One of `text`, `datetime`, `number`, `integer`, `boolean`, `media`, `select`, `url`, `email`. Required. | string  | —                |
-| label                  | Human-readable column header. Translatable. Required.                                             | string  | —                |
-| enableHiding           | When `false`, the column cannot be hidden.                                                        | boolean | `true`           |
-| enableGlobalSearch     | When `true`, the column participates in the global search box.                                    | boolean | `false`          |
-| enableSorting          | When `false`, the column cannot be sorted.                                                        | boolean | `true` (text/number/datetime) |
-| elements               | Enumerated `{ value, label }` pairs for select-type fields.                                       | array   | —                |
-| filterBy               | Filter configuration `{ operators: [...] }`. Omit to disable filtering. Operators include `is`, `isAny`, `isNot`, `isNotAll`. | object  | —                |
-
-### View-config action
-
-`id` and `label` are required.
-
-| Property        | Description                                                                                                          | Type    | Default |
-|-----------------|----------------------------------------------------------------------------------------------------------------------|---------|---------|
-| id              | Action identifier. Consuming apps key their callback map off this value. Required.                                    | string  | —       |
-| label           | Human-readable label. Translatable. Required.                                                                        | string  | —       |
-| icon            | Icon name resolved via the kernel icon registry.                                                                     | string  | —       |
-| isPrimary       | Surface as a top-level affordance instead of inside an overflow menu.                                                | boolean | `false` |
-| isDestructive   | Trigger destructive UI affordances (red button, confirmation modal).                                                  | boolean | `false` |
-| supportsBulk    | Operate on multiple selected rows.                                                                                   | boolean | `false` |
-| eligibleWhen    | Declarative eligibility predicate. v1 declares one field: `status` (single value or array of valid status strings). The consuming app compiles to an `isEligible(item)` callback. | object  | —       |
-
-#### Action `eligibleWhen`
-
-| Property | Description                                                                                          | Type             | Default |
-|----------|------------------------------------------------------------------------------------------------------|------------------|---------|
-| status   | Item status(es) that make the action eligible. Example: `"publish"` or `[ "publish", "future" ]`.   | string \| array  | —       |
-
-## fieldCollections
-
-> **v3 successor:** `settings.dataFields` in admin-v3. Same per-entry shape, moved under `settings` alongside `settings.dataViews` for registry symmetry. PHP registration function renames to `wp_admin_shell_register_data_field_collection()`; the legacy `wp_admin_shell_register_field_collection()` survives as a deprecation wrapper for one release cycle.
-
-Cascade registry of field collections, keyed by collection id (slash namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair, or to all names of the kind when `name` is `null`. View-configs reference a collection via `fieldsRef` and the runtime merges ref-wins with inline `fields` per-field override.
-
-### Field collection entry
-
-`kind` and `fields` are required.
-
-| Property      | Description                                                                                                                           | Type    | Default |
-|---------------|---------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
-| kind          | Entity kind, matching `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.). Required.                            | string  | —       |
-| name          | Entity name (`post`, `page`, `user`, `comment`). `null` = universal across all names of the kind.                                     | string \| null | — |
-| fields        | Field descriptors that view-configs may reference. Same shape as `viewConfigs[*][*][*].fields`. Required.                              | array   | —       |
-| fieldsModule  | Reserved for forward compatibility. Native ESM script-module handle. Currently inert; logs a one-time dev warning when declared.       | string  | —       |
-
 ## preload
 
 REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs. Each entry is either a string path (defaults to `GET`) or a `[ path, method ]` tuple. Methods are restricted to `GET` and `OPTIONS`.
 
-Across origins the resolved value is the concatenation of every origin's `preload[]` — there are no override semantics, only additive union. Duplicates by exact `path + method` are deduped before serialization. Conditional preloads belong in a `wp_admin_shell_data_{origin}` filter callback.
+Across origins the resolved value is the concatenation of every origin's `preload[]` — there are no override semantics, only additive union. Duplicates by exact `path + method` are deduped before serialization. Conditional preloads belong in a `wp_admin_shell_data_{origin}` filter callback. Per-screen preloads live in `screens[id].preload`.
 
 ```json
 {
@@ -402,18 +429,24 @@ Across origins the resolved value is the concatenation of every origin's `preloa
 | string       | Shorthand for `[ path, "GET" ]`. Leading slash required.                                              |
 | tuple        | `[ path, method ]` where method is `"GET"` or `"OPTIONS"`. Query string is part of the path string.   |
 
-## dashboardWidgets
+## `regions` / `routes` (escape hatches)
 
-Per-widget overrides keyed by app id. Each entry layers on top of the app manifest's `dashboardWidget` block — `admin.json` wins per-property. Use to hide widgets the shell ships with, to pin a widget to a specific cell, or to grow its size. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` contribute through the plugin origin and are overrideable here.
+The v3 compiler synthesizes the runtime regions map + routes table from `workspace.widgets[]` + `screens[]` + the active engine's `defaultRegions`. Authors who need a region or route the v3 shape can't express still write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against compiler synthesis.
 
-Keys must match the namespaced app id pattern `^(core:[a-z][a-z0-9-]*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$`.
+The shape of these blocks is identical to v2 — see [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-shell-design-spec.md#62-routes-block) for route patterns. New shells should avoid these blocks when the v3 surface can express the same thing.
 
-### Dashboard widget override
+## v2 surfaces (deprecated)
 
-| Property      | Description                                                                                                  | Type             | Default |
-|---------------|--------------------------------------------------------------------------------------------------------------|------------------|---------|
-| title         | Tile-header title. Translatable.                                                                             | string           | —       |
-| defaultSize   | `{ w, h }` in grid cells. Both `w` and `h` are required when set and must be `>= 1`.                          | object           | —       |
-| minSize       | `{ w, h }` floor in grid cells. Both `w` and `h` are required when set and must be `>= 1`.                    | object           | —       |
-| position      | `"auto"` or `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` are required when set.     | string \| object | `"auto"` (in `dashboardWidget`) |
-| hidden        | When `true`, the host skips this widget. `admin.json`-only — manifests can't hide themselves.               | boolean          | `false` |
+These top-level blocks are v2-shape and emit `_doing_it_wrong` notices when present in a v3 admin.json. Removed at v3.1. See [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md) for the migration table.
+
+| v2 block             | v3 successor                                          | Removal |
+|----------------------|-------------------------------------------------------|---------|
+| `viewConfigs`        | `settings.dataViews` (same 3-axis shape)              | v3.1    |
+| `fieldCollections`   | `settings.dataFields` (same per-entry shape)          | v3.1    |
+| `bindings`           | `commands` (id-keyed; shortcuts attached per entry)   | v3.1    |
+| `dashboardWidgets`   | `screens[id].apps[]` with `slot: "grid"`              | v3.1    |
+| `default-route`      | `workspace.default-screen`                            | v3.1    |
+| top-level `branding` | `workspace.branding`                                  | v3.1    |
+| top-level `engine`   | `workspace.engine`                                    | v3.1    |
+
+For the full deprecation timeline + filter renames + JS API renames + REST renames, read [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md). The `wp admin-shell migrate-shell <slug>` CLI handles the mechanical transform.
