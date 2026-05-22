@@ -1,37 +1,15 @@
 import { useEffect, useMemo } from '@wordpress/element';
 
 import { useKernel } from '../kernel-context';
-import { parseShortcut } from './parseShortcut.mjs';
+import { buildCommandsArray } from './buildCommandsArray.mjs';
 import { trigger } from './triggerStore.mjs';
 import { navigate } from '../routing/router';
 
-/**
- * Compile a `commands[]` / `bindings[]` array into the entry shape the
- * keydown handler iterates: `{ match, invoke, navigate }`. Skips entries
- * without a parseable shortcut or without at least one of
- * invoke/navigate. Returns `[]` for nullish / empty inputs so the caller
- * can use referential identity of the result for `useEffect` dep
- * stability.
- *
- * Pure and side-effect-free — module-scope so the rebind test can
- * exercise it without standing up a React tree.
- *
- * @param {Array<{shortcut?: string, invoke?: string, navigate?: string}>|null|undefined} commands Authored command/binding entries from the resolved config.
- * @return {Array<{match: Function, invoke: string|null, navigate: string|null}>} Compiled entries, empty array for unusable input.
- */
-export function buildCommandsArray( commands ) {
-	if ( ! Array.isArray( commands ) || commands.length === 0 ) {
-		return [];
-	}
-	return commands
-		.map( ( entry ) => ( {
-			match: parseShortcut( entry?.shortcut ),
-			invoke: typeof entry?.invoke === 'string' ? entry.invoke : null,
-			navigate:
-				typeof entry?.navigate === 'string' ? entry.navigate : null,
-		} ) )
-		.filter( ( e ) => e.match && ( e.invoke || e.navigate ) );
-}
+// `buildCommandsArray` lives in its own `.mjs` sibling so the rebind test
+// can import it directly (`tests/runtime/bindings-consumer-rebind.test.mjs`).
+// Keeping it pure-ESM + module-scoped matches the repo convention for
+// runtime helpers (`resolveRegion.mjs`, `matchRoute.mjs`, `lruCache.mjs`).
+export { buildCommandsArray };
 
 /**
  * Reads the resolved admin.json `commands` block (v3) and registers each

@@ -4,11 +4,38 @@
  * `BindingsConsumer` so the document keydown handler can rebind only on
  * real shortcut changes (item 6 of the PR-49 pre-merge feedback plan).
  *
- * A full JSDOM mount of `BindingsConsumer` would need to stub @wordpress/
- * element + react + the kernel context; the pragmatic move is to test the
- * pure function and infer `useMemo` dep stability from the existence of
- * `[ config?.commands, config?.bindings ]` deps in the component. The
- * runtime tests are pure-ESM-leaning by convention.
+ * Two layers of coverage live in this file:
+ *
+ * 1. **Functional behavior** on the extracted helper. Imported directly
+ *    from `src/runtime/bindings/buildCommandsArray.mjs` — the helper
+ *    sits in its own `.mjs` sibling per the repo's pure-ESM convention
+ *    (`resolveRegion.mjs`, `matchRoute.mjs`, `lruCache.mjs`). No source
+ *    extraction or function-constructor stubbing needed.
+ *
+ * 2. **Static-analysis tripwires** on `BindingsConsumer.js` itself —
+ *    grep for the specific shape of the perf fix (`useMemo` wrapper +
+ *    nested-ref deps + memoized-compiled effect deps). These are
+ *    regression tripwires for *the specific shape* of the fix, not
+ *    behavioral guarantees. They will need updating on any deliberate
+ *    var-name refactor (e.g. renaming `compiled` to `entries`); that's
+ *    an accepted brittleness in exchange for catching a future refactor
+ *    that legitimately reverts to the rebind-every-render shape.
+ *
+ * What this file does NOT cover (deferred until a JSDOM scaffold lands
+ * — issue #30 tracks):
+ *
+ *   - The `useEffect` cleanup function actually fires
+ *     (`document.removeEventListener( 'keydown', onKey )`).
+ *   - `useMemo` returns a referentially-stable value across renders
+ *     with unchanged deps (semantic React-runtime guarantee, not a
+ *     source-shape guarantee).
+ *   - The interaction between `compiled` referential stability and
+ *     the `useEffect` dep array — i.e. that the keydown handler is
+ *     actually rebound only when the deps array changes.
+ *
+ * All three gaps require mounting `<BindingsConsumer>` inside a React
+ * tree + observing `document.addEventListener` call counts. A
+ * follow-up PR should add JSDOM mount coverage when the scaffold lands.
  */
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,15 +44,9 @@ import { readFileSync } from 'node:fs';
 const __dirname   = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
-// BindingsConsumer.js imports @wordpress/element (a runtime external).
-// Importing the file directly would fail on the bare-specifier import.
-// Re-export the pure helper via dynamic-import after shimming Node's
-// resolver — simplest path is to read the source + extract the named
-// export through a Function constructor that stubs the bare imports.
-// In practice the helper is small enough that we reimplement-via-source.
-//
-// Cleaner alternative: split `buildCommandsArray` into its own .mjs file.
-// We accept the slight duplication for now — the function is 8 lines.
+const { buildCommandsArray } = await import(
+	resolve( projectRoot, 'src/runtime/bindings/buildCommandsArray.mjs' )
+);
 
 const sourcePath = resolve( projectRoot, 'src/runtime/bindings/BindingsConsumer.js' );
 const source = readFileSync( sourcePath, 'utf8' );
@@ -44,12 +65,13 @@ function ok( label, condition, detail = '' ) {
 }
 
 // -------------------------------------------------------------------- 1
-// Static-analysis guards on the source — these are the structural
-// guarantees the runtime relies on. If they regress, the keydown
-// handler is back to rebinding every render.
+// Static-analysis tripwires on the BindingsConsumer source — these are
+// the structural guarantees the runtime relies on. If they regress, the
+// keydown handler is back to rebinding every render. These are NOT
+// behavioral assertions — see the file header for the limitation.
 ok(
-	'exports buildCommandsArray helper at module scope',
-	/export function buildCommandsArray\s*\(/.test( source )
+	'BindingsConsumer re-exports buildCommandsArray helper',
+	/export \{ buildCommandsArray \};/.test( source )
 );
 ok(
 	'BindingsConsumer wraps the compile in useMemo',
@@ -65,31 +87,13 @@ ok(
 );
 
 // -------------------------------------------------------------------- 2
-// Functional behavior. Import the helper via a freshly-evaluated module
-// to isolate parseShortcut + the WP element shim. We Function-construct
-// the helper from its source slice — parseShortcut is the only external
-// dep, and we stub it with a deterministic implementation.
-const helperMatch = source.match(
-	/export function buildCommandsArray\([^)]*\)\s*\{[\s\S]*?\n\}/
-);
-ok( 'helper extracts from source', helperMatch !== null );
-
-const buildCommandsArray = new Function(
-	'parseShortcut',
-	`${ helperMatch[ 0 ].replace( /export\s+/, '' ) }; return buildCommandsArray;`
-)(
-	// Stub: parseShortcut returns truthy for non-empty strings, null otherwise.
-	( s ) => ( typeof s === 'string' && s.length > 0 ? () => true : null )
-);
-
-// -------------------------------------------------------------------- 3
-// Empty / nullish inputs.
+// Empty / nullish / non-array inputs.
 ok( 'null input → empty array', buildCommandsArray( null ).length === 0 );
 ok( 'undefined input → empty array', buildCommandsArray( undefined ).length === 0 );
 ok( 'empty array → empty array', buildCommandsArray( [] ).length === 0 );
 ok( 'non-array → empty array', buildCommandsArray( 'nope' ).length === 0 );
 
-// -------------------------------------------------------------------- 4
+// -------------------------------------------------------------------- 3
 // Filter drops malformed entries.
 const mixed = [
 	{ shortcut: 'Mod+K', invoke: 'core:command-palette' },
@@ -107,7 +111,7 @@ ok( 'invoke entries preserved',
 ok( 'navigate entries preserved',
 	mixedOut[ 1 ].navigate === '/posts' && mixedOut[ 1 ].invoke === null );
 
-// -------------------------------------------------------------------- 5
+// -------------------------------------------------------------------- 4
 // Determinism — identical inputs produce equal outputs.
 const a = [ { shortcut: 'Mod+K', invoke: 'core:command-palette' } ];
 const b = [ { shortcut: 'Mod+K', invoke: 'core:command-palette' } ];
