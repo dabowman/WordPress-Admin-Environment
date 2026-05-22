@@ -548,6 +548,100 @@ $T::assert_true(
 	is_wp_error( $data_url )
 );
 
+// vbscript: is rejected by the fall-through `strpos(':') === false`
+// branch — was claimed in the docblock but never asserted. Add
+// explicit coverage to lock the contract.
+$vbs = wp_admin_shell_register_menu_item( 'wpas-test-vbs', array(
+	'label' => 'evil',
+	'href'  => 'vbscript:msgbox(1)',
+) );
+$T::assert_true(
+	'is_safe_href: vbscript: rejected',
+	is_wp_error( $vbs )
+);
+
+// Whitespace-leading protocol-relative — HTML5 strips before
+// navigation, so the browser would route to `//evil.example.com`.
+// The validator's `trim()` neutralizes the bypass.
+$ws_space = wp_admin_shell_register_menu_item( 'wpas-test-ws-space', array(
+	'label' => 'evil',
+	'href'  => ' //evil.example.com',
+) );
+$T::assert_true(
+	'is_safe_href: leading-space protocol-relative rejected',
+	is_wp_error( $ws_space )
+);
+
+$ws_tab = wp_admin_shell_register_menu_item( 'wpas-test-ws-tab', array(
+	'label' => 'evil',
+	'href'  => "\t//evil.example.com",
+) );
+$T::assert_true(
+	'is_safe_href: leading-tab protocol-relative rejected',
+	is_wp_error( $ws_tab )
+);
+
+$ws_newline = wp_admin_shell_register_menu_item( 'wpas-test-ws-newline', array(
+	'label' => 'evil',
+	'href'  => "\n//evil.example.com",
+) );
+$T::assert_true(
+	'is_safe_href: leading-newline protocol-relative rejected',
+	is_wp_error( $ws_newline )
+);
+
+$ws_multi = wp_admin_shell_register_menu_item( 'wpas-test-ws-multi', array(
+	'label' => 'evil',
+	'href'  => "  \t //evil.example.com",
+) );
+$T::assert_true(
+	'is_safe_href: multi-whitespace protocol-relative rejected',
+	is_wp_error( $ws_multi )
+);
+
+// Backslash variants. Browsers sometimes treat `\\host` as
+// protocol-relative; legacy WebViews and IE/Edge historically did.
+// Defense-in-depth reject.
+$bs_double = wp_admin_shell_register_menu_item( 'wpas-test-bs-double', array(
+	'label' => 'evil',
+	'href'  => '\\\\evil.example.com',
+) );
+$T::assert_true(
+	'is_safe_href: double-backslash `\\\\evil.example.com` rejected',
+	is_wp_error( $bs_double )
+);
+
+$bs_escaped = wp_admin_shell_register_menu_item( 'wpas-test-bs-escaped', array(
+	'label' => 'evil',
+	'href'  => '\\/\\/evil.example.com',
+) );
+$T::assert_true(
+	'is_safe_href: escaped-slash `\\/\\/evil.example.com` rejected',
+	is_wp_error( $bs_escaped )
+);
+
+// Whitespace-only href trims to '' and is accepted (no navigation
+// target → nothing harmful to register).
+$ws_only = wp_admin_shell_register_menu_item( 'wpas-test-ws-only', array(
+	'label' => 'ok',
+	'href'  => '   ',
+) );
+$T::assert_true(
+	'is_safe_href: whitespace-only href accepted (trims to empty)',
+	! is_wp_error( $ws_only )
+);
+
+// Normal hrefs with leading whitespace still validate to the trimmed
+// inner value — `  /wp-admin/foo.php` → `/wp-admin/foo.php` → accepted.
+$ws_safe = wp_admin_shell_register_menu_item( 'wpas-test-ws-safe', array(
+	'label' => 'ok',
+	'href'  => '  /wp-admin/foo.php',
+) );
+$T::assert_true(
+	'is_safe_href: whitespace-padded safe href still accepted',
+	! is_wp_error( $ws_safe )
+);
+
 WP_Admin_Shell_Menu_Items::reset();
 
 echo "\nTOTAL: " . $T::$pass . " passed, " . $T::$fail . " failed of " . ( $T::$pass + $T::$fail ) . "\n";
