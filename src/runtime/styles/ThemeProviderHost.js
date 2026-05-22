@@ -25,6 +25,10 @@
  *      paints without any DS-specific styling until the engine fixes
  *      its provider.
  *
+ * Pure helpers (density extraction, scope-content detection,
+ * `compileStyles` → CSS serialization) live alongside this module in
+ * `themeScope.mjs` so `tests/runtime/*` can `import()` them directly.
+ *
  * Two public components:
  *   - `<ThemeProviderHost>`: top-level, takes the engine source directly.
  *   - `<ScopedThemeProvider>`: nested, reads the engine source via
@@ -35,12 +39,13 @@
 import { useId, useMemo, createElement, Component } from '@wordpress/element';
 
 import { useKernel } from '../kernel-context';
-
-const EMPTY_COMPILED = Object.freeze( {
-	top: Object.freeze( {} ),
-	scoped: Object.freeze( [] ),
-	subtrees: Object.freeze( {} ),
-} );
+import {
+	pickDensity,
+	hasThemeContent,
+	buildScopedDetailCss,
+	THEME_SCOPE_ATTRIBUTE,
+	THEME_SCOPE_DETAIL_ATTRIBUTE,
+} from './themeScope.mjs';
 
 const EMPTY_TOKENS = Object.freeze( {} );
 
@@ -63,29 +68,6 @@ export function ThemeProviderHost( props ) {
 }
 
 /**
- * Extract a density value from a styles tree. Returns whatever string the
- * author authored (tier-1 `styles.theme.density`, tier-4 legacy
- * `styles.density`) or `undefined`. Validation of the value against a DS-
- * specific vocabulary is the engine's ThemeProvider's responsibility —
- * the kernel does not enforce a fixed enum here so engines built on
- * design systems with different density names (Material's `dense`,
- * Tailwind's `sm/md/lg`, etc.) can interpret their own values.
- * @param {*} styles
- */
-function pickDensity( styles ) {
-	if ( ! styles ) {
-		return undefined;
-	}
-	if ( typeof styles.theme?.density === 'string' ) {
-		return styles.theme.density;
-	}
-	if ( typeof styles.density === 'string' ) {
-		return styles.density;
-	}
-	return undefined;
-}
-
-/**
  * Per-subtree host. Used by `<Region>` and `<MountedApp>` to scope token
  * overrides to a region or application via a nested provider. Returns
  * `children` unchanged when the subtree has no `styles` declared.
@@ -99,11 +81,7 @@ function pickDensity( styles ) {
  */
 export function ScopedThemeProvider( { styles, children } ) {
 	const { engineSource } = useKernel();
-	if (
-		! styles ||
-		typeof styles !== 'object' ||
-		! hasThemeContent( styles )
-	) {
+	if ( ! hasThemeContent( styles ) ) {
 		return children;
 	}
 	const tokens =
@@ -157,7 +135,7 @@ function ProviderShell( {
 	const wrapper = createElement(
 		'div',
 		{
-			'data-theme-scope-id': id,
+			[ THEME_SCOPE_ATTRIBUTE ]: id,
 			className: 'wp-admin-shell-theme-root',
 			style: { display: 'contents' },
 		},
@@ -172,7 +150,11 @@ function ProviderShell( {
 	};
 
 	const detailStyleNode = detailCss
-		? createElement( 'style', { 'data-theme-scope-detail': id }, detailCss )
+		? createElement(
+				'style',
+				{ [ THEME_SCOPE_DETAIL_ATTRIBUTE ]: id },
+				detailCss
+		  )
 		: null;
 
 	return createElement(
@@ -251,95 +233,6 @@ class ThemeProviderErrorBoundary extends Component {
 				wrapper
 			);
 		}
-		return createElement(
-			NeutralProvider,
-			{ detailStyleNode },
-			wrapper
-		);
+		return createElement( NeutralProvider, { detailStyleNode }, wrapper );
 	}
-}
-
-/**
- * Build the slot-override CSS layered on top of the engine's
- * ThemeProvider. No `:root` writes — the engine's provider already
- * covers that layer. Shell-level + chrome + region/app overrides
- * emit scoped to the provider id we attach to our wrapping `<div>`.
- *
- * Delegates the actual styles → CSS-variable compilation to the
- * engine's optional `compileStyles` hook. When the engine omits the
- * hook, no scoped CSS is emitted — the engine's ThemeProvider owns
- * all token plumbing directly.
- *
- * @param {Object} root0
- * @param {*}      root0.engineSource
- * @param {*}      root0.styles
- * @param {*}      root0.tokens
- * @param {*}      root0.providerId
- */
-function buildScopedDetailCss( { engineSource, styles, tokens, providerId } ) {
-	const compile = engineSource?.compileStyles;
-	const compiled = compile ? compile( styles, tokens ) : EMPTY_COMPILED;
-	const lines = [];
-	const scopeSel = `[data-theme-scope-id="${ providerId }"]`;
-
-	const topVars = compiled.top || {};
-	if ( Object.keys( topVars ).length > 0 ) {
-		lines.push( `${ scopeSel } {` );
-		for ( const [ name, value ] of Object.entries( topVars ) ) {
-			lines.push( `\t${ name }: ${ value };` );
-		}
-		lines.push( '}' );
-	}
-
-	for ( const { selector, vars } of compiled.scoped || [] ) {
-		lines.push( `${ scopeSel } ${ selector } {` );
-		for ( const [ name, value ] of Object.entries( vars ) ) {
-			lines.push( `\t${ name }: ${ value };` );
-		}
-		lines.push( '}' );
-	}
-
-	for ( const [ scopeKey, vars ] of Object.entries(
-		compiled.subtrees || {}
-	) ) {
-		const sel = scopedSelector( scopeKey, scopeSel );
-		if ( ! sel ) {
-			continue;
-		}
-		lines.push( `${ sel } {` );
-		for ( const [ name, value ] of Object.entries( vars ) ) {
-			lines.push( `\t${ name }: ${ value };` );
-		}
-		lines.push( '}' );
-	}
-
-	return lines.join( '\n' );
-}
-
-function scopedSelector( scopeKey, scopeSel ) {
-	if ( scopeKey.startsWith( 'region:' ) ) {
-		return `${ scopeSel } [data-region-id="${ scopeKey.slice( 7 ) }"]`;
-	}
-	if ( scopeKey.startsWith( 'app:' ) ) {
-		return `${ scopeSel } [data-app-id="${ scopeKey.slice( 4 ) }"]`;
-	}
-	return null;
-}
-
-function hasThemeContent( styles ) {
-	if ( styles.theme && typeof styles.theme === 'object' ) {
-		return true;
-	}
-	for ( const key of [
-		'color',
-		'border',
-		'dimension',
-		'elevation',
-		'font',
-	] ) {
-		if ( styles[ key ] && typeof styles[ key ] === 'object' ) {
-			return true;
-		}
-	}
-	return false;
 }
