@@ -1,5 +1,5 @@
 import Layout from './Layout';
-import { WpdsThemeProvider } from '../../styles/WpdsThemeProvider';
+import { WpdsThemeProvider } from './WpdsThemeProvider';
 import { compileStyles } from './compileStyles.mjs';
 import { iconTable, fallbackIcon } from './icons';
 import { registerIcons } from '../../config/iconMap';
