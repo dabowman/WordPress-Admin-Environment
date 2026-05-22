@@ -1086,7 +1086,9 @@ $views_over = array(
 		),
 	),
 );
-$views_merged = WP_Admin_Shell_Merge::merge( $views_base, $views_over );
+// Tombstones gated to trust-tier origins post-PR 1 (core/engine/plugin/site).
+// Use merge_with_tombstones to model the site-origin contribution path.
+$views_merged = WP_Admin_Shell_Merge::merge_with_tombstones( $views_base, $views_over );
 $mfields = $views_merged['settings']['dataViews']['postType']['post']['_default']['fields'];
 WPAS_Data_View_Test_Runner::assert_eq(
 	'cascade __tombstone removes a field from settings.dataViews.*.fields[]',

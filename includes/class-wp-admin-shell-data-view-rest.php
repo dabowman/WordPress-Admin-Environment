@@ -28,9 +28,13 @@
  *       Maps to `/data-view?screen=<id>` semantics. Attaches an
  *       `X-WP-Deprecated` header on the response. Removed in v3.1.
  *
- * Permission floor: `is_user_logged_in()`. Screen-level capability
- * gating happens elsewhere; reading the resolved config doc itself is
- * information-only.
+ * Permission floor:
+ *   - Screen-keyed requests (`?screen=<id>`) gate against the screen's
+ *     resolved `permissions` block via WP_Admin_Shell_Permissions. 401
+ *     for logged-out, 404 for unknown screen, 403 for known-but-denied.
+ *   - Triple-keyed requests (`?kind=X&name=Y&variant=Z`) keep the
+ *     `is_user_logged_in()` floor — triples aren't screen-scoped, no
+ *     cap floor to gate against.
  *
  * @package WP_Admin_Shell
  */
@@ -125,10 +129,55 @@ class WP_Admin_Shell_Data_View_REST {
 	}
 
 	/**
-	 * Permission floor: must be logged in.
+	 * Permission gate.
+	 *
+	 * Logged-out → 401 floor. For screen-keyed requests, additionally
+	 * resolve the requested screen's `permissions` block + `appFloor` and
+	 * route through `WP_Admin_Shell_Permissions::user_passes()` — 404 on
+	 * unknown screen id, 403 on known-but-denied. Triple-keyed requests
+	 * (kind/name/variant without a screen) keep the logged-in floor only
+	 * — they aren't screen-scoped, and the underlying registry entries
+	 * don't carry per-screen cap declarations.
+	 *
+	 * @param WP_REST_Request $request
+	 * @return bool|WP_Error
 	 */
-	public static function permission_check() {
-		return is_user_logged_in();
+	public static function permission_check( $request ) {
+		if ( ! is_user_logged_in() ) {
+			return new WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in to access this endpoint.', 'wp-admin-shell' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		$screen = $request instanceof WP_REST_Request ? (string) $request->get_param( 'screen' ) : '';
+		if ( $screen === '' ) {
+			return true;
+		}
+
+		$config  = wp_admin_shell_get_active_config();
+		$screens = isset( $config['screens'] ) && is_array( $config['screens'] ) ? $config['screens'] : array();
+		if ( ! isset( $screens[ $screen ] ) || ! is_array( $screens[ $screen ] ) ) {
+			return new WP_Error(
+				'wp_admin_shell_data_view_unknown_screen',
+				__( 'Unknown screen id.', 'wp-admin-shell' ),
+				array( 'status' => 404 )
+			);
+		}
+		$screen_entry = $screens[ $screen ];
+		$perms        = $screen_entry['permissions'] ?? null;
+		$app_floor    = WP_Admin_Shell_Permissions::app_floor_for( $screen_entry );
+		$resolved     = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
+
+		if ( ! WP_Admin_Shell_Permissions::user_passes( get_current_user_id(), $resolved ) ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'You are not allowed to read this screen view.', 'wp-admin-shell' ),
+				array( 'status' => 403 )
+			);
+		}
+		return true;
 	}
 
 	/**
