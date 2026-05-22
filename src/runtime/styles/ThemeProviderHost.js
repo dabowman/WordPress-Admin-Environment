@@ -1,20 +1,29 @@
 /**
  * ThemeProviderHost — single seam between the kernel and whichever
- * ThemeProvider the active engine ships.
+ * ThemeProvider the active engine ships. DS-neutral: this module
+ * never imports a design-system package; the kernel-DS-neutrality
+ * contract is verified by `tests/runtime/kernel-no-ds-import.test.mjs`.
  *
  * Responsibilities:
  *   1. Pick the inner ThemeProvider — engine's `ThemeProvider` field if
- *      declared, otherwise the platform default (`WpdsThemeProvider`).
+ *      declared, otherwise a neutral pass-through wrapper. Engines opt
+ *      into shell theming by shipping a `ThemeProvider`; absence leaves
+ *      children rendered un-themed inside a bare scoped wrapper.
  *   2. Mount it with seed/density/cursor inputs. Wrap children in a
- *      `<div data-wpds-theme-provider-id={id}>` so scoped detail CSS has
- *      a stable target.
- *   3. Emit tier-3 slot overrides + chrome → WPDS bridge + region/app
- *      scoped overrides as a sibling `<style>` block. Engines never
- *      reimplement these.
- *   4. Catch renders errors from the inner provider via an error
- *      boundary; on failure fall back to the platform default with a
- *      console warning. Shell stays usable when an extension engine
- *      ships a broken ThemeProvider.
+ *      `<div data-theme-scope-id={id}>` so scoped detail CSS has
+ *      a stable target. (Pre-v3 the attribute was named
+ *      `data-wpds-theme-provider-id`; renamed to drop the DS-specific
+ *      prefix since this attribute is the cross-engine scope hook.)
+ *   3. Emit engine-supplied scoped overrides (engine's `compileStyles`
+ *      hook returns `{top, scoped, subtrees}`) as a sibling `<style>`
+ *      block. Engines that omit the hook get zero scoped overrides —
+ *      their `ThemeProvider` owns all token plumbing directly.
+ *   4. Catch render errors from the engine-supplied provider via an
+ *      error boundary; on failure fall back to the same neutral
+ *      pass-through wrapper with a console warning. Shell stays usable
+ *      when an extension engine ships a broken ThemeProvider — but it
+ *      paints without any DS-specific styling until the engine fixes
+ *      its provider.
  *
  * Two public components:
  *   - `<ThemeProviderHost>`: top-level, takes the engine source directly.
@@ -25,7 +34,6 @@
 
 import { useId, useMemo, createElement, Component } from '@wordpress/element';
 
-import { WpdsThemeProvider } from './WpdsThemeProvider';
 import { useKernel } from '../kernel-context';
 
 const EMPTY_COMPILED = Object.freeze( {
@@ -41,7 +49,9 @@ const EMPTY_TOKENS = Object.freeze( {} );
  *
  * @param {Object}  props
  * @param {Object}  [props.engineSource] Active engine source. When absent
- *                                       (e.g. tests), falls back to WPDS.
+ *                                       (or when its `ThemeProvider` is
+ *                                       missing), falls back to a neutral
+ *                                       pass-through wrapper.
  * @param {Object}  props.styles
  * @param {Object}  props.tokens
  * @param {boolean} [props.isRoot]
@@ -147,7 +157,7 @@ function ProviderShell( {
 	const wrapper = createElement(
 		'div',
 		{
-			'data-wpds-theme-provider-id': id,
+			'data-theme-scope-id': id,
 			className: 'wp-admin-shell-theme-root',
 			style: { display: 'contents' },
 		},
@@ -162,15 +172,41 @@ function ProviderShell( {
 	};
 
 	const detailStyleNode = detailCss
-		? createElement( 'style', { 'data-wpds-shell-detail': id }, detailCss )
+		? createElement( 'style', { 'data-theme-scope-detail': id }, detailCss )
 		: null;
 
 	return createElement(
 		ThemeProviderErrorBoundary,
 		{ engineSource, innerProps, wrapper, detailStyleNode },
 		// children prop unused — boundary renders the engine provider
-		// internally so it can swap to the default on error.
+		// internally so it can swap to the neutral wrapper on error.
 		null
+	);
+}
+
+/**
+ * Neutral pass-through wrapper used when an engine declines to ship a
+ * `ThemeProvider`, or when its provider throws during render. Renders
+ * `detailStyleNode` (if any) plus the wrapped children unchanged. No DS
+ * package is imported here — engines that need design-system theming
+ * MUST ship their own `ThemeProvider`; the kernel's contract is render
+ * children un-themed, never silently inject a WPDS (or any other DS)
+ * fallback.
+ *
+ * The DOM-attribute contract on the wrapper (`data-theme-scope-id`)
+ * still holds in this path so engine-supplied `compileStyles` output
+ * — which scopes its CSS under that attribute — still applies even
+ * when the inner provider is absent or broken.
+ * @param {Object} root0
+ * @param {*}      root0.detailStyleNode
+ * @param {*}      root0.children
+ */
+function NeutralProvider( { detailStyleNode, children } ) {
+	return createElement(
+		'div',
+		{ style: { display: 'contents' } },
+		detailStyleNode || null,
+		children
 	);
 }
 
@@ -179,8 +215,9 @@ function ProviderShell( {
  * Engine-supplied providers ship outside the kernel's review process
  * (extensions can register their own engines via
  * `wp_admin_shell_register_engine`); a thrown render here would crash
- * the entire shell. Catch + log + fall back to WPDS so the shell still
- * paints.
+ * the entire shell. Catch + log + fall back to the neutral wrapper so
+ * the shell still paints — though without engine-specific DS theming
+ * until the engine ships a working provider.
  */
 class ThemeProviderErrorBoundary extends Component {
 	constructor( props ) {
@@ -196,7 +233,8 @@ class ThemeProviderErrorBoundary extends Component {
 		// eslint-disable-next-line no-console
 		console.error(
 			'wp-admin-shell: engine ThemeProvider threw during render. ' +
-				'Falling back to WPDS default. ' +
+				'Falling back to a neutral pass-through wrapper; engine ' +
+				'theming will not apply until the provider is fixed. ' +
 				( error?.message || error )
 		);
 	}
@@ -204,11 +242,20 @@ class ThemeProviderErrorBoundary extends Component {
 	render() {
 		const { engineSource, innerProps, wrapper, detailStyleNode } =
 			this.props;
-		const Provider =
-			! this.state.failed && engineSource?.ThemeProvider
-				? engineSource.ThemeProvider
-				: WpdsThemeProvider;
-		return createElement( Provider, innerProps, detailStyleNode, wrapper );
+		if ( ! this.state.failed && engineSource?.ThemeProvider ) {
+			const Provider = engineSource.ThemeProvider;
+			return createElement(
+				Provider,
+				innerProps,
+				detailStyleNode,
+				wrapper
+			);
+		}
+		return createElement(
+			NeutralProvider,
+			{ detailStyleNode },
+			wrapper
+		);
 	}
 }
 
@@ -233,7 +280,7 @@ function buildScopedDetailCss( { engineSource, styles, tokens, providerId } ) {
 	const compile = engineSource?.compileStyles;
 	const compiled = compile ? compile( styles, tokens ) : EMPTY_COMPILED;
 	const lines = [];
-	const scopeSel = `[data-wpds-theme-provider-id="${ providerId }"]`;
+	const scopeSel = `[data-theme-scope-id="${ providerId }"]`;
 
 	const topVars = compiled.top || {};
 	if ( Object.keys( topVars ).length > 0 ) {
