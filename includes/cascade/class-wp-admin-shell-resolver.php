@@ -129,6 +129,28 @@ class WP_Admin_Shell_Resolver {
 				: WP_Admin_Shell_Merge::merge( $merged, $tagged );
 		}
 
+		/**
+		 * Filter the cascade-merged admin.json doc before compilation.
+		 *
+		 * Fires after every origin has merged but BEFORE the v3 compiler
+		 * synthesizes the runtime tree (`routes`, `regions`,
+		 * `default-route`). Callbacks therefore receive the AUTHOR-SHAPE
+		 * doc — `workspace` / `screens` / `menu` / `commands` for v3
+		 * shells; legacy `routes` / `regions` for v2 shells —
+		 * not the post-compile shape. Mutating a screen here is fine;
+		 * synthesizing a `regions` block for a v3 shell is not (the
+		 * compiler will overwrite it).
+		 *
+		 * Plugin authors contributing screens, routes, regions, or
+		 * menu items should prefer the per-origin
+		 * `wp_admin_shell_data_{origin}` filters at priority 5 — those
+		 * fire before this hook, before `customizable` filtering, and
+		 * before the merge, so the contribution flows through the
+		 * cascade naturally (and reaches the existing
+		 * `inject_app_baselines` pass for dataView baselines).
+		 *
+		 * @param array $merged The cascade-merged author-shape doc.
+		 */
 		$merged = apply_filters( 'wp_admin_shell_data', $merged );
 		$merged = WP_Admin_Shell_Merge::strip_origin_tags( $merged );
 
