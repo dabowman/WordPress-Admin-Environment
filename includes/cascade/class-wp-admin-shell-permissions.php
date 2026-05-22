@@ -51,6 +51,136 @@ class WP_Admin_Shell_Permissions {
 	/** Origins restricted to REMOVE-only (shrink the OR-set). */
 	const REMOVE_ONLY_ORIGINS = array( 'role', 'user' );
 
+	/**
+	 * Resolver-side enforcement entry point. Called from
+	 * `WP_Admin_Shell_Resolver::resolve_with()` after each consumer-origin
+	 * filter pass, BEFORE the merge. Walks every
+	 * `screens[id].permissions` block in the incoming origin doc and
+	 * applies the shrink-only rule for role / user origins: any cap or
+	 * role the consumer attempts to add that isn't in the trusted-merged
+	 * baseline gets stripped + audit-logged.
+	 *
+	 * Trusted-tier origins (core / engine / plugin / site) pass through
+	 * untouched — they own the doc shape.
+	 *
+	 * @param array  $origin_doc    The single-origin doc about to be merged.
+	 * @param array  $merged_so_far The merged tree from previous origins.
+	 * @param string $origin        The origin name (`role` / `user` / etc).
+	 * @return array The (potentially stripped) origin doc.
+	 */
+	public static function enforce_origin_tier( $origin_doc, $merged_so_far, $origin ) {
+		if ( in_array( $origin, self::ADD_REMOVE_ORIGINS, true ) ) {
+			return $origin_doc;
+		}
+		if ( ! in_array( $origin, self::REMOVE_ONLY_ORIGINS, true ) ) {
+			return $origin_doc;
+		}
+		if ( ! is_array( $origin_doc ) || empty( $origin_doc['screens'] ) || ! is_array( $origin_doc['screens'] ) ) {
+			return $origin_doc;
+		}
+
+		$baseline_screens = isset( $merged_so_far['screens'] ) && is_array( $merged_so_far['screens'] )
+			? $merged_so_far['screens']
+			: array();
+
+		foreach ( $origin_doc['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) || ! isset( $screen['permissions'] ) || ! is_array( $screen['permissions'] ) ) {
+				continue;
+			}
+			$baseline_perms = isset( $baseline_screens[ $screen_id ]['permissions'] ) && is_array( $baseline_screens[ $screen_id ]['permissions'] )
+				? $baseline_screens[ $screen_id ]['permissions']
+				: array( 'capabilities' => array(), 'roles' => array() );
+
+			$origin_doc['screens'][ $screen_id ]['permissions'] = self::shrink_against_baseline(
+				$screen['permissions'],
+				$baseline_perms,
+				$origin,
+				(string) $screen_id
+			);
+		}
+		return $origin_doc;
+	}
+
+	/**
+	 * Apply shrink-only enforcement: drop any cap or role from the
+	 * consumer-origin permissions that isn't already present in the
+	 * trusted baseline. Each dropped entry produces an audit log
+	 * entry + WP_DEBUG error_log line.
+	 *
+	 * @param array  $consumer_perms { capabilities, roles } from consumer origin
+	 * @param array  $baseline_perms { capabilities, roles } from merged trusted baseline
+	 * @param string $origin
+	 * @param string $screen_id
+	 * @return array { capabilities, roles } — guaranteed subset of baseline
+	 */
+	private static function shrink_against_baseline( $consumer_perms, $baseline_perms, $origin, $screen_id ) {
+		$consumer_caps  = self::sanitize_string_list( $consumer_perms['capabilities'] ?? array() );
+		$consumer_roles = self::sanitize_string_list( $consumer_perms['roles'] ?? array() );
+		$baseline_caps  = self::sanitize_string_list( $baseline_perms['capabilities'] ?? array() );
+		$baseline_roles = self::sanitize_string_list( $baseline_perms['roles'] ?? array() );
+
+		$out_caps  = array();
+		foreach ( $consumer_caps as $cap ) {
+			if ( in_array( $cap, $baseline_caps, true ) ) {
+				$out_caps[] = $cap;
+				continue;
+			}
+			self::$audit[] = array(
+				'origin'    => $origin,
+				'screen'    => $screen_id,
+				'kind'      => 'capability',
+				'attempted' => 'add',
+				'detail'    => sprintf(
+					'origin "%1$s" attempted to add capability "%2$s" to screen "%3$s" permissions OR-set (consumer origins may only remove)',
+					$origin,
+					$cap,
+					$screen_id
+				),
+			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf(
+					'[wp-admin-shell] trust-tier violation: %s origin tried to add capability "%s" to screen "%s" OR-set; rejected.',
+					$origin,
+					$cap,
+					$screen_id
+				) );
+			}
+		}
+
+		$out_roles = array();
+		foreach ( $consumer_roles as $role ) {
+			if ( in_array( $role, $baseline_roles, true ) ) {
+				$out_roles[] = $role;
+				continue;
+			}
+			self::$audit[] = array(
+				'origin'    => $origin,
+				'screen'    => $screen_id,
+				'kind'      => 'role',
+				'attempted' => 'add',
+				'detail'    => sprintf(
+					'origin "%1$s" attempted to add role "%2$s" to screen "%3$s" permissions OR-set (consumer origins may only remove)',
+					$origin,
+					$role,
+					$screen_id
+				),
+			);
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf(
+					'[wp-admin-shell] trust-tier violation: %s origin tried to add role "%s" to screen "%s" OR-set; rejected.',
+					$origin,
+					$role,
+					$screen_id
+				) );
+			}
+		}
+
+		return array(
+			'capabilities' => array_values( array_unique( $out_caps ) ),
+			'roles'        => array_values( array_unique( $out_roles ) ),
+		);
+	}
+
 	/** Multisite magic value — triggers `is_super_admin()`. */
 	const SUPER_ADMIN_ROLE = 'super-admin';
 

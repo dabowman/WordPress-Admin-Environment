@@ -108,6 +108,13 @@ class WP_Admin_Shell_Resolver {
 		}
 
 		// Phase 2 — consumer origins (additive, customizable-filtered).
+		// Site sits at the top of the trust tier (core/engine/plugin/site may
+		// add+remove; role/user may only remove). Site uses
+		// `merge_with_tombstones()` — additive on keyed arrays but tombstones
+		// honored. Role/user use strict `merge()` (tombstones no-op). The
+		// permissions trust-tier (shrink-only) enforcement runs against
+		// `screens[].permissions` BEFORE the merge so role/user can't grow
+		// the OR-set even on screens they introduce.
 		foreach ( self::CONSUMER_ORIGINS as $origin ) {
 			$doc = $origins[ $origin ] ?? array();
 			if ( ! is_array( $doc ) ) {
@@ -115,8 +122,11 @@ class WP_Admin_Shell_Resolver {
 			}
 			$doc    = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
 			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc );
+			$doc    = WP_Admin_Shell_Permissions::enforce_origin_tier( $doc, $merged, $origin );
 			$tagged = WP_Admin_Shell_Merge::tag_origin( $doc, $origin );
-			$merged = WP_Admin_Shell_Merge::merge( $merged, $tagged );
+			$merged = $origin === 'site'
+				? WP_Admin_Shell_Merge::merge_with_tombstones( $merged, $tagged )
+				: WP_Admin_Shell_Merge::merge( $merged, $tagged );
 		}
 
 		$merged = apply_filters( 'wp_admin_shell_data', $merged );
