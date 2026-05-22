@@ -473,13 +473,24 @@ class WP_Admin_Shell_Menu_Items {
 
 	/**
 	 * Reject `javascript:`, `data:`, `vbscript:`, custom-app schemes etc.
-	 * Allowlist: relative paths (`/`, `#`, plain), protocol-relative (`//`),
-	 * http(s), ftp(s), mailto, tel, sms. Anything else with a `:` is
-	 * rejected at register time so it never reaches a React `<a href>`.
+	 * Allowlist: relative paths (`/`, `#`, plain), http(s), ftp(s),
+	 * mailto, tel, sms. Anything else with a `:` is rejected at register
+	 * time so it never reaches a React `<a href>`.
+	 *
+	 * Navigation-only validator; not for redirect targets or storage.
+	 * Use `wp_validate_redirect()` for redirects, `esc_url_raw()` for
+	 * storage.
 	 */
 	private static function is_safe_href( $href ) {
 		if ( ! is_string( $href ) || $href === '' ) {
 			return true;
+		}
+		// Protocol-relative URLs (`//evil.example.com`) inherit the page's
+		// scheme and route through the browser to an attacker-chosen host.
+		// Reject outright — authors who want cross-origin links must
+		// declare a full https:// scheme.
+		if ( strpos( $href, '//' ) === 0 ) {
+			return false;
 		}
 		// Token-only hrefs (`{site_url}`, `{home_url}`) are safe — they
 		// get interpolated by the renderer.
