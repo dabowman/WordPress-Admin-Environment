@@ -121,7 +121,7 @@ class WP_Admin_Shell_Resolver {
 				continue;
 			}
 			$doc    = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
-			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc );
+			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc, $origin );
 			$doc    = WP_Admin_Shell_Permissions::enforce_origin_tier( $doc, $merged, $origin );
 			$tagged = WP_Admin_Shell_Merge::tag_origin( $doc, $origin );
 			$merged = $origin === 'site'
