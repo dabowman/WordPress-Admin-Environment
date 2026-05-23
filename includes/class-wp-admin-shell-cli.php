@@ -40,15 +40,15 @@ class WP_Admin_Shell_CLI {
 		$rows = array();
 		foreach ( $shells as $shell ) {
 			$rows[] = array(
-				'slug'           => $shell['slug'],
-				'title'          => $shell['title'],
-				'origin'         => 'plugin', // shells/ files; M2 cascade lets site/role/user override on read
-				'userSwitchable' => ! empty( $shell['userSwitchable'] ) ? 'yes' : 'no',
-				'active'         => $shell['slug'] === $active ? 'yes' : '',
+				'slug'            => $shell['slug'],
+				'title'           => $shell['title'],
+				'origin'          => 'plugin', // shells/ files; M2 cascade lets site/role/user override on read
+				'user-switchable' => ( ! empty( $shell['user-switchable'] ) || ! empty( $shell['userSwitchable'] ) ) ? 'yes' : 'no',
+				'active'          => $shell['slug'] === $active ? 'yes' : '',
 			);
 		}
 
-		WP_CLI\Utils\format_items( 'table', $rows, array( 'slug', 'title', 'origin', 'userSwitchable', 'active' ) );
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'slug', 'title', 'origin', 'user-switchable', 'active' ) );
 	}
 
 	/**

@@ -40,24 +40,39 @@ class WP_Admin_Shell_Merge {
 
 	/**
 	 * Plain field-aware merge — additive on keyed arrays. Use this when
-	 * `over` is a *consumer* origin (site/role/user). It cannot remove
-	 * base entries; it can only override fields on entries the base
-	 * already declares plus append novel ids the upstream allows.
+	 * `over` is an UNTRUSTED consumer origin (role/user). It cannot
+	 * remove base entries; it can only override fields on entries the
+	 * base already declares plus append novel ids the upstream allows.
+	 * Tombstones (`null` keys, `__tombstone: true` entries) are ignored
+	 * with a WP_DEBUG `_doing_it_wrong` notice.
 	 *
-	 * Tombstones (`__origin === '__removed'`) on a base entry still
-	 * block any same-id override coming through this path — restrict-only
-	 * is enforced regardless of additive vs authoritative semantics.
+	 * `__origin === '__removed'` on a base entry still blocks any same-id
+	 * override coming through this path — restrict-only is enforced
+	 * regardless of additive vs authoritative semantics.
 	 */
 	public static function merge( $base, $over ) {
-		return self::merge_internal( $base, $over, false );
+		return self::merge_internal( $base, $over, false, false );
+	}
+
+	/**
+	 * Additive merge with tombstone authority. Use this for the `site`
+	 * origin: behaviorally an additive override (does NOT drop base
+	 * entries the override doesn't enumerate), but tombstones (null keys
+	 * and `__tombstone: true` entries) ARE honored. Site is the
+	 * top-of-trust-tier consumer origin per the v3 trust-tier rule
+	 * (core/engine/plugin/site may add+remove; role/user shrink-only).
+	 */
+	public static function merge_with_tombstones( $base, $over ) {
+		return self::merge_internal( $base, $over, false, true );
 	}
 
 	/**
 	 * Authoritative field-aware merge — enumeration in `over` defines
 	 * the new canonical list. Use this when `over` is a *trusted* origin
-	 * (core/plugin) declaring the shell's structure. Anything in `base`
-	 * not echoed by `over`'s keyed-array enumeration is tombstoned, so
-	 * later additive merges from consumer origins cannot resurrect it.
+	 * (core/engine/plugin) declaring the shell's structure. Anything in
+	 * `base` not echoed by `over`'s keyed-array enumeration is
+	 * tombstoned, so later additive merges from consumer origins cannot
+	 * resurrect it. Tombstones are always honored.
 	 *
 	 * If `over` does not enumerate a particular keyed array at all (the
 	 * key is absent from `over`), the base is preserved untouched — only
@@ -65,10 +80,15 @@ class WP_Admin_Shell_Merge {
 	 * authoritative-removal pass.
 	 */
 	public static function merge_authoritative( $base, $over ) {
-		return self::merge_internal( $base, $over, true );
+		return self::merge_internal( $base, $over, true, true );
 	}
 
-	private static function merge_internal( $base, $over, $authoritative ) {
+	private static function merge_internal( $base, $over, $authoritative, $tombstone_authority = null ) {
+		// Back-compat: callers that don't pass tombstone_authority get the
+		// historical coupling (tombstones honored iff authoritative).
+		if ( $tombstone_authority === null ) {
+			$tombstone_authority = (bool) $authoritative;
+		}
 		if ( ! is_array( $over ) ) {
 			return $over === null ? $base : $over;
 		}
@@ -89,7 +109,7 @@ class WP_Admin_Shell_Merge {
 		if ( ! $base_is_assoc && ! $over_is_assoc ) {
 			$key = self::detect_key_field( $base ) ?: self::detect_key_field( $over );
 			if ( $key ) {
-				return self::merge_keyed_arrays( $base, $over, $key, $authoritative );
+				return self::merge_keyed_arrays( $base, $over, $key, $authoritative, $tombstone_authority );
 			}
 			return $over; // plain array → replace
 		}
@@ -101,15 +121,34 @@ class WP_Admin_Shell_Merge {
 		$out = $base;
 		foreach ( $over as $k => $v ) {
 			// Null tombstone: REMOVE the key entirely from the merged
-			// result regardless of whether the base declares it. Mirrors
-			// theme.json convention; v3 spec §10. Removal happens at the
-			// exact path the null appears — it does not cascade further
-			// into the subtree.
+			// result. Mirrors theme.json convention; v3 spec §10. Removal
+			// happens at the exact path the null appears — it does not
+			// cascade further into the subtree.
+			//
+			// Gated behind `$tombstone_authority` so only trusted origins
+			// (core/engine/plugin) and the site-level option can use
+			// tombstones to drop keys. Untrusted consumer origins
+			// (role/user) cannot delete entries the trusted baseline
+			// ships; a `null` from them is a no-op with a WP_DEBUG notice
+			// so the author sees their intent ignored rather than
+			// silently dropped.
 			if ( $v === null ) {
-				unset( $out[ $k ] );
+				if ( $tombstone_authority ) {
+					unset( $out[ $k ] );
+				} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					_doing_it_wrong(
+						'WP_Admin_Shell_Merge::merge',
+						sprintf(
+							/* translators: %s: key name */
+							esc_html__( 'Consumer-origin (role/user) null tombstone for key "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keys via null. Author your override as an empty / replacement value instead.', 'wp-admin-shell' ),
+							esc_html( (string) $k )
+						),
+						'v3.0'
+					);
+				}
 				continue;
 			}
-			$out[ $k ] = self::merge_internal( $base[ $k ] ?? null, $v, $authoritative );
+			$out[ $k ] = self::merge_internal( $base[ $k ] ?? null, $v, $authoritative, $tombstone_authority );
 		}
 		return $out;
 	}
@@ -174,7 +213,10 @@ class WP_Admin_Shell_Merge {
 
 	// ── Internals ─────────────────────────────────────────────────────
 
-	private static function merge_keyed_arrays( $base, $over, $key, $authoritative = false ) {
+	private static function merge_keyed_arrays( $base, $over, $key, $authoritative = false, $tombstone_authority = null ) {
+		if ( $tombstone_authority === null ) {
+			$tombstone_authority = (bool) $authoritative;
+		}
 		$over_index     = array();
 		$over_order     = array();
 		$over_tombstone = array(); // id => true when entry carries `__tombstone`
@@ -207,8 +249,34 @@ class WP_Admin_Shell_Merge {
 				// the merged list entirely. (v3 spec §10.) The id is
 				// still marked emitted so Pass 2 doesn't re-add the
 				// tombstone marker itself.
-				$emitted[ $id ] = true;
-				continue;
+				//
+				// Gated behind `$tombstone_authority` for the same reason
+				// as the null-key tombstone above: untrusted consumer
+				// origins (role/user) cannot drop trusted-baseline
+				// entries via `__tombstone: true`. Non-authoritative
+				// attempts no-op with a WP_DEBUG notice.
+				if ( $tombstone_authority ) {
+					$emitted[ $id ] = true;
+					continue;
+				}
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					_doing_it_wrong(
+						'WP_Admin_Shell_Merge::merge_keyed_arrays',
+						sprintf(
+							/* translators: %s: entry id */
+							esc_html__( 'Consumer-origin (role/user) __tombstone marker for entry "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keyed-array entries.', 'wp-admin-shell' ),
+							esc_html( (string) $id )
+						),
+						'v3.0'
+					);
+				}
+				// Fall through — entry survives as if tombstone wasn't
+				// declared. Pass 1 continues with the base entry intact.
+				// Strip the marker off the over-entry first so the
+				// merge_internal() below doesn't stamp a stray
+				// `__tombstone: true` onto the surviving base entry
+				// (it would otherwise propagate to JS).
+				unset( $over_index[ $id ]['__tombstone'] );
 			}
 
 			if ( isset( $over_index[ $id ] ) ) {
@@ -218,7 +286,7 @@ class WP_Admin_Shell_Merge {
 					$emitted[ $id ] = true;
 					continue;
 				}
-				$result[]       = self::merge_internal( $entry, $over_index[ $id ], $authoritative );
+				$result[]       = self::merge_internal( $entry, $over_index[ $id ], $authoritative, $tombstone_authority );
 				$emitted[ $id ] = true;
 				continue;
 			}

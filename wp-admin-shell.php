@@ -909,20 +909,25 @@ function wp_admin_shell_get_available_shells() {
 		}
 		$slug             = basename( $file, '.json' );
 		$by_slug[ $slug ] = array(
-			'slug'           => $slug,
-			'title'          => $data['title'] ?? $slug,
-			'description'    => $data['description'] ?? '',
-			'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+			'slug'             => $slug,
+			'title'            => $data['title'] ?? $slug,
+			'description'      => $data['description'] ?? '',
+			// Schema-canonical kebab form emitted across the PHP → JS
+			// bridge. The legacy `userSwitchable` (camelCase) read
+			// stays as a one-cycle fallback at READ time only; the JS
+			// surface consumes `user-switchable` exclusively. See
+			// `src/apps/user-menu/index.js` for the JS-side reader.
+			'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
 		);
 	}
 
 	if ( class_exists( 'WP_Admin_Shell_Shells' ) ) {
 		foreach ( WP_Admin_Shell_Shells::all() as $slug => $data ) {
 			$by_slug[ $slug ] = array(
-				'slug'           => $slug,
-				'title'          => $data['title'] ?? $slug,
-				'description'    => $data['description'] ?? '',
-				'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+				'slug'             => $slug,
+				'title'            => $data['title'] ?? $slug,
+				'description'      => $data['description'] ?? '',
+				'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
 			);
 		}
 	}

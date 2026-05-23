@@ -231,6 +231,7 @@ admin-route shims, the `wp_admin_shell_cache_signals` filter, and the new
 | REST `GET /wp-admin-shell/v1/screen-view`                | Alias to `/data-view` + `X-WP-Deprecated`       | Removed             |
 | admin.json top-level `viewConfigs`                       | Dead data + `_doing_it_wrong` warning           | Silently dropped    |
 | admin.json top-level `fieldCollections`                  | Dead data + `_doing_it_wrong` (planned 3d.5+)   | Silently dropped    |
+| Shell flag camelCase `userSwitchable`                    | Read-fallback after kebab `user-switchable`     | Removed             |
 
 **v3.0 cutoff:** all shims live alongside the v3 surface. Any v2-name
 caller works but emits a notice on first invocation per request.

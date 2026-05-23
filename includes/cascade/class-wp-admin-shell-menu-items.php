@@ -473,13 +473,54 @@ class WP_Admin_Shell_Menu_Items {
 
 	/**
 	 * Reject `javascript:`, `data:`, `vbscript:`, custom-app schemes etc.
-	 * Allowlist: relative paths (`/`, `#`, plain), protocol-relative (`//`),
-	 * http(s), ftp(s), mailto, tel, sms. Anything else with a `:` is
-	 * rejected at register time so it never reaches a React `<a href>`.
+	 * Allowlist: relative paths (`/`, `#`, plain), http(s), ftp(s),
+	 * mailto, tel, sms. Anything else with a `:` is rejected at register
+	 * time so it never reaches a React `<a href>`.
+	 *
+	 * Navigation-only validator; not for redirect targets or storage.
+	 * Use `wp_validate_redirect()` for redirects, `esc_url_raw()` for
+	 * storage.
+	 *
+	 * Defense-in-depth normalization. HTML5 mandates browsers strip
+	 * leading ASCII whitespace from `href` before navigation, so
+	 * `" //evil.example.com"` would route to `//evil.example.com`
+	 * post-strip. We `trim()` first so the leading-`//` check catches
+	 * whitespace-padded protocol-relative URLs. Backslash variants
+	 * (`\\evil.example.com`, `\/\/evil.example.com`) are rejected too —
+	 * modern browsers usually don't navigate them as protocol-relative
+	 * per WHATWG, but legacy WebViews and Edge/IE historically did.
+	 * Cheap belt-and-suspenders.
 	 */
 	private static function is_safe_href( $href ) {
-		if ( ! is_string( $href ) || $href === '' ) {
+		if ( ! is_string( $href ) ) {
 			return true;
+		}
+		// Strip leading + trailing whitespace before any check. HTML5
+		// stripping makes leading whitespace navigationally invisible,
+		// so the post-strip value is what the browser sees. We validate
+		// THAT, not the raw input. The explicit charlist adds form-feed
+		// (`\x0c`) on top of PHP's default set (` \t\n\r\0\x0b`) — WHATWG
+		// counts FF as a stripped ASCII whitespace character, so a
+		// `"\x0c//evil.example.com"` would otherwise navigate post-strip.
+		$href = trim( $href, " \t\n\r\0\x0b\x0c" );
+		if ( $href === '' ) {
+			return true;
+		}
+		// Protocol-relative URLs (`//evil.example.com`) inherit the page's
+		// scheme and route through the browser to an attacker-chosen host.
+		// Reject outright — authors who want cross-origin links must
+		// declare a full https:// scheme.
+		if ( strpos( $href, '//' ) === 0 ) {
+			return false;
+		}
+		// Backslash variants. `\\evil.example.com` is treated as
+		// protocol-relative by some legacy WebViews; `\/\/evil.example.com`
+		// is the literal escape that some payloads use. Reject both.
+		if ( strpos( $href, '\\\\' ) === 0 ) {
+			return false;
+		}
+		if ( strpos( $href, '\\/\\/' ) === 0 ) {
+			return false;
 		}
 		// Token-only hrefs (`{site_url}`, `{home_url}`) are safe — they
 		// get interpolated by the renderer.
@@ -497,7 +538,8 @@ class WP_Admin_Shell_Menu_Items {
 			return true;
 		}
 		// Relative path with no scheme separator is fine; anything else
-		// with `:` is rejected.
+		// with `:` is rejected. This catches `javascript:`, `data:`,
+		// `vbscript:`, and any other custom-app scheme.
 		return strpos( $href, ':' ) === false;
 	}
 

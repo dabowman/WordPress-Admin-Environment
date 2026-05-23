@@ -118,9 +118,13 @@ $merged = WP_Admin_Shell_Merge::merge(
 $T::assert_eq( 'plain arrays: replace', $merged['tags'], array( 'c' ) );
 
 // 4a. Null tombstones (v3 spec §10) — theme.json convention adopted for admin.json.
+// Tombstones are gated to trust-tier origins (core/engine/plugin/site).
+// `merge_with_tombstones()` is the site-origin additive-with-tombstone path;
+// `merge_authoritative()` covers core/engine/plugin. Untrusted `merge()`
+// silently no-ops tombstones (with WP_DEBUG notice) — verified separately.
 
 // Top-level block removal.
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
 	array( 'screens' => array( 'posts' => null ) )
 );
@@ -130,7 +134,7 @@ $T::assert_eq( 'tombstone: top-level block removed',
 );
 
 // Nested field removal — siblings preserved.
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'screens' => array( 'posts' => array( 'label' => 'Posts', 'icon' => 'post' ) ) ),
 	array( 'screens' => array( 'posts' => array( 'icon' => null ) ) )
 );
@@ -140,7 +144,7 @@ $T::assert_eq( 'tombstone: nested field removed, sibling preserved',
 );
 
 // Deep nested tombstone — only the leaf path is nullified.
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'a' => array( 'b' => array( 'c' => array( 'd' => 'leaf', 'e' => 'sibling' ) ) ) ),
 	array( 'a' => array( 'b' => array( 'c' => array( 'd' => null ) ) ) )
 );
@@ -150,7 +154,7 @@ $T::assert_eq( 'tombstone: deep nested leaf removed, parent + sibling preserved'
 );
 
 // Keyed array entry removal by id via `__tombstone` marker.
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'commands' => array(
 		array( 'id' => 'open-palette', 'shortcut' => 'Mod+K' ),
 		array( 'id' => 'save',         'shortcut' => 'Mod+S' ),
@@ -167,7 +171,7 @@ $T::assert_eq( 'tombstone: keyed-array entry removed, siblings preserved',
 
 // Tombstone with no matching base entry is a harmless no-op (no
 // new entry materializes from the tombstone marker itself).
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'commands' => array(
 		array( 'id' => 'save', 'shortcut' => 'Mod+S' ),
 	) ),
@@ -182,7 +186,7 @@ $T::assert_eq( 'tombstone: orphan tombstone is a no-op',
 );
 
 // Tombstone field on a key with no lower-origin value is a no-op.
-$merged = WP_Admin_Shell_Merge::merge(
+$merged = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
 	array( 'screens' => array( 'posts' => array( 'unset-me' => null ) ) )
 );
@@ -193,7 +197,7 @@ $T::assert_eq( 'tombstone: nullify-an-absent-key is a no-op',
 
 // Three-origin resurrection: middle origin tombstones, highest origin
 // re-asserts. Highest-origin write wins (tombstones don't propagate).
-$step1 = WP_Admin_Shell_Merge::merge(
+$step1 = WP_Admin_Shell_Merge::merge_with_tombstones(
 	array( 'screens' => array( 'posts' => array( 'label' => 'Posts' ) ) ),
 	array( 'screens' => array( 'posts' => null ) )
 );
@@ -201,7 +205,7 @@ $T::assert_eq( 'tombstone: middle-origin tombstone removes value',
 	$step1,
 	array( 'screens' => array() )
 );
-$step2 = WP_Admin_Shell_Merge::merge(
+$step2 = WP_Admin_Shell_Merge::merge_with_tombstones(
 	$step1,
 	array( 'screens' => array( 'posts' => array( 'label' => 'Renamed' ) ) )
 );
@@ -450,6 +454,26 @@ WP_Admin_Shell_Shells::reset();
 WP_Admin_Shell_Cache::flush();
 WP_Admin_Shell_Resolver::reset_request_memo();
 delete_option( 'wp_admin_shell_active_shell' );
+
+// ── user-switchable: schema-canonical kebab form ─────────────────────
+
+echo "\n— user-switchable kebab form —\n";
+
+// A bundled shell that ships `"user-switchable": true` in kebab form.
+// Pre-fix: production code read `userSwitchable` and silently treated
+// every shell as non-switchable (always-false). Post-fix: kebab wins.
+// `WP_Admin_Shell_Config::get_user_switchable()` exercises the same
+// reader path used by JS-side `window.wpAdminShell.shells` enumeration.
+$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'shells/desktop-demo.v3.json';
+if ( file_exists( $desktop_demo_path ) ) {
+	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
+	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-shell-config.php';
+	$cfg = new WP_Admin_Shell_Config( $desktop_demo_doc );
+	$T::assert_true(
+		'user-switchable: kebab "user-switchable: true" recognized via Config::get_user_switchable',
+		$cfg->get_user_switchable()
+	);
+}
 
 // ── Summary ─────────────────────────────────────────────────────────
 
