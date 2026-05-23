@@ -205,6 +205,18 @@ $T::assert_true(
 	'consumer merge: __tombstone marker no-op (posts entry survives)',
 	in_array( 'posts', $ids, true )
 );
+// The ignored marker must not pollute the surviving entry.
+$posts_entry = null;
+foreach ( $consumer_kt['menu'] as $entry ) {
+	if ( ( $entry['id'] ?? null ) === 'posts' ) {
+		$posts_entry = $entry;
+		break;
+	}
+}
+$T::assert_false(
+	'consumer merge: ignored __tombstone does not pollute surviving entry',
+	is_array( $posts_entry ) && array_key_exists( '__tombstone', $posts_entry )
+);
 
 // Same payload through merge_with_tombstones — honored.
 $site_kt = WP_Admin_Shell_Merge::merge_with_tombstones(

@@ -272,6 +272,11 @@ class WP_Admin_Shell_Merge {
 				}
 				// Fall through — entry survives as if tombstone wasn't
 				// declared. Pass 1 continues with the base entry intact.
+				// Strip the marker off the over-entry first so the
+				// merge_internal() below doesn't stamp a stray
+				// `__tombstone: true` onto the surviving base entry
+				// (it would otherwise propagate to JS).
+				unset( $over_index[ $id ]['__tombstone'] );
 			}
 
 			if ( isset( $over_index[ $id ] ) ) {
