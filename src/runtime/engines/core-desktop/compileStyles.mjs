@@ -4,8 +4,8 @@
  * Walks the resolved `admin.json.styles` tree and emits CSS variables
  * scoped to the engine's ThemeProvider wrapper. The kernel's
  * `ThemeProviderHost` calls this hook and wraps the output in a
- * `[data-wpds-theme-provider-id="..."]` selector — that attribute is
- * the cross-engine scope hook, not WPDS-specific despite the name.
+ * `[data-theme-scope-id="..."]` selector — that attribute is the
+ * cross-engine scope hook.
  *
  * Two seam categories for MVP:
  *
