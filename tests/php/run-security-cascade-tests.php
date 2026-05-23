@@ -736,6 +736,17 @@ $T::assert_true(
 	is_wp_error( $ws_multi )
 );
 
+// Form-feed (`\x0c`) is WHATWG-stripped ASCII whitespace but absent from
+// PHP's default trim() charset — the explicit charlist must catch it.
+$ws_ff = wp_admin_shell_register_menu_item( 'wpas-test-ws-ff', array(
+	'label' => 'evil',
+	'href'  => "\x0c//evil.example.com",
+) );
+$T::assert_true(
+	'is_safe_href: leading form-feed protocol-relative rejected',
+	is_wp_error( $ws_ff )
+);
+
 // Backslash variants. Browsers sometimes treat `\\host` as
 // protocol-relative; legacy WebViews and IE/Edge historically did.
 // Defense-in-depth reject.

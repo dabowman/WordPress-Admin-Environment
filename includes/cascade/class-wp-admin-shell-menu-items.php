@@ -498,8 +498,11 @@ class WP_Admin_Shell_Menu_Items {
 		// Strip leading + trailing whitespace before any check. HTML5
 		// stripping makes leading whitespace navigationally invisible,
 		// so the post-strip value is what the browser sees. We validate
-		// THAT, not the raw input.
-		$href = trim( $href );
+		// THAT, not the raw input. The explicit charlist adds form-feed
+		// (`\x0c`) on top of PHP's default set (` \t\n\r\0\x0b`) — WHATWG
+		// counts FF as a stripped ASCII whitespace character, so a
+		// `"\x0c//evil.example.com"` would otherwise navigate post-strip.
+		$href = trim( $href, " \t\n\r\0\x0b\x0c" );
 		if ( $href === '' ) {
 			return true;
 		}
