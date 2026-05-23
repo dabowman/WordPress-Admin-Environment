@@ -6,14 +6,29 @@ import {
 	hydrateInlineDataViewTriple,
 } from './hydrateInline.mjs';
 import { shouldWarnDeprecation } from './deprecation.mjs';
+import { lruSet, LRU_CAP } from './lruCache.mjs';
+
+// Re-export for callers that import the cap from this module (the LRU
+// test exercises lruCache.mjs directly).
+export { LRU_CAP };
 
 /**
  * Module-level cache for resolved DataView docs. Keyed independently
  * for screen lookups (`screen:<id>`) and triple lookups
  * (`triple:<kind>/<name>/<variant>`) so the two access paths never
- * collide. Survives across hook mounts.
+ * collide. Survives across hook mounts. Bounded — see `LRU_CAP`.
  */
 const cache = new Map();
+
+/**
+ * In-flight fetch dedup map — `key` → unresolved promise. Self-limiting:
+ * each entry's `.finally` removes itself once the fetch settles, so the
+ * map only holds genuinely pending fetches. No LRU bound — bounding it
+ * would risk dropping a still-in-flight entry from the dedup map at >64
+ * concurrent fetches (pathological in practice), causing a concurrent
+ * caller for the same key to fire a duplicate fetch. The persistent
+ * `cache` is the load-bearing bound; `inflight` is self-draining.
+ */
 const inflight = new Map();
 
 /**
@@ -77,7 +92,7 @@ function readInlineScreen( screenId ) {
 		screenId
 	);
 	if ( hydrated ) {
-		cache.set( key, hydrated );
+		lruSet( cache, key, hydrated, LRU_CAP );
 		return hydrated;
 	}
 	return null;
@@ -101,7 +116,7 @@ function readInlineTriple( kind, name, variant ) {
 	}
 	const hydrated = hydrateInlineDataViewTriple( inline, kind, name, variant );
 	if ( hydrated && Object.keys( hydrated ).length > 0 ) {
-		cache.set( key, hydrated );
+		lruSet( cache, key, hydrated, LRU_CAP );
 		return hydrated;
 	}
 	return null;
@@ -170,6 +185,10 @@ export function useDataView( arg, { fallback } = {} ) {
 			).finally( () => {
 				inflight.delete( key );
 			} );
+		// `inflight` is unbounded by design — see the Map declaration above.
+		// The `.finally` cleanup keeps it self-limiting on actually-pending
+		// fetches; bounding it would risk dedup-misses on >64 concurrent
+		// in-flight fetches.
 		inflight.set( key, promise );
 
 		promise
@@ -177,7 +196,7 @@ export function useDataView( arg, { fallback } = {} ) {
 				if ( cancelled ) {
 					return;
 				}
-				cache.set( key, resolved );
+				lruSet( cache, key, resolved, LRU_CAP );
 				setDoc( resolved );
 				setIsLoading( false );
 			} )

@@ -1,7 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin-engine/v1.json",
-	"title": "WP Admin Shell — Engine Manifest (v1)",
+	"$id": "https://schemas.wp.org/admin-engine/v2.json",
+	"$comment": "Previously published as https://schemas.wp.org/admin-engine/v1.json; identifier corrected in v3.0 beta cycle to match the file version.",
+	"title": "WP Admin Shell — Engine Manifest (v2)",
 	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, and the identifier of its default arrangement algorithm. Engines are the spatial layer of the shell — they read a region tree assembled by the runtime and render it to DOM. The default engine `core:wp-default-layout` ships with the shell plugin; alternative engines (`core:floating-layout`, `core:tiling-layout`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. See WP Admin Shell Design Spec §4.2.",
 
 	"type": "object",

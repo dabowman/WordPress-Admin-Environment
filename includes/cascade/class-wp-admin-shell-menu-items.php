@@ -566,7 +566,11 @@ add_filter( 'wp_admin_shell_data_plugin', array( 'WP_Admin_Shell_Menu_Items', 'c
 // so screens/menu fields resolved across all origins (site/role/user
 // overrides included) are visible. Priority 5 keeps room for plugin
 // authors who hook `wp_admin_shell_data` at default 10 to see the bound
-// tree.
+// tree, and sequences this pass BEFORE
+// `WP_Admin_Shell_Data_View_Config::inject_app_baselines` (priority 6)
+// so dataView baselines attach to screens already contributed by the
+// menu-item shim. See `docs/upgrade-v2-to-v3.md` filter-ordering
+// section.
 add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Menu_Items', 'bind_screens' ), 5 );
 
 // Registry state lives in static class memory — invisible to the

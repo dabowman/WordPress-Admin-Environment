@@ -1,7 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin-app/v1.json",
-	"title": "WP Admin Shell — App Manifest (v1)",
+	"$id": "https://schemas.wp.org/admin-app/v2.json",
+	"$comment": "Previously published as https://schemas.wp.org/admin-app/v1.json; identifier corrected in v3.0 beta cycle to match the file version.",
+	"title": "WP Admin Shell — App Manifest (v2)",
 	"description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, and the configuration schema it accepts when admin.json passes values. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in admin.json. See WP Admin Shell Design Spec §4.1.",
 
 	"type": "object",
