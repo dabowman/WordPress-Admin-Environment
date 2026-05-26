@@ -183,4 +183,29 @@ design-spec, schema-sketch, dataview-config, public reference docs.
 
 ## Phase 6 — Issue backlog addendum
 
-_To be appended in Phase 6 (per-issue close/relabel/keep recommendations)._
+All 10 open issues predate the reshape and carry pre-reshape labels (`track:v2`,
+`track:upstream`). Two are obsoleted by work that has since shipped; the rest are
+still-valid backlog items that need relabeling (and several reference file paths /
+schema vocabulary that no longer exist).
+
+| # | Title | Recommendation | Reason |
+|---|-------|----------------|--------|
+| 30 | Runtime smoke harness (JSDOM kernel mount) | **keep + relabel** | Still the real coverage gap — *more* relevant now that the kernel does region/route synthesis JS-side (`build-runtime-config.test.mjs` covers synthesis, not mount). Body references v1-shape (`settings.defaultRoute`, `core:command-picker`) — refresh it. |
+| 28 | In-process shell re-mount (no hard reload) | **keep + relabel** | `shell-switching.js` still does `location.reload()`. Valid enhancement. |
+| 23 | Pluggable layout-engine: first non-default engine | **close** | Obsolete. Premise ("v1 ships only `core:site-editor-layout`") is false — three engines ship (`core:default`, `core:single-pane`, `core:desktop`). Engines are first-class artifacts. |
+| 22 | UsersApp bulk-delete reassign UX | **keep + relabel** | Valid UX enhancement. Stale path: `src/apps/UsersApp.js` → `src/apps/users/index.js`. |
+| 21 | PostsApp URL-encode `wp_template` IDs | **keep + relabel** | Valid. Stale path: `src/apps/PostsApp.js` → `src/apps/posts/index.js`. |
+| 20 | Post settings panel for SimpleEditorApp | **keep + relabel** | Valid; still deferred. |
+| 19 | developer-admin Design decomposition | **keep + relabel (verify)** | `developer-admin` now uses native apps + drilldown menu; confirm whether the Design-surface decomposition is done before keeping. |
+| 18 | Nav drilldown + navigate combined mode | **keep + relabel** | Underlying UX may still be open, but the body's v2 vocab (`{screen, app, items}`) is outdated — v3 uses the `menu` tree + path-based drilldown reopen. Refresh the body. |
+| 17 | tokens.json primitives layer — implementation sketch | **close** | Obsolete. tokens.json ships (`WP_Admin_Shell_Tokens` + `tokensResolver.mjs` + `docs/schemas/tokens.json`); the DTCG type-coercion is implemented. The "lands in v2 / no sketch yet" framing contradicts the current state. |
+| 15 | Upstream `@wordpress/ui` privateApis allowlist | **keep as-is** | Still accurate — the Gutenberg hard-dependency is current reality. `track:upstream` is fine (not v2-reshape vocab). |
+
+**Relabel recommendation:** replace `track:v2` with a release-neutral label (e.g.
+`backlog`, or drop it and keep the `area:*` / type labels) — nothing has shipped, so
+the v1/v2/v3 track vocabulary no longer maps to anything.
+
+**Applying these:** `gh` is not installed, but GitHub MCP tools are available (repo
+scoped to `dabowman/wordpress-admin-environment`). Per the "be frugal on GitHub"
+guidance, no issue was modified. The human can ask the assistant to apply the
+close/relabel actions, or do so manually.
