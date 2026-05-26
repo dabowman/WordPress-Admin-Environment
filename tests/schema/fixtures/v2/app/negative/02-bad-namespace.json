@@ -1,7 +1,0 @@
-{
-	"id": "myapp",
-	"version": 1,
-	"title": "Bad namespace",
-	"role": "main",
-	"script": "broken"
-}

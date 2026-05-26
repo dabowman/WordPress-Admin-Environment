@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app.json",
 	"id": "core:iframe-fallback",
 	"version": 1,
 	"title": "Iframe fallback",

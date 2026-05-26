@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app.json",
 	"id": "core:command-palette",
 	"version": 1,
 	"title": "Command palette",
@@ -64,8 +64,7 @@
 			{ "concern": "skip-parameterized-paths", "note": "Screens with `{param}` placeholders or `/*` wildcard suffixes are skipped — `Go to /posts/{id}` isn't a valid invocation because the user can't pick the captured value from a command list. Parameterized navigation needs a different surface (search-based, entity-based) that's out of scope here." },
 			{ "concern": "label-required", "note": "Commands without a `label` are keyboard-only and handled by `BindingsConsumer`'s keystroke path. They never appear in the palette so users discover them only via the shortcut documentation." },
 			{ "concern": "url-encode-name", "note": "Palette names use `encodeURIComponent(id)` so ids with slashes or other URL-unsafe characters produce distinct names without colliding under `@wordpress/commands`'s duplicate-name rejection. The unified `core/admin-shell/palette-<id>` prefix means screen ids and command ids share the namespace — first-write wins on collision." },
-			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `commands[].invoke` map keystrokes to this app." },
-			{ "concern": "schema-target", "note": "The `$schema` reference still points at `admin-app-v2.json` because this manifest hasn't been migrated to the v3 app-manifest shape yet. The doc sweep in roadmap §3d.4 flips this. Behavior consumed by the runtime is already v3 (`commands[]` + `screens[]`)." }
+			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `commands[].invoke` map keystrokes to this app." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/commands#useCommandLoader, store", "purpose": "Command registration. The package owns the palette UI." },

@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v3.json",
+	"$schema": "../../../docs/schemas/admin-app.json",
 	"id": "core:dashboard-widget-recent-posts",
 	"version": 1,
 	"title": "Recent Drafts",

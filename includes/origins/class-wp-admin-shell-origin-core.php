@@ -35,7 +35,7 @@ class WP_Admin_Shell_Origin_Core {
 	 */
 	public static function empty_doc() {
 		return array(
-			'$schema'   => '../docs/schemas/admin-v3.json',
+			'$schema'   => '../docs/schemas/admin.json',
 			'version'   => 3,
 			'$wpds'     => '6.9',
 			'name'      => 'empty',

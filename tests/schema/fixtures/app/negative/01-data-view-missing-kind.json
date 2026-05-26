@@ -1,0 +1,16 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app.json",
+	"id": "plugin:demo/no-kind",
+	"version": 3,
+	"title": "No kind",
+	"role": "main",
+	"script": "demo-no-kind",
+	"dataView": {
+		"name": "post",
+		"variants": {
+			"_default": {
+				"defaultView": { "type": "table" }
+			}
+		}
+	}
+}

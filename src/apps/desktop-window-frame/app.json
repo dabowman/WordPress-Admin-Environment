@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app.json",
 	"id": "core:desktop-window-frame",
 	"version": 1,
 	"title": "Desktop window frame",
