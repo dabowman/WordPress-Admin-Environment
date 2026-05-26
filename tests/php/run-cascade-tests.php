@@ -463,7 +463,7 @@ echo "\n— user-switchable kebab form —\n";
 // every shell as non-switchable (always-false). Post-fix: kebab wins.
 // `WP_Admin_Shell_Config::get_user_switchable()` exercises the same
 // reader path used by JS-side `window.wpAdminShell.shells` enumeration.
-$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'shells/desktop-demo.v3.json';
+$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'shells/desktop-demo.json';
 if ( file_exists( $desktop_demo_path ) ) {
 	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
 	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-shell-config.php';

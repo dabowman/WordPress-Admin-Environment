@@ -1,32 +1,49 @@
 # WP Admin Shell
 
-A WordPress plugin that replaces `wp-admin` with a configurable, React-based admin environment. The shell reads its layout, navigation, and styling from one or more `admin.json` files and renders a complete admin UI on top of WordPress's existing REST API and design system.
+A WordPress plugin that replaces `wp-admin` with a configurable, React-based admin environment. The shell reads its layout, navigation, branding, and styling from `admin.json` configuration files and renders a complete admin UI on top of WordPress's existing REST API and design system.
+
+> **Status:** pre-release. Nothing has shipped publicly; there is no installed base. The repository is being prepared for a first release — APIs and the schema may still change.
 
 ## The idea
 
-WordPress has one admin interface. Every user — writer, developer, client, site manager — sees the same dashboard, the same menus, the same screens. Plugins add more menus. Themes don't touch the admin. Everyone gets everything.
+WordPress has one admin interface. Every user — writer, developer, client, site manager — sees the same dashboard, the same menus, the same screens. Plugins add more menus. Everyone gets everything.
 
-WP Admin Shell makes the admin **configurable**. A JSON file declares which applications are available, how navigation is structured, what branding to show, and which toolbar actions to surface. Swap the JSON file, swap the admin experience.
+WP Admin Shell makes the admin **configurable**. A JSON file declares which screens are available, how navigation is structured, what branding to show, and which keyboard shortcuts do what. Swap the JSON file, swap the admin experience.
 
 Same WordPress. Same data. Same plugins. Different admin for different people.
 
-## What v1 ships
+## Architecture
 
-- **Cascade resolver.** Five origins (core / plugin / site / role / user) merge into a single config with field-aware semantics, restrict-only enforcement, and `userCustomizable` declarations modeled on block supports.
-- **Token system.** Engines own theming through the kernel's `ThemeProviderHost` seam. The bundled `core:default` engine compiles `admin.json.styles` to two CSS-variable families: WPDS surface (`--wpds-*`) and chrome extensions (`--wp-admin-shell--chrome--*`). Third-party engines plug in their own `ThemeProvider`, style compiler, icon table, and CSS bundles — the kernel itself is DS-neutral.
-- **Capability gating.** Four layers — region fast-path, app gate, source-cap floor, REST observation. Recursive nav prune drops gated apps + empty drilldowns.
-- **Native apps.** Posts, Pages (`core:posts`), Simple editor (`core:simple-editor`), Block editor (`core:editor`, iframed), Media (`core:media`), Profile (`core:profile`), Users (`core:users`), Comments (`core:comments`), Settings (`core:settings` composable host with REST-bounded native panels), Site editor (`core:site-editor`, iframe-backed adapter), Appearance prefs (`core:appearance`).
-- **Slots.** Render slots (`core:app.before/.after`, `core:editor.sidebar`) and data slots (`core:posts.row-actions`, `core:users.row-actions`, `core:comments.row-actions`, `core:settings.panels`) for plugin extension.
-- **Notices via `@wordpress/notices`** pinned in a built-in `notices` overlay region.
-- **WP-CLI:** `wp admin-shell list | activate | register | upgrade-config`.
-- **Per-role + per-user shell selection** with `userSwitchable` gating.
+Three artifact types, three responsibilities:
+
+| Artifact | Declares | Ships with |
+|---|---|---|
+| **app manifest** (`app.json`) | what an app *is* — ARIA role, requested platform services, capability floor, config schema, slots, DataView baseline | the app's code |
+| **engine manifest** (`engine.json`) | what an engine *provides* — region templates, modes, slots, menu renderer, default region tree, default styles | the engine's code |
+| **`admin.json`** | install *decisions* — which engine, which screens, the menu tree, commands, branding, token overrides | the install |
+
+`admin.json` is shaped around user-task surfaces:
+
+- **`workspace`** — engine selection, default screen, branding, notices, persistent widgets.
+- **`settings`** — reusable registries: `dataViews` (3-axis `@wordpress/dataviews` config keyed by `kind → name → variant`) and `dataFields` (named field collections).
+- **`screens`** — the id-keyed map of every screen: `apps[]`, `path`, `slot`, `mode`, `permissions`, `dataViewRef`.
+- **`menu`** — an engine-agnostic information-architecture tree; item keys that match a screen id bind to it.
+- **`commands`** — palette entries + keyboard shortcuts.
+- **`styles`** — theme.json-shaped token overrides. **`preload`** — workspace-boot REST preloads. **`regions` / `routes`** — escape hatches.
+
+**The runtime reads this shape directly.** The kernel (`src/runtime/`) derives the region tree + routes from the resolved `screens` / `workspace` blocks and the active engine's `defaultRegions` at mount time (`src/runtime/compile/`). There is no intermediate shape.
+
+- **Cascade resolver.** Six origins merge into one document with field-aware, restrict-only semantics and `customizable` declarations modeled on block supports: `core` → `engine` (synthetic; carries the active engine's default styles) → `plugin` → `site` → `role` → `user`. Arrays merge by `id`; `null` tombstones any key at any depth. `core`/`engine`/`plugin`/`site` are trusted (may add + remove); `role`/`user` are consumer origins (shrink-only).
+- **Capability gating.** Four layers — region fast-path, app gate, source-cap floor, REST observation. Navigation prunes gated screens recursively. Screen `permissions` are OR-semantic (`capabilities` / `roles`) with trust tiers.
+- **Engine-owned theming.** The kernel is design-system-neutral: it mounts the active engine's `ThemeProvider` through the `ThemeProviderHost` seam (or a neutral pass-through wrapper when the engine ships none). The bundled `core:default` engine ships a WPDS-backed provider + style compiler; a third-party engine plugs in its own design system without touching the kernel.
+- **REST-only contract.** Every screen reads/writes through `/wp-json/`. If the API can't do it, a thin app iframes the legacy wp-admin screen (the `iframe:<slug>` escape hatch) until it can be ported.
 
 ## Requirements
 
 - WordPress 6.7+
 - PHP 7.4+ (8.1+ supported)
-- Node.js 20+ (for building from source)
-- **Gutenberg plugin** — hard runtime dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist that core does not include but Gutenberg overrides. Without Gutenberg, the shell renders empty. The plugin header declares `Requires Plugins: gutenberg`.
+- Node.js 20+ (to build from source)
+- **Gutenberg plugin** — hard runtime dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist core does not include but Gutenberg overrides. Without Gutenberg the shell renders empty. The plugin header declares `Requires Plugins: gutenberg`.
 
 ## Installation
 
@@ -37,7 +54,7 @@ npm install
 npm run build
 ```
 
-Copy the entire directory into `wp-content/plugins/`, then activate **WP Admin Shell** from the Plugins screen. (Activate Gutenberg first.)
+Copy the directory into `wp-content/plugins/`, then activate **WP Admin Shell** (activate Gutenberg first).
 
 ### With wp-env (development)
 
@@ -50,134 +67,113 @@ Open `http://localhost:8888/wp-admin/admin.php?page=wp-admin-shell` (login: `adm
 ## Usage
 
 1. Activate the plugin (and Gutenberg).
-2. Click **Shell Admin** in the wp-admin sidebar.
-3. The shell takes over the viewport with its own navigation, toolbar, and content region.
-4. Switch shells from **Shell Admin → Settings** or programmatically via `window.wpAdminShell.switchShell('content-author')`.
+2. Open **WP Admin Shell** from the wp-admin sidebar — it takes over the viewport with its own navigation, toolbar, and content region.
+3. Switch shells from the settings page or programmatically via `window.wpAdminShell.switchShell('content-author')`.
 
-### Keyboard shortcuts
+`Cmd/Ctrl+K` opens the command palette.
 
-| Shortcut | Action |
+## Bundled engines
+
+| Engine | Idiom |
 |---|---|
-| `Cmd+K` / `Ctrl+K` | Open command palette |
+| `core:default` | Flagship: dark chrome, drilldown sidebar, elevated cards |
+| `core:single-pane` | Mobile-first: appbar + collapsible nav drawer |
+| `core:desktop` | Windowed: compositor, dock, draggable/resizable window frames |
 
-The palette publishes `Go to {App}` and `New Post` / `New Page` commands scoped to the active shell.
+## Bundled shells
 
-## Bundled configurations
-
-| Slug | Title | Notes |
-|---|---|---|
-| `developer-admin` | Developer Admin | Default. Native apps for the v1 surface (posts, pages, media, comments, users, settings, site editor) plus iframe escape hatches for plugins / tools. |
-| `content-author` | Writer | Minimal writing environment. Collapsed sidebar, focused on Posts / Pages / Media + a "New Post" button. |
-| `client-portal` | Acme Corp Portal | Branded shell with custom logo + accent. Pages first, scoped nav, "View Site" link. |
-| `wp-admin-default` | WP Admin (Default) | Mirrors stock wp-admin: every screen rendered as an iframe of its wp-admin counterpart. Useful for parity testing. |
+| Slug | Notes |
+|---|---|
+| `wp-admin-default` | Default install. Mirrors stock wp-admin via capability-gated screens + iframe fallbacks + the classic-menu bridge. |
+| `developer-admin` | Native apps (users / comments / settings / site editor) + drilldown menu containers. |
+| `content-author` | Minimal writing environment — collapsed sidebar, Posts / Pages / Media. |
+| `client-portal` | Branded shell with custom logo + accent, scoped nav, "View Site" link. |
+| `single-pane-demo` | `core:single-pane` engine demo. |
+| `desktop-demo` | `core:desktop` engine demo. |
+| `canonical-demo` | Canonical admin.json shape on `core:default`. |
 
 ## `admin.json` schema
 
-The full v1 schema lives at [`docs/schemas/admin-v1.json`](docs/schemas/admin-v1.json) and is the active schema for v1.0.0-beta.x bundled shells, which reference it via `$schema`. The post-v1 architecture is described in the master spec at [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (2026-05-01); the three v2 manifest schemas (`admin-v2.json`, `admin-app-v2.json`, `admin-engine-v2.json`) live alongside it. The 2026-04-29 architecture is preserved at [`docs/archive/wp-admin-shell-design-spec-2026-04-29.md`](docs/archive/wp-admin-shell-design-spec-2026-04-29.md). The v2 migration directive at [`docs/plans/wp-admin-shell-v2-migration-directive.md`](docs/plans/wp-admin-shell-v2-migration-directive.md) is the active plan on `feat/wp-admin-shell-v2`.
-
-v0 (MVP flat) admin.json files keep working indefinitely — the resolver normalizes them through the `core` origin loader. To rewrite a v0 file in place, run `wp admin-shell upgrade-config <name>` (the v0 file is preserved as `<name>.v0.json`).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (runtime architecture) and [`docs/v3/schema-sketch.md`](docs/v3/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 
 | Source | Native? | Notes |
 |---|---|---|
-| `core:posts` | ✅ | DataViews list, server-side fetch, search/filter/pagination |
-| `core:simple-editor` | ✅ | Substack-style writing flow (title + restricted blocks + auto-save) |
-| `core:editor` | iframe | Block editor (post.php?action=edit). Native mount is post-v1. |
-| `core:media` | ✅ | Grid, upload, detail edit |
-| `core:profile` | ✅ | User profile form |
-| `core:users` | ✅ | DataViews + bulk delete with reassign. `list_users` cap floor. |
-| `core:comments` | ✅ | DataViews + approve/unapprove/spam/trash. `moderate_comments` cap floor. |
-| `core:settings` | partial | Composable host. Native panels: general, writing, reading, discussion (REST-bounded). Iframed: permalinks, media, privacy. |
-| `core:site-editor` | iframe | `@wordpress/edit-site` adapter. Native mount deferred to v2. |
-| `core:appearance` | ✅ | User-prefs UI driven by `userCustomizable` declarations. |
-| `iframe:{url}` | iframe | Any wp-admin URL with chrome hidden. |
+| `core:posts` | ✅ | DataViews list; `config.postType`. |
+| `core:simple-editor` | ✅ | Substack-style writing flow (title + restricted blocks + auto-save). |
+| `core:editor` | iframe | Block editor (`post.php?action=edit`). Native mount deferred. |
+| `core:media` | ✅ | Grid, upload, detail edit. |
+| `core:users` / `core:comments` / `core:taxonomy` / `core:plugins` / `core:themes` | ✅ | DataViews entity-CRUD apps; per-app capability floors. |
+| `core:profile` | ✅ | User profile form. |
+| `core:settings` | partial | Composable host; native general / writing / reading / discussion panels, iframed permalinks / media / privacy. |
+| `core:site-editor` | iframe | `site-editor.php` adapter. Native mount deferred. |
+| `core:dashboard` / `core:dashboard-host` | ✅ | Overview cards / widget grid. |
+| `iframe:{slug}` | iframe | Any wp-admin URL with chrome hidden. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`) are pinned by the v0 normalizer and don't appear in shell author files unless overridden.
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are declared explicitly in each shell's `workspace` / regions.
 
 ## Project structure
 
 ```
 wp-admin-shell/
-├── wp-admin-shell.php              # Plugin entry
-├── webpack.config.js
-├── shells/                         # Bundled admin.json files
-├── assets/
-├── includes/                       # PHP — REST endpoints, cascade resolver
+├── wp-admin-shell.php       # Plugin entry — admin page, asset enqueue, config handoff
+├── webpack.config.js        # @wordpress/scripts + a copy step for the DataViews CSS
+├── shells/                  # Bundled admin.json configurations
+├── includes/                # PHP
 │   ├── class-wp-admin-shell-config.php
-│   ├── class-wp-admin-shell-{can,prefs,selection}-rest.php
-│   ├── class-wp-admin-shell-cli.php
-│   ├── cascade/                    # Resolver, merge engine, customizable, cache, validator
-│   └── origins/                    # Core origin (v0 → v1 normalizer)
-├── src/                            # JS source
-│   ├── runtime/                    # v1 kernel
-│   │   ├── kernel.js, kernel-context.js
-│   │   ├── registry/               # Source registry + builtins
-│   │   ├── engines/                # core:default + core:single-pane
-│   │   ├── regions/                # Generic Region renderer + regionKind helper + mountApp
-│   │   ├── routing/                # Hash router
-│   │   ├── selection/              # Cross-region selection bus
-│   │   ├── slots/                  # Render + data slots
-│   │   ├── styles/                 # ThemeProviderHost (engine-pluggable), WpdsThemeProvider (core-default's contribution), density helper
-│   │   ├── capabilities/           # userCan / checkCan
-│   │   ├── config/                 # iconMap (DS-neutral registry; engines populate)
-│   │   └── apps/                   # System apps (NavigationApp, SiteHubApp, etc.)
-│   └── apps/                       # User apps (PostsApp, MediaApp, …)
+│   ├── class-wp-admin-shell-{can,prefs,data-view,data-field-collections}-rest.php
+│   ├── class-wp-admin-shell-cli.php          # wp admin-shell list | activate | register
+│   ├── cascade/             # Resolver, merge engine, customizable, cache, permissions,
+│   │                        #   modes, dataView/dataField registries, preload, menu/route
+│   │                        #   shims, classic-menu bridge, dashboard widgets
+│   ├── origins/             # Core origin (bundled-defaults baseline)
+│   ├── manifests/           # app.json / engine.json discovery + registry + validator
+│   └── tokens/              # DTCG tokens.json resolver
+├── src/
+│   ├── index.js             # Entry — kernel(window.wpAdminShell.config)
+│   └── runtime/             # DS-neutral kernel
+│       ├── kernel.js, kernel-context.js
+│       ├── compile/         # screens/workspace → regions / routes / default-route / commands
+│       ├── registry/        # source registry + builtins
+│       ├── engines/         # core-default, core-single-pane, core-desktop
+│       ├── regions/         # generic Region renderer + mountApp
+│       ├── routing/         # hash + Navigation API router
+│       ├── styles/          # ThemeProviderHost seam + theme helpers
+│       ├── dataView/        # useDataView + inline hydration
+│       ├── modes/, capabilities/, bindings/, dirty-state/, config/
+│   └── apps/                # All bundled apps (one dir each: index.js + app.json + app.md)
 ├── tests/
-│   ├── php/                        # Cascade + manifest + cap + shape + selection runners (wp eval-file)
-│   ├── schema/                     # Ajv 2020-12 against admin-v1/v2/app-v2/engine-v2 (node)
-│   ├── runtime/                    # Pure-JS runtime helpers (node) — resolveRegion merge, etc.
-│   └── parity/                     # WPDS slot-list parity (node)
-├── docs/                           # Specs, schemas, readiness notes
-│   ├── wp-admin-shell-design-spec.md       # Master design (2026-05-01)
-│   ├── post-editor-sketch.md               # v2 worked example
-│   ├── plans/
-│   │   └── wp-admin-shell-v2-migration-directive.md  # Active v2 plan
-│   ├── schemas/
-│   │   ├── admin-v1.json                   # v1.0.0-beta.x schema (still load-bearing)
-│   │   ├── admin-v2.json                   # v2 admin.json schema
-│   │   ├── admin-app-v2.json               # v2 app manifest schema
-│   │   └── admin-engine-v2.json            # v2 engine manifest schema
-│   ├── research/schema-exercise-findings.md
-│   ├── v1-token-emission.md
-│   ├── v1-readiness.md
-│   └── archive/
-│       ├── wp-admin-shell-mvp-spec.md
-│       ├── wp-admin-shell-design-spec-2026-04-29.md
-│       └── wp-admin-shell-v1-plan.md
-├── scripts/                        # snapshot-wpds.mjs
-└── build/                          # Compiled output (gitignored)
+│   ├── php/                 # wp eval-file fixture runners
+│   ├── schema/              # Ajv 2020-12 sweep over shells + manifests + fixtures
+│   ├── runtime/             # pure-ESM runtime modules (node)
+│   └── engines/             # core:desktop TS tests (node --experimental-strip-types)
+└── docs/                    # design spec, schema docs, schemas, public references, archive
 ```
 
 ## Development
 
 ```bash
-npm run start            # Dev build with watch
-npm run build            # Production build
+npm run start            # dev build with watch
+npm run build            # production build
 npm run lint:js
-npm run format
-npm run snapshot:wpds    # Regenerate WPDS slot snapshot from @wordpress/theme
-npm run test:parity      # Diff snapshot vs upstream design-tokens.css
-```
+npm run lint:ts          # type-checks the core:desktop engine sources
+npm run test:schema      # Ajv schema sweep
+npm run test:parity      # WPDS slot-list drift detector
+npm run test:runtime     # pure-ESM runtime modules
+npm run test:engines     # core:desktop engine
 
-PHP fixture tests run inside the wp-env CLI container:
-
-```bash
+# PHP fixture tests (inside the wp-env CLI container)
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-selection-tests.php
+# … see docs / CLAUDE.md for the full list
 ```
 
-## Architecture highlights
+## Why these choices
 
-**Why a cascade resolver?** `theme.json` resolves through merged origins; admin.json takes the same shape so site administrators / plugin authors / end users can override the active shell along well-defined precedence boundaries. Trusted origins (core / plugin) merge authoritatively (omission ⇒ tombstone); consumer origins (site / role / user) merge additively, filtered through `userCustomizable`.
-
-**Why two CSS-variable families (in `core:default`)?** WPDS slots cover most of the WPDS-themed surface but not shell-only chrome (sidebar, toolbar, site hub, content card). The chrome extension namespace fills that gap. Both families are emitted by `core:default`'s engine-private style compiler — third-party engines bring whatever variable namespaces their own design system uses (or none, if their `ThemeProvider` owns all token plumbing directly).
-
-**Why iframe for the editor + site editor?** Both packages assume full-viewport ownership and own private-API stores. Embedding inside a region requires resolving four collisions (preferences-store namespace, command-palette double-registration, full-screen-mode CSS, hash-router conflicts). v1 ships iframe; v2 takes the native-mount path.
-
-**Why `wp_add_inline_script`?** Type fidelity. `wp_localize_script` stringifies booleans and nested objects.
-
-**Why the Gutenberg dependency?** Any `@wordpress/ui` overlay component (`Notice.CloseIcon → IconButton → Tooltip → @wordpress/theme`) opts into private APIs against an allowlist core does not include. Gutenberg overrides `wp-private-apis` with a permissive allowlist. Without Gutenberg, those modules throw at module-load.
+- **Cascade resolver** — `theme.json` resolves through merged origins; admin.json takes the same shape so site admins, plugin authors, and end users can override the active shell along well-defined precedence boundaries.
+- **Engine-owned theming** — the kernel never presupposes a design system. WPDS lives entirely inside `core:default`; a Material or Tailwind engine brings its own provider, icon table, and CSS.
+- **iframe for the editor / site editor** — both packages assume full-viewport ownership and private-API stores; the shell iframes them until a native mount lands.
+- **`wp_add_inline_script`** for the config handoff — preserves type fidelity (`wp_localize_script` stringifies booleans and nested objects).
 
 ## License
 

@@ -2,9 +2,9 @@
 	"$schema": "../docs/schemas/admin.json",
 	"version": 3,
 	"$wpds": "6.9",
-	"name": "v2-demo",
-	"title": "v2 Demo (canonical v3 admin.json shape)",
-	"description": "Originally authored against admin-v2.json. Migrated to v3 shape in Phase 3d.1. Exercises workspace/screens/menu primitives — engine + branding, default-screen, single-app + iframe-fallback screens, Mod+K command, modest theme tweak.",
+	"name": "canonical-demo",
+	"title": "Canonical Demo",
+	"description": "Demonstrates the canonical admin.json shape on the default engine — engine + branding, default-screen, single-app + iframe-fallback screens, a Mod+K command, and a modest theme tweak.",
 	"user-switchable": true,
 	"workspace": {
 		"engine": "core:default",

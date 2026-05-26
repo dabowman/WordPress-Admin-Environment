@@ -16,7 +16,7 @@ import { useDataView } from '../../runtime/dataView/useDataView';
  * Map a post type id to the URL hash that opens its editor route.
  * Routes are bundled in shells that surface PostsApp + the native
  * editor (developer-admin / content-author / single-pane-demo /
- * v2-demo). The `post` / `page` post types get their own pluralized
+ * canonical-demo). The `post` / `page` post types get their own pluralized
  * paths (`/posts/{id}/edit`, `/pages/{id}/edit`) — site-editor post
  * types (`wp_template`, `wp_block`, `wp_navigation`) need their own
  * edit canvas + URL-encoding (slug-shaped ids); defer until those

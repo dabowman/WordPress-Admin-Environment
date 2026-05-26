@@ -4,7 +4,7 @@ Substantive prose accompanying `app.json#documentation`. Structured facts (REST 
 
 ## Overview
 
-PostsApp is the canonical DataViews host in the shell. Every bundled shell that surfaces a post-type list (`wp-admin-default`, `developer-admin`, `content-author`, `v2-demo`) mounts an instance of `core:posts` and either leaves the default `postType: "post"` or overrides it (`pages`, `wp_block`). The component itself is intentionally thin: it pulls rows through `useEntityRecords`, declares the DataViews `fields` / `actions` / `view` shape, and lets the DataViews package own everything else — layout switching, pagination, sort, selection, action modals, the empty state.
+PostsApp is the canonical DataViews host in the shell. Every bundled shell that surfaces a post-type list (`wp-admin-default`, `developer-admin`, `content-author`, `canonical-demo`) mounts an instance of `core:posts` and either leaves the default `postType: "post"` or overrides it (`pages`, `wp_block`). The component itself is intentionally thin: it pulls rows through `useEntityRecords`, declares the DataViews `fields` / `actions` / `view` shape, and lets the DataViews package own everything else — layout switching, pagination, sort, selection, action modals, the empty state.
 
 ## Architecture
 
