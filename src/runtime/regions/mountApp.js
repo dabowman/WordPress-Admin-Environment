@@ -337,12 +337,38 @@ function resolveAppInstance( appRef ) {
 		return null;
 	}
 	if ( typeof appRef === 'string' ) {
+		// `iframe:<slug>` shorthand → the iframe-fallback app, slug as url.
+		if ( appRef.startsWith( 'iframe:' ) ) {
+			const slug = appRef.slice( 'iframe:'.length );
+			return {
+				id: appRef,
+				source: 'core:iframe-fallback',
+				config: { url: slug },
+			};
+		}
 		// Namespaced ids (core:* / plugin:*) are self-identifying — the id
-		// is the source. Anything else is invalid in v2.
+		// is the source.
 		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
 			return { id: appRef, source: appRef };
 		}
 		return null;
+	}
+	// Object form. Translate an `iframe:<slug>` source the same way; the
+	// route synthesizer already does this for routed mounts, so this is the
+	// catch-all for direct `region.app` / `screens[].apps[]` mounts.
+	if (
+		typeof appRef.source === 'string' &&
+		appRef.source.startsWith( 'iframe:' )
+	) {
+		const slug = appRef.source.slice( 'iframe:'.length );
+		const config =
+			appRef.config && typeof appRef.config === 'object'
+				? { ...appRef.config }
+				: {};
+		if ( config.url === undefined || config.url === '' ) {
+			config.url = slug;
+		}
+		return { ...appRef, source: 'core:iframe-fallback', config };
 	}
 	return appRef;
 }

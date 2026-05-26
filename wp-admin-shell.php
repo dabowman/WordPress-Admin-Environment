@@ -90,11 +90,9 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-v3-compiler.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli-migrate.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
@@ -341,7 +339,9 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	// on (WPDS baseline tokens, DataViews stylesheet, MUI bundle, etc.).
 	// Only the active engine's styles enqueue — keeps non-WPDS engines
 	// from loading WPDS tokens (and vice versa for other DS plugins).
-	$active_engine_id      = is_array( $config ) && isset( $config['engine'] ) ? $config['engine'] : null;
+	$active_engine_id      = is_array( $config )
+		? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+		: null;
 	$active_engine_manifest = $active_engine_id ? WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
 
 	if ( is_array( $active_engine_manifest ) && isset( $active_engine_manifest['styles'] ) && is_array( $active_engine_manifest['styles'] ) ) {

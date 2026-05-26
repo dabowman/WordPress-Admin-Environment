@@ -4,28 +4,27 @@
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php`
  *
- * For each bundled shell, runs the full resolver pipeline and asserts
- * the resolved tree has the structural invariants the runtime depends on:
+ * For each bundled shell, runs the full resolver pipeline and asserts the
+ * resolved AUTHOR-shape doc has the structural invariants the kernel
+ * depends on:
  *
- *   - top-level `engine` present and registered.
- *   - `regions` has ≥ 1 entry; every region declares `role` or `template`.
- *   - ≥ 1 app id referenced via regions + routes.
- *   - `default-route` resolves to a routes pattern.
- *   - v3 shape distinctives: top-level `screens` block present, top-level
- *     `workspace` block present, `version === 3`.
- *   - Multi-app screens (declaring `apps[]` with `slot` fields) synthesize
- *     the expected slot-namespaced routes (`@<slot>/<path>`).
+ *   - top-level `workspace` block present + `workspace.engine` registered.
+ *   - top-level `screens` block present with ≥ 1 entry.
+ *   - every screen declares a primary app (shorthand `app` or `apps[0]`),
+ *     and every referenced app source is a `core:*` / `plugin:*` /
+ *     `iframe:*` id.
+ *   - `workspace.default-screen` (when present) names a real screen.
+ *   - no two screens claim the same `path`.
+ *
+ * The kernel derives the runtime surfaces (`engine` / `regions` / `routes`
+ * / `default-route`) from these blocks JS-side; that synthesis is
+ * validated by `tests/runtime/build-runtime-config.test.mjs`.
  *
  * Bug class this catches: canonical path drift between author files
- * and runtime readers (e.g. a v3 reshape that loses the synthetic v2
- * runtime path).
+ * and runtime readers.
  *
  * Bug class this DOES NOT catch: React component-level render bugs
  * (those need the JSDOM smoke harness — separate issue).
- *
- * History: v1-shape branches dropped in Phase 3d.3 (all bundled shells
- * are v3-shape; the v3 compiler synthesizes v2-runtime shape so the
- * runtime branch still validates after compile).
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
@@ -66,22 +65,36 @@ sort( $shells );
 $known_engines = array( 'core:default', 'core:single-pane', 'core:desktop' );
 
 /**
- * Walk a v2-runtime region tree (top-level map of regions, each possibly
- * with nested `regions`) and collect every namespaced app id referenced
- * via `app` fields. Children are inspected recursively.
+ * The primary app id for a screen — shorthand `app` or first `apps[]`
+ * entry. Returns '' when the screen declares neither.
  */
-function wpas_collect_region_app_ids( $regions, &$out ) {
-	foreach ( $regions as $rid => $r ) {
-		if ( ! is_array( $r ) ) {
-			continue;
-		}
-		if ( isset( $r['app'] ) && is_string( $r['app'] ) ) {
-			$out[] = $r['app'];
-		}
-		if ( ! empty( $r['regions'] ) && is_array( $r['regions'] ) ) {
-			wpas_collect_region_app_ids( $r['regions'], $out );
+function wpas_screen_primary_app( $screen ) {
+	if ( ! is_array( $screen ) ) {
+		return '';
+	}
+	if ( isset( $screen['app'] ) && is_string( $screen['app'] ) && $screen['app'] !== '' ) {
+		return $screen['app'];
+	}
+	if ( isset( $screen['apps'] ) && is_array( $screen['apps'] ) && ! empty( $screen['apps'] ) ) {
+		$first = reset( $screen['apps'] );
+		if ( is_array( $first ) && isset( $first['app'] ) && is_string( $first['app'] ) ) {
+			return $first['app'];
 		}
 	}
+	return '';
+}
+
+/**
+ * A namespaced app source is valid when it's `core:*`, `plugin:*`, or
+ * `iframe:*` (the iframe shorthand the kernel translates to
+ * core:iframe-fallback).
+ */
+function wpas_is_valid_app_ref( $ref ) {
+	return is_string( $ref ) && (
+		strpos( $ref, 'core:' ) === 0 ||
+		strpos( $ref, 'plugin:' ) === 0 ||
+		strpos( $ref, 'iframe:' ) === 0
+	);
 }
 
 foreach ( $shells as $slug ) {
@@ -92,150 +105,75 @@ foreach ( $shells as $slug ) {
 
 	$config = wp_admin_shell_get_active_config();
 
-	// All bundled shells are v3-shape; the v3 compiler synthesizes
-	// `regions` / `routes` / `default-route` on top so the resolved doc
-	// surfaces BOTH the v3 authoring layer (screens / menu / workspace)
-	// AND the v2-runtime layer the kernel consumes.
+	// All bundled shells are v3-shape. The resolver serializes the
+	// author-shape doc (`workspace` / `screens` / `menu` / `settings` /
+	// `commands`); the kernel derives the runtime surfaces JS-side.
 	$T::ok(
-		"$slug: v3 shape — top-level `workspace` block present",
+		"$slug: top-level `workspace` block present",
 		isset( $config['workspace'] ) && is_array( $config['workspace'] )
 	);
 	$T::ok(
-		"$slug: v3 shape — top-level `screens` block present",
+		"$slug: top-level `screens` block present",
 		isset( $config['screens'] ) && is_array( $config['screens'] )
 	);
 
-	// Engine. v3 places it at workspace.engine; the v3 compiler promotes
-	// it to top-level `engine` for the kernel.
-	$engine = $config['engine'] ?? null;
+	// Engine — lives at workspace.engine in v3.
+	$engine = $config['workspace']['engine'] ?? null;
 	$T::ok(
-		"$slug: engine present (compiler-promoted from workspace.engine)",
+		"$slug: workspace.engine present",
 		$engine !== null,
 		'engine = ' . var_export( $engine, true )
 	);
 	$T::ok(
-		"$slug: engine is registered ($engine)",
+		"$slug: workspace.engine is registered ($engine)",
 		in_array( $engine, $known_engines, true ),
 		'expected one of ' . implode( ',', $known_engines )
 	);
 
-	// Regions — v2-runtime shape, synthesized by the v3 compiler from the
-	// active engine manifest's `defaultRegions` + workspace `regions`.
-	$regions = $config['regions'] ?? array();
-	$T::ok( "$slug: ≥1 region", count( $regions ) >= 1, 'count=' . count( $regions ) );
+	// Screens — ≥1 entry; each declares a valid primary app.
+	$screens = $config['screens'] ?? array();
+	$T::ok( "$slug: ≥1 screen", count( $screens ) >= 1, 'count=' . count( $screens ) );
 
-	foreach ( $regions as $rid => $r ) {
+	$paths = array();
+	foreach ( $screens as $screen_id => $screen ) {
+		if ( ! is_array( $screen ) ) {
+			continue;
+		}
+		$primary = wpas_screen_primary_app( $screen );
 		$T::ok(
-			"$slug: region '$rid' has no legacy source/kind/contains",
-			! isset( $r['source'] ) && ! isset( $r['kind'] ) && ! isset( $r['contains'] )
+			"$slug: screen '$screen_id' declares a primary app",
+			$primary !== '',
+			'no `app` or `apps[]` on screen'
 		);
-		$T::ok(
-			"$slug: region '$rid' has role or template",
-			isset( $r['role'] ) || isset( $r['template'] )
-		);
-	}
-
-	// Applications / app ids — collect from regions + routes.
-	$app_ids = array();
-	wpas_collect_region_app_ids( $regions, $app_ids );
-	foreach ( ( $config['routes'] ?? array() ) as $pattern => $route ) {
-		if ( isset( $route['app'] ) && is_string( $route['app'] ) ) {
-			$app_ids[] = $route['app'];
+		if ( $primary !== '' ) {
+			$T::ok(
+				"$slug: screen '$screen_id' app ref valid ($primary)",
+				wpas_is_valid_app_ref( $primary )
+			);
+		}
+		// Collect paths for collision detection.
+		if ( isset( $screen['path'] ) && is_string( $screen['path'] ) && $screen['path'] !== '' ) {
+			$paths[] = $screen['path'];
 		}
 	}
-	$app_ids = array_values( array_unique( $app_ids ) );
-	$T::ok( "$slug: ≥1 app id (regions + routes)", count( $app_ids ) >= 1, 'count=' . count( $app_ids ) );
 
-	// default-route — must match a routes block pattern (v2-runtime shape).
-	$default_route = $config['default-route'] ?? null;
-	if ( $default_route !== null ) {
-		$routes  = $config['routes'] ?? array();
-		$matched = false;
-		foreach ( array_keys( $routes ) as $pattern ) {
-			if (
-				class_exists( 'WP_Admin_Shell_Manifest_Resolver' ) &&
-				WP_Admin_Shell_Manifest_Resolver::match_route( $pattern, $default_route ) !== null
-			) {
-				$matched = true;
-				break;
-			}
-		}
+	// No two screens claim the same path.
+	$T::ok(
+		"$slug: screen paths are unique",
+		count( $paths ) === count( array_unique( $paths ) ),
+		'paths: ' . implode( ', ', $paths )
+	);
+
+	// default-screen (when declared) names a real screen.
+	$default_screen = $config['workspace']['default-screen'] ?? null;
+	if ( $default_screen !== null ) {
 		$T::ok(
-			"$slug: default-route '$default_route' matches a routes pattern",
-			$matched,
-			'patterns: ' . implode( ',', array_keys( $routes ) )
+			"$slug: workspace.default-screen '$default_screen' names a real screen",
+			isset( $screens[ $default_screen ] ),
+			'available: ' . implode( ', ', array_keys( $screens ) )
 		);
 	} else {
-		$T::ok( "$slug: default-route may be null (auto-pick first non-hidden)", true );
-	}
-
-	// Multi-app screens — every screen declaring `apps[]` with a `slot`
-	// other than `_self` should produce a slot-namespaced route. Walk
-	// the screens block + assert the compiler's synthesize_routes() did
-	// its job. v2 shells with no `screens` block skip this check
-	// (bundled v3 shells all have it).
-	if ( isset( $config['screens'] ) && is_array( $config['screens'] ) ) {
-		$routes_block = $config['routes'] ?? array();
-		foreach ( $config['screens'] as $screen_id => $screen ) {
-			if ( ! is_array( $screen ) || ! isset( $screen['apps'] ) || ! is_array( $screen['apps'] ) ) {
-				continue;
-			}
-			$apps_list = array_values( $screen['apps'] );
-			if ( count( $apps_list ) < 2 ) {
-				continue;
-			}
-			// Mirror the compiler's early-continue. `synthesize_routes()`
-			// in `class-wp-admin-shell-v3-compiler.php` skips the ENTIRE
-			// screen iteration when `path === '' && slot === '_self'`,
-			// meaning no routes are emitted — not even for non-primary
-			// peer entries. Bundled shells all carry explicit paths so
-			// this never bites today, but a path-less primary with a
-			// slotted peer would make the test assert routes the compiler
-			// intentionally skipped. Mirror the guard here.
-			$screen_path = isset( $screen['path'] ) && is_string( $screen['path'] ) && $screen['path'] !== ''
-				? $screen['path']
-				: '';
-			$screen_slot = isset( $screen['slot'] ) && is_string( $screen['slot'] ) && $screen['slot'] !== ''
-				? $screen['slot']
-				: '_self';
-			if ( $screen_path === '' && $screen_slot === '_self' ) {
-				continue;
-			}
-			$path = $screen_path !== '' ? $screen_path : '/' . $screen_id;
-			// Walk non-primary entries (skip apps[0] — handled as primary).
-			for ( $i = 1; $i < count( $apps_list ); $i++ ) {
-				$entry = $apps_list[ $i ];
-				if ( ! is_array( $entry ) ) {
-					continue;
-				}
-				$entry_slot = isset( $entry['slot'] ) && is_string( $entry['slot'] ) && $entry['slot'] !== ''
-					? $entry['slot']
-					: '';
-				// Apps without a slot are app-internal compositions (e.g.
-				// dashboard host's `slot: "grid"` widgets that mount
-				// inside the host). They shouldn't emit slot routes.
-				if ( $entry_slot === '' || $entry_slot === '_self' ) {
-					continue;
-				}
-				// `grid` is an app-internal slot used by dashboard-host.
-				// The compiler DOES synthesize `@grid/<path>` routes for
-				// these (the multi-app loop doesn't special-case `grid`),
-				// but they're ignored at the runtime layer — no engine
-				// region declares `routing.route-key: "grid"`, so the host
-				// reads the widget list directly from the screen.apps
-				// block instead. Skip the assertion here; the route's
-				// presence in the table is harmless.
-				if ( $entry_slot === 'grid' ) {
-					continue;
-				}
-				$slot_route = '@' . $entry_slot . '/' . ltrim( $path, '/' );
-				$T::ok(
-					"$slug: multi-app screen '$screen_id' synthesized slot route '$slot_route'",
-					isset( $routes_block[ $slot_route ] ),
-					'available routes: ' . implode( ', ', array_keys( $routes_block ) )
-				);
-			}
-		}
+		$T::ok( "$slug: default-screen may be absent (kernel auto-picks)", true );
 	}
 }
 

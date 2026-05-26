@@ -130,39 +130,37 @@ class WP_Admin_Shell_Resolver {
 		}
 
 		/**
-		 * Filter the cascade-merged admin.json doc before compilation.
+		 * Filter the fully cascade-merged admin.json doc.
 		 *
-		 * Fires after every origin has merged but BEFORE the v3 compiler
-		 * synthesizes the runtime tree (`routes`, `regions`,
-		 * `default-route`). Callbacks therefore receive the AUTHOR-SHAPE
-		 * doc — `workspace` / `screens` / `menu` / `commands` for v3
-		 * shells; legacy `routes` / `regions` for v2 shells —
-		 * not the post-compile shape. Mutating a screen here is fine;
-		 * synthesizing a `regions` block for a v3 shell is not (the
-		 * compiler will overwrite it).
+		 * Fires after every origin has merged. Callbacks receive the
+		 * author-shape v3 doc — `workspace` / `screens` / `menu` /
+		 * `commands` / `settings`. The kernel derives the runtime surfaces
+		 * (`engine` / `routes` / `regions` / `default-route`) from these
+		 * blocks JS-side, so mutating a screen / menu item / command here
+		 * flows straight through to the runtime.
 		 *
-		 * Plugin authors contributing screens, routes, regions, or
-		 * menu items should prefer the per-origin
-		 * `wp_admin_shell_data_{origin}` filters at priority 5 — those
-		 * fire before this hook, before `customizable` filtering, and
-		 * before the merge, so the contribution flows through the
-		 * cascade naturally (and reaches the existing
-		 * `inject_app_baselines` pass for dataView baselines).
+		 * Plugin authors contributing screens, menu items, or commands
+		 * should prefer the per-origin `wp_admin_shell_data_{origin}`
+		 * filters at priority 5 — those fire before this hook, before
+		 * `customizable` filtering, and before the merge, so the
+		 * contribution flows through the cascade naturally (and reaches
+		 * the `inject_app_baselines` pass for dataView baselines).
 		 *
 		 * @param array $merged The cascade-merged author-shape doc.
 		 */
 		$merged = apply_filters( 'wp_admin_shell_data', $merged );
 		$merged = WP_Admin_Shell_Merge::strip_origin_tags( $merged );
 
-		// v3 compiler pass — runs AFTER cascade merge and the
-		// `wp_admin_shell_data` filter so plugin authors can still
-		// observe / mutate the v3-shaped doc. Compiler is a no-op for v2
-		// shells (detect → passthrough); for v3 shells it synthesizes
-		// `routes`, `regions`, `default-route`, and normalizes
-		// `commands` so the existing kernel + router consume the
-		// resolved tree unchanged.
-		if ( class_exists( 'WP_Admin_Shell_V3_Compiler' ) ) {
-			$merged = WP_Admin_Shell_V3_Compiler::compile( $merged );
+		// Stamp the resolved per-screen DataView doc onto each v3 screen
+		// (the resolved (kind, name, variant) triple + the screen's inline
+		// `dataView` overlay, with the `wp_admin_shell_data_view_config_*`
+		// filters applied) so the JS `useDataView` hook's synchronous fast
+		// path resolves without a REST round-trip. Runs last, after the
+		// `wp_admin_shell_data` filter and origin-tag stripping. The kernel
+		// derives `routes` / `regions` / `default-route` / `commands` from
+		// the v3 blocks JS-side — PHP serializes the author-shape doc.
+		if ( class_exists( 'WP_Admin_Shell_Data_View_Config' ) ) {
+			$merged = WP_Admin_Shell_Data_View_Config::stamp_screen_data_views( $merged );
 		}
 
 		return $merged;

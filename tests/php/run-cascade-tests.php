@@ -346,19 +346,18 @@ $T::assert_true( 'doc: pages locked entirely',
 
 echo "\n— Origin loaders + full pipeline —\n";
 
-// V2.M4 task 8: the v0 → v1 normalizer is gone. v0 inputs are no
-// longer supported. The loader passes docs through as-is + falls back
-// to `empty_doc()` for missing/malformed JSON. The empty doc carries
-// an `engine` field and a single content region so the kernel can
-// render a valid (empty) shell.
+// The loader passes docs through as-is + falls back to `empty_doc()` for
+// missing/malformed JSON. The empty doc is v3-shape: it carries
+// `workspace.engine` and a single screen so the kernel can synthesize a
+// valid (empty) shell.
 $empty = WP_Admin_Shell_Origin_Core::empty_doc();
-$T::assert_eq( 'core origin: empty_doc carries engine',
-	$empty['engine'] ?? null,
+$T::assert_eq( 'core origin: empty_doc carries workspace.engine',
+	$empty['workspace']['engine'] ?? null,
 	'core:default'
 );
-$T::assert_true( 'core origin: empty_doc carries content region',
-	isset( $empty['regions']['content'] ),
-	'regions: ' . json_encode( array_keys( $empty['regions'] ?? array() ) )
+$T::assert_true( 'core origin: empty_doc carries a home screen',
+	isset( $empty['screens']['home'] ),
+	'screens: ' . json_encode( array_keys( $empty['screens'] ?? array() ) )
 );
 $T::assert_true( 'core origin: missing shell path falls back to empty_doc',
 	is_array( WP_Admin_Shell_Origin_Core::load( '/path/does/not/exist.json' ) )

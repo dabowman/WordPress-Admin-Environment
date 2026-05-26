@@ -251,6 +251,48 @@ class WP_Admin_Shell_Data_View_Config {
 	}
 
 	/**
+	 * Stamp `screens[id].dataView._resolved` on every screen the resolver
+	 * can produce a DataView doc for. The JS `useDataView` hook's
+	 * synchronous fast path reads this stamp; without it, entity-CRUD apps
+	 * render with empty fields until the REST fallback resolves.
+	 *
+	 * Runs as the last resolver step (after the `wp_admin_shell_data`
+	 * filter + origin-tag stripping) so the stamped doc reflects every
+	 * cascade origin, baseline injection, and the per-triple filters.
+	 * Author-declared inline overlays are preserved alongside the
+	 * `_resolved` snapshot.
+	 *
+	 * @param array $resolved Resolved admin.json doc.
+	 * @return array
+	 */
+	public static function stamp_screen_data_views( $resolved ) {
+		if ( ! is_array( $resolved ) ) {
+			return $resolved;
+		}
+		if ( ! isset( $resolved['screens'] ) || ! is_array( $resolved['screens'] ) ) {
+			return $resolved;
+		}
+
+		foreach ( $resolved['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$resolved_view = self::resolve_screen_data_view( $screen_id, $resolved );
+			if ( ! is_array( $resolved_view ) || empty( $resolved_view ) ) {
+				continue;
+			}
+			$existing_view = isset( $resolved['screens'][ $screen_id ]['dataView'] )
+				&& is_array( $resolved['screens'][ $screen_id ]['dataView'] )
+					? $resolved['screens'][ $screen_id ]['dataView']
+					: array();
+			$existing_view['_resolved']                    = $resolved_view;
+			$resolved['screens'][ $screen_id ]['dataView'] = $existing_view;
+		}
+
+		return $resolved;
+	}
+
+	/**
 	 * List every registered variant id under `(kind, name)`.
 	 *
 	 * Reads `settings.dataViews[$kind][$name]` keys after baselines have
