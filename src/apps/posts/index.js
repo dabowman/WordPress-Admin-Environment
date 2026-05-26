@@ -208,7 +208,7 @@ export default function PostsApp( { config } ) {
 							_n(
 								'%1$d of %2$d item failed to move to trash.',
 								'%1$d of %2$d items failed to move to trash.',
-								items.length,
+								failed,
 								'wp-admin-shell'
 							),
 							failed,

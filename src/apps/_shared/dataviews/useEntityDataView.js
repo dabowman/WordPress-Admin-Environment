@@ -18,6 +18,10 @@ import { useEffect, useMemo, useState } from '@wordpress/element';
  *    leaving that id in `view.fields` would render a second column for the
  *    same field. The returned `view` has the title id stripped from `fields`;
  *    `setView` / the raw state keep it so resync stays lossless.
+ * 4. **Selection reset** — the same screen/triple flip that re-seeds the view
+ *    also clears `selection`: the prior screen's selected row ids don't exist
+ *    in the new dataset, so a carried-over selection would point a subsequent
+ *    bulk action at stale/absent ids.
  *
  * @param {Object}      options
  * @param {string|null} options.screenId       Active screen id (resync key).
@@ -36,12 +40,14 @@ export function useEntityDataView( {
 		...viewDefaults,
 		...( dataViewConfig.defaultView || {} ),
 	} ) );
+	const [ selection, setSelection ] = useState( [] );
 
 	useEffect( () => {
 		setRawView( {
 			...viewDefaults,
 			...( dataViewConfig.defaultView || {} ),
 		} );
+		setSelection( [] );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ screenId, ...resyncKeys ] );
 
@@ -57,8 +63,6 @@ export function useEntityDataView( {
 		}
 		return { ...rawView, fields };
 	}, [ rawView, dataViewConfig ] );
-
-	const [ selection, setSelection ] = useState( [] );
 
 	return { view, setView: setRawView, selection, setSelection };
 }

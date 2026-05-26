@@ -77,6 +77,7 @@ export function createBulkConfirmModal( {
 						onClick={ async () => {
 							let results = [];
 							let failed = 0;
+							let succeeded = targets;
 							if ( targets.length ) {
 								results = await Promise.allSettled(
 									targets.map( ( item ) => mutate( item ) )
@@ -84,9 +85,16 @@ export function createBulkConfirmModal( {
 								failed = results.filter(
 									( r ) => r.status === 'rejected'
 								).length;
+								// Only the items that actually mutated are
+								// "performed"; reporting the failures here would
+								// deselect rows the user likely wants to retry.
+								succeeded = targets.filter(
+									( _item, i ) =>
+										results[ i ]?.status === 'fulfilled'
+								);
 							}
 							onSettled?.( { items, targets, results, failed } );
-							onActionPerformed?.( targets );
+							onActionPerformed?.( succeeded );
 							closeModal();
 						} }
 					>

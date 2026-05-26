@@ -201,7 +201,7 @@ export default function UsersApp( { config = {} } = {} ) {
 							_n(
 								'%1$d of %2$d user failed to delete.',
 								'%1$d of %2$d users failed to delete.',
-								targets.length,
+								failed,
 								'wp-admin-shell'
 							),
 							failed,

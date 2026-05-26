@@ -24,6 +24,23 @@ const FORM = {
 const showsStaticPage = ( item ) =>
 	( item.show_on_front || 'posts' ) === 'page';
 
+/**
+ * Coerce a per-page count to a positive integer, falling back to 10.
+ *
+ * The DataForm `integer` control can emit an empty string or 0 when the user
+ * clears the field; WordPress treats `posts_per_page = 0` as invalid and breaks
+ * front-end pagination. Clamp to a floor of 1 (default 10) so Save can never
+ * write a non-positive value — restores the `parseInt(...) || 10` guard the
+ * hand-rolled InputControl enforced before the DataForm migration.
+ *
+ * @param {*} value Raw control value (number or string).
+ * @return {number} Positive integer (>= 1), or 10 when empty/invalid.
+ */
+const clampPerPage = ( value ) => {
+	const n = parseInt( value, 10 );
+	return Number.isInteger( n ) && n > 0 ? n : 10;
+};
+
 export default function SettingsReadingApp() {
 	const pages = useEntityRecords( 'postType', 'page', {
 		per_page: 100,
@@ -87,6 +104,10 @@ export default function SettingsReadingApp() {
 				id: 'posts_per_page',
 				type: 'integer',
 				label: __( 'Blog pages show at most', 'wp-admin-shell' ),
+				getValue: ( { item } ) => item.posts_per_page ?? 10,
+				setValue: ( { value } ) => ( {
+					posts_per_page: clampPerPage( value ),
+				} ),
 			},
 			{
 				id: 'posts_per_rss',
@@ -95,6 +116,10 @@ export default function SettingsReadingApp() {
 					'Syndication feeds show the most recent',
 					'wp-admin-shell'
 				),
+				getValue: ( { item } ) => item.posts_per_rss ?? 10,
+				setValue: ( { value } ) => ( {
+					posts_per_rss: clampPerPage( value ),
+				} ),
 			},
 			{
 				id: 'rss_use_excerpt',

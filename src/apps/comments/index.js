@@ -211,7 +211,7 @@ export default function CommentsApp( { config = {} } ) {
 						_n(
 							'%1$d of %2$d comment failed to update.',
 							'%1$d of %2$d comments failed to update.',
-							items.length,
+							failed,
 							'wp-admin-shell'
 						),
 						failed,
@@ -264,7 +264,7 @@ export default function CommentsApp( { config = {} } ) {
 							_n(
 								'%1$d of %2$d comment failed to move to trash.',
 								'%1$d of %2$d comments failed to move to trash.',
-								items.length,
+								failed,
 								'wp-admin-shell'
 							),
 							failed,
