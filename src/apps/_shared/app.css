@@ -1,0 +1,39 @@
+/*
+ * Shared app-layer style utilities.
+ *
+ * Recipes that were copy-pasted across bundled apps (or implied by class names
+ * that had no CSS backing them). App-space, WPDS-flavored — the kernel stays
+ * DS-neutral. Imported as a side-effect by the apps that use these classes;
+ * webpack folds duplicate copies across lazy chunks.
+ */
+
+/*
+ * Fill the mounted region and stretch the DataViews wrapper to full height.
+ * Add `wp-admin-shell-app--fill` to a list app's root element. Was duplicated
+ * in posts + themes only; now every entity-CRUD list app uses it for parity.
+ */
+.wp-admin-shell-app--fill,
+.wp-admin-shell-app--fill .dataviews-wrapper {
+	height: 100%;
+}
+
+/*
+ * Dimmed secondary text — author email, usernames, meta lines. `@wordpress/ui`
+ * Text 0.12 has no `color` prop, so the muted treatment lives here. Replaces
+ * the inert per-app `__muted` classes that were rendered but never styled.
+ */
+.wp-admin-shell-app__muted {
+	color: var( --wpds-color-fg-content-neutral-weak );
+	font-size: var( --wpds-font-size-sm );
+}
+
+/*
+ * Centered loading / empty filler. Replaces the identical
+ * `display:flex; …; height:200px` block copy-pasted across the form apps.
+ */
+.wp-admin-shell-app__center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+}

@@ -1,11 +1,3 @@
-.wp-admin-shell-app-themes {
-	height: 100%;
-}
-
-.wp-admin-shell-app-themes .dataviews-wrapper {
-	height: 100%;
-}
-
 .wp-admin-shell-app-themes__details-modal {
 	padding: var( --wpds-dimension-padding-lg, 16px );
 }

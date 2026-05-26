@@ -1,29 +1,25 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useMemo, useState } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, Icon, InputControl, Stack, Text } from '@wordpress/ui';
-import {
-	Button as DestructiveButton,
-	Modal,
-	TextareaControl,
-} from '@wordpress/components';
+import { DataViews, DataForm } from '@wordpress/dataviews/wp';
+import { Button, Icon, Stack, Text } from '@wordpress/ui';
+import { Modal } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { buildFields } from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
 	post_tag: __( 'Tags', 'wp-admin-shell' ),
 };
 
-// View-config primitives ship as locale-agnostic JSON (spec §13 #7). Recover
-// translation for the ids the app authors by mapping known field/action ids
-// to `__()`-wrapped strings at module load. Unknown ids (plugin extension
-// columns / actions) fall through to `spec.label`.
+// Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	name: __( 'Name', 'wp-admin-shell' ),
 	slug: __( 'Slug', 'wp-admin-shell' ),
@@ -52,9 +48,7 @@ function stripTags( html ) {
 }
 
 /**
- * Field id → render callback. View-config declares the shape; the React
- * layer owns the row renderer. Unknown ids fall through to DataViews'
- * default renderer for the declared field type.
+ * Field id → render callback.
  *
  * @param {Object}   deps
  * @param {Function} deps.onEditTerm Open the edit modal for a raw term record.
@@ -77,163 +71,6 @@ function buildFieldRenderers( { onEditTerm } ) {
 	};
 }
 
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
-function buildActions(
-	actions,
-	{
-		taxonomy,
-		onEditTerm,
-		deleteEntityRecord,
-		invalidateResolution,
-		createSuccessNotice,
-		createErrorNotice,
-	}
-) {
-	const callbacks = {
-		edit: ( items ) => onEditTerm( items[ 0 ].rawRecord ),
-	};
-
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible: compileEligibility( spec.eligibleWhen ),
-			};
-
-			if ( spec.id === 'delete' ) {
-				compiled.RenderModal = ( {
-					items,
-					closeModal,
-					onActionPerformed,
-				} ) => (
-					<Stack
-						direction="column"
-						gap="md"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text>
-							{ items.length === 1
-								? __( 'Delete this term?', 'wp-admin-shell' )
-								: __(
-										'Delete these terms? Posts assigned to them will lose this term.',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button variant="minimal" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									try {
-										// Terms have no trash — `force: true`
-										// is required or the request 400s.
-										await Promise.all(
-											items.map( ( item ) =>
-												deleteEntityRecord(
-													'taxonomy',
-													taxonomy,
-													item.id,
-													{ force: true }
-												)
-											)
-										);
-										invalidateResolution(
-											'getEntityRecords',
-											[ 'taxonomy', taxonomy ]
-										);
-										createSuccessNotice(
-											__(
-												'Term deleted.',
-												'wp-admin-shell'
-											),
-											{ type: 'snackbar' }
-										);
-										onActionPerformed?.( items );
-									} catch ( err ) {
-										createErrorNotice(
-											err?.message ||
-												__(
-													'Failed to delete term.',
-													'wp-admin-shell'
-												),
-											{ isDismissible: true }
-										);
-									}
-									closeModal();
-								} }
-							>
-								{ __( 'Delete', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				);
-			} else if ( callbacks[ spec.id ] ) {
-				compiled.callback = callbacks[ spec.id ];
-			}
-
-			return compiled;
-		} );
-}
-
 export default function TaxonomyApp( { config = {} } ) {
 	const taxonomy = config.taxonomy || 'category';
 	const screenId = config.screenId || null;
@@ -242,24 +79,12 @@ export default function TaxonomyApp( { config = {} } ) {
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...dataViewConfig.defaultView,
-	} ) );
-
-	// Resync `view` when the screen flips on the same hook instance
-	// (e.g. /categories → /tags both mount TaxonomyApp). The useState
-	// initializer runs once, so without this effect the second screen
-	// inherits the first's perPage / sort / filters. Keyed only on
-	// screenId + taxonomy — not dataViewConfig — to avoid clobbering
-	// in-session view edits whenever the cascade re-resolves the doc.
-	useEffect( () => {
-		setView( {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		} );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ screenId, taxonomy ] );
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+		resyncKeys: [ taxonomy ],
+	} );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -307,32 +132,67 @@ export default function TaxonomyApp( { config = {} } ) {
 
 	const fields = useMemo(
 		() =>
-			buildFields(
-				dataViewConfig.fields ?? [],
-				buildFieldRenderers( { onEditTerm: setEditTerm } )
-			),
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: buildFieldRenderers( { onEditTerm: setEditTerm } ),
+			} ),
 		[ dataViewConfig ]
 	);
 
-	const actions = useMemo(
-		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				taxonomy,
-				onEditTerm: setEditTerm,
-				deleteEntityRecord,
-				invalidateResolution,
-				createSuccessNotice,
-				createErrorNotice,
-			} ),
-		[
-			dataViewConfig,
-			taxonomy,
-			deleteEntityRecord,
-			invalidateResolution,
-			createSuccessNotice,
-			createErrorNotice,
-		]
-	);
+	const actions = useMemo( () => {
+		const deleteModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __( 'Delete this term?', 'wp-admin-shell' )
+					: __(
+							'Delete these terms? Posts assigned to them will lose this term.',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			// Terms have no trash — `force: true` is required or the request
+			// 400s.
+			mutate: ( item ) =>
+				deleteEntityRecord( 'taxonomy', taxonomy, item.id, {
+					force: true,
+				} ),
+			onSettled: ( { results, failed } ) => {
+				invalidateResolution( 'getEntityRecords', [
+					'taxonomy',
+					taxonomy,
+				] );
+				if ( failed > 0 ) {
+					const first = results.find(
+						( r ) => r.status === 'rejected'
+					);
+					createErrorNotice(
+						first?.reason?.message ||
+							__( 'Failed to delete term.', 'wp-admin-shell' ),
+						{ isDismissible: true }
+					);
+				} else {
+					createSuccessNotice(
+						__( 'Term deleted.', 'wp-admin-shell' ),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			callbacks: {
+				edit: ( items ) => setEditTerm( items[ 0 ].rawRecord ),
+			},
+			modals: { delete: deleteModal },
+		} );
+	}, [
+		dataViewConfig,
+		taxonomy,
+		deleteEntityRecord,
+		invalidateResolution,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -341,8 +201,6 @@ export default function TaxonomyApp( { config = {} } ) {
 		} ),
 		[ totalItems, totalPages ]
 	);
-
-	const [ selection, setSelection ] = useState( [] );
 
 	return (
 		<div className="wp-admin-shell-app-taxonomy">
@@ -414,6 +272,31 @@ export default function TaxonomyApp( { config = {} } ) {
 	);
 }
 
+const TERM_FIELDS = [
+	{
+		id: 'name',
+		type: 'text',
+		label: __( 'Name', 'wp-admin-shell' ),
+		isValid: { required: true },
+	},
+	{
+		id: 'slug',
+		type: 'text',
+		label: __( 'Slug', 'wp-admin-shell' ),
+	},
+	{
+		id: 'description',
+		type: 'text',
+		label: __( 'Description', 'wp-admin-shell' ),
+		Edit: { control: 'textarea', rows: 4 },
+	},
+];
+
+const TERM_FORM = {
+	layout: { type: 'regular', labelPosition: 'top' },
+	fields: [ 'name', 'slug', 'description' ],
+};
+
 function TermEditModal( {
 	term,
 	taxonomy,
@@ -423,19 +306,17 @@ function TermEditModal( {
 	onError,
 } ) {
 	const isNew = ! term;
-	const [ name, setName ] = useState( term?.name || '' );
-	const [ slug, setSlug ] = useState( term?.slug || '' );
-	const [ description, setDescription ] = useState( term?.description || '' );
+	const [ data, setData ] = useState( {
+		name: term?.name || '',
+		slug: term?.slug || '',
+		description: term?.description || '',
+	} );
 	const [ isSaving, setIsSaving ] = useState( false );
 
 	const handleSave = async () => {
 		setIsSaving( true );
 		try {
-			const payload = {
-				name,
-				slug,
-				description,
-			};
+			const payload = { ...data };
 			if ( ! isNew ) {
 				payload.id = term.id;
 			}
@@ -459,26 +340,13 @@ function TermEditModal( {
 			onRequestClose={ onClose }
 		>
 			<Stack direction="column" gap="md">
-				<InputControl
-					label={ __( 'Name', 'wp-admin-shell' ) }
-					value={ name }
-					onChange={ ( e ) => setName( e.target.value ) }
-				/>
-				<InputControl
-					label={ __( 'Slug', 'wp-admin-shell' ) }
-					value={ slug }
-					onChange={ ( e ) => setSlug( e.target.value ) }
-					description={ __(
-						'URL-friendly version of the name. Auto-generated if blank.',
-						'wp-admin-shell'
-					) }
-				/>
-				<TextareaControl
-					label={ __( 'Description', 'wp-admin-shell' ) }
-					value={ description }
-					onChange={ setDescription }
-					rows={ 4 }
-					__nextHasNoMarginBottom
+				<DataForm
+					data={ data }
+					fields={ TERM_FIELDS }
+					form={ TERM_FORM }
+					onChange={ ( edits ) =>
+						setData( ( prev ) => ( { ...prev, ...edits } ) )
+					}
 				/>
 				<Stack direction="row" justify="flex-end" gap="sm">
 					<Button variant="minimal" onClick={ onClose }>
@@ -489,7 +357,7 @@ function TermEditModal( {
 						variant="solid"
 						onClick={ handleSave }
 						loading={ isSaving }
-						disabled={ ! name || isSaving }
+						disabled={ ! data.name || isSaving }
 					>
 						{ isNew
 							? __( 'Add term', 'wp-admin-shell' )

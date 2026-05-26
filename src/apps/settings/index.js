@@ -26,9 +26,10 @@ import IframeApp from '../iframe-fallback';
  *
  *   general     — full coverage, native (existing SettingsGeneralApp)
  *   writing     — partial: default category + post format
- *   reading     — partial: front-page config, posts-per-page, RSS,
- *                  default comment + ping status
- *   discussion  — partial: default comment + ping status
+ *   reading     — partial: front-page config, posts-per-page, RSS
+ *   discussion  — partial: default comment + ping status (the canonical
+ *                  home for these "Default post settings" — Reading used
+ *                  to duplicate them; removed)
  *   permalinks  — iframed (no REST coverage; needs custom endpoint)
  *   media       — iframed (image-size + uploads-org-by-month not REST-exposed)
  *   privacy     — iframed (privacy page not REST-exposed)

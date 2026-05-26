@@ -2,13 +2,6 @@
 	max-width: 720px;
 }
 
-.wp-admin-shell-app-settings-general__loading {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 200px;
-}
-
 .wp-admin-shell-app-settings-general code {
 	font-size: 12px;
 	background: var(--wpds-color-bg-surface-neutral-weak);

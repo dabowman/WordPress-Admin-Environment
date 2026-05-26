@@ -1,16 +1,21 @@
-import './index.css';
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import '../_shared/app.css';
+import { useMemo } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, Stack, Text } from '@wordpress/ui';
-import { Button as DestructiveButton } from '@wordpress/components';
+import { Button, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { navigate } from '../../runtime/routing/router';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import {
+	buildFields,
+	elementsFromLabels,
+} from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -38,12 +43,7 @@ const STATUS_LABELS = {
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
-// View-config primitives ship as locale-agnostic JSON (spec §13 #7) — labels
-// reach DataViews in whatever locale the spec was authored in. Recover the
-// pre-C2 translation behavior by mapping known field/action ids to `__()`-
-// wrapped strings at compile time. Unknown ids (plugin extension columns /
-// actions) fall through to `spec.label` so third-party authors can still
-// label their own additions.
+// Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	title: __( 'Title', 'wp-admin-shell' ),
 	status: __( 'Status', 'wp-admin-shell' ),
@@ -57,11 +57,6 @@ const ACTION_LABELS = {
 	trash: __( 'Move to Trash', 'wp-admin-shell' ),
 };
 
-/**
- * Shape defaults for DataViews `view` state. Spread under the resolved
- * `defaultView` so iteration over `view.filters` / `view.fields` is safe
- * when admin.json omits empty-list keys.
- */
 const VIEW_DEFAULTS = {
 	type: 'table',
 	search: '',
@@ -74,10 +69,9 @@ const VIEW_DEFAULTS = {
 };
 
 /**
- * Field id → render callback. View-config declares the *shape* (id,
- * type, label, hide/sort/search flags); the React layer supplies the
- * row renderer. Unknown ids fall through to DataViews' default
- * renderer for the declared field type.
+ * Field id → render callback. View-config declares the *shape*; the React
+ * layer supplies the row renderer. Unknown ids fall through to DataViews'
+ * default renderer for the declared field type.
  * @param {string} postType Active post type id from app config.
  */
 function buildFieldRenderers( postType ) {
@@ -97,197 +91,18 @@ function buildFieldRenderers( postType ) {
 	};
 }
 
-/**
- * Compile a declarative `eligibleWhen` predicate into a DataViews
- * `isEligible(item)` callback. Supports `{ field: value | [values] }`
- * shape; absent → no eligibility filter (always shown).
- * @param {Object} eligibleWhen Eligibility map.
- */
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-function buildActions(
-	actions,
-	{ postType, deleteEntityRecord, createNotice }
-) {
-	const callbacks = {
-		edit: ( items ) => navigate( editHref( postType, items[ 0 ].id ) ),
-		view: ( items ) => {
-			window.open( items[ 0 ].link, '_blank', 'noopener,noreferrer' );
-		},
-	};
-
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible: compileEligibility( spec.eligibleWhen ),
-			};
-
-			if ( spec.id === 'trash' ) {
-				compiled.RenderModal = ( {
-					items,
-					closeModal,
-					onActionPerformed,
-				} ) => (
-					<Stack
-						direction="column"
-						gap="md"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text>
-							{ items.length === 1
-								? __(
-										'Are you sure you want to move this item to the trash?',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Are you sure you want to move these items to the trash?',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button variant="minimal" onClick={ closeModal }>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									// `allSettled` so one failure doesn't
-									// collapse the rest of a bulk action.
-									// Surface partial-success via a
-									// snackbar notice.
-									const results = await Promise.allSettled(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'postType',
-												postType,
-												item.id
-											)
-										)
-									);
-									const failed = results.filter(
-										( r ) => r.status === 'rejected'
-									).length;
-									if ( failed > 0 ) {
-										createNotice(
-											'error',
-											sprintf(
-												/* translators: 1: failed item count, 2: total item count */
-												_n(
-													'%1$d of %2$d item failed to move to trash.',
-													'%1$d of %2$d items failed to move to trash.',
-													items.length,
-													'wp-admin-shell'
-												),
-												failed,
-												items.length
-											),
-											{ type: 'snackbar' }
-										);
-									}
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Move to Trash', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				);
-			} else if ( callbacks[ spec.id ] ) {
-				compiled.callback = callbacks[ spec.id ];
-			}
-
-			return compiled;
-		} );
-}
-
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			} else if ( spec.id === 'status' && ! spec.elements ) {
-				// Fallback: derive elements from STATUS_LABELS for the
-				// status column when none are declared in the spec.
-				compiled.elements = Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				);
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 	const screenId = config.screenId || null;
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...dataViewConfig.defaultView,
-	} ) );
-
-	// Resync `view` when the screen flips on the same hook instance
-	// (e.g. /posts → /posts/drafts both mount PostsApp). The useState
-	// initializer runs once, so without this effect the second screen
-	// inherits the first's perPage / sort / filters. Keyed on screenId
-	// + postType — not dataViewConfig — to avoid clobbering in-session view
-	// edits whenever the cascade re-resolves the doc shape.
-	useEffect( () => {
-		setView( {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		} );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ screenId, postType ] );
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+		resyncKeys: [ postType ],
+	} );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -329,7 +144,8 @@ export default function PostsApp( { config } ) {
 		queryArgs
 	);
 
-	const { deleteEntityRecord } = useDispatch( coreStore );
+	const { deleteEntityRecord, invalidateResolution } =
+		useDispatch( coreStore );
 	const { createNotice } = useDispatch( noticesStore );
 
 	const data = useMemo( () => {
@@ -353,22 +169,80 @@ export default function PostsApp( { config } ) {
 
 	const fields = useMemo(
 		() =>
-			buildFields(
-				dataViewConfig.fields ?? [],
-				buildFieldRenderers( postType )
-			),
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: buildFieldRenderers( postType ),
+				elementFallbacks: {
+					status: elementsFromLabels( STATUS_LABELS ),
+				},
+			} ),
 		[ dataViewConfig, postType ]
 	);
 
-	const actions = useMemo(
-		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				postType,
-				deleteEntityRecord,
-				createNotice,
-			} ),
-		[ dataViewConfig, postType, deleteEntityRecord, createNotice ]
-	);
+	const actions = useMemo( () => {
+		const trashModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __(
+							'Are you sure you want to move this item to the trash?',
+							'wp-admin-shell'
+					  )
+					: __(
+							'Are you sure you want to move these items to the trash?',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Move to Trash', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				deleteEntityRecord( 'postType', postType, item.id ),
+			onSettled: ( { items, failed } ) => {
+				invalidateResolution( 'getEntityRecords', [
+					'postType',
+					postType,
+					queryArgs,
+				] );
+				if ( failed > 0 ) {
+					createNotice(
+						'error',
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d item failed to move to trash.',
+								'%1$d of %2$d items failed to move to trash.',
+								items.length,
+								'wp-admin-shell'
+							),
+							failed,
+							items.length
+						),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			callbacks: {
+				edit: ( items ) =>
+					navigate( editHref( postType, items[ 0 ].id ) ),
+				view: ( items ) => {
+					window.open(
+						items[ 0 ].link,
+						'_blank',
+						'noopener,noreferrer'
+					);
+				},
+			},
+			modals: { trash: trashModal },
+		} );
+	}, [
+		dataViewConfig,
+		postType,
+		deleteEntityRecord,
+		invalidateResolution,
+		queryArgs,
+		createNotice,
+	] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -378,10 +252,8 @@ export default function PostsApp( { config } ) {
 		[ totalItems, totalPages ]
 	);
 
-	const [ selection, setSelection ] = useState( [] );
-
 	return (
-		<div className="wp-admin-shell-app-posts">
+		<div className="wp-admin-shell-app-posts wp-admin-shell-app--fill">
 			<DataViews
 				data={ data }
 				fields={ fields }

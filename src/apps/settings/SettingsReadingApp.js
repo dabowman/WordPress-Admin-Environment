@@ -1,21 +1,30 @@
-/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
-import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
-import { store as noticesStore } from '@wordpress/notices';
-import { Button, InputControl, Stack, Text } from '@wordpress/ui';
-import {
-	SelectControl,
-	RadioControl,
-	CheckboxControl,
-	Spinner,
-	__experimentalDivider as Divider,
-} from '@wordpress/components';
+import { useMemo } from '@wordpress/element';
+import { useEntityRecords } from '@wordpress/core-data';
+import { Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
+import { EntityDataForm } from '../_shared/forms/EntityDataForm';
+
+const FORM = {
+	fields: [
+		'show_on_front',
+		'page_on_front',
+		'page_for_posts',
+		'posts_per_page',
+		'posts_per_rss',
+		'rss_use_excerpt',
+	],
+};
+
+/**
+ * Whether the static-page selects apply. Defaults to `posts` when unset.
+ *
+ * @param {Object} item Edited site record.
+ * @return {boolean} True when a static homepage is selected.
+ */
+const showsStaticPage = ( item ) =>
+	( item.show_on_front || 'posts' ) === 'page';
 
 export default function SettingsReadingApp() {
-	const { record, editedRecord, edit, save, hasEdits, isSaving } =
-		useEntityRecord( 'root', 'site' );
-
 	const pages = useEntityRecords( 'postType', 'page', {
 		per_page: 100,
 		status: 'publish',
@@ -25,185 +34,106 @@ export default function SettingsReadingApp() {
 		context: 'edit',
 	} );
 
-	const { createSuccessNotice, createErrorNotice } =
-		useDispatch( noticesStore );
-
-	if ( ! record ) {
-		return (
-			<div className="wp-admin-shell-app-settings-reading__loading">
-				<Spinner />
-			</div>
-		);
-	}
-
-	const handleSave = async () => {
-		try {
-			await save();
-			createSuccessNotice( __( 'Settings saved.', 'wp-admin-shell' ), {
-				type: 'snackbar',
-			} );
-		} catch ( err ) {
-			createErrorNotice(
-				err.message ||
-					__( 'Failed to save settings.', 'wp-admin-shell' )
-			);
-		}
-	};
-
-	const eventValue = ( e ) => e.target.value;
-
-	const pageOptions = [
-		{ value: '0', label: __( '— Select —', 'wp-admin-shell' ) },
-		...( pages.records || [] ).map( ( p ) => ( {
-			value: String( p.id ),
-			label: p.title?.rendered || p.title?.raw || `#${ p.id }`,
-		} ) ),
-	];
-
-	const showOnFront = editedRecord.show_on_front || 'posts';
+	const fields = useMemo( () => {
+		const pageOptions = [
+			{ value: '0', label: __( '— Select —', 'wp-admin-shell' ) },
+			...( pages.records || [] ).map( ( p ) => ( {
+				value: String( p.id ),
+				label: p.title?.rendered || p.title?.raw || `#${ p.id }`,
+			} ) ),
+		];
+		return [
+			{
+				id: 'show_on_front',
+				type: 'text',
+				label: __( 'Your homepage displays', 'wp-admin-shell' ),
+				Edit: 'radio',
+				elements: [
+					{
+						value: 'posts',
+						label: __( 'Your latest posts', 'wp-admin-shell' ),
+					},
+					{
+						value: 'page',
+						label: __( 'A static page', 'wp-admin-shell' ),
+					},
+				],
+			},
+			{
+				id: 'page_on_front',
+				type: 'text',
+				label: __( 'Homepage', 'wp-admin-shell' ),
+				Edit: 'select',
+				elements: pageOptions,
+				isVisible: showsStaticPage,
+				getValue: ( { item } ) => String( item.page_on_front ?? 0 ),
+				setValue: ( { value } ) => ( {
+					page_on_front: parseInt( value, 10 ),
+				} ),
+			},
+			{
+				id: 'page_for_posts',
+				type: 'text',
+				label: __( 'Posts page', 'wp-admin-shell' ),
+				Edit: 'select',
+				elements: pageOptions,
+				isVisible: showsStaticPage,
+				getValue: ( { item } ) => String( item.page_for_posts ?? 0 ),
+				setValue: ( { value } ) => ( {
+					page_for_posts: parseInt( value, 10 ),
+				} ),
+			},
+			{
+				id: 'posts_per_page',
+				type: 'integer',
+				label: __( 'Blog pages show at most', 'wp-admin-shell' ),
+			},
+			{
+				id: 'posts_per_rss',
+				type: 'integer',
+				label: __(
+					'Syndication feeds show the most recent',
+					'wp-admin-shell'
+				),
+			},
+			{
+				id: 'rss_use_excerpt',
+				type: 'text',
+				label: __(
+					'For each post in a feed, include',
+					'wp-admin-shell'
+				),
+				Edit: 'radio',
+				elements: [
+					{ value: '0', label: __( 'Full text', 'wp-admin-shell' ) },
+					{ value: '1', label: __( 'Excerpt', 'wp-admin-shell' ) },
+				],
+				getValue: ( { item } ) => ( item.rss_use_excerpt ? '1' : '0' ),
+				setValue: ( { value } ) => ( {
+					rss_use_excerpt: value === '1',
+				} ),
+			},
+		];
+	}, [ pages.records ] );
 
 	return (
-		<div className="wp-admin-shell-app-settings-reading">
-			<Stack direction="column" gap="xl">
-				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'Reading', 'wp-admin-shell' ) }
-				</Text>
-
-				<RadioControl
-					label={ __( 'Your homepage displays', 'wp-admin-shell' ) }
-					selected={ showOnFront }
-					options={ [
-						{
-							value: 'posts',
-							label: __( 'Your latest posts', 'wp-admin-shell' ),
-						},
-						{
-							value: 'page',
-							label: __( 'A static page', 'wp-admin-shell' ),
-						},
-					] }
-					onChange={ ( val ) => edit( { show_on_front: val } ) }
-				/>
-
-				{ showOnFront === 'page' && (
-					<Stack direction="column" gap="md">
-						<SelectControl
-							label={ __( 'Homepage', 'wp-admin-shell' ) }
-							value={ String( editedRecord.page_on_front ?? 0 ) }
-							options={ pageOptions }
-							onChange={ ( val ) =>
-								edit( { page_on_front: parseInt( val, 10 ) } )
-							}
-							__nextHasNoMarginBottom
-						/>
-						<SelectControl
-							label={ __( 'Posts page', 'wp-admin-shell' ) }
-							value={ String( editedRecord.page_for_posts ?? 0 ) }
-							options={ pageOptions }
-							onChange={ ( val ) =>
-								edit( { page_for_posts: parseInt( val, 10 ) } )
-							}
-							__nextHasNoMarginBottom
-						/>
-					</Stack>
+		<EntityDataForm
+			className="wp-admin-shell-app-settings-reading"
+			entity={ [ 'root', 'site' ] }
+			fields={ fields }
+			form={ FORM }
+			heading={ __( 'Reading', 'wp-admin-shell' ) }
+			messages={ {
+				success: __( 'Settings saved.', 'wp-admin-shell' ),
+				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+			} }
+		>
+			<Text variant="body-sm">
+				{ __(
+					'Search-engine visibility (the “discourage search engines” toggle) is not exposed by the REST API. Use the legacy Reading Settings screen for that field.',
+					'wp-admin-shell'
 				) }
-
-				<Divider />
-
-				<InputControl
-					label={ __( 'Blog pages show at most', 'wp-admin-shell' ) }
-					type="number"
-					value={ String( editedRecord.posts_per_page ?? 10 ) }
-					onChange={ ( e ) =>
-						edit( {
-							posts_per_page:
-								parseInt( eventValue( e ), 10 ) || 10,
-						} )
-					}
-				/>
-
-				<InputControl
-					label={ __(
-						'Syndication feeds show the most recent',
-						'wp-admin-shell'
-					) }
-					type="number"
-					value={ String( editedRecord.posts_per_rss ?? 10 ) }
-					onChange={ ( e ) =>
-						edit( {
-							posts_per_rss:
-								parseInt( eventValue( e ), 10 ) || 10,
-						} )
-					}
-				/>
-
-				<RadioControl
-					label={ __(
-						'For each post in a feed, include',
-						'wp-admin-shell'
-					) }
-					selected={ editedRecord.rss_use_excerpt ? '1' : '0' }
-					options={ [
-						{
-							value: '0',
-							label: __( 'Full text', 'wp-admin-shell' ),
-						},
-						{
-							value: '1',
-							label: __( 'Excerpt', 'wp-admin-shell' ),
-						},
-					] }
-					onChange={ ( val ) =>
-						edit( { rss_use_excerpt: val === '1' } )
-					}
-				/>
-
-				<Divider />
-
-				<CheckboxControl
-					label={ __(
-						'Allow people to submit comments on new posts',
-						'wp-admin-shell'
-					) }
-					checked={ editedRecord.default_comment_status === 'open' }
-					onChange={ ( v ) =>
-						edit( {
-							default_comment_status: v ? 'open' : 'closed',
-						} )
-					}
-					__nextHasNoMarginBottom
-				/>
-				<CheckboxControl
-					label={ __(
-						'Allow link notifications from other blogs (pingbacks and trackbacks) on new posts',
-						'wp-admin-shell'
-					) }
-					checked={ editedRecord.default_ping_status === 'open' }
-					onChange={ ( v ) =>
-						edit( { default_ping_status: v ? 'open' : 'closed' } )
-					}
-					__nextHasNoMarginBottom
-				/>
-
-				<Text variant="body-sm">
-					{ __(
-						'Search-engine visibility (the “discourage search engines” toggle) is not exposed by the REST API. Use the legacy Reading Settings screen for that field.',
-						'wp-admin-shell'
-					) }
-				</Text>
-
-				<Stack direction="row" justify="flex-start">
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						disabled={ ! hasEdits || isSaving }
-						loading={ isSaving }
-					>
-						{ __( 'Save Changes', 'wp-admin-shell' ) }
-					</Button>
-				</Stack>
-			</Stack>
-		</div>
+			</Text>
+		</EntityDataForm>
 	);
 }

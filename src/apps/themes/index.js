@@ -1,5 +1,6 @@
 import './index.css';
-import { useEffect, useMemo, useState, useCallback } from '@wordpress/element';
+import '../_shared/app.css';
+import { useMemo, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
@@ -8,8 +9,13 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import {
+	buildFields,
+	elementsFromLabels,
+} from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
@@ -20,11 +26,7 @@ const STATUS_LABELS = {
 	inactive: __( 'Inactive', 'wp-admin-shell' ),
 };
 
-// View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — labels
-// reach DataViews with raw English strings regardless of the user's locale.
-// Recover translation by mapping known field/action ids to `__()`-wrapped
-// strings at module load. Unknown ids fall through to `spec.label` so
-// plugin-extension columns / actions keep their cascade-supplied strings.
+// Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	name: __( 'Name', 'wp-admin-shell' ),
 	screenshot: __( 'Screenshot', 'wp-admin-shell' ),
@@ -50,27 +52,7 @@ const VIEW_DEFAULTS = {
 	layout: {},
 };
 
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-// Module-scoped — renderers are stateless and capture no props, so we avoid
-// rebuilding the object on every render. A future refactor that introduces
-// props-capturing renderers should re-introduce a per-instance builder.
+// Module-scoped — renderers are stateless and capture no props.
 const FIELD_RENDERERS = {
 	name: ( { item } ) => <Text>{ item.name }</Text>,
 	screenshot: ( { item } ) =>
@@ -91,71 +73,6 @@ const FIELD_RENDERERS = {
 	author: ( { item } ) => <Text>{ item.author || '' }</Text>,
 };
 
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			} else if ( spec.id === 'status' && ! spec.elements ) {
-				compiled.elements = Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				);
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
-function buildActions( actions, { activate, renderDetailsModal } ) {
-	const callbacks = {
-		activate: ( items ) => activate( items[ 0 ] ),
-	};
-
-	const renderers = {
-		details: renderDetailsModal,
-	};
-
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible: compileEligibility( spec.eligibleWhen ),
-			};
-			if ( renderers[ spec.id ] ) {
-				compiled.RenderModal = renderers[ spec.id ];
-			} else if ( callbacks[ spec.id ] ) {
-				compiled.callback = callbacks[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
 export default function ThemesApp( { config = {} } ) {
 	const screenId = config.screenId || null;
 
@@ -173,23 +90,11 @@ export default function ThemesApp( { config = {} } ) {
 	const { invalidateResolution } = useDispatch( coreStore );
 	const { createNotice } = useDispatch( noticesStore );
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...( dataViewConfig.defaultView || {} ),
-	} ) );
-
-	// Resync `view` when the screen flips on the same hook instance —
-	// useState initializer runs once, so without this effect a sibling
-	// screen inherits the prior screen's perPage / sort / filters. Keyed
-	// only on screenId so cascade re-resolves don't clobber in-session
-	// view edits.
-	useEffect( () => {
-		setView( {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		} );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ screenId ] );
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+	} );
 
 	const activate = useCallback(
 		async ( theme ) => {
@@ -312,15 +217,23 @@ export default function ThemesApp( { config = {} } ) {
 	}, [ themes ] );
 
 	const fields = useMemo(
-		() => buildFields( dataViewConfig.fields ?? [], FIELD_RENDERERS ),
+		() =>
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: FIELD_RENDERERS,
+				elementFallbacks: {
+					status: elementsFromLabels( STATUS_LABELS ),
+				},
+			} ),
 		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				activate,
-				renderDetailsModal,
+			buildActions( dataViewConfig.actions, {
+				labels: ACTION_LABELS,
+				callbacks: { activate: ( items ) => activate( items[ 0 ] ) },
+				modals: { details: renderDetailsModal },
 			} ),
 		[ dataViewConfig, activate, renderDetailsModal ]
 	);
@@ -333,10 +246,8 @@ export default function ThemesApp( { config = {} } ) {
 		[ data.length ]
 	);
 
-	const [ selection, setSelection ] = useState( [] );
-
 	return (
-		<div className="wp-admin-shell-app-themes">
+		<div className="wp-admin-shell-app-themes wp-admin-shell-app--fill">
 			<DataViews
 				data={ data }
 				fields={ fields }

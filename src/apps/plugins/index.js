@@ -1,13 +1,19 @@
+import '../_shared/app.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { Button, Notice, Stack, Text } from '@wordpress/ui';
-import { Button as DestructiveButton } from '@wordpress/components';
+import { Notice, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import {
+	buildFields,
+	elementsFromLabels,
+} from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -66,148 +72,6 @@ function buildFieldRenderers() {
 	};
 }
 
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			} else if ( spec.id === 'status' && ! spec.elements ) {
-				compiled.elements = Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				);
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
-function buildActions( actions, { setPluginStatus, deletePlugins } ) {
-	const callbacks = {
-		activate: ( items ) => setPluginStatus( items, 'active' ),
-		deactivate: ( items ) => setPluginStatus( items, 'inactive' ),
-		visit: ( items ) => {
-			window.open(
-				items[ 0 ].pluginUri,
-				'_blank',
-				'noopener,noreferrer'
-			);
-		},
-	};
-
-	// `eligibleWhen` JSON only handles equality / membership; presence
-	// checks (e.g. `pluginUri` exists) need code. Per-id overrides win
-	// over the declarative spec.
-	const eligibilityOverrides = {
-		visit: ( item ) => !! item.pluginUri,
-	};
-
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible:
-					eligibilityOverrides[ spec.id ] ??
-					compileEligibility( spec.eligibleWhen ),
-			};
-
-			if ( spec.id === 'delete' ) {
-				compiled.RenderModal = ( {
-					items,
-					closeModal,
-					onActionPerformed,
-				} ) => (
-					<Stack
-						direction="column"
-						gap="lg"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text variant="body-md">
-							{ items.length === 1
-								? __(
-										'Permanently delete this plugin? This cannot be undone.',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Permanently delete these plugins? This cannot be undone.',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button
-								tone="neutral"
-								variant="outline"
-								onClick={ closeModal }
-							>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									await deletePlugins( items );
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Delete', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				);
-			} else if ( callbacks[ spec.id ] ) {
-				compiled.callback = callbacks[ spec.id ];
-			}
-
-			return compiled;
-		} );
-}
-
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
@@ -228,7 +92,6 @@ export default function PluginsApp( { config = {} } = {} ) {
 	);
 	const { invalidateResolution } = useDispatch( coreStore );
 
-	const isLoading = isResolving;
 	const [ error, setError ] = useState( null );
 
 	const refresh = useCallback( () => {
@@ -267,50 +130,11 @@ export default function PluginsApp( { config = {} } = {} ) {
 		[ refresh ]
 	);
 
-	const deletePlugins = useCallback(
-		async ( items ) => {
-			try {
-				await Promise.all(
-					items.map( ( item ) =>
-						apiFetch( {
-							path: `/wp/v2/plugins/${ encodeURIComponent(
-								item.plugin
-							) }`,
-							method: 'DELETE',
-						} )
-					)
-				);
-				refresh();
-			} catch ( err ) {
-				setError(
-					err.message ||
-						__( 'Failed to delete plugin.', 'wp-admin-shell' )
-				);
-			}
-		},
-		[ refresh ]
-	);
-
-	const [ view, setView ] = useState( () => {
-		const seed = {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		};
-		// Title-dedup: when defaultView declares a `titleField`, drop it
-		// from the visible-fields list so DataViews doesn't render the
-		// title column twice.
-		if ( seed.titleField ) {
-			seed.fields = ( seed.fields || [] ).filter(
-				( id ) => id !== seed.titleField
-			);
-		}
-		return seed;
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
 	} );
-
-	// No variant axis on `(root, plugin)` today — the PostsApp resync
-	// useEffect would be a same-tick noop. When a variant is wired in
-	// (e.g. `mu-plugins` / `dropins`), add it back keyed on the variant
-	// prop so a triple flip reseeds `view`.
 
 	const data = useMemo( () => {
 		if ( ! records ) {
@@ -354,18 +178,72 @@ export default function PluginsApp( { config = {} } = {} ) {
 	}, [ records, view ] );
 
 	const fields = useMemo(
-		() => buildFields( dataViewConfig.fields ?? [], buildFieldRenderers() ),
+		() =>
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: buildFieldRenderers(),
+				elementFallbacks: {
+					status: elementsFromLabels( STATUS_LABELS ),
+				},
+			} ),
 		[ dataViewConfig ]
 	);
 
-	const actions = useMemo(
-		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				setPluginStatus,
-				deletePlugins,
-			} ),
-		[ dataViewConfig, setPluginStatus, deletePlugins ]
-	);
+	const actions = useMemo( () => {
+		const deleteModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __(
+							'Permanently delete this plugin? This cannot be undone.',
+							'wp-admin-shell'
+					  )
+					: __(
+							'Permanently delete these plugins? This cannot be undone.',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				apiFetch( {
+					path: `/wp/v2/plugins/${ encodeURIComponent(
+						item.plugin
+					) }`,
+					method: 'DELETE',
+				} ),
+			onSettled: ( { results, failed } ) => {
+				refresh();
+				if ( failed > 0 ) {
+					const first = results.find(
+						( r ) => r.status === 'rejected'
+					);
+					setError(
+						first?.reason?.message ||
+							__( 'Failed to delete plugin.', 'wp-admin-shell' )
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			callbacks: {
+				activate: ( items ) => setPluginStatus( items, 'active' ),
+				deactivate: ( items ) => setPluginStatus( items, 'inactive' ),
+				visit: ( items ) => {
+					window.open(
+						items[ 0 ].pluginUri,
+						'_blank',
+						'noopener,noreferrer'
+					);
+				},
+			},
+			modals: { delete: deleteModal },
+			// `eligibleWhen` JSON only handles equality / membership; a presence
+			// check (plugin URI exists) needs code.
+			eligibilityOverrides: {
+				visit: ( item ) => !! item.pluginUri,
+			},
+		} );
+	}, [ dataViewConfig, setPluginStatus, refresh ] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -374,8 +252,6 @@ export default function PluginsApp( { config = {} } = {} ) {
 		} ),
 		[ data.length, view.perPage ]
 	);
-
-	const [ selection, setSelection ] = useState( [] );
 
 	if ( error ) {
 		return (
@@ -388,7 +264,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-plugins">
+		<div className="wp-admin-shell-app-plugins wp-admin-shell-app--fill">
 			<DataViews
 				data={ data }
 				fields={ fields }
@@ -396,7 +272,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 				onChangeView={ setView }
 				actions={ actions }
 				paginationInfo={ paginationInfo }
-				isLoading={ isLoading }
+				isLoading={ isResolving }
 				defaultLayouts={
 					dataViewConfig.defaultLayouts ?? { table: {} }
 				}

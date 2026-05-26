@@ -1,24 +1,29 @@
 import './index.css';
-import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
+import '../_shared/app.css';
+import { useCallback, useMemo } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, Stack, Text } from '@wordpress/ui';
-import { Button as DestructiveButton } from '@wordpress/components';
+import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import {
+	buildFields,
+	elementsFromLabels,
+} from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
  * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
  *
  * Status flow: hold → approved | spam | trash. The REST endpoint accepts
- * `status` updates via PATCH; we issue them through `saveEntityRecord`
- * with a partial payload so optimistic edits round-trip cleanly. Comment
- * content arrives HTML-rendered; we rely on `dangerouslySetInnerHTML`
- * because WPDS `Text` doesn't pass HTML through. The HTML is already
- * sanitized server-side by `wp_filter_comment_content`.
+ * `status` updates via PATCH; we issue them through `saveEntityRecord` with a
+ * partial payload so optimistic edits round-trip cleanly. Comment content
+ * arrives HTML-rendered (already sanitized server-side by
+ * `wp_filter_comment_content`); we render it via `dangerouslySetInnerHTML`.
  */
 const STATUS_LABELS = {
 	approved: __( 'Approved', 'wp-admin-shell' ),
@@ -27,12 +32,7 @@ const STATUS_LABELS = {
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
 
-// View-config primitives ship as locale-agnostic JSON (spec §13 #7) —
-// labels reach DataViews in whatever locale the spec was authored in.
-// Recover pre-C2 translation by mapping known field/action ids to
-// `__()`-wrapped strings at compile time. Unknown ids (plugin extension
-// columns / actions) fall through to `spec.label` so third-party authors
-// can still label their own additions.
+// Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	author: __( 'Author', 'wp-admin-shell' ),
 	content: __( 'Comment', 'wp-admin-shell' ),
@@ -48,10 +48,9 @@ const ACTION_LABELS = {
 };
 
 /**
- * Snackbar copy for each non-trash status-change action. Keyed by spec id
- * so a cascade override that renames `spam` → `mark-as-spam` keeps the
- * declared label (via `ACTION_LABELS`) but loses the success message —
- * which is fine; the default fallback below covers it.
+ * Snackbar copy for each non-trash status-change action. Keyed by spec id so a
+ * cascade override that renames `spam` → `mark-as-spam` keeps the declared
+ * label but loses the success message — the default fallback covers it.
  */
 const STATUS_SUCCESS_LABELS = {
 	approve: __( 'Approved.', 'wp-admin-shell' ),
@@ -65,11 +64,6 @@ const STATUS_TARGETS = {
 	spam: 'spam',
 };
 
-/**
- * Shape defaults for DataViews `view` state. Spread under the resolved
- * `defaultView` so iteration over `view.filters` / `view.fields` is safe
- * when admin.json omits empty-list keys.
- */
 const VIEW_DEFAULTS = {
 	type: 'table',
 	search: '',
@@ -82,29 +76,21 @@ const VIEW_DEFAULTS = {
 };
 
 /**
- * Field id → render callback. View-config declares the *shape* (id,
- * type, label, hide/sort/search flags); the React layer supplies the
- * row renderer. Unknown ids fall through to DataViews' default
- * renderer for the declared field type.
+ * Field id → render callback. Module-scoped — renderers capture no props.
  */
 const FIELD_RENDERERS = {
 	author: ( { item } ) => (
 		<Stack direction="column" gap="xs">
-			<Text className="wp-admin-shell-app-comments__name">
-				{ item.author }
-			</Text>
-			<Text
-				variant="body-sm"
-				className="wp-admin-shell-app-comments__muted"
-			>
+			<Text>{ item.author }</Text>
+			<Text className="wp-admin-shell-app__muted">
 				{ item.authorEmail }
 			</Text>
 		</Stack>
 	),
 	// Trust boundary: `item.content` is `record.content.rendered`, which
 	// WordPress core filters server-side via `wp_filter_comment_content`
-	// (kses + the comment-text filter chain). Author-supplied raw HTML
-	// has been sanitized before it reaches the REST response.
+	// (kses + the comment-text filter chain). Author-supplied raw HTML has
+	// been sanitized before it reaches the REST response.
 	content: ( { item } ) => (
 		<div
 			className="wp-admin-shell-app-comments__excerpt"
@@ -116,229 +102,16 @@ const FIELD_RENDERERS = {
 	),
 };
 
-/**
- * Compile a declarative `eligibleWhen` predicate into a DataViews
- * `isEligible(item)` callback. Supports `{ field: value | [values] }`
- * shape; absent → no eligibility filter (always shown).
- *
- * @param {Object} eligibleWhen Eligibility map.
- */
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			} else if ( spec.id === 'status' && ! spec.elements ) {
-				compiled.elements = Object.entries( STATUS_LABELS ).map(
-					( [ value, label ] ) => ( { value, label } )
-				);
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
-function buildActions(
-	actions,
-	{
-		setCommentsStatus,
-		deleteEntityRecord,
-		invalidateResolution,
-		queryArgs,
-		createSuccessNotice,
-		createErrorNotice,
-	}
-) {
-	const callbacks = {
-		approve: ( items ) =>
-			setCommentsStatus(
-				items,
-				STATUS_TARGETS.approve,
-				STATUS_SUCCESS_LABELS.approve
-			),
-		unapprove: ( items ) =>
-			setCommentsStatus(
-				items,
-				STATUS_TARGETS.unapprove,
-				STATUS_SUCCESS_LABELS.unapprove
-			),
-		spam: ( items ) =>
-			setCommentsStatus(
-				items,
-				STATUS_TARGETS.spam,
-				STATUS_SUCCESS_LABELS.spam
-			),
-	};
-
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible: compileEligibility( spec.eligibleWhen ),
-			};
-
-			if ( spec.id === 'trash' ) {
-				compiled.RenderModal = ( {
-					items,
-					closeModal,
-					onActionPerformed,
-				} ) => (
-					<Stack
-						direction="column"
-						gap="lg"
-						style={ {
-							padding: 'var(--wpds-dimension-padding-lg)',
-						} }
-					>
-						<Text>
-							{ items.length === 1
-								? __(
-										'Move this comment to trash?',
-										'wp-admin-shell'
-								  )
-								: __(
-										'Move these comments to trash?',
-										'wp-admin-shell'
-								  ) }
-						</Text>
-						<Stack direction="row" justify="flex-end" gap="sm">
-							<Button
-								tone="neutral"
-								variant="minimal"
-								onClick={ closeModal }
-							>
-								{ __( 'Cancel', 'wp-admin-shell' ) }
-							</Button>
-							<DestructiveButton
-								variant="primary"
-								isDestructive
-								onClick={ async () => {
-									// `allSettled` so one failure doesn't
-									// collapse the rest of a bulk action.
-									const results = await Promise.allSettled(
-										items.map( ( item ) =>
-											deleteEntityRecord(
-												'root',
-												'comment',
-												item.id
-											)
-										)
-									);
-									const failed = results.filter(
-										( r ) => r.status === 'rejected'
-									).length;
-									invalidateResolution( 'getEntityRecords', [
-										'root',
-										'comment',
-										queryArgs,
-									] );
-									if ( failed > 0 ) {
-										createErrorNotice(
-											sprintf(
-												/* translators: 1: failed item count, 2: total item count */
-												_n(
-													'%1$d of %2$d comment failed to move to trash.',
-													'%1$d of %2$d comments failed to move to trash.',
-													items.length,
-													'wp-admin-shell'
-												),
-												failed,
-												items.length
-											),
-											{ isDismissible: true }
-										);
-									} else {
-										createSuccessNotice(
-											__(
-												'Moved to trash.',
-												'wp-admin-shell'
-											),
-											{ type: 'snackbar' }
-										);
-									}
-									onActionPerformed?.( items );
-									closeModal();
-								} }
-							>
-								{ __( 'Trash', 'wp-admin-shell' ) }
-							</DestructiveButton>
-						</Stack>
-					</Stack>
-				);
-			} else if ( callbacks[ spec.id ] ) {
-				compiled.callback = callbacks[ spec.id ];
-			}
-
-			return compiled;
-		} );
-}
-
 export default function CommentsApp( { config = {} } ) {
 	const screenId = config.screenId || null;
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...dataViewConfig.defaultView,
-	} ) );
-
-	// Resync `view` when the screen flips on the same hook instance.
-	// `useState`'s initializer runs once, so without this effect a sibling
-	// screen would inherit the previous screen's perPage / sort / filters.
-	// Keyed only on screenId — not dataViewConfig — to avoid clobbering
-	// in-session view edits whenever the cascade re-resolves the doc.
-	useEffect( () => {
-		setView( {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		} );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ screenId ] );
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+	} );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -400,8 +173,7 @@ export default function CommentsApp( { config = {} } ) {
 	const setCommentsStatus = useCallback(
 		async ( items, targetStatus, label ) => {
 			// `allSettled` so one failure in a bulk action doesn't collapse
-			// the rest — symmetric with the trash modal. Partial failure
-			// surfaces as an error notice with the failed/total count.
+			// the rest — symmetric with the trash modal.
 			const results = await Promise.allSettled(
 				items.map( ( item ) =>
 					saveEntityRecord( 'root', 'comment', {
@@ -424,8 +196,6 @@ export default function CommentsApp( { config = {} } ) {
 					{ type: 'snackbar' }
 				);
 			} else if ( failed === items.length ) {
-				// Everything failed — surface the first rejection's message
-				// so authors get a real reason, not a generic count.
 				const firstError = results.find(
 					( r ) => r.status === 'rejected'
 				);
@@ -461,30 +231,89 @@ export default function CommentsApp( { config = {} } ) {
 	);
 
 	const fields = useMemo(
-		() => buildFields( dataViewConfig.fields ?? [], FIELD_RENDERERS ),
+		() =>
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: FIELD_RENDERERS,
+				elementFallbacks: {
+					status: elementsFromLabels( STATUS_LABELS ),
+				},
+			} ),
 		[ dataViewConfig ]
 	);
 
-	const actions = useMemo(
-		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				setCommentsStatus,
-				deleteEntityRecord,
-				invalidateResolution,
-				queryArgs,
-				createSuccessNotice,
-				createErrorNotice,
-			} ),
-		[
-			dataViewConfig,
-			setCommentsStatus,
-			deleteEntityRecord,
-			invalidateResolution,
-			queryArgs,
-			createSuccessNotice,
-			createErrorNotice,
-		]
-	);
+	const actions = useMemo( () => {
+		const trashModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __( 'Move this comment to trash?', 'wp-admin-shell' )
+					: __( 'Move these comments to trash?', 'wp-admin-shell' ),
+			confirmLabel: __( 'Trash', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				deleteEntityRecord( 'root', 'comment', item.id ),
+			onSettled: ( { items, failed } ) => {
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'comment',
+					queryArgs,
+				] );
+				if ( failed > 0 ) {
+					createErrorNotice(
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d comment failed to move to trash.',
+								'%1$d of %2$d comments failed to move to trash.',
+								items.length,
+								'wp-admin-shell'
+							),
+							failed,
+							items.length
+						),
+						{ isDismissible: true }
+					);
+				} else {
+					createSuccessNotice(
+						__( 'Moved to trash.', 'wp-admin-shell' ),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			callbacks: {
+				approve: ( items ) =>
+					setCommentsStatus(
+						items,
+						STATUS_TARGETS.approve,
+						STATUS_SUCCESS_LABELS.approve
+					),
+				unapprove: ( items ) =>
+					setCommentsStatus(
+						items,
+						STATUS_TARGETS.unapprove,
+						STATUS_SUCCESS_LABELS.unapprove
+					),
+				spam: ( items ) =>
+					setCommentsStatus(
+						items,
+						STATUS_TARGETS.spam,
+						STATUS_SUCCESS_LABELS.spam
+					),
+			},
+			modals: { trash: trashModal },
+		} );
+	}, [
+		dataViewConfig,
+		setCommentsStatus,
+		deleteEntityRecord,
+		invalidateResolution,
+		queryArgs,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -494,10 +323,8 @@ export default function CommentsApp( { config = {} } ) {
 		[ totalItems, totalPages ]
 	);
 
-	const [ selection, setSelection ] = useState( [] );
-
 	return (
-		<div className="wp-admin-shell-app-comments">
+		<div className="wp-admin-shell-app-comments wp-admin-shell-app--fill">
 			<DataViews
 				data={ data }
 				fields={ fields }
