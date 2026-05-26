@@ -1,0 +1,32 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "bad-variant-id-with-slash",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "posts"
+	},
+	"settings": {
+		"dataViews": {
+			"postType": {
+				"post": {
+					"_default": {
+						"defaultView": { "type": "table" }
+					},
+					"feature/beta": {
+						"extends": "_default",
+						"defaultView": { "filters": [] }
+					}
+				}
+			}
+		}
+	},
+	"screens": {
+		"posts": {
+			"label": "Posts",
+			"path": "/posts",
+			"app": "core:posts"
+		}
+	}
+}

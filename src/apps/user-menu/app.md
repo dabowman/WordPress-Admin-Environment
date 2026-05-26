@@ -10,7 +10,7 @@ The shell switcher is conditional: it surfaces only when more than one `user-swi
 
 ## Architecture
 
-Trivial — read user, derive `controls` array, hand to `DropdownMenu`. Each control is `{ title, onClick }`. The shell switcher loops over `user-switchable` shells (reads the kebab key from `window.wpAdminShell.shells[i]['user-switchable']`; legacy camelCase `userSwitchable` is read as a one-cycle fallback). `controls` is memoized but the dependency list (`profileUrl, logoutUrl, showShellSwitcher, switchableShells`) doesn't change often in practice.
+Trivial — read user, derive `controls` array, hand to `DropdownMenu`. Each control is `{ title, onClick }`. The shell switcher loops over `user-switchable` shells (reads `window.wpAdminShell.shells[i]['user-switchable']`). `controls` is memoized but the dependency list (`profileUrl, logoutUrl, showShellSwitcher, switchableShells`) doesn't change often in practice.
 
 `DropdownMenu` is legacy (`@wordpress/components`) — WPDS 0.12 has no direct port. The Tabs + Popover primitives could compose one, but `DropdownMenu` is more semantic.
 

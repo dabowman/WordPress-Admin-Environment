@@ -31,10 +31,6 @@ import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
  *                                   { pattern, app, config, params } or null.
  *   - navigate(href)              — single-arg URL-decomposer style. Sets
  *                                   `location.hash` to the given href.
- *                                   Backwards-compatible: when called with
- *                                   `(appId, ...segments)`, joins the way
- *                                   v1 callers expect (deprecated; will
- *                                   retire when bundled apps migrate).
  *   - navigateRoute(route)        — sets the hash to a literal route string.
  *
  * Browser back/forward, middle-click "open in new tab", and right-click
@@ -155,26 +151,15 @@ export function useRouteForRegion( region, routesBlock ) {
 }
 
 /**
- * Programmatic navigation. v2 calls pass a single href string:
+ * Programmatic navigation. Pass a single href string:
  *   navigate('#/posts')
+ *   navigate('/posts')
  *   navigate('?detail=' + encodeURIComponent('/posts/42/edit'))
  *
- * v1 multi-arg form (`navigate(appId, ...segments)`) is supported as a
- * deprecated transitional path until bundled apps migrate to plain
- * `<a href>` link emission. When the second argument is present the
- * router treats the call as v1 and joins the segments the way v1
- * shells expect.
- * @param {*}      href
- * @param {...any} rest
+ * @param {string} href
  */
-export function navigate( href, ...rest ) {
+export function navigate( href ) {
 	if ( typeof window === 'undefined' ) {
-		return;
-	}
-	if ( rest.length > 0 ) {
-		// Deprecated v1 form: navigate(appId, seg, seg, ...).
-		const joined = [ href, ...rest ].filter( Boolean ).join( '/' );
-		window.location.hash = '#/' + joined;
 		return;
 	}
 	if ( typeof href !== 'string' ) {
@@ -195,8 +180,7 @@ export function navigate( href, ...rest ) {
 		window.location.hash = '#' + href;
 		return;
 	}
-	// Anything else (bare slug like `posts`): treat as v1 single-arg
-	// navigate, which v1 callers used.
+	// Bare slug (e.g. `posts`): treat as a root-relative path.
 	window.location.hash = '#/' + href;
 }
 

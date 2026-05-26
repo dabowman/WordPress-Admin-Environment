@@ -19,7 +19,7 @@
  *   - `dataViewRef` parsing — valid resolves; invalid returns empty.
  *   - `dataViewRef` precedence over `dataViewKind/Name/Variant`.
  *   - Inference fallback — manifest `dataView.kind`/`name` + screen.config overrides.
- *   - `screen.config.variant` (v2 back-compat) flows into screen inference.
+ *   - `screen.config.variant` flows into screen inference.
  *   - Inline `screens[id].dataView` overlay deep-merges with resolved triple.
  *   - Tombstones via `null` (top-level + nested).
  *   - id-keyed merge for `fields[]` + `actions[]`.
@@ -27,14 +27,6 @@
  *   - `list_variants()` returns sorted ids with `_default` first.
  *   - Cascade contribution — registered data-field collections enter
  *     `settings.dataFields` via `wp_admin_shell_data_plugin` filter.
- *   - Legacy filter deprecation shim — v2 names (`wp_admin_shell_view_config_*`
- *     + `_{variant}`) fire alongside the new names whenever a legacy filter
- *     is registered, short-circuit otherwise, and `_default` skips the
- *     variant suffix.
- *   - v2 `viewConfigs` orphan migration warning (3d.5 Item 1) — emits
- *     `_doing_it_wrong` once per request when the post-cascade resolved
- *     doc still carries a non-empty top-level `viewConfigs` block;
- *     one-shot guard suppresses repeats; empty / missing blocks silent.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
  * resolver directly with `$config` to avoid depending on disk shells.
@@ -93,15 +85,6 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	$registry['core/post-fields']['kind'],
 	'postType'
 );
-
-// Legacy function name still works (deprecation wrapper).
-$legacy_id = wp_admin_shell_register_field_collection(
-	'legacy/wrapper-fields',
-	'postType',
-	'page',
-	array( array( 'id' => 'slug', 'type' => 'text', 'label' => 'Slug' ) )
-);
-WPAS_Data_View_Test_Runner::assert_eq( 'legacy wrapper forwards registration', $legacy_id, 'legacy/wrapper-fields' );
 
 // Universal collection (null name).
 wp_admin_shell_register_data_field_collection(
@@ -471,88 +454,6 @@ WPAS_Data_View_Test_Runner::assert_true(
 
 remove_filter( 'wp_admin_shell_data_view_config_postType_post', $base_callback, 10 );
 remove_filter( 'wp_admin_shell_data_view_config_postType_post_drafts', $variant_callback, 10 );
-
-// --- legacy filter deprecation shim ----------------------------------------
-//
-// v2-name filters (`wp_admin_shell_view_config_*` + `_{variant}`) fire
-// alongside the new names for one release cycle so CIAB-port plugins keep
-// working. First invocation per legacy handle emits `_deprecated_hook`.
-
-WP_Admin_Shell_Data_View_Config::reset();
-
-$legacy_base_calls    = array();
-$legacy_variant_calls = array();
-$legacy_base_callback = function ( $doc, $kind, $name, $variant ) use ( &$legacy_base_calls ) {
-	$legacy_base_calls[] = compact( 'kind', 'name', 'variant' );
-	$doc['_legacyBaseFiltered'] = true;
-	return $doc;
-};
-$legacy_variant_callback = function ( $doc, $kind, $name, $variant ) use ( &$legacy_variant_calls ) {
-	$legacy_variant_calls[] = compact( 'kind', 'name', 'variant' );
-	$doc['_legacyVariantFiltered'] = true;
-	return $doc;
-};
-
-add_filter( 'wp_admin_shell_view_config_postType_post', $legacy_base_callback, 10, 4 );
-add_filter( 'wp_admin_shell_view_config_postType_post_drafts', $legacy_variant_callback, 10, 4 );
-
-$legacy_drafts = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
-WPAS_Data_View_Test_Runner::assert_true(
-	'legacy base filter ran during resolve',
-	! empty( $legacy_drafts['_legacyBaseFiltered'] )
-);
-WPAS_Data_View_Test_Runner::assert_true(
-	'legacy variant filter ran during resolve',
-	! empty( $legacy_drafts['_legacyVariantFiltered'] )
-);
-WPAS_Data_View_Test_Runner::assert_eq(
-	'legacy base filter fired exactly once',
-	count( $legacy_base_calls ),
-	1
-);
-WPAS_Data_View_Test_Runner::assert_eq(
-	'legacy variant filter fired exactly once',
-	count( $legacy_variant_calls ),
-	1
-);
-
-// `_default` resolution skips the legacy variant filter (variant === '_default').
-$legacy_base_calls    = array();
-$legacy_variant_calls = array();
-$legacy_default = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'legacy base filter fires for _default',
-	count( $legacy_base_calls ),
-	1
-);
-WPAS_Data_View_Test_Runner::assert_eq(
-	'legacy variant filter skipped for _default',
-	count( $legacy_variant_calls ),
-	0
-);
-
-remove_filter( 'wp_admin_shell_view_config_postType_post', $legacy_base_callback, 10 );
-remove_filter( 'wp_admin_shell_view_config_postType_post_drafts', $legacy_variant_callback, 10 );
-
-// Triples with no legacy filter registered MUST NOT pay the `apply_filters`
-// cost (the shim short-circuits on `has_filter` check).
-$dispatch_probe = array();
-$probe = function ( $doc ) use ( &$dispatch_probe ) {
-	$dispatch_probe[] = true;
-	return $doc;
-};
-add_filter( 'wp_admin_shell_data_view_config_postType_post', $probe, 10, 4 );
-// No legacy filter attached this time around — only the new-name probe.
-$silent = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
-WPAS_Data_View_Test_Runner::assert_true(
-	'modern filter still ran when no legacy filter registered',
-	! empty( $dispatch_probe )
-);
-WPAS_Data_View_Test_Runner::assert_true(
-	'modern filter result clean of legacy markers when no legacy filter registered',
-	empty( $silent['_legacyBaseFiltered'] ) && empty( $silent['_legacyVariantFiltered'] )
-);
-remove_filter( 'wp_admin_shell_data_view_config_postType_post', $probe, 10 );
 
 WP_Admin_Shell_Data_View_Config::reset();
 
@@ -1144,117 +1045,6 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	array()
 );
 
-// --- 3d.5 Item 1: v2 viewConfigs orphan migration warning -----------------
-//
-// v2 admin.json's top-level `viewConfigs` block is dead data under v3.
-// The resolver's low-priority post-merge hook should emit `_doing_it_wrong`
-// at most once per request when it sees a non-empty block in the
-// post-cascade resolved doc. Removed in v3.1.0.
-
-WP_Admin_Shell_Data_View_Config::reset();
-
-$doing_it_wrong_calls = array();
-$doing_it_wrong_capture = function ( $function, $message, $version ) use ( &$doing_it_wrong_calls ) {
-	$doing_it_wrong_calls[] = compact( 'function', 'message', 'version' );
-};
-add_action( 'doing_it_wrong_run', $doing_it_wrong_capture, 10, 3 );
-
-// Silence the actual notice — we just want the action fired.
-$original_doing_it_wrong_trigger = has_filter( 'doing_it_wrong_trigger_error' );
-add_filter( 'doing_it_wrong_trigger_error', '__return_false' );
-
-// Drive the hook directly with a synthesized doc carrying a non-empty
-// `viewConfigs` block — skips the rest of the cascade for a tight unit.
-$orphan_doc = array(
-	'viewConfigs' => array(
-		'postType' => array(
-			'post' => array(
-				'_default' => array( 'defaultView' => array( 'perPage' => 50 ) ),
-			),
-		),
-	),
-);
-$out = WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'warn_legacy_view_configs returns doc unchanged',
-	$out,
-	$orphan_doc
-);
-WPAS_Data_View_Test_Runner::assert_true(
-	'orphan viewConfigs triggered doing_it_wrong on first call',
-	count(
-		array_filter( $doing_it_wrong_calls, function ( $call ) {
-			return $call['function'] === 'wp_admin_shell viewConfigs';
-		} )
-	) === 1
-);
-
-// Second call within the same request — one-shot guard must suppress.
-$doing_it_wrong_calls = array();
-WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'second call within same request is one-shot suppressed',
-	count(
-		array_filter( $doing_it_wrong_calls, function ( $call ) {
-			return $call['function'] === 'wp_admin_shell viewConfigs';
-		} )
-	),
-	0
-);
-
-// After reset() — one-shot guard re-arms (test isolation).
-WP_Admin_Shell_Data_View_Config::reset();
-$doing_it_wrong_calls = array();
-WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( $orphan_doc );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'reset() re-arms the one-shot guard',
-	count(
-		array_filter( $doing_it_wrong_calls, function ( $call ) {
-			return $call['function'] === 'wp_admin_shell viewConfigs';
-		} )
-	),
-	1
-);
-
-// Empty `viewConfigs` block is silent.
-WP_Admin_Shell_Data_View_Config::reset();
-$doing_it_wrong_calls = array();
-WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( array( 'viewConfigs' => array() ) );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'empty viewConfigs block does not warn',
-	count( $doing_it_wrong_calls ),
-	0
-);
-
-// Missing `viewConfigs` block is silent.
-$doing_it_wrong_calls = array();
-WP_Admin_Shell_Data_View_Config::warn_legacy_view_configs( array( 'workspace' => array() ) );
-WPAS_Data_View_Test_Runner::assert_eq(
-	'missing viewConfigs block does not warn',
-	count( $doing_it_wrong_calls ),
-	0
-);
-
-// End-to-end — the hook fires when registered on `wp_admin_shell_data`.
-WP_Admin_Shell_Data_View_Config::reset();
-$doing_it_wrong_calls = array();
-$resolved = apply_filters( 'wp_admin_shell_data', $orphan_doc );
-WPAS_Data_View_Test_Runner::assert_true(
-	'end-to-end wp_admin_shell_data hook triggers the warning',
-	count(
-		array_filter( $doing_it_wrong_calls, function ( $call ) {
-			return $call['function'] === 'wp_admin_shell viewConfigs';
-		} )
-	) === 1
-);
-WPAS_Data_View_Test_Runner::assert_true(
-	'end-to-end hook returns doc with viewConfigs block intact (no auto-translation)',
-	isset( $resolved['viewConfigs']['postType']['post']['_default'] )
-);
-
-remove_action( 'doing_it_wrong_run', $doing_it_wrong_capture, 10 );
-remove_filter( 'doing_it_wrong_trigger_error', '__return_false' );
-WP_Admin_Shell_Data_View_Config::reset();
 
 // --- Summary ---------------------------------------------------------------
 

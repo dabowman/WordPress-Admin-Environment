@@ -33,10 +33,6 @@
  *      `wp_admin_shell_register_app()` call. The synthetic manifest
  *      carries `slotHints` derived from the placement args.
  *
- * v2 back-compat — the v3 compiler translates the legacy
- * top-level `dashboardWidgets` block to screen-app entries at
- * resolve time (see `WP_Admin_Shell_V3_Compiler::translate_v2_dashboard_widgets`).
- *
  * @package WP_Admin_Shell
  */
 

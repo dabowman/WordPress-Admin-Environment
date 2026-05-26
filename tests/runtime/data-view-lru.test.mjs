@@ -2,7 +2,7 @@
 /**
  * Tests for the dataView cache LRU helper (`src/runtime/dataView/lruCache.mjs`).
  *
- * Item 7 of `docs/plans/2026-05-22-pr49-pre-merge-feedback.md` — caps the
+ * Item 7 of `docs/archive/plans/2026-05-22-pr49-pre-merge-feedback.md` — caps the
  * persistent `cache` Map so a long-running session bouncing between many
  * entity-CRUD apps × variants × screens doesn't grow without bound.
  *

@@ -90,11 +90,9 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-v3-compiler.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli-migrate.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
@@ -341,7 +339,9 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 	// on (WPDS baseline tokens, DataViews stylesheet, MUI bundle, etc.).
 	// Only the active engine's styles enqueue — keeps non-WPDS engines
 	// from loading WPDS tokens (and vice versa for other DS plugins).
-	$active_engine_id      = is_array( $config ) && isset( $config['engine'] ) ? $config['engine'] : null;
+	$active_engine_id      = is_array( $config )
+		? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+		: null;
 	$active_engine_manifest = $active_engine_id ? WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
 
 	if ( is_array( $active_engine_manifest ) && isset( $active_engine_manifest['styles'] ) && is_array( $active_engine_manifest['styles'] ) ) {
@@ -504,11 +504,10 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
 function wp_admin_shell_resolve_capabilities( $config ) {
 	$declared = array();
 
-	// v2: regions live at the root, recursively. Walk the tree and
-	// collect both `region.capability` and any caps declared on nav
-	// items inside `region.config.items` (the navigation app's config —
-	// inline labels + capability gates per item, the v2 way to express
-	// per-screen caps now that there's no `settings.applications` array).
+	// Escape-hatch `regions` block (recursive). A region may declare a
+	// `capability`, and a nav-style app embedded in a region may declare
+	// per-item caps in `region.config.items`. Walk both so they reach the
+	// runtime cap-map.
 	$collect_from_regions = function ( $regions ) use ( &$declared, &$collect_from_regions ) {
 		if ( ! is_array( $regions ) ) {
 			return;
@@ -534,20 +533,7 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		$collect_from_regions( $config['regions'] );
 	}
 
-	// v1: regions + applications under settings.*. Walk the legacy paths
-	// for unmigrated shells.
-	foreach ( ( $config['settings']['regions'] ?? array() ) as $region ) {
-		if ( isset( $region['capability'] ) && is_string( $region['capability'] ) ) {
-			$declared[ $region['capability'] ] = true;
-		}
-	}
-	foreach ( ( $config['settings']['applications'] ?? array() ) as $app ) {
-		if ( isset( $app['capability'] ) && is_string( $app['capability'] ) ) {
-			$declared[ $app['capability'] ] = true;
-		}
-	}
-
-	// v3: per-screen permissions block. screens[id].permissions has
+	// Per-screen permissions block. screens[id].permissions has
 	// `capabilities[]` + `roles[]`; we collect the cap slugs so the
 	// runtime cap-map covers v3 screens the same way v2 region.capability
 	// strings were collected. Roles are evaluated separately (membership
@@ -568,8 +554,8 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		}
 	}
 
-	// v3: menu items can carry their own `permissions.capabilities[]`
-	// when they don't inherit from a bound screen (e.g. standalone link
+	// Menu items can carry their own `permissions.capabilities[]` when
+	// they don't inherit from a bound screen (e.g. standalone link
 	// items registered via `wp_admin_shell_register_menu_item()`). Walk
 	// the menu tree so those caps reach the runtime cap-map too — without
 	// this, `userCan()` would default-false on inline-permissioned menu
@@ -912,12 +898,7 @@ function wp_admin_shell_get_available_shells() {
 			'slug'             => $slug,
 			'title'            => $data['title'] ?? $slug,
 			'description'      => $data['description'] ?? '',
-			// Schema-canonical kebab form emitted across the PHP → JS
-			// bridge. The legacy `userSwitchable` (camelCase) read
-			// stays as a one-cycle fallback at READ time only; the JS
-			// surface consumes `user-switchable` exclusively. See
-			// `src/apps/user-menu/index.js` for the JS-side reader.
-			'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
+			'user-switchable'  => ! empty( $data['user-switchable'] ),
 		);
 	}
 
@@ -927,7 +908,7 @@ function wp_admin_shell_get_available_shells() {
 				'slug'             => $slug,
 				'title'            => $data['title'] ?? $slug,
 				'description'      => $data['description'] ?? '',
-				'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
+				'user-switchable'  => ! empty( $data['user-switchable'] ),
 			);
 		}
 	}

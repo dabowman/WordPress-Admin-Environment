@@ -2,18 +2,16 @@
 /**
  * Schema validation harness — Ajv 2020-12.
  *
- * Validates against:
- *   - docs/schemas/admin-v1.json   (legacy beta-shipped schema; $id /admin/v0.json
- *                                   to free /admin/v1.json for the new manifest model)
- *   - docs/schemas/admin-v2.json   (canonical v1 of the new admin.json manifest)
- *   - docs/schemas/admin-app-v2.json
- *   - docs/schemas/admin-engine-v2.json
+ * Validates against the single schema generation:
+ *   - docs/schemas/admin.json         (admin.json workspace)
+ *   - docs/schemas/admin-app.json     (app manifest)
+ *   - docs/schemas/admin-engine.json  (engine manifest)
+ *   - docs/schemas/tokens.json        (DTCG primitives)
  *
- * For each schema, runs:
- *   - Bundled-shell sweep (admin only — engines/apps don't have bundled equivalents)
+ * For each manifest schema, runs:
+ *   - Bundled-artifact sweep (shells / app manifests / engine manifests)
  *   - Positive fixtures (must validate clean)
  *   - Negative fixtures (must fail validation)
- *   - Inline negative cases (compact one-liners)
  *
  * Run: `node tests/schema/validate-shells.test.mjs` (also `npm run test:schema`).
  */
@@ -101,123 +99,39 @@ function formatErrors( errors ) {
 		.join( '\n      ' );
 }
 
-function isV1ShellShape( doc ) {
-	return Boolean( doc?.settings?.shell?.layoutEngine );
-}
-
-function isV2ShellShape( doc ) {
-	// v2 puts engine + regions at root with no `settings` partition.
-	// v3 docs declare `version: 3` + a `workspace` block — exclude those.
-	if ( doc?.version === 3 || doc?.workspace ) {
-		return false;
-	}
-	return typeof doc?.engine === 'string' && ! doc?.settings;
-}
-
 function isV3ShellShape( doc ) {
 	return doc?.version === 3 || Boolean( doc?.workspace );
 }
 
-// ── Schema 1: legacy admin-v1.json ─────────────────────────────────
+// ── admin.json / admin-app.json / admin-engine.json ─────────────────
+//
+// One generation. Every bundled shell validates under admin.json; every
+// app/engine manifest under its manifest schema; fixtures under
+// `fixtures/<key>/{positive,negative}` exercise edge cases.
 
-console.log( '\n— admin-v1.json (legacy beta) —' );
-{
-	const validate = compileSchema( 'admin-v1.json' );
-
-	console.log( '\n  Bundled shells:' );
-	for ( const file of listJson( SHELLS_DIR ) ) {
-		const path  = join( SHELLS_DIR, file );
-		const doc   = readJson( path );
-		if ( isV2ShellShape( doc ) ) {
-			console.log( `SKIP  shells/${ file } (v2 shape; validated under admin-v2.json)` );
-			continue;
-		}
-		if ( ! isV1ShellShape( doc ) ) {
-			console.log( `SKIP  shells/${ file } (v0 flat shape; PHP normalizer transforms at load)` );
-			continue;
-		}
-		const valid = validate( doc );
-		ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
-	}
-
-	console.log( '\n  v1 fixtures (top-level fixtures dir):' );
-	for ( const file of listJson( FIXTURES_DIR ) ) {
-		const path  = join( FIXTURES_DIR, file );
-		const doc   = readJson( path );
-		const valid = validate( doc );
-		ok( `fixtures/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
-	}
-
-	console.log( '\n  v1 inline negative cases:' );
-	const negatives = [
-		{
-			label: 'rejects missing version',
-			doc: { name: 'broken' },
-		},
-		{
-			label: 'rejects bad userCustomizable type (number)',
-			doc: { version: 1, styles: { userCustomizable: 42 } },
-		},
-		{
-			label: 'rejects bad shell.layoutEngine type (number)',
-			doc: { version: 1, settings: { shell: { layoutEngine: 99 } } },
-		},
-		{
-			label: 'rejects bad density value',
-			doc: { version: 1, styles: { density: 'huge' } },
-		},
-		{
-			label: 'rejects region with no source',
-			doc: {
-				version: 1,
-				settings: {
-					shell: { layoutEngine: 'core:site-editor-layout' },
-					regions: { sidebar: { kind: 'persistent' } },
-				},
-			},
-		},
-	];
-	for ( const { label, doc } of negatives ) {
-		const valid = validate( doc );
-		ok( label, ! valid, valid ? 'expected validation failure but doc accepted' : '' );
-	}
-}
-
-// ── Schemas 2-4: v2 manifest schemas ───────────────────────────────
-
-const v2Schemas = [
-	{ key: 'admin',  schemaFile: 'admin-v2.json',        fixtureKey: 'admin'  },
-	{ key: 'app',    schemaFile: 'admin-app-v2.json',    fixtureKey: 'app'    },
-	{ key: 'engine', schemaFile: 'admin-engine-v2.json', fixtureKey: 'engine' },
+const manifestSchemas = [
+	{ key: 'admin',  schemaFile: 'admin.json' },
+	{ key: 'app',    schemaFile: 'admin-app.json' },
+	{ key: 'engine', schemaFile: 'admin-engine.json' },
 ];
 
-for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
+for ( const { key, schemaFile } of manifestSchemas ) {
 	console.log( `\n— ${ schemaFile } —` );
 	const validate = compileSchema( schemaFile );
 
 	if ( key === 'admin' ) {
-		console.log( '\n  Bundled shells (v2 shape):' );
+		console.log( '\n  Bundled shells:' );
 		for ( const file of listJson( SHELLS_DIR ) ) {
-			const doc = readJson( join( SHELLS_DIR, file ) );
-			if ( ! isV2ShellShape( doc ) ) {
-				continue;
-			}
+			const doc   = readJson( join( SHELLS_DIR, file ) );
 			const valid = validate( doc );
 			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 
 	if ( key === 'app' ) {
-		console.log( '\n  Bundled app manifests (v2 shape):' );
+		console.log( '\n  Bundled app manifests:' );
 		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
-			const doc = readJson( path );
-			// Bundled manifests opting into the v3 shape declare their
-			// `$schema` accordingly; v3 manifests carry `dataView` / no
-			// `view` so they fail under admin-app-v2.json. The v3 sweep
-			// below validates them under admin-app-v3.json instead.
-			if ( typeof doc?.$schema === 'string' && doc.$schema.includes( 'admin-app-v3' ) ) {
-				continue;
-			}
+			const doc   = readJson( path );
 			const valid = validate( doc );
 			const rel   = path.slice( projectRoot.length + 1 );
 			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
@@ -234,91 +148,15 @@ for ( const { key, schemaFile, fixtureKey } of v2Schemas ) {
 		}
 	}
 
-	const positiveDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'positive' );
-	const negativeDir = resolve( FIXTURES_DIR, 'v2', fixtureKey, 'negative' );
-
-	console.log( `\n  Positive (must validate):` );
-	for ( const file of listJson( positiveDir ) ) {
-		const doc   = readJson( join( positiveDir, file ) );
-		const valid = validate( doc );
-		ok( `v2/${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
-	}
-
-	console.log( `\n  Negative (must fail):` );
-	for ( const file of listJson( negativeDir ) ) {
-		const doc   = readJson( join( negativeDir, file ) );
-		const valid = validate( doc );
-		ok(
-			`v2/${ key }/negative/${ file }`,
-			! valid,
-			valid ? 'expected validation failure but doc accepted' : ''
-		);
-	}
-}
-
-// ── Schemas 5-7: v3 manifest schemas ───────────────────────────────
-//
-// Phase 3d.1 retired all v2 bundled shells; every shell in `shells/`
-// now validates under admin-v3.json. The canonical authoring fixture at
-// `docs/v3/wp-admin-default.v3.json` mirrors the active default at
-// `shells/wp-admin-default.json` byte-for-byte — both validate here.
-
-const v3Schemas = [
-	{ key: 'admin',  schemaFile: 'admin-v3.json' },
-	{ key: 'app',    schemaFile: 'admin-app-v3.json' },
-	{ key: 'engine', schemaFile: 'admin-engine-v3.json' },
-];
-
-for ( const { key, schemaFile } of v3Schemas ) {
-	console.log( `\n— ${ schemaFile } —` );
-	const validate = compileSchema( schemaFile );
-
-	if ( key === 'admin' ) {
-		console.log( '\n  v3 default workspace:' );
-		const fixture = resolve( projectRoot, 'docs/v3/wp-admin-default.v3.json' );
-		if ( existsSync( fixture ) ) {
-			const doc   = readJson( fixture );
-			const valid = validate( doc );
-			ok(
-				'docs/v3/wp-admin-default.v3.json',
-				valid,
-				valid ? '' : formatErrors( validate.errors )
-			);
-		}
-
-		console.log( '\n  Bundled shells (v3 shape):' );
-		for ( const file of listJson( SHELLS_DIR ) ) {
-			const doc = readJson( join( SHELLS_DIR, file ) );
-			if ( ! isV3ShellShape( doc ) ) {
-				continue;
-			}
-			const valid = validate( doc );
-			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
-		}
-	}
-
-	if ( key === 'app' ) {
-		console.log( '\n  Bundled app manifests (v3 shape):' );
-		for ( const path of listManifests( APP_MANIFEST_DIRS, 'app.json' ) ) {
-			const doc = readJson( path );
-			if ( typeof doc?.$schema !== 'string' || ! doc.$schema.includes( 'admin-app-v3' ) ) {
-				continue;
-			}
-			const valid = validate( doc );
-			const rel   = path.slice( projectRoot.length + 1 );
-			ok( rel, valid, valid ? '' : formatErrors( validate.errors ) );
-		}
-	}
-
-	const positiveDir = resolve( FIXTURES_DIR, 'v3', key, 'positive' );
-	const negativeDir = resolve( FIXTURES_DIR, 'v3', key, 'negative' );
+	const positiveDir = resolve( FIXTURES_DIR, key, 'positive' );
+	const negativeDir = resolve( FIXTURES_DIR, key, 'negative' );
 
 	if ( existsSync( positiveDir ) ) {
 		console.log( `\n  Positive (must validate):` );
 		for ( const file of listJson( positiveDir ) ) {
 			const doc   = readJson( join( positiveDir, file ) );
 			const valid = validate( doc );
-			ok( `v3/${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+			ok( `${ key }/positive/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 
@@ -328,7 +166,7 @@ for ( const { key, schemaFile } of v3Schemas ) {
 			const doc   = readJson( join( negativeDir, file ) );
 			const valid = validate( doc );
 			ok(
-				`v3/${ key }/negative/${ file }`,
+				`${ key }/negative/${ file }`,
 				! valid,
 				valid ? 'expected validation failure but doc accepted' : ''
 			);
@@ -336,11 +174,11 @@ for ( const { key, schemaFile } of v3Schemas ) {
 	}
 }
 
-// ── Schema 8: tokens-v1.json ───────────────────────────────────────
+// ── tokens.json ────────────────────────────────────────────────────
 
-console.log( '\n— tokens-v1.json —' );
+console.log( '\n— tokens.json —' );
 {
-	const validate = compileSchema( 'tokens-v1.json' );
+	const validate = compileSchema( 'tokens.json' );
 
 	console.log( '\n  Bundled core.tokens.json:' );
 	if ( existsSync( CORE_TOKENS_PATH ) ) {

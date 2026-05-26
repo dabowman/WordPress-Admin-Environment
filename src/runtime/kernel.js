@@ -14,6 +14,7 @@ import { createDynamicChildrenStore } from './regions/dynamicChildren.mjs';
 import { NavigationGuard } from './dirty-state/NavigationGuard';
 import { BindingsConsumer } from './bindings/BindingsConsumer';
 import { deepMergeUnder } from './styles/deepMergeUnder.mjs';
+import { buildRuntimeConfig } from './compile/buildRuntimeConfig.mjs';
 
 /**
  * Mount the v1 kernel against a resolved config.
@@ -69,7 +70,17 @@ export function kernel( config ) {
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachShellSwitcherToWindow();
 
-	const engineId = config.engine || 'core:default';
+	const engineId =
+		config.workspace?.engine || config.engine || 'core:default';
+	const engineManifest = getEngineManifest( engineId );
+
+	// Build the runtime config from the resolved v3 author doc + the active
+	// engine manifest. The kernel is the single place that derives the
+	// runtime surfaces (`engine`, `routes`, `regions`, `default-route`,
+	// `commands`) from the v3 `workspace` / `screens` / `menu` / `commands`
+	// blocks; the author blocks pass through unchanged for apps to read.
+	const runtimeConfig = buildRuntimeConfig( config, engineManifest );
+
 	const engineSource = registry.get( engineId, 'engine' );
 
 	// Engine `default-styles` deep-merged UNDER admin.json `styles`.
@@ -77,12 +88,11 @@ export function kernel( config ) {
 	// so the kernel is normally a no-op. Defensive: covers tests and
 	// Storybook stories that mount the kernel with raw fixture config
 	// bypassing the PHP resolver.
-	const engineManifest = getEngineManifest( engineId );
 	const engineDefaults =
 		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
 	const shellStyles = engineDefaults
-		? deepMergeUnder( config.styles || {}, engineDefaults )
-		: config.styles || {};
+		? deepMergeUnder( runtimeConfig.styles || {}, engineDefaults )
+		: runtimeConfig.styles || {};
 
 	if ( ! engineSource ) {
 		return (
@@ -99,7 +109,7 @@ export function kernel( config ) {
 	// overrides and recurses into nested children. `app` xor
 	// `routing.route-key` is enforced post-merge: violations log a
 	// `console.warn`; sanitization drops `app` so URL routing wins.
-	const regionsMap = config.regions || {};
+	const regionsMap = runtimeConfig.regions || {};
 	const regions = {};
 	const honoredServices = new Set(
 		Array.isArray( engineManifest?.[ 'honored-platform' ] )
@@ -163,9 +173,14 @@ export function kernel( config ) {
 	// the substrate (or that ship their own) skip the wrap.
 	return (
 		<KernelProvider
-			value={ { registry, config, engineSource, dynamicChildrenStore } }
+			value={ {
+				registry,
+				config: runtimeConfig,
+				engineSource,
+				dynamicChildrenStore,
+			} }
 		>
-			<RouterProvider defaultRoute={ config[ 'default-route' ] }>
+			<RouterProvider defaultRoute={ runtimeConfig[ 'default-route' ] }>
 				<ThemeProviderHost
 					engineSource={ engineSource }
 					isRoot
@@ -174,7 +189,7 @@ export function kernel( config ) {
 				>
 					<NavigationGuard />
 					<BindingsConsumer />
-					<Engine config={ config } regions={ regions } />
+					<Engine config={ runtimeConfig } regions={ regions } />
 				</ThemeProviderHost>
 			</RouterProvider>
 		</KernelProvider>

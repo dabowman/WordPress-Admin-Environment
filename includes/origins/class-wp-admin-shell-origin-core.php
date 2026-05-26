@@ -2,15 +2,9 @@
 /**
  * Core origin loader.
  *
- * Provides the bundled defaults baseline for the cascade resolver. v2
- * admin.json shells (top-level `engine` + `regions` + `routes`) pass
- * through unchanged — the loader is just `file_get_contents` +
- * `json_decode` plus the empty fallback.
- *
- * v0 (MVP flat) inputs are no longer supported. Pre-v2 shells must be
- * migrated by hand (or via `wp admin-shell upgrade-config`) before
- * activation. The previous v0 → v1 partitioned synthesis is retired,
- * and the `normalize_v0()` backwards-compat shim was removed in P2.7.
+ * Provides the bundled defaults baseline for the cascade resolver. The
+ * loader is just `file_get_contents` + `json_decode` plus the empty
+ * fallback returned when the shell file is missing or malformed.
  *
  * @package WP_Admin_Shell
  */
@@ -30,38 +24,34 @@ class WP_Admin_Shell_Origin_Core {
 		if ( ! is_array( $raw ) ) {
 			return self::empty_doc();
 		}
-		// Pre-v2 shapes (v0 flat / v1 partitioned) flow through too —
-		// the runtime now rejects them at compose time. Returning the
-		// raw doc keeps the cascade resolver's per-origin merge stable;
-		// invalid docs fall through to no engine + no regions and the
-		// kernel renders the fallback view.
 		return $raw;
 	}
 
 	/**
-	 * Minimal v2 admin.json doc returned when the shell file is missing
-	 * or malformed. Contains only what the kernel needs to render a
-	 * non-empty fallback: an engine, a single content region with a
-	 * route-key, and a default route. The kernel's "no route matched"
-	 * placeholder copy then surfaces — better UX than a blank screen.
+	 * Minimal v3 admin.json doc returned when the shell file is missing
+	 * or malformed. Carries just what the kernel needs to render a
+	 * non-empty fallback: an engine, a default screen, and one screen at
+	 * `/`. The kernel synthesizes the region tree + routes from these.
 	 */
 	public static function empty_doc() {
 		return array(
-			'$schema'  => '../docs/schemas/admin-v2.json',
-			'version'  => 1,
-			'$wpds'    => '6.9',
-			'name'     => 'empty',
-			'title'    => 'Empty',
-			'engine'   => self::ENGINE_ID,
-			'regions'  => array(
-				'content' => array(
-					'template' => 'core:main',
-					'routing'  => array( 'route-key' => '_self' ),
+			'$schema'   => '../docs/schemas/admin.json',
+			'version'   => 3,
+			'$wpds'     => '6.9',
+			'name'      => 'empty',
+			'title'     => 'Empty',
+			'workspace' => array(
+				'engine'         => self::ENGINE_ID,
+				'default-screen' => 'home',
+			),
+			'screens'   => array(
+				'home' => array(
+					'label' => 'Home',
+					'path'  => '/',
+					'app'   => 'core:dashboard',
 				),
 			),
-			'routes'   => array(),
-			'default-route' => '/',
-			'styles'   => array(),
+			'styles'    => array(),
 		);
 	}
 }

@@ -16,7 +16,7 @@
  * keyed-array level, the styles tree, and the v3 top-level blocks
  * (workspace / menu / screens / commands / preload / regions / routes).
  *
- * Trust tiers (per `docs/v3/schema-sketch.md`):
+ * Trust tiers (per `docs/schema-sketch.md`):
  *   - `core` / `engine` / `plugin` / `site` — author the doc shape. Pass
  *     through verbatim. `customizable` is THEIR declaration about what
  *     downstream may touch; they are exempt.

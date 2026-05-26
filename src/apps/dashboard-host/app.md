@@ -76,8 +76,8 @@ A rebuild needs:
 
 ## Known limitations
 
-- **No drag-to-reorder.** Widget order is config-driven (matches CIAB's parallel dashboard-widgets system). Authors reorder via the entry order in `apps[]` and `position` overrides.
-- **No WP-core dashboard bridge.** Legacy widgets registered via `wp_add_dashboard_widget()` don't render here — they emit jQuery-bound HTML and need a separate bridge. Deferred per the Track C plan.
+- **No drag-to-reorder.** Widget order is config-driven. Authors reorder via the entry order in `apps[]` and `position` overrides.
+- **No WP-core dashboard bridge.** Legacy widgets registered via `wp_add_dashboard_widget()` don't render here — they emit jQuery-bound HTML and need a separate bridge. Deferred.
 - **No min-height enforcement at the widget level.** `minSize` clamps `defaultSize` but the CSS grid's `grid-auto-rows: minmax(160px, auto)` sets the floor uniformly. A widget asking for `minSize: { w: 1, h: 2 }` gets 2 grid-row spans, not 2× the row-min.
 - **Single grid per screen.** The host expects to be one of the apps in a single screen. Multiple grids on the same screen (e.g., split-view with two separate widget regions) aren't modeled — declare a second screen if needed.
 

@@ -143,9 +143,8 @@ class WP_Admin_Shell_Cache {
 }
 
 // Defensive flush hooks — anything that writes a cascade origin invalidates.
-add_action( 'update_option_wp_admin_shell_active_shell',  array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'update_option_wp_admin_shell_active_config', array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'update_option_wp_admin_shell_site_config',   array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_shell_active_shell', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_shell_site_config',  array( 'WP_Admin_Shell_Cache', 'flush' ) );
 add_action( 'update_option_wp_admin_shell_role_config',   array( 'WP_Admin_Shell_Cache', 'flush' ) );
 add_action( 'updated_user_meta', function ( $meta_id, $object_id, $meta_key ) {
 	if ( $meta_key === 'wp_admin_shell_user_prefs' ) {

@@ -38,15 +38,6 @@ class WP_Admin_Shell_Data_Field_Collections {
 	private static $warned_modules = array();
 
 	/**
-	 * Whether the legacy-function deprecation notice has fired this
-	 * request. Avoid spamming WP_DEBUG when a plugin calls the legacy
-	 * shim repeatedly.
-	 *
-	 * @var bool
-	 */
-	private static $legacy_warned = false;
-
-	/**
 	 * Register a field collection.
 	 *
 	 * @param string      $id            Collection id (slash-namespacing allowed, e.g. `core/post-fields`).
@@ -160,33 +151,17 @@ class WP_Admin_Shell_Data_Field_Collections {
 	public static function reset() {
 		self::$registry       = array();
 		self::$warned_modules = array();
-		self::$legacy_warned  = false;
 	}
 
 	/**
-	 * Sanitize a kind/name segment. Mirrors CIAB:
-	 * preserves camelCase, drops everything outside `[A-Za-z0-9_-]`.
+	 * Sanitize a kind/name segment — preserves camelCase, drops everything
+	 * outside `[A-Za-z0-9_-]`.
 	 *
 	 * @param string $value
 	 * @return string
 	 */
 	public static function sanitize_segment( $value ) {
 		return preg_replace( '/[^A-Za-z0-9_-]/', '', $value );
-	}
-
-	/**
-	 * Mark the legacy-function notice as having fired this request.
-	 * Returns true the first time it's called per-request; false
-	 * thereafter. Test-aware: `reset()` clears the flag too.
-	 *
-	 * @return bool True on first invocation, false on subsequent calls.
-	 */
-	public static function note_legacy_call() {
-		if ( self::$legacy_warned ) {
-			return false;
-		}
-		self::$legacy_warned = true;
-		return true;
 	}
 
 	/**
@@ -216,10 +191,6 @@ class WP_Admin_Shell_Data_Field_Collections {
 /**
  * Public API — register a data-field collection.
  *
- * Renamed from v2's `wp_admin_shell_register_field_collection()` as part
- * of the v3 dataview-registry restoration. The legacy function name
- * survives below as a thin deprecation wrapper for one release cycle.
- *
  * @param string      $id            Collection id.
  * @param string      $kind          Entity kind.
  * @param string|null $name          Entity name or null (universal).
@@ -229,30 +200,6 @@ class WP_Admin_Shell_Data_Field_Collections {
  */
 function wp_admin_shell_register_data_field_collection( $id, $kind, $name, $fields, $fields_module = null ) {
 	return WP_Admin_Shell_Data_Field_Collections::register( $id, $kind, $name, $fields, $fields_module );
-}
-
-/**
- * Legacy alias — deprecated in favor of
- * `wp_admin_shell_register_data_field_collection()`. Emits a one-time
- * `_doing_it_wrong` notice per request when `WP_DEBUG` is on; otherwise
- * silently forwards.
- *
- * @param string      $id            Collection id.
- * @param string      $kind          Entity kind.
- * @param string|null $name          Entity name or null (universal).
- * @param array       $fields        Field descriptors.
- * @param string|null $fields_module Optional, reserved.
- * @return string|WP_Error
- */
-function wp_admin_shell_register_field_collection( $id, $kind, $name, $fields, $fields_module = null ) {
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG && WP_Admin_Shell_Data_Field_Collections::note_legacy_call() ) {
-		_doing_it_wrong(
-			'wp_admin_shell_register_field_collection',
-			esc_html__( 'Use wp_admin_shell_register_data_field_collection() instead. The legacy name is preserved for one release cycle as part of the v3 dataview-registry rename.', 'wp-admin-shell' ),
-			'v3.0.0'
-		);
-	}
-	return wp_admin_shell_register_data_field_collection( $id, $kind, $name, $fields, $fields_module );
 }
 
 /**

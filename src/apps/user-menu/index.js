@@ -24,13 +24,7 @@ export default function UserMenuApp() {
 	const logoutUrl = user.logoutUrl || '';
 
 	const shells = window.wpAdminShell?.shells || [];
-	// Schema-canonical kebab `user-switchable`. PHP bridge in
-	// `wp_admin_shell_get_available_shells()` emits this key directly;
-	// the legacy camelCase `userSwitchable` is read once-cycle as a
-	// fallback (drops at v3.1). See spec §15.
-	const switchableShells = shells.filter(
-		( s ) => s[ 'user-switchable' ] || s.userSwitchable
-	);
+	const switchableShells = shells.filter( ( s ) => s[ 'user-switchable' ] );
 	const showShellSwitcher = switchableShells.length > 1;
 
 	const controls = useMemo( () => {

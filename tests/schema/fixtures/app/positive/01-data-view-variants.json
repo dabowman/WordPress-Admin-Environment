@@ -1,0 +1,42 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app.json",
+	"id": "plugin:demo/posts-clone",
+	"version": 3,
+	"title": "Posts clone",
+	"role": "main",
+	"script": "demo-posts-clone",
+	"dataView": {
+		"kind": "postType",
+		"name": "post",
+		"variants": {
+			"_default": {
+				"fieldsRef": "core/post-fields",
+				"defaultView": {
+					"type": "table",
+					"fields": [ "title", "status", "author", "date" ],
+					"titleField": "title"
+				},
+				"defaultLayouts": { "table": {} },
+				"actions": [
+					{ "id": "edit", "label": "Edit", "isPrimary": true }
+				]
+			},
+			"drafts": {
+				"extends": "_default",
+				"defaultView": {
+					"filters": [ { "field": "status", "operator": "is", "value": "draft" } ]
+				}
+			},
+			"trash": {
+				"extends": "_default",
+				"defaultView": {
+					"filters": [ { "field": "status", "operator": "is", "value": "trash" } ]
+				},
+				"actions": [
+					{ "id": "restore", "label": "Restore", "supportsBulk": true },
+					{ "id": "delete-permanent", "label": "Delete Permanently", "isDestructive": true, "supportsBulk": true }
+				]
+			}
+		}
+	}
+}

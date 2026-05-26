@@ -1,0 +1,185 @@
+{
+	"$schema": "../docs/schemas/admin.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "acme-client-portal",
+	"title": "Acme Corp Portal",
+	"description": "Client portal for Acme Corp website management. Branded shell — logo, red accent, scoped navigation.",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "pages",
+		"branding": {
+			"title": "Acme Corp",
+			"logo": "./assets/acme-logo.svg"
+		},
+		"notices": {
+			"banner": {
+				"app": "core:notices-banner"
+			},
+			"snackbar": {
+				"app": "core:notices-snackbar"
+			}
+		}
+	},
+	"screens": {
+		"pages": {
+			"label": "Pages",
+			"icon": "page",
+			"path": "/pages",
+			"app": "core:posts",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			}
+		},
+		"page-new": {
+			"label": "New Page",
+			"path": "/pages/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"page-edit": {
+			"label": "Edit Page",
+			"path": "/pages/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"posts": {
+			"label": "Blog",
+			"icon": "post",
+			"path": "/posts",
+			"app": "core:posts",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			}
+		},
+		"post-new": {
+			"label": "New Blog Post",
+			"path": "/posts/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"post-edit": {
+			"label": "Edit Blog Post",
+			"path": "/posts/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"media": {
+			"label": "Images & Files",
+			"icon": "media",
+			"path": "/media",
+			"app": "iframe:upload.php",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
+			}
+		},
+		"profile": {
+			"label": "My Account",
+			"icon": "user",
+			"path": "/profile",
+			"app": "core:profile",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			}
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot": "palette",
+			"app": "core:command-palette",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			},
+			"mode": "modal"
+		}
+	},
+	"menu": {
+		"pages": {
+			"position": 10
+		},
+		"posts": {
+			"position": 20
+		},
+		"media": {
+			"position": 30
+		},
+		"sep-1": {
+			"separator": true,
+			"position": 40
+		},
+		"profile": {
+			"position": 50
+		},
+		"view-site": {
+			"label": "View My Site",
+			"icon": "external",
+			"href": "/",
+			"external": true,
+			"position": 60
+		}
+	},
+	"commands": [
+		{
+			"id": "core-command-palette",
+			"shortcut": "Mod+K",
+			"invoke": "core:command-palette",
+			"label": "Open Command Palette"
+		}
+	],
+	"styles": {
+		"theme": {
+			"color": {
+				"primary": "#e63946"
+			}
+		}
+	}
+}

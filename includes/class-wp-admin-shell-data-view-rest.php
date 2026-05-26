@@ -22,12 +22,6 @@
  *       under `(kind, name)`. Reads `settings.dataViews[kind][name]`
  *       keys after baselines have been injected.
  *
- * Plus a deprecation alias kept one release cycle:
- *
- *   GET /screen-view?screen=<id>
- *       Maps to `/data-view?screen=<id>` semantics. Attaches an
- *       `X-WP-Deprecated` header on the response. Removed in v3.1.
- *
  * Permission floor:
  *   - Screen-keyed requests (`?screen=<id>`) gate against the screen's
  *     resolved `permissions` block via WP_Admin_Shell_Permissions. 401
@@ -46,7 +40,7 @@ class WP_Admin_Shell_Data_View_REST {
 	const REST_NAMESPACE = 'wp-admin-shell/v1';
 
 	/**
-	 * Register all four routes.
+	 * Register the data-view routes.
 	 */
 	public static function register() {
 		register_rest_route(
@@ -101,26 +95,6 @@ class WP_Admin_Shell_Data_View_REST {
 							'type'              => 'string',
 							'required'          => true,
 							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
-						),
-					),
-				),
-			)
-		);
-
-		// Deprecation alias — one release cycle.
-		register_rest_route(
-			self::REST_NAMESPACE,
-			'/screen-view',
-			array(
-				array(
-					'methods'             => 'GET',
-					'callback'            => array( __CLASS__, 'get_screen_view_deprecated' ),
-					'permission_callback' => array( __CLASS__, 'permission_check' ),
-					'args'                => array(
-						'screen' => array(
-							'type'              => 'string',
-							'required'          => true,
-							'sanitize_callback' => 'sanitize_key',
 						),
 					),
 				),
@@ -264,46 +238,6 @@ class WP_Admin_Shell_Data_View_REST {
 			'name'     => $name,
 			'variants' => $variants,
 		) );
-	}
-
-	/**
-	 * GET /screen-view — deprecation alias for `/data-view?screen=<id>`.
-	 * Adds an `X-WP-Deprecated` header on the response.
-	 */
-	public static function get_screen_view_deprecated( $request ) {
-		$screen = $request->get_param( 'screen' );
-
-		if ( ! is_string( $screen ) || $screen === '' ) {
-			return new WP_Error(
-				'wp_admin_shell_screen_view_invalid_id',
-				__( 'screen must be a non-empty kebab-case identifier.', 'wp-admin-shell' ),
-				array( 'status' => 400 )
-			);
-		}
-
-		$config       = wp_admin_shell_get_active_config();
-		$doc          = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( $screen, $config );
-		$screen_entry = isset( $config['screens'][ $screen ] ) && is_array( $config['screens'][ $screen ] )
-			? $config['screens'][ $screen ]
-			: null;
-		$identity     = self::screen_identity( $screen_entry );
-
-		$response = rest_ensure_response( array(
-			'screen'  => $screen,
-			'kind'    => $identity['kind'],
-			'name'    => $identity['name'],
-			'variant' => $identity['variant'],
-			'view'    => $doc,
-		) );
-
-		if ( $response instanceof WP_REST_Response ) {
-			$response->header(
-				'X-WP-Deprecated',
-				'GET /wp-admin-shell/v1/screen-view is deprecated; use GET /wp-admin-shell/v1/data-view?screen=<id>. Removed in v3.1.'
-			);
-		}
-
-		return $response;
 	}
 
 	/**
