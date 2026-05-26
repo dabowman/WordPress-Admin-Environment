@@ -29,7 +29,7 @@
  * reference a collection via `fieldsRef`; resolution merges
  * ref-wins-inline-overrides per-field.
  *
- * Filter hooks (CIAB-compatible naming, `s/next_admin_entity_view_config_/wp_admin_shell_data_view_config_/g`):
+ * Filter hooks:
  *   - `wp_admin_shell_data_view_config_{kind}_{name}` — always fires
  *     after the triple resolves. Receives `(doc, kind, name, variant)`.
  *   - `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` —
@@ -59,33 +59,10 @@ class WP_Admin_Shell_Data_View_Config {
 	private static $warned_chains = array();
 
 	/**
-	 * Deprecation-shim notice tracking — `_deprecated_hook` only fires
-	 * the first time the v2 filter name is invoked per request, per
-	 * filter handle. Removed in v3.1.0 along with the v2 alias filter.
-	 *
-	 * @var array<string, bool>
-	 */
-	private static $emitted_deprecation_notices = array();
-
-	/**
-	 * One-shot guard for the v2 `viewConfigs` migration warning. v3
-	 * doesn't read the top-level `viewConfigs` block — admin-customized
-	 * overrides on v2-shape shells silently drop on upgrade. The
-	 * `wp_admin_shell_data` hook below emits `_doing_it_wrong` at most
-	 * once per request when it sees a non-empty orphan block. Removed
-	 * in v3.1.0 alongside the v2-shape compatibility layer.
-	 *
-	 * @var bool
-	 */
-	private static $emitted_view_configs_orphan_notice = false;
-
-	/**
 	 * Reset internal state. Test-only.
 	 */
 	public static function reset() {
-		self::$warned_chains                       = array();
-		self::$emitted_deprecation_notices         = array();
-		self::$emitted_view_configs_orphan_notice  = false;
+		self::$warned_chains = array();
 	}
 
 	/**
@@ -132,54 +109,15 @@ class WP_Admin_Shell_Data_View_Config {
 			$doc = array();
 		}
 
-		// Deprecation shim — fire v2 filter name alongside the new one so
-		// CIAB-port plugins compiled against `wp_admin_shell_view_config_*`
-		// keep working through one release cycle (removed in v3.1.0).
-		$legacy_base_filter = sprintf( 'wp_admin_shell_view_config_%s_%s', $kind, $name );
-		if ( has_filter( $legacy_base_filter ) ) {
-			self::maybe_emit_deprecation_notice( $legacy_base_filter, 'wp_admin_shell_data_view_config_*' );
-			$doc = apply_filters( $legacy_base_filter, $doc, $kind, $name, $variant );
-			if ( ! is_array( $doc ) ) {
-				$doc = array();
-			}
-		}
-
 		if ( $variant !== '_default' ) {
 			$variant_filter = sprintf( 'wp_admin_shell_data_view_config_%s_%s_%s', $kind, $name, $variant );
 			$doc            = apply_filters( $variant_filter, $doc, $kind, $name, $variant );
 			if ( ! is_array( $doc ) ) {
 				$doc = array();
 			}
-
-			$legacy_variant_filter = sprintf( 'wp_admin_shell_view_config_%s_%s_%s', $kind, $name, $variant );
-			if ( has_filter( $legacy_variant_filter ) ) {
-				self::maybe_emit_deprecation_notice( $legacy_variant_filter, 'wp_admin_shell_data_view_config_*' );
-				$doc = apply_filters( $legacy_variant_filter, $doc, $kind, $name, $variant );
-				if ( ! is_array( $doc ) ) {
-					$doc = array();
-				}
-			}
 		}
 
 		return $doc;
-	}
-
-	/**
-	 * Emit a one-shot `_deprecated_hook` notice per legacy filter handle
-	 * per request. Avoids spam when the same triple resolves many times in
-	 * one render pass. Removed in v3.1.0.
-	 *
-	 * @param string $legacy_handle The v2 filter name being dispatched.
-	 * @param string $replacement   The v3 replacement name (for the notice).
-	 */
-	private static function maybe_emit_deprecation_notice( $legacy_handle, $replacement ) {
-		if ( ! empty( self::$emitted_deprecation_notices[ $legacy_handle ] ) ) {
-			return;
-		}
-		self::$emitted_deprecation_notices[ $legacy_handle ] = true;
-		if ( function_exists( '_deprecated_hook' ) ) {
-			_deprecated_hook( $legacy_handle, '3.0.0-beta.3', $replacement );
-		}
 	}
 
 	/**
@@ -566,8 +504,7 @@ class WP_Admin_Shell_Data_View_Config {
 	 *      `dataViewVariant`.
 	 *   3. Manifest inference — primary app's `dataView.kind`/`name`
 	 *      overridden by `screen.config.postType` / `screen.config.taxonomy`,
-	 *      variant defaulted to `screen.config.variant` (v2 back-compat)
-	 *      then `_default`.
+	 *      variant defaulted to `screen.config.variant` then `_default`.
 	 *
 	 * @param array $screen Resolved screen entry.
 	 * @return array{0:string,1:string,2:string} `[ $kind, $name, $variant ]`.
@@ -636,8 +573,8 @@ class WP_Admin_Shell_Data_View_Config {
 			$name = $config['taxonomy'];
 		}
 
-		// v2 back-compat: `route.config.variant` flows into the screen
-		// when the v3 compiler synthesizes screens from v2 routes.
+		// A screen may select a variant via `config.variant` when it relies
+		// on manifest inference rather than an explicit `dataViewRef`.
 		$variant = '_default';
 		if ( isset( $config['variant'] ) && is_string( $config['variant'] ) && $config['variant'] !== '' ) {
 			$variant = $config['variant'];
@@ -772,50 +709,6 @@ class WP_Admin_Shell_Data_View_Config {
 	}
 
 	/**
-	 * Warn when the resolved doc carries a non-empty top-level
-	 * `viewConfigs` block.
-	 *
-	 * v2 admin.json's top-level `viewConfigs` block becomes dead data
-	 * under v3 — the v3 resolver reads `settings.dataViews` (3-axis
-	 * registry) instead. v2-shape shells lurking in plugin / site / role
-	 * / user origins still serialize this block through the cascade, but
-	 * nothing downstream consumes it. Admin-customized overrides drop
-	 * silently on upgrade.
-	 *
-	 * Emits a one-shot `_doing_it_wrong` per request (the same resolved
-	 * doc is read many times per page render — only the first detection
-	 * matters). Removed in v3.1.0 alongside the v2-shape compatibility
-	 * layer.
-	 *
-	 * Hooked at low priority on `wp_admin_shell_data` so we see the
-	 * final resolved doc after every other filter has folded in. Does
-	 * NOT translate the block — that's the `wp admin-shell migrate-shell`
-	 * CLI's job (Phase 3d.2).
-	 *
-	 * @param array $doc Post-cascade resolved doc.
-	 * @return array Same doc, unchanged.
-	 */
-	public static function warn_legacy_view_configs( $doc ) {
-		if ( self::$emitted_view_configs_orphan_notice ) {
-			return $doc;
-		}
-		if ( ! is_array( $doc ) ) {
-			return $doc;
-		}
-		if ( empty( $doc['viewConfigs'] ) || ! is_array( $doc['viewConfigs'] ) ) {
-			return $doc;
-		}
-
-		self::$emitted_view_configs_orphan_notice = true;
-		_doing_it_wrong(
-			'wp_admin_shell viewConfigs',
-			esc_html__( 'The top-level `viewConfigs` block is a v2 shape that v3 no longer reads. Migrate to `settings.dataViews` via the `wp admin-shell migrate-shell` CLI (Phase 3d.2), or hand-merge each `(kind, name, variant|_default)` entry into the new path. The current `viewConfigs` block will be silently dropped at the v3.1 release.', 'wp-admin-shell' ),
-			'v3.0.0'
-		);
-		return $doc;
-	}
-
-	/**
 	 * Merge inline fields over a collection's base fields. Both arrays
 	 * are lists of field descriptors keyed by `id`. Inline overrides win
 	 * per-field (shallow merge); collection fields not redeclared carry
@@ -916,12 +809,5 @@ class WP_Admin_Shell_Data_View_Config {
 // Post-merge so admin.json (and downstream origins) are authoritative.
 // Priority 6 — sequenced AFTER `WP_Admin_Shell_Menu_Items::bind_screens` at
 // priority 5 so screens contributed by the menu-item shim are visible when
-// dataView baselines attach. See `docs/upgrade-v2-to-v3.md` filter-ordering
-// section.
+// dataView baselines attach.
 add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'inject_app_baselines' ), 6 );
-
-// Low-priority orphan-`viewConfigs` migration warning. Runs after every
-// other filter has folded in so we see the final resolved doc. One-shot
-// per request via static guard. Removed in v3.1.0 alongside the v2-shape
-// compatibility layer.
-add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'warn_legacy_view_configs' ), 999 );

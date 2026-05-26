@@ -12,16 +12,11 @@ import { navigate } from '../routing/router';
 export { buildCommandsArray };
 
 /**
- * Reads the resolved admin.json `commands` block (v3) and registers each
+ * Reads the resolved admin.json `commands` block and registers each
  * shortcut against the document. When a binding fires:
  *   - `invoke` commands look up the app id in the trigger store and
- *     call its open handler (v2 binding semantics preserved).
+ *     call its open handler.
  *   - `navigate` commands push the target path onto the URL bar.
- *
- * The PHP v3 compiler forwards any legacy v2 `bindings[]` into
- * `commands[]` so this reader has a single source of truth. The
- * fallback to `config.bindings` is defensive — covers tests / fixtures
- * that bypass the compiler.
  *
  * Spec §8 precedence: app shortcuts win when focus is inside the app's
  * DOM. We approximate this by skipping the binding when the active
@@ -33,20 +28,17 @@ export { buildCommandsArray };
  */
 export function BindingsConsumer() {
 	const { config } = useKernel();
-	// Memoize the compiled command table on the underlying nested refs so
+	// Memoize the compiled command table on the underlying nested ref so
 	// the keydown handler binds once per real shortcut change, not once
 	// per router event. The outer config object ref churns on every
-	// resolved-tree update; `config.commands` / `config.bindings` are
-	// stable across renders that didn't touch them.
+	// resolved-tree update; `config.commands` is stable across renders
+	// that didn't touch it.
 	const compiled = useMemo( () => {
-		let source = null;
-		if ( Array.isArray( config?.commands ) ) {
-			source = config.commands;
-		} else if ( Array.isArray( config?.bindings ) ) {
-			source = config.bindings;
-		}
+		const source = Array.isArray( config?.commands )
+			? config.commands
+			: null;
 		return buildCommandsArray( source );
-	}, [ config?.commands, config?.bindings ] );
+	}, [ config?.commands ] );
 
 	useEffect( () => {
 		if ( compiled.length === 0 || typeof window === 'undefined' ) {

@@ -1,21 +1,17 @@
 <?php
 /**
- * Admin-routes registry — CIAB-compatible URL→app shim.
+ * Admin-routes registry — programmatic URL→app registration.
  *
- * Plugins call `wp_admin_shell_register_admin_route( $path, $args )`
- * (the mechanical `s/next_admin_/wp_admin_shell_/g` rename of CIAB's
- * `next_admin_register_admin_route()`) to declare URL routes at runtime.
- * The registry contributes them to the cascade through the synthetic
- * `plugin` origin so admin.json can still override per-path.
+ * Plugins call `wp_admin_shell_register_admin_route( $path, $args )` to
+ * declare URL routes at runtime. The registry contributes them to the
+ * cascade through the synthetic `plugin` origin so admin.json can still
+ * override per-path.
  *
- * The arg shape differs from CIAB. CIAB's positional
- * `( $path, $content_module, $route_module, $before_load, $static_data, $gc_time )`
- * collapses into the shell's `( $path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ] )`
- * — `app` is the shell-side replacement for `content_module`, `config`
- * carries route configuration, `static_data` is folded into `config` for
- * forward compatibility, and `gc_time` is accepted but ignored
- * (TanStack-specific cache GC, no shell equivalent — emits a one-time
- * `WP_DEBUG` notice).
+ * Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […],
+ * 'gc_time' => … ] )` — `app` names the app to mount, `config` carries
+ * route configuration, `static_data` is folded into `config` for forward
+ * compatibility, and `gc_time` is accepted but ignored (no shell
+ * equivalent — emits a one-time `WP_DEBUG` notice).
  *
  * @package WP_Admin_Shell
  */
@@ -50,8 +46,8 @@ class WP_Admin_Shell_Admin_Routes {
 	 * @param array  $args {
 	 *     @type string     $app          App id to mount. Required.
 	 *     @type array|null $config       Configuration passed to the app. Optional.
-	 *     @type array|null $static_data  CIAB pass-through. Folded into `config`.
-	 *     @type int|null   $gc_time      CIAB pass-through. Ignored, dev-warns.
+	 *     @type array|null $static_data  Folded into `config`.
+	 *     @type int|null   $gc_time      Accepted but ignored; dev-warns.
 	 * }
 	 *
 	 * @return string|WP_Error Path on success, WP_Error on failure.
@@ -109,10 +105,9 @@ class WP_Admin_Shell_Admin_Routes {
 					__( 'Admin route "static_data" must be an array when provided.', 'wp-admin-shell' )
 				);
 			}
-			// CIAB pass-through. Fold into `config` so the admin-v2 schema
-			// (which only allows `app` + `config` on a route) accepts it.
-			// `config` wins on collision — explicit overrides preloaded
-			// route state, matching CIAB's static_data-as-base convention.
+			// Fold `static_data` into `config` so the route schema (which
+			// only allows `app` + `config`) accepts it. `config` wins on
+			// collision — explicit overrides the preloaded route state.
 			$config = array_merge( $args['static_data'], $config );
 		}
 		if ( ! empty( $config ) ) {

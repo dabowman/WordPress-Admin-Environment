@@ -78,8 +78,8 @@ ok(
 	/const\s+compiled\s*=\s*useMemo\s*\(/.test( source )
 );
 ok(
-	'useMemo deps key on nested commands+bindings refs (not outer config)',
-	/\[\s*config\?\.commands\s*,\s*config\?\.bindings\s*\]/.test( source )
+	'useMemo deps key on the nested commands ref (not outer config)',
+	/\[\s*config\?\.commands\s*\]/.test( source )
 );
 ok(
 	'useEffect deps on memoized compiled array',
