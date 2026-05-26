@@ -149,5 +149,4 @@ String argument routes through `/data-view?screen=<id>`; object argument routes 
 
 - `docs/wp-admin-shell-design-spec.md` §13 #7–#8 — spec-level normative description.
 - `docs/v3/schema-sketch.md` — design rationale + cascade examples.
-- `docs/plans/2026-05-20-dataview-registry-restoration.md` — implementation plan that introduced this primitive.
 - [`@wordpress/dataviews`](https://www.npmjs.com/package/@wordpress/dataviews) — upstream component reference.

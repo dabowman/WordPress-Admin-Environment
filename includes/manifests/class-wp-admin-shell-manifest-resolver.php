@@ -7,7 +7,7 @@
  * that references between admin.json, app manifests, and engine
  * manifests resolve to registered artifacts.
  *
- * Per `docs/research/schema-exercise-findings.md`, runtime-only checks:
+ * Per `docs/archive/schema-exercise-findings.md`, runtime-only checks:
  *   - role resolvability across template inheritance
  *   - id references (engine, app, template) resolving to registered
  *     artifacts

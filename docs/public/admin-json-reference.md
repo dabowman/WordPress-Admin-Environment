@@ -4,7 +4,7 @@
 
 Multiple `admin.json` files can coexist on a site (one per workspace). The active workspace is selected per-site, per-role, or per-user through the cascade.
 
-This reference covers the **v3 shape**, the active schema. v2 shells continue to validate through the v3.0 release cycle via the [`v2 → v3 upgrade guide`](../upgrade-v2-to-v3.md) — call out the v2 path explicitly when you need it, but new shells should be authored in v3.
+This reference covers the admin.json workspace schema (`admin.json`).
 
 ## In this article
 
@@ -32,7 +32,7 @@ This reference covers the **v3 shape**, the active schema. v2 shells continue to
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin/v3.json",
+	"$schema": "https://schemas.wp.org/admin.json",
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "my-workspace",
@@ -50,7 +50,7 @@ This reference covers the **v3 shape**, the active schema. v2 shells continue to
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-v3.json`](../schemas/admin-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin.json`](../schemas/admin.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -197,7 +197,7 @@ See [`docs/dataview-config.md`](../dataview-config.md) for the author-facing ref
 | settings.dataViews  | 3-axis dataView registry. Keyed `kind → name → variant`. Each leaf is a complete dataView doc (`fields`, `defaultView`, `defaultLayouts`, `actions`, `titleField`, `fieldsRef`). Variants resolve independently unless `extends` is declared. |
 | settings.dataFields | Named field collections. Each entry binds an array of field descriptors to `(kind, name)` (or universal when `name === null`). Referenced from dataView docs via `fieldsRef`. |
 
-The v2 → v3 rename: `viewConfigs` → `settings.dataViews`, `fieldCollections` → `settings.dataFields`. The 3-axis registry shape (`kind → name → variant`) is preserved. Filter renames live in [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md).
+The 3-axis registry shape is `kind → name → variant`.
 
 ## screens
 
@@ -431,22 +431,6 @@ Across origins the resolved value is the concatenation of every origin's `preloa
 
 ## `regions` / `routes` (escape hatches)
 
-The v3 compiler synthesizes the runtime regions map + routes table from `workspace.widgets[]` + `screens[]` + the active engine's `defaultRegions`. Authors who need a region or route the v3 shape can't express still write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against compiler synthesis.
+The kernel synthesizes the runtime regions map + routes table from `screens[]` + the active engine's `defaultRegions` (`src/runtime/compile/`). Authors who need a region or route the `screens` shape can't express write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against the synthesis.
 
-The shape of these blocks is identical to v2 — see [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-shell-design-spec.md#62-routes-block) for route patterns. New shells should avoid these blocks when the v3 surface can express the same thing.
-
-## v2 surfaces (deprecated)
-
-These top-level blocks are v2-shape and emit `_doing_it_wrong` notices when present in a v3 admin.json. Removed at v3.1. See [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md) for the migration table.
-
-| v2 block             | v3 successor                                          | Removal |
-|----------------------|-------------------------------------------------------|---------|
-| `viewConfigs`        | `settings.dataViews` (same 3-axis shape)              | v3.1    |
-| `fieldCollections`   | `settings.dataFields` (same per-entry shape)          | v3.1    |
-| `bindings`           | `commands` (id-keyed; shortcuts attached per entry)   | v3.1    |
-| `dashboardWidgets`   | `screens[id].apps[]` with `slot: "grid"`              | v3.1    |
-| `default-route`      | `workspace.default-screen`                            | v3.1    |
-| top-level `branding` | `workspace.branding`                                  | v3.1    |
-| top-level `engine`   | `workspace.engine`                                    | v3.1    |
-
-For the full deprecation timeline + filter renames + JS API renames + REST renames, read [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md). The `wp admin-shell migrate-shell <slug>` CLI handles the mechanical transform.
+See [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-shell-design-spec.md#62-routes-block) for route patterns. Avoid these blocks when the `screens` surface can express the same thing.

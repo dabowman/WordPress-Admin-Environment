@@ -1,7 +1,7 @@
 # `core:desktop` engine — readiness checklist
 
 P2 readiness for the windowed desktop engine. Lives alongside
-`docs/v1-readiness.md` and `docs/v2-readiness.md`. This document
+`docs/archive/v1-readiness.md` and `docs/archive/v2-readiness.md`. This document
 captures what must be green before the engine can be tagged or
 merged to `main`.
 
@@ -11,7 +11,7 @@ P1 (kernel `core:dynamic-children` platform service) + P2 (engine
 scaffolding, WindowManager, drag / resize / snap, dock-rail registry,
 desktop-iframe app, 14-subsystem chromeless bridge, theming hook,
 window manifest blocks). Detailed phase plan in
-[`docs/plans/2026-05-12-desktop-engine-port.md`](plans/2026-05-12-desktop-engine-port.md).
+[`docs/archive/plans/2026-05-12-desktop-engine-port.md`](archive/plans/2026-05-12-desktop-engine-port.md).
 
 ## Automated gates
 

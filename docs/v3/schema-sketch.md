@@ -1,10 +1,8 @@
-# admin.json v3 — Schema Design Doc
+# admin.json — Schema Design Doc
 
-> **Status:** Canonical v3 schema design doc. Authoritative for the v3 admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for the v3-specific concerns of cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
+> Authoritative for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
 >
-> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-shell-design-spec.md`](../wp-admin-shell-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The v2 → v3 deprecation timeline lives in [`../upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md). The live phase tracker is [`./roadmap.md`](./roadmap.md). The JSON Schemas are at [`../schemas/admin-v3.json`](../schemas/admin-v3.json), [`admin-app-v3.json`](../schemas/admin-app-v3.json), [`admin-engine-v3.json`](../schemas/admin-engine-v3.json).
->
-> **When prose, schema, and runtime disagree:** runtime behavior wins. The schema is authoritative for shape; this doc is authoritative for design rationale and cascade-level semantics that the JSON Schema can't express.
+> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-shell-design-spec.md`](../wp-admin-shell-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/admin.json`](../schemas/admin.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
 
 v3 reshapes admin.json around user-task surfaces instead of runtime-pipeline surfaces.
 
@@ -844,7 +842,7 @@ Behavior:
 
 ## Plugin extension hooks
 
-Phase 2 locked the v3 plugin-extension surfaces:
+The plugin-extension surfaces:
 
 ### Plugin-contributed modes
 
@@ -873,7 +871,7 @@ Preserved from v2 with the v3 rename: the `wp_admin_shell_data_view_config_{kind
 
 ## Open design questions
 
-Lower-priority items deferred beyond v3.0. The phase tracker in [`./roadmap.md`](./roadmap.md) carries the live state; items below are the design-level questions:
+Lower-priority items deferred. The items below are the design-level questions:
 
 1. **Per-renderer capability declarations.** Each engine `menu-renderer` should document what it supports (max nesting depth, separator rendering, drilldown vs accordion). Spec needs a contract table.
 

@@ -6,7 +6,7 @@ The default engine `core:default` ships with the shell plugin alongside `core:si
 
 Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_shell_register_engine()`.
 
-This reference covers the **v3 shape** (`admin-engine-v3.json`). v2 manifests continue to validate through v3.0 — the v3 schema adds three new top-level blocks (`menu-renderer`, `slots`, `modes`) on top of the v2 surface.
+This reference covers the engine manifest schema (`admin-engine.json`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`.
 
 ## In this article
 
@@ -35,7 +35,7 @@ This reference covers the **v3 shape** (`admin-engine-v3.json`). v2 manifests co
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-engine/v3.json",
+	"$schema": "https://schemas.wp.org/admin-engine.json",
 	"id": "plugin:acme/desktop",
 	"version": 3,
 	"title": "Acme Desktop",
@@ -57,7 +57,7 @@ This reference covers the **v3 shape** (`admin-engine-v3.json`). v2 manifests co
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-engine-v3.json`](../schemas/admin-engine-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin-engine.json`](../schemas/admin-engine.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `specializes-roles`, `honored-platform`, `templates` (must contain at least one template), `default-arrangement`, `script`, `modes`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -73,7 +73,7 @@ Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro
 
 ## version
 
-Engine manifest schema version. v3 is the current shape (admin-engine-v3.json). Bump only on breaking changes to this engine's manifest contract. v2 manifests (`version: 2`) keep validating through v3.0.
+Engine manifest schema version (currently `3`). Bump only on breaking changes to this engine's manifest contract.
 
 | Property | Description                                       | Type    | Default |
 |----------|---------------------------------------------------|---------|---------|

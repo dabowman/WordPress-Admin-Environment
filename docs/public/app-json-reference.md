@@ -4,7 +4,7 @@
 
 Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `admin.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
 
-This reference covers the **v3 shape** (`admin-app-v3.json`). v2 manifests continue to validate through v3.0 — see [`docs/upgrade-v2-to-v3.md`](../upgrade-v2-to-v3.md) for migration.
+This reference covers the app manifest schema (`admin-app.json`).
 
 ## In this article
 
@@ -34,7 +34,7 @@ This reference covers the **v3 shape** (`admin-app-v3.json`). v2 manifests conti
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-app/v3.json",
+	"$schema": "https://schemas.wp.org/admin-app.json",
 	"id": "plugin:acme/orders",
 	"version": 3,
 	"title": "Orders",
@@ -43,7 +43,7 @@ This reference covers the **v3 shape** (`admin-app-v3.json`). v2 manifests conti
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-app-v3.json`](../schemas/admin-app-v3.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/admin-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -63,7 +63,7 @@ The runtime registry rejects duplicate ids; plugins extending core apps must use
 
 ## version
 
-Manifest schema version this document conforms to. v3 is the current shape (admin-app-v3.json). Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load. v2 manifests (`version: 2`) keep validating through v3.0.
+Manifest schema version this document conforms to (currently `3`). Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
 
 | Property | Description                                       | Type    | Default |
 |----------|---------------------------------------------------|---------|---------|
