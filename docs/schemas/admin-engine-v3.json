@@ -1,0 +1,436 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://schemas.wp.org/admin-engine/v3.json",
+	"title": "WP Admin Shell — Engine Manifest (v3)",
+	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm. Engines are the spatial + chrome layer of the shell — they read a region tree (and in v3, a resolved screens + menu tree) assembled by the runtime and render it to DOM. The flagship engine `core:default` ships with the shell plugin; alternative engines (`core:single-pane`, `core:desktop`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. v3 adds three new top-level blocks — `menu-renderer`, `slots`, `modes` — on top of the v2 surface (templates, default-arrangement, honored-platform, default-styles). See WP Admin Shell Design Spec §4.2 and docs/v3/core-default-engine.v3.md.",
+
+	"type": "object",
+	"required": [
+		"id",
+		"version",
+		"title",
+		"specializes-roles",
+		"honored-platform",
+		"templates",
+		"default-arrangement",
+		"script",
+		"modes"
+	],
+	"additionalProperties": false,
+
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"format": "uri-reference",
+			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine/v3.json`. Relative paths are accepted (e.g., `../docs/schemas/admin-engine-v3.json` for in-repo authoring), matching the block.json convention."
+		},
+
+		"id": {
+			"type": "string",
+			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+			"description": "Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Shell plugin, `plugin:{slug}/{name}` for plugin-contributed engines. Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids."
+		},
+
+		"version": {
+			"type": "integer",
+			"minimum": 3,
+			"description": "Engine manifest schema version. v3 is the current shape. Bump only on breaking changes to this engine's manifest contract. v3 manifests must declare `3` here so the resolver can distinguish them from v1/v2 manifests at load time."
+		},
+
+		"title": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Human-readable name of the engine. Shown in shell-switcher UI, plugin install screens, and developer tooling. Translatable."
+		},
+
+		"description": {
+			"type": "string",
+			"description": "Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable."
+		},
+
+		"designSystem": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Design system this engine ships with. Free-form string by convention: `@wordpress/ui` (WPDS — what `core:default` + `core:single-pane` use), `mui` (Material Design), `chakra`, `radix`, `custom`, etc. The kernel emits a dev-mode warning when a mounted app's `designSystem` differs from this engine's, signaling a visual-mismatch risk. Optional — engines that don't declare a value are treated as DS-unknown and skip the mismatch check."
+		},
+
+		"specializes-roles": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/ariaRole" },
+			"uniqueItems": true,
+			"minItems": 0,
+			"description": "ARIA roles this engine recognizes and specializes for. A region whose `role` is in this list receives engine-shipped chrome treatments (default styling, default platform behaviors, position in the default arrangement). Roles outside this list still mount, but fall through to the engine's default arrangement algorithm with author-provided styling and no engine-specific chrome. Authors discover what an engine does well by reading this list. Empty list is valid (an engine that treats every region the same)."
+		},
+
+		"honored-platform": {
+			"type": "array",
+			"items": { "$ref": "#/$defs/platformServiceName" },
+			"uniqueItems": true,
+			"description": "Platform service requests this engine implements. An app declaring a `platform.{service}: true` request gets that service only if the active engine lists it here. Apps requesting unhonored services still mount; the unhonored requests are no-ops with a logged warning in development. The list grows additively in minor spec versions; engines ship updates as the spec adds services they choose to implement."
+		},
+
+		"menu-renderer": {
+			"$ref": "#/$defs/menuRenderer",
+			"description": "Strategy this engine uses to render the resolved workspace `menu` tree. Required for any engine that wants screens to appear in a menu; omitting the field is equivalent to declaring `\"none\"` — the engine ignores the `menu` block and authors must drive navigation through the `regions` / `routes` escape hatches instead. The four core strategies are `sidebar-drilldown` (flagship `core:default`: items with children become slide-in sub-screens with a back link), `sidebar-tree` (expandable tree nodes), `dock` (`core:desktop`: tiles in a dock rail; containers become folders), `drawer` (`core:single-pane`: collapsible drawer with accordion sections for containers). Plugin-namespaced renderer ids (`plugin:{slug}/{name}`) are accepted — the engine's render path consults the runtime renderer registry populated via `wp_admin_shell_register_menu_renderer()`. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup. See docs/v3/core-default-engine.v3.md."
+		},
+
+		"slots": {
+			"type": "object",
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": {
+					"$ref": "#/$defs/engineSlot"
+				}
+			},
+			"additionalProperties": false,
+			"description": "Engine-declared slot vocabulary. Slots are named mount points; the schema-sketch tiered model layers three sources: kernel-reserved (`_self`, `palette` — always workspace-scope, never redeclared here), engine-declared (this block), and app-declared (per app manifest `slots`). Authors reference slots from the workspace via `screens[id].slot` (workspace-scope) and from inside a screen via `screens[id].apps[i].slot` (screen-scope). Each entry declares its `scope` so the resolver knows where the slot is allowed to appear. Omitting the block entirely means the engine inherits only the kernel-reserved slots — sufficient for engines that mount everything through `_self`. Conventional engine slots include `detail`, `inspector`, `banner`, `snackbar`, `window`, `toolbar`, `sidebar-footer`, `status-bar`; the schema does not enumerate them because the catalog grows additively as engines ship."
+		},
+
+		"modes": {
+			"type": "object",
+			"required": [ "default" ],
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": {
+					"$ref": "#/$defs/mode"
+				}
+			},
+			"additionalProperties": false,
+			"description": "Catalog of named chrome modes a screen may request via `screens[id].mode`. Every engine ships at least a `default` mode — the schema enforces its presence here. The four conventional modes from the v1 core vocabulary are `default` (full chrome), `focus` (strip nav + reduce toolbar), `takeover` (hide all workspace chrome), `modal` (overlay on top of current screen; chrome unchanged). Engines may add their own — `core:desktop` adds windowed-mode flavors; `core:single-pane` adds drawer-state variants. Modes may chain via `extends` to inherit and partially override another mode in the same catalog (depth limit 10; circular references produce a runtime diagnostic). The resolver pipeline reads `screens[id].mode`, walks the extends chain bottom-up with deep-merge, deep-merges the screen's own `regions` override on top, then hands the resolved region-state map to each region's wrapper for paint. Apps stay mounted across mode changes — visibility is paint-only (matches `core:persists-across-navigation` semantics). Plugins extend an engine's catalog via the `wp_admin_shell_engine_modes_{engineId}` filter at the plugin cascade origin. See docs/v3/core-default-engine.v3.md."
+		},
+
+		"templates": {
+			"type": "object",
+			"minProperties": 1,
+			"patternProperties": {
+				"^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$": {
+					"$ref": "#/$defs/regionTemplate"
+				}
+			},
+			"additionalProperties": false,
+			"description": "Region template catalog. Authors instantiate these templates from admin.json by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure. Template ids follow the same namespace pattern as apps and engines. The catalog must contain at least one template — an engine with no templates would be unusable. Templates are the engine's primary author-facing contribution; an engine can ship many."
+		},
+
+		"default-arrangement": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "Identifier for the engine's spatial arrangement algorithm — a documentation marker, not configuration the runtime reads. The actual algorithm is implementation in the engine's script. Authors and tooling reference this name when describing how an engine behaves: `wp-chrome` (sidebar-topbar-content layout), `tiling-dwindle` (Hyprland-style tiling), `floating-windows` (draggable resizable windows), `single-pane` (one region visible at a time). New algorithm names accumulate in this field's effective vocabulary as engines are written; the schema does not enumerate them."
+		},
+
+		"script": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "WordPress script handle for this engine's JavaScript bundle. Must be registered with WordPress before the manifest references it. The runtime enqueues this when the engine activates."
+		},
+
+		"style": {
+			"type": "string",
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "Optional WordPress style handle for this engine's CSS. Engines may rely entirely on design-system tokens and the chrome extension namespace for styling, in which case this is omitted. Engines with their own structural CSS (grid templates, animation, layout-specific pseudo-elements) declare a style handle here."
+		},
+
+		"styles": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": [ "handle", "src" ],
+				"additionalProperties": false,
+				"properties": {
+					"handle": {
+						"type": "string",
+						"pattern": "^[a-z][a-z0-9-]*$",
+						"description": "WordPress style handle. Must be unique across all enqueued engines. Convention: `<plugin-slug>-<engine-name>-<asset>` (e.g. `wp-admin-shell-wpds-tokens`)."
+					},
+					"src": {
+						"type": "string",
+						"minLength": 1,
+						"description": "URL or plugin-relative path to the CSS file. The kernel resolves plugin-relative paths against the engine's plugin URL at enqueue time."
+					},
+					"deps": {
+						"type": "array",
+						"items": { "type": "string" },
+						"description": "Optional dependency handles enqueued before this one."
+					}
+				}
+			},
+			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `admin.json#workspace.engine` (v3) / `admin.json#engine` (v2). The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
+		},
+
+		"default-styles": {
+			"$ref": "#/$defs/defaultStyles",
+			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
+		},
+
+		"defaultRegions": {
+			"type": "object",
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/regionInstance" }
+			},
+			"additionalProperties": false,
+			"description": "Region tree the engine assembles when a workspace doesn't author its own `regions` block (the v3 common case). Each key is a region id; each value is a region instance — same shape an admin.json `regions[id]` entry takes (may declare `template`, `role`, `app`, `routing`, `style`, nested `regions`, etc.). The v3 compiler walks this block when synthesizing the resolved region tree from a v3 workspace: when the workspace omits `regions`, the engine's `defaultRegions` becomes the region tree directly; when the workspace declares `regions` explicitly (the v2 escape hatch), the workspace tree wins per-field on top of the engine defaults. The primary region (where routed screens mount) should declare `routing.route-key: \"_self\"`; modal slots (palette, etc.) declare their respective route-keys. Optional — engines that mount everything through `_self` may omit this block and let the workspace declare `regions` directly."
+		}
+	},
+
+	"$defs": {
+		"ariaRole": {
+			"type": "string",
+			"pattern": "^[a-z][a-z]+$",
+			"description": "A WAI-ARIA 1.2 role name. See the app manifest schema for the full description."
+		},
+
+		"platformServiceName": {
+			"type": "string",
+			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
+			"description": "A platform service name. Same namespace convention as app, region-template, and engine ids: `core:{name}` for services blessed by the WP Admin Shell core spec (the v3 set is `core:modal`, `core:dismiss-on`, `core:autofocus-target`, `core:triggerable`, `core:persists-across-navigation`, `core:dirty-state`, `core:block-navigation-on-dirty`, `core:trigger`, `core:dynamic-children`), and `plugin:{slug}/{name}` for plugin-contributed services. The schema does not enumerate names — the vocabulary grows as engines and plugins ship. Apps declare requested services; engines declare honored ones. Apps requesting unhonored services still mount; the unhonored request is a no-op with a dev-mode warning. Namespacing eliminates collision between independently-developed plugin services (e.g. one plugin's `swipe-to-dismiss` versus another's). `core:dynamic-children` (added 2026-05-12) lets a region template host runtime-mutated child regions added/removed by its mounted app — kernel renders them through the same nested-region recursion as static `regions`, so all per-region kernel services (routing, dirty-state, trigger, capability gating, ARIA) apply uniformly. Windowed and MDI engines (e.g. `core:desktop`) rely on it. See spec §5.5."
+		},
+
+		"menuRenderer": {
+			"type": "string",
+			"pattern": "^(sidebar-drilldown|sidebar-tree|dock|drawer|none|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$",
+			"description": "Menu-renderer identifier. One of the four core strategies (`sidebar-drilldown`, `sidebar-tree`, `dock`, `drawer`), the explicit opt-out (`none`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`). Plugin renderers must be registered at runtime via `wp_admin_shell_register_menu_renderer()` before the engine activates, or the engine's render path falls back to `none` with a dev-mode warning. The core strategies match named conventions (drilldown / tree / dock / drawer) so authors writing menus author once and any engine using one of those strategies renders the same tree natively. Renderers may impose their own depth limits (default convention: 3); items deeper than the limit are flattened or dropped per renderer policy."
+		},
+
+		"engineSlot": {
+			"type": "object",
+			"required": [ "scope" ],
+			"additionalProperties": false,
+			"description": "An engine-declared slot. Each slot names a mount point and declares whether the kernel admits it at workspace scope, screen scope, or both. Authors writing `screens[id].slot` reference workspace-scope slots; authors writing `screens[id].apps[i].slot` reference screen-scope slots (or `both`-scoped slots). A slot reference that doesn't resolve at any tier (kernel-reserved / engine-declared / app-declared) is rejected at resolve time with a diagnostic.",
+			"properties": {
+				"scope": {
+					"type": "string",
+					"enum": [ "workspace", "screen", "both" ],
+					"description": "Where this slot is mountable. `workspace` — referenced from `screens[id].slot`; the screen itself mounts in this slot. `screen` — referenced from `screens[id].apps[i].slot`; an app inside a screen mounts in this slot (typically opened by another app in the same screen, e.g. a dashboard-host's `grid`). `both` — admissible at either scope. The two kernel-reserved slots `_self` and `palette` are implicitly workspace-scope and never redeclared here."
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Optional human-readable label for tooling. Translatable."
+				},
+				"description": {
+					"type": "string",
+					"description": "Optional one-line summary of the slot's intent. Used by authoring tools to surface slot choices to workspace authors. Translatable."
+				},
+				"accepts": {
+					"type": "string",
+					"enum": [ "app", "widget", "any" ],
+					"description": "Optional hint about what kind of contribution the slot accepts. `app` — full screen-like apps (typical for `_self` and engine workspace slots). `widget` — small chrome contributions registered through `workspace.widgets[slot]` (typical for `toolbar`, `sidebar-footer`, `status-bar`). `any` — accepts both. Hint-only; the resolver does not enforce. Defaults to `any` when omitted."
+				}
+			}
+		},
+
+		"mode": {
+			"type": "object",
+			"required": [ "label" ],
+			"additionalProperties": false,
+			"description": "A chrome mode entry. Names a screen-author-facing chrome preset that maps to a per-region state map. Modes are the primary mechanism for screens to request reduced chrome (focus, takeover) or overlay rendering (modal) without each screen having to know which regions an engine ships. Engines define their region-state vocabulary; the four conventional keys `hidden`, `compact`, `minimal`, `fullWidth` are recommended for cross-engine portability of screen authoring (see `regionState`). Modes may chain via `extends` to inherit and override per-field; the resolver applies a depth limit of 10 and produces a runtime diagnostic on circular reference. The `modal` flag declares the mode as an overlay: the underlying screen stays mounted with chrome unchanged, the modal layer renders above. When `modal` is true, the engine ignores `regions` + `chrome` on this mode (they would not apply meaningfully).",
+			"properties": {
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Human-readable label for tooling and cascade audit reports. Translatable. Required — every mode must declare a label so authoring tools can surface it."
+				},
+				"description": {
+					"type": "string",
+					"description": "Optional one-line summary of the mode's intent. Translatable."
+				},
+				"extends": {
+					"type": "string",
+					"pattern": "^[a-z][a-z0-9-]*$",
+					"description": "Optional. Name of another mode in the same catalog. The new mode inherits the parent's region states + chrome flags and overrides per-field via deep merge. The resolver walks the chain bottom-up: each level layers on top of its parent. Inheritance depth limit: 10. Circular references (`focus extends tight`, `tight extends focus`) produce a runtime diagnostic and the screen falls back to the `default` mode."
+				},
+				"modal": {
+					"type": "boolean",
+					"description": "When true, this mode renders as a modal overlay. The current screen stays mounted underneath with its chrome state unchanged; the modal layer renders above with focus + Escape ownership. Engines maintain a LIFO stack of active modals; closing the topmost dismisses just that one. Engines that don't support modal stacking (e.g. mobile-first single-pane) collapse to exclusive modal — opening a second dismisses the first. When `modal` is true, the engine ignores `regions` + `chrome` on this mode."
+				},
+				"regions": {
+					"type": "object",
+					"patternProperties": {
+						"^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$": {
+							"$ref": "#/$defs/regionState"
+						}
+					},
+					"additionalProperties": false,
+					"description": "Region-id-keyed map of region-state objects. Keys match the engine's template ids (or nested `parent/child` ids for child regions instantiated via `regions.<parent>.regions`). The schema for region-state is engine-defined; see `regionState` for the recommended cross-engine vocabulary. The screen's own `screens[id].regions` block deep-merges on top of this at resolve time, so authors can override per-region without forking the mode."
+				},
+				"chrome": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Optional engine-level chrome flags that aren't tied to a specific region. Use for global tweaks the engine honors at chrome level (e.g. `density` override, global background swap, header visibility flag). Schema is loose — each engine defines its own chrome vocabulary and documents accepted keys in its README. Ignored when `modal` is true."
+				}
+			}
+		},
+
+		"regionState": {
+			"type": "object",
+			"additionalProperties": true,
+			"description": "Region-state object inside `modes[id].regions[regionId]`. The schema is intentionally loose (`additionalProperties: true`) because each engine ships its own region-state vocabulary tuned to the chrome surfaces it owns. Engine authors document their accepted keys in the engine README. The recommended cross-engine vocabulary is `hidden` (boolean — hide via CSS; mount tree unchanged), `compact` (boolean — reduced chrome; sidebar collapses to icons, toolbar shrinks to back + save), `minimal` (boolean — stricter than `compact`; only essential affordances), `fullWidth` (boolean — content region expands into the space normally occupied by hidden regions). Authors writing screen-level `regions` overrides depend on knowing which keys an engine accepts; engines should match these names whenever the semantics align so screen authoring is portable across engines. Engines extend with their own vocabulary as needed — `core:desktop` adds `pinned`, `floating`, `tiled` for dock + window-frame regions; `core:single-pane` adds `drawerOpen`. Mount trees stay stable across mode changes: regions are hidden via CSS, not unmounted, matching `core:persists-across-navigation` semantics."
+		},
+
+		"tokenAlias": {
+			"type": "string",
+			"pattern": "^\\{[a-zA-Z][a-zA-Z0-9._-]*\\}$",
+			"description": "A token alias reference — a curly-brace-wrapped path resolved by the runtime against the merged tokens.json (paths starting with a token category like `color.`, `spacing.`, etc.) or against the merged admin.json `styles` tree (paths starting with `styles.`). See spec §4.0.2 and §9 for resolution rules."
+		},
+
+		"cssLayoutValue": {
+			"type": [ "string", "number" ],
+			"description": "A CSS value used in the layout vocabulary. May be a literal CSS string (`240px`, `min(720px, 50%)`, `sticky`), a token alias (`{styles.chrome.sidebar.background}` — for properties accepting decoration values), or a numeric pixel value as shorthand. Validation of the value's syntactic correctness against the property's expected type is delegated to the runtime's CSS parser."
+		},
+
+		"regionTemplate": {
+			"type": "object",
+			"required": [ "role" ],
+			"additionalProperties": false,
+			"description": "A region template declares a reusable region shape that admin.json can instantiate. Templates supply defaults; the instantiating region overrides what it cares about. Templates may declare nested child regions — those become independently addressable as `{parent}/{child}` in admin.json.",
+			"properties": {
+				"role": {
+					"$ref": "#/$defs/ariaRole",
+					"description": "The ARIA role the resulting region carries when instantiated. Drives engine specialization in the active engine. A template with `role: \"navigation\"` produces a region that behaves like a sidebar nav. Required."
+				},
+
+				"platform": {
+					"$ref": "#/$defs/regionPlatform",
+					"description": "Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating. The engine honors only services in its top-level `honored-platform` list; other entries are no-ops."
+				},
+
+				"default-style": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`). The resolver expands aliases against the merged token tree at compile time. admin.json overrides via the region's `style` field; the merge is shallow (top-level CSS property overrides win). Schema is loose because the engine's CSS allowlist is ultimately what's enforced; declaring `display: grid` here is technically permitted in the engine's own templates because the engine controls layout context, but the same is not true for admin.json regions (see the admin.json schema's `layout` allowlist).",
+					"examples": [
+						{
+							"inline-size": "240px",
+							"block-size": "100%",
+							"background": "{styles.chrome.sidebar.background}",
+							"color": "{styles.chrome.sidebar.foreground}"
+						}
+					]
+				},
+
+				"regions": {
+					"type": "object",
+					"patternProperties": {
+						"^[a-z][a-z0-9-]*$": {
+							"$ref": "#/$defs/regionTemplate"
+						}
+					},
+					"additionalProperties": false,
+					"description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When admin.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. admin.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
+				}
+			}
+		},
+
+		"defaultStyles": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Engine-supplied seed defaults for the shell `styles` tree. Same shape as the admin.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER admin.json so individual shells override anything they care to customize.",
+			"properties": {
+				"theme": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after admin.json overrides apply."
+				},
+				"chrome": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as admin.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
+				},
+				"color": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — top-level color tokens. Layered onto the seed-derived ThemeProvider output via the host's sibling `<style>` block."
+				},
+				"border": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — border tokens."
+				},
+				"dimension": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — dimension tokens."
+				},
+				"elevation": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — elevation tokens."
+				},
+				"font": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "Direct WPDS slot overrides — font tokens."
+				}
+			}
+		},
+
+		"regionInstance": {
+			"type": "object",
+			"additionalProperties": true,
+			"description": "A region instance shape — matches what admin.json `regions[id]` accepts. Loose by design so the engine's `defaultRegions` can declare the same vocabulary an authored workspace would. Recognized fields (all optional): `template` (region template id to instantiate from the engine's `templates` catalog), `role` (ARIA role when not using a template), `app` (mounted app id), `config` (mounted-app config), `routing` (e.g. `{ route-key: \"_self\" }` to participate in URL routing), `platform` (region-level platform service requests), `style` (per-region style overrides), `regions` (nested child region instances), plus engine-specific keys the renderer interprets at mount time. Validation of the structural invariants (e.g. `app` xor `routing.route-key`, capability fast-path) happens at runtime, not in the schema.",
+			"properties": {
+				"template": { "type": "string", "minLength": 1 },
+				"role":     { "$ref": "#/$defs/ariaRole" },
+				"app":      { "type": "string", "minLength": 1 },
+				"config":   { "type": "object" },
+				"routing": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"route-key": { "type": "string", "minLength": 1 },
+						"mode": {
+							"enum": [ "query", "mirror" ],
+							"description": "Slot resolution mode. `query` (default) reads the URL query parameter of the same name. `mirror` synthesizes `@<route-key><primary>` for multi-app peer slots (3c.4). See admin-v3.json#$defs/regionInstance.routing.mode for the full contract."
+						}
+					}
+				},
+				"platform": { "$ref": "#/$defs/regionPlatform" },
+				"style":    { "type": "object", "additionalProperties": true },
+				"regions": {
+					"type": "object",
+					"patternProperties": {
+						"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/regionInstance" }
+					},
+					"additionalProperties": false
+				}
+			}
+		},
+
+		"regionPlatform": {
+			"type": "object",
+			"additionalProperties": false,
+			"description": "Platform services a region requests. Same shape as the app manifest's `platform` block, but applied at the region level rather than the app level. When both a region and its mounted app declare the same platform service, the region's declaration is the floor: the engine honors the strictest combined request.",
+			"properties": {
+				"core:modal": { "type": "boolean" },
+				"core:dismiss-on": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": {
+						"enum": [
+							"Escape",
+							"backdrop-click",
+							"outside-click",
+							"navigation"
+						]
+					}
+				},
+				"core:autofocus-target": { "type": "string", "minLength": 1 },
+				"core:triggerable": { "type": "boolean" },
+				"core:persists-across-navigation": { "type": "boolean" },
+				"core:dirty-state": { "type": "boolean" },
+				"core:block-navigation-on-dirty": { "type": "boolean" },
+				"core:dynamic-children": {
+					"type": "boolean",
+					"description": "When true, this region's mounted app may add/remove child regions at runtime via the `useDynamicChildren(regionId)` API. Kernel renders runtime children through the same nested-region recursion as static `regions`, so all per-region services (routing, dirty-state, triggerStore, capability gating, ARIA roles, theming scope) apply uniformly. Added 2026-05-12 for windowed/MDI/desktop-style engines. See spec §5.5."
+				},
+				"core:trigger": {
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"shortcut": { "type": "string", "minLength": 1 }
+					},
+					"description": "Declarative trigger placeholder — a hint that this region is intended to be invoked by a keystroke. The actual binding is decided in admin.json's `commands` block (v3) / `bindings` block (v2); this field is documentary and may be used by tooling to suggest default bindings."
+				}
+			}
+		}
+	}
+}

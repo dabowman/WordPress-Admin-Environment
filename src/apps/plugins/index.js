@@ -7,7 +7,7 @@ import { Button, Notice, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -212,8 +212,13 @@ function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
-export default function PluginsApp() {
-	const { config: viewConfig } = useViewConfig( 'root', 'plugin' );
+/**
+ * @param {Object} root0          Mount-supplied props.
+ * @param {Object} [root0.config] App config — `config.screenId` keys the per-screen view lookup.
+ */
+export default function PluginsApp( { config = {} } = {} ) {
+	const screenId = config.screenId || null;
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const pluginsQuery = useMemo( () => ( { context: 'edit' } ), [] );
 	const { records, isResolving } = useEntityRecords(
@@ -289,7 +294,7 @@ export default function PluginsApp() {
 	const [ view, setView ] = useState( () => {
 		const seed = {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		};
 		// Title-dedup: when defaultView declares a `titleField`, drop it
 		// from the visible-fields list so DataViews doesn't render the
@@ -349,17 +354,17 @@ export default function PluginsApp() {
 	}, [ records, view ] );
 
 	const fields = useMemo(
-		() => buildFields( viewConfig.fields ?? [], buildFieldRenderers() ),
-		[ viewConfig ]
+		() => buildFields( dataViewConfig.fields ?? [], buildFieldRenderers() ),
+		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				setPluginStatus,
 				deletePlugins,
 			} ),
-		[ viewConfig, setPluginStatus, deletePlugins ]
+		[ dataViewConfig, setPluginStatus, deletePlugins ]
 	);
 
 	const paginationInfo = useMemo(
@@ -392,7 +397,9 @@ export default function PluginsApp() {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isLoading }
-				defaultLayouts={ viewConfig.defaultLayouts ?? { table: {} } }
+				defaultLayouts={
+					dataViewConfig.defaultLayouts ?? { table: {} }
+				}
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id }

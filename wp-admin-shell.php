@@ -81,15 +81,20 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-field-collections.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-view-config.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-v3-compiler.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-view-config-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-field-collections-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli-migrate.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
@@ -381,6 +386,14 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
 		'shells'        => wp_admin_shell_get_available_shells(),
+		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
+		// production builds. PHP `_deprecated_hook` is gated by
+		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
+		// JS shims default to `NODE_ENV !== 'production'` so prod builds
+		// stay silent. Site admins with `WP_DEBUG` on get JS warnings
+		// even when consuming a minified shell bundle. Removed in v3.1
+		// when the shims themselves go away.
+		'debug'         => defined( 'WP_DEBUG' ) && WP_DEBUG,
 		'user'          => array(
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
@@ -403,6 +416,15 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		// `compileStyles` consumes this when resolving non-`styles.*`
 		// curly-brace aliases in admin.json `styles`.
 		'tokens'        => WP_Admin_Shell_Tokens::resolve(),
+		// v3 — flattened engine-modes catalog. The active engine's
+		// `modes` block is walked for `extends` chains (depth-limited),
+		// then the `wp_admin_shell_engine_modes_{engineId}` filter runs
+		// so plugins can contribute additional modes. Empty object when
+		// no engine is resolved (degenerate; the shell would fail to
+		// mount upstream of this anyway).
+		'engineModes'   => $active_engine_manifest
+			? WP_Admin_Shell_Modes::resolve_engine_modes( $active_engine_manifest )
+			: WP_Admin_Shell_Modes::synthesize_default_catalog(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -525,6 +547,37 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		}
 	}
 
+	// v3: per-screen permissions block. screens[id].permissions has
+	// `capabilities[]` + `roles[]`; we collect the cap slugs so the
+	// runtime cap-map covers v3 screens the same way v2 region.capability
+	// strings were collected. Roles are evaluated separately (membership
+	// check, not a capability check).
+	if ( isset( $config['screens'] ) && is_array( $config['screens'] ) ) {
+		foreach ( $config['screens'] as $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			$caps = $screen['permissions']['capabilities'] ?? array();
+			if ( is_array( $caps ) ) {
+				foreach ( $caps as $cap ) {
+					if ( is_string( $cap ) && $cap !== '' ) {
+						$declared[ $cap ] = true;
+					}
+				}
+			}
+		}
+	}
+
+	// v3: menu items can carry their own `permissions.capabilities[]`
+	// when they don't inherit from a bound screen (e.g. standalone link
+	// items registered via `wp_admin_shell_register_menu_item()`). Walk
+	// the menu tree so those caps reach the runtime cap-map too — without
+	// this, `userCan()` would default-false on inline-permissioned menu
+	// items that have no screen binding.
+	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
+		wpas_collect_menu_item_caps( $config['menu'], $declared );
+	}
+
 	// Built-in source capability floors (mirrors registry/builtins.js
 	// `capabilities` arrays). Kept tight to the surface authors actually
 	// declare — adding every WP cap here would inflate the inline script.
@@ -537,6 +590,33 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 		$out[ $cap ] = current_user_can( $cap );
 	}
 	return $out;
+}
+
+/**
+ * Walk a v3 menu tree (recursive `items` map) and collect every cap slug
+ * declared on `permissions.capabilities[]`. Mirrors the screen-perms walk
+ * for menu items that don't inherit perms from a bound screen.
+ */
+function wpas_collect_menu_item_caps( $menu, &$declared ) {
+	if ( ! is_array( $menu ) ) {
+		return;
+	}
+	foreach ( $menu as $item ) {
+		if ( ! is_array( $item ) ) {
+			continue;
+		}
+		$caps = $item['permissions']['capabilities'] ?? array();
+		if ( is_array( $caps ) ) {
+			foreach ( $caps as $cap ) {
+				if ( is_string( $cap ) && $cap !== '' ) {
+					$declared[ $cap ] = true;
+				}
+			}
+		}
+		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
+			wpas_collect_menu_item_caps( $item['items'], $declared );
+		}
+	}
 }
 
 /**
@@ -829,20 +909,25 @@ function wp_admin_shell_get_available_shells() {
 		}
 		$slug             = basename( $file, '.json' );
 		$by_slug[ $slug ] = array(
-			'slug'           => $slug,
-			'title'          => $data['title'] ?? $slug,
-			'description'    => $data['description'] ?? '',
-			'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+			'slug'             => $slug,
+			'title'            => $data['title'] ?? $slug,
+			'description'      => $data['description'] ?? '',
+			// Schema-canonical kebab form emitted across the PHP → JS
+			// bridge. The legacy `userSwitchable` (camelCase) read
+			// stays as a one-cycle fallback at READ time only; the JS
+			// surface consumes `user-switchable` exclusively. See
+			// `src/apps/user-menu/index.js` for the JS-side reader.
+			'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
 		);
 	}
 
 	if ( class_exists( 'WP_Admin_Shell_Shells' ) ) {
 		foreach ( WP_Admin_Shell_Shells::all() as $slug => $data ) {
 			$by_slug[ $slug ] = array(
-				'slug'           => $slug,
-				'title'          => $data['title'] ?? $slug,
-				'description'    => $data['description'] ?? '',
-				'userSwitchable' => ! empty( $data['userSwitchable'] ) || ! empty( $data['user-switchable'] ),
+				'slug'             => $slug,
+				'title'            => $data['title'] ?? $slug,
+				'description'      => $data['description'] ?? '',
+				'user-switchable'  => ! empty( $data['user-switchable'] ) || ! empty( $data['userSwitchable'] ),
 			);
 		}
 	}

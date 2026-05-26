@@ -1,21 +1,33 @@
 /**
- * core:dashboard-host — widget-grid controller (C4).
+ * core:dashboard-host — widget-grid controller (v3 reshape).
  *
- * Reads the manifest registry for every app declaring a
- * `dashboardWidget` block, merges admin.json `dashboardWidgets`
- * overrides per-id, and renders each surviving widget as a tile
- * inside a grid container. Each tile mounts the widget app via
+ * Reads the current `screens[screenId].apps[]` array, filters to
+ * entries with `slot: "grid"`, and renders each as a tile inside a
+ * CSS Grid container. Each tile mounts the widget app via
  * `<MountedApp>` so the existing 4-layer cap gating + theming +
  * source-cap floor apply uniformly.
  *
- * Why direct render instead of `useDynamicChildren`: the v1 host
- * is config-driven (no drag-to-reorder, no runtime mutation). The
+ * v3 vs v2:
+ *   - **v2** read manifest `dashboardWidget` blocks + admin.json
+ *     `dashboardWidgets` overrides. Both have been retired — the
+ *     placement model is now uniform with the rest of the workspace
+ *     (screen-app entries with a `slot` field).
+ *   - **v3** reads `config.screens[screenId].apps[]` filtered by
+ *     `slot === 'grid'`. Per-entry `size` / `position` override the
+ *     manifest's `slotHints` defaults.
+ *
+ * The v3 compiler injects `config.screenId` into the route config
+ * before mount, so the host knows which screen it's hosting. v2
+ * shells reach this host through the compiler's
+ * `synthesize_v2_screens_from_routes` back-compat path.
+ *
+ * Why direct render instead of `useDynamicChildren`: the host is
+ * config-driven (no drag-to-reorder, no runtime mutation). The
  * `core:dashboard-grid` template still ships with the
  * `core:dynamic-children` platform service for engines that want
  * to drive widget mounts as runtime-mutable child regions; a
  * future engine can replace this host with a compositor that
- * pushes widget regions through the dynamic-children store. The
- * bundled host stays simple.
+ * pushes widget regions through the dynamic-children store.
  *
  * Position handling: explicit `{row, col}` placements set inline
  * `grid-row` / `grid-column` on the tile. `auto` (default) leaves
@@ -28,7 +40,7 @@ import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 import { MountedApp } from '../../runtime/regions/mountApp';
-import { composeWidgets } from '../../runtime/dashboardGrid/composeWidgets.mjs';
+import { composeScreenWidgets } from './composeScreenWidgets.mjs';
 import { useKernel } from '../../runtime/kernel-context';
 
 import './index.css';
@@ -58,19 +70,28 @@ function tileStyle( widget ) {
 	return style;
 }
 
-export default function DashboardHostApp() {
-	const { config } = useKernel();
+/**
+ * @param {Object} root0
+ * @param {Object} [root0.config] Per-mount config — the v3 compiler injects `screenId`.
+ */
+export default function DashboardHostApp( { config = {} } = {} ) {
+	const { config: kernelConfig } = useKernel();
 
-	// `window.wpAdminShell.manifests.apps` is the inline-script snapshot
-	// — a single object reference for the page's lifetime. Reading the
-	// same reference inside useMemo would still produce a fresh `{}`
-	// fallback on every render. Stable-ify both inputs first, then
-	// derive the widget list.
+	const screenId =
+		typeof config?.screenId === 'string' && config.screenId !== ''
+			? config.screenId
+			: '';
+
 	const widgets = useMemo( () => {
 		const manifests = window.wpAdminShell?.manifests?.apps || {};
-		const overrides = config?.dashboardWidgets || {};
-		return composeWidgets( manifests, overrides );
-	}, [ config?.dashboardWidgets ] );
+		const screen =
+			screenId &&
+			kernelConfig?.screens &&
+			typeof kernelConfig.screens === 'object'
+				? kernelConfig.screens[ screenId ]
+				: null;
+		return composeScreenWidgets( { screen, manifests } );
+	}, [ screenId, kernelConfig?.screens ] );
 
 	if ( widgets.length === 0 ) {
 		return (
@@ -101,7 +122,7 @@ export default function DashboardHostApp() {
 					</div>
 					<div className="wp-admin-shell-dashboard-tile__body">
 						<MountedApp
-							appRef={ widget.id }
+							appRef={ widget.appId }
 							regionId={ `dashboard-widget/${ widget.id }` }
 						/>
 					</div>

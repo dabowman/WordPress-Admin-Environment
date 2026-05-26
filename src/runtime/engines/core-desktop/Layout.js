@@ -26,6 +26,8 @@
  * instance via `useWindowManager()`.
  */
 
+import { SlotFillProvider } from '@wordpress/components';
+
 import { Region } from '../../regions/Region';
 import { WindowManagerProvider } from './windowing/WindowManagerContext';
 
@@ -39,31 +41,40 @@ export default function CoreDesktopLayout( { regions } ) {
 		( r ) => ! PERSISTENT_IDS.has( r.id )
 	);
 
+	// `<SlotFillProvider>` lives in the engine layout (not the kernel)
+	// to keep the kernel DS-neutral. Bundled apps mounted inside
+	// windows still use `@wordpress/components` Slot/Fill (e.g.
+	// `core:simple-editor`'s `core:editor.sidebar` slot), so the
+	// substrate ships here too. `<SlotFillProvider>` lives outside
+	// `<WindowManagerProvider>` so the substrate is also available
+	// to any sibling chrome apps the engine may add in the future.
 	return (
-		<WindowManagerProvider>
-			<div
-				className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
-				data-engine="core:desktop"
-			>
-				{ wallpaper && (
-					<div className="wp-admin-shell-desktop__wallpaper-slot">
-						<Region region={ wallpaper } />
-					</div>
-				) }
-				{ workspace && (
-					<div className="wp-admin-shell-desktop__workspace-slot">
-						<Region region={ workspace } />
-					</div>
-				) }
-				{ dock && (
-					<div className="wp-admin-shell-desktop__dock-slot">
-						<Region region={ dock } />
-					</div>
-				) }
-				{ overlays.map( ( region ) => (
-					<Region key={ region.id } region={ region } />
-				) ) }
-			</div>
-		</WindowManagerProvider>
+		<SlotFillProvider>
+			<WindowManagerProvider>
+				<div
+					className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
+					data-engine="core:desktop"
+				>
+					{ wallpaper && (
+						<div className="wp-admin-shell-desktop__wallpaper-slot">
+							<Region region={ wallpaper } />
+						</div>
+					) }
+					{ workspace && (
+						<div className="wp-admin-shell-desktop__workspace-slot">
+							<Region region={ workspace } />
+						</div>
+					) }
+					{ dock && (
+						<div className="wp-admin-shell-desktop__dock-slot">
+							<Region region={ dock } />
+						</div>
+					) }
+					{ overlays.map( ( region ) => (
+						<Region key={ region.id } region={ region } />
+					) ) }
+				</div>
+			</WindowManagerProvider>
+		</SlotFillProvider>
 	);
 }

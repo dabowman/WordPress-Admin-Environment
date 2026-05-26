@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app-v3.json",
 	"id": "core:users",
 	"version": 1,
 	"title": "Users",
@@ -14,30 +14,41 @@
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"viewConfig": {
+	"dataView": {
 		"kind": "root",
 		"name": "user",
-		"defaultView": {
-			"type": "table",
-			"search": "",
-			"filters": [],
-			"page": 1,
-			"perPage": 20,
-			"sort": { "field": "name", "direction": "asc" },
-			"fields": [ "email", "roles", "registered_date" ],
-			"titleField": "name",
-			"layout": {}
-		},
-		"defaultLayouts": { "table": {}, "grid": {} },
-		"fields": [
-			{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
-			{ "id": "email", "type": "text", "label": "Email", "enableGlobalSearch": true },
-			{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is" ] } },
-			{ "id": "registered_date", "type": "datetime", "label": "Registered" }
-		],
-		"actions": [
-			{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
-		]
+		"variants": {
+			"_default": {
+				"defaultView": {
+					"type": "table",
+					"search": "",
+					"filters": [],
+					"page": 1,
+					"perPage": 20,
+					"sort": { "field": "name", "direction": "asc" },
+					"fields": [ "email", "roles", "registered_date" ],
+					"titleField": "name",
+					"layout": {}
+				},
+				"defaultLayouts": { "table": {}, "grid": {} },
+				"fields": [
+					{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+					{ "id": "email", "type": "text", "label": "Email", "enableGlobalSearch": true },
+					{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is" ] } },
+					{ "id": "registered_date", "type": "datetime", "label": "Registered" }
+				],
+				"actions": [
+					{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
+				]
+			},
+			"administrators": {
+				"extends": "_default",
+				"defaultView": {
+					"fields": [ "email", "registered_date" ],
+					"filters": [ { "field": "roles", "operator": "isAny", "value": [ "administrator" ] } ]
+				}
+			}
+		}
 	},
 	"window": {
 		"defaultSize": {
@@ -57,9 +68,9 @@
 		"data": {
 			"reads": [
 				{
-					"source": "viewConfigs.root.user._default",
+					"source": "settings.dataViews.root.user.{variant|_default}",
 					"via": "kernel-config",
-					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig('root', 'user')`; baseline ships in `app.json#viewConfig` and is injected post-merge by `inject_app_baselines`.",
+					"purpose": "Resolved DataView doc — fields, default view, default layouts, actions. Read via `useDataView(screenId)`; baseline ships in `app.json#dataView` (with variants family) and is injected post-merge by `inject_app_baselines`.",
 					"fields": [
 						"fields",
 						"defaultView",
@@ -179,14 +190,14 @@
 				"note": "Call `invalidateResolution('getEntityRecords', ['root', 'user', queryArgs])` — the per-row `deleteEntityRecord` does not bust the parent query."
 			},
 			{
-				"concern": "view-config-overridable",
-				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. admin.json `viewConfigs.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_shell_view_config_root_user` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
+				"concern": "data-view-overridable",
+				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. admin.json `settings.dataViews.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_shell_data_view_config_root_user[_<variant>]` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/dataviews/wp#DataViews",
-				"purpose": "Table view with selection + bulk action."
+				"import": "@wordpress/dataviews/wp",
+				"purpose": "DataViews + DataForm components, field descriptor shape. Table view with selection + bulk action."
 			},
 			{
 				"import": "@wordpress/ui#Button, Stack, Text",

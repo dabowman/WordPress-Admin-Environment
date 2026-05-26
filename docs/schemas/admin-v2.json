@@ -1,7 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin/v1.json",
-	"title": "WP Admin Shell — admin.json (v1)",
+	"$id": "https://schemas.wp.org/admin/v2.json",
+	"$comment": "Previously published as https://schemas.wp.org/admin/v1.json; identifier corrected in v3.0 beta cycle to match the file version.",
+	"title": "WP Admin Shell — admin.json (v2)",
 	"description": "Declares install-specific decisions for a WP Admin Shell shell: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every entry should be a decision a site author plausibly makes — anything intrinsic to apps or engines belongs in their respective manifests, not here. Multiple admin.json files can coexist on a site (one per shell); selection of the active shell is per-site, per-role, or per-user via the cascade. See WP Admin Shell Design Spec §4.3.",
 
 	"type": "object",

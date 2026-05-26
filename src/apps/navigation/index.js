@@ -18,34 +18,47 @@ import {
 	useSidebarNavigation,
 } from './_components/SidebarNavigationContext';
 
+import { useKernel } from '../../runtime/kernel-context';
 import { useRoute, navigate } from '../../runtime/routing/router';
 import { userCan } from '../../runtime/capabilities/userCan';
 
 /**
  * core:navigation — sidebar nav app.
  *
- * Reads its tree from `props.config.items` (the navigation array). Each
- * item self-describes inline via `{ label, icon, href, capability }`
- * for app links, `{ separator: true }` for dividers,
- * `{ group, items }` for inline grouping, and `{ screen, items }` for
- * drill-down sub-screens. External links carry `external: true`. The
- * v2 admin.json has no applications array, so nav items can't reuse a
- * shared app catalog — each item carries its own metadata.
+ * v3: reads `config.menu` (nested tree) and `config.screens` (screen
+ * registry) from the resolved kernel config. The PHP `bind_screens`
+ * resolver pass has already flowed screen `label` / `icon` /
+ * `description` / `href` / `permissions` into matching menu items, so
+ * each entry is renderable in isolation.
+ *
+ * The per-region `props.config` block is read for navigation-app
+ * options that aren't part of the engine-agnostic menu tree —
+ * `collapsed`, `title`, `description`.
+ *
+ * Drilldown state lives in the URL slot `?screen=<id>` so it deep-links
+ * and survives refresh.
  * @param {Object} root0
  * @param {*}      root0.config
  */
 export default function NavigationApp( { config: navConfig = {} } ) {
 	const collapsed = !! navConfig.collapsed;
 
+	const { config: kernelConfig } = useKernel();
 	const route = useRoute();
 	const currentPrimary = route.primary || '';
 
-	// Spec §8 — recursive prune of items the user cannot reach.
-	const rawItems = Array.isArray( navConfig.items ) ? navConfig.items : [];
-	const items = pruneNavItems( rawItems );
+	// v3 — menu tree at root. Each entry already screen-bound by PHP.
+	const rawMenu =
+		kernelConfig &&
+		typeof kernelConfig.menu === 'object' &&
+		kernelConfig.menu !== null
+			? kernelConfig.menu
+			: {};
 
-	// Provider hoisted to wrap collapsed mode too, so any future
-	// drill-down inside the icon rail picks up the same nav-state.
+	// Sort siblings by `position` (lower first), then drop hidden +
+	// capability-denied entries recursively.
+	const items = pruneMenu( orderTree( rawMenu ) );
+
 	return (
 		<SidebarNavigationProvider>
 			{ collapsed ? (
@@ -65,30 +78,139 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 }
 
 /**
- * Resolve a nav item to { key, href, label, icon, isActive(currentPrimary) }.
- * v2 inline-only — items self-describe.
- * @param {*} item
+ * Convert a `{ id => entry }` v3 menu tree into a sorted array of
+ * `{ id, ...entry, items: orderTree(entry.items) }`. Sort siblings by
+ * `position` ascending (lower first), then registration order for ties.
+ *
+ * @param {Object} tree v3 menu object keyed by id.
+ * @return {Array} Sorted siblings.
  */
-function resolveNavTarget( item ) {
-	if ( ! item.href ) {
-		return null;
+function orderTree( tree ) {
+	if ( ! tree || typeof tree !== 'object' ) {
+		return [];
 	}
-	const href = item.href;
-	const target = hashPrimary( href );
-	return {
-		key: href,
-		href,
-		label: item.label,
-		icon: item.icon,
-		isActive: ( currentPrimary ) => !! target && currentPrimary === target,
-	};
+	const entries = Object.entries( tree );
+	const withIndex = entries.map( ( [ id, entry ], i ) => ( {
+		id,
+		entry,
+		i,
+	} ) );
+	withIndex.sort( ( a, b ) => {
+		const pa = Number.isInteger( a.entry?.position )
+			? a.entry.position
+			: Number.POSITIVE_INFINITY;
+		const pb = Number.isInteger( b.entry?.position )
+			? b.entry.position
+			: Number.POSITIVE_INFINITY;
+		if ( pa === pb ) {
+			return a.i - b.i;
+		}
+		return pa < pb ? -1 : 1;
+	} );
+	return withIndex.map( ( { id, entry } ) => {
+		const sub =
+			entry && typeof entry === 'object' && entry.items
+				? orderTree( entry.items )
+				: undefined;
+		return sub ? { id, ...entry, items: sub } : { id, ...entry };
+	} );
+}
+
+/**
+ * Recursive prune. Drops items that:
+ *   - declare `hidden: true`,
+ *   - declare permissions the user fails (any capability NOT held),
+ *   - are containers (have `items`) whose pruned children are empty AND
+ *     have no own `href` / screen affordance to fall back on,
+ * Separators that orphan at the top/bottom of a list are trimmed.
+ *
+ * @param {Array} items Sorted siblings.
+ * @return {Array} Pruned siblings.
+ */
+function pruneMenu( items ) {
+	if ( ! Array.isArray( items ) ) {
+		return [];
+	}
+	const out = [];
+	for ( const item of items ) {
+		if ( ! item || typeof item !== 'object' ) {
+			continue;
+		}
+		if ( item.hidden === true ) {
+			continue;
+		}
+		if ( item.separator === true ) {
+			out.push( item );
+			continue;
+		}
+		if ( ! itemPassesPermissions( item ) ) {
+			continue;
+		}
+		if ( Array.isArray( item.items ) && item.items.length > 0 ) {
+			const children = pruneMenu( item.items );
+			if ( children.length === 0 && ! item.href ) {
+				// Container with no surviving children and no own
+				// affordance — drop.
+				continue;
+			}
+			out.push( { ...item, items: children } );
+			continue;
+		}
+		out.push( item );
+	}
+	while ( out.length && out[ 0 ].separator ) {
+		out.shift();
+	}
+	while ( out.length && out[ out.length - 1 ].separator ) {
+		out.pop();
+	}
+	return out;
+}
+
+/**
+ * v3 permissions are OR-semantic: pass if ANY capability holds OR ANY
+ * role-membership check holds. For client-side prune the conservative
+ * read is "user holds at least one declared cap" — role checks are
+ * server-side only (no client-side role map). Server-side cap gating
+ * still applies on top.
+ *
+ * Items without a `permissions` block are visible (admin.json fallback
+ * to admin-only is enforced server-side and reflected in the cap map).
+ *
+ * @param {Object} item Menu item.
+ * @return {boolean} Whether the user passes the item's permissions.
+ */
+function itemPassesPermissions( item ) {
+	const perms = item.permissions;
+	if ( ! perms || typeof perms !== 'object' ) {
+		return true;
+	}
+	const caps = Array.isArray( perms.capabilities ) ? perms.capabilities : [];
+	const roles = Array.isArray( perms.roles ) ? perms.roles : [];
+	if ( caps.length === 0 && roles.length === 0 ) {
+		return true;
+	}
+	for ( const cap of caps ) {
+		if ( typeof cap === 'string' && userCan( cap ) ) {
+			return true;
+		}
+	}
+	// No client-side role check today — server-side cap gating is
+	// authoritative. When the only access route is by role, render the
+	// item (server will 403 on the route if it shouldn't be reachable).
+	if ( roles.length > 0 ) {
+		return true;
+	}
+	return false;
 }
 
 /**
  * Extract the primary path from an in-shell hash href (`#/posts/foo` →
  * `/posts/foo`). External / non-hash hrefs return null so they never
  * match the active state.
- * @param {*} href
+ *
+ * @param {string} href Hash href.
+ * @return {string|null} Primary path or null.
  */
 function hashPrimary( href ) {
 	if ( typeof href !== 'string' || ! href.startsWith( '#' ) ) {
@@ -107,64 +229,73 @@ function CollapsedNavigation( { items, currentPrimary } ) {
 			gap="xs"
 			className="wp-admin-shell-nav__items"
 		>
-			{ items.map( ( item, idx ) =>
+			{ flattenLeaves( items ).map( ( item, idx ) =>
 				renderCollapsedItem( item, idx, currentPrimary )
 			) }
 		</Stack>
 	);
 }
 
+/**
+ * Collapsed nav surfaces leaf items only — drilldown affordances don't
+ * fit in the icon rail. Walks the tree and pulls every renderable leaf
+ * (has `href`, is not a separator/container) up to a flat list,
+ * preserving sort order.
+ *
+ * @param {Array} items Pruned siblings.
+ * @return {Array} Flat list of leaf items.
+ */
+function flattenLeaves( items ) {
+	const out = [];
+	for ( const item of items ) {
+		if ( item.separator ) {
+			continue;
+		}
+		if ( Array.isArray( item.items ) && item.items.length > 0 ) {
+			out.push( ...flattenLeaves( item.items ) );
+			continue;
+		}
+		if ( item.href ) {
+			out.push( item );
+		}
+	}
+	return out;
+}
+
 function renderCollapsedItem( item, index, currentPrimary ) {
-	if ( item.screen ) {
-		return ( item.items || [] ).map( ( child, ci ) =>
-			renderCollapsedItem( child, `${ index }-${ ci }`, currentPrimary )
-		);
-	}
-	if ( item.group ) {
-		return ( item.items || [] ).map( ( child, ci ) =>
-			renderCollapsedItem( child, `${ index }-${ ci }`, currentPrimary )
-		);
-	}
-	if ( item.separator ) {
-		return (
-			<hr
-				key={ `sep-${ index }` }
-				className="wp-admin-shell-nav__separator"
-			/>
-		);
-	}
 	if ( item.external && item.href ) {
 		return (
 			<a
-				key={ `ext-${ index }` }
+				key={ `ext-${ item.id || index }` }
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
 				className="wp-admin-shell-nav__link"
+				aria-label={ item.label }
 			>
 				<Icon icon={ resolveIcon( item.icon ) } size={ 24 } />
 			</a>
 		);
 	}
-	const resolved = resolveNavTarget( item );
-	if ( ! resolved ) {
+	if ( ! item.href ) {
 		return null;
 	}
-	const isActive = resolved.isActive( currentPrimary );
+	const target = hashPrimary( item.href );
+	const isActive = !! target && currentPrimary === target;
 	return (
 		<IconButton
-			key={ resolved.key }
+			key={ item.id || `nav-${ index }` }
 			tone="neutral"
 			variant="minimal"
 			className="wp-admin-shell-nav__item"
-			icon={ resolveIcon( resolved.icon ) }
+			icon={ resolveIcon( item.icon ) }
 			render={
 				<a
-					href={ resolved.href }
+					href={ item.href }
 					aria-current={ isActive ? 'true' : undefined }
 				/>
 			}
-			label={ resolved.label }
+			label={ item.label || item.id }
 		/>
 	);
 }
@@ -174,22 +305,41 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 	const navState = useSidebarNavigation();
 	const { record: site } = useEntityRecord( 'root', 'site' );
 
-	// Sub-screen state lives in the URL slot `?screen=<id>` so it
-	// deep-links and survives refresh. Primary path stays content-only.
-	const activeScreen = route.params?.screen || null;
+	// Sub-screen state in `?screen=<id>` URL slot:
+	//   - Explicit screen id ("posts") → that drilldown.
+	//   - `__root` sentinel → user explicitly closed the drilldown via
+	//     back; suppress inference even if the URL primary path matches
+	//     a child item. The sentinel clears on the next leaf-click
+	//     because plain <a href="#/..."> overwrites the entire hash.
+	//   - Absent → infer from primary path. If the URL matches a child
+	//     whose parent container has children, keep that container open
+	//     so clicking a leaf doesn't snap the nav back to root.
+	const explicitScreen = route.params?.screen || null;
+	const userClosedDrilldown = explicitScreen === '__root';
+	const inferredScreen =
+		! explicitScreen && ! userClosedDrilldown
+			? findContainerForPrimary( items, currentPrimary )
+			: null;
+	const activeScreen =
+		explicitScreen && explicitScreen !== '__root'
+			? explicitScreen
+			: inferredScreen;
 	const screenDef = activeScreen ? findScreen( items, activeScreen ) : null;
 
 	if ( screenDef ) {
+		const children = Array.isArray( screenDef.items )
+			? screenDef.items
+			: [];
 		return (
 			<SidebarContent screenKey={ activeScreen }>
 				<SidebarNavigationScreen
-					title={ screenDef.label }
+					title={ screenDef.label || screenDef.id }
 					description={ screenDef.description }
-					onBack={ () => navigateScreen( null ) }
+					onBack={ () => navigateScreen( '__root' ) }
 					content={
 						<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
-							{ ( screenDef.items || [] ).map( ( child, i ) =>
-								renderScreenItem( child, i, currentPrimary )
+							{ children.map( ( child, i ) =>
+								renderLeafItem( child, i, currentPrimary )
 							) }
 						</ItemGroup>
 					}
@@ -230,7 +380,8 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 /**
  * Write `?screen=<id>` (or clear when null) on top of the current
  * primary path. Preserves any other URL params.
- * @param {*} screenId
+ *
+ * @param {string|null} screenId Sub-screen id or null to clear.
  */
 function navigateScreen( screenId ) {
 	if ( typeof window === 'undefined' ) {
@@ -251,72 +402,121 @@ function navigateScreen( screenId ) {
 	navigate( target );
 }
 
+/**
+ * Combined navigation: write a new primary path + `?screen=<id>`
+ * drilldown slot in a single URL update so the second write doesn't
+ * wipe the first's query params.
+ *
+ * @param {string|null} screenId
+ * @param {string|null} ownPath  Container item's own href (e.g. `#/posts`).
+ */
+function navigateContainer( screenId, ownPath ) {
+	if ( typeof window === 'undefined' ) {
+		return;
+	}
+	// Determine the new primary path. If the container has no path
+	// of its own, keep the current primary.
+	const currentHash = window.location.hash || '';
+	const currentQueryIdx = currentHash.indexOf( '?' );
+	const currentPrimary =
+		currentQueryIdx === -1
+			? currentHash
+			: currentHash.slice( 0, currentQueryIdx );
+	const nextPrimary = ownPath || currentPrimary || '#';
+
+	// Build the query slots, preserving anything except the screen
+	// slot (which we set explicitly below).
+	const currentSearch =
+		currentQueryIdx === -1 ? '' : currentHash.slice( currentQueryIdx + 1 );
+	const params = new URLSearchParams( currentSearch );
+	if ( screenId ) {
+		params.set( 'screen', screenId );
+	} else {
+		params.delete( 'screen' );
+	}
+	const next = params.toString();
+	const target = next ? `${ nextPrimary }?${ next }` : nextPrimary;
+	navigate( target );
+}
+
+/**
+ * Root-level item renderer. Items with nested `items` become drilldown
+ * affordances (chevron + click pushes `?screen=<id>` and slides in the
+ * sub-screen). Everything else renders as a leaf.
+ *
+ * @param {Object}      item           Menu item.
+ * @param {number}      index          Sibling index.
+ * @param {string}      currentPrimary Active URL primary path.
+ * @param {Object|null} navState       Sidebar nav state context.
+ * @return {*} React element.
+ */
 function renderRootItem( item, index, currentPrimary, navState ) {
 	if ( item.separator ) {
 		return (
 			<hr
-				key={ `sep-${ index }` }
+				key={ `sep-${ item.id || index }` }
 				className="wp-admin-shell-nav__separator"
 			/>
 		);
 	}
 
-	if ( item.screen ) {
-		const hasActiveChild = ( item.items || [] ).some( ( child ) => {
-			const resolved = resolveNavTarget( child );
-			return resolved ? resolved.isActive( currentPrimary ) : false;
+	const hasChildren = Array.isArray( item.items ) && item.items.length > 0;
+	if ( hasChildren ) {
+		// Match wp-admin: clicking a container item with a screen
+		// binding navigates to that screen AND opens the drilldown.
+		// Container items WITHOUT a route binding (pure groups) only
+		// drill down.
+		const ownTarget = item.href ? hashPrimary( item.href ) : null;
+		const ownPath = item.href || null;
+		const hasActiveChild = item.items.some( ( child ) => {
+			const target = child.href ? hashPrimary( child.href ) : null;
+			return !! target && currentPrimary === target;
 		} );
+		const isActive =
+			( !! ownTarget && currentPrimary === ownTarget ) || hasActiveChild;
 
 		return (
 			<SidebarNavigationItem
-				key={ `screen-${ item.screen }` }
-				uid={ `screen-${ item.screen }` }
+				key={ `screen-${ item.id }` }
+				uid={ `screen-${ item.id }` }
 				icon={ resolveIcon( item.icon ) }
 				withChevron
-				isActive={ hasActiveChild }
+				isActive={ isActive }
 				onClick={ () => {
 					if ( navState ) {
 						navState.navigate(
 							'forward',
-							`[id="screen-${ item.screen }"]`
+							`[id="screen-${ item.id }"]`
 						);
 					}
-					navigateScreen( item.screen );
+					// Single URL write combining the container's own
+					// route (if any) with `?screen=<id>` drilldown slot.
+					// Sequential writes wipe each other — `navigate()`
+					// clears any prior query slots.
+					navigateContainer( item.id, ownPath );
 				} }
 			>
-				{ item.label }
+				{ item.label || item.id }
 			</SidebarNavigationItem>
 		);
 	}
 
-	if ( item.group ) {
-		return (
-			<div
-				key={ `group-${ index }` }
-				className="wp-admin-shell-nav__group"
-			>
-				<span className="wp-admin-shell-nav__group-label">
-					{ item.group }
-				</span>
-				{ ( item.items || [] ).map( ( child, ci ) =>
-					renderScreenItem(
-						child,
-						`${ index }-${ ci }`,
-						currentPrimary
-					)
-				) }
-			</div>
-		);
-	}
-
-	return renderScreenItem( item, index, currentPrimary );
+	return renderLeafItem( item, index, currentPrimary );
 }
 
-function renderScreenItem( item, index, currentPrimary ) {
+/**
+ * Leaf item renderer — separator, external link, or in-shell link.
+ *
+ * @param {Object} item           Menu item.
+ * @param {number} index          Sibling index.
+ * @param {string} currentPrimary Active URL primary path.
+ * @return {*} React element.
+ */
+function renderLeafItem( item, index, currentPrimary ) {
 	if ( item.separator ) {
 		return (
 			<hr
-				key={ `sep-${ index }` }
+				key={ `sep-${ item.id || index }` }
 				className="wp-admin-shell-nav__separator"
 			/>
 		);
@@ -324,37 +524,38 @@ function renderScreenItem( item, index, currentPrimary ) {
 	if ( item.external && item.href ) {
 		return (
 			<SidebarNavigationItem
-				key={ `ext-${ index }` }
-				uid={ `ext-${ index }` }
+				key={ `ext-${ item.id || index }` }
+				uid={ `ext-${ item.id || index }` }
 				icon={ resolveIcon( item.icon ) }
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
 			>
-				{ item.label }
+				{ item.label || item.id }
 			</SidebarNavigationItem>
 		);
 	}
-	const resolved = resolveNavTarget( item );
-	if ( ! resolved ) {
+	if ( ! item.href ) {
 		return null;
 	}
+	const target = hashPrimary( item.href );
+	const isActive = !! target && currentPrimary === target;
 	return (
 		<SidebarNavigationItem
-			key={ resolved.key }
-			uid={ `nav-${ resolved.key }` }
-			icon={ resolveIcon( resolved.icon ) }
-			isActive={ resolved.isActive( currentPrimary ) }
-			href={ resolved.href }
+			key={ item.id || `nav-${ index }` }
+			uid={ `nav-${ item.id || index }` }
+			icon={ resolveIcon( item.icon ) }
+			isActive={ isActive }
+			href={ item.href }
 		>
-			{ resolved.label }
+			{ item.label || item.id }
 		</SidebarNavigationItem>
 	);
 }
 
 function findScreen( items, screenId ) {
 	for ( const item of items ) {
-		if ( item.screen === screenId ) {
+		if ( item.id === screenId && Array.isArray( item.items ) ) {
 			return item;
 		}
 	}
@@ -362,43 +563,40 @@ function findScreen( items, screenId ) {
 }
 
 /**
- * Recursive navigation prune. An item is dropped when:
- *   - it declares a `capability` the user lacks,
- *   - it's a screen/group whose pruned children are empty.
- * Separators that orphan at the top/bottom are stripped.
- * @param {*} items
+ * Find the top-level container item whose subtree contains a child
+ * whose href maps to the active primary URL path. Used to keep a
+ * drilldown open after clicking through to a sub-item (the sub-item's
+ * `<a href>` overwrites the hash, so the `?screen=<id>` slot is lost
+ * unless we infer it from the path).
+ *
+ * Top-level containers only — drilldowns don't nest more than one
+ * level in the v3 default workspace.
+ *
+ * @param {Array}  items          Pruned top-level menu siblings.
+ * @param {string} currentPrimary Active primary URL path.
+ * @return {string|null} Container item id, or null when no match.
  */
-function pruneNavItems( items ) {
-	if ( ! Array.isArray( items ) ) {
-		return [];
+function findContainerForPrimary( items, currentPrimary ) {
+	if ( ! currentPrimary ) {
+		return null;
 	}
-	const out = [];
 	for ( const item of items ) {
-		if ( ! item || typeof item !== 'object' ) {
+		if (
+			! item ||
+			! Array.isArray( item.items ) ||
+			item.items.length === 0
+		) {
 			continue;
 		}
-		if ( item.separator ) {
-			out.push( item );
-			continue;
-		}
-		if ( item.screen || item.group ) {
-			const children = pruneNavItems( item.items );
-			if ( children.length === 0 ) {
+		for ( const child of item.items ) {
+			if ( ! child || typeof child.href !== 'string' ) {
 				continue;
 			}
-			out.push( { ...item, items: children } );
-			continue;
+			const target = hashPrimary( child.href );
+			if ( target && target === currentPrimary ) {
+				return item.id;
+			}
 		}
-		if ( item.capability && ! userCan( item.capability ) ) {
-			continue;
-		}
-		out.push( item );
 	}
-	while ( out.length && out[ 0 ].separator ) {
-		out.shift();
-	}
-	while ( out.length && out[ out.length - 1 ].separator ) {
-		out.pop();
-	}
-	return out;
+	return null;
 }

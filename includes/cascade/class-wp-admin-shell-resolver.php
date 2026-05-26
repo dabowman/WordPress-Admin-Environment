@@ -108,19 +108,64 @@ class WP_Admin_Shell_Resolver {
 		}
 
 		// Phase 2 — consumer origins (additive, customizable-filtered).
+		// Site sits at the top of the trust tier (core/engine/plugin/site may
+		// add+remove; role/user may only remove). Site uses
+		// `merge_with_tombstones()` — additive on keyed arrays but tombstones
+		// honored. Role/user use strict `merge()` (tombstones no-op). The
+		// permissions trust-tier (shrink-only) enforcement runs against
+		// `screens[].permissions` BEFORE the merge so role/user can't grow
+		// the OR-set even on screens they introduce.
 		foreach ( self::CONSUMER_ORIGINS as $origin ) {
 			$doc = $origins[ $origin ] ?? array();
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
 			$doc    = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
-			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc );
+			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc, $origin );
+			$doc    = WP_Admin_Shell_Permissions::enforce_origin_tier( $doc, $merged, $origin );
 			$tagged = WP_Admin_Shell_Merge::tag_origin( $doc, $origin );
-			$merged = WP_Admin_Shell_Merge::merge( $merged, $tagged );
+			$merged = $origin === 'site'
+				? WP_Admin_Shell_Merge::merge_with_tombstones( $merged, $tagged )
+				: WP_Admin_Shell_Merge::merge( $merged, $tagged );
 		}
 
+		/**
+		 * Filter the cascade-merged admin.json doc before compilation.
+		 *
+		 * Fires after every origin has merged but BEFORE the v3 compiler
+		 * synthesizes the runtime tree (`routes`, `regions`,
+		 * `default-route`). Callbacks therefore receive the AUTHOR-SHAPE
+		 * doc — `workspace` / `screens` / `menu` / `commands` for v3
+		 * shells; legacy `routes` / `regions` for v2 shells —
+		 * not the post-compile shape. Mutating a screen here is fine;
+		 * synthesizing a `regions` block for a v3 shell is not (the
+		 * compiler will overwrite it).
+		 *
+		 * Plugin authors contributing screens, routes, regions, or
+		 * menu items should prefer the per-origin
+		 * `wp_admin_shell_data_{origin}` filters at priority 5 — those
+		 * fire before this hook, before `customizable` filtering, and
+		 * before the merge, so the contribution flows through the
+		 * cascade naturally (and reaches the existing
+		 * `inject_app_baselines` pass for dataView baselines).
+		 *
+		 * @param array $merged The cascade-merged author-shape doc.
+		 */
 		$merged = apply_filters( 'wp_admin_shell_data', $merged );
-		return WP_Admin_Shell_Merge::strip_origin_tags( $merged );
+		$merged = WP_Admin_Shell_Merge::strip_origin_tags( $merged );
+
+		// v3 compiler pass — runs AFTER cascade merge and the
+		// `wp_admin_shell_data` filter so plugin authors can still
+		// observe / mutate the v3-shaped doc. Compiler is a no-op for v2
+		// shells (detect → passthrough); for v3 shells it synthesizes
+		// `routes`, `regions`, `default-route`, and normalizes
+		// `commands` so the existing kernel + router consume the
+		// resolved tree unchanged.
+		if ( class_exists( 'WP_Admin_Shell_V3_Compiler' ) ) {
+			$merged = WP_Admin_Shell_V3_Compiler::compile( $merged );
+		}
+
+		return $merged;
 	}
 
 	/**
@@ -158,6 +203,7 @@ class WP_Admin_Shell_Resolver {
 		$has_plugin_engine =
 			( is_array( $plugin_doc ) && (
 				isset( $plugin_doc['engine'] ) ||
+				isset( $plugin_doc['workspace']['engine'] ) ||
 				isset( $plugin_doc['settings']['shell']['layoutEngine'] )
 			) );
 		$core_doc = $has_plugin_engine
@@ -195,7 +241,12 @@ class WP_Admin_Shell_Resolver {
 		if ( ! is_array( $plugin_doc ) ) {
 			return array();
 		}
-		$engine_id = $plugin_doc['engine'] ?? null;
+		// v3 nests the engine under workspace.engine; v2 keeps it at root.
+		// Read the v3 location first so v3 shells resolve correctly, then
+		// fall back to v2.
+		$engine_id = $plugin_doc['workspace']['engine']
+			?? $plugin_doc['engine']
+			?? null;
 		if ( ! is_string( $engine_id ) || $engine_id === '' ) {
 			return array();
 		}
@@ -285,6 +336,13 @@ class WP_Admin_Shell_Resolver {
 			return false;
 		}
 		$doc = json_decode( file_get_contents( $path ), true );
-		return is_array( $doc ) && ! empty( $doc['userSwitchable'] );
+		// Schema is canonical kebab (`user-switchable`); bundled shells
+		// ship the kebab form. Read the kebab form first; fall back to the
+		// legacy camelCase shape ONLY for back-compat with shells written
+		// before the casing was fixed.
+		return is_array( $doc ) && (
+			! empty( $doc['user-switchable'] ) ||
+			! empty( $doc['userSwitchable'] )
+		);
 	}
 }

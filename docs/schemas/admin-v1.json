@@ -1,8 +1,9 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin/v0.json",
+	"$id": "https://schemas.wp.org/admin/v1.json",
+	"$comment": "Previously published as https://schemas.wp.org/admin/v0.json; identifier corrected in v3.0 beta cycle to match the file version.",
 	"title": "WP Admin Shell — v1.0.0-beta.x admin.json (legacy partitioned shape)",
-	"description": "Schema for the v1.0.0-beta.x admin.json configuration consumed by the WP Admin Shell cascade resolver in the shipping beta. The MVP flat shape is also accepted at runtime via the core origin loader's normalize_v0 path; this schema describes the partitioned shape that authors targeted under v1. Superseded by the three v2 manifest schemas (admin-v2.json, admin-app-v2.json, admin-engine-v2.json) which become the canonical /admin/v1.json /admin-app/v1.json /admin-engine/v1.json once V2.M5 ships. The $id was changed from /admin/v1.json to /admin/v0.json to free the v1 URL slot for the new schemas without colliding inside Ajv when both are registered (V2.M1 task 1).",
+	"description": "Schema for the v1.0.0-beta.x admin.json configuration consumed by the WP Admin Shell cascade resolver in the shipping beta. The MVP flat shape is also accepted at runtime via the core origin loader's normalize_v0 path; this schema describes the partitioned shape that authors targeted under v1. Superseded by the v2 then v3 manifest schemas; v2 shells continue to validate through the v3.0 beta cycle.",
 	"type": "object",
 	"properties": {
 		"$schema": { "type": "string" },

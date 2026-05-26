@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app-v2.json",
+	"$schema": "../../../docs/schemas/admin-app-v3.json",
 	"id": "core:themes",
 	"version": 1,
 	"title": "Themes",
@@ -14,40 +14,44 @@
 		"properties": {
 			"variant": {
 				"type": "string",
-				"description": "Optional view-config variant id to consume. When set, useViewConfig reads `viewConfigs.root.theme.<variant>` instead of the `_default` triple."
+				"description": "Optional DataView variant id. v2 back-compat: when the v3 compiler synthesizes a screen from a v2 route, `config.variant` stays on `screen.config.variant` and the resolver's step-3 manifest-inference path reads it directly to reach `settings.dataViews.root.theme.<variant>`."
 			}
 		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
-	"viewConfig": {
+	"dataView": {
 		"kind": "root",
 		"name": "theme",
-		"defaultView": {
-			"type": "grid",
-			"search": "",
-			"filters": [],
-			"page": 1,
-			"perPage": 50,
-			"sort": { "field": "status", "direction": "asc" },
-			"fields": [ "status", "description", "version", "author" ],
-			"titleField": "name",
-			"mediaField": "screenshot",
-			"layout": {}
-		},
-		"defaultLayouts": { "grid": {}, "table": {} },
-		"fields": [
-			{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
-			{ "id": "screenshot", "type": "media", "label": "Screenshot", "enableSorting": false, "enableHiding": false },
-			{ "id": "status", "type": "text", "label": "Status", "elements": [ { "value": "active", "label": "Active" }, { "value": "inactive", "label": "Inactive" } ], "filterBy": { "operators": [ "isAny" ] } },
-			{ "id": "description", "type": "text", "label": "Description", "enableSorting": false },
-			{ "id": "version", "type": "text", "label": "Version" },
-			{ "id": "author", "type": "text", "label": "Author" }
-		],
-		"actions": [
-			{ "id": "activate", "label": "Activate", "isPrimary": true, "icon": "check", "eligibleWhen": { "status": "inactive" } },
-			{ "id": "details", "label": "Details", "isPrimary": true }
-		]
+		"variants": {
+			"_default": {
+				"defaultView": {
+					"type": "grid",
+					"search": "",
+					"filters": [],
+					"page": 1,
+					"perPage": 50,
+					"sort": { "field": "status", "direction": "asc" },
+					"fields": [ "status", "description", "version", "author" ],
+					"titleField": "name",
+					"mediaField": "screenshot",
+					"layout": {}
+				},
+				"defaultLayouts": { "grid": {}, "table": {} },
+				"fields": [
+					{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+					{ "id": "screenshot", "type": "media", "label": "Screenshot", "enableSorting": false, "enableHiding": false },
+					{ "id": "status", "type": "text", "label": "Status", "elements": [ { "value": "active", "label": "Active" }, { "value": "inactive", "label": "Inactive" } ], "filterBy": { "operators": [ "isAny" ] } },
+					{ "id": "description", "type": "text", "label": "Description", "enableSorting": false },
+					{ "id": "version", "type": "text", "label": "Version" },
+					{ "id": "author", "type": "text", "label": "Author" }
+				],
+				"actions": [
+					{ "id": "activate", "label": "Activate", "isPrimary": true, "icon": "check", "eligibleWhen": { "status": "inactive" } },
+					{ "id": "details", "label": "Details", "isPrimary": true }
+				]
+			}
+		}
 	},
 	"window": {
 		"defaultSize": {
@@ -67,9 +71,9 @@
 		"data": {
 			"reads": [
 				{
-					"source": "viewConfigs.root.theme._default",
+					"source": "settings.dataViews.root.theme.{variant|_default}",
 					"via": "kernel-config",
-					"purpose": "Resolved view-config triple — fields, default view, default layouts, actions. Read via `useViewConfig(kind, name, variant?)`; baseline ships in `app.json#viewConfig` and is injected post-merge by `inject_app_baselines`.",
+					"purpose": "Resolved DataView doc — fields, default view, default layouts, actions. Read via `useDataView(screenId)`; baseline ships in `app.json#dataView` and is injected post-merge by `inject_app_baselines`.",
 					"fields": [
 						"fields",
 						"defaultView",
@@ -172,8 +176,8 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/dataviews/wp#DataViews",
-				"purpose": "Grid + table view with filtering, sorting, pagination, selection, per-row + bulk actions, action modals."
+				"import": "@wordpress/dataviews/wp",
+				"purpose": "DataViews + DataForm components, field descriptor shape. Grid + table view with filtering, sorting, pagination, selection, per-row + bulk actions, action modals."
 			},
 			{
 				"import": "@wordpress/ui#Button, Stack, Text",

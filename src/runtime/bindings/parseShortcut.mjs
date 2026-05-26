@@ -105,7 +105,19 @@ export function parseShortcut( shortcut, options = {} ) {
 		}
 		const eventKey = event.key || '';
 		if ( keyLower.length === 1 ) {
-			return eventKey.toLowerCase() === keyLower;
+			// On macOS the Option/Alt modifier rewrites event.key to a
+			// composed glyph (e.g. `Cmd+Alt+N` → event.key === "˜").
+			// event.code is layout-independent (always `KeyN` for the N
+			// physical key) so prefer it when the modifier set involves
+			// Alt. Letters only.
+			if ( eventKey.toLowerCase() === keyLower ) {
+				return true;
+			}
+			if ( /^[a-z]$/.test( keyLower ) ) {
+				const eventCode = event.code || '';
+				return eventCode === 'Key' + keyLower.toUpperCase();
+			}
+			return false;
 		}
 		return eventKey === keyLower;
 	};

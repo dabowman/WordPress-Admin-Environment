@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-shell",
 	"documentation": {
-		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminShell.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminShell.shells` (for the switcher submenu). Shell switcher only renders when more than one `userSwitchable` shell is available; calls `window.wpAdminShell.switchShell(slug)` which posts the new active shell + reloads.",
+		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminShell.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminShell.shells` (for the switcher submenu). Shell switcher only renders when more than one `user-switchable` shell is available; calls `window.wpAdminShell.switchShell(slug)` which posts the new active shell + reloads.",
 		"data": {
 			"reads": [
 				{
@@ -26,13 +26,13 @@
 				{
 					"source": "window.wpAdminShell.shells",
 					"via": "window-global",
-					"purpose": "Available shells (with `userSwitchable` flag) for the switcher submenu."
+					"purpose": "Available shells (with `user-switchable` flag) for the switcher submenu."
 				}
 			]
 		},
 		"states": [
-			{ "id": "ready-no-switcher", "when": "shells.length <= 1 || no userSwitchable", "renders": "Avatar trigger + dropdown with Profile + Log out." },
-			{ "id": "ready-with-switcher", "when": "More than one userSwitchable shell", "renders": "Same dropdown plus `Switch to {title}` entries between Profile and Log out." }
+			{ "id": "ready-no-switcher", "when": "shells.length <= 1 || no user-switchable", "renders": "Avatar trigger + dropdown with Profile + Log out." },
+			{ "id": "ready-with-switcher", "when": "More than one user-switchable shell", "renders": "Same dropdown plus `Switch to {title}` entries between Profile and Log out." }
 		],
 		"interactions": [
 			{ "trigger": "Click avatar", "effect": "Open dropdown." },

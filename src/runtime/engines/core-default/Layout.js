@@ -24,6 +24,8 @@
  * kind-based dispatch for platform-service dispatch.
  */
 
+import { SlotFillProvider } from '@wordpress/components';
+
 import { Region } from '../../regions/Region';
 import { getRegionKind } from '../../regions/regionKind';
 
@@ -31,6 +33,7 @@ const SLOT_IDS = {
 	toolbar: 'toolbar',
 	sidebar: 'sidebar',
 	content: 'content',
+	detail: 'detail',
 	preview: 'preview',
 };
 
@@ -60,10 +63,11 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
 	const sidebar = findById( buckets.persistent, SLOT_IDS.sidebar );
 	const content = findById( buckets.persistent, SLOT_IDS.content );
+	const detail = findById( buckets.persistent, SLOT_IDS.detail );
 	const preview = findById( buckets.persistent, SLOT_IDS.preview );
 
 	const claimed = new Set(
-		[ toolbar, sidebar, content, preview ]
+		[ toolbar, sidebar, content, detail, preview ]
 			.filter( Boolean )
 			.map( ( region ) => region.id )
 	);
@@ -71,37 +75,50 @@ export default function CoreSiteEditorLayout( { regions } ) {
 		( region ) => ! claimed.has( region.id )
 	);
 
+	// `<SlotFillProvider>` lives in the engine layout (not the kernel)
+	// to keep the kernel DS-neutral. Bundled apps using
+	// `@wordpress/components` Slot/Fill (e.g. `core:simple-editor`'s
+	// `core:editor.sidebar` slot) need this substrate, so every WPDS-
+	// based engine ships it. A non-WPDS engine that doesn't use
+	// `@wordpress/components` Slot/Fill can drop the wrap.
 	return (
-		<div className="wp-admin-shell-layout" data-engine="core:default">
-			{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
+		<SlotFillProvider>
+			<div className="wp-admin-shell-layout" data-engine="core:default">
+				{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
-			<div className="wp-admin-shell-layout__body">
-				{ sidebar && <Region key={ sidebar.id } region={ sidebar } /> }
+				<div className="wp-admin-shell-layout__body">
+					{ sidebar && (
+						<Region key={ sidebar.id } region={ sidebar } />
+					) }
 
-				<div
-					className={ `wp-admin-shell-areas${
-						preview ? ' has-preview' : ''
-					}` }
-				>
-					{ content && (
-						<Region key={ content.id } region={ content } />
-					) }
-					{ preview && (
-						<Region key={ preview.id } region={ preview } />
-					) }
+					<div
+						className={ `wp-admin-shell-areas${
+							preview ? ' has-preview' : ''
+						}` }
+					>
+						{ content && (
+							<Region key={ content.id } region={ content } />
+						) }
+						{ detail && (
+							<Region key={ detail.id } region={ detail } />
+						) }
+						{ preview && (
+							<Region key={ preview.id } region={ preview } />
+						) }
+					</div>
 				</div>
+
+				{ stragglers.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+
+				{ buckets.drawer.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
+				{ buckets.overlay.map( ( region ) => (
+					<Region key={ region.id } region={ region } />
+				) ) }
 			</div>
-
-			{ stragglers.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-
-			{ buckets.drawer.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-			{ buckets.overlay.map( ( region ) => (
-				<Region key={ region.id } region={ region } />
-			) ) }
-		</div>
+		</SlotFillProvider>
 	);
 }

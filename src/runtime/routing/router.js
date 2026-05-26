@@ -133,7 +133,13 @@ export function useRouteForRegion( region, routesBlock ) {
 		if ( ! key ) {
 			return null;
 		}
-		const slot = readSlot( url, key );
+		// Default resolution mode is `query` — the slot value comes
+		// from the URL query parameter of the same name. Multi-app
+		// layout regions (3c.4) opt into `mirror` so the slot value
+		// is `@<key>/<primary>`, matching the compiler's
+		// `@<slot>/<primary>` route synthesis.
+		const mode = region?.routing?.mode || 'query';
+		const slot = readSlot( url, key, mode );
 		if ( ! slot ) {
 			return null;
 		}

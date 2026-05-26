@@ -8,7 +8,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { resolveIcon } from '../../runtime/config/iconMap';
-import { useViewConfig } from '../../runtime/viewConfig/useViewConfig';
+import { useDataView } from '../../runtime/dataView/useDataView';
 
 /**
  * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
@@ -318,27 +318,27 @@ function buildActions(
 }
 
 export default function CommentsApp( { config = {} } ) {
-	const variant = config.variant || null;
+	const screenId = config.screenId || null;
 
-	const { config: viewConfig } = useViewConfig( 'root', 'comment', variant );
+	const { config: dataViewConfig } = useDataView( screenId );
 
 	const [ view, setView ] = useState( () => ( {
 		...VIEW_DEFAULTS,
-		...viewConfig.defaultView,
+		...dataViewConfig.defaultView,
 	} ) );
 
-	// Resync `view` when the variant flips on the same hook instance.
-	// `useState`'s initializer runs once, so without this effect a
-	// second variant inherits the first's perPage / sort / filters.
-	// Keyed only on the triple — not viewConfig — to avoid clobbering
+	// Resync `view` when the screen flips on the same hook instance.
+	// `useState`'s initializer runs once, so without this effect a sibling
+	// screen would inherit the previous screen's perPage / sort / filters.
+	// Keyed only on screenId — not dataViewConfig — to avoid clobbering
 	// in-session view edits whenever the cascade re-resolves the doc.
 	useEffect( () => {
 		setView( {
 			...VIEW_DEFAULTS,
-			...( viewConfig.defaultView || {} ),
+			...( dataViewConfig.defaultView || {} ),
 		} );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ variant ] );
+	}, [ screenId ] );
 
 	const queryArgs = useMemo( () => {
 		const args = {
@@ -461,13 +461,13 @@ export default function CommentsApp( { config = {} } ) {
 	);
 
 	const fields = useMemo(
-		() => buildFields( viewConfig.fields ?? [], FIELD_RENDERERS ),
-		[ viewConfig ]
+		() => buildFields( dataViewConfig.fields ?? [], FIELD_RENDERERS ),
+		[ dataViewConfig ]
 	);
 
 	const actions = useMemo(
 		() =>
-			buildActions( viewConfig.actions ?? [], {
+			buildActions( dataViewConfig.actions ?? [], {
 				setCommentsStatus,
 				deleteEntityRecord,
 				invalidateResolution,
@@ -476,7 +476,7 @@ export default function CommentsApp( { config = {} } ) {
 				createErrorNotice,
 			} ),
 		[
-			viewConfig,
+			dataViewConfig,
 			setCommentsStatus,
 			deleteEntityRecord,
 			invalidateResolution,
@@ -506,7 +506,7 @@ export default function CommentsApp( { config = {} } ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				isLoading={ isResolving }
-				defaultLayouts={ viewConfig.defaultLayouts ?? {} }
+				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
 				selection={ selection }
 				onChangeSelection={ setSelection }
 				getItemId={ ( item ) => item.id.toString() }

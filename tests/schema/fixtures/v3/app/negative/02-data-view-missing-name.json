@@ -1,0 +1,14 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-app-v3.json",
+	"id": "plugin:demo/no-name",
+	"version": 3,
+	"title": "No name",
+	"role": "main",
+	"script": "demo-no-name",
+	"dataView": {
+		"kind": "postType",
+		"variants": {
+			"_default": { "defaultView": { "type": "table" } }
+		}
+	}
+}

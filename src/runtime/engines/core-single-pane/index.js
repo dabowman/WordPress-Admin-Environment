@@ -1,5 +1,10 @@
 import Layout from './Layout';
-import { WpdsThemeProvider } from '../../styles/WpdsThemeProvider';
+// `core:single-pane` reuses the `core:default` WPDS contract.
+// It points at core-default's `WpdsThemeProvider`, `compileStyles`,
+// and `iconTable` so single-pane stays a thin layout variant on the
+// same DS surface. A standalone non-WPDS pane engine would ship its
+// own provider + compiler + icon table.
+import { WpdsThemeProvider } from '../core-default/WpdsThemeProvider';
 import { compileStyles } from '../core-default/compileStyles.mjs';
 import { iconTable, fallbackIcon } from '../core-default/icons';
 import { registerIcons } from '../../config/iconMap';

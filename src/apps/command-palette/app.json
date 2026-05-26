@@ -3,7 +3,7 @@
 	"id": "core:command-palette",
 	"version": 1,
 	"title": "Command palette",
-	"description": "Cmd+K command palette. Signs commands into `@wordpress/commands`; derives palette entries from the routes block.",
+	"description": "Cmd+K command palette. Signs commands into `@wordpress/commands`; derives palette entries from `config.commands[]` + `config.screens[]`.",
 	"designSystem": "@wordpress/ui",
 	"role": "dialog",
 	"platform": {
@@ -21,13 +21,18 @@
 	},
 	"script": "wp-admin-shell",
 	"documentation": {
-		"purpose": "Cmd+K command palette contributor. The palette UI itself is owned by `@wordpress/commands` — this app contributes a command set and renders nothing. Commands are derived from the shell's routes block (`config.routes`): each `core:route` whose pattern has no `{param}` placeholder or `/*` wildcard becomes a `Go to <pattern>` entry. Authors can override the label + icon by attaching `title` + `icon` to a route entry (not in the current schema; the runtime reads them if present so a future schema bump can land without migration).",
+		"purpose": "Cmd+K command palette contributor. The palette UI itself is owned by `@wordpress/commands` — this app contributes a command set and renders nothing. Two v3 sources feed the palette: (1) `config.commands[]` — labelled first-class commands (v3 replacement for v2's `bindings` array); entries with a `label` become palette entries, callback fires `invoke` then `navigate` matching `BindingsConsumer`'s keystroke-handler order. (2) `config.screens[]` — every non-hidden screen with a `path` + `label` becomes a `Go to <label>` entry; hidden / parameterized / wildcarded paths skipped. Two dedup layers stack: dedup-by-path (a command's `navigate` suppresses a screen entry on the same path) + dedup-by-name (the unified `core/admin-shell/palette-<id>` prefix catches id collisions across sources, first-write wins). The branching is unit-testable on a bare Node runtime via the pure-ESM compiler at `compileCommands.mjs`.",
 		"data": {
 			"reads": [
 				{
-					"source": "config.routes",
+					"source": "config.commands",
 					"via": "kernel-config",
-					"purpose": "Route patterns to convert into palette commands."
+					"purpose": "First-class commands (id + label + optional shortcut + invoke|navigate). Labelled entries surface in the palette; keyboard-only entries (no label) are handled by `BindingsConsumer` and never appear here."
+				},
+				{
+					"source": "config.screens",
+					"via": "kernel-config",
+					"purpose": "Workspace screen map. Each entry with a `path` + `label` (and not `hidden: true`, not parameterized) becomes a synthesized `Go to <label>` palette entry."
 				}
 			],
 			"writes": [
@@ -42,27 +47,31 @@
 		"url": {
 			"reads-slots": [],
 			"writes-slots": [ "_self" ],
-			"navigates": [ "{any non-parameterized pattern from config.routes}" ]
+			"navigates": [ "{any non-parameterized screens[id].path}", "{any commands[].navigate}" ]
 		},
 		"states": [
 			{ "id": "renders-null", "when": "Always", "renders": "Nothing — this app is invisible. The `@wordpress/commands` portal renders the palette UI elsewhere in the DOM." }
 		],
 		"interactions": [
 			{ "trigger": "Mount", "effect": "Register the command-loader hook with `@wordpress/commands`." },
-			{ "trigger": "User opens palette (Mod+K or other binding)", "effect": "`@wordpress/commands` invokes the registered loader, gets the route-derived commands, and surfaces them. Selecting an entry calls its `callback({ close })` which writes `window.location.hash` + closes the palette." }
+			{ "trigger": "User opens palette (Mod+K or other binding)", "effect": "`@wordpress/commands` invokes the registered loader, gets the derived commands, and surfaces them. Selecting an entry calls its `callback({ close })` which calls `trigger(invoke)` then falls back to the runtime router's `navigate(path)` when invoke didn't handle (or wasn't present), then closes the palette." }
 		],
 		"a11y": {
 			"focus-management": "`@wordpress/commands` owns palette focus when open (focus trap inside the modal, return focus on close). This app only contributes commands; it does not render UI."
 		},
 		"constraints": [
 			{ "concern": "no-ui", "note": "Returns `null`. All visual surface area lives in the `@wordpress/commands` portal. Tests that look for shell-rendered DOM should expect nothing." },
-			{ "concern": "skip-parameterized-routes", "note": "Routes with `{param}` placeholders or `/*` wildcards are skipped — `Go to /posts/{id}` isn't a valid invocation because the user can't pick the captured value from a command list. Parameterized routes need a different surface (search-based, entity-based) that's out of scope here." },
-			{ "concern": "url-encode-name", "note": "Command names use `encodeURIComponent(pattern)` so distinct routes (`/foo-bar` vs `/foo/bar`) produce distinct names. Without encoding, both would collapse to `foo-bar` and `@wordpress/commands` would reject the duplicate." },
-			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `bindings` block map keystrokes to this app." }
+			{ "concern": "skip-parameterized-paths", "note": "Screens with `{param}` placeholders or `/*` wildcard suffixes are skipped — `Go to /posts/{id}` isn't a valid invocation because the user can't pick the captured value from a command list. Parameterized navigation needs a different surface (search-based, entity-based) that's out of scope here." },
+			{ "concern": "label-required", "note": "Commands without a `label` are keyboard-only and handled by `BindingsConsumer`'s keystroke path. They never appear in the palette so users discover them only via the shortcut documentation." },
+			{ "concern": "url-encode-name", "note": "Palette names use `encodeURIComponent(id)` so ids with slashes or other URL-unsafe characters produce distinct names without colliding under `@wordpress/commands`'s duplicate-name rejection. The unified `core/admin-shell/palette-<id>` prefix means screen ids and command ids share the namespace — first-write wins on collision." },
+			{ "concern": "modal-platform-service", "note": "Manifest declares `core:modal: true` + `core:dismiss-on: [Escape, backdrop-click]` + `core:triggerable: true`. The kernel's region renderer applies focus trap + ARIA modal + backdrop dismiss. The triggerable flag lets admin.json's `commands[].invoke` map keystrokes to this app." },
+			{ "concern": "schema-target", "note": "The `$schema` reference still points at `admin-app-v2.json` because this manifest hasn't been migrated to the v3 app-manifest shape yet. The doc sweep in roadmap §3d.4 flips this. Behavior consumed by the runtime is already v3 (`commands[]` + `screens[]`)." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/commands#useCommandLoader, store", "purpose": "Command registration. The package owns the palette UI." },
-			{ "import": "@wordpress/icons (via resolveIcon)", "purpose": "Per-command icons resolved through the kernel icon registry — bundled `core:default` engine ships the `@wordpress/icons` table." }
+			{ "import": "@wordpress/icons (via resolveIcon)", "purpose": "Per-command icons resolved through the kernel icon registry — bundled `core:default` engine ships the `@wordpress/icons` table." },
+			{ "import": "../../runtime/routing/router#navigate", "purpose": "URL navigation — same entry point `BindingsConsumer` uses, so the palette callback path mirrors the keystroke path exactly." },
+			{ "import": "../../runtime/bindings/triggerStore.mjs#trigger", "purpose": "App-trigger dispatch for commands declaring `invoke`. Returns whether a registered handler claimed the trigger, gating the `navigate` fallback for compound entries." }
 		]
 	}
 }

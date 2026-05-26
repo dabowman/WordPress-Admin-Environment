@@ -1,0 +1,23 @@
+{
+	"$schema": "../../../../../../docs/schemas/admin-v3.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "bad-routing-mode",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "split"
+	},
+	"regions": {
+		"detail": {
+			"role": "complementary",
+			"routing": { "route-key": "detail", "mode": "reflect" }
+		}
+	},
+	"screens": {
+		"split": {
+			"label": "Split",
+			"path": "/split",
+			"app": "core:posts"
+		}
+	}
+}

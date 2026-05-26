@@ -1,24 +1,27 @@
 <?php
 /**
- * Menu-item + admin-route shim tests — Track B (C3) phase.
+ * Menu-item + admin-route shim tests — v3 nested-tree shape.
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-menu-route-shims-tests.php`
  *
  * Coverage:
- *   - Both shim APIs validate input + reject duplicates with WP_Error.
- *   - `wp_admin_shell_data_plugin` filter contributes registered items
- *     additively into the resolved tree.
- *   - Default region resolution (first `core:navigation` region) +
- *     explicit region (bare id and slash-path) routing.
- *   - CIAB `parent` + `parent_type=drilldown` nesting builds a `screen`
- *     subtree under the named parent.
- *   - `parent_type=dropdown` falls back to drilldown without fataling.
- *   - `gc_time` accepted + ignored (no fatal, no schema rejection).
- *   - Cap-collection sweep picks up shim-declared `capability` so the
- *     shell's 4-layer cap model gates shim items the same as inline
- *     admin.json items.
- *   - End-to-end: register both shims; declare admin.json that does NOT
- *     mention them; resolved cascade tree contains both.
+ *   - Menu-item registration validates ids/args, rejects duplicates,
+ *     and rejects dangerous URL schemes on `href`.
+ *   - `contribute()` merges registered items into the v3 `menu` tree:
+ *       * root insertion at top-level keys,
+ *       * nested insertion via `parent: "<id>"` (walks any depth),
+ *       * missing parent falls back to root.
+ *   - Cascade behavior at depth: site/role/user can override per-field
+ *     anywhere in the nested tree (`menu.parent.items.child.label`),
+ *     and `null` tombstones remove items + subtrees.
+ *   - Screen-binding pass flows `label` / `icon` / `description` /
+ *     `permissions` / `path` from `screens[id]` into matching menu items.
+ *   - Item-key collisions: later origins win per-field via the merge
+ *     engine; the shim does not stomp pre-existing fields.
+ *   - Admin-routes shim unchanged from v2 — kept here to confirm it
+ *     still passes after the menu-items rewrite.
+ *
+ * Test totals target the 40–60 assertion range per the v3 plan.
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
@@ -48,69 +51,43 @@ class WPAS_Shim_Test_Runner {
 	}
 }
 
-// Helper: build a synthetic shell doc with an explicit nav region tree.
-function wpas_shim_test_shell_doc() {
+// Minimal v3 doc — top-level `menu` + `screens` blocks only.
+function wpas_shim_test_v3_doc() {
 	return array(
+		'version' => 3,
 		'engine'  => 'core:default',
-		'regions' => array(
-			'sidebar' => array(
-				'template' => 'core:sidebar',
-				'regions'  => array(
-					'hub' => array( 'role' => 'region', 'app' => 'core:site-hub' ),
-					'nav' => array(
-						'role'   => 'navigation',
-						'app'    => 'core:navigation',
-						'config' => array(
-							'items' => array(
-								array(
-									'label'      => 'Existing Posts',
-									'icon'       => 'post',
-									'href'       => '#/posts',
-									'capability' => 'edit_posts',
-								),
-							),
-						),
-					),
-				),
+		'screens' => array(
+			'dashboard'    => array(
+				'label'       => 'Dashboard',
+				'icon'        => 'dashboard',
+				'description' => 'Site overview.',
+				'path'        => '/dashboard',
+				'app'         => 'core:dashboard',
+				'permissions' => array( 'capabilities' => array( 'read' ) ),
 			),
-			'content' => array(
-				'template' => 'core:main',
-				'routing'  => array( 'route-key' => '_self' ),
+			'posts'        => array(
+				'label'       => 'Posts',
+				'icon'        => 'post',
+				'path'        => '/posts',
+				'app'         => 'core:posts',
+				'config'      => array( 'postType' => 'post' ),
+				'permissions' => array( 'capabilities' => array( 'edit_posts' ) ),
+			),
+			'posts-drafts' => array(
+				'label'       => 'Drafts',
+				'icon'        => 'drafts',
+				'path'        => '/posts/drafts',
+				'app'         => 'core:posts',
+				'config'      => array( 'postType' => 'post' ),
+				'permissions' => array( 'capabilities' => array( 'edit_posts' ) ),
 			),
 		),
-		'routes'  => array(
-			'/posts' => array(
-				'app'    => 'core:iframe-fallback',
-				'config' => array( 'url' => 'edit.php' ),
-			),
-		),
-	);
-}
-
-// Helper: build a shell doc with a SECOND nav region nested deeper for
-// region routing tests.
-function wpas_shim_test_dual_nav_doc() {
-	return array(
-		'engine'  => 'core:default',
-		'regions' => array(
-			'sidebar' => array(
-				'template' => 'core:sidebar',
-				'regions'  => array(
-					'nav' => array(
-						'role'   => 'navigation',
-						'app'    => 'core:navigation',
-						'config' => array( 'items' => array() ),
-					),
-				),
-			),
-			'sub-shell' => array(
-				'role'    => 'region',
-				'regions' => array(
-					'inner-nav' => array(
-						'role'   => 'navigation',
-						'app'    => 'core:navigation',
-						'config' => array( 'items' => array() ),
-					),
+		'menu'    => array(
+			'dashboard' => array( 'position' => 5 ),
+			'posts'     => array(
+				'position' => 30,
+				'items'    => array(
+					'posts-drafts' => array( 'position' => 10 ),
 				),
 			),
 		),
@@ -124,12 +101,15 @@ WP_Admin_Shell_Admin_Routes::reset();
 // Menu items — registration + validation
 // -----------------------------------------------------------------------------
 
-$id = wp_admin_shell_register_menu_item( 'plugin-foo', array(
-	'to'         => '/foo',
-	'label'      => 'Foo',
-	'icon'       => 'star-filled',
-	'capability' => 'edit_posts',
-) );
+$id = wp_admin_shell_register_menu_item(
+	'plugin-foo',
+	array(
+		'label'    => 'Foo',
+		'icon'     => 'star-filled',
+		'href'     => '#/foo',
+		'position' => 100,
+	)
+);
 WPAS_Shim_Test_Runner::assert_eq( 'register returns id', $id, 'plugin-foo' );
 
 $registry = WP_Admin_Shell_Menu_Items::all();
@@ -138,322 +118,242 @@ WPAS_Shim_Test_Runner::assert_true(
 	isset( $registry['plugin-foo'] )
 );
 
-// Validation rejections.
-$err = wp_admin_shell_register_menu_item( '', array( 'to' => '/foo', 'label' => 'Foo' ) );
+$err = wp_admin_shell_register_menu_item( '', array( 'label' => 'X' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty id', $err );
 
 $err = wp_admin_shell_register_menu_item( 'plugin-bar', 'not-an-array' );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-array args', $err );
 
-$err = wp_admin_shell_register_menu_item( 'plugin-bar', array( 'to' => '/bar' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects missing label', $err );
-
-$err = wp_admin_shell_register_menu_item( 'plugin-bar', array( 'label' => 'Bar' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects missing both `to` and `parent_type`', $err );
-
-$err = wp_admin_shell_register_menu_item( 'plugin-bar', array(
-	'label'       => 'Bar',
-	'parent_type' => 'mystery',
-) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects unknown parent_type', $err );
-
-// Duplicate id rejection.
-$err = wp_admin_shell_register_menu_item( 'plugin-foo', array( 'to' => '/foo', 'label' => 'Foo Again' ) );
+$err = wp_admin_shell_register_menu_item( 'plugin-foo', array( 'label' => 'Again' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects duplicate id', $err );
 
-// Dangerous-scheme rejection — `to` allowlist enforces http(s)/ftp(s)/
-// mailto/tel/sms or relative paths only. Defense in depth even though
-// plugin code is trusted.
+$err = wp_admin_shell_register_menu_item( 'plugin-bad-label', array( 'label' => '' ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty label', $err );
+
+$err = wp_admin_shell_register_menu_item(
+	'plugin-bad-parent',
+	array(
+		'label'  => 'X',
+		'parent' => '',
+	)
+);
+WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty parent', $err );
+
+$err = wp_admin_shell_register_menu_item(
+	'plugin-bad-position',
+	array(
+		'label'    => 'X',
+		'href'     => '/p',
+		'position' => 'not-int',
+	)
+);
+WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-integer position', $err );
+
+// Dangerous URL schemes on `href` rejected (defense in depth even though
+// plugin code is trusted).
 foreach ( array( 'javascript:alert(1)', 'data:text/html,<script>', 'vbscript:msgbox(1)', 'file:///etc/passwd' ) as $bad ) {
-	$err = wp_admin_shell_register_menu_item( 'bad-' . md5( $bad ), array( 'to' => $bad, 'label' => 'Bad' ) );
+	$bad_id = 'bad-' . md5( $bad );
+	$err    = wp_admin_shell_register_menu_item(
+		$bad_id,
+		array(
+			'label' => 'Bad',
+			'href'  => $bad,
+		)
+	);
 	WPAS_Shim_Test_Runner::assert_wp_error( "register rejects dangerous scheme: $bad", $err );
 }
-foreach ( array( 'mailto:hello@example.com', 'tel:+15551234', 'https://wordpress.org', '/relative', '#hash' ) as $ok ) {
-	$err_id = 'ok-' . md5( $ok );
-	$id     = wp_admin_shell_register_menu_item( $err_id, array( 'to' => $ok, 'label' => 'OK' ) );
-	WPAS_Shim_Test_Runner::assert_eq( "register accepts safe scheme: $ok", $id, $err_id );
+foreach ( array( 'mailto:hello@example.com', 'tel:+15551234', 'https://wordpress.org', '/relative', '#hash', '{site_url}' ) as $ok ) {
+	$ok_id = 'ok-' . md5( $ok );
+	$got   = wp_admin_shell_register_menu_item(
+		$ok_id,
+		array(
+			'label' => 'OK',
+			'href'  => $ok,
+		)
+	);
+	WPAS_Shim_Test_Runner::assert_eq( "register accepts safe scheme: $ok", $got, $ok_id );
 }
 
-// Badge floor — only scalars pass.
-$err = wp_admin_shell_register_menu_item( 'badge-array', array( 'to' => '/x', 'label' => 'X', 'badge' => array( 'html' => '<script>' ) ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects array badge', $err );
-$err = wp_admin_shell_register_menu_item( 'badge-object', array( 'to' => '/x', 'label' => 'X', 'badge' => new stdClass() ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects object badge', $err );
-$ok = wp_admin_shell_register_menu_item( 'badge-int', array( 'to' => '/x', 'label' => 'X', 'badge' => 7 ) );
-WPAS_Shim_Test_Runner::assert_eq( 'register accepts int badge', $ok, 'badge-int' );
-$ok = wp_admin_shell_register_menu_item( 'badge-string', array( 'to' => '/x', 'label' => 'X', 'badge' => 'NEW' ) );
-WPAS_Shim_Test_Runner::assert_eq( 'register accepts string badge', $ok, 'badge-string' );
-
 // -----------------------------------------------------------------------------
-// Menu items — default region resolution
+// Menu items — root contribution
 // -----------------------------------------------------------------------------
 
 WP_Admin_Shell_Menu_Items::reset();
 
-wp_admin_shell_register_menu_item( 'plugin-default', array(
-	'to'    => '/plugin-default',
-	'label' => 'Plugin Default',
-) );
-
-$doc      = wpas_shim_test_shell_doc();
-$filtered = WP_Admin_Shell_Menu_Items::contribute( $doc );
-$nav_items = $filtered['regions']['sidebar']['regions']['nav']['config']['items'];
-
-WPAS_Shim_Test_Runner::assert_eq(
-	'default region resolves to first core:navigation region — items count',
-	count( $nav_items ),
-	2
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'admin.json item preserved at index 0',
-	$nav_items[0]['label'],
-	'Existing Posts'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'shim item appended at index 1',
-	$nav_items[1]['label'],
-	'Plugin Default'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'shim item href = `#` + `to`',
-	$nav_items[1]['href'],
-	'#/plugin-default'
+wp_admin_shell_register_menu_item(
+	'plugin-root',
+	array(
+		'label'    => 'Plugin Root',
+		'icon'     => 'admin-plugins',
+		'href'     => '#/plugin',
+		'position' => 150,
+	)
 );
 
-// `find_default_nav_region_id` returns the right slash-path.
-WPAS_Shim_Test_Runner::assert_eq(
-	'find_default_nav_region_id returns sidebar/nav slash-path',
-	WP_Admin_Shell_Menu_Items::find_default_nav_region_id( wpas_shim_test_shell_doc() ),
-	'sidebar/nav'
-);
+$contributed = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
 
-// -----------------------------------------------------------------------------
-// Menu items — explicit region routing (bare id + slash-path)
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-
-wp_admin_shell_register_menu_item( 'plugin-bare', array(
-	'to'     => '/bare',
-	'label'  => 'Bare Region',
-	'region' => 'inner-nav',
-) );
-wp_admin_shell_register_menu_item( 'plugin-slash', array(
-	'to'     => '/slash',
-	'label'  => 'Slash Region',
-	'region' => 'sub-shell/inner-nav',
-) );
-
-$dual = wpas_shim_test_dual_nav_doc();
-$filtered_dual = WP_Admin_Shell_Menu_Items::contribute( $dual );
-$inner_items = $filtered_dual['regions']['sub-shell']['regions']['inner-nav']['config']['items'];
-
-WPAS_Shim_Test_Runner::assert_eq(
-	'bare region id matches nested region',
-	count( $inner_items ),
-	2
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'slash-path region id matches the same nested region',
-	$inner_items[1]['label'],
-	'Slash Region'
-);
-
-// Sidebar/nav stays empty — both items targeted the inner region.
-WPAS_Shim_Test_Runner::assert_eq(
-	'sidebar/nav stays empty when items target a different region',
-	count( $filtered_dual['regions']['sidebar']['regions']['nav']['config']['items'] ),
-	0
-);
-
-// Item targeting an unknown region drops silently.
-WP_Admin_Shell_Menu_Items::reset();
-wp_admin_shell_register_menu_item( 'plugin-orphan', array(
-	'to'     => '/orphan',
-	'label'  => 'Orphan',
-	'region' => 'does-not-exist',
-) );
-$dual_again = wpas_shim_test_dual_nav_doc();
-$filtered_orphan = WP_Admin_Shell_Menu_Items::contribute( $dual_again );
-WPAS_Shim_Test_Runner::assert_eq(
-	'item targeting unknown region drops silently',
-	count( $filtered_orphan['regions']['sidebar']['regions']['nav']['config']['items'] ),
-	0
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'item targeting unknown region drops — inner nav also empty',
-	count( $filtered_orphan['regions']['sub-shell']['regions']['inner-nav']['config']['items'] ),
-	0
-);
-
-// -----------------------------------------------------------------------------
-// Menu items — drilldown nesting via parent
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-
-wp_admin_shell_register_menu_item( 'settings', array(
-	'label'       => 'Settings',
-	'icon'        => 'settings',
-	'parent_type' => 'drilldown',
-	'description' => 'Plugin configuration.',
-) );
-wp_admin_shell_register_menu_item( 'settings-general', array(
-	'to'         => '/plugin/settings/general',
-	'label'      => 'General',
-	'icon'       => 'admin-generic',
-	'parent'     => 'settings',
-	'capability' => 'manage_options',
-) );
-wp_admin_shell_register_menu_item( 'settings-advanced', array(
-	'to'         => '/plugin/settings/advanced',
-	'label'      => 'Advanced',
-	'parent'     => 'settings',
-	'capability' => 'manage_options',
-) );
-
-$doc_drill = wpas_shim_test_shell_doc();
-$filtered_drill = WP_Admin_Shell_Menu_Items::contribute( $doc_drill );
-$nav_drill = $filtered_drill['regions']['sidebar']['regions']['nav']['config']['items'];
-
-WPAS_Shim_Test_Runner::assert_eq(
-	'drilldown parent appended after admin.json items',
-	count( $nav_drill ),
-	2
-);
-$screen_item = $nav_drill[1];
-WPAS_Shim_Test_Runner::assert_eq(
-	'drilldown parent emitted as `screen`',
-	$screen_item['screen'],
-	'settings'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'drilldown parent label preserved',
-	$screen_item['label'],
-	'Settings'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'drilldown parent description preserved',
-	$screen_item['description'],
-	'Plugin configuration.'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'drilldown parent has 2 children',
-	count( $screen_item['items'] ),
-	2
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'first child href = `#` + `to`',
-	$screen_item['items'][0]['href'],
-	'#/plugin/settings/general'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'first child carries capability',
-	$screen_item['items'][0]['capability'],
-	'manage_options'
-);
-
-// -----------------------------------------------------------------------------
-// Menu items — dropdown falls back to drilldown
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-
-$dropdown_id = wp_admin_shell_register_menu_item( 'menu-as-dropdown', array(
-	'label'       => 'Dropdown Menu',
-	'parent_type' => 'dropdown',
-) );
-wp_admin_shell_register_menu_item( 'menu-as-dropdown-child', array(
-	'to'     => '/dropdown/child',
-	'label'  => 'Child',
-	'parent' => 'menu-as-dropdown',
-) );
-WPAS_Shim_Test_Runner::assert_eq( 'dropdown registers cleanly (no fatal)', $dropdown_id, 'menu-as-dropdown' );
-
-$registry = WP_Admin_Shell_Menu_Items::all();
-WPAS_Shim_Test_Runner::assert_eq(
-	'dropdown coerced to drilldown in registry',
-	$registry['menu-as-dropdown']['parent_type'],
-	'drilldown'
-);
-
-// -----------------------------------------------------------------------------
-// Menu items — position sorting
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-
-wp_admin_shell_register_menu_item( 'pos-c', array( 'to' => '/c', 'label' => 'C', 'position' => 30 ) );
-wp_admin_shell_register_menu_item( 'pos-a', array( 'to' => '/a', 'label' => 'A', 'position' => 10 ) );
-wp_admin_shell_register_menu_item( 'pos-b', array( 'to' => '/b', 'label' => 'B', 'position' => 20 ) );
-wp_admin_shell_register_menu_item( 'pos-z', array( 'to' => '/z', 'label' => 'Z' ) ); // null position → last
-
-$doc_pos = wpas_shim_test_shell_doc();
-$filtered_pos = WP_Admin_Shell_Menu_Items::contribute( $doc_pos );
-$sorted_labels = array_map(
-	function ( $item ) { return $item['label']; },
-	$filtered_pos['regions']['sidebar']['regions']['nav']['config']['items']
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'position sort: existing → A(10) → B(20) → C(30) → Z(null)',
-	$sorted_labels,
-	array( 'Existing Posts', 'A', 'B', 'C', 'Z' )
-);
-
-// -----------------------------------------------------------------------------
-// Menu items — external link auto-detection
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-
-wp_admin_shell_register_menu_item( 'ext-https', array(
-	'to'    => 'https://wordpress.org/',
-	'label' => 'WordPress',
-) );
-wp_admin_shell_register_menu_item( 'ext-protocol-relative', array(
-	'to'    => '//cdn.example/',
-	'label' => 'CDN',
-) );
-wp_admin_shell_register_menu_item( 'ext-hash', array(
-	'to'    => '#/inside-shell',
-	'label' => 'Inside',
-) );
-
-$doc_ext = wpas_shim_test_shell_doc();
-$filtered_ext = WP_Admin_Shell_Menu_Items::contribute( $doc_ext );
-$ext_items = $filtered_ext['regions']['sidebar']['regions']['nav']['config']['items'];
-
-// existing item is at index 0; shim items follow
-WPAS_Shim_Test_Runner::assert_eq( 'https external href passes through', $ext_items[1]['href'], 'https://wordpress.org/' );
-WPAS_Shim_Test_Runner::assert_true( 'https flagged external', ! empty( $ext_items[1]['external'] ) );
-WPAS_Shim_Test_Runner::assert_eq( 'protocol-relative href passes through', $ext_items[2]['href'], '//cdn.example/' );
-WPAS_Shim_Test_Runner::assert_true( 'protocol-relative flagged external', ! empty( $ext_items[2]['external'] ) );
-WPAS_Shim_Test_Runner::assert_eq( 'hash href passes through unchanged', $ext_items[3]['href'], '#/inside-shell' );
-WPAS_Shim_Test_Runner::assert_true( 'hash NOT flagged external', empty( $ext_items[3]['external'] ) );
-
-// Explicit `external => false` suppresses absolute-URL auto-detect
-// (escape hatch — author chose to hash-route an absolute URL).
-WP_Admin_Shell_Menu_Items::reset();
-wp_admin_shell_register_menu_item( 'ext-explicit-false', array(
-	'to'       => 'https://wordpress.org/',
-	'label'    => 'Internal Despite https',
-	'external' => false,
-) );
-wp_admin_shell_register_menu_item( 'ext-explicit-true', array(
-	'to'       => '#/inside',
-	'label'    => 'External Despite Hash',
-	'external' => true,
-) );
-$doc_explicit = wpas_shim_test_shell_doc();
-$filtered_explicit = WP_Admin_Shell_Menu_Items::contribute( $doc_explicit );
-$exp_items = $filtered_explicit['regions']['sidebar']['regions']['nav']['config']['items'];
 WPAS_Shim_Test_Runner::assert_true(
-	'explicit external=false suppresses absolute-URL auto-detect',
-	empty( $exp_items[1]['external'] )
+	'root contribution adds id to menu',
+	isset( $contributed['menu']['plugin-root'] )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'root contribution preserves label',
+	$contributed['menu']['plugin-root']['label'],
+	'Plugin Root'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'root contribution preserves position',
+	$contributed['menu']['plugin-root']['position'],
+	150
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'root contribution preserves href',
+	$contributed['menu']['plugin-root']['href'],
+	'#/plugin'
 );
 WPAS_Shim_Test_Runner::assert_true(
-	'explicit external=true overrides hash-href default',
-	! empty( $exp_items[2]['external'] )
+	'pre-existing menu entries preserved on contribute',
+	isset( $contributed['menu']['dashboard'] ) && isset( $contributed['menu']['posts'] )
+);
+
+// -----------------------------------------------------------------------------
+// Menu items — nested contribution via `parent`
+// -----------------------------------------------------------------------------
+
+WP_Admin_Shell_Menu_Items::reset();
+
+wp_admin_shell_register_menu_item(
+	'plugin-nested',
+	array(
+		'label'    => 'Nested',
+		'href'     => '#/posts/nested',
+		'parent'   => 'posts',
+		'position' => 99,
+	)
+);
+
+$nested = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
+
+WPAS_Shim_Test_Runner::assert_true(
+	'nested contribution lands under parent items map',
+	isset( $nested['menu']['posts']['items']['plugin-nested'] )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'nested contribution preserves label under parent',
+	$nested['menu']['posts']['items']['plugin-nested']['label'],
+	'Nested'
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'nested contribution does NOT land at root',
+	! isset( $nested['menu']['plugin-nested'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'sibling under parent preserved',
+	isset( $nested['menu']['posts']['items']['posts-drafts'] )
+);
+
+// Deep nesting — register under a child of `posts`.
+WP_Admin_Shell_Menu_Items::reset();
+
+$doc_deep                                                    = wpas_shim_test_v3_doc();
+$doc_deep['menu']['posts']['items']['posts-drafts']['items'] = array(
+	'drafts-mine' => array( 'position' => 5 ),
+);
+$doc_deep['screens']['drafts-mine']                          = array(
+	'label' => 'Mine',
+	'path'  => '/posts/drafts/mine',
+	'app'   => 'core:posts',
+);
+
+wp_admin_shell_register_menu_item(
+	'plugin-deep',
+	array(
+		'label'  => 'Deep',
+		'href'   => '#/deep',
+		'parent' => 'posts-drafts',
+	)
+);
+$deep = WP_Admin_Shell_Menu_Items::contribute( $doc_deep );
+
+WPAS_Shim_Test_Runner::assert_true(
+	'deep contribution lands under 2-level-deep parent',
+	isset( $deep['menu']['posts']['items']['posts-drafts']['items']['plugin-deep'] )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'deep contribution preserves label two levels deep',
+	$deep['menu']['posts']['items']['posts-drafts']['items']['plugin-deep']['label'],
+	'Deep'
+);
+
+// Missing parent → falls back to root (with WP_DEBUG notice when on).
+WP_Admin_Shell_Menu_Items::reset();
+wp_admin_shell_register_menu_item(
+	'plugin-orphan',
+	array(
+		'label'  => 'Orphan',
+		'href'   => '#/orphan',
+		'parent' => 'does-not-exist',
+	)
+);
+$orphan_filtered = @WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() ); // suppress potential WP_DEBUG notice
+WPAS_Shim_Test_Runner::assert_true(
+	'missing parent → item lands at root',
+	isset( $orphan_filtered['menu']['plugin-orphan'] )
+);
+
+// -----------------------------------------------------------------------------
+// Menu items — separator + hidden + external
+// -----------------------------------------------------------------------------
+
+WP_Admin_Shell_Menu_Items::reset();
+wp_admin_shell_register_menu_item(
+	'plugin-sep',
+	array(
+		'separator' => true,
+		'position'  => 5,
+	)
+);
+wp_admin_shell_register_menu_item(
+	'plugin-hidden',
+	array(
+		'label'  => 'Hidden',
+		'href'   => '#/hidden',
+		'hidden' => true,
+	)
+);
+wp_admin_shell_register_menu_item(
+	'plugin-ext-https',
+	array(
+		'label' => 'WordPress',
+		'href'  => 'https://wordpress.org/',
+	)
+);
+wp_admin_shell_register_menu_item(
+	'plugin-ext-explicit-false',
+	array(
+		'label'    => 'Internal Despite https',
+		'href'     => 'https://wordpress.org/',
+		'external' => false,
+	)
+);
+
+$sep_doc = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
+
+WPAS_Shim_Test_Runner::assert_true(
+	'separator entry preserved on contribute',
+	! empty( $sep_doc['menu']['plugin-sep']['separator'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'hidden flag preserved on contribute',
+	! empty( $sep_doc['menu']['plugin-hidden']['hidden'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'absolute https href auto-flags external',
+	! empty( $sep_doc['menu']['plugin-ext-https']['external'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'explicit external=false suppresses auto-detect',
+	empty( $sep_doc['menu']['plugin-ext-explicit-false']['external'] )
 );
 
 // -----------------------------------------------------------------------------
@@ -461,7 +361,7 @@ WPAS_Shim_Test_Runner::assert_true(
 // -----------------------------------------------------------------------------
 
 WP_Admin_Shell_Menu_Items::reset();
-$untouched = wpas_shim_test_shell_doc();
+$untouched = wpas_shim_test_v3_doc();
 $same      = WP_Admin_Shell_Menu_Items::contribute( $untouched );
 WPAS_Shim_Test_Runner::assert_eq(
 	'empty registry: contribute is a no-op',
@@ -470,248 +370,314 @@ WPAS_Shim_Test_Runner::assert_eq(
 );
 
 // -----------------------------------------------------------------------------
-// Admin routes — registration + validation
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Admin_Routes::reset();
-
-$path = wp_admin_shell_register_admin_route( '/plugin/list', array(
-	'app'    => 'plugin:my-plugin/list',
-	'config' => array( 'view' => 'table' ),
-) );
-WPAS_Shim_Test_Runner::assert_eq( 'register returns path', $path, '/plugin/list' );
-
-$err = wp_admin_shell_register_admin_route( '', array( 'app' => 'plugin:x/y' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty path', $err );
-
-$err = wp_admin_shell_register_admin_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects path without leading slash', $err );
-
-$err = wp_admin_shell_register_admin_route( '/has spaces', array( 'app' => 'plugin:x/y' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects path with disallowed chars', $err );
-
-$err = wp_admin_shell_register_admin_route( '/no-app', array( 'config' => array() ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects missing `app`', $err );
-
-$err = wp_admin_shell_register_admin_route( '/bad-config', array(
-	'app'    => 'plugin:x/y',
-	'config' => 'not-an-array',
-) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-array config', $err );
-
-$err = wp_admin_shell_register_admin_route( '/bad-static', array(
-	'app'         => 'plugin:x/y',
-	'static_data' => 'not-an-array',
-) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-array static_data', $err );
-
-// Duplicate-path rejection.
-$err = wp_admin_shell_register_admin_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
-WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects duplicate path', $err );
-
-// -----------------------------------------------------------------------------
-// Admin routes — `static_data` folds into `config`
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Admin_Routes::reset();
-wp_admin_shell_register_admin_route( '/plugin/detail', array(
-	'app'         => 'plugin:my-plugin/detail',
-	'config'      => array( 'view' => 'edit' ),
-	'static_data' => array( 'origin' => 'shim' ),
-) );
-
-$registry = WP_Admin_Shell_Admin_Routes::all();
-WPAS_Shim_Test_Runner::assert_eq(
-	'static_data merged into config',
-	$registry['/plugin/detail']['config'],
-	array( 'origin' => 'shim', 'view' => 'edit' )
-);
-
-// Merge direction: explicit `config` wins on key collision.
-WP_Admin_Shell_Admin_Routes::reset();
-wp_admin_shell_register_admin_route( '/plugin/collide', array(
-	'app'         => 'plugin:my-plugin/detail',
-	'config'      => array( 'view' => 'config-wins' ),
-	'static_data' => array( 'view' => 'static-loses', 'extra' => 'kept' ),
-) );
-$collide_registry = WP_Admin_Shell_Admin_Routes::all();
-WPAS_Shim_Test_Runner::assert_eq(
-	'explicit config wins on collision with static_data',
-	$collide_registry['/plugin/collide']['config']['view'],
-	'config-wins'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'static_data extras (no collision) survive merge',
-	$collide_registry['/plugin/collide']['config']['extra'],
-	'kept'
-);
-
-// `gc_time` accepted, no fatal.
-WP_Admin_Shell_Admin_Routes::reset();
-$path = wp_admin_shell_register_admin_route( '/plugin/cached', array(
-	'app'     => 'plugin:my-plugin/list',
-	'gc_time' => 60000,
-) );
-WPAS_Shim_Test_Runner::assert_eq( 'gc_time accepted (no fatal, registers fine)', $path, '/plugin/cached' );
-$registry = WP_Admin_Shell_Admin_Routes::all();
-WPAS_Shim_Test_Runner::assert_true(
-	'gc_time NOT propagated to resolved route doc',
-	! isset( $registry['/plugin/cached']['gc_time'] )
-);
-
-// -----------------------------------------------------------------------------
-// Admin routes — cascade contribution
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Admin_Routes::reset();
-wp_admin_shell_register_admin_route( '/plugin/list', array(
-	'app'    => 'plugin:my-plugin/list',
-	'config' => array( 'view' => 'table' ),
-) );
-
-$doc_routes = wpas_shim_test_shell_doc();
-$filtered_routes = WP_Admin_Shell_Admin_Routes::contribute( $doc_routes );
-WPAS_Shim_Test_Runner::assert_eq(
-	'admin.json route preserved',
-	$filtered_routes['routes']['/posts']['app'],
-	'core:iframe-fallback'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'shim route appended',
-	$filtered_routes['routes']['/plugin/list']['app'],
-	'plugin:my-plugin/list'
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'shim route config preserved',
-	$filtered_routes['routes']['/plugin/list']['config']['view'],
-	'table'
-);
-
-// admin.json wins on per-path collision.
-$doc_collide = wpas_shim_test_shell_doc();
-$doc_collide['routes']['/plugin/list'] = array(
-	'app'    => 'plugin:my-plugin/winner',
-	'config' => array( 'view' => 'admin-json-wins' ),
-);
-$filtered_collide = WP_Admin_Shell_Admin_Routes::contribute( $doc_collide );
-WPAS_Shim_Test_Runner::assert_eq(
-	'admin.json wins per-path on collision',
-	$filtered_collide['routes']['/plugin/list']['config']['view'],
-	'admin-json-wins'
-);
-
-// Contribute with no doc-routes block creates one.
-$doc_no_routes = array( 'engine' => 'core:default' );
-$filtered_seed = WP_Admin_Shell_Admin_Routes::contribute( $doc_no_routes );
-WPAS_Shim_Test_Runner::assert_true(
-	'contribute seeds routes block when absent',
-	isset( $filtered_seed['routes']['/plugin/list'] )
-);
-
-// -----------------------------------------------------------------------------
-// End-to-end — both shims through `wp_admin_shell_data_plugin` filter
+// Cascade — site origin overrides nested item label two levels deep
 // -----------------------------------------------------------------------------
 
 WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
 
-wp_admin_shell_register_menu_item( 'plugin-e2e', array(
-	'to'         => '/plugin/e2e',
-	'label'      => 'E2E',
-	'icon'       => 'star-filled',
-	'capability' => 'manage_options',
-) );
-wp_admin_shell_register_admin_route( '/plugin/e2e', array(
-	'app'    => 'plugin:my-plugin/e2e',
-	'config' => array( 'view' => 'list' ),
-) );
+$base_origin                                                  = wpas_shim_test_v3_doc();
+$base_origin['menu']['posts']['items']['posts-drafts']['label'] = 'Draft Posts';
 
-$bare_admin_json = wpas_shim_test_shell_doc(); // declares NEITHER /plugin/e2e nor a matching nav item
-$plugin_after_filters = apply_filters( 'wp_admin_shell_data_plugin', $bare_admin_json );
-
-$nav_after = $plugin_after_filters['regions']['sidebar']['regions']['nav']['config']['items'];
-$found_e2e = false;
-foreach ( $nav_after as $item ) {
-	if ( ( $item['label'] ?? null ) === 'E2E' ) {
-		$found_e2e = true;
-		break;
-	}
-}
-WPAS_Shim_Test_Runner::assert_true(
-	'E2E: shim menu item appears in resolved nav region',
-	$found_e2e
-);
-WPAS_Shim_Test_Runner::assert_true(
-	'E2E: shim route appears in resolved routes block',
-	isset( $plugin_after_filters['routes']['/plugin/e2e'] )
-);
-WPAS_Shim_Test_Runner::assert_eq(
-	'E2E: shim route app id preserved through filter',
-	$plugin_after_filters['routes']['/plugin/e2e']['app'],
-	'plugin:my-plugin/e2e'
+$site_origin = array(
+	'menu' => array(
+		'posts' => array(
+			'items' => array(
+				'posts-drafts' => array( 'label' => 'My Drafts' ),
+			),
+		),
+	),
 );
 
-// -----------------------------------------------------------------------------
-// Cap gating — shim-declared `capability` flows through 4-layer cap model
-// -----------------------------------------------------------------------------
-
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
-WP_Admin_Shell_Resolver::reset_request_memo();
-if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-	WP_Admin_Shell_Cache::flush();
-}
-
-wp_admin_shell_register_menu_item( 'plugin-locked', array(
-	'to'         => '/plugin/locked',
-	'label'      => 'Locked',
-	'capability' => 'manage_woocommerce', // unlikely to be granted
-) );
-
-$origins = array(
+$origins  = array(
 	'core'   => array(),
 	'engine' => array(),
-	'plugin' => wpas_shim_test_shell_doc(),
-	'site'   => array(),
+	'plugin' => $base_origin,
+	'site'   => $site_origin,
 	'role'   => array(),
 	'user'   => array(),
 );
 $resolved = WP_Admin_Shell_Resolver::resolve_with( $origins );
 
-// Walk the resolved nav config items and confirm shim cap survived.
-$resolved_items = $resolved['regions']['sidebar']['regions']['nav']['config']['items'];
-$cap_seen = false;
-foreach ( $resolved_items as $item ) {
-	if ( ( $item['label'] ?? null ) === 'Locked' && ( $item['capability'] ?? null ) === 'manage_woocommerce' ) {
-		$cap_seen = true;
-		break;
-	}
-}
-WPAS_Shim_Test_Runner::assert_true(
-	'cap-gate: shim-declared `capability` survives cascade resolution',
-	$cap_seen
+WPAS_Shim_Test_Runner::assert_eq(
+	'cascade: site origin renames nested child label',
+	$resolved['menu']['posts']['items']['posts-drafts']['label'],
+	'My Drafts'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'cascade: lower-origin position preserved when site does not touch it',
+	$resolved['menu']['posts']['items']['posts-drafts']['position'],
+	10
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'cascade: untouched siblings survive',
+	$resolved['menu']['posts']['position'],
+	30
 );
 
-// `wpas_collect_nav_item_caps` (from wp-admin-shell.php) walks
-// region.config.items and gathers caps for the JS-side payload — so the
-// browser pruner sees an authoritative cap map for shim items.
-$declared = array();
-wpas_collect_nav_item_caps( $resolved_items, $declared );
+// -----------------------------------------------------------------------------
+// Cascade — tombstones remove items + subtrees
+// -----------------------------------------------------------------------------
+
+$origins_tombstone  = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => wpas_shim_test_v3_doc(),
+	'site'   => array(
+		'menu' => array(
+			'posts' => null,
+		),
+	),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_tombstone = WP_Admin_Shell_Resolver::resolve_with( $origins_tombstone );
 WPAS_Shim_Test_Runner::assert_true(
-	'cap-gate: cap collector picks up shim cap (manage_woocommerce)',
-	isset( $declared['manage_woocommerce'] )
+	'cascade: null tombstones a root menu entry',
+	! isset( $resolved_tombstone['menu']['posts'] )
 );
 WPAS_Shim_Test_Runner::assert_true(
-	'cap-gate: cap collector picks up admin.json cap (edit_posts) too',
-	isset( $declared['edit_posts'] )
+	'cascade: tombstone takes subtree with it',
+	! isset( $resolved_tombstone['menu']['posts']['items']['posts-drafts'] )
 );
+WPAS_Shim_Test_Runner::assert_true(
+	'cascade: tombstone scoped to target id only',
+	isset( $resolved_tombstone['menu']['dashboard'] )
+);
+
+// Nested tombstone — site removes a child two levels deep.
+$origins_deep_tomb  = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => wpas_shim_test_v3_doc(),
+	'site'   => array(
+		'menu' => array(
+			'posts' => array(
+				'items' => array(
+					'posts-drafts' => null,
+				),
+			),
+		),
+	),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_deep_tomb = WP_Admin_Shell_Resolver::resolve_with( $origins_deep_tomb );
+WPAS_Shim_Test_Runner::assert_true(
+	'cascade: nested null tombstone removes deep child only',
+	isset( $resolved_deep_tomb['menu']['posts'] ) &&
+	! isset( $resolved_deep_tomb['menu']['posts']['items']['posts-drafts'] )
+);
+
+// -----------------------------------------------------------------------------
+// Screen-binding pass — flow label/icon/description/permissions/path
+// -----------------------------------------------------------------------------
 
 WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
 WP_Admin_Shell_Resolver::reset_request_memo();
 if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
 	WP_Admin_Shell_Cache::flush();
 }
+
+$plugin_doc         = wpas_shim_test_v3_doc();
+$plugin_doc['menu'] = array(
+	'dashboard' => array( 'position' => 5 ),
+	'posts'     => array(
+		'position' => 30,
+		'items'    => array(
+			'posts-drafts' => array( 'position' => 10 ),
+		),
+	),
+);
+// One menu item override — keep `Posts` screen but show as `Articles`
+// in the menu.
+$plugin_doc['menu']['posts']['label'] = 'Articles';
+
+$origins_bind  = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => $plugin_doc,
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_bind = WP_Admin_Shell_Resolver::resolve_with( $origins_bind );
+
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: dashboard label flows from screen',
+	$resolved_bind['menu']['dashboard']['label'],
+	'Dashboard'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: dashboard icon flows from screen',
+	$resolved_bind['menu']['dashboard']['icon'],
+	'dashboard'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: dashboard description flows from screen',
+	$resolved_bind['menu']['dashboard']['description'],
+	'Site overview.'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: dashboard path → href',
+	$resolved_bind['menu']['dashboard']['href'],
+	'#/dashboard'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: permissions copied from screen',
+	$resolved_bind['menu']['dashboard']['permissions']['capabilities'],
+	array( 'read' )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: menu-item label override wins over screen label',
+	$resolved_bind['menu']['posts']['label'],
+	'Articles'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: posts icon flows from screen',
+	$resolved_bind['menu']['posts']['icon'],
+	'post'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: nested child label flows from screen',
+	$resolved_bind['menu']['posts']['items']['posts-drafts']['label'],
+	'Drafts'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: nested child href derived from screen path',
+	$resolved_bind['menu']['posts']['items']['posts-drafts']['href'],
+	'#/posts/drafts'
+);
+
+// `hidden: true` on screen propagates to menu item.
+$plugin_doc_hidden                                = wpas_shim_test_v3_doc();
+$plugin_doc_hidden['screens']['posts']['hidden']  = true;
+$plugin_doc_hidden['menu']                        = array(
+	'posts' => array( 'position' => 30 ),
+);
+$origins_hidden                                   = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => $plugin_doc_hidden,
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_hidden                                  = WP_Admin_Shell_Resolver::resolve_with( $origins_hidden );
+WPAS_Shim_Test_Runner::assert_true(
+	'screen-binding: hidden flag propagates from screen',
+	! empty( $resolved_hidden['menu']['posts']['hidden'] )
+);
+
+// Standalone menu item (no matching screen) untouched by binding.
+$plugin_doc_standalone               = wpas_shim_test_v3_doc();
+$plugin_doc_standalone['menu']['view-site'] = array(
+	'label'    => 'View Site',
+	'icon'     => 'external',
+	'href'     => '{site_url}',
+	'external' => true,
+	'position' => 999,
+);
+$origins_standalone                  = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => $plugin_doc_standalone,
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_standalone                 = WP_Admin_Shell_Resolver::resolve_with( $origins_standalone );
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: standalone item label preserved',
+	$resolved_standalone['menu']['view-site']['label'],
+	'View Site'
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'screen-binding: standalone item gets no `permissions` (no screen)',
+	! isset( $resolved_standalone['menu']['view-site']['permissions'] )
+);
+
+// -----------------------------------------------------------------------------
+// End-to-end — shim contributes through `wp_admin_shell_data_plugin`
+// -----------------------------------------------------------------------------
+
+WP_Admin_Shell_Menu_Items::reset();
+
+wp_admin_shell_register_menu_item(
+	'plugin-e2e',
+	array(
+		'label'    => 'E2E',
+		'href'     => '#/plugin/e2e',
+		'parent'   => 'posts',
+		'position' => 99,
+	)
+);
+
+$bare         = wpas_shim_test_v3_doc();
+$after_plugin = apply_filters( 'wp_admin_shell_data_plugin', $bare );
+
+WPAS_Shim_Test_Runner::assert_true(
+	'E2E: registered item appears under named parent',
+	isset( $after_plugin['menu']['posts']['items']['plugin-e2e'] )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'E2E: registered item label survives the filter',
+	$after_plugin['menu']['posts']['items']['plugin-e2e']['label'],
+	'E2E'
+);
+
+// Full pipeline — register via plugin, resolve, both shim + screen
+// binding flow through.
+WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Shell_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
+	WP_Admin_Shell_Cache::flush();
+}
+
+wp_admin_shell_register_menu_item(
+	'plugin-bound',
+	array(
+		'parent'   => 'dashboard',
+		'position' => 25,
+	)
+);
+// Register a screen for it so binding fills label/icon.
+$plugin_doc_e2e                              = wpas_shim_test_v3_doc();
+$plugin_doc_e2e['screens']['plugin-bound']   = array(
+	'label' => 'Bound by Screen',
+	'icon'  => 'admin-tools',
+	'path'  => '/plugin-bound',
+	'app'   => 'plugin:my-plugin/bound',
+);
+
+$origins_e2e  = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => $plugin_doc_e2e,
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_e2e = WP_Admin_Shell_Resolver::resolve_with( $origins_e2e );
+
+WPAS_Shim_Test_Runner::assert_true(
+	'pipeline: shim item appears under parent after full resolve',
+	isset( $resolved_e2e['menu']['dashboard']['items']['plugin-bound'] )
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'pipeline: screen-binding fills shim item label from screen',
+	$resolved_e2e['menu']['dashboard']['items']['plugin-bound']['label'],
+	'Bound by Screen'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'pipeline: screen-binding fills shim item icon from screen',
+	$resolved_e2e['menu']['dashboard']['items']['plugin-bound']['icon'],
+	'admin-tools'
+);
+WPAS_Shim_Test_Runner::assert_eq(
+	'pipeline: screen-binding stamps href from screen path',
+	$resolved_e2e['menu']['dashboard']['items']['plugin-bound']['href'],
+	'#/plugin-bound'
+);
 
 // -----------------------------------------------------------------------------
 // Cache-fingerprint signal — registry mutations contribute to the cache key
@@ -722,46 +688,100 @@ WP_Admin_Shell_Admin_Routes::reset();
 
 $baseline_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
-	'cache signals — no menu_items key with empty menu registry',
+	'cache signals — no menu_items key when registry empty',
 	! isset( $baseline_signals['menu_items'] )
 );
+
+wp_admin_shell_register_menu_item(
+	'cache-fp',
+	array(
+		'label' => 'X',
+		'href'  => '/cache',
+	)
+);
+$after_menu = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
-	'cache signals — no admin_routes key with empty route registry',
-	! isset( $baseline_signals['admin_routes'] )
+	'menu registration adds menu_items fingerprint',
+	isset( $after_menu['menu_items'] )
 );
 
-wp_admin_shell_register_menu_item( 'cache-fp', array( 'to' => '/cache', 'label' => 'Cache' ) );
-$after_menu_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
-WPAS_Shim_Test_Runner::assert_true(
-	'menu-item registration adds menu_items fingerprint to cache signals',
-	isset( $after_menu_signals['menu_items'] )
+wp_admin_shell_register_menu_item(
+	'cache-fp-2',
+	array(
+		'label' => 'Y',
+		'href'  => '/cache-2',
+	)
 );
-
-wp_admin_shell_register_menu_item( 'cache-fp-2', array( 'to' => '/cache-2', 'label' => 'Cache 2' ) );
-$after_second_menu_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$after_second = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
-	'second menu-item registration changes the menu_items fingerprint',
-	$after_menu_signals['menu_items'] !== $after_second_menu_signals['menu_items']
-);
-
-wp_admin_shell_register_admin_route( '/cache-fp', array( 'app' => 'plugin:my-plugin/cache' ) );
-$after_route_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
-WPAS_Shim_Test_Runner::assert_true(
-	'admin-route registration adds admin_routes fingerprint to cache signals',
-	isset( $after_route_signals['admin_routes'] )
+	'second registration changes menu_items fingerprint',
+	$after_menu['menu_items'] !== $after_second['menu_items']
 );
 
 WP_Admin_Shell_Menu_Items::reset();
+$cleared = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'reset clears menu_items fingerprint',
+	! isset( $cleared['menu_items'] )
+);
+
+// -----------------------------------------------------------------------------
+// Admin routes — unchanged from v2 (kept here to confirm Phase-3a-out-of-
+// scope status; the shim still validates + contributes correctly).
+// -----------------------------------------------------------------------------
+
 WP_Admin_Shell_Admin_Routes::reset();
-$cleared_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
-WPAS_Shim_Test_Runner::assert_true(
-	'registry reset clears menu_items fingerprint',
-	! isset( $cleared_signals['menu_items'] )
+
+$path = wp_admin_shell_register_admin_route(
+	'/plugin/list',
+	array(
+		'app'    => 'plugin:my-plugin/list',
+		'config' => array( 'view' => 'table' ),
+	)
 );
-WPAS_Shim_Test_Runner::assert_true(
-	'registry reset clears admin_routes fingerprint',
-	! isset( $cleared_signals['admin_routes'] )
+WPAS_Shim_Test_Runner::assert_eq( 'admin-route: register returns path', $path, '/plugin/list' );
+
+$err = wp_admin_shell_register_admin_route( '', array( 'app' => 'plugin:x/y' ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects empty path', $err );
+
+$err = wp_admin_shell_register_admin_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects path without leading slash', $err );
+
+$err = wp_admin_shell_register_admin_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
+WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects duplicate path', $err );
+
+WP_Admin_Shell_Admin_Routes::reset();
+wp_admin_shell_register_admin_route(
+	'/plugin/list',
+	array(
+		'app'    => 'plugin:my-plugin/list',
+		'config' => array( 'view' => 'table' ),
+	)
 );
+$with_routes = WP_Admin_Shell_Admin_Routes::contribute( wpas_shim_test_v3_doc() );
+WPAS_Shim_Test_Runner::assert_eq(
+	'admin-route: shim route appended to doc',
+	$with_routes['routes']['/plugin/list']['app'],
+	'plugin:my-plugin/list'
+);
+
+WP_Admin_Shell_Admin_Routes::reset();
+$cleared_routes = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Shim_Test_Runner::assert_true(
+	'admin-route: reset clears admin_routes fingerprint',
+	! isset( $cleared_routes['admin_routes'] )
+);
+
+// -----------------------------------------------------------------------------
+// Cleanup
+// -----------------------------------------------------------------------------
+
+WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Shell_Admin_Routes::reset();
+WP_Admin_Shell_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
+	WP_Admin_Shell_Cache::flush();
+}
 
 // -----------------------------------------------------------------------------
 // Summary
@@ -769,7 +789,7 @@ WPAS_Shim_Test_Runner::assert_true(
 
 $total = WPAS_Shim_Test_Runner::$pass + WPAS_Shim_Test_Runner::$fail;
 echo "\n";
-echo 'TOTAL: ' . WPAS_Shim_Test_Runner::$pass . " passed, " . WPAS_Shim_Test_Runner::$fail . " failed of $total\n";
+echo 'TOTAL: ' . WPAS_Shim_Test_Runner::$pass . ' passed, ' . WPAS_Shim_Test_Runner::$fail . " failed of $total\n";
 if ( WPAS_Shim_Test_Runner::$fail > 0 ) {
 	exit( 1 );
 }

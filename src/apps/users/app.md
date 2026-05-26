@@ -10,20 +10,20 @@ Read shape follows PostsApp: `useEntityRecords('root', 'user', queryArgs)` with 
 
 ## Architecture
 
-UsersApp reads its DataViews spec via `useViewConfig('root', 'user')`. The baseline (fields, default view, default layouts, actions) ships in `app.json#viewConfig` and is injected into the resolved tree post-merge by `WP_Admin_Shell_View_Config::inject_app_baselines`. Override paths, in order:
+UsersApp reads its DataViews spec via `useDataView(screenId)`. The baseline (fields, default view, default layouts, actions) ships in `app.json#dataView` and is injected into the resolved tree post-merge by `WP_Admin_Shell_Data_View_Config::inject_app_baselines`. Override paths, in order:
 
-1. **admin.json** — `viewConfigs.root.user._default` wins as a whole-entry override (no per-field merge; same pattern as `fieldCollections`). Site / role / user origins extend through the normal cascade.
-2. **Filter** — `apply_filters('wp_admin_shell_view_config_root_user', $doc, 'root', 'user', null)` runs last; the same filter dispatches with the variant suffix when a non-null variant is requested.
+1. **admin.json** — `settings.dataViews.root.user.<variant|_default>` wins as a whole-entry override (no per-field merge; same pattern as `settings.dataFields`). Site / role / user origins extend through the normal cascade.
+2. **Filter** — `apply_filters('wp_admin_shell_data_view_config_root_user', $doc, 'root', 'user', '_default')` runs last; the per-variant `wp_admin_shell_data_view_config_root_user_<variant>` fires additionally when `variant !== '_default'`.
 
 The JSON layer carries only the *shape* — locale-agnostic labels + structural flags. Render callbacks stay in `index.js`, keyed by spec id:
 
 - **`buildFieldRenderers()`** maps `name` → `<Stack>` with display name + username, `email` → `<Text>`, `roles` → joined `<Text>`. Unknown ids fall through to DataViews' default renderer for the declared type.
-- **`buildActions(actions, ctx)`** compiles each `viewConfig.actions[]` entry into the DataViews action shape. The `delete` id attaches the `RenderModal` body (self-delete guard + confirm UI); all other ids fall through with no callback (extension hook for plugin-contributed actions, deferred).
-- **`buildFields(fields, renderers)`** compiles each `viewConfig.fields[]` entry into a DataViews field, copying through `enableGlobalSearch`, `enableHiding`, `enableSorting`, `elements`, `filterBy`, and attaching the matching renderer if one exists.
+- **`buildActions(actions, ctx)`** compiles each `dataView.actions[]` entry into the DataViews action shape. The `delete` id attaches the `RenderModal` body (self-delete guard + confirm UI); all other ids fall through with no callback (extension hook for plugin-contributed actions, deferred).
+- **`buildFields(fields, renderers)`** compiles each `dataView.fields[]` entry into a DataViews field, copying through `enableGlobalSearch`, `enableHiding`, `enableSorting`, `elements`, `filterBy`, and attaching the matching renderer if one exists.
 
 ### Translation recipe
 
-View-configs ship as locale-agnostic JSON primitives (spec §13 #7) — labels reach DataViews in whatever locale the spec was authored in (English, by convention). UsersApp recovers per-locale labels via two small in-app tables keyed by spec id:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — labels reach DataViews in whatever locale the spec was authored in (English, by convention). UsersApp recovers per-locale labels via two small in-app tables keyed by spec id:
 
 ```js
 const FIELD_LABELS = {
@@ -42,11 +42,11 @@ const ACTION_LABELS = {
 
 ### View-state resync
 
-A small `useEffect` re-seeds local `view` state when the underlying triple changes on the same hook instance. UsersApp ships a single triple today, but the recipe matches PostsApp's so a future variant config (e.g. `?role=author`) picks up the new defaults without rewriting. The effect is keyed on the binding axis only, not on `viewConfig` itself, so in-session view edits aren't clobbered every time the cascade re-resolves.
+A small `useEffect` re-seeds local `view` state when the underlying triple changes on the same hook instance. UsersApp ships a single triple today, but the recipe matches PostsApp's so a future variant config (e.g. `?role=author`) picks up the new defaults without rewriting. The effect is keyed on the binding axis only, not on the resolved `dataView` itself, so in-session view edits aren't clobbered every time the cascade re-resolves.
 
 ### Title-field dedup
 
-`viewConfig.defaultView.titleField` is `name`. DataViews renders the title cell from `view.titleField`; if `name` were also listed in `view.fields`, the table would render a second column for the same field. The `visibleView` memo strips the title id out of `view.fields` before handing the object to DataViews. Same recipe as PostsApp.
+`dataView.defaultView.titleField` is `name`. DataViews renders the title cell from `view.titleField`; if `name` were also listed in `view.fields`, the table would render a second column for the same field. The `visibleView` memo strips the title id out of `view.fields` before handing the object to DataViews. Same recipe as PostsApp.
 
 ### Destructive modal
 
@@ -67,7 +67,7 @@ The data shape is straightforward; the architectural pattern worth preserving is
 - Strip the acting user out of bulk target sets for any operation that can't legally include them (delete, demote, role-change-to-lower).
 - Surface the skip in the confirmation UI rather than silently filtering — users notice when their selection count shrinks.
 
-A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive modal + invalidation) plus access to the acting user's id. The DataViews spec can be reused verbatim from `app.json#viewConfig` (it carries no React) — only the renderer table needs porting.
+A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive modal + invalidation) plus access to the acting user's id. The DataViews spec can be reused verbatim from `app.json#dataView` (it carries no React) — only the renderer table needs porting.
 
 ## Known limitations
 
@@ -79,4 +79,4 @@ A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive mo
 - No `change-role` bulk action. wp-admin's "Change role to…" dropdown above the list applies a new role to selected users; the v2 app doesn't ship this.
 - No "View author's posts" row link. wp-admin's screen links each user row to a filtered post list; the v2 app surfaces neither the link nor any per-user post count.
 - The plugin-contributed row-actions slot (`core:users.row-actions` per M4.5) is documented but not yet wired up.
-- Roles filter `elements` are not declared in the manifest baseline because the available role list is site-dependent. Plugin authors wanting a typed dropdown can override `viewConfigs.root.user._default.fields[id=roles].elements` in admin.json (whole-entry override semantics — restate the full spec) or hook `wp_admin_shell_view_config_root_user` to inject the live role list at filter time.
+- Roles filter `elements` are not declared in the manifest baseline because the available role list is site-dependent. Plugin authors wanting a typed dropdown can override `settings.dataViews.root.user._default.fields[id=roles].elements` in admin.json (whole-entry override semantics — restate the full spec) or hook `wp_admin_shell_data_view_config_root_user` to inject the live role list at filter time.

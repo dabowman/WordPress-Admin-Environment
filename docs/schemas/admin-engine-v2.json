@@ -1,7 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin-engine/v1.json",
-	"title": "WP Admin Shell — Engine Manifest (v1)",
+	"$id": "https://schemas.wp.org/admin-engine/v2.json",
+	"$comment": "Previously published as https://schemas.wp.org/admin-engine/v1.json; identifier corrected in v3.0 beta cycle to match the file version.",
+	"title": "WP Admin Shell — Engine Manifest (v2)",
 	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, and the identifier of its default arrangement algorithm. Engines are the spatial layer of the shell — they read a region tree assembled by the runtime and render it to DOM. The default engine `core:wp-default-layout` ships with the shell plugin; alternative engines (`core:floating-layout`, `core:tiling-layout`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. See WP Admin Shell Design Spec §4.2.",
 
 	"type": "object",
@@ -130,6 +131,35 @@
 		"default-styles": {
 			"$ref": "#/$defs/defaultStyles",
 			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
+		},
+
+		"modes": {
+			"type": "object",
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"label":       { "type": "string" },
+						"description": { "type": "string" },
+						"extends":     { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+						"modal":       { "type": "boolean" },
+						"regions":     { "type": "object" },
+						"chrome":      { "type": "object" }
+					}
+				}
+			},
+			"additionalProperties": false,
+			"description": "Forward-compat opt-in (v3 contract): catalog of named chrome modes a screen may request via `screens[id].mode`. v2 engines may declare this block to preview v3 mode behavior; the v2 runtime treats absence as a default-only catalog. Schema enforces only shape; the resolver enforces extends-chain depth limit + circular-ref detection at runtime. See docs/v3/core-default-engine.v3.md."
+		},
+
+		"defaultRegions": {
+			"type": "object",
+			"patternProperties": {
+				"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/regionInstance" }
+			},
+			"additionalProperties": false,
+			"description": "Region tree the engine assembles when a workspace doesn't author its own `regions` block (the v3 common case). Each key is a region id; each value is a region instance — same shape an admin.json `regions[id]` entry takes (may declare `template`, `role`, `app`, `routing`, `style`, nested `regions`, etc.). The v3 compiler walks this block when synthesizing the resolved region tree from a v3 workspace: when the workspace omits `regions`, the engine's `defaultRegions` becomes the region tree directly; when the workspace declares `regions` explicitly (the v2 escape hatch), the workspace tree wins per-field on top of the engine defaults. The primary region (where routed screens mount) should declare `routing.route-key: \"_self\"`; modal slots (palette, etc.) declare their respective route-keys. Optional — engines that mount everything through `_self` may omit this block and let the workspace declare `regions` directly."
 		}
 	},
 
@@ -239,6 +269,34 @@
 					"type": "object",
 					"additionalProperties": true,
 					"description": "Direct WPDS slot overrides — font tokens."
+				}
+			}
+		},
+
+		"regionInstance": {
+			"type": "object",
+			"additionalProperties": true,
+			"description": "A region instance shape — matches what admin.json `regions[id]` accepts. Loose by design so the engine's `defaultRegions` can declare the same vocabulary an authored workspace would. Recognized fields (all optional): `template` (region template id to instantiate from the engine's `templates` catalog), `role` (ARIA role when not using a template), `app` (mounted app id), `config` (mounted-app config), `routing` (e.g. `{ route-key: \"_self\" }` to participate in URL routing), `platform` (region-level platform service requests), `style` (per-region style overrides), `regions` (nested child region instances), plus engine-specific keys the renderer interprets at mount time. Validation of the structural invariants (e.g. `app` xor `routing.route-key`, capability fast-path) happens at runtime, not in the schema.",
+			"properties": {
+				"template": { "type": "string", "minLength": 1 },
+				"role":     { "$ref": "#/$defs/ariaRole" },
+				"app":      { "type": "string", "minLength": 1 },
+				"config":   { "type": "object" },
+				"routing": {
+					"type": "object",
+					"additionalProperties": true,
+					"properties": {
+						"route-key": { "type": "string", "minLength": 1 }
+					}
+				},
+				"platform": { "$ref": "#/$defs/regionPlatform" },
+				"style":    { "type": "object", "additionalProperties": true },
+				"regions": {
+					"type": "object",
+					"patternProperties": {
+						"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/regionInstance" }
+					},
+					"additionalProperties": false
 				}
 			}
 		},

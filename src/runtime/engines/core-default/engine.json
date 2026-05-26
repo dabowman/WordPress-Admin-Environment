@@ -28,6 +28,47 @@
 		"core:dynamic-children"
 	],
 
+	"modes": {
+		"default": {
+			"label": "Default",
+			"description": "Full workspace chrome — sidebar, toolbar, site-hub, content.",
+			"regions": {
+				"sidebar":  { "hidden": false, "compact": false },
+				"toolbar":  { "hidden": false, "compact": false },
+				"site-hub": { "hidden": false },
+				"content":  { "hidden": false, "fullWidth": false },
+				"preview":  { "hidden": false }
+			}
+		},
+		"focus": {
+			"label": "Focus",
+			"description": "Strip the sidebar; compress the toolbar to a back link + save indicator. Editor and authoring surfaces.",
+			"regions": {
+				"sidebar":  { "hidden": true },
+				"toolbar":  { "compact": true },
+				"site-hub": { "hidden": false },
+				"content":  { "hidden": false, "fullWidth": true },
+				"preview":  { "hidden": true }
+			}
+		},
+		"takeover": {
+			"label": "Takeover",
+			"description": "All workspace chrome hidden. Full-viewport screen. Customizer, full-screen apps.",
+			"regions": {
+				"sidebar":  { "hidden": true },
+				"toolbar":  { "hidden": true },
+				"site-hub": { "hidden": true },
+				"content":  { "hidden": false, "fullWidth": true },
+				"preview":  { "hidden": true }
+			}
+		},
+		"modal": {
+			"label": "Modal Overlay",
+			"description": "Mount as overlay on top of the current screen. Chrome state of underlying screen unchanged.",
+			"modal": true
+		}
+	},
+
 	"templates": {
 		"core:sidebar": {
 			"role": "navigation",
@@ -173,6 +214,46 @@
 				"bg": "#ffffff"
 			},
 			"density": "default"
+		}
+	},
+
+	"defaultRegions": {
+		"sidebar": {
+			"template": "core:sidebar",
+			"regions": {
+				"hub": {
+					"role": "region",
+					"app": "core:site-hub"
+				},
+				"nav": {
+					"role": "navigation",
+					"app": "core:navigation"
+				}
+			}
+		},
+		"content": {
+			"template": "core:main",
+			"routing": { "route-key": "_self" }
+		},
+		"detail": {
+			"template": "core:detail",
+			"routing": { "route-key": "detail", "mode": "mirror" }
+		},
+		"command-palette": {
+			"template": "core:overlay",
+			"routing": { "route-key": "palette" },
+			"platform": {
+				"core:triggerable": true,
+				"core:trigger": { "shortcut": "Mod+K" }
+			}
+		},
+		"notices-banner": {
+			"role": "region",
+			"app": "core:notices-banner"
+		},
+		"notices-snackbar": {
+			"role": "region",
+			"app": "core:notices-snackbar"
 		}
 	}
 }

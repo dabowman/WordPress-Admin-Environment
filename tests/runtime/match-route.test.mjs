@@ -203,11 +203,39 @@ console.log( '\n— readSlot: route-key resolution —\n' );
 const url = parseHash( '#/posts?detail=%2Fposts%2F42&inspector=%2Fusers%2F3' );
 
 ok( 'readSlot _self → primary path', readSlot( url, '_self' ) === '/posts' );
-ok( 'readSlot detail → query value', readSlot( url, 'detail' ) === '/posts/42' );
-ok( 'readSlot inspector → query value', readSlot( url, 'inspector' ) === '/users/3' );
+ok( 'readSlot detail → query value (default query mode)', readSlot( url, 'detail' ) === '/posts/42' );
+ok( 'readSlot inspector → query value (default query mode)', readSlot( url, 'inspector' ) === '/users/3' );
 ok( 'readSlot missing key → empty', readSlot( url, 'sidebar' ) === '' );
 ok( 'readSlot null url → empty', readSlot( null, '_self' ) === '' );
 ok( 'readSlot empty key → empty', readSlot( url, '' ) === '' );
+
+// `query` mode is the default — explicit pass equals default.
+ok(
+	'readSlot detail w/ explicit query mode → query value',
+	readSlot( url, 'detail', 'query' ) === '/posts/42'
+);
+
+// `mirror` mode (3c.4) — synthesizes `@<key><primary>` from the URL
+// primary path so engine peer regions match the v3 compiler's
+// `@<slot>/<primary>` route keys without redundant URL query params.
+const mirrorUrl = parseHash( '#/split' );
+ok(
+	'readSlot mirror mode → @<key><primary>',
+	readSlot( mirrorUrl, 'detail', 'mirror' ) === '@detail/split'
+);
+ok(
+	'readSlot mirror mode w/ empty primary → empty',
+	readSlot( parseHash( '#' ), 'detail', 'mirror' ) === ''
+);
+ok(
+	'readSlot mirror inspector slot',
+	readSlot( mirrorUrl, 'inspector', 'mirror' ) === '@inspector/split'
+);
+// Mirror ignores query params — the slot value is synthesized.
+ok(
+	'readSlot mirror ignores query param of same name',
+	readSlot( parseHash( '#/split?detail=ignored' ), 'detail', 'mirror' ) === '@detail/split'
+);
 
 console.log( '\n— isValidRoutePattern —\n' );
 
@@ -216,6 +244,13 @@ ok( 'valid: /posts/{id}', isValidRoutePattern( '/posts/{id}' ) );
 ok( 'valid: /media/*', isValidRoutePattern( '/media/*' ) );
 ok( 'invalid: no leading slash', ! isValidRoutePattern( 'posts' ) );
 ok( 'invalid: empty', ! isValidRoutePattern( '' ) );
+// Slot-namespaced patterns (3c.4) — `@<slot>/<path>` is the v3
+// compiler's convention for non-primary `apps[]` routes.
+ok( 'valid: @detail/split (slot prefix)', isValidRoutePattern( '@detail/split' ) );
+ok( 'valid: @inspector/posts/{id} (slot + param)', isValidRoutePattern( '@inspector/posts/{id}' ) );
+ok( 'valid: @palette/posts (existing palette pattern)', isValidRoutePattern( '@palette/posts' ) );
+ok( 'invalid: @ without slot name (bare @)', ! isValidRoutePattern( '@/posts' ) );
+ok( 'invalid: @SlotWithUpperCase (slot must be a-z)', ! isValidRoutePattern( '@Detail/split' ) );
 
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );

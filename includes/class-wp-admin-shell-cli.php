@@ -3,10 +3,11 @@
  * `wp admin-shell …` WP-CLI commands (plan §M5.9).
  *
  * Subcommands:
- *   list                  Print registered shells with their origins.
- *   activate <slug>       Set wp_admin_shell_active_shell.
- *   register <name> <path> Register a programmatic shell from JSON on disk.
- *   upgrade-config <name> Normalize a v0 (MVP flat) shell to v1 form.
+ *   list                          Print registered shells with their origins.
+ *   activate <slug>               Set wp_admin_shell_active_shell.
+ *   register <name> <path>        Register a programmatic shell from JSON on disk.
+ *   check-config <name>           Diagnose a shell's v2 readiness.
+ *   migrate-shell <slug-or-path>  Rewrite a v2 admin.json shell as v3-shape.
  *
  * @package WP_Admin_Shell
  */
@@ -39,15 +40,15 @@ class WP_Admin_Shell_CLI {
 		$rows = array();
 		foreach ( $shells as $shell ) {
 			$rows[] = array(
-				'slug'           => $shell['slug'],
-				'title'          => $shell['title'],
-				'origin'         => 'plugin', // shells/ files; M2 cascade lets site/role/user override on read
-				'userSwitchable' => ! empty( $shell['userSwitchable'] ) ? 'yes' : 'no',
-				'active'         => $shell['slug'] === $active ? 'yes' : '',
+				'slug'            => $shell['slug'],
+				'title'           => $shell['title'],
+				'origin'          => 'plugin', // shells/ files; M2 cascade lets site/role/user override on read
+				'user-switchable' => ( ! empty( $shell['user-switchable'] ) || ! empty( $shell['userSwitchable'] ) ) ? 'yes' : 'no',
+				'active'          => $shell['slug'] === $active ? 'yes' : '',
 			);
 		}
 
-		WP_CLI\Utils\format_items( 'table', $rows, array( 'slug', 'title', 'origin', 'userSwitchable', 'active' ) );
+		WP_CLI\Utils\format_items( 'table', $rows, array( 'slug', 'title', 'origin', 'user-switchable', 'active' ) );
 	}
 
 	/**
@@ -224,6 +225,165 @@ class WP_Admin_Shell_CLI {
 		}
 
 		WP_CLI::success( 'Shell is v2-canonical.' );
+	}
+
+	/**
+	 * Rewrite a v2 admin.json shell as v3-shape (Phase 3d.2).
+	 *
+	 * Reads the source file from either a slug (looked up in
+	 * `shells/<slug>.json`) or an absolute file path. Writes the
+	 * v3-shape JSON to `--output=<path>` or, by default, next to the
+	 * source at `<basename>.v3.json`.
+	 *
+	 * Codifies the same v2 → v3 transformations the runtime
+	 * `WP_Admin_Shell_V3_Compiler` performs at boot — `routes` → `screens`,
+	 * `viewConfigs` → `settings.dataViews`, `fieldCollections` →
+	 * `settings.dataFields`, `bindings` → `commands`, iframe-fallback
+	 * collapse to `iframe:<slug>` shorthand, branding promotion to
+	 * `workspace.branding`. Plugin authors carrying v2 shells use this to
+	 * mechanically transition.
+	 *
+	 * **dataViewRef heuristic.** When a v2 route declares
+	 * `config.variant`, the rewriter synthesizes
+	 * `screen.dataViewRef: "<kind>/<name>/<variant>"`. The kind/name
+	 * segments come from the app manifest registry's `dataView` block
+	 * when available; otherwise the rewriter falls back to assuming
+	 * `(postType, config.postType)` or `(taxonomy, config.taxonomy)`.
+	 * Routes that match neither path leave `variant` in
+	 * `screen.config.variant`; the v3 compiler's runtime
+	 * manifest-inference picks it up at boot, so the migration is still
+	 * functional but slightly less explicit.
+	 *
+	 * Output validation: lightweight checks against the admin-v3.json
+	 * schema's top-level shape rules (required fields, enums, kebab-case
+	 * patterns) before writing. Validation errors surface as
+	 * `WP_CLI::warning()`s and abort the write unless `--force` is set.
+	 *
+	 * **Source lookup precedence:** the CLI first checks for a file at
+	 * `<source>` (relative-to-cwd OR absolute), then falls back to
+	 * `shells/<source>.json` under the plugin root. Running the CLI
+	 * from a directory carrying a file named `<slug>` (without
+	 * `.json`) may match unexpectedly; pass an explicit absolute path
+	 * or use the slug form from an unrelated cwd to disambiguate.
+	 *
+	 * **`regions` block preservation:** v2 shells declaring a `regions`
+	 * block (rare) get the block copied verbatim into the v3 output
+	 * under the v3 `regions` escape hatch. v3's region shape may
+	 * diverge from v2's; the output passes the rewriter clean but
+	 * may fail Ajv validation post-merge. Hand-review any migrated
+	 * shell that carried a custom `regions` block.
+	 *
+	 * **`infer_kind_name` heuristic:** when a route's `app` manifest
+	 * doesn't declare a `dataView` block, the rewriter falls back to
+	 * reading `(postType, config.postType)` then `(taxonomy,
+	 * config.taxonomy)`. If both are set (unusual), `postType` wins.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <slug-or-path>
+	 * : Either an active-shell slug (resolves via `shells/<slug>.json`)
+	 * or an absolute file path to a v2 admin.json document. Cwd-relative
+	 * file matches take precedence over slug lookup — see "Source
+	 * lookup precedence" above.
+	 *
+	 * [--dry-run]
+	 * : Print the rewritten JSON to stdout; do not write any file.
+	 *
+	 * [--output=<path>]
+	 * : Explicit destination file path. Default: source-path with
+	 * `.json` replaced by `.v3.json`. Source paths already ending in
+	 * `.v3.json` are kept as-is (no `.v3.v3.json` doubling).
+	 *
+	 * [--force]
+	 * : Dual-purpose. (1) Overwrite an existing destination file
+	 * (default: abort if the destination exists). (2) Bypass
+	 * lightweight v3 schema validation errors and write anyway
+	 * (default: abort on validation errors). Both behaviors gated by
+	 * the same flag for ergonomic simplicity; pass `--force` only
+	 * when you've reviewed the destination + the validation warnings.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp admin-shell migrate-shell my-v2-shell
+	 *     wp admin-shell migrate-shell /tmp/legacy-shell.json --dry-run
+	 *     wp admin-shell migrate-shell my-shell --output=/tmp/my-shell.v3.json --force
+	 *
+	 * @subcommand migrate-shell
+	 * @when after_wp_load
+	 *
+	 * @param array $args        Positional args.
+	 * @param array $assoc_args  Flag args.
+	 * @return void
+	 */
+	public function migrate_shell( $args, $assoc_args ) {
+		list( $source ) = $args;
+
+		$source_path = WP_Admin_Shell_Migrate_CLI_Helpers::resolve_source( $source );
+		if ( $source_path === '' ) {
+			WP_CLI::error(
+				"Source not found: {$source}. Expected a slug (looked up in shells/) or an absolute file path."
+			);
+		}
+
+		$raw = file_get_contents( $source_path );
+		if ( ! is_string( $raw ) ) {
+			WP_CLI::error( "Could not read source file: {$source_path}" );
+		}
+		$v2 = json_decode( $raw, true );
+		if ( ! is_array( $v2 ) ) {
+			WP_CLI::error( "Source is not valid JSON: {$source_path}" );
+		}
+
+		if ( ! WP_Admin_Shell_Migrate_Rewriter::is_pre_v3( $v2 ) ) {
+			WP_CLI::error(
+				'Source appears to be v3 already (version:3 or workspace block present). Migration is one-way (v2 → v3); refusing to rewrite.'
+			);
+		}
+
+		$warnings = array();
+		$v3       = WP_Admin_Shell_Migrate_Rewriter::rewrite( $v2, array(), $warnings );
+
+		foreach ( $warnings as $warn ) {
+			WP_CLI::warning( $warn );
+		}
+
+		$errors = WP_Admin_Shell_Migrate_Rewriter::lightweight_validate( $v3 );
+		foreach ( $errors as $err ) {
+			WP_CLI::warning( $err );
+		}
+
+		$json = WP_Admin_Shell_Migrate_Rewriter::encode_json( $v3 );
+
+		if ( ! empty( $assoc_args['dry-run'] ) ) {
+			if ( ! empty( $errors ) ) {
+				WP_CLI::log(
+					'# v3-shape rewrite (validation surfaced ' . count( $errors ) . ' warning(s) — see above):'
+				);
+			}
+			WP_CLI::log( $json );
+			return;
+		}
+
+		$output = isset( $assoc_args['output'] ) && is_string( $assoc_args['output'] ) && $assoc_args['output'] !== ''
+			? $assoc_args['output']
+			: WP_Admin_Shell_Migrate_CLI_Helpers::default_output_path( $source_path );
+
+		if ( ! empty( $errors ) && empty( $assoc_args['force'] ) ) {
+			WP_CLI::error(
+				'v3 validation surfaced ' . count( $errors ) . ' error(s); pass --force to write anyway, or correct the source.'
+			);
+		}
+
+		if ( file_exists( $output ) && empty( $assoc_args['force'] ) ) {
+			WP_CLI::error( "Destination already exists: {$output}. Pass --force to overwrite." );
+		}
+
+		$written = file_put_contents( $output, $json );
+		if ( $written === false ) {
+			WP_CLI::error( "Could not write to destination: {$output}" );
+		}
+
+		WP_CLI::success( "Wrote v3-shape shell to: {$output}" );
 	}
 }
 

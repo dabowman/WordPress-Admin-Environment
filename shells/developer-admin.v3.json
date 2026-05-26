@@ -1,0 +1,1026 @@
+{
+	"$schema": "../docs/schemas/admin-v3.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "developer-admin",
+	"title": "Developer Admin",
+	"description": "Full admin shell with access to all WordPress features. Drill-down nav for design (templates / patterns / navigation / styles); iframe fallbacks for plugins / tools.",
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "posts",
+		"notices": {
+			"banner": {
+				"app": "core:notices-banner"
+			},
+			"snackbar": {
+				"app": "core:notices-snackbar"
+			}
+		}
+	},
+	"settings": {
+		"dataFields": {
+			"developer/post-fields": {
+				"kind": "postType",
+				"name": null,
+				"fields": [
+					{
+						"id": "title",
+						"type": "text",
+						"label": "Title",
+						"enableGlobalSearch": true,
+						"enableHiding": false
+					},
+					{
+						"id": "status",
+						"type": "text",
+						"label": "Status",
+						"filterBy": {
+							"operators": [
+								"isAny"
+							]
+						}
+					},
+					{
+						"id": "author",
+						"type": "text",
+						"label": "Author"
+					},
+					{
+						"id": "date",
+						"type": "datetime",
+						"label": "Date"
+					}
+				]
+			}
+		},
+		"dataViews": {
+			"postType": {
+				"post": {
+					"_default": {
+						"fieldsRef": "developer/post-fields",
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 10,
+							"fields": [
+								"status",
+								"author",
+								"date"
+							],
+							"titleField": "title",
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {},
+							"grid": {},
+							"list": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"icon": "pencil"
+							},
+							{
+								"id": "view",
+								"label": "View",
+								"icon": "external",
+								"eligibleWhen": {
+									"status": "publish"
+								}
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
+					},
+					"drafts": {
+						"fieldsRef": "developer/post-fields",
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 50,
+							"fields": [
+								"author",
+								"date"
+							],
+							"titleField": "title",
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							},
+							"filters": [
+								{
+									"field": "status",
+									"operator": "is",
+									"value": "draft"
+								}
+							]
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Resume editing",
+								"isPrimary": true,
+								"icon": "pencil"
+							},
+							{
+								"id": "trash",
+								"label": "Discard draft",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
+					}
+				},
+				"page": {
+					"_default": {
+						"fieldsRef": "developer/post-fields",
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 50,
+							"fields": [
+								"status",
+								"author",
+								"date"
+							],
+							"titleField": "title",
+							"sort": {
+								"field": "title",
+								"direction": "asc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"icon": "pencil"
+							},
+							{
+								"id": "view",
+								"label": "View",
+								"icon": "external",
+								"eligibleWhen": {
+									"status": "publish"
+								}
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
+					}
+				},
+				"wp_template": {
+					"_default": {
+						"fields": [
+							{
+								"id": "title",
+								"type": "text",
+								"label": "Template",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Modified"
+							}
+						],
+						"defaultView": {
+							"type": "grid",
+							"page": 1,
+							"perPage": 24,
+							"fields": [
+								"date"
+							],
+							"titleField": "title",
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							}
+						},
+						"defaultLayouts": {
+							"grid": {},
+							"table": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit template",
+								"isPrimary": true,
+								"icon": "pencil"
+							}
+						]
+					}
+				},
+				"wp_block": {
+					"_default": {
+						"fields": [
+							{
+								"id": "title",
+								"type": "text",
+								"label": "Pattern",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Created"
+							}
+						],
+						"defaultView": {
+							"type": "grid",
+							"page": 1,
+							"perPage": 36,
+							"fields": [],
+							"titleField": "title",
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							}
+						},
+						"defaultLayouts": {
+							"grid": {},
+							"table": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit pattern",
+								"isPrimary": true,
+								"icon": "pencil"
+							}
+						]
+					}
+				},
+				"wp_navigation": {
+					"_default": {
+						"fields": [
+							{
+								"id": "title",
+								"type": "text",
+								"label": "Menu",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Updated"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 25,
+							"fields": [
+								"date"
+							],
+							"titleField": "title",
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit menu",
+								"isPrimary": true,
+								"icon": "pencil"
+							}
+						]
+					}
+				}
+			},
+			"root": {
+				"user": {
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Name",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "email",
+								"type": "email",
+								"label": "Email",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "roles",
+								"type": "text",
+								"label": "Roles",
+								"filterBy": {
+									"operators": [
+										"is"
+									]
+								}
+							},
+							{
+								"id": "registered_date",
+								"type": "datetime",
+								"label": "Registered"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 10,
+							"fields": [
+								"email",
+								"roles",
+								"registered_date"
+							],
+							"titleField": "name",
+							"sort": {
+								"field": "name",
+								"direction": "asc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						},
+						"actions": [
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
+					}
+				},
+				"plugin": {
+					"_default": {
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 25,
+							"fields": [
+								"status",
+								"version",
+								"name",
+								"author"
+							],
+							"sort": {
+								"field": "name",
+								"direction": "asc"
+							}
+						}
+					}
+				},
+				"comment": {
+					"_default": {
+						"fields": [
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "content",
+								"type": "text",
+								"label": "Comment",
+								"enableGlobalSearch": true
+							},
+							{
+								"id": "status",
+								"type": "text",
+								"label": "Status",
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								}
+							},
+							{
+								"id": "date",
+								"type": "datetime",
+								"label": "Date"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 10,
+							"fields": [
+								"author",
+								"content",
+								"status",
+								"date"
+							],
+							"sort": {
+								"field": "date",
+								"direction": "desc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {},
+							"grid": {}
+						},
+						"actions": [
+							{
+								"id": "approve",
+								"label": "Approve",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"spam",
+										"trash"
+									]
+								}
+							},
+							{
+								"id": "unapprove",
+								"label": "Unapprove",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "approved"
+								}
+							},
+							{
+								"id": "spam",
+								"label": "Mark as spam",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"trash"
+									]
+								}
+							},
+							{
+								"id": "trash",
+								"label": "Move to trash",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash",
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"spam"
+									]
+								}
+							}
+						]
+					}
+				}
+			},
+			"taxonomy": {
+				"post_tag": {
+					"_default": {
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Tag",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "slug",
+								"type": "text",
+								"label": "Slug"
+							},
+							{
+								"id": "count",
+								"type": "integer",
+								"label": "Posts"
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description"
+							}
+						],
+						"defaultView": {
+							"type": "table",
+							"page": 1,
+							"perPage": 20,
+							"fields": [
+								"slug",
+								"count"
+							],
+							"titleField": "name",
+							"sort": {
+								"field": "name",
+								"direction": "asc"
+							}
+						},
+						"defaultLayouts": {
+							"table": {}
+						},
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"icon": "pencil"
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"screens": {
+		"dashboard": {
+			"label": "Dashboard",
+			"icon": "wordpress",
+			"path": "/dashboard",
+			"app": "core:dashboard",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			}
+		},
+		"dashboard-grid": {
+			"label": "Dashboard Grid",
+			"icon": "layout",
+			"path": "/dashboard-grid",
+			"app": "core:dashboard-host",
+			"permissions": {
+				"capabilities": [
+					"edit_dashboard"
+				]
+			}
+		},
+		"posts": {
+			"label": "Posts",
+			"icon": "post",
+			"path": "/posts",
+			"app": "core:posts",
+			"config": {
+				"postType": "post"
+			},
+			"dataViewRef": "postType/post/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			}
+		},
+		"drafts": {
+			"label": "Drafts",
+			"icon": "drafts",
+			"path": "/drafts",
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"variant": "drafts"
+			},
+			"dataViewRef": "postType/post/drafts",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			}
+		},
+		"post-new": {
+			"label": "New Post",
+			"path": "/posts/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"post-edit": {
+			"label": "Edit Post",
+			"path": "/posts/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"pages": {
+			"label": "Pages",
+			"icon": "page",
+			"path": "/pages",
+			"app": "core:posts",
+			"config": {
+				"postType": "page"
+			},
+			"dataViewRef": "postType/page/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			}
+		},
+		"page-new": {
+			"label": "New Page",
+			"path": "/pages/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"page-edit": {
+			"label": "Edit Page",
+			"path": "/pages/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"media": {
+			"label": "Media",
+			"icon": "media",
+			"path": "/media",
+			"app": "iframe:upload.php",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
+			}
+		},
+		"comments": {
+			"label": "Comments",
+			"icon": "comment",
+			"path": "/comments",
+			"app": "core:comments",
+			"dataViewRef": "root/comment/_default",
+			"permissions": {
+				"capabilities": [
+					"moderate_comments"
+				]
+			}
+		},
+		"categories": {
+			"label": "Categories",
+			"icon": "category",
+			"path": "/categories",
+			"app": "core:taxonomy",
+			"config": {
+				"taxonomy": "category"
+			},
+			"permissions": {
+				"capabilities": [
+					"manage_categories"
+				]
+			}
+		},
+		"tags": {
+			"label": "Tags",
+			"icon": "tag",
+			"path": "/tags",
+			"app": "core:taxonomy",
+			"config": {
+				"taxonomy": "post_tag"
+			},
+			"dataViewRef": "taxonomy/post_tag/_default",
+			"permissions": {
+				"capabilities": [
+					"manage_categories"
+				]
+			}
+		},
+		"design-styles": {
+			"label": "Styles",
+			"icon": "styles",
+			"path": "/design/styles",
+			"app": "core:site-editor",
+			"config": {
+				"url": "site-editor.php?p=%2Fstyles&canvas=edit"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
+		},
+		"design-navigation": {
+			"label": "Navigation",
+			"icon": "navigation",
+			"path": "/design/navigation",
+			"app": "core:posts",
+			"config": {
+				"postType": "wp_navigation"
+			},
+			"dataViewRef": "postType/wp_navigation/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
+		},
+		"design-templates": {
+			"label": "Templates",
+			"icon": "layout",
+			"path": "/design/templates",
+			"app": "core:posts",
+			"config": {
+				"postType": "wp_template"
+			},
+			"dataViewRef": "postType/wp_template/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
+		},
+		"design-patterns": {
+			"label": "Patterns",
+			"icon": "symbol",
+			"path": "/design/patterns",
+			"app": "core:posts",
+			"config": {
+				"postType": "wp_block"
+			},
+			"dataViewRef": "postType/wp_block/_default",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
+		},
+		"plugins": {
+			"label": "Plugins",
+			"icon": "plugins",
+			"path": "/plugins",
+			"app": "core:plugins",
+			"dataViewRef": "root/plugin/_default",
+			"permissions": {
+				"capabilities": [
+					"activate_plugins"
+				]
+			}
+		},
+		"themes": {
+			"label": "Themes",
+			"icon": "styles",
+			"path": "/themes",
+			"app": "core:themes",
+			"permissions": {
+				"capabilities": [
+					"switch_themes"
+				]
+			}
+		},
+		"users": {
+			"label": "Users",
+			"icon": "people",
+			"path": "/users",
+			"app": "core:users",
+			"dataViewRef": "root/user/_default",
+			"permissions": {
+				"capabilities": [
+					"list_users"
+				]
+			}
+		},
+		"tools": {
+			"label": "Tools",
+			"icon": "wrench",
+			"path": "/tools",
+			"app": "core:tools",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			}
+		},
+		"site-health": {
+			"label": "Site Health",
+			"icon": "update",
+			"path": "/site-health",
+			"app": "core:site-health",
+			"permissions": {
+				"capabilities": [
+					"view_site_health_checks"
+				]
+			}
+		},
+		"settings": {
+			"label": "Settings",
+			"icon": "settings",
+			"path": "/settings",
+			"app": "core:settings",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
+		},
+		"profile": {
+			"label": "Profile",
+			"icon": "user",
+			"path": "/profile",
+			"app": "core:profile",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			}
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot": "palette",
+			"app": "core:command-palette",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			},
+			"mode": "modal"
+		}
+	},
+	"menu": {
+		"dashboard": {
+			"position": 10
+		},
+		"dashboard-grid": {
+			"position": 20
+		},
+		"sep-1": {
+			"separator": true,
+			"position": 25
+		},
+		"posts": {
+			"position": 30
+		},
+		"drafts": {
+			"position": 40
+		},
+		"pages": {
+			"position": 50
+		},
+		"media": {
+			"position": 60
+		},
+		"comments": {
+			"position": 70
+		},
+		"categories": {
+			"position": 80
+		},
+		"tags": {
+			"position": 90
+		},
+		"sep-2": {
+			"separator": true,
+			"position": 95
+		},
+		"design": {
+			"label": "Design",
+			"icon": "layout",
+			"description": "Edit your site's appearance, navigation, templates, and patterns.",
+			"position": 100,
+			"items": {
+				"design-styles": {
+					"position": 10
+				},
+				"design-navigation": {
+					"position": 20
+				},
+				"design-templates": {
+					"position": 30
+				},
+				"design-patterns": {
+					"position": 40
+				}
+			}
+		},
+		"sep-3": {
+			"separator": true,
+			"position": 105
+		},
+		"system": {
+			"label": "System",
+			"icon": "settings",
+			"description": "Manage plugins, users, tools, and site settings.",
+			"position": 110,
+			"items": {
+				"plugins": {
+					"position": 10
+				},
+				"themes": {
+					"position": 20
+				},
+				"users": {
+					"position": 30
+				},
+				"tools": {
+					"position": 40
+				},
+				"site-health": {
+					"position": 50
+				},
+				"settings": {
+					"position": 60
+				}
+			}
+		},
+		"sep-4": {
+			"separator": true,
+			"position": 115
+		},
+		"view-site": {
+			"label": "View Site",
+			"icon": "external",
+			"href": "/",
+			"external": true,
+			"position": 120
+		}
+	},
+	"commands": [
+		{
+			"id": "core-command-palette",
+			"shortcut": "Mod+K",
+			"invoke": "core:command-palette",
+			"label": "Open Command Palette"
+		},
+		{
+			"id": "navigate-post-new",
+			"shortcut": "Mod+Alt+N",
+			"navigate": "/posts/new",
+			"label": "New Post"
+		}
+	],
+	"styles": {
+		"theme": {
+			"color": {
+				"bg": "#1e1e1e"
+			},
+			"density": "compact"
+		},
+		"regions": {
+			"content": {
+				"theme": {
+					"color": {
+						"bg": "#ffffff"
+					}
+				}
+			}
+		}
+	}
+}

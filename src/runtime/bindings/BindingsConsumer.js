@@ -1,13 +1,27 @@
-import { useEffect } from '@wordpress/element';
+import { useEffect, useMemo } from '@wordpress/element';
 
 import { useKernel } from '../kernel-context';
-import { parseShortcut } from './parseShortcut.mjs';
+import { buildCommandsArray } from './buildCommandsArray.mjs';
 import { trigger } from './triggerStore.mjs';
+import { navigate } from '../routing/router';
+
+// `buildCommandsArray` lives in its own `.mjs` sibling so the rebind test
+// can import it directly (`tests/runtime/bindings-consumer-rebind.test.mjs`).
+// Keeping it pure-ESM + module-scoped matches the repo convention for
+// runtime helpers (`resolveRegion.mjs`, `matchRoute.mjs`, `lruCache.mjs`).
+export { buildCommandsArray };
 
 /**
- * Reads the resolved admin.json `bindings` block and registers each
- * shortcut against the document. When a binding fires, looks up the
- * `invoke` app id in the trigger store and calls its open handler.
+ * Reads the resolved admin.json `commands` block (v3) and registers each
+ * shortcut against the document. When a binding fires:
+ *   - `invoke` commands look up the app id in the trigger store and
+ *     call its open handler (v2 binding semantics preserved).
+ *   - `navigate` commands push the target path onto the URL bar.
+ *
+ * The PHP v3 compiler forwards any legacy v2 `bindings[]` into
+ * `commands[]` so this reader has a single source of truth. The
+ * fallback to `config.bindings` is defensive — covers tests / fixtures
+ * that bypass the compiler.
  *
  * Spec §8 precedence: app shortcuts win when focus is inside the app's
  * DOM. We approximate this by skipping the binding when the active
@@ -19,25 +33,23 @@ import { trigger } from './triggerStore.mjs';
  */
 export function BindingsConsumer() {
 	const { config } = useKernel();
-	const bindings = Array.isArray( config?.bindings ) ? config.bindings : null;
+	// Memoize the compiled command table on the underlying nested refs so
+	// the keydown handler binds once per real shortcut change, not once
+	// per router event. The outer config object ref churns on every
+	// resolved-tree update; `config.commands` / `config.bindings` are
+	// stable across renders that didn't touch them.
+	const compiled = useMemo( () => {
+		let source = null;
+		if ( Array.isArray( config?.commands ) ) {
+			source = config.commands;
+		} else if ( Array.isArray( config?.bindings ) ) {
+			source = config.bindings;
+		}
+		return buildCommandsArray( source );
+	}, [ config?.commands, config?.bindings ] );
 
 	useEffect( () => {
-		if (
-			! bindings ||
-			bindings.length === 0 ||
-			typeof window === 'undefined'
-		) {
-			return undefined;
-		}
-
-		const compiled = bindings
-			.map( ( entry ) => ( {
-				match: parseShortcut( entry?.shortcut ),
-				invoke: entry?.invoke,
-			} ) )
-			.filter( ( e ) => e.match && typeof e.invoke === 'string' );
-
-		if ( compiled.length === 0 ) {
+		if ( compiled.length === 0 || typeof window === 'undefined' ) {
 			return undefined;
 		}
 
@@ -47,7 +59,15 @@ export function BindingsConsumer() {
 			}
 			for ( const entry of compiled ) {
 				if ( entry.match( event ) ) {
-					if ( trigger( entry.invoke ) ) {
+					let handled = false;
+					if ( entry.invoke ) {
+						handled = trigger( entry.invoke );
+					}
+					if ( ! handled && entry.navigate ) {
+						navigate( entry.navigate );
+						handled = true;
+					}
+					if ( handled ) {
 						event.preventDefault();
 						event.stopPropagation();
 					}
@@ -58,7 +78,7 @@ export function BindingsConsumer() {
 
 		document.addEventListener( 'keydown', onKey );
 		return () => document.removeEventListener( 'keydown', onKey );
-	}, [ bindings ] );
+	}, [ compiled ] );
 
 	return null;
 }
