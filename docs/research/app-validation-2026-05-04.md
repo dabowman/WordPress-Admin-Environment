@@ -1,5 +1,7 @@
 # App validation — WPDS / REST / core-data compliance
 
+> **⚠️ v2-era audit (historical).** This is a point-in-time triage snapshot taken on the `feat/wp-admin-shell-v2` branch. Many findings have since been remediated; file paths and counts reflect the v2 tree, not the current v3 codebase. Read as a remediation checklist / historical context, **not** current v3 guidance. Verify any finding against the live source before acting.
+
 **Date:** 2026-05-04
 **Branch:** `feat/wp-admin-shell-v2` (validation worktree `validate-apps-wpds`)
 **Scope:** Every app under `src/apps/` (22 files) and `src/runtime/apps/` (8 files + `_components/`)
