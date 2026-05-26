@@ -1,9 +1,8 @@
 /* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
 import './index.css';
+import '../_shared/app.css';
 import { useState } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
-import { store as noticesStore } from '@wordpress/notices';
 import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
 import {
 	SelectControl,
@@ -13,6 +12,8 @@ import {
 	__experimentalDivider as Divider,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { eventValue } from '../_shared/forms/eventValue.mjs';
+import { useEntitySave } from '../_shared/forms/useEntitySave';
 
 const CUSTOM_RADIO_VALUE = '__custom__';
 
@@ -21,8 +22,10 @@ export default function SettingsGeneralApp() {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'site' );
 
-	const { createSuccessNotice, createErrorNotice } =
-		useDispatch( noticesStore );
+	const handleSave = useEntitySave( save, {
+		success: __( 'Settings saved.', 'wp-admin-shell' ),
+		error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+	} );
 	const [ dateFormatCustom, setDateFormatCustom ] = useState(
 		editedRecord?.date_format || ''
 	);
@@ -34,26 +37,11 @@ export default function SettingsGeneralApp() {
 
 	if ( ! record || ! data ) {
 		return (
-			<div className="wp-admin-shell-app-settings-general__loading">
+			<div className="wp-admin-shell-app__center">
 				<Spinner />
 			</div>
 		);
 	}
-
-	const handleSave = async () => {
-		try {
-			await save();
-			createSuccessNotice( __( 'Settings saved.', 'wp-admin-shell' ), {
-				type: 'snackbar',
-			} );
-		} catch ( err ) {
-			createErrorNotice(
-				err.message ||
-					__( 'Failed to save settings.', 'wp-admin-shell' ),
-				{ isDismissible: true }
-			);
-		}
-	};
 
 	const dateFormatPresetValues = data.dateFormats.map( ( o ) => o.value );
 	const timeFormatPresetValues = data.timeFormats.map( ( o ) => o.value );
@@ -89,9 +77,6 @@ export default function SettingsGeneralApp() {
 			label: __( 'Custom', 'wp-admin-shell' ),
 		},
 	];
-
-	// `@wordpress/ui` InputControl uses native React onChange (event-based).
-	const eventValue = ( e ) => e.target.value;
 
 	return (
 		<div className="wp-admin-shell-app-settings-general">

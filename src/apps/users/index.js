@@ -1,20 +1,18 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import '../_shared/app.css';
+import { useMemo } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, Stack, Text } from '@wordpress/ui';
-import { Button as DestructiveButton } from '@wordpress/components';
+import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
-import { resolveIcon } from '../../runtime/config/iconMap';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { buildFields } from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
-// View-config primitives ship as locale-agnostic JSON (spec §13 #7) — labels
-// reach DataViews in whatever locale the spec was authored in. Recover the
-// pre-C2 translation behavior by mapping known field/action ids to `__()`-
-// wrapped strings at compile time. Unknown ids (plugin extension columns /
-// actions) fall through to `spec.label` so third-party authors can still
-// label their own additions.
+// Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	name: __( 'Name', 'wp-admin-shell' ),
 	email: __( 'Email', 'wp-admin-shell' ),
@@ -26,11 +24,6 @@ const ACTION_LABELS = {
 	delete: __( 'Delete', 'wp-admin-shell' ),
 };
 
-/**
- * Shape defaults for DataViews `view` state. Spread under the resolved
- * `defaultView` so iteration over `view.filters` / `view.fields` is safe
- * when admin.json omits empty-list keys.
- */
 const VIEW_DEFAULTS = {
 	type: 'table',
 	search: '',
@@ -43,22 +36,15 @@ const VIEW_DEFAULTS = {
 };
 
 /**
- * Field id → render callback. View-config declares the *shape* (id,
- * type, label, hide/sort/search flags); the React layer supplies the
- * row renderer. Unknown ids fall through to DataViews' default
- * renderer for the declared field type.
+ * Field id → render callback. View-config declares the *shape*; the React
+ * layer supplies the row renderer.
  */
 function buildFieldRenderers() {
 	return {
 		name: ( { item } ) => (
 			<Stack direction="column" gap="xs">
-				<Text className="wp-admin-shell-app-users__name">
-					{ item.name }
-				</Text>
-				<Text
-					variant="body-sm"
-					className="wp-admin-shell-app-users__muted"
-				>
+				<Text>{ item.name }</Text>
+				<Text className="wp-admin-shell-app__muted">
 					{ item.username }
 				</Text>
 			</Stack>
@@ -69,274 +55,26 @@ function buildFieldRenderers() {
 }
 
 /**
- * Compile a declarative `eligibleWhen` predicate into a DataViews
- * `isEligible(item)` callback. Supports `{ field: value | [values] }`
- * shape; absent → no eligibility filter (always shown).
- * @param {Object} eligibleWhen Eligibility map.
- */
-function compileEligibility( eligibleWhen ) {
-	if ( ! eligibleWhen || typeof eligibleWhen !== 'object' ) {
-		return undefined;
-	}
-	const entries = Object.entries( eligibleWhen );
-	if ( entries.length === 0 ) {
-		return undefined;
-	}
-	return ( item ) =>
-		entries.every( ( [ field, expected ] ) => {
-			const actual = item?.[ field ];
-			if ( Array.isArray( expected ) ) {
-				return expected.includes( actual );
-			}
-			return actual === expected;
-		} );
-}
-
-function buildActions(
-	actions,
-	{
-		deleteEntityRecord,
-		invalidateResolution,
-		queryArgs,
-		createSuccessNotice,
-		createErrorNotice,
-	}
-) {
-	return actions
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				label: ACTION_LABELS[ spec.id ] ?? spec.label,
-				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
-				supportsBulk: !! spec.supportsBulk,
-				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
-				isEligible: compileEligibility( spec.eligibleWhen ),
-			};
-
-			if ( spec.id === 'delete' ) {
-				compiled.RenderModal = ( {
-					items,
-					closeModal,
-					onActionPerformed,
-				} ) => {
-					const currentUserId = window.wpAdminShell?.userId;
-					const targets = items.filter(
-						( i ) => i.id !== currentUserId
-					);
-					const skipped = items.length - targets.length;
-					return (
-						<Stack
-							direction="column"
-							gap="lg"
-							style={ {
-								padding: 'var(--wpds-dimension-padding-lg)',
-							} }
-						>
-							<Text>
-								{ ( () => {
-									if ( targets.length === 0 ) {
-										return __(
-											'You cannot delete your own account.',
-											'wp-admin-shell'
-										);
-									}
-									if ( targets.length === 1 ) {
-										return __(
-											'Delete this user permanently? Their content will be reassigned to you.',
-											'wp-admin-shell'
-										);
-									}
-									return __(
-										'Delete these users permanently? Their content will be reassigned to you.',
-										'wp-admin-shell'
-									);
-								} )() }
-								{ skipped > 0 && targets.length > 0 && (
-									<>
-										{ ' ' }
-										{ __(
-											'(Your own account will be skipped.)',
-											'wp-admin-shell'
-										) }
-									</>
-								) }
-							</Text>
-							<Stack direction="row" justify="flex-end" gap="sm">
-								<Button
-									tone="neutral"
-									variant="minimal"
-									onClick={ closeModal }
-								>
-									{ __( 'Cancel', 'wp-admin-shell' ) }
-								</Button>
-								<DestructiveButton
-									variant="primary"
-									isDestructive
-									disabled={ targets.length === 0 }
-									onClick={ async () => {
-										if ( targets.length === 0 ) {
-											createErrorNotice(
-												__(
-													'Cannot delete yourself.',
-													'wp-admin-shell'
-												)
-											);
-											closeModal();
-											return;
-										}
-										// `allSettled` so one failure doesn't
-										// collapse the rest of a bulk action;
-										// surface partial-success via a
-										// snackbar notice.
-										const results =
-											await Promise.allSettled(
-												targets.map( ( item ) =>
-													deleteEntityRecord(
-														'root',
-														'user',
-														item.id,
-														{
-															force: true,
-															reassign:
-																currentUserId,
-														}
-													)
-												)
-											);
-										const failed = results.filter(
-											( r ) => r.status === 'rejected'
-										).length;
-										invalidateResolution(
-											'getEntityRecords',
-											[ 'root', 'user', queryArgs ]
-										);
-										if ( failed === 0 ) {
-											createSuccessNotice(
-												__(
-													'User(s) deleted.',
-													'wp-admin-shell'
-												),
-												{ type: 'snackbar' }
-											);
-										} else if ( failed < targets.length ) {
-											createErrorNotice(
-												sprintf(
-													/* translators: 1: failed item count, 2: total item count */
-													_n(
-														'%1$d of %2$d user failed to delete.',
-														'%1$d of %2$d users failed to delete.',
-														targets.length,
-														'wp-admin-shell'
-													),
-													failed,
-													targets.length
-												),
-												{ isDismissible: true }
-											);
-										} else {
-											const first = results.find(
-												( r ) => r.status === 'rejected'
-											);
-											createErrorNotice(
-												first?.reason?.message ||
-													__(
-														'Failed to delete user(s).',
-														'wp-admin-shell'
-													),
-												{ isDismissible: true }
-											);
-										}
-										onActionPerformed?.( targets );
-										closeModal();
-									} }
-								>
-									{ __( 'Delete', 'wp-admin-shell' ) }
-								</DestructiveButton>
-							</Stack>
-						</Stack>
-					);
-				};
-			}
-
-			return compiled;
-		} );
-}
-
-function buildFields( fieldSpecs, fieldRenderers ) {
-	return fieldSpecs
-		.filter( ( spec ) => spec && typeof spec === 'object' && spec.id )
-		.map( ( spec ) => {
-			const compiled = {
-				id: spec.id,
-				type: spec.type,
-				label: FIELD_LABELS[ spec.id ] ?? spec.label,
-			};
-			if ( spec.enableGlobalSearch !== undefined ) {
-				compiled.enableGlobalSearch = !! spec.enableGlobalSearch;
-			}
-			if ( spec.enableHiding !== undefined ) {
-				compiled.enableHiding = !! spec.enableHiding;
-			}
-			if ( spec.enableSorting !== undefined ) {
-				compiled.enableSorting = !! spec.enableSorting;
-			}
-			if ( Array.isArray( spec.elements ) ) {
-				compiled.elements = spec.elements;
-			}
-			if ( spec.filterBy ) {
-				compiled.filterBy = spec.filterBy;
-			}
-			if ( fieldRenderers[ spec.id ] ) {
-				compiled.render = fieldRenderers[ spec.id ];
-			}
-			return compiled;
-		} );
-}
-
-/**
  * core:users — DataViews list of WordPress users.
  *
- * Reads its DataViews spec via `useDataView(screenId)`. The baseline
- * ships in `app.json#dataView` and is injected into
- * `settings.dataViews.root.user` post-merge by `inject_app_baselines`;
- * admin.json `settings.dataViews.root.user` wins on per-entry override;
- * per-screen `screens[screenId].dataView` deep-merges on top; the
- * per-triple filter
- * `wp_admin_shell_data_view_config_root_user[_<variant>]` runs last.
+ * Reads its DataViews spec via `useDataView(screenId)`. Bulk delete uses
+ * `deleteEntityRecord( 'root', 'user', id, { reassign, force: true } )` —
+ * users have no trash, so deletion is permanent. The acting user is filtered
+ * out of the target set (reassign-to-self fails server-side and would error
+ * the bulk request mid-flight).
  *
- * Reads via useEntityRecords('root', 'user') with `context: 'edit'` so
- * email + roles come back in the response. Bulk delete supported via
- * the deleteEntityRecord( 'root', 'user', id, { reassign, force: true } )
- * — users have no trash, so deletion is permanent.
- *
- * Plugin-contributed actions land via the core:users.row-actions data
- * slot (M4.5).
  * @param {Object} root0          Mount-supplied props.
- * @param {Object} [root0.config] App config from the resolved screen — `config.screenId` keys the per-screen view lookup.
+ * @param {Object} [root0.config] App config — `config.screenId` keys the per-screen view lookup.
  */
 export default function UsersApp( { config = {} } = {} ) {
 	const screenId = config.screenId || null;
 	const { config: dataViewConfig } = useDataView( screenId );
 
-	const [ view, setView ] = useState( () => ( {
-		...VIEW_DEFAULTS,
-		...dataViewConfig.defaultView,
-	} ) );
-
-	// Resync `view` when the screen flips on the same hook instance.
-	// Mirrors PostsApp's recipe — keyed on screenId so a sibling screen
-	// using the same hook instance picks up its own defaults. Keyed only
-	// on screenId — not dataViewConfig — to avoid clobbering in-session view
-	// edits whenever the cascade re-resolves the doc shape.
-	useEffect( () => {
-		setView( {
-			...VIEW_DEFAULTS,
-			...( dataViewConfig.defaultView || {} ),
-		} );
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ screenId ] );
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+	} );
 
 	const queryArgs = useMemo( () => {
 		const sortField = view.sort?.field || 'name';
@@ -387,45 +125,115 @@ export default function UsersApp( { config = {} } = {} ) {
 		} ) );
 	}, [ records ] );
 
-	// Strip the titleField from the visible-columns list. DataViews renders
-	// the title cell from `view.titleField`; leaving the id in `view.fields`
-	// would render a second column for the same field. PostsApp recipe.
-	const visibleView = useMemo( () => {
-		const titleField =
-			view.titleField || dataViewConfig.defaultView?.titleField;
-		if ( ! titleField || ! Array.isArray( view.fields ) ) {
-			return view;
-		}
-		const fields = view.fields.filter( ( id ) => id !== titleField );
-		if ( fields.length === view.fields.length ) {
-			return view;
-		}
-		return { ...view, fields };
-	}, [ view, dataViewConfig ] );
-
 	const fields = useMemo(
-		() => buildFields( dataViewConfig.fields ?? [], buildFieldRenderers() ),
+		() =>
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: buildFieldRenderers(),
+			} ),
 		[ dataViewConfig ]
 	);
 
-	const actions = useMemo(
-		() =>
-			buildActions( dataViewConfig.actions ?? [], {
-				deleteEntityRecord,
-				invalidateResolution,
-				queryArgs,
-				createSuccessNotice,
-				createErrorNotice,
-			} ),
-		[
-			dataViewConfig,
-			deleteEntityRecord,
-			invalidateResolution,
-			queryArgs,
-			createSuccessNotice,
-			createErrorNotice,
-		]
-	);
+	const actions = useMemo( () => {
+		const currentUserId = window.wpAdminShell?.userId;
+		const deleteModal = createBulkConfirmModal( {
+			filterItems: ( items ) =>
+				items.filter( ( i ) => i.id !== currentUserId ),
+			isConfirmDisabled: ( targets ) => targets.length === 0,
+			getMessage: ( items, targets ) => {
+				const skipped = items.length - targets.length;
+				let body;
+				if ( targets.length === 0 ) {
+					body = __(
+						'You cannot delete your own account.',
+						'wp-admin-shell'
+					);
+				} else if ( targets.length === 1 ) {
+					body = __(
+						'Delete this user permanently? Their content will be reassigned to you.',
+						'wp-admin-shell'
+					);
+				} else {
+					body = __(
+						'Delete these users permanently? Their content will be reassigned to you.',
+						'wp-admin-shell'
+					);
+				}
+				return (
+					<>
+						{ body }
+						{ skipped > 0 && targets.length > 0 && (
+							<>
+								{ ' ' }
+								{ __(
+									'(Your own account will be skipped.)',
+									'wp-admin-shell'
+								) }
+							</>
+						) }
+					</>
+				);
+			},
+			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				deleteEntityRecord( 'root', 'user', item.id, {
+					force: true,
+					reassign: currentUserId,
+				} ),
+			onSettled: ( { targets, results, failed } ) => {
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'user',
+					queryArgs,
+				] );
+				if ( ! targets.length ) {
+					return;
+				}
+				if ( failed === 0 ) {
+					createSuccessNotice(
+						__( 'User(s) deleted.', 'wp-admin-shell' ),
+						{ type: 'snackbar' }
+					);
+				} else if ( failed < targets.length ) {
+					createErrorNotice(
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d user failed to delete.',
+								'%1$d of %2$d users failed to delete.',
+								failed,
+								'wp-admin-shell'
+							),
+							failed,
+							targets.length
+						),
+						{ isDismissible: true }
+					);
+				} else {
+					const first = results.find(
+						( r ) => r.status === 'rejected'
+					);
+					createErrorNotice(
+						first?.reason?.message ||
+							__( 'Failed to delete user(s).', 'wp-admin-shell' ),
+						{ isDismissible: true }
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			modals: { delete: deleteModal },
+		} );
+	}, [
+		dataViewConfig,
+		deleteEntityRecord,
+		invalidateResolution,
+		queryArgs,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -435,14 +243,12 @@ export default function UsersApp( { config = {} } = {} ) {
 		[ totalItems, totalPages ]
 	);
 
-	const [ selection, setSelection ] = useState( [] );
-
 	return (
-		<div className="wp-admin-shell-app-users">
+		<div className="wp-admin-shell-app-users wp-admin-shell-app--fill">
 			<DataViews
 				data={ data }
 				fields={ fields }
-				view={ visibleView }
+				view={ view }
 				onChangeView={ setView }
 				actions={ actions }
 				paginationInfo={ paginationInfo }

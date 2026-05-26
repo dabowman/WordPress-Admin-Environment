@@ -24,10 +24,3 @@
 	padding-left: var(--wpds-dimension-padding-2xl);
 	overflow-y: auto;
 }
-
-.wp-admin-shell-app-settings__loading {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 200px;
-}

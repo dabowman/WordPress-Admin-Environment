@@ -1,4 +1,5 @@
 import './index.css';
+import '../_shared/app.css';
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
@@ -178,7 +179,7 @@ export default function MediaApp() {
 							<Stack direction="column" align="center" gap="md">
 								<Text
 									variant="body-sm"
-									className="wp-admin-shell-app-media__muted"
+									className="wp-admin-shell-app__muted"
 								>
 									{ __(
 										'No media items found.',
@@ -377,7 +378,7 @@ function MediaDetailModal( {
 					/>
 					<Text
 						variant="body-sm"
-						className="wp-admin-shell-app-media__muted"
+						className="wp-admin-shell-app__muted"
 					>
 						{ item.source_url }
 					</Text>

@@ -1,14 +1,8 @@
-/* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
-import { useEntityRecord, useEntityRecords } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
-import { store as noticesStore } from '@wordpress/notices';
-import { Button, Stack, Text } from '@wordpress/ui';
-import {
-	SelectControl,
-	Spinner,
-	__experimentalDivider as Divider,
-} from '@wordpress/components';
+import { useMemo } from '@wordpress/element';
+import { useEntityRecords } from '@wordpress/core-data';
+import { Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
+import { EntityDataForm } from '../_shared/forms/EntityDataForm';
 
 const POST_FORMAT_OPTIONS = [
 	{ value: 'standard', label: __( 'Standard', 'wp-admin-shell' ) },
@@ -23,10 +17,11 @@ const POST_FORMAT_OPTIONS = [
 	{ value: 'audio', label: __( 'Audio', 'wp-admin-shell' ) },
 ];
 
-export default function SettingsWritingApp() {
-	const { record, editedRecord, edit, save, hasEdits, isSaving } =
-		useEntityRecord( 'root', 'site' );
+const FORM = {
+	fields: [ 'default_category', 'default_post_format' ],
+};
 
+export default function SettingsWritingApp() {
 	const categories = useEntityRecords( 'taxonomy', 'category', {
 		per_page: 100,
 		orderby: 'name',
@@ -34,89 +29,53 @@ export default function SettingsWritingApp() {
 		hide_empty: false,
 	} );
 
-	const { createSuccessNotice, createErrorNotice } =
-		useDispatch( noticesStore );
-
-	if ( ! record ) {
-		return (
-			<div className="wp-admin-shell-app-settings-writing__loading">
-				<Spinner />
-			</div>
-		);
-	}
-
-	const handleSave = async () => {
-		try {
-			await save();
-			createSuccessNotice( __( 'Settings saved.', 'wp-admin-shell' ), {
-				type: 'snackbar',
-			} );
-		} catch ( err ) {
-			createErrorNotice(
-				err.message ||
-					__( 'Failed to save settings.', 'wp-admin-shell' )
-			);
-		}
-	};
-
-	const categoryOptions = ( categories.records || [] ).map( ( c ) => ( {
-		value: c.id,
-		label: c.name,
-	} ) );
+	const fields = useMemo( () => {
+		const categoryOptions = ( categories.records || [] ).map( ( c ) => ( {
+			value: String( c.id ),
+			label: c.name,
+		} ) );
+		return [
+			{
+				id: 'default_category',
+				type: 'text',
+				label: __( 'Default Post Category', 'wp-admin-shell' ),
+				Edit: 'select',
+				elements: categoryOptions,
+				getValue: ( { item } ) => String( item.default_category ?? '' ),
+				setValue: ( { value } ) => ( {
+					default_category: parseInt( value, 10 ),
+				} ),
+			},
+			{
+				id: 'default_post_format',
+				type: 'text',
+				label: __( 'Default Post Format', 'wp-admin-shell' ),
+				Edit: 'select',
+				elements: POST_FORMAT_OPTIONS,
+				getValue: ( { item } ) =>
+					item.default_post_format || 'standard',
+			},
+		];
+	}, [ categories.records ] );
 
 	return (
-		<div className="wp-admin-shell-app-settings-writing">
-			<Stack direction="column" gap="xl">
-				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'Writing', 'wp-admin-shell' ) }
-				</Text>
-
-				<SelectControl
-					label={ __( 'Default Post Category', 'wp-admin-shell' ) }
-					value={ String( editedRecord.default_category ?? '' ) }
-					options={ categoryOptions.map( ( o ) => ( {
-						...o,
-						value: String( o.value ),
-					} ) ) }
-					onChange={ ( val ) =>
-						edit( { default_category: parseInt( val, 10 ) } )
-					}
-					help={ __(
-						'New posts get this category if you do not pick one.',
-						'wp-admin-shell'
-					) }
-					__nextHasNoMarginBottom
-				/>
-
-				<SelectControl
-					label={ __( 'Default Post Format', 'wp-admin-shell' ) }
-					value={ editedRecord.default_post_format || 'standard' }
-					options={ POST_FORMAT_OPTIONS }
-					onChange={ ( val ) => edit( { default_post_format: val } ) }
-					__nextHasNoMarginBottom
-				/>
-
-				<Divider />
-
-				<Text variant="body-sm">
-					{ __(
-						'Post via email and remote-publishing settings are not exposed by the WordPress REST API. Use the legacy Writing Settings screen for those fields.',
-						'wp-admin-shell'
-					) }
-				</Text>
-
-				<Stack direction="row" justify="flex-start">
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						disabled={ ! hasEdits || isSaving }
-						loading={ isSaving }
-					>
-						{ __( 'Save Changes', 'wp-admin-shell' ) }
-					</Button>
-				</Stack>
-			</Stack>
-		</div>
+		<EntityDataForm
+			className="wp-admin-shell-app-settings-writing"
+			entity={ [ 'root', 'site' ] }
+			fields={ fields }
+			form={ FORM }
+			heading={ __( 'Writing', 'wp-admin-shell' ) }
+			messages={ {
+				success: __( 'Settings saved.', 'wp-admin-shell' ),
+				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+			} }
+		>
+			<Text variant="body-sm">
+				{ __(
+					'Post via email and remote-publishing settings are not exposed by the WordPress REST API. Use the legacy Writing Settings screen for those fields.',
+					'wp-admin-shell'
+				) }
+			</Text>
+		</EntityDataForm>
 	);
 }

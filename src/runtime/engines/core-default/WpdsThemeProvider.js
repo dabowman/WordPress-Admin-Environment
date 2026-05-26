@@ -19,7 +19,8 @@
  * mirrors the public `ThemeProvider` prop contract.
  */
 
-import { createElement } from '@wordpress/element';
+import { createElement, useId } from '@wordpress/element';
+import { Popover } from '@wordpress/components';
 
 const PRIVATE_API_CONSENT =
 	'I acknowledge private features are not for use in themes or plugins and doing so will break in the next version of WordPress.';
@@ -93,6 +94,57 @@ function pickCursor( styles ) {
 	return null;
 }
 
+/**
+ * Wraps a NON-root region/app themed subtree with the two things the real
+ * `@wordpress/theme.ThemeProvider` doesn't provide on its own:
+ *
+ * 1. **Inherited foreground.** The real provider emits only custom properties
+ *    on a `display:contents` element — it never sets the `color` property. The
+ *    engine paints `color` at the layout root (canvas foreground = the shell
+ *    *root* ramp), and `color` inherits. A nested light region that doesn't
+ *    re-set `color` therefore leaks the root's dark-theme foreground
+ *    (`#f0f0f0`) into its text. Components that set their own color from a
+ *    token (`@wordpress/ui` Text / InputControl) look right; ones that rely on
+ *    inherited `color` (`@wordpress/components` Items, icons via `currentColor`)
+ *    render light-on-light. Re-establish this region's ramp foreground here.
+ *    `color` inherits through `display:contents`, so layout is untouched and
+ *    the overlay Slot below is covered too. Background is NOT set — it isn't
+ *    inherited; each surface paints its own from its tokens.
+ *
+ * 2. **Overlay routing.** `@wordpress/components` `Popover` reads
+ *    `slotNameContext`; with a matching named `Popover.Slot` mounted it renders
+ *    as a Fill at the Slot's tree position instead of body-portaling, so
+ *    dropdowns / select menus / DataViews filter comboboxes resolve their
+ *    tokens against this region's ramp. Per-instance slot name (`useId`);
+ *    nested `slotNameContext` overrides pick the nearest region.
+ *
+ * Root/chrome popovers keep body-portaling (already correctly root-themed).
+ * NOTE: `@wordpress/components` `Modal` uses its own body portal independent of
+ * the Popover slot, so Modal-based overlays (DataViews action `RenderModal`)
+ * are NOT covered by this seam — see docs/feedback.md.
+ *
+ * @param {Object} root0
+ * @param {*}      root0.children
+ */
+function RegionThemedSubtree( { children } ) {
+	const slotName = `wp-admin-shell-overlays-${ useId() }`;
+	return createElement(
+		'div',
+		{
+			style: {
+				display: 'contents',
+				color: 'var(--wpds-color-fg-content-neutral)',
+			},
+		},
+		createElement(
+			Popover.__unstableSlotNameProvider,
+			{ value: slotName },
+			children,
+			createElement( Popover.Slot, { name: slotName } )
+		)
+	);
+}
+
 export function WpdsThemeProvider( { styles, density, isRoot, children } ) {
 	if ( ! RealThemeProvider ) {
 		// eslint-disable-next-line no-console
@@ -116,5 +168,9 @@ export function WpdsThemeProvider( { styles, density, isRoot, children } ) {
 		props.cursor = cursor;
 	}
 
-	return createElement( RealThemeProvider, props, children );
+	const inner = isRoot
+		? children
+		: createElement( RegionThemedSubtree, null, children );
+
+	return createElement( RealThemeProvider, props, inner );
 }
