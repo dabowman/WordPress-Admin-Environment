@@ -271,7 +271,7 @@ Four named modes ship with the runtime. Engines opt into honoring them; engines 
 | `takeover`  | All workspace chrome hidden. Full-viewport screen.                       | hidden / hidden / hidden / full-viewport                         |
 | `modal`     | Mount as an overlay on top of the current screen. Chrome state unchanged.| unchanged; modal layer renders above content                     |
 
-Engine declares its mode catalog in `engine.json#modes` (see [`core-default-engine.v3.md`](./core-default-engine.v3.md) for the full shape).
+Engine declares its mode catalog in `engine.json#modes` (see [`core-default-engine.md`](./core-default-engine.md) for the full shape).
 
 ### Mode inheritance via `extends`
 

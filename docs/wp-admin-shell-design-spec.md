@@ -1,7 +1,7 @@
 # WordPress Admin Shell — Design Spec
 
 > Authoritative source for the WP Admin Shell runtime architecture.
-> **Companion docs:** [`docs/v3/schema-sketch.md`](./v3/schema-sketch.md) is the design doc for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
+> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
 
 The shell is built on three artifact types (app manifest, engine manifest, `admin.json`). Regions are described by a three-layer vocabulary (`role` / `layout` / `platform`) and compose by recursive nesting — there are no slots in the region tree and no selection event bus; app coordination is data-layer only. Navigation is URL-driven: every navigable surface is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes.
 
@@ -362,7 +362,7 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
 `admin.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
 
-> **Authoring shape.** Authors write admin.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/v3/schema-sketch.md`](./v3/schema-sketch.md) for the authoritative shape and [`docs/schemas/admin.json`](./schemas/admin.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
+> **Authoring shape.** Authors write admin.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/admin.json`](./schemas/admin.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
 
 ```jsonc
 {
@@ -1245,9 +1245,9 @@ This appendix preserves decisions made across the design process so context is n
 
 In-repo:
 
-- [`v3/schema-sketch.md`](./v3/schema-sketch.md) — **admin.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
+- [`schema-sketch.md`](./schema-sketch.md) — **admin.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
 - [`dataview-config.md`](./dataview-config.md) — author-facing guide for the dataView primitive.
-- [`v3/core-default-engine.v3.md`](./v3/core-default-engine.v3.md) — engine contract worked example.
+- [`core-default-engine.md`](./core-default-engine.md) — engine contract worked example.
 - [`schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
 - [`public/admin-json-reference.md`](./public/admin-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
 - [`admin-customization-prior-art.md`](./admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context.

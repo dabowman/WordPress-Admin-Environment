@@ -18,8 +18,8 @@
  * under `engineModes`.
  *
  * See:
- *   - docs/v3/schema-sketch.md §Modes
- *   - docs/v3/core-default-engine.v3.md
+ *   - docs/schema-sketch.md §Modes
+ *   - docs/core-default-engine.md
  *
  * @package WP_Admin_Shell
  */

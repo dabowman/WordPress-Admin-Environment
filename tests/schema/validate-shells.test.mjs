@@ -120,18 +120,6 @@ for ( const { key, schemaFile } of manifestSchemas ) {
 	const validate = compileSchema( schemaFile );
 
 	if ( key === 'admin' ) {
-		const fixture = resolve( projectRoot, 'docs/v3/wp-admin-default.v3.json' );
-		if ( existsSync( fixture ) ) {
-			console.log( '\n  Canonical workspace fixture:' );
-			const doc   = readJson( fixture );
-			const valid = validate( doc );
-			ok(
-				'docs/v3/wp-admin-default.v3.json',
-				valid,
-				valid ? '' : formatErrors( validate.errors )
-			);
-		}
-
 		console.log( '\n  Bundled shells:' );
 		for ( const file of listJson( SHELLS_DIR ) ) {
 			const doc   = readJson( join( SHELLS_DIR, file ) );

@@ -7,7 +7,7 @@
  * tree at the right depth through the `plugin` cascade origin so
  * site/role/user origins can still override per the usual rules.
  *
- * v3 menu shape (from `docs/v3/schema-sketch.md` §Menu shape):
+ * v3 menu shape (from `docs/schema-sketch.md` §Menu shape):
  *
  *   - Tree of nested items keyed by id at every depth.
  *   - Item whose id matches a `screens` id is implicitly bound to that

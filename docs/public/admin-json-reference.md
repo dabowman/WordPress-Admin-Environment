@@ -68,7 +68,7 @@ The schema is also available in-repo at [`docs/schemas/admin.json`](../schemas/a
 | `regions` | **Escape hatch** — direct region tree for engines that need it (windowed, MDI, multi-pane). | Deep-merge. Optional in v3; `screens` block synthesizes regions for the common case. |
 | `routes` | **Escape hatch** — direct URL→app mapping for non-screen compositions. | Deep-merge by route key. Optional in v3. |
 
-For the full design rationale around each block, see [`docs/v3/schema-sketch.md`](../v3/schema-sketch.md). This reference covers per-field shape.
+For the full design rationale around each block, see [`docs/schema-sketch.md`](../schema-sketch.md). This reference covers per-field shape.
 
 ## version
 
@@ -251,7 +251,7 @@ The map of every screen the workspace exposes. Each entry is keyed by a kebab-ca
 | dataView        | Inline overlay that deep-merges on top of the resolved triple — id-keyed `fields[]` and `actions[]` merge with `null` tombstones.                            | object           | —       |
 | mode            | Engine-declared chrome mode. Defaults: `default`, `focus`, `takeover`, `modal`. Plugin-contributed modes accepted.                                            | string           | `default` |
 | regions         | Per-screen region overrides (escape hatch, e.g. tweak `hidden`/`compact` flags on individual engine regions).                                                | object           | —       |
-| permissions     | Access policy `{ capabilities: [], roles: [] }` with OR semantics. Default when absent: admin-only. See [Permissions](../v3/schema-sketch.md#permissions).    | object           | —       |
+| permissions     | Access policy `{ capabilities: [], roles: [] }` with OR semantics. Default when absent: admin-only. See [Permissions](../schema-sketch.md#permissions).    | object           | —       |
 | preload         | REST paths to hydrate when this screen activates. Additive with workspace-level `preload[]`.                                                                  | array            | —       |
 | hidden          | When `true` at any cascade origin, the screen is suppressed entirely.                                                                                        | boolean          | `false` |
 | styles          | Per-screen style overrides.                                                                                                                                  | object           | —       |

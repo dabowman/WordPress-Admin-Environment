@@ -94,7 +94,7 @@ Open `http://localhost:8888/wp-admin/admin.php?page=wp-admin-shell` (login: `adm
 
 ## `admin.json` schema
 
-The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (runtime architecture) and [`docs/v3/schema-sketch.md`](docs/v3/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 

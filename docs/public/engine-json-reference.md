@@ -230,7 +230,7 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 | modes.<name>.regions | Map of region id → state object. State keys (`hidden`, `compact`, etc.) are engine-defined.                                                          | object | —       |
 | modes.<name>.extends | Optional. Inherit from another mode in the catalog. Recursive, cycle-safe, max depth 10.                                                              | string | —       |
 
-Plugins may extend the catalog via the `wp_admin_shell_engine_modes_{engineId}` PHP filter — see [`docs/v3/schema-sketch.md`](../v3/schema-sketch.md#plugin-contributed-modes).
+Plugins may extend the catalog via the `wp_admin_shell_engine_modes_{engineId}` PHP filter — see [`docs/schema-sketch.md`](../schema-sketch.md#plugin-contributed-modes).
 
 ## slots
 
@@ -254,7 +254,7 @@ Engine-declared mount points beyond the kernel-reserved `_self` and `palette`. E
 | slots.<id>.scope     | `"workspace"`, `"screen"`, or `"both"`. Required — no default.                                     | string | —       |
 | slots.<id>.description | Human-readable description for tooling.                                                          | string | —       |
 
-See [`docs/v3/schema-sketch.md#slots`](../v3/schema-sketch.md#slots) for the slot vocabulary design rationale.
+See [`docs/schema-sketch.md#slots`](../schema-sketch.md#slots) for the slot vocabulary design rationale.
 
 ## menu-renderer
 

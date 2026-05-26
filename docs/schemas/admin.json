@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/admin.json",
 	"title": "WP Admin Shell — admin.json (v3)",
-	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/v3/schema-sketch.md` for the full design rationale and `docs/wp-admin-shell-design-spec.md` for the runtime spec.",
+	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-shell-design-spec.md` for the runtime spec.",
 
 	"type": "object",
 	"required": [ "version", "$wpds", "name", "workspace", "screens" ],
@@ -18,7 +18,7 @@
 		"version": {
 			"type": "integer",
 			"const": 3,
-			"description": "admin.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/v3/schema-sketch.md`."
+			"description": "admin.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/schema-sketch.md`."
 		},
 
 		"$wpds": {

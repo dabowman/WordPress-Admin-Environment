@@ -291,16 +291,9 @@ class WP_Admin_Shell_Resolver {
 
 	/**
 	 * Active shell slug — site default with role/user override.
-	 *
-	 * Migration: the MVP wrote `wp_admin_shell_active_config`; v1 writes
-	 * `wp_admin_shell_active_shell`. Reads check the new key first, fall
-	 * back to the old. Plan §M2.9.
 	 */
 	public static function active_shell_slug() {
-		$slug = get_option( 'wp_admin_shell_active_shell', null );
-		if ( ! $slug ) {
-			$slug = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
-		}
+		$slug = get_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
 
 		// Role override (per-role shell selection).
 		$role_config = get_option( 'wp_admin_shell_role_config', array() );
@@ -334,13 +327,6 @@ class WP_Admin_Shell_Resolver {
 			return false;
 		}
 		$doc = json_decode( file_get_contents( $path ), true );
-		// Schema is canonical kebab (`user-switchable`); bundled shells
-		// ship the kebab form. Read the kebab form first; fall back to the
-		// legacy camelCase shape ONLY for back-compat with shells written
-		// before the casing was fixed.
-		return is_array( $doc ) && (
-			! empty( $doc['user-switchable'] ) ||
-			! empty( $doc['userSwitchable'] )
-		);
+		return is_array( $doc ) && ! empty( $doc['user-switchable'] );
 	}
 }

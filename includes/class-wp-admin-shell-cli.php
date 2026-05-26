@@ -30,18 +30,15 @@ class WP_Admin_Shell_CLI {
 	public function list( $args, $assoc_args ) {
 		$shells = wp_admin_shell_get_available_shells();
 
-		$active = get_option( 'wp_admin_shell_active_shell', '' );
-		if ( $active === '' ) {
-			$active = get_option( 'wp_admin_shell_active_config', 'developer-admin' );
-		}
+		$active = get_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
 
 		$rows = array();
 		foreach ( $shells as $shell ) {
 			$rows[] = array(
 				'slug'            => $shell['slug'],
 				'title'           => $shell['title'],
-				'origin'          => 'plugin', // shells/ files; M2 cascade lets site/role/user override on read
-				'user-switchable' => ( ! empty( $shell['user-switchable'] ) || ! empty( $shell['userSwitchable'] ) ) ? 'yes' : 'no',
+				'origin'          => 'plugin', // shells/ files; cascade lets site/role/user override on read
+				'user-switchable' => ! empty( $shell['user-switchable'] ) ? 'yes' : 'no',
 				'active'          => $shell['slug'] === $active ? 'yes' : '',
 			);
 		}
