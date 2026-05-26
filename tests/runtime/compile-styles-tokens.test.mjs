@@ -86,6 +86,45 @@ console.log( '\n— missing tokens arg keeps var() fallback —' );
 	ok( 'missing tokens emits var()', value && value.startsWith( 'var(' ) );
 }
 
+console.log( '\n— canvas binding does not darken card surface —' );
+{
+	// Regression guard: a previous shape bound `canvas.background` to
+	// `--wpds-color-bg-surface-neutral` inside the layout scope, which
+	// then re-darkened every `core:main` / `core:detail` card (their
+	// `default-style` reads `--wpds-color-bg-surface-neutral` as the
+	// final fallback when no chrome-content-card-background slot is
+	// authored). The canvas binding now ships `foreground` only;
+	// authoring `chrome.canvas.background` must not emit a scoped WPDS
+	// override that descends into card content.
+	const styles = {
+		theme: { color: { bg: '#ffffff' } },
+		chrome: {
+			canvas: { background: '#1e1e1e', foreground: '#e0e0e0' },
+		},
+	};
+	const compiled = compileStyles( styles, {} );
+	const canvasScope = ( compiled.scoped || [] ).find(
+		( entry ) => entry.selector === '.wp-admin-shell-layout'
+	);
+	const offending = canvasScope?.vars?.[ '--wpds-color-bg-surface-neutral' ];
+	ok(
+		'canvas.background does not emit --wpds-color-bg-surface-neutral',
+		offending === undefined,
+		offending !== undefined
+			? `surface-neutral scoped to .wp-admin-shell-layout = ${ offending } (darkens cards)`
+			: ''
+	);
+	ok(
+		'canvas.foreground still binds (--wpds-color-fg-content-neutral)',
+		canvasScope?.vars?.[ '--wpds-color-fg-content-neutral' ] === '#e0e0e0'
+	);
+	const topBg = compiled.top[ '--wp-admin-shell--chrome--canvas--background' ];
+	ok(
+		'canvas.background still emits the chrome slot at top scope',
+		topBg === '#1e1e1e'
+	);
+}
+
 console.log( '\n— Summary —' );
 console.log( `PASS: ${ pass }  FAIL: ${ fail }` );
 if ( fail > 0 ) {

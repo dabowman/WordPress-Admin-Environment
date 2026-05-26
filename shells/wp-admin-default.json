@@ -1308,8 +1308,7 @@
 	"styles": {
 		"theme": {
 			"color": {
-				"primary": "#3858e9",
-				"bg": "#1e1e1e"
+				"primary": "#3858e9"
 			},
 			"density": "default"
 		}

@@ -1008,19 +1008,7 @@
 	],
 	"styles": {
 		"theme": {
-			"color": {
-				"bg": "#1e1e1e"
-			},
 			"density": "compact"
-		},
-		"regions": {
-			"content": {
-				"theme": {
-					"color": {
-						"bg": "#ffffff"
-					}
-				}
-			}
 		}
 	}
 }
