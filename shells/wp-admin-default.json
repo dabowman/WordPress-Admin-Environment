@@ -1091,7 +1091,7 @@
 		"settings-writing": {
 			"label": "Writing",
 			"path": "/settings/writing",
-			"app": "iframe:options-writing.php",
+			"app": "core:settings-writing",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1101,7 +1101,7 @@
 		"settings-reading": {
 			"label": "Reading",
 			"path": "/settings/reading",
-			"app": "iframe:options-reading.php",
+			"app": "core:settings-reading",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1111,7 +1111,7 @@
 		"settings-discussion": {
 			"label": "Discussion",
 			"path": "/settings/discussion",
-			"app": "iframe:options-discussion.php",
+			"app": "core:settings-discussion",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1332,9 +1332,6 @@
 		"sep-3": {
 			"separator": true,
 			"position": 115
-		},
-		"ingested": {
-			"hidden": true
 		},
 		"view-site": {
 			"label": "View Site",

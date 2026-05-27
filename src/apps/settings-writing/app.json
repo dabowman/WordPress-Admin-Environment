@@ -1,0 +1,67 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:settings-writing",
+	"version": 1,
+	"title": "Settings — Writing",
+	"description": "Standalone Writing-settings panel: default post category + default post format over the REST settings surface.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true
+	},
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "DataForm over the REST-exposed slice of WordPress's Writing Settings: `default_category` (select of categories) + `default_post_format` (select of the ten core post formats). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `writing` panel; shells mount it directly as a Writing screen.",
+		"rebuilds": "settings-writing",
+		"data": {
+			"reads": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Default-category + default-post-format options.",
+					"fields": [ "default_category", "default_post_format" ]
+				},
+				{
+					"source": "taxonomy/category",
+					"via": "core-data",
+					"purpose": "Populate the Default Post Category select (per_page 100, ordered by name)."
+				}
+			],
+			"writes": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Save accumulated edits via `save()`."
+				}
+			]
+		},
+		"states": [
+			{ "id": "loading", "when": "!record", "renders": "Centered Spinner (from EntityDataForm null-guard)." },
+			{ "id": "ready", "when": "record && !hasEdits", "renders": "DataForm populated; Save disabled." },
+			{ "id": "with-edits", "when": "hasEdits && !isSaving", "renders": "DataForm with Save enabled." },
+			{ "id": "saving", "when": "isSaving", "renders": "Save button shows loading state." }
+		],
+		"interactions": [
+			{ "trigger": "Choose Default Post Category", "effect": "`edit({ default_category: int })`." },
+			{ "trigger": "Choose Default Post Format", "effect": "`edit({ default_post_format: value })`." },
+			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." }
+		],
+		"a11y": {
+			"focus-management": "Native DataForm focus order is sufficient."
+		},
+		"constraints": [
+			{ "concern": "null-guard-record", "note": "`EntityDataForm` renders a Spinner until `useEntityRecord('root','site')` resolves." },
+			{ "concern": "rest-coverage-gap", "note": "Post-via-email + remote-publishing fields are not exposed by `/wp/v2/settings`. The panel renders an in-form notice pointing at the legacy `options-writing.php` screen for those." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#Text", "purpose": "REST-gap notice text." },
+			{ "import": "@wordpress/dataviews DataForm (via _shared/forms/EntityDataForm)", "purpose": "Form rendering." }
+		]
+	}
+}

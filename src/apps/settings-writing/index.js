@@ -1,3 +1,4 @@
+import './index.css';
 import { useMemo } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import { Text } from '@wordpress/ui';

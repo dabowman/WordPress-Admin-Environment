@@ -91,6 +91,24 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-settings-general" */ '../../apps/settings-general'
 			),
 	},
+	'core:settings-writing': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-writing" */ '../../apps/settings-writing'
+			),
+	},
+	'core:settings-reading': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-reading" */ '../../apps/settings-reading'
+			),
+	},
+	'core:settings-discussion': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-discussion" */ '../../apps/settings-discussion'
+			),
+	},
 	'core:iframe-fallback': {
 		load: () =>
 			import(

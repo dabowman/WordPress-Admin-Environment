@@ -124,8 +124,11 @@ second consumer appears.
 | `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
 | `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard; dataView consumer on `(root, user, variant)`. |
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord. dataView consumer on `(root, comment, variant)`. |
-| `core:settings` | SettingsApp | partial | `manage_options` | Composable host; native general/writing/reading/discussion + iframed permalinks/media/privacy |
-| `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone version of the General panel |
+| `core:settings` | SettingsApp | partial | `manage_options` | Composable host; imports the standalone native panels (general/writing/reading/discussion) + iframes permalinks/media/privacy |
+| `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone General panel (hand-rolled — optgroup selects + date/time radios don't fit DataForm) |
+| `core:settings-writing` | settings-writing | ✅ | `manage_options` | Standalone Writing panel; `DataForm` over `default_category` + `default_post_format`. Default shell mounts directly |
+| `core:settings-reading` | settings-reading | ✅ | `manage_options` | Standalone Reading panel; `DataForm` over front-page + feed options. Default shell mounts directly |
+| `core:settings-discussion` | settings-discussion | ✅ | `manage_options` | Standalone Discussion panel; `DataForm` over default comment + ping status. Default shell mounts directly |
 | `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
 | `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'`; activate/deactivate via REST. dataView consumer on `(root, plugin, variant)`. |
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'`. dataView consumer on `(root, theme, variant)`; grid default with screenshot tiles + Activate / Details. |

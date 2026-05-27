@@ -1,3 +1,4 @@
+import './index.css';
 import { Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { EntityDataForm } from '../_shared/forms/EntityDataForm';
