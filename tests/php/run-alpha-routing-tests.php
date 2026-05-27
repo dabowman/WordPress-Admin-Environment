@@ -194,6 +194,40 @@ unset( $_COOKIE['wp_admin_shell_classic'] );
 remove_filter( 'wp_admin_shell_admin_json_path', $path_filter );
 WP_Admin_Shell_Origin_File::reset_memo();
 
+// ── W5: classic→workspace legacy redirect mapping ──────────────────
+
+echo "\n— legacy redirect mapping —\n";
+
+$match_legacy = $ref->getMethod( 'match_legacy_hash' );
+$match_legacy->setAccessible( true );
+
+$map = array(
+	'/posts'           => array( 'legacy_path' => 'edit.php' ),
+	'/pages'           => array( 'legacy_path' => 'edit.php', 'legacy_query' => array( 'post_type' => 'page' ) ),
+	'/posts/{id}/edit' => array( 'legacy_path' => 'post.php', 'legacy_query' => array( 'action' => 'edit' ), 'legacy_params' => array( 'id' => 'post' ) ),
+);
+
+$_GET = array( 'post_type' => 'page' );
+$T::ok( 'edit.php?post_type=page → /pages (specific wins)', $match_legacy->invoke( null, 'edit.php', $map ) === '/pages' );
+
+$_GET = array();
+$T::ok( 'bare edit.php → /posts', $match_legacy->invoke( null, 'edit.php', $map ) === '/posts' );
+
+$_GET = array( 'post' => '42', 'action' => 'edit' );
+$T::ok( 'post.php?post=42&action=edit → /posts/42/edit', $match_legacy->invoke( null, 'post.php', $map ) === '/posts/42/edit' );
+
+$_GET = array();
+$T::ok( 'unmapped script → null', $match_legacy->invoke( null, 'upload.php', $map ) === null );
+$_GET = array();
+
+// Baseline screens populate the legacy map.
+$baseline = json_decode( file_get_contents( $plugin_dir . 'shells/wp-admin-default.json' ), true );
+$lm       = WP_Admin_Shell_Admin_Routes::legacy_map( $baseline );
+$T::ok( 'baseline maps /posts → edit.php', ( $lm['/posts']['legacy_path'] ?? '' ) === 'edit.php' );
+$T::ok( 'baseline maps /pages with post_type=page', ( $lm['/pages']['legacy_query']['post_type'] ?? '' ) === 'page' );
+$T::ok( 'baseline maps /media → upload.php', ( $lm['/media']['legacy_path'] ?? '' ) === 'upload.php' );
+$T::ok( 'baseline does NOT map allowlisted plugin-install', ! isset( $lm['/plugins/new'] ) );
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n────────────────────────────\n";

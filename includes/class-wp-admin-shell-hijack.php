@@ -72,19 +72,21 @@ class WP_Admin_Shell_Hijack {
 		if ( self::$is_active !== null ) {
 			return self::$is_active;
 		}
-		self::$is_active = self::compute();
+		self::$is_active = self::passes_base_gates() && self::is_root_entry();
 		return self::$is_active;
 	}
 
 	/**
-	 * Compute the takeover decision. Order matters — cheap context guards
-	 * first, then the allowlist, then the escape-hatch cookie, then the
-	 * workspace-active + capability gates, and finally the root-entry
-	 * screen test.
+	 * The shared takeover gates, minus the root-entry screen test. Order
+	 * matters — cheap context guards first, then the allowlist, then the
+	 * escape-hatch cookie, then the workspace-active + capability gates.
+	 * The render hijack (W2) additionally requires {@see is_root_entry()};
+	 * the classic→workspace redirect (W5) applies to non-root screens that
+	 * clear these gates.
 	 *
 	 * @return bool
 	 */
-	private static function compute() {
+	private static function passes_base_gates() {
 		// Non-page admin contexts run their own auth/nonce flows.
 		if ( ! is_admin() ) {
 			return false;
@@ -113,11 +115,7 @@ class WP_Admin_Shell_Hijack {
 		if ( ! current_user_can( 'read' ) ) {
 			return false;
 		}
-		// Only the admin-root entry points are taken over by the render
-		// hijack. Other classic screens with a workspace equivalent are
-		// handled by the classic→workspace redirect (W5); the rest stay
-		// classic.
-		return self::is_root_entry();
+		return true;
 	}
 
 	/**
@@ -167,15 +165,118 @@ class WP_Admin_Shell_Hijack {
 	}
 
 	/**
+	 * admin_init priority-0 entry. Root entry points render the workspace;
+	 * other classic screens that map to a workspace route redirect into it
+	 * (W5); everything else falls through to classic.
+	 */
+	public static function maybe_hijack() {
+		if ( ! self::passes_base_gates() ) {
+			return;
+		}
+		if ( self::is_root_entry() ) {
+			self::render_and_exit();
+			return;
+		}
+		self::maybe_redirect_legacy();
+	}
+
+	/**
+	 * Redirect a classic-screen navigation that has a workspace equivalent
+	 * to the matching workspace route (`admin_url('/') . '#' . path`).
+	 * GET-only — write endpoints (POST) are never redirected. The most
+	 * specific legacy mapping (most satisfied `legacy_query` constraints)
+	 * wins, so `edit.php?post_type=page` lands on `/pages`, not `/posts`.
+	 */
+	private static function maybe_redirect_legacy() {
+		$method = isset( $_SERVER['REQUEST_METHOD'] )
+			? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) )
+			: 'GET';
+		if ( 'GET' !== $method ) {
+			return;
+		}
+		if ( ! function_exists( 'wp_admin_shell_get_active_config' ) || ! class_exists( 'WP_Admin_Shell_Admin_Routes' ) ) {
+			return;
+		}
+
+		$pagenow = isset( $GLOBALS['pagenow'] ) ? (string) $GLOBALS['pagenow'] : '';
+		if ( '' === $pagenow || 'index.php' === $pagenow ) {
+			return;
+		}
+
+		$map = WP_Admin_Shell_Admin_Routes::legacy_map( wp_admin_shell_get_active_config() );
+		$hash = self::match_legacy_hash( $pagenow, $map );
+		if ( null === $hash ) {
+			return;
+		}
+
+		wp_safe_redirect( admin_url( '/' ) . '#' . $hash, 302 );
+		exit;
+	}
+
+	/**
+	 * Resolve the workspace route hash for a classic `$pagenow` + current
+	 * `$_GET`, or null. Mirrors the JS interceptor's matchLegacyRoute:
+	 * most-specific (most satisfied constraints) wins; route `{token}`s
+	 * interpolate from `legacy_params` (or a same-named query key).
+	 *
+	 * @param string $pagenow Current classic script.
+	 * @param array  $map     legacy_map() output.
+	 * @return string|null Workspace route path (leading slash) or null.
+	 */
+	private static function match_legacy_hash( $pagenow, $map ) {
+		$best       = null;
+		$best_score = -1;
+		foreach ( $map as $route_path => $entry ) {
+			if ( ( $entry['legacy_path'] ?? '' ) !== $pagenow ) {
+				continue;
+			}
+			$legacy_query = isset( $entry['legacy_query'] ) && is_array( $entry['legacy_query'] ) ? $entry['legacy_query'] : array();
+			$matches      = true;
+			foreach ( $legacy_query as $key => $value ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only GET routing match.
+				$got = isset( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
+				if ( (string) $got !== (string) $value ) {
+					$matches = false;
+					break;
+				}
+			}
+			if ( ! $matches ) {
+				continue;
+			}
+			$score = count( $legacy_query );
+			if ( $score <= $best_score ) {
+				continue;
+			}
+
+			$params      = isset( $entry['legacy_params'] ) && is_array( $entry['legacy_params'] ) ? $entry['legacy_params'] : array();
+			$interpolated = preg_replace_callback(
+				'/\{(\w+)\}/',
+				function ( $m ) use ( $params ) {
+					$query_key = $params[ $m[1] ] ?? $m[1];
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only GET routing match.
+					$value = isset( $_GET[ $query_key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $query_key ] ) ) : null;
+					return ( null !== $value && '' !== $value ) ? rawurlencode( $value ) : $m[0];
+				},
+				$route_path
+			);
+
+			// Skip entries whose tokens didn't resolve (stray `{...}`) or
+			// that point at the root (would loop with the render hijack).
+			if ( '' === $interpolated || '/' === $interpolated || false !== strpos( $interpolated, '{' ) ) {
+				continue;
+			}
+			$best       = $interpolated;
+			$best_score = $score;
+		}
+		return $best;
+	}
+
+	/**
 	 * Render the workspace and exit. Delegates head/footer + script
 	 * printing to WordPress's admin chrome so the Gutenberg private-apis
 	 * override and every `@wordpress/*` dependency register correctly.
 	 */
-	public static function maybe_hijack() {
-		if ( ! self::is_active_request() ) {
-			return;
-		}
-
+	private static function render_and_exit() {
 		// admin-header.php expects a title + screen context.
 		if ( empty( $GLOBALS['title'] ) ) {
 			$GLOBALS['title'] = __( 'Admin', 'wp-admin-shell' );

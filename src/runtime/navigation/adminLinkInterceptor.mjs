@@ -92,6 +92,13 @@ export function matchLegacyRoute( script, query, routes ) {
 	if ( ! routes || typeof routes !== 'object' ) {
 		return null;
 	}
+	// Among entries sharing a legacy_path, the most SPECIFIC one wins —
+	// the one whose legacy_query constraints are all satisfied AND most
+	// numerous. So `edit.php?post_type=page` (1 constraint) beats a bare
+	// `edit.php` entry (0 constraints) that also vacuously matches, while
+	// bare `edit.php` still wins when no post_type is present.
+	let best = null;
+	let bestScore = -1;
 	for ( const [ path, route ] of Object.entries( routes ) ) {
 		if ( ! route || route.legacy_path !== script ) {
 			continue;
@@ -107,17 +114,21 @@ export function matchLegacyRoute( script, query, routes ) {
 		if ( ! matches ) {
 			continue;
 		}
+		const score = Object.keys( legacyQuery ).length;
+		if ( score <= bestScore ) {
+			continue;
+		}
 		const params = route.legacy_params || {};
-		const interpolated = path.replace( /\{(\w+)\}/g, ( token, name ) => {
+		best = path.replace( /\{(\w+)\}/g, ( token, name ) => {
 			const queryKey = params[ name ] || name;
 			const value = query.get( queryKey );
 			return value !== null && value !== undefined
 				? encodeURIComponent( value )
 				: token;
 		} );
-		return interpolated;
+		bestScore = score;
 	}
-	return null;
+	return best;
 }
 
 /**
