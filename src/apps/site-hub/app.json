@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-shell",
 	"documentation": {
-		"purpose": "Branded header at the top of the navigation sidebar. Renders site icon (linked to the dashboard URL) + site title (linked to the home URL, opens in new tab) + a command-palette toggle. Site icon respects `styles.branding.*` cascade values; site title comes from `useEntityRecord('root', 'site').record.title` with HTML-entity decoding and a window-global fallback.",
+		"purpose": "Branded header at the top of the navigation sidebar. Renders site icon (linked to the dashboard URL) + site title (linked to the home URL, opens in new tab) + a command-palette toggle. Site icon resolves in priority order: `styles.branding.*` cascade logo → REST `site_icon_url` (Settings → General) → default WordPress mark. Site title comes from `useEntityRecord('root', 'site').record.title` with HTML-entity decoding and a window-global fallback.",
 		"data": {
 			"reads": [
 				{
@@ -25,9 +25,15 @@
 					"fields": [ "title", "url" ]
 				},
 				{
+					"source": "root/__unstableBase",
+					"via": "core-data",
+					"purpose": "Home URL for the site-title anchor (`home`) and the REST Site Icon fallback when no branding logo is configured (`site_icon_url`). Mirrors edit-site SiteHub/SiteIcon.",
+					"fields": [ "home", "site_icon_url" ]
+				},
+				{
 					"source": "config.styles.branding",
 					"via": "kernel-config",
-					"purpose": "Branded site icon — branding object read from the resolved admin.json tree via `useKernel()` and passed to SiteIcon helper."
+					"purpose": "Branded site icon — branding object read from the resolved admin.json tree via `useKernel()` and passed to SiteIcon helper. Takes precedence over the REST `site_icon_url`."
 				},
 				{
 					"source": "window.wpAdminShell.siteName",
@@ -37,12 +43,13 @@
 				{
 					"source": "window.wpAdminShell.homeUrl | siteUrl | dashboardUrl",
 					"via": "window-global",
-					"purpose": "Anchor hrefs for the site-icon button (dashboard) and the site-title button (home, new tab)."
+					"purpose": "Anchor href for the site-icon button (dashboard); fallback href for the site-title button (home, new tab) when `root/__unstableBase.home` has not resolved."
 				}
 			]
 		},
 		"states": [
 			{ "id": "ready", "when": "Always (renders with whatever data is available; falls back gracefully)", "renders": "Site icon + title + command-palette icon button. Title falls back to filterURLForDisplay(site.url) when title is empty but URL is set." },
+			{ "id": "icon-loading", "when": "No branding logo configured AND `root/__unstableBase` not yet resolved", "renders": "An empty sized placeholder for the icon (no fallback-mark flash) until `site_icon_url` resolves or is confirmed absent." },
 			{ "id": "transparent-icon", "when": "appConfig.isTransparent === true", "renders": "Site-icon container drops its background — useful when the engine's chrome already provides the surface." }
 		],
 		"interactions": [
@@ -67,8 +74,7 @@
 			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack flex rules live in `@layer wp-ui-components` and lose to unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `[class*=\"__stack\"] { display: flex }` defensive rule. A rebuild using Stack-style flex must defeat unlayered host CSS the same way." }
 		],
 		"design-system-leakage": [
-			{ "import": "@wordpress/ui#Button, IconButton, Stack", "purpose": "Three controls + layout primitives." },
-			{ "import": "@wordpress/components#VisuallyHidden", "purpose": "Visually-hidden `(opens in a new tab)` hint." },
+			{ "import": "@wordpress/ui#Button, IconButton, Stack, VisuallyHidden", "purpose": "Three controls + layout primitives + visually-hidden `(opens in a new tab)` hint." },
 			{ "import": "@wordpress/icons#search", "purpose": "Command-palette icon." },
 			{ "import": "@wordpress/commands#store", "purpose": "Open the global palette via `dispatch('core/commands').open()`." },
 			{ "import": "@wordpress/keycodes#displayShortcut", "purpose": "Format the `Mod+K` shortcut hint for the palette button." },
