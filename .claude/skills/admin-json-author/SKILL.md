@@ -187,7 +187,7 @@ Both shapes coexist. The resolver normalizes shorthand to `apps: [ { "id": "main
 | Field | Purpose | Default |
 |---|---|---|
 | `label` / `icon` / `description` | Menu + header. `icon` resolves through the active engine's icon registry. | — |
-| `path` | URL pattern routing to this screen. Static segments + `{param}` captures + `/*` wildcard suffix. | — |
+| `path` | URL pattern routing to this screen. Static segments + `{param}` captures. (Schema `path` pattern rejects `*` — for a wildcard suffix use the `routes` escape hatch, whose keys allow `*`.) | — |
 | `slot` | Workspace-scope URL slot. `_self` (primary path), `palette` (command palette), engine-declared slots (`detail`, `inspector`, etc.). | `_self` |
 | `app` / `config` | Single-app shorthand. `{paramname}` substitutions in `config` resolve against URL params. | — |
 | `apps[]` | Multi-app long form. Each entry: `id` (required), `app`, `config`, `slot` (screen-scope), `size: {w,h}`, `position: "auto" | {row,col}`, `routing: {mode}` (e.g. `"mirror"`). | — |

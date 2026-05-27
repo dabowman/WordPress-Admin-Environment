@@ -201,7 +201,7 @@ Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) d
 
 ```json
 "slots": {
-    "grid": { "description": "Widget grid tiles." }
+    "grid": { "label": "Dashboard Grid", "description": "Widget grid tiles.", "accepts": "widget" }
 }
 ```
 
@@ -210,8 +210,9 @@ A screen mounting an app that declares a `grid` slot gains that slot for use by 
 | Field | Notes |
 |---|---|
 | Slot id | kebab-case. |
-| `description` | Human-readable. |
-| `scope` | Defaults to `"screen"` for app-declared slots (only valid scope for app-declared). |
+| `label` | **Required.** Human-readable name (surfaces in tooling). |
+| `description` | Optional one-line summary. |
+| `accepts` | Optional hint: `app` (default) / `widget` / `any`. Not load-bearing — tooling-only. App-declared slots are always screen-scope; there is no `scope` field. |
 
 ### `slotHints`
 
