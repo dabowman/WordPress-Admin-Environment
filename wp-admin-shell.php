@@ -405,6 +405,11 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		'adminUrl'      => admin_url(),
 		'dashboardUrl'  => admin_url(),
 		'pluginUrl'     => WP_ADMIN_SHELL_URL,
+		// Classic→workspace legacy-route map for the admin-link interceptor
+		// (W4). Keyed by workspace route path → { legacy_path, legacy_query,
+		// legacy_params }. Empty until screens / programmatic routes declare
+		// `legacy_path`.
+		'adminRoutes'   => WP_Admin_Shell_Admin_Routes::legacy_map( $config ),
 		'restUrl'       => get_rest_url(),
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),

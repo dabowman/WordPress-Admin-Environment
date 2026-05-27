@@ -13,6 +13,7 @@ import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
 import { createDynamicChildrenStore } from './regions/dynamicChildren.mjs';
 import { NavigationGuard } from './dirty-state/NavigationGuard';
 import { BindingsConsumer } from './bindings/BindingsConsumer';
+import { AdminLinkInterceptor } from './navigation/AdminLinkInterceptor';
 import { deepMergeUnder } from './styles/deepMergeUnder.mjs';
 import { buildRuntimeConfig } from './compile/buildRuntimeConfig.mjs';
 
@@ -189,6 +190,7 @@ export function kernel( config ) {
 				>
 					<NavigationGuard />
 					<BindingsConsumer />
+					<AdminLinkInterceptor />
 					<Engine config={ runtimeConfig } regions={ regions } />
 				</ThemeProviderHost>
 			</RouterProvider>
