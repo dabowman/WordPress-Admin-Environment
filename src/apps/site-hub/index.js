@@ -1,13 +1,12 @@
 import './index.css';
-import { Button, IconButton, Stack } from '@wordpress/ui';
-import { VisuallyHidden } from '@wordpress/components';
+import { Button, IconButton, Stack, VisuallyHidden } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { search } from '@wordpress/icons';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as commandsStore } from '@wordpress/commands';
 import { displayShortcut } from '@wordpress/keycodes';
 import { decodeEntities } from '@wordpress/html-entities';
-import { useEntityRecord } from '@wordpress/core-data';
+import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
 import { filterURLForDisplay } from '@wordpress/url';
 import { memo, forwardRef } from '@wordpress/element';
 
@@ -34,6 +33,14 @@ const SiteHubApp = memo(
 		const isTransparent = !! appConfig?.isTransparent;
 		const { open: openCommandCenter } = useDispatch( commandsStore );
 		const { record: site } = useEntityRecord( 'root', 'site' );
+		const restHomeUrl = useSelect(
+			( select ) =>
+				select( coreStore ).getEntityRecord(
+					'root',
+					'__unstableBase'
+				)?.home,
+			[]
+		);
 
 		const resolvedTitle =
 			! site?.title && !! site?.url
@@ -41,7 +48,9 @@ const SiteHubApp = memo(
 				: site?.title || window.wpAdminShell?.siteName || '';
 		const siteTitle = decodeEntities( resolvedTitle );
 		const homeUrl =
-			window.wpAdminShell?.homeUrl || window.wpAdminShell?.siteUrl;
+			restHomeUrl ||
+			window.wpAdminShell?.homeUrl ||
+			window.wpAdminShell?.siteUrl;
 		const dashboardUrl = window.wpAdminShell?.dashboardUrl;
 
 		return (
@@ -95,7 +104,7 @@ const SiteHubApp = memo(
 								}
 							>
 								{ siteTitle }
-								<VisuallyHidden as="span">
+								<VisuallyHidden render={ <span /> }>
 									{ __(
 										'(opens in a new tab)',
 										'wp-admin-shell'
