@@ -231,3 +231,14 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 	}
 	return $doc;
 }, 5 );
+
+// Registry state lives in static class memory — invisible to the
+// default cache-signal map. Hook into the cache layer's filter so a
+// field-collection registration delta forces a fresh resolver run cross-request.
+add_filter( 'wp_admin_shell_cache_signals', function ( $signals ) {
+	$registry = WP_Admin_Shell_Data_Field_Collections::all();
+	if ( ! empty( $registry ) ) {
+		$signals['data_field_collections'] = md5( wp_json_encode( $registry ) );
+	}
+	return $signals;
+} );
