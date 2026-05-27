@@ -147,6 +147,13 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
+				suffix={
+					<Icon
+						className="wp-admin-shell-sidebar-navigation-item__external-indicator"
+						icon={ resolveIcon( 'external' ) }
+						size={ 20 }
+					/>
+				}
 				style={ depthStyle( depth ) }
 			>
 				{ item.label || item.id }

@@ -348,6 +348,13 @@ function renderLeafItem( item, index, currentPrimary ) {
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
+				suffix={
+					<Icon
+						className="wp-admin-shell-sidebar-navigation-item__external-indicator"
+						icon={ resolveIcon( 'external' ) }
+						size={ 20 }
+					/>
+				}
 			>
 				{ item.label || item.id }
 			</SidebarNavigationItem>

@@ -204,6 +204,14 @@
 	padding-right: var(--wpds-dimension-padding-lg);
 }
 
+/* External-link indicator — muted "opens in a new tab" affordance on
+   menu items pointing off-shell (e.g. bridged plugin Support/Docs links). */
+.wp-admin-shell-sidebar-navigation-item__external-indicator {
+	flex-shrink: 0;
+	opacity: 0.6;
+	fill: currentcolor;
+}
+
 /* ==========================================================================
    Collapsed Nav (icon-only mode) — no site-editor equivalent.
    ========================================================================== */
