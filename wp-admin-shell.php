@@ -291,42 +291,27 @@ add_action( 'init', function () {
 	}
 }, 8 );
 
-/**
- * Register the shell admin page and settings.
- */
-add_action( 'admin_menu', function () {
-	add_menu_page(
-		__( 'Shell Admin', 'wp-admin-shell' ),
-		__( 'Shell Admin', 'wp-admin-shell' ),
-		'read',
-		'wp-admin-shell',
-		'wp_admin_shell_render_page',
-		'dashicons-layout',
-		2
-	);
-
-	add_submenu_page(
-		'wp-admin-shell',
-		__( 'Shell Settings', 'wp-admin-shell' ),
-		__( 'Settings', 'wp-admin-shell' ),
-		'manage_options',
-		'wp-admin-shell-settings',
-		'wp_admin_shell_render_settings'
-	);
-} );
+// Workspace-as-primary-entry hijack. When a workspace is active (see
+// wp_admin_shell_workspace_active()), the shell takes over the admin
+// root (`/wp-admin/`, `index.php`, bare `admin.php`) at admin_init
+// priority 0 — there is no longer a `?page=wp-admin-shell` menu entry.
+// Classic stays reachable via the allowlist + the classic-mode cookie.
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-hijack.php';
+WP_Admin_Shell_Hijack::init();
 
 /**
- * Render the shell page container.
+ * Enqueue shell assets for a workspace takeover request.
+ *
+ * Runs on `admin_enqueue_scripts` during the hijack's admin-header
+ * render (and is harmless elsewhere because it self-gates). The
+ * `$hook` arg is ignored — `wp_admin_shell_is_active_request()` is the
+ * sole gate now that the shell mounts at the admin root rather than a
+ * registered page.
+ *
+ * @param string $hook Admin page hook suffix (unused).
  */
-function wp_admin_shell_render_page() {
-	echo '<div id="wp-admin-shell"></div>';
-}
-
-/**
- * Enqueue shell assets on the shell page only.
- */
-add_action( 'admin_enqueue_scripts', function ( $hook ) {
-	if ( 'toplevel_page_wp-admin-shell' !== $hook ) {
+function wp_admin_shell_enqueue_assets( $hook = '' ) {
+	if ( ! wp_admin_shell_is_active_request() ) {
 		return;
 	}
 
@@ -431,7 +416,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
 			'profileUrl'  => '#/profile',
-			'logoutUrl'   => wp_logout_url( admin_url( 'admin.php?page=wp-admin-shell' ) ),
+			'logoutUrl'   => wp_logout_url( admin_url( '/' ) ),
 		),
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
@@ -467,7 +452,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		html.wp-toolbar { padding-top: 0 !important; }
 		#wp-admin-shell { position: fixed; inset: 0; z-index: 99999; }
 	' );
-} );
+}
+add_action( 'admin_enqueue_scripts', 'wp_admin_shell_enqueue_assets' );
 
 /**
  * Read the active admin.json configuration through the M2 cascade resolver.
@@ -503,6 +489,17 @@ function wp_admin_shell_workspace_active() {
 	}
 	$active_shell = get_option( 'wp_admin_shell_active_shell', null );
 	return is_string( $active_shell ) && $active_shell !== '';
+}
+
+/**
+ * Whether the current request is a workspace takeover (the W2 hijack
+ * fired / will fire). Thin wrapper over WP_Admin_Shell_Hijack so the
+ * asset-enqueue gate and other callers don't reach into the class.
+ *
+ * @return bool
+ */
+function wp_admin_shell_is_active_request() {
+	return class_exists( 'WP_Admin_Shell_Hijack' ) && WP_Admin_Shell_Hijack::is_active_request();
 }
 
 /**
@@ -893,45 +890,6 @@ function wp_admin_shell_get_settings_general_data() {
 			return array( 'value' => (string) $i, 'label' => $wp_locale->get_weekday( $i ) );
 		}, range( 0, 6 ) ),
 	);
-}
-
-/**
- * Render the settings page.
- */
-function wp_admin_shell_render_settings() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
-	}
-	$active = get_option( 'wp_admin_shell_active_shell', '' );
-	if ( $active === '' ) {
-		$active = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
-	}
-	$shells = wp_admin_shell_get_available_shells();
-	?>
-	<div class="wrap">
-		<h1><?php esc_html_e( 'Shell Settings', 'wp-admin-shell' ); ?></h1>
-		<form method="post" action="options.php">
-			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
-			<table class="form-table">
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Active Shell', 'wp-admin-shell' ); ?></th>
-					<td>
-						<select name="wp_admin_shell_active_shell">
-							<?php foreach ( $shells as $shell ) : ?>
-								<option value="<?php echo esc_attr( $shell['slug'] ); ?>"
-									<?php selected( $active, $shell['slug'] ); ?>>
-									<?php echo esc_html( $shell['title'] ); ?>
-									&mdash; <?php echo esc_html( $shell['description'] ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</td>
-				</tr>
-			</table>
-			<?php submit_button(); ?>
-		</form>
-	</div>
-	<?php
 }
 
 /**
