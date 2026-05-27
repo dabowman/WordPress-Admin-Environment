@@ -1,0 +1,72 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:settings-reading",
+	"version": 1,
+	"title": "Settings — Reading",
+	"description": "Standalone Reading-settings panel: front-page display, posts-per-page, and feed options over the REST settings surface.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true
+	},
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "DataForm over the REST-exposed slice of WordPress's Reading Settings: `show_on_front` (latest posts vs static page), conditional `page_on_front` / `page_for_posts` selects, `posts_per_page`, `posts_per_rss`, and `rss_use_excerpt`. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `reading` panel; shells mount it directly as a Reading screen.",
+		"rebuilds": "settings-reading",
+		"data": {
+			"reads": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Front-page + feed options.",
+					"fields": [ "show_on_front", "page_on_front", "page_for_posts", "posts_per_page", "posts_per_rss", "rss_use_excerpt" ]
+				},
+				{
+					"source": "postType/page",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Populate the homepage / posts-page selects (published pages, _fields id,title)."
+				}
+			],
+			"writes": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Save accumulated edits via `save()`."
+				}
+			]
+		},
+		"states": [
+			{ "id": "loading", "when": "!record", "renders": "Centered Spinner (from EntityDataForm null-guard)." },
+			{ "id": "ready", "when": "record && !hasEdits", "renders": "DataForm populated; Save disabled." },
+			{ "id": "with-edits", "when": "hasEdits && !isSaving", "renders": "DataForm with Save enabled." },
+			{ "id": "saving", "when": "isSaving", "renders": "Save button shows loading state." },
+			{ "id": "static-page", "when": "show_on_front === 'page'", "renders": "Homepage + Posts-page selects revealed via `isVisible`." }
+		],
+		"interactions": [
+			{ "trigger": "Choose homepage display radio", "effect": "`edit({ show_on_front: 'posts'|'page' })`; toggles visibility of the page selects." },
+			{ "trigger": "Choose Homepage / Posts page", "effect": "`edit({ page_on_front|page_for_posts: int })`.", "guards": [ "show_on_front === 'page'" ] },
+			{ "trigger": "Edit posts-per-page / RSS count", "effect": "`edit({ … })` clamped to a positive integer (floor 1, default 10)." },
+			{ "trigger": "Choose feed full-text vs excerpt", "effect": "`edit({ rss_use_excerpt: bool })`." },
+			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." }
+		],
+		"a11y": {
+			"focus-management": "Native DataForm focus order is sufficient."
+		},
+		"constraints": [
+			{ "concern": "null-guard-record", "note": "`EntityDataForm` renders a Spinner until `useEntityRecord('root','site')` resolves." },
+			{ "concern": "per-page-clamp", "note": "`posts_per_page` / `posts_per_rss` clamp to a floor of 1 (default 10) — WordPress treats 0 as invalid and breaks pagination." },
+			{ "concern": "rest-coverage-gap", "note": "Search-engine visibility (`blog_public`) is not exposed by `/wp/v2/settings`. The panel renders an in-form notice pointing at the legacy `options-reading.php` screen." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#Text", "purpose": "REST-gap notice text." },
+			{ "import": "@wordpress/dataviews DataForm (via _shared/forms/EntityDataForm)", "purpose": "Form rendering." }
+		]
+	}
+}

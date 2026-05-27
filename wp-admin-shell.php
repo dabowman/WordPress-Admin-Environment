@@ -97,6 +97,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-menu-renderers.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-shells.php';
 
@@ -144,6 +145,31 @@ function wp_admin_shell_register_template( $engine_id, $template_id, $template )
 		$template_id,
 		$template
 	);
+}
+
+/**
+ * Register a plugin menu renderer (spec §13 #15).
+ *
+ * An engine names a renderer through its `engine.json` `menu-renderer`
+ * field; a `plugin:{slug}/{name}` id resolves to a React component a
+ * plugin supplies. This declares the id + the script handle that
+ * registers that component (`window.wpAdminShell.registerMenuRenderer`).
+ * The shell enqueues the script on the admin-shell page.
+ *
+ * The renderer component receives `{ items, currentPrimary, navConfig }`
+ * — the host-pruned menu tree, the active URL primary path, and the
+ * per-region nav config — and returns React.
+ *
+ * Timing: register the script handle (`wp_register_script`, with
+ * `wp-admin-shell` as a dependency) before the shell page renders, then
+ * call this from `admin_enqueue_scripts` or earlier.
+ *
+ * @param string $renderer_id Renderer id (`plugin:{slug}/{name}`).
+ * @param array  $args        See `WP_Admin_Shell_Menu_Renderers::register`.
+ * @return string|WP_Error Renderer id on success, WP_Error on failure.
+ */
+function wp_admin_shell_register_menu_renderer( $renderer_id, $args ) {
+	return WP_Admin_Shell_Menu_Renderers::register( $renderer_id, $args );
 }
 
 /**
@@ -324,6 +350,12 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		$asset['version'],
 		true
 	);
+
+	// Plugin menu renderers (spec §13 #15). Each registered renderer's
+	// script enqueues here, after the main bundle, so a handle declaring
+	// `wp-admin-shell` as a dependency loads once the kernel has published
+	// `window.wpAdminShell.registerMenuRenderer`.
+	WP_Admin_Shell_Menu_Renderers::enqueue_assets();
 
 	$config = wp_admin_shell_get_active_config();
 

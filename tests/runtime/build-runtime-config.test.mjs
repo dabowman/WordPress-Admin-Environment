@@ -97,7 +97,11 @@ eq(
 	shorthandRoutes[ '/posts' ].config.postType,
 	'post'
 );
-eq( '/posts screenId injected', shorthandRoutes[ '/posts' ].config.screenId, 'posts' );
+eq(
+	'/posts screenId injected',
+	shorthandRoutes[ '/posts' ].config.screenId,
+	'posts'
+);
 
 // ── primaryApp — long-form apps[] ───────────────────────────────────
 console.log( '\n— synthesizeRoutes (long-form apps[]) —\n' );
@@ -113,16 +117,13 @@ const longScreens = {
 };
 const longRoutes = synthesizeRoutes( longScreens );
 eq( 'primary app from first entry', longRoutes[ '/split' ].app, 'core:posts' );
+eq( 'primary config retained', longRoutes[ '/split' ].config.postType, 'page' );
 eq(
-	'primary config retained',
-	longRoutes[ '/split' ].config.postType,
-	'page'
+	'screenId injected on primary',
+	longRoutes[ '/split' ].config.screenId,
+	'split'
 );
-eq( 'screenId injected on primary', longRoutes[ '/split' ].config.screenId, 'split' );
-ok(
-	'@detail/split slot route synthesized',
-	!! longRoutes[ '@detail/split' ]
-);
+ok( '@detail/split slot route synthesized', !! longRoutes[ '@detail/split' ] );
 eq(
 	'@detail slot mounts core:editor',
 	longRoutes[ '@detail/split' ].app,
@@ -202,7 +203,11 @@ ok(
 	'no-slot peer emits no slot route',
 	! multiRoutes[ '@dashboard-widget-recent-posts/no-slot' ]
 );
-eq( '_self guard — primary stays first entry', multiRoutes[ '/self' ].app, 'core:posts' );
+eq(
+	'_self guard — primary stays first entry',
+	multiRoutes[ '/self' ].app,
+	'core:posts'
+);
 ok( '_self guard — no @_self route', ! multiRoutes[ '@_self/self' ] );
 eq(
 	'intra-slot collision — first entry wins',
@@ -235,7 +240,12 @@ const paramRoutes = synthesizeRoutes( {
 		path: '/posts/{id}/edit',
 		apps: [
 			{ id: 'main', app: 'core:editor' },
-			{ id: 'detail', app: 'core:posts', slot: 'detail', config: { postId: '{id}' } },
+			{
+				id: 'detail',
+				app: 'core:posts',
+				slot: 'detail',
+				config: { postId: '{id}' },
+			},
 		],
 	},
 } );
@@ -305,7 +315,10 @@ const engineDefaults = {
 	},
 };
 const plainRegions = synthesizeRegions( engineDefaults, {} );
-ok( 'engine defaults pass through when no workspace regions', !! plainRegions.sidebar && !! plainRegions.content );
+ok(
+	'engine defaults pass through when no workspace regions',
+	!! plainRegions.sidebar && !! plainRegions.content
+);
 
 const mergedRegions = synthesizeRegions( engineDefaults, {
 	content: { style: { background: 'red' } },
@@ -372,7 +385,9 @@ const built = buildRuntimeConfig(
 			home: { path: '/dashboard/home', app: 'core:dashboard' },
 			posts: { path: '/posts', app: 'core:posts' },
 		},
-		commands: [ { id: 'k', shortcut: 'Mod+K', invoke: 'core:command-palette' } ],
+		commands: [
+			{ id: 'k', shortcut: 'Mod+K', invoke: 'core:command-palette' },
+		],
 	},
 	engineDefaults && { defaultRegions: engineDefaults }
 );
@@ -382,6 +397,30 @@ eq( 'default-route resolved', built[ 'default-route' ], '/dashboard/home' );
 ok( 'regions present', !! built.regions.content );
 ok( 'screens block preserved', !! built.screens.posts );
 eq( 'commands compiled', built.commands.length, 1 );
+ok(
+	'menu-renderer absent when engine manifest omits it',
+	! ( 'menu-renderer' in built )
+);
+
+// menu-renderer stamped from the engine manifest when present.
+const builtWithRenderer = buildRuntimeConfig(
+	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ defaultRegions: engineDefaults || {}, 'menu-renderer': 'sidebar-tree' }
+);
+eq(
+	'menu-renderer stamped from engine manifest',
+	builtWithRenderer[ 'menu-renderer' ],
+	'sidebar-tree'
+);
+// Non-string manifest value is ignored (key stays off).
+const builtBadRenderer = buildRuntimeConfig(
+	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ defaultRegions: {}, 'menu-renderer': 42 }
+);
+ok(
+	'non-string menu-renderer ignored',
+	! ( 'menu-renderer' in builtBadRenderer )
+);
 
 // ── e2e — every bundled shell against its engine manifest ───────────
 console.log( '\n— e2e: bundled shells —\n' );
@@ -399,7 +438,9 @@ function loadEngineManifest( engineId ) {
 }
 
 const shellDir = resolve( projectRoot, 'shells' );
-const shellFiles = readdirSync( shellDir ).filter( ( f ) => f.endsWith( '.json' ) );
+const shellFiles = readdirSync( shellDir ).filter( ( f ) =>
+	f.endsWith( '.json' )
+);
 for ( const file of shellFiles.sort() ) {
 	const shell = JSON.parse(
 		readFileSync( resolve( shellDir, file ), 'utf8' )
@@ -423,6 +464,16 @@ for ( const file of shellFiles.sort() ) {
 			rc[ 'default-route' ] !== ''
 	);
 	ok( `${ file }: screens block preserved`, !! rc.screens );
+
+	// Every bundled engine declares menu-renderer → it's stamped onto the
+	// runtime config matching the manifest.
+	if ( typeof manifest[ 'menu-renderer' ] === 'string' ) {
+		eq(
+			`${ file }: menu-renderer stamped from engine`,
+			rc[ 'menu-renderer' ],
+			manifest[ 'menu-renderer' ]
+		);
+	}
 
 	// No iframe: refs leak into the synthesized routes.
 	const leaked = Object.values( rc.routes ).some(

@@ -644,34 +644,11 @@
 		}
 	},
 	"screens": {
-		"dashboard": {
+		"dashboard-home": {
 			"label": "Dashboard",
 			"icon": "dashboard",
-			"description": "Site overview and core updates.",
-			"path": "/dashboard",
-			"app": "core:dashboard",
-			"permissions": {
-				"capabilities": [
-					"read"
-				]
-			}
-		},
-		"dashboard-home": {
-			"label": "Home",
-			"icon": "home",
 			"description": "Site overview, recent activity, drafts at a glance.",
 			"path": "/dashboard/home",
-			"app": "core:dashboard",
-			"permissions": {
-				"capabilities": [
-					"read"
-				]
-			}
-		},
-		"dashboard-widgets": {
-			"label": "Widgets",
-			"icon": "grid",
-			"path": "/dashboard/widgets",
 			"apps": [
 				{
 					"id": "host",
@@ -690,18 +667,7 @@
 			],
 			"permissions": {
 				"capabilities": [
-					"edit_dashboard"
-				]
-			}
-		},
-		"dashboard-updates": {
-			"label": "Updates",
-			"icon": "update",
-			"path": "/dashboard/updates",
-			"app": "iframe:update-core.php",
-			"permissions": {
-				"capabilities": [
-					"update_core"
+					"read"
 				]
 			}
 		},
@@ -718,51 +684,6 @@
 			"permissions": {
 				"capabilities": [
 					"edit_posts"
-				]
-			}
-		},
-		"posts-drafts": {
-			"label": "Drafts",
-			"icon": "drafts",
-			"path": "/posts/drafts",
-			"app": "core:posts",
-			"config": {
-				"postType": "post"
-			},
-			"dataViewRef": "postType/post/drafts",
-			"permissions": {
-				"capabilities": [
-					"edit_posts"
-				]
-			}
-		},
-		"posts-pending": {
-			"label": "Pending Review",
-			"icon": "drafts",
-			"path": "/posts/pending",
-			"app": "core:posts",
-			"config": {
-				"postType": "post"
-			},
-			"dataViewRef": "postType/post/pending",
-			"permissions": {
-				"capabilities": [
-					"edit_others_posts"
-				]
-			}
-		},
-		"posts-trash": {
-			"label": "Trash",
-			"icon": "trash",
-			"path": "/posts/trash",
-			"app": "core:posts",
-			"config": {
-				"postType": "post"
-			},
-			"dataViewRef": "postType/post/trash",
-			"permissions": {
-				"capabilities": [
-					"delete_posts"
 				]
 			}
 		},
@@ -840,6 +761,21 @@
 				]
 			}
 		},
+		"pages-new": {
+			"label": "Add New Page",
+			"icon": "plus",
+			"path": "/pages/new",
+			"app": "core:editor",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
 		"page-edit": {
 			"label": "Edit Page",
 			"path": "/pages/{id}/edit",
@@ -866,6 +802,18 @@
 					"upload_files"
 				]
 			}
+		},
+		"media-new": {
+			"label": "Add Media File",
+			"icon": "plus",
+			"path": "/media/new",
+			"app": "iframe:media-new.php",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
+			},
+			"mode": "takeover"
 		},
 		"comments": {
 			"label": "Comments",
@@ -940,6 +888,21 @@
 				]
 			}
 		},
+		"fonts": {
+			"label": "Fonts",
+			"icon": "typography",
+			"path": "/fonts",
+			"app": "core:iframe-fallback",
+			"config": {
+				"url": "themes.php?page=font-library-wp-admin&p=%2Ffont-list"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			},
+			"mode": "takeover"
+		},
 		"plugins": {
 			"label": "Plugins",
 			"icon": "plugins",
@@ -953,6 +916,18 @@
 				]
 			}
 		},
+		"plugins-new": {
+			"label": "Add Plugin",
+			"icon": "plus",
+			"path": "/plugins/new",
+			"app": "iframe:plugin-install.php",
+			"permissions": {
+				"capabilities": [
+					"install_plugins"
+				]
+			},
+			"mode": "takeover"
+		},
 		"users": {
 			"label": "Users",
 			"icon": "users",
@@ -965,6 +940,18 @@
 					"list_users"
 				]
 			}
+		},
+		"users-new": {
+			"label": "Add New User",
+			"icon": "plus",
+			"path": "/users/new",
+			"app": "iframe:user-new.php",
+			"permissions": {
+				"capabilities": [
+					"create_users"
+				]
+			},
+			"mode": "takeover"
 		},
 		"user-edit": {
 			"label": "Edit User",
@@ -1034,6 +1021,52 @@
 				]
 			}
 		},
+		"export-personal-data": {
+			"label": "Export Personal Data",
+			"icon": "download",
+			"path": "/tools/export-personal-data",
+			"app": "iframe:export-personal-data.php",
+			"permissions": {
+				"capabilities": [
+					"export_others_personal_data"
+				]
+			}
+		},
+		"erase-personal-data": {
+			"label": "Erase Personal Data",
+			"icon": "trash",
+			"path": "/tools/erase-personal-data",
+			"app": "iframe:erase-personal-data.php",
+			"permissions": {
+				"capabilities": [
+					"erase_others_personal_data"
+				]
+			}
+		},
+		"theme-editor": {
+			"label": "Theme File Editor",
+			"icon": "code",
+			"path": "/tools/theme-editor",
+			"app": "iframe:theme-editor.php",
+			"permissions": {
+				"capabilities": [
+					"edit_themes"
+				]
+			},
+			"mode": "takeover"
+		},
+		"plugin-editor": {
+			"label": "Plugin File Editor",
+			"icon": "code",
+			"path": "/tools/plugin-editor",
+			"app": "iframe:plugin-editor.php",
+			"permissions": {
+				"capabilities": [
+					"edit_plugins"
+				]
+			},
+			"mode": "takeover"
+		},
 		"settings": {
 			"label": "Settings",
 			"icon": "settings",
@@ -1058,7 +1091,7 @@
 		"settings-writing": {
 			"label": "Writing",
 			"path": "/settings/writing",
-			"app": "iframe:options-writing.php",
+			"app": "core:settings-writing",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1068,7 +1101,7 @@
 		"settings-reading": {
 			"label": "Reading",
 			"path": "/settings/reading",
-			"app": "iframe:options-reading.php",
+			"app": "core:settings-reading",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1078,7 +1111,7 @@
 		"settings-discussion": {
 			"label": "Discussion",
 			"path": "/settings/discussion",
-			"app": "iframe:options-discussion.php",
+			"app": "core:settings-discussion",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1128,19 +1161,10 @@
 		}
 	},
 	"menu": {
-		"dashboard": {
-			"position": 5,
-			"items": {
-				"dashboard-home": {
-					"position": 10
-				},
-				"dashboard-widgets": {
-					"position": 20
-				},
-				"dashboard-updates": {
-					"position": 30
-				}
-			}
+		"dashboard-home": {
+			"label": "Dashboard",
+			"icon": "dashboard",
+			"position": 5
 		},
 		"sep-1": {
 			"separator": true,
@@ -1149,31 +1173,50 @@
 		"posts": {
 			"position": 30,
 			"items": {
-				"posts-drafts": {
+				"posts-all": {
+					"label": "All Posts",
+					"href": "#/posts",
 					"position": 10
 				},
-				"posts-pending": {
+				"posts-new": {
+					"label": "Add Post",
 					"position": 20
 				},
-				"posts-trash": {
+				"categories": {
 					"position": 30
 				},
-				"posts-new": {
-					"position": 40
-				},
-				"categories": {
-					"position": 50
-				},
 				"tags": {
-					"position": 60
+					"position": 40
 				}
 			}
 		},
 		"pages": {
-			"position": 40
+			"position": 40,
+			"items": {
+				"pages-all": {
+					"label": "All Pages",
+					"href": "#/pages",
+					"position": 10
+				},
+				"pages-new": {
+					"label": "Add Page",
+					"position": 20
+				}
+			}
 		},
 		"media": {
-			"position": 50
+			"position": 50,
+			"items": {
+				"media-library": {
+					"label": "Library",
+					"href": "#/media",
+					"position": 10
+				},
+				"media-new": {
+					"label": "Add Media File",
+					"position": 20
+				}
+			}
 		},
 		"comments": {
 			"position": 60
@@ -1189,26 +1232,52 @@
 					"position": 10
 				},
 				"site-editor": {
+					"label": "Editor",
 					"position": 20
 				},
-				"customize": {
+				"fonts": {
 					"position": 30
-				},
-				"widgets": {
-					"position": 40
 				}
 			}
 		},
 		"plugins": {
-			"position": 80
+			"position": 80,
+			"items": {
+				"plugins-installed": {
+					"label": "Installed Plugins",
+					"href": "#/plugins",
+					"position": 10
+				},
+				"plugins-new": {
+					"label": "Add Plugin",
+					"position": 20
+				}
+			}
 		},
 		"users": {
-			"position": 90
+			"position": 90,
+			"items": {
+				"users-all": {
+					"label": "All Users",
+					"href": "#/users",
+					"position": 10
+				},
+				"users-new": {
+					"label": "Add User",
+					"position": 20
+				},
+				"profile": {
+					"label": "Profile",
+					"position": 30
+				}
+			}
 		},
 		"tools": {
 			"position": 100,
 			"items": {
-				"site-health": {
+				"available-tools": {
+					"label": "Available Tools",
+					"href": "#/tools",
 					"position": 10
 				},
 				"import": {
@@ -1216,6 +1285,21 @@
 				},
 				"export": {
 					"position": 30
+				},
+				"site-health": {
+					"position": 40
+				},
+				"export-personal-data": {
+					"position": 50
+				},
+				"erase-personal-data": {
+					"position": 60
+				},
+				"theme-editor": {
+					"position": 70
+				},
+				"plugin-editor": {
+					"position": 80
 				}
 			}
 		},
@@ -1248,9 +1332,6 @@
 		"sep-3": {
 			"separator": true,
 			"position": 115
-		},
-		"profile": {
-			"position": 120
 		},
 		"view-site": {
 			"label": "View Site",
@@ -1307,11 +1388,7 @@
 	],
 	"styles": {
 		"theme": {
-			"color": {
-				"primary": "#3858e9",
-				"bg": "#1e1e1e"
-			},
-			"density": "default"
+			"density": "compact"
 		}
 	}
 }

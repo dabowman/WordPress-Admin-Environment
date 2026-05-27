@@ -1,0 +1,63 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:settings-discussion",
+	"version": 1,
+	"title": "Settings — Discussion",
+	"description": "Standalone Discussion-settings panel: default comment + ping status over the REST settings surface.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true
+	},
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "DataForm over the REST-exposed slice of WordPress's Discussion Settings: `default_comment_status` + `default_ping_status` — the canonical 'Default post settings' pair (mapped open/closed ↔ boolean). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `discussion` panel; shells mount it directly as a Discussion screen.",
+		"rebuilds": "settings-discussion",
+		"data": {
+			"reads": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Default comment + ping status.",
+					"fields": [ "default_comment_status", "default_ping_status" ]
+				}
+			],
+			"writes": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Save accumulated edits via `save()`."
+				}
+			]
+		},
+		"states": [
+			{ "id": "loading", "when": "!record", "renders": "Centered Spinner (from EntityDataForm null-guard)." },
+			{ "id": "ready", "when": "record && !hasEdits", "renders": "DataForm populated; Save disabled." },
+			{ "id": "with-edits", "when": "hasEdits && !isSaving", "renders": "DataForm with Save enabled." },
+			{ "id": "saving", "when": "isSaving", "renders": "Save button shows loading state." }
+		],
+		"interactions": [
+			{ "trigger": "Toggle allow comments on new posts", "effect": "`edit({ default_comment_status: 'open'|'closed' })` (boolean ↔ string via getValue/setValue)." },
+			{ "trigger": "Toggle allow pingbacks/trackbacks", "effect": "`edit({ default_ping_status: 'open'|'closed' })`." },
+			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." }
+		],
+		"a11y": {
+			"focus-management": "Native DataForm focus order is sufficient."
+		},
+		"constraints": [
+			{ "concern": "null-guard-record", "note": "`EntityDataForm` renders a Spinner until `useEntityRecord('root','site')` resolves." },
+			{ "concern": "open-closed-mapping", "note": "`default_comment_status` / `default_ping_status` round-trip as `open`/`closed` strings; the boolean control maps both ways via getValue/setValue." },
+			{ "concern": "rest-coverage-gap", "note": "Fine-grained discussion rules (moderation, blocklists, avatars) are not exposed by `/wp/v2/settings`. The panel renders an in-form notice pointing at the legacy `options-discussion.php` screen." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#Text", "purpose": "REST-gap notice text." },
+			{ "import": "@wordpress/dataviews DataForm (via _shared/forms/EntityDataForm)", "purpose": "Form rendering." }
+		]
+	}
+}

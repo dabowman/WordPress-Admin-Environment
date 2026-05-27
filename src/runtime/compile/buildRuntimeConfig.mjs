@@ -12,6 +12,7 @@ import { compileCommands } from './compileCommands.mjs';
  * is the single place that derives the runtime surfaces from it:
  *
  *   - `engine`        ← `workspace.engine`
+ *   - `menu-renderer` ← engine manifest `menu-renderer` (strategy id)
  *   - `routes`        ← synthesized from `screens` (+ `routes` escape hatch)
  *   - `regions`       ← engine `defaultRegions` merged under `regions` escape hatch
  *   - `default-route` ← `workspace.default-screen` → screen path
@@ -50,7 +51,16 @@ export function buildRuntimeConfig( config, engineManifest ) {
 		);
 	const commands = compileCommands( config.commands || [] );
 
-	return {
+	// Surface the engine's chosen menu-rendering strategy on the runtime
+	// config so the `core:navigation` app can dispatch on it without
+	// reaching back into the engine manifest. Absent on the manifest →
+	// leave the key off so navigation falls back to its default renderer.
+	const menuRenderer =
+		engineManifest && typeof engineManifest[ 'menu-renderer' ] === 'string'
+			? engineManifest[ 'menu-renderer' ]
+			: undefined;
+
+	const runtimeConfig = {
 		...config,
 		engine: engineId,
 		routes,
@@ -58,4 +68,8 @@ export function buildRuntimeConfig( config, engineManifest ) {
 		'default-route': defaultRoute,
 		commands,
 	};
+	if ( menuRenderer !== undefined ) {
+		runtimeConfig[ 'menu-renderer' ] = menuRenderer;
+	}
+	return runtimeConfig;
 }

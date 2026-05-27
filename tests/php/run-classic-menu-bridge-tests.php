@@ -345,9 +345,9 @@ $T::assert_true(
 	isset( $doc['screens']['ingested-my-plugin-page'] )
 );
 $T::assert_eq(
-	'contribute: screen app is iframe:<slug>',
+	'contribute: screen app maps slug → iframe:admin.php?page=<slug>',
 	$doc['screens']['ingested-my-plugin-page']['app'],
-	'iframe:my-plugin-page'
+	'iframe:admin.php?page=my-plugin-page'
 );
 $T::assert_eq(
 	'contribute: screen path is /admin/<slugified>',
@@ -365,13 +365,12 @@ $T::assert_eq(
 	array( 'manage_options' )
 );
 $T::assert_true(
-	'contribute: ingested container created at menu root',
-	isset( $doc['menu']['ingested']['items']['ingested-my-plugin-page'] )
+	'contribute: third-party top-level menu surfaces at menu ROOT (not nested under ingested)',
+	isset( $doc['menu']['ingested-my-plugin-page'] )
 );
-$T::assert_eq(
-	'contribute: ingested container label defaults to "Plugins"',
-	$doc['menu']['ingested']['label'],
-	'Plugins'
+$T::assert_true(
+	'contribute: no ingested container created when there are no core-parented orphans',
+	! isset( $doc['menu']['ingested'] )
 );
 
 // --- contribute(): cascade collision with admin.json screen -------------
@@ -410,10 +409,18 @@ $T::assert_eq(
 );
 
 // --- contribute(): custom container label preserved across origins ------
+// The shared `ingested` container only collects submenus parented to a
+// CORE wp-admin slug (orphans the shell doesn't mirror natively). Use
+// such a submenu so ensure_container()'s preserve branch is exercised.
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
-	array( 'My Plugin', 'manage_options', 'my-plugin-page', 'My Plugin', '', '', 'dashicons-admin-tools' ),
+	array( 'Tools', 'edit_posts', 'tools.php', 'Tools', '', '', 'dashicons-admin-tools' ),
+);
+$GLOBALS['submenu'] = array(
+	'tools.php' => array(
+		array( 'Custom Tool', 'manage_options', 'custom-tool-page' ),
+	),
 );
 $custom_container = array(
 	'menu' => array(
@@ -436,8 +443,8 @@ $T::assert_eq(
 	50
 );
 $T::assert_true(
-	'contribute: bridge still writes its item into custom-labeled container',
-	isset( $doc['menu']['ingested']['items']['ingested-my-plugin-page'] )
+	'contribute: bridge writes the core-parented orphan into the custom-labeled container',
+	isset( $doc['menu']['ingested']['items']['ingested-tools-php'] )
 );
 
 // --- contribute(): idempotency — filter twice doesn't duplicate ---------
@@ -454,9 +461,9 @@ $T::assert_eq(
 	count( $first['screens'] )
 );
 $T::assert_eq(
-	'idempotency: container item count unchanged after second contribute',
-	count( $second['menu']['ingested']['items'] ),
-	count( $first['menu']['ingested']['items'] )
+	'idempotency: top-level menu count unchanged after second contribute',
+	count( $second['menu'] ),
+	count( $first['menu'] )
 );
 
 // --- contribute(): empty globals → contribution is a no-op --------------
@@ -486,13 +493,13 @@ $T::assert_true(
 	isset( $doc['screens']['ingested-my-plugin-settings'] )
 );
 $T::assert_eq(
-	'contribute: submenu child app is iframe:<slug>',
+	'contribute: submenu child app maps slug → iframe:admin.php?page=<slug>',
 	$doc['screens']['ingested-my-plugin-settings']['app'],
-	'iframe:my-plugin-settings'
+	'iframe:admin.php?page=my-plugin-settings'
 );
 $T::assert_true(
-	'contribute: submenu child nested under parent in menu tree',
-	isset( $doc['menu']['ingested']['items']['ingested-my-plugin-page']['items']['ingested-my-plugin-settings'] )
+	'contribute: submenu child nested under the top-level parent in menu tree',
+	isset( $doc['menu']['ingested-my-plugin-page']['items']['ingested-my-plugin-settings'] )
 );
 
 // --- contribute(): synthesized container under core parent --------------
@@ -529,6 +536,74 @@ $T::assert_true(
 	isset( $doc['menu']['ingested']['items']['ingested-tools-php']['items']['ingested-custom-tool-page'] )
 );
 
+// --- scan(): wp-admin separator rows are skipped ------------------------
+// $GLOBALS['menu'] interleaves `wp-menu-separator` divider rows (synthetic
+// `separatorN` slug, CSS class in index 4). They are visual dividers, not
+// navigable pages, and must never be ingested.
+
+wpas_cmb_reset_globals();
+$GLOBALS['menu'] = array(
+	array( '', 'read', 'separator1', '', 'wp-menu-separator' ),
+	array( 'My Plugin', 'manage_options', 'my-plugin-page', 'My Plugin', 'menu-top', '', 'dashicons-admin-tools' ),
+	array( '', 'read', 'separator-last', '', 'wp-menu-separator' ),
+);
+$sep_records = WP_Admin_Shell_Classic_Menu_Bridge::scan();
+$T::assert_eq(
+	'scan: separator rows skipped — only the real plugin entry ingested',
+	count( $sep_records ),
+	1
+);
+$T::assert_eq(
+	'scan: surviving record is the plugin page (not a separator)',
+	$sep_records[0]['id'],
+	'ingested-my-plugin-page'
+);
+
+// --- contribute(): external (http) submenu child → anchor, no screen ----
+// Gutenberg's Support / Documentation submenus register a full URL as the
+// slug. They must surface as external links, not iframe-mounted screens.
+
+wpas_cmb_reset_globals();
+$GLOBALS['menu'] = array(
+	array( 'My Plugin', 'manage_options', 'my-plugin-page', 'My Plugin', 'menu-top', '', 'dashicons-admin-tools' ),
+);
+$GLOBALS['submenu'] = array(
+	'my-plugin-page' => array(
+		array( 'Docs', 'manage_options', 'https://example.com/docs' ),
+	),
+);
+$ext_doc  = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
+$ext_id   = WP_Admin_Shell_Classic_Menu_Bridge::derive_screen_id( 'https://example.com/docs' );
+$ext_item = $ext_doc['menu']['ingested-my-plugin-page']['items'][ $ext_id ];
+$T::assert_eq(
+	'contribute: external child href is the raw URL',
+	$ext_item['href'],
+	'https://example.com/docs'
+);
+$T::assert_true(
+	'contribute: external child marked external',
+	! empty( $ext_item['external'] )
+);
+$T::assert_true(
+	'contribute: external child does NOT synthesize a screen',
+	! isset( $ext_doc['screens'][ $ext_id ] )
+);
+
+// --- contribute(): a `.php` slug passes through unchanged ----------------
+// `menu_page_url()` treats a `.php` slug as a direct admin file (keep the
+// query string); only page slugs get the `admin.php?page=` prefix.
+
+wpas_cmb_reset_globals();
+$GLOBALS['menu'] = array(
+	array( 'Orders', 'manage_options', 'edit.php?post_type=shop_order', 'Orders', 'menu-top', '', 'dashicons-cart' ),
+);
+$php_doc = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
+$T::assert_eq(
+	'contribute: .php slug kept as-is for the iframe url (no admin.php?page= prefix)',
+	$php_doc['screens']['ingested-edit-php-post-type-shop-order']['app'],
+	'iframe:edit.php?post_type=shop_order'
+);
+
 // --- Coexistence with wp_admin_shell_register_menu_item() ----------------
 
 wpas_cmb_reset_globals();
@@ -554,7 +629,7 @@ $T::assert_eq(
 $doc_after_menu_items = apply_filters( 'wp_admin_shell_data_plugin', array() );
 $T::assert_true(
 	'coexistence: bridge item present alongside manual menu item',
-	isset( $doc_after_menu_items['menu']['ingested']['items']['ingested-my-plugin-page'] )
+	isset( $doc_after_menu_items['menu']['ingested-my-plugin-page'] )
 );
 $T::assert_true(
 	'coexistence: manual menu item also present',
@@ -577,32 +652,25 @@ $GLOBALS['menu'] = array(
 WP_Admin_Shell_Menu_Items::reset();
 WP_Admin_Shell_Classic_Menu_Bridge::reset();
 
-// Manual registration claims the same id the bridge would assign.
-// Note: register_menu_item writes to top-level menu by default; to
-// collide on the same `menu.ingested.items[ingested-my-plugin-page]`
-// path the manual entry needs parent=ingested. The menu-items shim
-// supports `parent` via the `to` arg shape. Simpler: pre-seed the doc.
+// Manual registration claims the same id the bridge would assign. The
+// bridge now surfaces a third-party top-level menu at `menu.<id>`
+// (root), so pre-seed there to exercise the first-write-wins path.
 $pre_seeded = array(
 	'menu' => array(
-		'ingested' => array(
-			'label' => 'Plugins',
-			'items' => array(
-				'ingested-my-plugin-page' => array(
-					'label' => 'Custom override label',
-					'icon'  => 'star',
-				),
-			),
+		'ingested-my-plugin-page' => array(
+			'label' => 'Custom override label',
+			'icon'  => 'star',
 		),
 	),
 );
 $collision_doc = apply_filters( 'wp_admin_shell_data_plugin', $pre_seeded );
 $T::assert_true(
 	'real collision: pre-seeded ingested-my-plugin-page survives the bridge pass',
-	isset( $collision_doc['menu']['ingested']['items']['ingested-my-plugin-page'] )
+	isset( $collision_doc['menu']['ingested-my-plugin-page'] )
 );
 $T::assert_eq(
 	'real collision: first-write wins — original label preserved',
-	$collision_doc['menu']['ingested']['items']['ingested-my-plugin-page']['label'],
+	$collision_doc['menu']['ingested-my-plugin-page']['label'],
 	'Custom override label'
 );
 

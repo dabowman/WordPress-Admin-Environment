@@ -204,6 +204,14 @@
 	padding-right: var(--wpds-dimension-padding-lg);
 }
 
+/* External-link indicator — muted "opens in a new tab" affordance on
+   menu items pointing off-shell (e.g. bridged plugin Support/Docs links). */
+.wp-admin-shell-sidebar-navigation-item__external-indicator {
+	flex-shrink: 0;
+	opacity: 0.6;
+	fill: currentcolor;
+}
+
 /* ==========================================================================
    Collapsed Nav (icon-only mode) — no site-editor equivalent.
    ========================================================================== */
@@ -279,4 +287,35 @@
 
 .wp-admin-shell-nav__link:hover {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+}
+
+/* ---------------------------------------------------------------------
+ * sidebar-tree renderer
+ *
+ * Expandable in-place tree. Branch nodes are <button>s styled like nav
+ * items (they carry .wp-admin-shell-sidebar-navigation-item); leaves
+ * reuse SidebarNavigationItem. Depth indent is applied inline.
+ * ------------------------------------------------------------------- */
+.wp-admin-shell-sidebar-navigation-tree {
+	padding: var(--wpds-dimension-padding-sm);
+}
+
+.wp-admin-shell-sidebar-navigation-tree__list {
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-sidebar-navigation-tree__branch {
+	width: 100%;
+	cursor: pointer;
+	background: transparent;
+	border: 0;
+	text-align: start;
+	font: inherit;
+	color: inherit;
+}
+
+.wp-admin-shell-sidebar-navigation-tree__toggle-indicator {
+	flex-shrink: 0;
+	opacity: 0.7;
 }

@@ -222,6 +222,13 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			if ( $slug === '' ) {
 				continue;
 			}
+			// Skip wp-admin separator rows — visual dividers, not pages.
+			// They carry a `wp-menu-separator` CSS class (entry index 4)
+			// and a synthetic `separatorN` slug.
+			$css = isset( $entry[4] ) && is_string( $entry[4] ) ? $entry[4] : '';
+			if ( strpos( $css, 'wp-menu-separator' ) !== false ) {
+				continue;
+			}
 			if ( self::is_core_slug( $slug ) ) {
 				continue;
 			}
@@ -507,9 +514,92 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			$doc['menu'] = array();
 		}
 
-		// Ensure the container exists with a default label. If
-		// admin.json already declared `menu.ingested` (with a custom
-		// label or other fields), preserve everything except items.
+		foreach ( $records as $record ) {
+			$id = $record['id'];
+
+			if ( $record['parent_is_core'] ) {
+				// Submenu parented to a CORE wp-admin slug (an orphan the
+				// shell doesn't mirror natively). Group it beneath the
+				// shared `ingested` container (label "Plugins"), created
+				// lazily so it never renders empty.
+				self::ensure_container( $doc );
+				$container_items = &$doc['menu'][ self::DEFAULT_CONTAINER ]['items'];
+
+				// Hidden stub screen — container only, no bound page.
+				// Authors override the icon menu-side at
+				// `menu.ingested.items[<id>]`, not on the hidden screen.
+				if ( ! isset( $doc['screens'][ $id ] ) ) {
+					$doc['screens'][ $id ] = array(
+						'label'  => $record['label'],
+						'hidden' => true,
+					);
+				}
+				if ( ! isset( $container_items[ $id ] ) ) {
+					$menu_item = array( 'label' => $record['label'] );
+					if ( $record['icon'] !== '' ) {
+						$menu_item['icon'] = $record['icon'];
+					}
+					$container_items[ $id ] = $menu_item;
+				}
+				if ( ! empty( $record['children'] ) ) {
+					if ( ! isset( $container_items[ $id ]['items'] ) || ! is_array( $container_items[ $id ]['items'] ) ) {
+						$container_items[ $id ]['items'] = array();
+					}
+					$child_items = &$container_items[ $id ]['items'];
+					foreach ( $record['children'] as $child ) {
+						self::synthesize_child( $doc, $child_items, $child );
+					}
+					unset( $child_items );
+				}
+				unset( $container_items );
+				continue;
+			}
+
+			// Genuine third-party TOP-LEVEL menu (e.g. Gutenberg). Surface
+			// it as a top-level menu entry — a sibling of the shell's own
+			// screens — NOT nested under the `ingested` container. The menu
+			// item is left bare; `bind_screens` (priority 5, post-merge)
+			// folds the screen's label/icon/href from the matching id.
+			if ( ! isset( $doc['screens'][ $id ] ) ) {
+				$screen = array(
+					'label' => $record['label'],
+					'icon'  => $record['icon'],
+					'path'  => $record['path'],
+					'app'   => self::iframe_app_id( $record['slug'] ),
+				);
+				if ( $record['capability'] !== '' ) {
+					$screen['permissions'] = array(
+						'capabilities' => array( $record['capability'] ),
+					);
+				}
+				$doc['screens'][ $id ] = $screen;
+			}
+			if ( ! isset( $doc['menu'][ $id ] ) ) {
+				$doc['menu'][ $id ] = array();
+			}
+			if ( ! empty( $record['children'] ) ) {
+				if ( ! isset( $doc['menu'][ $id ]['items'] ) || ! is_array( $doc['menu'][ $id ]['items'] ) ) {
+					$doc['menu'][ $id ]['items'] = array();
+				}
+				$child_items = &$doc['menu'][ $id ]['items'];
+				foreach ( $record['children'] as $child ) {
+					self::synthesize_child( $doc, $child_items, $child );
+				}
+				unset( $child_items );
+			}
+		}
+
+		return $doc;
+	}
+
+	/**
+	 * Ensure the shared `ingested` container exists. Preserves an
+	 * admin.json-declared container (custom label / hidden flag), only
+	 * force-filling its `items` array.
+	 *
+	 * @param array $doc Plugin-origin admin.json doc (by reference).
+	 */
+	private static function ensure_container( &$doc ) {
 		if ( ! isset( $doc['menu'][ self::DEFAULT_CONTAINER ] ) || ! is_array( $doc['menu'][ self::DEFAULT_CONTAINER ] ) ) {
 			$doc['menu'][ self::DEFAULT_CONTAINER ] = array(
 				'label'    => __( 'Plugins', 'wp-admin-shell' ),
@@ -517,95 +607,54 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				'position' => 200,
 				'items'    => array(),
 			);
-		} else {
-			if ( ! isset( $doc['menu'][ self::DEFAULT_CONTAINER ]['items'] ) || ! is_array( $doc['menu'][ self::DEFAULT_CONTAINER ]['items'] ) ) {
-				$doc['menu'][ self::DEFAULT_CONTAINER ]['items'] = array();
+		} elseif ( ! isset( $doc['menu'][ self::DEFAULT_CONTAINER ]['items'] ) || ! is_array( $doc['menu'][ self::DEFAULT_CONTAINER ]['items'] ) ) {
+			$doc['menu'][ self::DEFAULT_CONTAINER ]['items'] = array();
+		}
+	}
+
+	/**
+	 * Synthesize one ingested child into a menu-items map (by reference),
+	 * plus its backing screen when the child is a real admin page.
+	 *
+	 * External `http(s)://` children become anchor menu items (no bound
+	 * screen); everything else becomes an `iframe:`-backed screen + a
+	 * bare menu item (href bound later from the screen path).
+	 *
+	 * @param array $doc         Plugin-origin doc (by reference).
+	 * @param array $child_items Parent's `items` map (by reference).
+	 * @param array $child       Child record from `scan_children()`.
+	 */
+	private static function synthesize_child( &$doc, &$child_items, $child ) {
+		$child_id = $child['id'];
+
+		if ( self::is_external_slug( $child['slug'] ) ) {
+			if ( ! isset( $child_items[ $child_id ] ) ) {
+				$child_items[ $child_id ] = array(
+					'label'    => $child['label'],
+					'href'     => $child['slug'],
+					'external' => true,
+				);
 			}
+			return;
 		}
 
-		foreach ( $records as $record ) {
-			$id = $record['id'];
-
-			// Build the screen entry — skip when the container/screen
-			// already exists (admin.json wins, OR previous filter pass).
-			if ( ! isset( $doc['screens'][ $id ] ) ) {
-				if ( $record['parent_is_core'] ) {
-					// Synthesized container — hidden stub. Authors
-					// override the icon at `menu.ingested.items[<id>]`
-					// (menu-side), not on the hidden screen — writing
-					// icon here makes it drift from the menu item when
-					// admin.json overrides one but not the other.
-					// Capability omitted — the children carry their
-					// own caps.
-					$doc['screens'][ $id ] = array(
-						'label'  => $record['label'],
-						'hidden' => true,
-					);
-				} else {
-					$screen = array(
-						'label' => $record['label'],
-						'icon'  => $record['icon'],
-						'path'  => $record['path'],
-						'app'   => self::iframe_app_id( $record['slug'] ),
-					);
-					if ( $record['capability'] !== '' ) {
-						$screen['permissions'] = array(
-							'capabilities' => array( $record['capability'] ),
-						);
-					}
-					$doc['screens'][ $id ] = $screen;
-				}
+		if ( ! isset( $doc['screens'][ $child_id ] ) ) {
+			$child_screen = array(
+				'label' => $child['label'],
+				'icon'  => 'menu',
+				'path'  => $child['path'],
+				'app'   => self::iframe_app_id( $child['slug'] ),
+			);
+			if ( $child['capability'] !== '' ) {
+				$child_screen['permissions'] = array(
+					'capabilities' => array( $child['capability'] ),
+				);
 			}
-
-			// Build the menu item — same idempotency guard. Skip when
-			// an item under the container already declares the id.
-			$container_items = &$doc['menu'][ self::DEFAULT_CONTAINER ]['items'];
-			if ( ! isset( $container_items[ $id ] ) ) {
-				$menu_item = array();
-				if ( $record['parent_is_core'] ) {
-					// Synthesized container — label/icon come from the
-					// core wp-admin slug since no screen-binding pass
-					// will inherit it.
-					$menu_item['label'] = $record['label'];
-					if ( $record['icon'] !== '' ) {
-						$menu_item['icon'] = $record['icon'];
-					}
-				}
-				$container_items[ $id ] = $menu_item;
-			}
-
-			// Children of this record nest under the container's items.
-			if ( ! empty( $record['children'] ) ) {
-				if ( ! isset( $container_items[ $id ]['items'] ) || ! is_array( $container_items[ $id ]['items'] ) ) {
-					$container_items[ $id ]['items'] = array();
-				}
-				$child_items = &$container_items[ $id ]['items'];
-				foreach ( $record['children'] as $child ) {
-					$child_id = $child['id'];
-					if ( ! isset( $doc['screens'][ $child_id ] ) ) {
-						$child_screen = array(
-							'label' => $child['label'],
-							'icon'  => 'menu',
-							'path'  => $child['path'],
-							'app'   => self::iframe_app_id( $child['slug'] ),
-						);
-						if ( $child['capability'] !== '' ) {
-							$child_screen['permissions'] = array(
-								'capabilities' => array( $child['capability'] ),
-							);
-						}
-						$doc['screens'][ $child_id ] = $child_screen;
-					}
-					if ( ! isset( $child_items[ $child_id ] ) ) {
-						$child_items[ $child_id ] = array();
-					}
-				}
-				unset( $child_items );
-			}
-			unset( $container_items );
+			$doc['screens'][ $child_id ] = $child_screen;
 		}
-
-		return $doc;
+		if ( ! isset( $child_items[ $child_id ] ) ) {
+			$child_items[ $child_id ] = array();
+		}
 	}
 
 	/**
@@ -618,7 +667,39 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 * @return string
 	 */
 	private static function iframe_app_id( $slug ) {
-		return 'iframe:' . $slug;
+		return 'iframe:' . self::admin_url_for_slug( $slug );
+	}
+
+	/**
+	 * Resolve a wp-admin menu slug to the URL that actually loads its
+	 * page, mirroring core's `menu_page_url()` logic: a slug containing
+	 * `.php` is a direct admin file (keep any query string as-is);
+	 * anything else is a registered page reached through
+	 * `admin.php?page=<slug>`. Without this the iframe-fallback would
+	 * request `<adminUrl>/<slug>` (e.g. `/wp-admin/gutenberg`) → 404.
+	 *
+	 * @param string $slug Original wp-admin menu slug.
+	 * @return string Loadable admin URL (relative to adminUrl).
+	 */
+	private static function admin_url_for_slug( $slug ) {
+		$slug = (string) $slug;
+		if ( strpos( $slug, '.php' ) !== false ) {
+			return $slug;
+		}
+		return 'admin.php?page=' . $slug;
+	}
+
+	/**
+	 * Is this menu slug an absolute external link (registered with a
+	 * full `http(s)://` URL as its slug, as Gutenberg's Support /
+	 * Documentation entries are)? Such entries are anchor links, not
+	 * iframe-mountable admin pages.
+	 *
+	 * @param string $slug
+	 * @return bool
+	 */
+	private static function is_external_slug( $slug ) {
+		return is_string( $slug ) && (bool) preg_match( '#^https?://#i', $slug );
 	}
 
 	/**

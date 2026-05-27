@@ -8,9 +8,9 @@ import {
 import { Stack } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import SettingsGeneralApp from '../settings-general';
-import SettingsWritingApp from './SettingsWritingApp';
-import SettingsReadingApp from './SettingsReadingApp';
-import SettingsDiscussionApp from './SettingsDiscussionApp';
+import SettingsWritingApp from '../settings-writing';
+import SettingsReadingApp from '../settings-reading';
+import SettingsDiscussionApp from '../settings-discussion';
 import IframeApp from '../iframe-fallback';
 
 /**

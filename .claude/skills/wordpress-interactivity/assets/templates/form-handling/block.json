@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "NAMESPACE/contact-form",
+  "title": "Contact Form",
+  "category": "widgets",
+  "icon": "email",
+  "description": "Interactive contact form with validation.",
+  "supports": {
+    "interactivity": true,
+    "color": {
+      "background": true,
+      "text": true
+    },
+    "spacing": {
+      "margin": true,
+      "padding": true
+    }
+  },
+  "attributes": {
+    "successMessage": {
+      "type": "string",
+      "default": "Thank you! Your message has been sent."
+    }
+  },
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}

@@ -29,9 +29,14 @@
 	},
 	"script": "wp-admin-shell",
 	"documentation": {
-		"purpose": "Sidebar navigation app. Renders `config.items[]` — a tree of nav entries declared inline in admin.json. Item shapes: `{ label, icon, href, capability?, external? }` for links, `{ separator: true }` for dividers, `{ group, items }` for inline labeled groups, `{ screen, label, icon, description, items }` for drill-down sub-screens. Active state derives from the URL primary path (compared with `aria-current=\"true\"`). Drill-down sub-screen state lives in the URL slot `?screen=<id>` so it deep-links + survives refresh. Recursively prunes items the user can't reach (capability check) and orphan separators.",
+		"purpose": "Menu host + renderer dispatcher. Reads the resolved `menu` tree from the kernel config (nested entries, screen-bound by the PHP `bind_screens` pass), orders + prunes it once (sort by `position`; recursively drop hidden, capability-denied, and orphan-separator items), then dispatches to the renderer the active engine named via its `engine.json` `menu-renderer` field (threaded onto the runtime config by `buildRuntimeConfig`). Dispatch goes through the kernel menu-renderer registry (`src/runtime/config/menuRendererRegistry.js`), so a `plugin:*` renderer resolves by the same path as a built-in. Ships two renderers — `sidebar-drilldown` (default; slide-in sub-screens + `?screen=<id>` URL slot, honors `config.collapsed` icon rail) and `sidebar-tree` (expandable in-place tree). `core:single-pane`'s `drawer` renderer registers from that engine's module. `menu-renderer: none` → renders nothing; absent → falls back to `sidebar-drilldown`. Active state derives from the URL primary path via `aria-current=\"true\"`.",
 		"data": {
 			"reads": [
+				{
+					"source": "menu-renderer + menu",
+					"via": "kernel-config",
+					"purpose": "`useKernel().config` supplies the resolved `menu` tree to order/prune and the engine's `menu-renderer` strategy id to dispatch on."
+				},
 				{
 					"source": "root/site",
 					"via": "core-data",
@@ -50,10 +55,12 @@
 			"writes-slots": [ "screen" ]
 		},
 		"states": [
-			{ "id": "collapsed-rail", "when": "config.collapsed === true", "renders": "Vertical column of IconButton entries; separators render as <hr>; external links render as native <a target=\"_blank\">." },
-			{ "id": "expanded-root", "when": "!collapsed && no `?screen=` slot", "renders": "Sidebar drill-down `screen` showing the root item list. Title falls back to admin.json `title` → `record.title` → window global → `Admin`." },
-			{ "id": "expanded-screen", "when": "?screen=<id> matches a screen item", "renders": "Drill-down sub-screen with back button + screen.label heading + screen.description + items list." },
-			{ "id": "expanded-screen-not-found", "when": "?screen=<id> does NOT match", "renders": "Falls through to root screen (no 404)." }
+			{ "id": "renderer-none", "when": "engine `menu-renderer` === 'none'", "renders": "Nothing. Engine drives navigation through `regions` / `routes` instead." },
+			{ "id": "renderer-tree", "when": "engine `menu-renderer` === 'sidebar-tree'", "renders": "Expandable in-place tree; branch nodes are <button>s with a rotating chevron, leaves are links. Branches seed open when their subtree contains the active route." },
+			{ "id": "collapsed-rail", "when": "sidebar-drilldown && config.collapsed === true", "renders": "Vertical column of IconButton entries; separators render as <hr>; external links render as native <a target=\"_blank\">." },
+			{ "id": "expanded-root", "when": "sidebar-drilldown && !collapsed && no `?screen=` slot", "renders": "Sidebar drill-down `screen` showing the root item list. Title falls back to admin.json `title` → `record.title` → window global → `Admin`." },
+			{ "id": "expanded-screen", "when": "sidebar-drilldown && ?screen=<id> matches a screen item", "renders": "Drill-down sub-screen with back button + screen.label heading + screen.description + items list." },
+			{ "id": "expanded-screen-not-found", "when": "sidebar-drilldown && ?screen=<id> does NOT match", "renders": "Falls through to root screen (no 404)." }
 		],
 		"interactions": [
 			{ "trigger": "Click a screen item", "effect": "`navigateScreen(item.screen)` writes `?screen=<id>` to the URL on top of the current primary path; SidebarNavigationProvider plays a slide animation." },
