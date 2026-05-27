@@ -1,4 +1,5 @@
 import { IconButton, Stack } from '@wordpress/ui';
+import { __ } from '@wordpress/i18n';
 
 import { resolveIcon } from '../../runtime/config/iconMap';
 
@@ -25,7 +26,17 @@ const COMMAND_HREFS = {
 
 export default function ToolbarActionsApp( { config = {} } ) {
 	const left = Array.isArray( config.left ) ? config.left : [];
-	const right = Array.isArray( config.right ) ? config.right : [];
+	const right = Array.isArray( config.right ) ? [ ...config.right ] : [];
+
+	// Classic-mode escape hatch — only for users who can actually toggle
+	// it (the PHP handler is cap-gated to manage_options too). The href is
+	// a full `/wp-admin/?classic=1` navigation handled server-side, not an
+	// in-shell hash route; the admin-link interceptor lets the `classic`
+	// param through.
+	const classic = classicAction();
+	if ( classic ) {
+		right.push( classic );
+	}
 
 	if ( ! left.length && ! right.length ) {
 		return null;
@@ -48,6 +59,27 @@ export default function ToolbarActionsApp( { config = {} } ) {
 			</Stack>
 		</Stack>
 	);
+}
+
+/**
+ * Build the "Classic wp-admin" action when the current user can toggle
+ * classic mode, or null otherwise.
+ *
+ * @return {?{href: string, icon: string, label: string}} Action or null.
+ */
+function classicAction() {
+	const shell = typeof window !== 'undefined' ? window.wpAdminShell : null;
+	const caps = ( shell && shell.capabilities ) || {};
+	if ( ! caps.manage_options ) {
+		return null;
+	}
+	const adminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
+	const sep = adminUrl.indexOf( '?' ) === -1 ? '?' : '&';
+	return {
+		href: `${ adminUrl }${ sep }classic=1`,
+		icon: 'wordpress',
+		label: __( 'Classic wp-admin', 'wp-admin-shell' ),
+	};
 }
 
 function renderAction( action, key ) {

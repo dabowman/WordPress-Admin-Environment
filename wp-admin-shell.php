@@ -299,6 +299,12 @@ add_action( 'init', function () {
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-hijack.php';
 WP_Admin_Shell_Hijack::init();
 
+// Classic-mode escape hatch — cap-gated `?classic=1` cookie toggle that
+// lets an admin drop into classic wp-admin (and back). Runs at admin_init
+// priority -10, before the hijack.
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-classic-mode.php';
+WP_Admin_Shell_Classic_Mode::init();
+
 /**
  * Enqueue shell assets for a workspace takeover request.
  *

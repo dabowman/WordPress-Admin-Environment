@@ -128,6 +128,72 @@ echo "\n— is_active_request context guard —\n";
 $T::request( 'index.php' );
 $T::ok( 'is_active_request false under non-admin (CLI) context', WP_Admin_Shell_Hijack::is_active_request() === false );
 
+// ── W3: classic-mode cookie + admin bar ────────────────────────────
+
+echo "\n— classic-mode cookie + admin bar —\n";
+
+$cm  = new ReflectionClass( 'WP_Admin_Shell_Classic_Mode' );
+$set = $cm->getMethod( 'set_cookie' );
+$set->setAccessible( true );
+
+unset( $_COOKIE['wp_admin_shell_classic'] );
+$set->invoke( null, true );
+$T::ok( 'set_cookie(true) marks $_COOKIE', ( $_COOKIE['wp_admin_shell_classic'] ?? '' ) === '1' );
+$set->invoke( null, false );
+$T::ok( 'set_cookie(false) clears $_COOKIE', ! isset( $_COOKIE['wp_admin_shell_classic'] ) );
+
+// Stub admin bar — captures add_node() calls without needing WP_Admin_Bar.
+$make_bar = function () {
+	return new class() {
+		public $nodes = array();
+		public function add_node( $args ) {
+			$this->nodes[ $args['id'] ] = $args;
+		}
+	};
+};
+
+// Drive workspace-active state through the override-path filter.
+$GLOBALS['wpas_routing_override'] = '';
+$path_filter = function () {
+	return $GLOBALS['wpas_routing_override'] ? $GLOBALS['wpas_routing_override'] : '/__no_admin_json__';
+};
+add_filter( 'wp_admin_shell_admin_json_path', $path_filter );
+
+$fix = $plugin_dir . 'tests/php/fixtures/alpha/';
+
+// Cookie set + workspace active → node present.
+$GLOBALS['wpas_routing_override'] = $fix . 'override-styles-only.json';
+WP_Admin_Shell_Origin_File::reset_memo();
+$_COOKIE['wp_admin_shell_classic'] = '1';
+$bar = $make_bar();
+WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'Back-to-workspace node shown when cookie set + workspace active', isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+
+// Cookie absent → no node.
+unset( $_COOKIE['wp_admin_shell_classic'] );
+$bar = $make_bar();
+WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'no node when classic cookie absent', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+
+// Cookie set but workspace inactive (no file + no option) → no node.
+$GLOBALS['wpas_routing_override'] = '';
+WP_Admin_Shell_Origin_File::reset_memo();
+$saved_shell = get_option( 'wp_admin_shell_active_shell', null );
+$had_shell   = ( false !== get_option( 'wp_admin_shell_active_shell', false ) );
+delete_option( 'wp_admin_shell_active_shell' );
+$_COOKIE['wp_admin_shell_classic'] = '1';
+$bar = $make_bar();
+WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'no node when workspace inactive', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+
+// Restore option + cookie + filter state.
+if ( $had_shell && is_string( $saved_shell ) ) {
+	update_option( 'wp_admin_shell_active_shell', $saved_shell );
+}
+unset( $_COOKIE['wp_admin_shell_classic'] );
+remove_filter( 'wp_admin_shell_admin_json_path', $path_filter );
+WP_Admin_Shell_Origin_File::reset_memo();
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n────────────────────────────\n";
