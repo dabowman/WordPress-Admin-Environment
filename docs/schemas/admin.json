@@ -97,6 +97,10 @@
 							"items": { "$ref": "#/$defs/workspaceWidget" }
 						}
 					}
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for the `workspace` block (e.g. `[ \"default-screen\", \"branding.title\" ]`; relative paths cover `branding.*`, `notices.*`, `widgets.*`). Note the hardcoded deny-list still blocks `workspace.engine` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
 				}
 			}
 		},

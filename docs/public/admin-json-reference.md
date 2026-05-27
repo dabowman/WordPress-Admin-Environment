@@ -24,6 +24,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 - [styles](#styles)
 - [preload](#preload)
 - [regions / routes](#regions--routes-escape-hatches)
+- [customizable](#customizable)
 - [v2 surfaces (deprecated)](#v2-surfaces-deprecated)
 
 ## JSON Schema
@@ -434,3 +435,36 @@ Across origins the resolved value is the concatenation of every origin's `preloa
 The kernel synthesizes the runtime regions map + routes table from `screens[]` + the active engine's `defaultRegions` (`src/runtime/compile/`). Authors who need a region or route the `screens` shape can't express write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against the synthesis.
 
 See [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-shell-design-spec.md#62-routes-block) for route patterns. Avoid these blocks when the `screens` surface can express the same thing.
+
+## customizable
+
+`customizable` is a per-entry write allowlist: it declares what the consumer cascade origins (`role`, `user`) may write to that entry and its descendants. Trust-tier origins (`core`, `engine`, `plugin`, `site`) author the declaration and are exempt from it — the field is *their* statement about what downstream consumers may touch. Enforcement runs server-side in `WP_Admin_Shell_Customizable` before the merge, so blocked fields never enter the resolved tree.
+
+Three accepted shapes:
+
+| Value                  | Meaning                                                                                                          |
+|------------------------|------------------------------------------------------------------------------------------------------------------|
+| `true`                 | Every field on this entry (and its descendants) is writable by consumer origins.                                 |
+| `[ "dotted.path", … ]` | Only the listed dotted paths — relative to the declaring entry — are writable; everything else is locked.        |
+| `false` / absent       | Locked. No fields writable downstream (default-deny — same posture as block supports).                           |
+
+The array form requires unique, non-empty strings; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors.
+
+Entry types that honor `customizable`: `workspace`, each `screens[id]`, each `menu` item (and its nested `items`), each `commands` entry, each `workspace.widgets.<slot>[]` entry, `styles`, each `regions[id]` (and nested child regions), and each `routes` entry.
+
+Two limits always apply regardless of the declaration:
+
+- **Consumer origins are shrink-only.** `role` / `user` can REMOVE entries (e.g. drop a capability from `screens[].permissions`) but never grow an OR-set or add new structure beyond what an allowlist permits.
+- **A hardcoded deny-list blocks security-sensitive paths even when listed.** `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` are rejected for consumer origins even with a matching `customizable` allowlist entry.
+
+```json
+{
+	"workspace": {
+		"engine": "core:default",
+		"default-screen": "dashboard-home",
+		"customizable": [ "default-screen", "branding.title" ]
+	}
+}
+```
+
+See [§4.4.2 of the design sketch](../schema-sketch.md) for the full trust-tier rationale and `#/$defs/customizable` in [`docs/schemas/admin.json`](../schemas/admin.json) for the schema definition.
