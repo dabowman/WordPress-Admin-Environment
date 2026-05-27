@@ -103,7 +103,9 @@ const SiteHubApp = memo(
 									/>
 								}
 							>
-								{ siteTitle }
+								<span className="wp-admin-shell-site-hub__title-text">
+									{ siteTitle }
+								</span>
 								<VisuallyHidden render={ <span /> }>
 									{ __(
 										'(opens in a new tab)',
