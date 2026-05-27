@@ -236,35 +236,38 @@ $ref = new ReflectionClass( 'WP_Admin_Shell_Resolver' );
 $method = $ref->getMethod( 'engine_origin' );
 $method->setAccessible( true );
 
-$origin_full = $method->invoke( null, array( 'engine' => $test_engine_id ) );
+// engine_origin() now takes the resolved engine id (a string) — the
+// caller (load_origins) extracts it from the override file's
+// workspace.engine, falling back to the baseline's engine.
+$origin_full = $method->invoke( null, $test_engine_id );
 $T::assert_true(
 	'engine_origin: returns synthetic styles doc for engine with default-styles',
 	is_array( $origin_full ) && isset( $origin_full['styles']['theme']['density'] ) &&
 		$origin_full['styles']['theme']['density'] === 'compact'
 );
 
-$origin_noop = $method->invoke( null, array( 'engine' => $noop_engine_id ) );
+$origin_noop = $method->invoke( null, $noop_engine_id );
 $T::assert_true(
 	'engine_origin: returns empty array for engine without default-styles',
 	$origin_noop === array()
 );
 
-$origin_missing_engine = $method->invoke( null, array() );
+$origin_empty_id = $method->invoke( null, '' );
 $T::assert_true(
-	'engine_origin: returns empty array when admin.json omits engine',
-	$origin_missing_engine === array()
+	'engine_origin: returns empty array for an empty engine id',
+	$origin_empty_id === array()
 );
 
-$origin_unknown = $method->invoke( null, array( 'engine' => 'plugin:nonexistent/whatever' ) );
+$origin_unknown = $method->invoke( null, 'plugin:nonexistent/whatever' );
 $T::assert_true(
 	'engine_origin: returns empty array for unregistered engine id',
 	$origin_unknown === array()
 );
 
-$origin_non_array = $method->invoke( null, null );
+$origin_null = $method->invoke( null, null );
 $T::assert_true(
-	'engine_origin: returns empty array for non-array plugin_doc',
-	$origin_non_array === array()
+	'engine_origin: returns empty array for a null engine id',
+	$origin_null === array()
 );
 
 // ─── 5. Bundled core:default ships default-styles ──────────────

@@ -6,9 +6,12 @@
  *   user   — wp_admin_shell_user_prefs (current user only)
  *   role   — wp_admin_shell_role_config[<role>]
  *   site   — wp_admin_shell_site_config option
- *   plugin — files in shells/ (or programmatic registration; the active
- *            shell that the user / role / site selected)
- *   core   — empty baseline (and v0→v1 normalization)
+ *   plugin — wp-content/admin.json override (partial delta) when present;
+ *            otherwise the back-compat selected shell (full, replaces the
+ *            baseline)
+ *   engine — synthetic: the active engine's default-styles
+ *   core   — the wp-admin-default baseline when an override file is
+ *            present; otherwise the empty guard baseline
  *
  * Each origin is loaded into a normalized doc, optionally filtered with
  * `wp_admin_shell_data_{origin}`, run through `customizable` filtering
@@ -178,39 +181,59 @@ class WP_Admin_Shell_Resolver {
 	 * (programmatic plugin shells, network site config), extract then.
 	 */
 	public static function load_origins( $context = array() ) {
-		$shell_slug = $context['shell'] ?? self::active_shell_slug();
 		$plugin_dir = trailingslashit( WP_ADMIN_SHELL_PATH );
 
-		// Programmatic registrations win over file-based shells of the
-		// same slug (spec §13 #6). Falls through to disk when the slug
-		// is not registered programmatically.
-		if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $shell_slug ) ) {
-			$plugin_doc = WP_Admin_Shell_Shells::get( $shell_slug );
-		} else {
-			$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
-			$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
-		}
+		// File-override path (theme.json model). A valid
+		// `wp-content/admin.json` is a PARTIAL delta layered on the
+		// `wp-admin-default` baseline: the baseline fills the `core` slot,
+		// the file fills `plugin`, and the field-aware merge folds the
+		// file's keys over the baseline. The file wins over the legacy
+		// active-shell option. A one-key `{ "styles": … }` file retints
+		// the chrome while every baseline screen / menu / command survives.
+		$file_doc = class_exists( 'WP_Admin_Shell_Origin_File' )
+			? WP_Admin_Shell_Origin_File::load()
+			: null;
 
-		// Core origin is the empty baseline that guards against missing
-		// shells. When the plugin origin is a real shell with an engine
-		// declaration (v2 root `engine` or v1 `settings.shell.layoutEngine`),
-		// merging the v1-shaped empty_doc on top would inject conflicting
-		// keys. v2 shells in particular gain a phantom `settings.*` partition
-		// from the baseline. Skip the baseline whenever the plugin doc has
-		// already declared an engine.
-		$has_plugin_engine =
-			( is_array( $plugin_doc ) && (
-				isset( $plugin_doc['engine'] ) ||
-				isset( $plugin_doc['workspace']['engine'] ) ||
-				isset( $plugin_doc['settings']['shell']['layoutEngine'] )
-			) );
-		$core_doc = $has_plugin_engine
-			? array()
-			: WP_Admin_Shell_Origin_Core::empty_doc();
+		if ( is_array( $file_doc ) ) {
+			$plugin_doc       = $file_doc;
+			$core_doc         = WP_Admin_Shell_Origin_Core::load_baseline();
+			$effective_engine = $plugin_doc['workspace']['engine']
+				?? $plugin_doc['engine']
+				?? ( is_array( $core_doc ) ? ( $core_doc['workspace']['engine'] ?? $core_doc['engine'] ?? null ) : null );
+		} else {
+			// Back-compat path — a selected full shell occupies the
+			// `plugin` slot and REPLACES the baseline (unchanged from
+			// pre-0.1.0 behavior). Programmatic registrations win over
+			// file-based shells of the same slug (spec §13 #6).
+			$shell_slug = $context['shell'] ?? self::active_shell_slug();
+
+			if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $shell_slug ) ) {
+				$plugin_doc = WP_Admin_Shell_Shells::get( $shell_slug );
+			} else {
+				$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
+				$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
+			}
+
+			// A full selected shell declaring an engine (v2 root `engine`
+			// or v1 `settings.shell.layoutEngine`) replaces the baseline —
+			// merging the v1-shaped empty_doc under it would inject
+			// conflicting keys. Otherwise the empty_doc guards against a
+			// missing shell.
+			$has_plugin_engine =
+				( is_array( $plugin_doc ) && (
+					isset( $plugin_doc['engine'] ) ||
+					isset( $plugin_doc['workspace']['engine'] ) ||
+					isset( $plugin_doc['settings']['shell']['layoutEngine'] )
+				) );
+			$core_doc         = $has_plugin_engine ? array() : WP_Admin_Shell_Origin_Core::empty_doc();
+			$effective_engine = is_array( $plugin_doc )
+				? ( $plugin_doc['workspace']['engine'] ?? $plugin_doc['engine'] ?? null )
+				: null;
+		}
 
 		return array(
 			'core'   => $core_doc,
-			'engine' => self::engine_origin( $plugin_doc ),
+			'engine' => self::engine_origin( $effective_engine ),
 			'plugin' => $plugin_doc,
 			'site'   => is_array( get_option( 'wp_admin_shell_site_config', array() ) ) ? get_option( 'wp_admin_shell_site_config', array() ) : array(),
 			'role'   => self::role_origin(),
@@ -220,31 +243,26 @@ class WP_Admin_Shell_Resolver {
 
 	/**
 	 * Engine origin — synthetic doc carrying the active engine's
-	 * `default-styles` manifest block. Sits between `core` (empty
-	 * baseline) and `plugin` (admin.json) in the cascade so the engine's
-	 * visual identity ships with the engine but admin.json wins on every
-	 * overlapping key.
+	 * `default-styles` manifest block. Sits between `core` (baseline) and
+	 * `plugin` (override) in the cascade so the engine's visual identity
+	 * ships with the engine but admin.json wins on every overlapping key.
+	 *
+	 * The effective engine id is resolved by the caller — for an override
+	 * file that omits `workspace.engine`, it falls back to the baseline's
+	 * engine, so a partial override never loses the engine's default
+	 * styles.
 	 *
 	 * Returns an empty array when:
-	 *   - The plugin doc declares no engine (legacy v0 shells default to
+	 *   - No engine id is resolved (legacy v0 shells default to
 	 *     `core:default` at the JS layer; PHP doesn't infer here).
 	 *   - The engine manifest registry is unavailable (e.g. tests calling
 	 *     `resolve_with` directly with hand-rolled origin arrays).
 	 *   - The engine manifest declares no `default-styles`.
 	 *
-	 * @param array $plugin_doc  The active shell admin.json (post-load).
+	 * @param string|null $engine_id  The resolved active engine id.
 	 * @return array
 	 */
-	private static function engine_origin( $plugin_doc ) {
-		if ( ! is_array( $plugin_doc ) ) {
-			return array();
-		}
-		// v3 nests the engine under workspace.engine; v2 keeps it at root.
-		// Read the v3 location first so v3 shells resolve correctly, then
-		// fall back to v2.
-		$engine_id = $plugin_doc['workspace']['engine']
-			?? $plugin_doc['engine']
-			?? null;
+	private static function engine_origin( $engine_id ) {
 		if ( ! is_string( $engine_id ) || $engine_id === '' ) {
 			return array();
 		}

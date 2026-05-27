@@ -80,6 +80,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-custom
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-file.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
@@ -479,6 +480,29 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
  */
 function wp_admin_shell_get_active_config() {
 	return WP_Admin_Shell_Resolver::resolve();
+}
+
+/**
+ * Whether the workspace should take over the admin.
+ *
+ * Single source of truth for the workspace-as-primary-entry hijack and
+ * the classic-mode escape hatch. True when EITHER:
+ *   - a valid `wp-content/admin.json` override file is present, OR
+ *   - the legacy `wp_admin_shell_active_shell` option was explicitly
+ *     written (back-compat for installs that selected a shell before the
+ *     file-based trigger landed).
+ *
+ * A fresh install with neither returns false, so the workspace never
+ * mounts and classic wp-admin is served untouched.
+ *
+ * @return bool
+ */
+function wp_admin_shell_workspace_active() {
+	if ( class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid() ) {
+		return true;
+	}
+	$active_shell = get_option( 'wp_admin_shell_active_shell', null );
+	return is_string( $active_shell ) && $active_shell !== '';
 }
 
 /**
