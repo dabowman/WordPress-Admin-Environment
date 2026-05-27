@@ -80,6 +80,11 @@
 	text-decoration: none;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	/* @wordpress/ui Button is an inline-flex element centering its
+	 * content; left-align so a long title truncates with an ellipsis
+	 * at the end instead of clipping on both sides. */
+	justify-content: flex-start;
+	text-align: start;
 }
 
 .wp-admin-shell-site-hub__title :is(button, a):focus {
