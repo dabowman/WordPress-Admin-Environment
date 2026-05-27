@@ -130,8 +130,11 @@ class WP_Admin_Shell_Hijack {
 		if ( 'index.php' === $pagenow ) {
 			return true;
 		}
+		// Bare admin.php only — a `page=` (plugin page) or `action=`
+		// (plugin dispatch) request is not a root entry and must reach its
+		// own handler.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing decision, no state change.
-		if ( 'admin.php' === $pagenow && empty( $_GET['page'] ) ) {
+		if ( 'admin.php' === $pagenow && empty( $_GET['page'] ) && empty( $_GET['action'] ) ) {
 			return true;
 		}
 		return false;
@@ -224,6 +227,14 @@ class WP_Admin_Shell_Hijack {
 	 * @return string|null Workspace route path (leading slash) or null.
 	 */
 	private static function match_legacy_hash( $pagenow, $map ) {
+		// Never map a nonce-protected action (e.g.
+		// `plugins.php?action=deactivate&_wpnonce=…`): redirecting would
+		// drop `action`/`_wpnonce` and silently void the operation. Such
+		// links must complete in classic.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- presence check only; not verifying.
+		if ( isset( $_GET['_wpnonce'] ) ) {
+			return null;
+		}
 		$best       = null;
 		$best_score = -1;
 		foreach ( $map as $route_path => $entry ) {

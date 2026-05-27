@@ -96,9 +96,13 @@ class WP_Admin_Shell_Classic_Mode {
 	 */
 	private static function set_cookie( $on ) {
 		$expire = $on ? 0 : ( time() - DAY_IN_SECONDS );
+		// Scope to the install's real admin path — `ADMIN_COOKIE_PATH`
+		// already encodes subdirectory / relocated / multisite-subdir
+		// installs (`/blog/wp-admin/`). A hardcoded `/wp-admin/` would never
+		// be sent on those, leaving the escape hatch permanently off.
 		$args   = array(
 			'expires'  => $expire,
-			'path'     => '/wp-admin/',
+			'path'     => defined( 'ADMIN_COOKIE_PATH' ) ? ADMIN_COOKIE_PATH : '/wp-admin/',
 			'secure'   => is_ssl(),
 			'httponly' => true,
 			'samesite' => 'Lax',

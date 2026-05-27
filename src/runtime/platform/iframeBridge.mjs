@@ -56,9 +56,15 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 		if ( 'route' === decision.action ) {
 			return { type: 'navigate', hashRoute: decision.hashRoute };
 		}
-		// No workspace equivalent — keep the user embedded by pointing the
-		// iframe at the classic page.
-		return { type: 'iframe', href: url };
+		// Only a genuine same-origin admin MISS keeps the user embedded by
+		// pointing the iframe at the classic page. A `'pass'` (RPC, the
+		// classic-mode toggle, cross-origin, in-page hash) must NOT reach
+		// `iframe.src` — treat it as ignore so the URL can't become an
+		// unvalidated navigation sink.
+		if ( 'iframe' === decision.action ) {
+			return { type: 'iframe', href: url };
+		}
+		return { type: 'ignore' };
 	}
 
 	if ( 'wp-admin-shell-external-link' === data.type ) {
@@ -97,15 +103,25 @@ export function installIframeBridge( options = {} ) {
 		return () => {};
 	}
 
+	// Resolve the expected origin, falling back to the page origin when
+	// `adminUrl` is relative (e.g. the iframe-fallback default `/wp-admin/`).
+	// If it still can't be determined, REFUSE all messages rather than
+	// silently disabling the origin pin.
 	let expectedOrigin = null;
 	try {
 		expectedOrigin = new URL( adminUrl ).origin;
 	} catch ( e ) {
-		expectedOrigin = null;
+		try {
+			const base =
+				w.location && w.location.href ? w.location.href : undefined;
+			expectedOrigin = new URL( adminUrl, base ).origin;
+		} catch ( e2 ) {
+			expectedOrigin = null;
+		}
 	}
 
 	const handler = ( event ) => {
-		if ( expectedOrigin && event.origin !== expectedOrigin ) {
+		if ( ! expectedOrigin || event.origin !== expectedOrigin ) {
 			return;
 		}
 		if ( typeof getIframeWindow === 'function' ) {

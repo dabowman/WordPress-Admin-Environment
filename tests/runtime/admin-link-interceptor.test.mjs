@@ -221,6 +221,35 @@ ok(
 	classify( ADMIN_URL + 'admin.php?page=foo' ).action === 'iframe'
 );
 
+// Nonce-protected action → pass (must complete in classic).
+ok(
+	'mapped link with _wpnonce → pass',
+	classify( ADMIN_URL + 'edit.php?post_type=page&_wpnonce=abc' ).action ===
+		'pass'
+);
+
+// Unresolved token → not a route (mirrors the PHP guard).
+ok(
+	'post.php?action=edit with no post id → iframe (no bogus token route)',
+	classify( ADMIN_URL + 'post.php?action=edit' ).action === 'iframe'
+);
+ok(
+	'matchLegacyRoute returns null on unresolved token',
+	matchLegacyRoute(
+		'post.php',
+		new URLSearchParams( 'action=edit' ),
+		ROUTES
+	) === null
+);
+ok(
+	'matchLegacyRoute returns null on empty id param',
+	matchLegacyRoute(
+		'post.php',
+		new URLSearchParams( 'post=&action=edit' ),
+		ROUTES
+	) === null
+);
+
 // ── installAdminLinkInterceptor (fake DOM) ─────────────────────────
 
 console.log( '\n— installAdminLinkInterceptor —\n' );

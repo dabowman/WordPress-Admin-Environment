@@ -106,7 +106,11 @@ export function matchLegacyRoute( script, query, routes ) {
 		const legacyQuery = route.legacy_query || {};
 		let matches = true;
 		for ( const key of Object.keys( legacyQuery ) ) {
-			if ( String( query.get( key ) ) !== String( legacyQuery[ key ] ) ) {
+			// Absent param compares as '' (matches the PHP `'' === $got`
+			// semantics) so a literal `'null'` constraint can't be matched
+			// by an omitted param.
+			const got = query.has( key ) ? query.get( key ) : '';
+			if ( String( got ) !== String( legacyQuery[ key ] ) ) {
 				matches = false;
 				break;
 			}
@@ -119,13 +123,26 @@ export function matchLegacyRoute( script, query, routes ) {
 			continue;
 		}
 		const params = route.legacy_params || {};
-		best = path.replace( /\{(\w+)\}/g, ( token, name ) => {
+		const interpolated = path.replace( /\{(\w+)\}/g, ( token, name ) => {
 			const queryKey = params[ name ] || name;
 			const value = query.get( queryKey );
-			return value !== null && value !== undefined
+			return value !== null && value !== undefined && value !== ''
 				? encodeURIComponent( value )
 				: token;
 		} );
+		// Skip entries whose tokens didn't resolve (stray `{...}`) or that
+		// collapse to the root — mirrors the PHP guard so a tokened route
+		// (e.g. `/posts/{id}/edit`) hit with no id doesn't yield a bogus
+		// `/posts/{id}/edit` or `/posts//edit`.
+		if (
+			'' === interpolated ||
+			'/' === interpolated ||
+			interpolated.includes( '{' ) ||
+			interpolated.includes( '//' )
+		) {
+			continue;
+		}
+		best = interpolated;
 		bestScore = score;
 	}
 	return best;
@@ -180,6 +197,12 @@ export function classifyAdminLink( {
 	// Classic-mode toggle is a server-handled full navigation (W3).
 	const classic = url.searchParams.get( 'classic' );
 	if ( classic === '0' || classic === '1' ) {
+		return { action: 'pass' };
+	}
+	// Nonce-protected actions (e.g. `plugins.php?action=deactivate&_wpnonce=…`)
+	// must complete in classic — intercepting would drop `action`/`_wpnonce`
+	// and silently void the operation.
+	if ( url.searchParams.has( '_wpnonce' ) ) {
 		return { action: 'pass' };
 	}
 

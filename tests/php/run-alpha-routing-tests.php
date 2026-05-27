@@ -218,6 +218,14 @@ $T::ok( 'post.php?post=42&action=edit → /posts/42/edit', $match_legacy->invoke
 
 $_GET = array();
 $T::ok( 'unmapped script → null', $match_legacy->invoke( null, 'upload.php', $map ) === null );
+
+// Nonce-protected action is never mapped (would drop action/_wpnonce).
+$_GET = array( '_wpnonce' => 'abc', 'post_type' => 'page' );
+$T::ok( 'nonce-protected GET → null (stays classic)', $match_legacy->invoke( null, 'edit.php', $map ) === null );
+
+// Unresolved token → null (no bogus /posts/{id}/edit route).
+$_GET = array( 'action' => 'edit' );
+$T::ok( 'post.php?action=edit with no post id → null', $match_legacy->invoke( null, 'post.php', $map ) === null );
 $_GET = array();
 
 // Baseline screens populate the legacy map.

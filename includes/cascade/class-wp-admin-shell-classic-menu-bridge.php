@@ -45,11 +45,7 @@
  * **Out of scope.** Icon SVG harvesting from data-URIs (a future
  * pass — bridge falls back to a generic `menu` icon today). Removing
  * the original entries from `$GLOBALS['menu']` (the bridge is purely
- * additive — wp-admin's native nav is unaffected). Detecting +
- * skipping self-references (the shell's own admin page lives under
- * `wp-admin-shell-settings`; out of scope to guard against because
- * the shell's settings page is not surfaced as a third-party-plugin
- * menu entry that needs ingestion).
+ * additive — wp-admin's native nav is unaffected).
  *
  * @package WP_Admin_Shell
  */
@@ -139,11 +135,6 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		'edit-tags.php?taxonomy=post_tag',
 		'media-new.php',
 		'user-new.php',
-		// The shell's own settings page — defensive (the slug doesn't
-		// surface in $GLOBALS['menu'] as a third-party plugin entry,
-		// but documenting the exclusion here makes the intent obvious).
-		'wp-admin-shell-settings',
-		'wp-admin-shell',
 	);
 
 	/**

@@ -30,6 +30,9 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Shell_Origin_File {
 
+	/** Maximum override-file size. Structural config, not data — 1 MB is generous. */
+	const MAX_BYTES = 1048576;
+
 	/** @var array{loaded:bool,doc:?array} Per-request memo. */
 	private static $memo = array(
 		'loaded' => false,
@@ -72,6 +75,15 @@ class WP_Admin_Shell_Origin_File {
 			return null;
 		}
 
+		// Size guard — the override is structural config, not a data file.
+		// Caps the read + the json_decode work on a cache-cold admin request.
+		$size = filesize( $path );
+		if ( false !== $size && $size > self::MAX_BYTES ) {
+			self::warn_invalid( $path );
+			self::$memo['doc'] = null;
+			return null;
+		}
+
 		$json = file_get_contents( $path );
 		if ( $json === false || $json === '' ) {
 			self::$memo['doc'] = null;
@@ -106,6 +118,21 @@ class WP_Admin_Shell_Origin_File {
 	public static function mtime() {
 		$path = self::path();
 		return is_readable( $path ) ? (int) filemtime( $path ) : 0;
+	}
+
+	/**
+	 * Cache signal — `mtime:size`. Mixing in the file size disambiguates an
+	 * edit made within the same filesystem second (mtime alone is
+	 * 1s-resolution), so a malformed-then-fixed file invalidates promptly.
+	 *
+	 * @return string
+	 */
+	public static function signal() {
+		$path = self::path();
+		if ( ! is_readable( $path ) ) {
+			return '0:0';
+		}
+		return (int) filemtime( $path ) . ':' . (int) filesize( $path );
 	}
 
 	/**

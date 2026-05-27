@@ -86,6 +86,25 @@ ok(
 		'ignore'
 );
 
+// A 'pass' classification (RPC / classic toggle) must NOT reach iframe.src.
+ok(
+	'admin-link to RPC endpoint → ignore (not iframe sink)',
+	classifyBridgeMessage(
+		{
+			type: 'wp-admin-shell-admin-link',
+			url: ADMIN_URL + 'admin-ajax.php?action=x',
+		},
+		ctx
+	).type === 'ignore'
+);
+ok(
+	'admin-link with classic toggle → ignore (not iframe sink)',
+	classifyBridgeMessage(
+		{ type: 'wp-admin-shell-admin-link', url: ADMIN_URL + '?classic=1' },
+		ctx
+	).type === 'ignore'
+);
+
 const ext = classifyBridgeMessage(
 	{ type: 'wp-admin-shell-external-link', url: 'https://example.com' },
 	ctx
