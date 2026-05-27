@@ -1,6 +1,9 @@
 import './index.css';
-import { useCallback, useState } from '@wordpress/element';
+import { useCallback, useEffect, useRef, useState } from '@wordpress/element';
 import { Spinner } from '@wordpress/components';
+
+import { navigate } from '../../runtime/routing/router';
+import { installIframeBridge } from '../../runtime/platform/iframeBridge.mjs';
 
 // TODO: site-editor chrome-hiding selectors are fragile —
 // rev with each WP release. Verify Style Book canvas layout after upgrades.
@@ -40,6 +43,30 @@ export default function IframeApp( { app, config = {} } ) {
 	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 
 	const [ isLoading, setIsLoading ] = useState( true );
+	const iframeRef = useRef( null );
+
+	// Parent-side chromeless-bridge listener (W6). In-iframe admin-link
+	// clicks the bridge posts up route into the workspace when they map to
+	// a workspace screen, navigate the iframe itself otherwise, and open
+	// external links in a new tab. Origin- + source-pinned.
+	useEffect( () => {
+		const shell =
+			typeof window !== 'undefined' ? window.wpAdminShell : null;
+		const bridgeAdminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
+		const routes = ( shell && shell.adminRoutes ) || {};
+		return installIframeBridge( {
+			adminUrl: bridgeAdminUrl,
+			routes,
+			navigate,
+			onIframeNavigate: ( href ) => {
+				if ( iframeRef.current ) {
+					iframeRef.current.src = href;
+				}
+			},
+			getIframeWindow: () =>
+				iframeRef.current ? iframeRef.current.contentWindow : null,
+		} );
+	}, [] );
 
 	const onIframeLoad = useCallback( ( event ) => {
 		setIsLoading( false );
@@ -68,6 +95,7 @@ export default function IframeApp( { app, config = {} } ) {
 				</div>
 			) }
 			<iframe
+				ref={ iframeRef }
 				src={ src }
 				title={ app?.title }
 				className="wp-admin-shell-app-iframe__frame"
