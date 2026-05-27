@@ -8,10 +8,9 @@ import {
 } from '@wordpress/components';
 import { Stack } from '@wordpress/ui';
 import { chevronUp, chevronDown } from '@wordpress/icons';
-import { __ } from '@wordpress/i18n';
 
 import { resolveIcon } from '../../config/iconMap';
-import { hashPrimary } from '../../menu/menuTree.mjs';
+import { hashPrimary, subtreeContainsPrimary } from '../../menu/menuTree.mjs';
 
 /**
  * `drawer` menu renderer — the `core:single-pane` engine's strategy.
@@ -38,11 +37,11 @@ export default function DrawerRenderer( { items, currentPrimary } ) {
 	if ( ! Array.isArray( items ) || items.length === 0 ) {
 		return null;
 	}
+	// No wrapping <nav> landmark: the single-pane `core:nav-drawer` region
+	// already declares `role="navigation"`, so a nested <nav> would double
+	// the landmark.
 	return (
-		<nav
-			className="wp-admin-shell-drawer-nav"
-			aria-label={ __( 'Navigation', 'wp-admin-shell' ) }
-		>
+		<div className="wp-admin-shell-drawer-nav">
 			{ items.map( ( item, index ) => {
 				if ( item.separator ) {
 					return (
@@ -71,7 +70,7 @@ export default function DrawerRenderer( { items, currentPrimary } ) {
 					/>
 				);
 			} ) }
-		</nav>
+		</div>
 	);
 }
 
@@ -178,36 +177,4 @@ function DrawerLink( { item, currentPrimary } ) {
 			</Stack>
 		</a>
 	);
-}
-
-/**
- * Whether any leaf in the item's subtree maps to the active primary path.
- * Drives the initial open state so a deep-linked section expands.
- *
- * @param {Object} item           Section item.
- * @param {string} currentPrimary Active primary URL path.
- * @return {boolean} True when a descendant leaf is active.
- */
-function subtreeContainsPrimary( item, currentPrimary ) {
-	if ( ! currentPrimary || ! item || ! Array.isArray( item.items ) ) {
-		return false;
-	}
-	for ( const child of item.items ) {
-		if ( ! child ) {
-			continue;
-		}
-		if (
-			typeof child.href === 'string' &&
-			hashPrimary( child.href ) === currentPrimary
-		) {
-			return true;
-		}
-		if (
-			Array.isArray( child.items ) &&
-			subtreeContainsPrimary( child, currentPrimary )
-		) {
-			return true;
-		}
-	}
-	return false;
 }

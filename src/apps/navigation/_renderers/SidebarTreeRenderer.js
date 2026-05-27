@@ -8,11 +8,13 @@ import {
 } from '@wordpress/components';
 import { Stack } from '@wordpress/ui';
 import { chevronDown, chevronRight } from '@wordpress/icons';
-import { __ } from '@wordpress/i18n';
 
 import { resolveIcon } from '../../../runtime/config/iconMap';
 import SidebarNavigationItem from '../_components/SidebarNavigationItem';
-import { hashPrimary } from '../../../runtime/menu/menuTree.mjs';
+import {
+	hashPrimary,
+	subtreeContainsPrimary,
+} from '../../../runtime/menu/menuTree.mjs';
 
 /**
  * `sidebar-tree` menu renderer.
@@ -32,17 +34,17 @@ import { hashPrimary } from '../../../runtime/menu/menuTree.mjs';
  * @param {string} root0.currentPrimary Active URL primary path.
  */
 export default function SidebarTreeRenderer( { items, currentPrimary } ) {
+	// No wrapping <nav> landmark: the region this mounts in already
+	// declares `role="navigation"` (engine.json), so a nested <nav> would
+	// double the landmark. Same rule the drilldown renderer follows.
 	return (
-		<nav
-			className="wp-admin-shell-sidebar-navigation-tree"
-			aria-label={ __( 'Navigation', 'wp-admin-shell' ) }
-		>
+		<div className="wp-admin-shell-sidebar-navigation-tree">
 			<TreeList
 				items={ items }
 				currentPrimary={ currentPrimary }
 				depth={ 0 }
 			/>
-		</nav>
+		</div>
 	);
 }
 
@@ -184,36 +186,4 @@ function depthStyle( depth ) {
 	return {
 		paddingInlineStart: `calc(${ depth } * var(--wpds-space-16, 16px))`,
 	};
-}
-
-/**
- * Whether any leaf in the item's subtree maps to the active primary path.
- * Drives the initial expanded state so a deep-linked branch opens.
- *
- * @param {Object} item           Branch item.
- * @param {string} currentPrimary Active primary URL path.
- * @return {boolean} True when a descendant leaf is active.
- */
-function subtreeContainsPrimary( item, currentPrimary ) {
-	if ( ! currentPrimary || ! item || ! Array.isArray( item.items ) ) {
-		return false;
-	}
-	for ( const child of item.items ) {
-		if ( ! child ) {
-			continue;
-		}
-		if (
-			typeof child.href === 'string' &&
-			hashPrimary( child.href ) === currentPrimary
-		) {
-			return true;
-		}
-		if (
-			Array.isArray( child.items ) &&
-			subtreeContainsPrimary( child, currentPrimary )
-		) {
-			return true;
-		}
-	}
-	return false;
 }

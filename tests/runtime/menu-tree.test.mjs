@@ -21,6 +21,7 @@ const {
 	flattenLeaves,
 	findScreen,
 	findContainerForPrimary,
+	subtreeContainsPrimary,
 } = await import( resolve( projectRoot, 'src/runtime/menu/menuTree.mjs' ) );
 
 let pass = 0;
@@ -188,6 +189,34 @@ console.log( '\n— findScreen + findContainerForPrimary —' );
 		'findContainerForPrimary returns null on no match',
 		findContainerForPrimary( items, '/nope' ),
 		null
+	);
+}
+
+console.log( '\n— subtreeContainsPrimary recurses to any depth —' );
+{
+	const branch = {
+		id: 'design',
+		items: [
+			{ id: 'templates', href: '#/templates' },
+			{ id: 'nested', items: [ { id: 'deep', href: '#/deep/leaf' } ] },
+		],
+	};
+	ok(
+		'true for a direct child match',
+		subtreeContainsPrimary( branch, '/templates' )
+	);
+	ok(
+		'true for a deep descendant match',
+		subtreeContainsPrimary( branch, '/deep/leaf' )
+	);
+	ok(
+		'false when no descendant matches',
+		! subtreeContainsPrimary( branch, '/nope' )
+	);
+	ok( 'false for empty primary', ! subtreeContainsPrimary( branch, '' ) );
+	ok(
+		'false for a leaf (no items)',
+		! subtreeContainsPrimary( { id: 'x', href: '#/x' }, '/x' )
 	);
 }
 

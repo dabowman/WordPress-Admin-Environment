@@ -212,3 +212,38 @@ export function findContainerForPrimary( items, currentPrimary ) {
 	}
 	return null;
 }
+
+/**
+ * Whether any leaf anywhere in the item's subtree maps to the active
+ * primary path. Renderers (tree, drawer) seed a container's
+ * expanded/open state from this so a deep-linked branch lands visible.
+ * Unlike `findContainerForPrimary` (top-level containers, returns an id),
+ * this recurses to any depth and answers a boolean for one subtree.
+ *
+ * @param {Object} item           Container item (must have `items`).
+ * @param {string} currentPrimary Active primary URL path.
+ * @return {boolean} True when a descendant leaf is active.
+ */
+export function subtreeContainsPrimary( item, currentPrimary ) {
+	if ( ! currentPrimary || ! item || ! Array.isArray( item.items ) ) {
+		return false;
+	}
+	for ( const child of item.items ) {
+		if ( ! child ) {
+			continue;
+		}
+		if (
+			typeof child.href === 'string' &&
+			hashPrimary( child.href ) === currentPrimary
+		) {
+			return true;
+		}
+		if (
+			Array.isArray( child.items ) &&
+			subtreeContainsPrimary( child, currentPrimary )
+		) {
+			return true;
+		}
+	}
+	return false;
+}
