@@ -1045,6 +1045,52 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	array()
 );
 
+// --- Cache-fingerprint signal — registry mutations contribute to the cache key
+
+WP_Admin_Shell_Data_Field_Collections::reset();
+
+$baseline_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Data_View_Test_Runner::assert_true(
+	'cache signals — no data_field_collections key when registry empty',
+	! isset( $baseline_signals['data_field_collections'] )
+);
+
+wp_admin_shell_register_data_field_collection(
+	'core/cache-fp',
+	'postType',
+	'post',
+	array( array( 'id' => 'sku', 'type' => 'text', 'label' => 'SKU' ) )
+);
+$after_first = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Data_View_Test_Runner::assert_true(
+	'field-collection registration adds data_field_collections fingerprint',
+	isset( $after_first['data_field_collections'] )
+);
+WPAS_Data_View_Test_Runner::assert_eq(
+	'fingerprint matches md5 of all() contents',
+	$after_first['data_field_collections'],
+	md5( wp_json_encode( WP_Admin_Shell_Data_Field_Collections::all() ) )
+);
+
+wp_admin_shell_register_data_field_collection(
+	'core/cache-fp-2',
+	'postType',
+	'page',
+	array( array( 'id' => 'template', 'type' => 'text', 'label' => 'Template' ) )
+);
+$after_second = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Data_View_Test_Runner::assert_true(
+	'second registration changes data_field_collections fingerprint',
+	$after_first['data_field_collections'] !== $after_second['data_field_collections']
+);
+
+WP_Admin_Shell_Data_Field_Collections::reset();
+$cleared_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WPAS_Data_View_Test_Runner::assert_true(
+	'reset clears data_field_collections fingerprint',
+	! isset( $cleared_signals['data_field_collections'] )
+);
+
 
 // --- Summary ---------------------------------------------------------------
 
