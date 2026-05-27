@@ -8,9 +8,17 @@ import { WpdsThemeProvider } from '../core-default/WpdsThemeProvider';
 import { compileStyles } from '../core-default/compileStyles.mjs';
 import { iconTable, fallbackIcon } from '../core-default/icons';
 import { registerIcons } from '../../config/iconMap';
+import { registerMenuRenderer } from '../../config/menuRendererRegistry';
+import DrawerRenderer from './DrawerRenderer';
 import './index.css';
 
 registerIcons( iconTable, { fallback: fallbackIcon } );
+
+// Engine-owned menu renderer. `core:single-pane` declares
+// `"menu-renderer": "drawer"` in its manifest; `core:navigation` resolves
+// that id here. Registered from the engine module (not the bundled nav
+// app) so it travels with the engine if it's extracted to a plugin.
+registerMenuRenderer( 'drawer', DrawerRenderer );
 
 /** @type {import('../../registry/source-types.js').EngineSource} */
 const coreSinglePane = {

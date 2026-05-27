@@ -441,6 +441,67 @@ WPAS_Manifest_Test_Runner::assert_eq(
 	null
 );
 
+echo "\n— register_menu_renderer: plugin extension point (spec §13 #15) —\n";
+WP_Admin_Shell_Menu_Renderers::reset();
+
+WPAS_Manifest_Test_Runner::assert_eq(
+	'register_menu_renderer returns the id on success',
+	WP_Admin_Shell_Menu_Renderers::register(
+		'plugin:acme/breadcrumb',
+		array( 'script' => 'acme-breadcrumb-menu' )
+	),
+	'plugin:acme/breadcrumb'
+);
+$renderers = WP_Admin_Shell_Menu_Renderers::all();
+WPAS_Manifest_Test_Runner::assert_eq(
+	'registry stores the script handle',
+	$renderers['plugin:acme/breadcrumb']['script'] ?? null,
+	'acme-breadcrumb-menu'
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_menu_renderer: core id rejected (reserved) → WP_Error',
+	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+		'sidebar-drilldown',
+		array( 'script' => 'x' )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_menu_renderer: malformed plugin id → WP_Error',
+	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+		'plugin:Acme/Bad',
+		array( 'script' => 'x' )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_menu_renderer: missing script handle → WP_Error',
+	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+		'plugin:acme/no-script',
+		array()
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'register_menu_renderer: duplicate id → WP_Error (first wins)',
+	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+		'plugin:acme/breadcrumb',
+		array( 'script' => 'other-handle' )
+	) )
+);
+WPAS_Manifest_Test_Runner::assert_eq(
+	'duplicate registration kept the first script handle',
+	WP_Admin_Shell_Menu_Renderers::all()['plugin:acme/breadcrumb']['script'] ?? null,
+	'acme-breadcrumb-menu'
+);
+WPAS_Manifest_Test_Runner::assert_true(
+	'public wrapper wp_admin_shell_register_menu_renderer exists',
+	function_exists( 'wp_admin_shell_register_menu_renderer' )
+);
+WP_Admin_Shell_Menu_Renderers::reset();
+WPAS_Manifest_Test_Runner::assert_eq(
+	'reset() drains the registry',
+	count( WP_Admin_Shell_Menu_Renderers::all() ),
+	0
+);
+
 echo "\n— Summary —\n";
 echo 'PASS: ' . WPAS_Manifest_Test_Runner::$pass . '  FAIL: ' . WPAS_Manifest_Test_Runner::$fail . "\n";
 

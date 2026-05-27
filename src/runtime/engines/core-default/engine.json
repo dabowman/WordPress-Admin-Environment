@@ -7,6 +7,8 @@
 
 	"designSystem": "@wordpress/ui",
 
+	"menu-renderer": "sidebar-drilldown",
+
 	"specializes-roles": [
 		"navigation",
 		"banner",

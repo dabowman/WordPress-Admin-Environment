@@ -59,23 +59,36 @@ Working draft. Shows how the flagship engine declares its `modes` catalog, along
 
 ### `menu-renderer`
 
-Names the strategy the engine uses to render the resolved `menu` block. Required for any engine that wants screens to appear in a menu.
+Names the strategy the engine uses to render the resolved `menu` block. Required for any engine that wants screens to appear in a menu. `core:default` declares `"menu-renderer": "sidebar-drilldown"`.
 
-| Value | Behavior |
-|-------|----------|
-| `sidebar-drilldown` | Items render in a sidebar nav; `parent` produces a slide-in sub-screen with a back link. (`core:default`.) |
-| `sidebar-tree`      | Items render in a sidebar nav as an expandable tree. |
-| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. (`core:desktop` uses this.) |
-| `drawer`            | Items render in a collapsible drawer; `parent` produces an accordion section. (`core:single-pane`.) |
-| `none`              | The engine ignores `menu` entirely. Authors must use `regions` / `routes` escape hatches. |
+**How it drives rendering.** `buildRuntimeConfig` copies the active engine's `menu-renderer` onto the runtime config. The bundled `core:navigation` app reads it, orders + prunes the `menu` tree once, then dispatches to the renderer registered under that id (kernel registry `src/runtime/config/menuRendererRegistry.js`). Built-in and plugin renderers resolve through the identical path — that's the seam a non-WPDS engine plugs into without touching kernel code.
 
-Plugin-contributed renderer ids (`plugin:my/breadcrumb-menu`) are allowed. Plugins register the renderer at runtime:
+| Value | Behavior | Owner |
+|-------|----------|-------|
+| `sidebar-drilldown` | Items render in a sidebar nav; `parent` produces a slide-in sub-screen with a back link. Honors `config.collapsed` (icon rail). | `core:navigation` (bundled) |
+| `sidebar-tree`      | Items render in a sidebar nav as an expandable in-place tree; branches seed open when they contain the active route. | `core:navigation` (bundled) |
+| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a shell that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
+| `drawer`            | Items render in a collapsible-accordion drawer; `parent` produces a section. | `core:single-pane` — registered from the engine module (`DrawerRenderer.js`) so it travels with the engine on extraction. |
+| `none`              | The engine ignores `menu` entirely; `core:navigation` renders nothing. Authors must use `regions` / `routes` escape hatches. | — |
+| absent              | No field → `core:navigation` falls back to `sidebar-drilldown` (back-compat for engines predating the field). | — |
+
+**Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the shell enqueues it on the admin-shell page:
 
 ```php
-wp_admin_shell_register_menu_renderer( 'plugin:my/breadcrumb-menu', $callback );
+// PHP — declare the renderer + the script that registers its component.
+wp_admin_shell_register_menu_renderer( 'plugin:my/breadcrumb-menu', array(
+    'script' => 'my-breadcrumb-menu', // wp_register_script'd, deps: [ 'wp-admin-shell' ]
+) );
 ```
 
-The engine's render path consults the renderer registry. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup.
+```js
+// JS (in that script) — register the component.
+window.wpAdminShell.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
+```
+
+Every renderer component receives the same props: `{ items, currentPrimary, navConfig }` — the host-pruned + ordered menu tree, the active URL primary path, and the per-region nav config block. It returns React.
+
+**Timing caveat.** The kernel mounts synchronously when its bundle runs. Bundled + engine-owned renderers register via a direct ESM import, so they're race-free. A loose plugin script enqueued *after* the kernel bundle can miss the first paint — robustly fixing that needs a published kernel import surface (tracked in `docs/feedback.md`, kernel-import-surface gap).
 
 ### `modes`
 

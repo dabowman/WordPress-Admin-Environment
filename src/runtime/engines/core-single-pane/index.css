@@ -130,3 +130,52 @@
 	inline-size: 100%;
 	max-inline-size: 100%;
 }
+
+/* ---------------------------------------------------------------------
+ * drawer menu renderer (engine-owned)
+ *
+ * Collapsible accordion sections for the mobile drawer. Colors pull from
+ * the sidebar chrome slot with a WPDS fallback, matching the rest of the
+ * single-pane drawer chrome.
+ * ------------------------------------------------------------------- */
+.wp-admin-shell-drawer-nav {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpds-dimension-gap-xs);
+	padding: var(--wpds-dimension-padding-sm);
+}
+
+.wp-admin-shell-drawer-nav__section-header {
+	width: 100%;
+	cursor: pointer;
+	background: transparent;
+	border: 0;
+	text-align: start;
+	font: inherit;
+	color: inherit;
+	min-height: 44px;
+}
+
+.wp-admin-shell-drawer-nav__section-items {
+	padding-inline-start: var(--wpds-space-16, 16px);
+}
+
+.wp-admin-shell-drawer-nav__link {
+	display: flex;
+	align-items: center;
+	min-height: 44px;
+	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	text-decoration: none;
+	border-radius: var(--wpds-border-radius-md);
+	font-size: var(--wpds-font-size-md);
+}
+
+.wp-admin-shell-drawer-nav__link:hover {
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+}
+
+.wp-admin-shell-drawer-nav__link[aria-current="true"] {
+	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-neutral-selected));
+	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+}
