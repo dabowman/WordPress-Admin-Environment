@@ -97,6 +97,10 @@
 							"items": { "$ref": "#/$defs/workspaceWidget" }
 						}
 					}
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for the `workspace` block (e.g. `[ \"default-screen\", \"branding.title\" ]`; relative paths cover `branding.*`, `notices.*`, `widgets.*`). Note the hardcoded deny-list still blocks `workspace.engine` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
 				}
 			}
 		},
@@ -205,6 +209,23 @@
 	},
 
 	"$defs": {
+		"customizable": {
+			"oneOf": [
+				{
+					"type": "boolean"
+				},
+				{
+					"type": "array",
+					"items": {
+						"type": "string",
+						"minLength": 1
+					},
+					"uniqueItems": true
+				}
+			],
+			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Shell_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/admin-json-reference.md`."
+		},
+
 		"namespacedId": {
 			"type": "string",
 			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*|iframe:[A-Za-z0-9_./?=&\\-]+)$",
@@ -345,6 +366,10 @@
 					"type": "boolean",
 					"default": false,
 					"description": "When true, the screen is hidden from menu rendering but still routable by URL. Useful for palette-only screens, drill-target screens reached only via in-app links, modal-mounted screens. Different from tombstoning the screen entirely (`screens.<id>: null`) — `hidden: true` keeps the URL working."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this screen. Note the hardcoded deny-list still blocks `permissions` and `app` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
 				}
 			},
 
@@ -468,6 +493,10 @@
 					"type": "boolean",
 					"default": false,
 					"description": "When true, the item is suppressed from rendering. The subtree is still addressable by cascade (so a higher origin can un-hide), unlike a `null` tombstone which removes the entry entirely."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this menu item (and its nested `items`). Allowlist paths are relative to this node, e.g. `[ \"label\", \"position\" ]` or `[ \"items.posts.position\" ]`. See `#/$defs/customizable`."
 				}
 			}
 		},
@@ -501,6 +530,10 @@
 					"type": "string",
 					"minLength": 1,
 					"description": "Human-readable command label for the palette UI. Surfaces the command even when keyboard-only. Translatable."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this command. Note the hardcoded deny-list still blocks `invoke` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
 				}
 			}
 		},
@@ -528,6 +561,10 @@
 					"type": "boolean",
 					"default": false,
 					"description": "When true, the widget is suppressed from the slot. Use site/role/user origins to hide widgets the workspace ships with."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this widget entry (e.g. `[ \"hidden\", \"config.label\" ]`). See `#/$defs/customizable`."
 				}
 			}
 		},
@@ -728,6 +765,10 @@
 			"additionalProperties": true,
 			"description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (shell-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
 			"properties": {
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for the `styles` tree. This is the primary surface AppearanceApp reads to decide which appearance controls to render — e.g. `[ \"theme.density\", \"theme.color.primary\" ]` lets `user`-origin prefs override density and accent only. `true` exposes the whole tree to user customization; absence (default) locks it. The `core:default` engine's `compileStyles` treats this key as a non-token directive, not a CSS slot. See `#/$defs/customizable`."
+				},
 				"theme": {
 					"type": "object",
 					"additionalProperties": false,
@@ -857,6 +898,10 @@
 				"config": {
 					"type": "object",
 					"description": "Configuration object passed to the mounted app at mount time. Only meaningful when `app` is set."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this region (and its nested child `regions`). See `#/$defs/customizable`."
 				},
 				"regions": {
 					"type": "object",
@@ -1015,6 +1060,10 @@
 				"config": {
 					"type": "object",
 					"description": "Configuration passed to the mounted app. URL parameter substitution applies: `{paramname}` strings in values resolve against captured route params."
+				},
+				"customizable": {
+					"$ref": "#/$defs/customizable",
+					"description": "Consumer-origin write allowlist for this route entry. See `#/$defs/customizable`."
 				}
 			}
 		},
