@@ -553,7 +553,7 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 			}
 			$items = $region['config']['items'] ?? null;
 			if ( is_array( $items ) ) {
-				wpas_collect_nav_item_caps( $items, $declared );
+				wp_admin_shell_collect_nav_item_caps( $items, $declared );
 			}
 			if ( ! empty( $region['regions'] ) && is_array( $region['regions'] ) ) {
 				$collect_from_regions( $region['regions'] );
@@ -643,7 +643,7 @@ function wpas_collect_menu_item_caps( $menu, &$declared ) {
  * and collect every `capability` declaration. Recurses into `screen`/
  * `group` children.
  */
-function wpas_collect_nav_item_caps( $items, &$declared ) {
+function wp_admin_shell_collect_nav_item_caps( $items, &$declared ) {
 	if ( ! is_array( $items ) ) {
 		return;
 	}
@@ -655,7 +655,7 @@ function wpas_collect_nav_item_caps( $items, &$declared ) {
 			$declared[ $item['capability'] ] = true;
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			wpas_collect_nav_item_caps( $item['items'], $declared );
+			wp_admin_shell_collect_nav_item_caps( $item['items'], $declared );
 		}
 	}
 }
