@@ -152,3 +152,147 @@ sibling and gets the full WPDS surface for free.
   without code.
 - For a one-off layout tweak → declare a new region template inside
   the existing engine's `engine.json` rather than forking the engine.
+
+## Theming model — author customization paths
+
+`ThemeProviderHost` is the kernel's single seam to the active engine's
+`ThemeProvider`. Absent provider → neutral pass-through wrapper
+(`NeutralProvider`), no DS injected. The host wraps the inner provider
+in a render-error boundary; a throwing third-party provider swaps to
+the neutral wrapper + console error so the shell still paints. The host
+emits `<div data-theme-scope-id={id}>` around children with a sibling
+`<style data-theme-scope-detail={id}>` carrying engine-compiled scoped
+CSS. Verified by `tests/runtime/kernel-no-ds-import.test.mjs`.
+
+Author customization, in order of preference:
+
+1. **Seeds** — `styles.theme.{color.{primary,bg}, cursor.control,
+   density}`. The engine's `ThemeProvider` interprets them.
+2. **Nested seeds** — `styles.regions[id].theme` /
+   `styles.applications[id].theme`. `<Region>` / `<MountedApp>` wrap
+   content in a nested `<ScopedThemeProvider>` reading the engine's
+   provider from kernel context.
+3. **Direct slot overrides** — `styles.{color,border,dimension,
+   elevation,font}` (top-level + per-region/app). Escape hatch the
+   engine's `compileStyles` translates into provider-scoped CSS vars.
+4. **DTCG `tokens.json` primitives** — provider-independent named
+   primitives, consumable from any of the above via `{tokens.x.y}`.
+
+Density: `ThemeProviderHost.pickDensity()` (helper `themeScope.mjs`)
+pulls `styles.theme.density`, falls back to `styles.density`, passes
+the raw string to the engine's provider. The `default|compact|
+comfortable` enum validation lives in `WpdsThemeProvider`, NOT the
+kernel — a Material/Tailwind engine interprets the raw string itself.
+
+Slot/Fill substrate (`<SlotFillProvider>` from `@wordpress/components`)
+lives in each engine's `Layout.js`, NOT the kernel. Bundled engines all
+ship it so notices snackbar / modals / `core:editor.sidebar` work; a
+non-WPDS engine omits it.
+
+## How tokens reach DOM (core:default / core:single-pane)
+
+Two engine-side paths (never kernel):
+
+- **Engine template `default-style`** — `core:default` emits values
+  like `var(--wp-admin-shell--chrome--sidebar--background,
+  var(--wpds-color-bg-surface-neutral))` as inline style on each
+  region's `<div>`. `resolveRegion.mjs` merges template `default-style`
+  into `region.style`; `Region.js`'s `toReactStyle` kebab→camelCases
+  and applies as React `style={...}`. The two-arg `var()` chain: chrome
+  var wins when authored, falls back to the WPDS slot when empty.
+- **Engine `index.css` class rules** — `core:default/index.css` ships
+  chrome-anchor/svg/Stack-defensive overrides + engine root paint
+  (`.wp-admin-shell-layout` bg+color via
+  `--wp-admin-shell--chrome--canvas--{background,foreground}`).
+  Single-pane paints its root through the same canvas slot. Non-WPDS
+  engines ship none of these.
+
+Kernel `src/index.css` is ~10 lines: body positioning + a11y fallback
+only. `chrome.canvas.*` is the author entry point for shell-wide
+bg/fg; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface
+chrome. Inside WPDS-flavored app/engine code, never hardcode hex —
+use `var(--wpds-*)` so provider seeds flow through.
+
+## `@wordpress/ui` layered-CSS gotchas (bundled WPDS engines)
+
+`@wordpress/ui` injects component CSS at module-load wrapped in
+`@layer wp-ui-utilities, wp-ui-components, wp-ui-compositions,
+wp-ui-overrides`. Per the cascade-layer spec, **unlayered rules win
+against any layered rule regardless of specificity** — and WP-admin
+loads many unlayered stylesheets (common.css, forms.css, dashboard.css,
+theme resets) that stomp `@wordpress/ui` defaults.
+
+- **Theme by overriding the WPDS tokens it consumes, NOT rendered
+  colors per component.** The chrome → WPDS bridge in
+  `core-default/compileStyles.mjs` (`CHROME_WPDS_BINDINGS`) maps each
+  chrome surface's `chrome.<surface>.<slot>` → a `--wpds-*` interactive
+  token, scoped under the surface container class (`.wp-admin-shell-nav,
+  .wp-admin-shell-site-hub`, …). Buttons/IconButtons/Stacks inside
+  inherit the chrome palette automatically. **Do not** add
+  `.wp-admin-shell-*-button { color }` rules — extend the bindings
+  table. Engine-private; a non-WPDS engine ships its own.
+- **`Stack` stomped to `display: block`** → children flow vertically
+  regardless of inline `flex-direction: row`. `core:default/index.css`
+  ships a defensive unlayered `.wp-admin-shell [class*="__stack"]
+  { display: flex }`. Don't remove without verifying the cascade layer
+  applies in every shell DOM context (esp. inside `<button>`).
+- Pass explicit `align="center"` to `<Stack direction="row">` with icon
+  + text — default `align-items: stretch` mis-sizes SVGs in flex.
+- **`href` on `@wordpress/ui` Button / IconButton requires
+  `render={<a href={...}/>}`** — both wrap `@base-ui/react` Button which
+  renders a native `<button>` and drops `href`. Add `target`/`rel` to
+  the `<a>` directly.
+- **Anchor-rendered chrome buttons need an unlayered color override** —
+  WP-admin's `colors/<scheme>/colors.css` ships unlayered
+  `a { color: var(--wp-admin-theme-color) }`; `@wordpress/ui` Button's
+  color is layered and loses. `core:default/index.css` ships scoped
+  anchor color rules (`.wp-admin-shell-region--{sidebar,toolbar} a,
+  .wp-admin-shell-site-hub a { color: var(--wpds-color-fg-interactive-
+  neutral) }`) + symmetric `:hover/:focus/:active → -active`.
+- **`@wordpress/icons` SVGs need `fill: currentColor` forced** —
+  `@wordpress/icons` Icon sets `width`/`height` but not `fill`
+  (`@wordpress/ui`'s Icon does). `core:default/index.css` ships
+  `.wp-admin-shell-region--{sidebar,toolbar} svg,
+  .wp-admin-shell-site-hub svg { fill: currentColor }`.
+- **Ellipsis-in-flex** — `@wordpress/ui` Button is `inline-flex`. To
+  truncate text in a constrained flex parent (site-hub title): wrapper
+  div needs `display: flex; min-width: 0;` AND Button needs
+  `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow:
+  ellipsis; white-space: nowrap`.
+- Custom CSS targeting `@wordpress/ui` DOM must NOT use
+  `.components-button` / `.components-item` (those are
+  `@wordpress/components` classes). Use the `wp-admin-shell-*` class or
+  the `button` element selector inside a chrome wrapper; when render can
+  be `<button>` or `<a>`, use `:is(button, a)`.
+
+## Region-scoped theming — the `RegionThemedSubtree` seam
+
+Region/app theming uses a *nested* `@wordpress/theme.ThemeProvider`
+(via `<ScopedThemeProvider>`). That provider emits ONLY custom
+properties (`--wpds-*` + `--wp-components-*`) on a `display:contents`
+element — it never sets `color`, and its tokens don't reach
+`document.body` portals. So a nested region (e.g. light content over a
+dark-root shell) had two leaks, both fixed by wrapping NON-root provider
+children in `RegionThemedSubtree`:
+
+1. **Inherited foreground leak.** The engine paints `color` at the
+   layout root (shell-*root* ramp) and `color` inherits. A nested region
+   that doesn't re-set `color` leaks the root foreground into its text.
+   Components setting their own color from a token (`@wordpress/ui`
+   Text/InputControl) looked right; ones relying on inherited `color`
+   (`@wordpress/components` Items, icons via `currentColor`, headings)
+   rendered light-on-light. Fix: a `display:contents` wrapper with
+   `color: var(--wpds-color-fg-content-neutral)` re-establishes the
+   region ramp foreground (background NOT set — each surface paints its
+   own).
+2. **Portaled overlays.** `@wordpress/components` `Popover` (dropdowns,
+   `SelectControl` menus, DataViews filter comboboxes) body-portals →
+   inherits root theme. Fix: `Popover.__unstableSlotNameProvider` + a
+   per-instance-named `Popover.Slot` inside the subtree; Popover prefers
+   a matching named Slot over its body portal.
+
+Root/chrome popovers keep body-portaling (correctly root-themed).
+**Known gap:** `@wordpress/components` `Modal` uses its own body portal
+independent of the Popover slot — Modal overlays (DataViews
+`RenderModal`, bulk-confirm) inherit root theme on bg + color; NOT
+covered. Engine-private — a non-WPDS engine ships its own strategy.

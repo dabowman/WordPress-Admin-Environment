@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "NAMESPACE/posts-list",
+  "title": "Posts List with Client Navigation",
+  "category": "widgets",
+  "icon": "list-view",
+  "description": "Paginated posts list with SPA-like navigation.",
+  "supports": {
+    "interactivity": {
+      "clientNavigation": true,
+      "interactive": true
+    },
+    "color": {
+      "background": true,
+      "text": true
+    }
+  },
+  "attributes": {
+    "postsPerPage": {
+      "type": "number",
+      "default": 10
+    },
+    "postType": {
+      "type": "string",
+      "default": "post"
+    }
+  },
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}

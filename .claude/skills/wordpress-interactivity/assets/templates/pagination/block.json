@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "myplugin/paginated-posts",
+  "version": "1.0.0",
+  "title": "Paginated Posts",
+  "category": "widgets",
+  "description": "Posts list with client-side pagination using the Interactivity Router",
+  "supports": {
+    "html": false,
+    "interactivity": {
+      "clientNavigation": true,
+      "interactive": true
+    }
+  },
+  "textdomain": "myplugin",
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}

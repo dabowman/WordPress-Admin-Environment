@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "NAMESPACE/toggle",
+  "title": "Toggle Content",
+  "category": "widgets",
+  "icon": "visibility",
+  "description": "Show/hide content with a button.",
+  "supports": {
+    "interactivity": true,
+    "color": {
+      "background": true,
+      "text": true
+    },
+    "spacing": {
+      "margin": true,
+      "padding": true
+    }
+  },
+  "attributes": {
+    "buttonText": {
+      "type": "string",
+      "default": "Toggle"
+    },
+    "startOpen": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}

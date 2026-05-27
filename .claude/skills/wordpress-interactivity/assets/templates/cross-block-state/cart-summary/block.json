@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "shop/cart-summary",
+  "title": "Cart Summary",
+  "category": "widgets",
+  "icon": "cart",
+  "description": "Display cart contents and total.",
+  "supports": {
+    "interactivity": true,
+    "color": {
+      "background": true,
+      "text": true
+    }
+  },
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}

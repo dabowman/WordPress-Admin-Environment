@@ -1,0 +1,26 @@
+{
+  "skill_name": "wordpress-core-data",
+  "evals": [
+    {
+      "id": 0,
+      "name": "sidebar-meta-pre-publish-validation",
+      "prompt": "I'm building a WordPress plugin for a books site. I have a CPT called 'acme_book' and a custom post-meta field called 'isbn'. Write me the complete code (PHP + JS) for a sidebar plugin that lets editors set the ISBN, AND a pre-publish validation check that prevents publishing the book if the ISBN field is empty. Use the modern Gutenberg data layer — no withSelect, no source:'meta', no @wordpress/edit-post imports. Output two files: a PHP file (with register_post_meta + enqueue) and a JS file (the React + @wordpress/data code).",
+      "expected_output": "PHP with register_post_meta including show_in_rest:true + auth_callback. JS with PluginSidebar + useEntityProp + useDispatch + lockPostSaving / unlockPostSaving from @wordpress/editor. Imports from @wordpress/editor (NOT @wordpress/edit-post).",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "block-binding-post-meta-source",
+      "prompt": "I want a heading in my Gutenberg post content to display the value of a custom post meta field called 'hero_headline'. The user shouldn't have to retype this on every post — it should pull from the meta. They should also be able to edit it directly from the heading block in the editor and have those edits saved back to the meta. Show me how to do this in WP 6.9+. Include both the PHP registration of the meta and the block markup that wires up the binding.",
+      "expected_output": "register_post_meta for hero_headline with show_in_rest:true, single:true, auth_callback. Block markup using metadata.bindings with source: core/post-meta, args.key: hero_headline. NOT source:'meta'. Should mention this is the modern replacement for source:'meta'.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "fix-buggy-data-code",
+      "prompt": "Review this React component and find the bugs. There are several mistakes in how it uses @wordpress/data and @wordpress/core-data. Then rewrite it correctly.\n\n```jsx\nimport { select, dispatch } from '@wordpress/data';\nimport { useEffect } from '@wordpress/element';\n\nfunction PostList({ author }) {\n  const records = select('core').getEntityRecords('postType', 'post', { per_page: 10, _fields: 'title', author });\n  const canEdit = select('core').canUser('update', 'posts', 1);\n  \n  useEffect(() => {\n    if (canEdit) {\n      dispatch('core/editor').editPost({ title: 'Updated' });\n    }\n  }, []);\n  \n  if (!records) return <div>Loading...</div>;\n  return <ul>{records.map(r => <li>{r.title.rendered}</li>)}</ul>;\n}\n```\n\nList every bug and explain why each is a bug, then provide the corrected version.",
+      "expected_output": "Bugs found: (1) using bare select() at top of render — no subscription, use useSelect; (2) _fields missing 'id' (entity key) — caching breaks; (3) inline query object — useMemo it; (4) canUser legacy positional form — use object form { kind, name, id }; (5) canUser tri-state — undefined treated as false; (6) editPost is on core/editor (this is correct namespace) but dispatching imperatively in useEffect on mount with empty deps is questionable. Corrected version uses useSelect, useMemo for query, _fields:'id,title', canUser({ kind:'postType', name:'post', id:1 }), and tri-state check.",
+      "files": []
+    }
+  ]
+}

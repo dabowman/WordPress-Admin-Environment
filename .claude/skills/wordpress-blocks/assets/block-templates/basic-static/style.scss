@@ -1,0 +1,34 @@
+/**
+ * Frontend & Editor Styles
+ * Uses theme.json presets - no hard-coded values!
+ */
+
+.wp-block-namespace-block-name {
+	// Use theme spacing scale
+	padding: var(--wp--preset--spacing--40);
+	
+	// Default to theme colors if user hasn't selected
+	&:not(.has-background) {
+		background-color: var(--wp--preset--color--base);
+	}
+	
+	&:not(.has-text-color) {
+		color: var(--wp--preset--color--contrast);
+	}
+	
+	// Respect layout constraints
+	max-width: var(--wp--style--global--content-size);
+	margin-inline: auto;
+	
+	&.alignwide {
+		max-width: var(--wp--style--global--wide-size);
+	}
+	
+	&.alignfull {
+		max-width: none;
+	}
+	
+	p {
+		margin: 0;
+	}
+}

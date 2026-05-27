@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "myplugin/modal-overlay",
+  "version": "1.0.0",
+  "title": "Modal Overlay Content",
+  "category": "widgets",
+  "description": "Modal that loads content from another page using attachTo (6.9+)",
+  "supports": {
+    "html": false,
+    "interactivity": {
+      "clientNavigation": true,
+      "interactive": true
+    }
+  },
+  "textdomain": "myplugin",
+  "viewScriptModule": "file:./view.js",
+  "render": "file:./render.php"
+}
