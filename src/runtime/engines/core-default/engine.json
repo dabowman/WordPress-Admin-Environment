@@ -7,7 +7,7 @@
 
 	"designSystem": "@wordpress/ui",
 
-	"menu-renderer": "sidebar-drilldown",
+	"menu-renderer": "sidebar-tree",
 
 	"specializes-roles": [
 		"navigation",

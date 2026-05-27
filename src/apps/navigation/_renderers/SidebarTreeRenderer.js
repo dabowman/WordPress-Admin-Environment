@@ -112,7 +112,7 @@ function TreeBranch( { item, currentPrimary, depth } ) {
 					align="center"
 					gap="sm"
 				>
-					{ item.icon && (
+					{ depth === 0 && item.icon && (
 						<Icon
 							style={ { fill: 'currentcolor' } }
 							icon={ resolveIcon( item.icon ) }
@@ -143,7 +143,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 		return (
 			<SidebarNavigationItem
 				uid={ `ext-${ item.id || index }` }
-				icon={ resolveIcon( item.icon ) }
+				icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
@@ -161,7 +161,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 	return (
 		<SidebarNavigationItem
 			uid={ `nav-${ item.id || index }` }
-			icon={ resolveIcon( item.icon ) }
+			icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
 			isActive={ isActive }
 			href={ item.href }
 			style={ depthStyle( depth ) }
