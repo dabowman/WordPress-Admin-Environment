@@ -92,7 +92,7 @@
 					"source": "root/plugin",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Installed-plugin list.",
+					"purpose": "Installed-plugin list. Unpaginated, so status filter counts (\"Active (5)\") are derived client-side from these records — no extra count requests.",
 					"fields": [
 						"plugin",
 						"name",

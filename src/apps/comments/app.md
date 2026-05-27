@@ -103,5 +103,6 @@ A non-WPDS rebuild needs:
 - No author / IP / email row-level filtering.
 - The Trash action lacks an undo path. wp-admin's edit-comments has a "Undo" snackbar after trash; we issue a plain success snackbar.
 - Pagination caps perPage at 100 server-side; the app passes whatever DataViews sends.
+- Status **counts** surface on the status filter elements (`Approved (12)`, `Pending (3)`) via the shared `useEntityElementCounts` hook — one `per_page=1&_fields=id` request per status, read off the `X-WP-Total` header. Rendered as filter-dropdown options, not the standalone `All | Mine | Pending | Approved | Spam | Trash` tab strip wp-admin uses, and there is no `Mine` count.
 
 Parity gaps versus `docs/screens/comments.md` not surfaced in the v2 app are tracked in that screen spec; they carry forward unchanged from the pre-C2 implementation.

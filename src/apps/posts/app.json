@@ -143,6 +143,19 @@
 						"search": "view.search",
 						"author": "filter.author"
 					}
+				},
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Per-status totals for the status filter elements (\"Published (12)\"). One lightweight request per status value via `useEntityElementCounts`; the total comes from the X-WP-Total header. Global counts — they ignore the active search/page so they mirror wp-admin's status links.",
+					"fields": [ "id" ],
+					"query": {
+						"status": "publish|draft|pending|private|future|trash",
+						"per_page": 1,
+						"_fields": "id",
+						"context": "edit"
+					}
 				}
 			],
 			"writes": [

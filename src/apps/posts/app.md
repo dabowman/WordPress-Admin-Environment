@@ -17,6 +17,8 @@ Four pieces of state drive the app:
 
 `data` is a `useMemo` projection of `records` into the row shape DataViews wants (`{ id, title, status, date, author, link, rawRecord }`). The original record is kept on `rawRecord` so future row actions can read fields the projection doesn't surface.
 
+Status-filter **counts** ride a separate, shared hook: `useEntityElementCounts('postType', postType, 'status', STATUS_VALUES)` fires one `per_page=1&_fields=id` request per status and returns `{ value: count }`. `buildFields` folds that map into the status field's `elements` (`elementCounts` option → the pure `withElementCounts` helper), so the count shows in the filter label without a DataViews-native count slot. Counts are global by design — they ignore the active search/page so they read like wp-admin's status links rather than re-fetching on every keystroke.
+
 The trash-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`. The action's `id` (`trash`) is what `buildActions()` keys off; plugins overriding the dataView can keep / rename / drop the action via their filter, and the React layer simply skips ids it has no callback for.
 
 ## DataView integration (C2 / v3 restored)
@@ -90,7 +92,7 @@ Two patterns to preserve:
 
 Parity gaps versus `docs/screens/posts.md` not surfaced in the v2 app:
 
-- No status-count tabs (`All (N) | Mine (N) | Published (N) | Drafts (N) | Pending (N) | Trash (N)`). DataViews `totalItems` covers the active filter only.
+- Status **counts** now surface on the status filter elements (`Published (12)`, `Draft (3)`) via the shared `useEntityElementCounts` hook — one lightweight `per_page=1&_fields=id` request per status value, read back off the `X-WP-Total` header, global (search/page-independent) to mirror wp-admin's status links. Still rendered as filter-dropdown options, **not** the classic standalone subsubsub tab strip (`All (N) | Mine (N) | …`), and there is no `Mine` count.
 - No author / date / taxonomy column filters. wp-admin offers a separate dropdown per axis; the v2 app exposes only the status filter.
 - No trash view + Restore + Delete Permanently actions. Trashed posts are filtered out by `status: any` and the app never surfaces them.
 - No undo snackbar after trash. We emit a plain success notice; wp-admin offers "Move to trash · Undo".

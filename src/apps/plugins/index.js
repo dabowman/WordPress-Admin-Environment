@@ -177,6 +177,17 @@ export default function PluginsApp( { config = {} } = {} ) {
 			} ) );
 	}, [ records, view ] );
 
+	// Plugins arrive in a single unpaginated fetch, so status counts come for
+	// free off the records — no extra count requests like the server-paginated
+	// list apps need.
+	const statusCounts = useMemo( () => {
+		const counts = {};
+		for ( const record of records ?? [] ) {
+			counts[ record.status ] = ( counts[ record.status ] || 0 ) + 1;
+		}
+		return counts;
+	}, [ records ] );
+
 	const fields = useMemo(
 		() =>
 			buildFields( dataViewConfig.fields, {
@@ -185,8 +196,11 @@ export default function PluginsApp( { config = {} } = {} ) {
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
 				},
+				elementCounts: {
+					status: statusCounts,
+				},
 			} ),
-		[ dataViewConfig ]
+		[ dataViewConfig, statusCounts ]
 	);
 
 	const actions = useMemo( () => {

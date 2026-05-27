@@ -10,6 +10,7 @@ import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
@@ -105,6 +106,24 @@ export default function UsersApp( { config = {} } = {} ) {
 		queryArgs
 	);
 
+	// Role values come from the resolved spec (shell-authored `roles`
+	// elements), so the count set tracks whatever roles the shell exposes.
+	const roleValues = useMemo( () => {
+		const roleField = ( dataViewConfig.fields ?? [] ).find(
+			( field ) => field.id === 'roles'
+		);
+		return ( roleField?.elements ?? [] ).map(
+			( element ) => element.value
+		);
+	}, [ dataViewConfig ] );
+
+	const roleCounts = useEntityElementCounts(
+		'root',
+		'user',
+		'roles',
+		roleValues
+	);
+
 	const { deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -130,8 +149,11 @@ export default function UsersApp( { config = {} } = {} ) {
 			buildFields( dataViewConfig.fields, {
 				labels: FIELD_LABELS,
 				renderers: buildFieldRenderers(),
+				elementCounts: {
+					roles: roleCounts,
+				},
 			} ),
-		[ dataViewConfig ]
+		[ dataViewConfig, roleCounts ]
 	);
 
 	const actions = useMemo( () => {

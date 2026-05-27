@@ -38,5 +38,6 @@ A non-WPDS rebuild needs: grid layout (CSS `grid-template-columns: repeat(auto-f
 - **No edit-in-place image editing** (crop, rotate, scale). wp-admin has this; the shell doesn't.
 - **Pagination not URL-driven.** Refreshing returns to page 1; deep-linking to a specific page isn't supported.
 - **No search.** Filter is media-type-only. wp-admin's media library has a search box + date filter; the shell omits both.
+- **Type counts on the filter.** The media-type `SelectControl` options now carry counts (`Images (12)`, `All (40)`) via the shared `useEntityElementCounts` hook — one `per_page=1&_fields=id` request per type plus an unfiltered total for `All`, read off the `X-WP-Total` header. Reuses the same `withElementCounts` label helper as the DataViews apps even though Media renders a plain `SelectControl`, not DataViews.
 - **Source URL is single-line.** Long URLs overflow visually; no clamp or scroll.
 - **Copy URL relies on `navigator.clipboard`.** Insecure-origin contexts (HTTP-only dev sites) deny clipboard access; the error notice is the fallback.

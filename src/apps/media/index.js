@@ -15,6 +15,8 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { upload, trash, copy } from '@wordpress/icons';
+import { withElementCounts } from '../_shared/dataviews/buildFields.mjs';
+import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
 
 const MEDIA_TYPE_OPTIONS = [
 	{ value: '', label: __( 'All', 'wp-admin-shell' ) },
@@ -23,6 +25,10 @@ const MEDIA_TYPE_OPTIONS = [
 	{ value: 'audio', label: __( 'Audio', 'wp-admin-shell' ) },
 	{ value: 'application', label: __( 'Documents', 'wp-admin-shell' ) },
 ];
+
+const MEDIA_TYPE_VALUES = MEDIA_TYPE_OPTIONS.filter(
+	( option ) => option.value
+).map( ( option ) => option.value );
 
 export default function MediaApp() {
 	const [ mediaType, setMediaType ] = useState( '' );
@@ -47,6 +53,30 @@ export default function MediaApp() {
 		'root',
 		'media',
 		queryArgs
+	);
+
+	const typeCounts = useEntityElementCounts(
+		'root',
+		'media',
+		'media_type',
+		MEDIA_TYPE_VALUES
+	);
+	const allCountQuery = useMemo(
+		() => ( { per_page: 1, _fields: 'id', context: 'edit' } ),
+		[]
+	);
+	const { totalItems: allCount } = useEntityRecords(
+		'root',
+		'media',
+		allCountQuery
+	);
+	const typeOptions = useMemo(
+		() =>
+			withElementCounts( MEDIA_TYPE_OPTIONS, {
+				...typeCounts,
+				'': allCount,
+			} ),
+		[ typeCounts, allCount ]
 	);
 
 	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
@@ -136,7 +166,7 @@ export default function MediaApp() {
 				<Stack direction="row" gap="md" align="center">
 					<SelectControl
 						value={ mediaType }
-						options={ MEDIA_TYPE_OPTIONS }
+						options={ typeOptions }
 						onChange={ ( val ) => {
 							setMediaType( val );
 							setPage( 1 );

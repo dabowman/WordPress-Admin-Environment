@@ -14,6 +14,7 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
@@ -31,6 +32,8 @@ const STATUS_LABELS = {
 	spam: __( 'Spam', 'wp-admin-shell' ),
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
+
+const STATUS_VALUES = Object.keys( STATUS_LABELS );
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
@@ -150,6 +153,13 @@ export default function CommentsApp( { config = {} } ) {
 		queryArgs
 	);
 
+	const statusCounts = useEntityElementCounts(
+		'root',
+		'comment',
+		'status',
+		STATUS_VALUES
+	);
+
 	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -238,8 +248,11 @@ export default function CommentsApp( { config = {} } ) {
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
 				},
+				elementCounts: {
+					status: statusCounts,
+				},
 			} ),
-		[ dataViewConfig ]
+		[ dataViewConfig, statusCounts ]
 	);
 
 	const actions = useMemo( () => {

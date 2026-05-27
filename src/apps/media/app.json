@@ -50,6 +50,19 @@
 						"context": "edit",
 						"media_type": "state.mediaType"
 					}
+				},
+				{
+					"source": "root/media",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Per-type totals for the media-type filter (\"Images (12)\") plus an unfiltered total for \"All\". One lightweight request per type via `useEntityElementCounts`; totals come from the X-WP-Total header.",
+					"fields": [ "id" ],
+					"query": {
+						"media_type": "image|video|audio|application",
+						"per_page": 1,
+						"_fields": "id",
+						"context": "edit"
+					}
 				}
 			],
 			"writes": [
