@@ -41,6 +41,11 @@
 					"purpose": "Fallback for site title before core-data hydrates."
 				},
 				{
+					"source": "window.wpAdminShell.pluginUrl",
+					"via": "window-global",
+					"purpose": "Prefix for a plugin-relative `branding.logo` path so the bundled site icon resolves against the plugin's asset URL (SiteIcon helper). Absolute and protocol-relative logos skip this."
+				},
+				{
 					"source": "window.wpAdminShell.homeUrl | siteUrl | dashboardUrl",
 					"via": "window-global",
 					"purpose": "Anchor href for the site-icon button (dashboard); fallback href for the site-title button (home, new tab) when `root/__unstableBase.home` has not resolved."
@@ -76,6 +81,7 @@
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#Button, IconButton, Stack, VisuallyHidden", "purpose": "Three controls + layout primitives + visually-hidden `(opens in a new tab)` hint." },
 			{ "import": "@wordpress/icons#search", "purpose": "Command-palette icon." },
+			{ "import": "@wordpress/icons#Icon, wordpress", "purpose": "Default WordPress-mark fallback icon (SiteIcon helper) when no branding logo or REST `site_icon_url` is set." },
 			{ "import": "@wordpress/commands#store", "purpose": "Open the global palette via `dispatch('core/commands').open()`." },
 			{ "import": "@wordpress/keycodes#displayShortcut", "purpose": "Format the `Mod+K` shortcut hint for the palette button." },
 			{ "import": "@wordpress/html-entities#decodeEntities", "purpose": "Decode site title HTML entities." },
