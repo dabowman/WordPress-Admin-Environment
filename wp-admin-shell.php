@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 2.0.0-beta.1
+ * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Requires Plugins: gutenberg

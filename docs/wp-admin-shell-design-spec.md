@@ -1243,7 +1243,60 @@ This appendix preserves decisions made across the design process so context is n
 
 ---
 
-## 19. References
+## 19. Workspace as primary admin entry (0.1.0)
+
+This is a spec-level contract, not an implementation detail: with a workspace
+active, **the URL determines the renderer**, and classic wp-admin is an
+explicit, cap-gated escape hatch.
+
+**Trigger (theme.json model).** The plugin ships the `wp-admin-default`
+baseline in the cascade `core` slot. A valid `wp-content/admin.json` is a
+**partial override** loaded into the `plugin` slot; the field-aware merge
+folds its keys over the baseline (a delta-only file inherits every baseline
+screen/menu/command). `wp_admin_shell_workspace_active()` is the single
+source of truth: true when a valid file is present, OR the legacy
+`wp_admin_shell_active_shell` option was explicitly written (back-compat).
+Validation is partial-permissive — the override need not be a complete shell;
+completeness of the *merged* doc is enforced post-resolution.
+
+**Hijack.** When active, `WP_Admin_Shell_Hijack` (admin_init priority 0) takes
+over the admin-root entry points — `/wp-admin/`, `index.php`, bare
+`admin.php` — and renders the shell through WordPress's own
+`admin-header.php`/`admin-footer.php` (so the Gutenberg `wp-private-apis`
+override and every `@wordpress/*` dependency register through the standard
+chain). The legacy `admin.php?page=wp-admin-shell` entry is removed.
+
+**Endpoint allowlist.** A fixed never-hijack set (RPC `admin-ajax.php` /
+`admin-post.php` / `async-upload.php`, the install/update flows, `customize.php`,
+`load-scripts.php` / `load-styles.php`, deprecated bookmark targets) plus all
+multisite network admin always falls through to classic. Extensible via the
+`wp_admin_shell_hijack_allowlist` filter. Plugin `admin.php?page=*` pages are
+not root entries, so they stay classic and surface in the workspace nav via
+the classic-menu bridge.
+
+**Classic escape hatch.** `?classic=1` (cap: `manage_options`) sets a
+session cookie that makes the hijack stand down for the browser session;
+`?classic=0` clears it. The classic admin bar gains a reciprocal "Back to
+workspace" node while the cookie is set.
+
+**Link interception (both directions).** Workspace→classic anchor clicks are
+caught by a capture-phase document listener (`adminLinkInterceptor`): a
+`/wp-admin/...` href that maps to a workspace route (via the route's
+`legacy_path`/`legacy_query`/`legacy_params`) hash-navigates in place;
+unmapped/RPC/cross-origin/modifier-click/external links pass through.
+Classic→workspace direct navigations to a mapped screen are 302-redirected
+into the workspace (GET-only — write endpoints pass through). In-iframe clicks
+(which don't bubble to the parent) route up through the chromeless bridge's
+parent-side `iframeBridge` consumer. The legacy mappings live on
+`screens[].legacy_path` etc., so the JS interceptor and the PHP redirect share
+one source of truth (`WP_Admin_Shell_Admin_Routes::legacy_map()`).
+
+**Non-goals (alpha):** network admin and the customizer stay classic
+(allowlist only); there is no in-workspace iframe host for unmapped links (they
+full-navigate); no settings UI writes `wp-content/admin.json`. See
+[`alpha-readiness.md`](./alpha-readiness.md).
+
+## 20. References
 
 In-repo:
 
