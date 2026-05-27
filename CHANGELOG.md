@@ -2,6 +2,50 @@
 
 All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
+> **Status:** Pre-release. Nothing has shipped publicly; there is no installed base. The canonical architecture lives in `CLAUDE.md` + `docs/`. This file records how the codebase reached its current shape — migration history, deprecation windows, and provenance that `CLAUDE.md` deliberately omits to stay canonical.
+
+## [Unreleased]
+
+### v3 reshape (current shape)
+
+Three artifacts replaced v1's single-file shape:
+
+- `app.json` (per-app intrinsics, ships with app code)
+- `engine.json` (engine + region templates + modes + slots)
+- `admin.json` (install decisions only) — shape `workspace` / `settings` / `screens` / `menu` / `commands` (+ `styles` / `preload` / `regions` / `routes`)
+
+The v2 region vocabulary (`role` + `layout` + `platform` + `routing`) carried forward unchanged into v3. The kernel reads v3 natively. All bundled shells migrated to canonical v3 shape.
+
+Provenance of notable subsystems (for archaeology only — not load-bearing):
+
+- Desktop engine P1 + P2 landed on `feat/desktop-engine-*` branches.
+- `WpdsThemeProvider` relocated kernel → `engines/core-default/` in PR-#49 Stage 4; `compileStyles` + wpds-defaults snapshot moved to core-default in P1.
+- Per-app docs contract (`app.json#documentation` + sibling `app.md`) introduced 2026-05-13.
+- Master spec dated 2026-05-01 (URL-routing refined 2026-05-04). App-validation audit 2026-05-04 (v2-era). App-level CSS hex-color audit 2026-05-06. Lint clean baseline 2026-05-07.
+
+### Removed (relative to earlier pre-release builds)
+
+- WPDS theming fallback path removed at v2.0.0-beta.2 — sites without a Gutenberg + WPDS engine now render empty rather than falling back to a kernel-injected WPDS provider.
+
+### Deprecated (shims live one release cycle; removed in v3.1)
+
+- `useScreenView` / `useViewConfig` JS hooks → re-export from `useDataView` with one-shot dev `console.warn`.
+- `hydrateInlineScreenView` → alias of `hydrateInline`.
+- REST `/wp-admin-shell/v1/screen-view` → aliases `/data-view` with `X-WP-Deprecated` header.
+- Filter `wp_admin_shell_view_config_{kind}_{name}[_{variant}]` → fires alongside `wp_admin_shell_data_view_config_*` with `_deprecated_hook` notice.
+- `wp_admin_shell_register_field_collection()` → wrapper over `wp_admin_shell_register_data_field_collection()`; `_doing_it_wrong` under `WP_DEBUG`.
+- admin.json `viewConfigs` block → `_doing_it_wrong` via `warn_legacy_view_configs()` (priority 999).
+- admin.json `dashboardWidgets` block → folded into `screens[dashboard-widgets].apps[]` at resolve time with `_doing_it_wrong` under `WP_DEBUG`; `composeWidgets.mjs` retained for these legacy shells.
+- `userCustomizable` → read for one cycle alongside `customizable`.
+- Option `wp_admin_shell_active_config` (MVP) → resolver reads `wp_admin_shell_active_shell` first, falls back to legacy key.
+- App-level `contentWidth` / `preview` config keys → still honored as a decoration escape hatch; new shells use the v3 multi-app `screens[id].apps[]` shape.
+
+### Known gaps
+
+- `core:desktop-iframe` command-palette harvest (chromeless-bridge sub-system 11) ships as a stub — the parent palette consumer isn't wired yet.
+- No JSDOM mount test for the React kernel (`<Region>` / `<ThemeProviderHost>`); full component render is a manual browser pass. Tracked in issue #30.
+- `@wordpress/components` `Modal` overlays (DataViews `RenderModal`, bulk-confirm) inherit root theme on bg + color — not covered by the `RegionThemedSubtree` seam. Logged in `docs/feedback.md`.
+
 ## [1.0.0-beta.1] — 2026-04-30
 
 First v1 cut. Branch: `feat/wp-admin-shell-v1`. Five-milestone plan landed (M1 kernel rebuild → M2 cascade → M3 tokens → M4 apps → M5 ship).
