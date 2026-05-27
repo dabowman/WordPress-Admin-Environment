@@ -1091,7 +1091,6 @@ WPAS_Data_View_Test_Runner::assert_true(
 	! isset( $cleared_signals['data_field_collections'] )
 );
 
-
 // --- Summary ---------------------------------------------------------------
 
 $total = WPAS_Data_View_Test_Runner::$pass + WPAS_Data_View_Test_Runner::$fail;
