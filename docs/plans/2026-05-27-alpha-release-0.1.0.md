@@ -311,3 +311,45 @@ After every workstream lands:
 - Network admin support — explicit non-goal; document in readiness.
 - Customizer port — explicit non-goal; allowlist only.
 - Auto-disable plugin when no file + no option — alpha behavior in that state is "no hijack, classic admin"; a cleaner deactivation flow is post-alpha.
+
+## Implementation deviations from this plan
+
+These are accepted divergences applied during implementation and review — the
+plan is otherwise the contract. Live behavior is authoritatively documented
+in `docs/wp-admin-shell-design-spec.md` §19 and `docs/alpha-readiness.md`.
+
+- **JS naming split.** Plan named `adminLinkInterceptor.js` and
+  `iframeBridge.js`; shipped as `adminLinkInterceptor.mjs` (pure +
+  node-testable) + `AdminLinkInterceptor.js` (React effect component) and
+  `iframeBridge.mjs`. The split follows the `.mjs`-for-side-effect-free
+  modules convention so the pure logic runs under `node --test` without a
+  webpack/jest harness.
+- **Baseline not relocated on disk.** Plan W1 called for moving the baseline
+  to `includes/origins/admin-default.json`; it stays at
+  `shells/wp-admin-default.json` (`Origin_Core::BASELINE_SLUG`). The
+  architectural shift (baseline-in-`core` / file-in-`plugin`) is in place;
+  the on-disk relocation was deferred as cosmetic — `shells_mtime()` already
+  covers the cache signal, and the back-compat selector still references
+  the file at its current path. Relocating is a future cleanup, not a
+  behavior change.
+- **W6 (chromeless bridge) PHP not moved.** Plan called for relocating the
+  bridge PHP from `includes/engines/core-desktop/` to `includes/platform/`.
+  The bridge gate is already engine-agnostic (`Sec-Fetch-Dest: iframe`),
+  so the move would be cosmetic and risked the tested desktop path; only
+  the parent-side consumption was added (`src/runtime/platform/iframeBridge.mjs`).
+- **Matcher refinements added during review.** The matcher learned two
+  WordPress conventions not in the original plan: an absent `?post_type=`
+  is compared as `post` (so a `post_type=post`-constrained baseline entry
+  still matches a bare `edit.php` while CPTs fall through to classic), and
+  an entry that doesn't itself constrain `?action=` is skipped when the
+  URL carries one. `?_wpnonce`'d requests are never mapped. The baseline
+  `post-edit` screen's `legacy_path` was removed during review — `post.php`
+  carries no `post_type`, so it can't be safely disambiguated; editing a
+  Page loads the classic editor.
+- **iframe bridge hardening beyond plan.** The parent-side bridge requires
+  a mandatory source pin (`getIframeWindow`), refuses messages when no
+  origin can be resolved, and scheme-allowlists `external-link` URLs
+  (`http`/`https`/`mailto`).
+- **W9 trust-tier doc.** Spec §19 gained an explicit "Trust tier" paragraph
+  on the override file's authority; the cookie path now uses
+  `ADMIN_COOKIE_PATH` (subdir/relocated installs).

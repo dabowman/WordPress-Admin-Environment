@@ -871,7 +871,7 @@ Capability resolution uses `core-data`'s `canUser()` for entity-level checks; cu
 
 ### 12.1 Mount and config delivery
 
-PHP renders an empty mount point at `admin.php?page=wp-admin-shell`. Merged manifests + admin.json delivered via `wp_add_inline_script` + `wp_json_encode` on `window.wpAdminShell.config`. Default wp-admin chrome hidden via plugin CSS. Authentication: existing cookie session; REST nonces via `wpApiSettings.nonce`.
+PHP renders an empty mount point at the admin root (`/wp-admin/`) when the workspace hijack fires — see §19. Merged manifests + admin.json delivered via `wp_add_inline_script` + `wp_json_encode` on `window.wpAdminShell.config`. Default wp-admin chrome hidden via plugin CSS. Authentication: existing cookie session; REST nonces via `wpApiSettings.nonce`.
 
 ### 12.2 Resolution sequence
 
@@ -1071,7 +1071,7 @@ export default {
 
 **Data compatibility.** All persistence via WordPress core options/user-meta and REST API. No shadow datastore. `uninstall.php` removes shell-specific options.
 
-**Coexistence with wp-admin.** Standard wp-admin remains fully functional. The shell mounts at one page (`admin.php?page=wp-admin-shell`); both admins coexist as peers. A site setting controls default landing; per-user opt-out is available.
+**Coexistence with wp-admin.** Standard wp-admin remains fully functional. As of 0.1.0 the shell takes over the admin root (`/wp-admin/`, bare `index.php`, bare `admin.php`) when a `wp-content/admin.json` override is present — see §19. Classic stays reachable for every allowlisted endpoint (RPC / install / update / customizer / network admin), via plugin `?page=` pages, and via the cap-gated `?classic=1` cookie escape hatch.
 
 **No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. admin.json has a single shape (`workspace` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
 
@@ -1259,12 +1259,25 @@ source of truth: true when a valid file is present, OR the legacy
 Validation is partial-permissive — the override need not be a complete shell;
 completeness of the *merged* doc is enforced post-resolution.
 
-**Hijack.** When active, `WP_Admin_Shell_Hijack` (admin_init priority 0) takes
-over the admin-root entry points — `/wp-admin/`, `index.php`, bare
-`admin.php` — and renders the shell through WordPress's own
+**Trust tier.** The override file sits in the `plugin` cascade slot — a
+TRUSTED origin merged via `merge_authoritative`, bypassing the
+`Customizable` deny-list and `Permissions` shrink-only rules that gate
+the consumer origins (site/role/user). It may add+remove baseline screens
+(null tombstones), grow `screens[].permissions` OR-sets, and change
+`workspace.engine` — the same authority as the bundled plugin. This is
+correct: writing `wp-content/admin.json` requires filesystem access,
+which already implies running arbitrary plugin code, so there is no
+privilege boundary to defend at the cascade.
+
+**Hijack.** When active, `WP_Admin_Shell_Hijack` (admin_init priority 0)
+takes over the admin-root entry points — `/wp-admin/`, bare `index.php`,
+bare `admin.php` — and renders the shell through WordPress's own
 `admin-header.php`/`admin-footer.php` (so the Gutenberg `wp-private-apis`
-override and every `@wordpress/*` dependency register through the standard
-chain). The legacy `admin.php?page=wp-admin-shell` entry is removed.
+override and every `@wordpress/*` dependency register through the
+standard chain). A `?page=` (plugin subpage, including
+`index.php?page=…`) or `?action=` dispatch is **not** a root entry and
+reaches its own handler. The legacy `admin.php?page=wp-admin-shell` entry
+is removed.
 
 **Endpoint allowlist.** A fixed never-hijack set (RPC `admin-ajax.php` /
 `admin-post.php` / `async-upload.php`, the install/update flows, `customize.php`,
@@ -1276,20 +1289,41 @@ the classic-menu bridge.
 
 **Classic escape hatch.** `?classic=1` (cap: `manage_options`) sets a
 session cookie that makes the hijack stand down for the browser session;
-`?classic=0` clears it. The classic admin bar gains a reciprocal "Back to
-workspace" node while the cookie is set.
+`?classic=0` clears it. The classic admin bar gains a reciprocal "Back
+to workspace" node while the cookie is set. The cookie is scoped to
+`ADMIN_COOKIE_PATH` so it works on subdirectory / relocated installs;
+the gate matches the exact value `'1'` (a forged non-empty cookie can't
+permanently disable the workspace); and the toggle handler bails on
+ajax / REST / cron / xmlrpc / CLI + non-GET contexts so a stray
+`?classic=` can't short-circuit an exempt endpoint.
 
-**Link interception (both directions).** Workspace→classic anchor clicks are
-caught by a capture-phase document listener (`adminLinkInterceptor`): a
-`/wp-admin/...` href that maps to a workspace route (via the route's
+**Link interception (both directions).** Workspace→classic anchor clicks
+are caught by a capture-phase document listener (`adminLinkInterceptor`):
+a `/wp-admin/...` href that maps to a workspace route (via the route's
 `legacy_path`/`legacy_query`/`legacy_params`) hash-navigates in place;
-unmapped/RPC/cross-origin/modifier-click/external links pass through.
-Classic→workspace direct navigations to a mapped screen are 302-redirected
-into the workspace (GET-only — write endpoints pass through). In-iframe clicks
-(which don't bubble to the parent) route up through the chromeless bridge's
-parent-side `iframeBridge` consumer. The legacy mappings live on
-`screens[].legacy_path` etc., so the JS interceptor and the PHP redirect share
-one source of truth (`WP_Admin_Shell_Admin_Routes::legacy_map()`).
+unmapped / RPC / cross-origin / modifier-click / external links pass
+through. Classic→workspace direct navigations to a mapped screen are
+302-redirected into the workspace (GET-only — write endpoints pass
+through). In-iframe clicks (which don't bubble to the parent) route up
+through the chromeless bridge's parent-side `iframeBridge` consumer; the
+bridge is origin- + **mandatorily** source-pinned, and `external-link`
+URLs are scheme-allowlisted (`http`/`https`/`mailto` only). The legacy
+mappings live on `screens[].legacy_path` etc., so the JS interceptor and
+the PHP redirect share one source of truth
+(`WP_Admin_Shell_Admin_Routes::legacy_map()`).
+
+**Matcher conventions.** Among entries sharing a `legacy_path` the most-
+specific (most satisfied `legacy_query` constraints) wins. Two
+WordPress-specific conventions live in the matcher itself rather than
+in every entry: (a) bare `edit.php`/`post-new.php` carries no `post_type`
+in the URL but means `post_type=post`, so an absent `post_type` is
+compared as `post`; and (b) an entry that doesn't itself constrain
+`?action=` is skipped when the URL carries one, so a nonce-less state-
+changing GET (`?action=trash&post=5`) isn't redirected with its action
+dropped. `?_wpnonce` requests are likewise never mapped — they complete
+in classic. `post.php` is **not** mapped by the baseline because it
+carries no `post_type` (the editor can't be safely disambiguated by URL
+alone); editing a Page therefore loads the classic editor.
 
 **Non-goals (alpha):** network admin and the customizer stay classic
 (allowlist only); there is no in-workspace iframe host for unmapped links (they

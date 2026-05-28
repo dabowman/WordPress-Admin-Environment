@@ -284,9 +284,9 @@ App-level `contentWidth` / `preview` config keys are also honored as a decoratio
 
 ## Shell switching
 
-The active shell config is stored in the `wp_admin_shell_active_shell` option (registered with `show_in_rest`). Switchable via:
-- Settings page (`wp-admin/admin.php?page=wp-admin-shell-settings`)
-- Toolbar dropdown (saves via `POST /wp/v2/settings`, then reloads)
+The active shell config is stored in the `wp_admin_shell_active_shell` option (registered with `show_in_rest`). Under the 0.1.0 file-trigger model, `wp-content/admin.json` wins over the option, so the user-menu switcher and `switchShell()` JS are gated on `window.wpAdminShell.workspaceFileActive`: the switcher hides + `switchShell()` throws when a file override is present (writing the option would be a silent no-op). Switching paths when no file is present:
+- User-menu dropdown — only when more than one bundled shell sets `user-switchable: true` (saves via `POST /wp/v2/settings`, then reloads).
+- `window.wpAdminShell.switchShell(slug)` — same path, exposed for command-palette / programmatic use.
 
 ## Extension points (spec §13)
 
