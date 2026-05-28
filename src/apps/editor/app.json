@@ -53,7 +53,7 @@
 					"source": "/wp/v2/posts | /wp/v2/pages",
 					"via": "api-fetch",
 					"operation": "create",
-					"purpose": "Create a draft when navigating to `#/editor/{postType}/new`. Seeds an empty paragraph block in `content` because REST rejects fully-empty posts."
+					"purpose": "Create a draft when the screen routes here with no `config.id` (e.g. `/posts/new`; `\"new\"`/`\"\"` also trigger it). Seeds an empty paragraph block in `content` because REST rejects fully-empty posts."
 				}
 			]
 		},
@@ -64,7 +64,8 @@
 			"navigates": [
 				"#/posts",
 				"#/pages",
-				"#/editor/{postType}/{id}"
+				"#/posts/{id}/edit",
+				"#/pages/{id}/edit"
 			]
 		},
 		"states": [
@@ -91,8 +92,8 @@
 		],
 		"interactions": [
 			{
-				"trigger": "Mount with `#/editor/{postType}/new`",
-				"effect": "POST a draft, update `postId`, replace URL via `history.replaceState` (not navigate — avoids re-render loop)."
+				"trigger": "Mount on an add-new screen (`config.id` absent, e.g. `/posts/new`)",
+				"effect": "POST a draft, update `postId`, then `history.replaceState` the URL to the canonical edit route `#/{posts|pages}/{id}/edit` (not navigate — avoids re-render loop, and the canonical route survives a refresh)."
 			},
 			{
 				"trigger": "Iframe `load` event",
