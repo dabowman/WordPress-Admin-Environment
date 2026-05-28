@@ -10,7 +10,10 @@ import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
-import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
@@ -208,6 +211,15 @@ export default function UsersApp( { config = {} } = {} ) {
 					'user',
 					queryArgs,
 				] );
+				// Deletes shrink role buckets, so the per-role count
+				// queries the filter labels read from need to refresh too.
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'root',
+					'user',
+					'roles',
+					roleValues
+				);
 				if ( ! targets.length ) {
 					return;
 				}
@@ -253,6 +265,7 @@ export default function UsersApp( { config = {} } = {} ) {
 		deleteEntityRecord,
 		invalidateResolution,
 		queryArgs,
+		roleValues,
 		createSuccessNotice,
 		createErrorNotice,
 	] );

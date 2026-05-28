@@ -2,7 +2,7 @@ import './index.css';
 import '../_shared/app.css';
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
 import { Button, Icon, InputControl, Stack, Text } from '@wordpress/ui';
@@ -16,7 +16,12 @@ import {
 import { __ } from '@wordpress/i18n';
 import { upload, trash, copy } from '@wordpress/icons';
 import { withElementCounts } from '../_shared/dataviews/buildFields.mjs';
-import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
+
+const ALL_COUNT_QUERY = { per_page: 1, _fields: 'id', context: 'edit' };
 
 const MEDIA_TYPE_OPTIONS = [
 	{ value: '', label: __( 'All', 'wp-admin-shell' ) },
@@ -49,11 +54,12 @@ export default function MediaApp() {
 		return args;
 	}, [ mediaType, page ] );
 
-	const { records, isResolving, totalPages } = useEntityRecords(
-		'root',
-		'media',
-		queryArgs
-	);
+	const {
+		records,
+		isResolving,
+		totalItems: mainTotal,
+		totalPages,
+	} = useEntityRecords( 'root', 'media', queryArgs );
 
 	const typeCounts = useEntityElementCounts(
 		'root',
@@ -61,15 +67,27 @@ export default function MediaApp() {
 		'media_type',
 		MEDIA_TYPE_VALUES
 	);
-	const allCountQuery = useMemo(
-		() => ( { per_page: 1, _fields: 'id', context: 'edit' } ),
-		[]
+	// When unfiltered, the main list query already exposes the unfiltered
+	// `totalItems` — no need to fire a second `per_page=1` request. When a
+	// type filter is active, the main query's total is scoped to that type,
+	// so a dedicated lightweight request inside `useSelect` covers "All".
+	const filteredAllCount = useSelect(
+		( select ) => {
+			if ( ! mediaType ) {
+				return null;
+			}
+			const { getEntityRecords, getEntityRecordsTotalItems } =
+				select( coreStore );
+			getEntityRecords( 'root', 'media', ALL_COUNT_QUERY );
+			return getEntityRecordsTotalItems(
+				'root',
+				'media',
+				ALL_COUNT_QUERY
+			);
+		},
+		[ mediaType ]
 	);
-	const { totalItems: allCount } = useEntityRecords(
-		'root',
-		'media',
-		allCountQuery
-	);
+	const allCount = mediaType ? filteredAllCount : mainTotal;
 	const typeOptions = useMemo(
 		() =>
 			withElementCounts( MEDIA_TYPE_OPTIONS, {
@@ -107,6 +125,19 @@ export default function MediaApp() {
 					'media',
 					queryArgs,
 				] );
+				// Uploads grow the per-type and unfiltered totals.
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'root',
+					'media',
+					'media_type',
+					MEDIA_TYPE_VALUES
+				);
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'media',
+					ALL_COUNT_QUERY,
+				] );
 			} finally {
 				setIsUploading( false );
 				if ( fileInputRef.current ) {
@@ -126,6 +157,19 @@ export default function MediaApp() {
 				'root',
 				'media',
 				queryArgs,
+			] );
+			// Deletes shrink the per-type and unfiltered totals.
+			invalidateEntityElementCounts(
+				invalidateResolution,
+				'root',
+				'media',
+				'media_type',
+				MEDIA_TYPE_VALUES
+			);
+			invalidateResolution( 'getEntityRecords', [
+				'root',
+				'media',
+				ALL_COUNT_QUERY,
 			] );
 			setSelectedItem( null );
 		},

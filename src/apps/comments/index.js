@@ -14,7 +14,10 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
-import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
@@ -197,6 +200,16 @@ export default function CommentsApp( { config = {} } ) {
 				'comment',
 				queryArgs,
 			] );
+			// Status transitions move comments between buckets, so the
+			// per-status count queries the filter labels read from need
+			// to refresh too — same goes for the trash modal below.
+			invalidateEntityElementCounts(
+				invalidateResolution,
+				'root',
+				'comment',
+				'status',
+				STATUS_VALUES
+			);
 			const failed = results.filter(
 				( r ) => r.status === 'rejected'
 			).length;
@@ -270,6 +283,13 @@ export default function CommentsApp( { config = {} } ) {
 					'comment',
 					queryArgs,
 				] );
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'root',
+					'comment',
+					'status',
+					STATUS_VALUES
+				);
 				if ( failed > 0 ) {
 					createErrorNotice(
 						sprintf(

@@ -15,7 +15,10 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
-import { useEntityElementCounts } from '../_shared/dataviews/useEntityElementCounts';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
@@ -213,6 +216,15 @@ export default function PostsApp( { config } ) {
 					postType,
 					queryArgs,
 				] );
+				// Trash moves rows between statuses, so the count queries
+				// the filter labels read from need to refresh too.
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'postType',
+					postType,
+					'status',
+					STATUS_VALUES
+				);
 				if ( failed > 0 ) {
 					createNotice(
 						'error',
