@@ -70,22 +70,37 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 - [manual] Logged-out → `/wp-admin/` redirects to `wp-login.php` and back
   cleanly (no hijack-before-auth loop).
 
-## 4. Classic escape hatch (W3)
+## 4. Escape hatches — persistent toggle + session cookie
 
-- [auto] `set_cookie(true|false)` flips `$_COOKIE`; the "Back to workspace"
-  admin-bar node shows only when the cookie is set AND a workspace is
-  active. `passes_base_gates` matches the exact value `'1'` (a forged /
-  garbage non-empty cookie can't permanently disable the workspace).
-- [auto] The toggle handler bails on ajax / REST / cron / xmlrpc / CLI
-  contexts and on non-GET requests — a stray `?classic=` on `update.php`
-  or `admin-ajax.php` can't short-circuit those requests.
-- [manual] As an admin, the toolbar "Classic wp-admin" button reloads into
-  classic; every classic page is reachable; the admin bar shows "↩ Back
-  to workspace"; clicking it returns to the workspace. The cookie clears
-  on browser close. The cookie is scoped to `ADMIN_COOKIE_PATH`, so it
-  works on subdirectory / relocated / multisite-subdir installs.
-- [manual] A non-`manage_options` user: the toolbar button is absent, and
-  hitting `?classic=1` directly is ignored (lands back in the workspace).
+The workspace can be left in two ways. The persistent **Settings →
+Workspace** screen flips the `wp_admin_shell_workspace_enabled` option;
+the session-scoped `?classic=1` cookie remains as a power-user shortcut.
+
+- [auto] **Persistent toggle.** The trigger truth table in
+  `run-alpha-trigger-tests.php` covers it: `workspace_enabled=false`
+  vetoes a present `wp-content/admin.json` AND the legacy active-shell
+  option; flipping back to true restores the file-trigger path.
+- [manual] **Workspace → Settings → Workspace.** Uncheck "Activate WP
+  Admin Workspace", click Save → snackbar success → an inline "Reload
+  to apply" notice appears with a Reload now button. Click it → land in
+  classic wp-admin.
+- [manual] **Classic → Settings → WP Admin Shell.** Check the box and
+  click Save Changes → the next admin nav lands in the workspace. (This
+  parallel `add_options_page` is the only way to re-enable from classic;
+  without it the workspace would strand the user after disabling.)
+- [auto] **Session cookie.** `set_cookie(true|false)` flips `$_COOKIE`;
+  `passes_base_gates` matches the exact value `'1'` (a forged / garbage
+  non-empty cookie can't permanently disable the workspace). The toggle
+  handler bails on ajax / REST / cron / xmlrpc / CLI contexts and on
+  non-GET requests.
+- [manual] **`?classic=1` URL toggle.** As an admin, visit
+  `/wp-admin/?classic=1` → cookie set → classic for the session. The
+  classic admin bar gains "↩ Back to workspace" linking to
+  `/wp-admin/?classic=0`. Cookie clears on browser close. Scoped to
+  `ADMIN_COOKIE_PATH`, so it works on subdirectory / relocated /
+  multisite-subdir installs.
+- [manual] A non-`manage_options` user hitting `?classic=1` directly is
+  ignored (lands back in the workspace).
 
 ## 5. Link interception — workspace → classic (W4)
 
@@ -123,18 +138,38 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 
 ## 7. Iframe behavior (W6)
 
-- [auto] `iframe-bridge.test.mjs`: origin- + source-pinned (source pin is
-  **mandatory** — messages without a bound `getIframeWindow` are refused);
-  in-iframe `admin-link` routes to the workspace when mapped, navigates
-  the iframe otherwise (a `'pass'` URL — RPC / classic toggle / cross-
-  origin — is never piped into `iframe.src`); `external-link` is scheme-
-  allowlisted (`http` / `https` / `mailto` only — `javascript:` / `data:`
-  are ignored); spoofed origin/source dropped.
-- [manual] Open an `iframe:` screen (e.g. the editor / site-editor).
-  Clicking an in-iframe admin link that maps to a workspace screen pops
-  out into the workspace; an unmapped one navigates within the iframe;
-  an external link opens a new tab. Desktop engine (`core:desktop`)
-  iframe windows behave as before (regression check).
+- [auto] `iframe-bridge.test.mjs`: origin- + source-pinned (source pin
+  is **mandatory** — messages without a bound `getIframeWindow` are
+  refused); in-iframe `admin-link` routes to the workspace when mapped,
+  navigates the iframe otherwise (a `'pass'` URL — RPC / classic toggle
+  / cross-origin — is never piped into `iframe.src`); `external-link`
+  is scheme-allowlisted (`http` / `https` / `mailto` only — `javascript:`
+  / `data:` are ignored); `target=_parent` / `_top` navigate the iframe
+  (URL preserved, including nonces); spoofed origin/source + tampered
+  cross-origin `target=_parent` dropped.
+- [auto] `passes_base_gates` bails on chromeless requests
+  (`Sec-Fetch-Dest: iframe` OR `?wp_admin_shell_chromeless=1`), so an
+  iframed classic page never re-enters the workspace → no nested-shell
+  recursion regardless of whether the iframe URL hits a W5 redirect
+  mapping or W2's root-entry render.
+- [manual] **Open an `iframe:` screen** (editor / site-editor / Plugins
+  → Add New). Clicking an in-iframe admin link that maps to a workspace
+  screen pops out into the workspace; an unmapped link navigates within
+  the iframe; an external link opens a new tab. Desktop engine
+  (`core:desktop`) iframe windows behave as before (regression check).
+- [manual] **Plugin upload "Replace current with uploaded".** The
+  `target=_parent` button now navigates the IFRAME (not the workspace
+  parent), so the action completes server-side with its `_wpnonce`
+  preserved and the result renders embedded — user stays in the workspace.
+- [manual] **No chrome flash.** The iframe stays `visibility: hidden`
+  until `onIframeLoad` injects the chrome-hide CSS, AND a
+  `beforeunload` listener flips it hidden again for any in-iframe
+  navigation (form submit / link click). A Spinner covers the gap.
+- [manual] **Session-expiry recovery.** Reload an iframed classic page
+  after a session reset. WordPress would normally render `wp-login.php`
+  inside the iframe; the iframe stays hidden, a heartbeat poll is
+  forced, and the standard wp-auth-check modal pops at the shell level.
+  Sign in → heartbeat tick → iframe reloads to the real page.
 
 ## 8. Capability matrix
 

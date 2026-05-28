@@ -6,6 +6,19 @@ All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### 0.1.0 alpha — workspace as primary admin entry
+
+The first public alpha: a `wp-content/admin.json` file turns the WordPress admin into the workspace. Top-line shape (full detail in `docs/wp-admin-shell-design-spec.md` §19 and `docs/alpha-readiness.md`):
+
+- **Theme.json-style cascade.** `wp-admin-default` ships as the baseline in the `core` origin slot; `wp-content/admin.json` is a partial delta loaded into the `plugin` slot. Field-aware merge — a one-key `{ "styles": … }` file retints the chrome while every baseline screen/menu/command survives.
+- **Workspace hijack.** `WP_Admin_Shell_Hijack` (admin_init priority 0) renders the shell at `/wp-admin/` / `index.php` / bare `admin.php` via WordPress's own `admin-header.php`/`admin-footer.php`. The legacy `admin.php?page=wp-admin-shell` entry is removed. Allowlist + the cap-gated `?classic=1` session cookie + the persistent **Settings → Workspace** toggle keep classic reachable.
+- **Bidirectional link interception.** Workspace→classic clicks intercepted by `adminLinkInterceptor` (route or pass-through); classic→workspace direct navigations 302'd via `screens[].legacy_path` mappings. Matcher honors WP conventions (absent `?post_type=` ≡ `post`, `?action=` only when an entry constrains it, `?_wpnonce` never mapped).
+- **Iframe-fallback hardening.** Origin- + mandatorily-source-pinned bridge consumer; `target=_parent` navigates the iframe (preserves nonces, keeps the user in the workspace); `external-link` scheme-allowlisted; chrome no longer flashes on inner navigation; session expiry forces the wp-auth-check modal immediately. Chromeless requests never re-enter the workspace (no nested-shell recursion).
+- **Persistent toggle.** `wp_admin_shell_workspace_enabled` option (default true) vetoes the file/legacy triggers. Workspace-side `core:settings-workspace` DataForm + classic-side `Settings → WP Admin Shell` page.
+- **Distribution.** `npm run build:zip` (wp-scripts `plugin-zip` + the `package.json` `files` allowlist) produces `wp-admin-shell.zip`.
+
+Origin-file defensive stat hardening (`clearstatcache` + `is_file()` + `@`-suppressed reads) so the override file disappearing between requests doesn't leak warnings or break header() calls on Docker bind-mount setups.
+
 ### v3 reshape (current shape)
 
 Three artifacts replaced v1's single-file shape:

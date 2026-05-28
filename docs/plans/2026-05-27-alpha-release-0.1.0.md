@@ -353,3 +353,38 @@ in `docs/wp-admin-shell-design-spec.md` §19 and `docs/alpha-readiness.md`.
 - **W9 trust-tier doc.** Spec §19 gained an explicit "Trust tier" paragraph
   on the override file's authority; the cookie path now uses
   `ADMIN_COOKIE_PATH` (subdir/relocated installs).
+- **Persistent escape via Settings → Workspace.** W3 originally specified a
+  toolbar "Classic wp-admin" button (session-scoped cookie). After testing
+  it turned out users wanted persistence — a new `core:settings-workspace`
+  DataForm screen + `wp_admin_shell_workspace_enabled` option (with a
+  parallel classic-side `add_options_page` so users can re-enable from
+  classic) replaced the toolbar button. The session cookie + `?classic=1`
+  URL toggle remain as a power-user escape; only the toolbar button was
+  removed.
+- **Chromeless requests never re-enter the workspace.** `passes_base_gates`
+  bails on `wp_admin_shell_is_chromeless_request()` (Sec-Fetch-Dest:
+  iframe OR the explicit query flag), so an iframed classic page can't
+  recurse into the shell — neither via W2's root-entry render nor via
+  W5's classic→workspace redirect. Discovered during testing of the
+  Privacy iframe.
+- **`target=_parent` → iframe navigation.** Plan W6 didn't specify
+  behavior for WP's "break out of modal" idiom (plugin-install Replace
+  button, etc.). Final shape: the bridge includes `target` in its
+  postMessage, and the parent-side `classifyBridgeMessage` routes
+  `_parent`/`_top` to an iframe navigation — same-origin guarded.
+  Preserves nonces, keeps the user in the workspace.
+- **iframe-fallback visibility contract.** Iframe stays `visibility:
+  hidden` until chrome-hide CSS is injected; a `beforeunload` listener
+  flips it hidden again on in-iframe navigation; session-expiry
+  detection (`wp-login.php` rendered inside iframe) keeps it hidden and
+  forces a heartbeat poll so the standard wp-auth-check modal pops at
+  the shell level immediately rather than after ~15s.
+- **DataViews loading gate.** Each entity-CRUD app renders a Spinner
+  while `records === null` to avoid a brief flash of DataViews' empty
+  state on initial fetch. DataViews' own `isLoading` doesn't suppress
+  the empty state when `data=[]`.
+- **Distribution.** `npm run build:zip` (added in `package.json`)
+  produces `wp-admin-shell.zip` via `wp-scripts plugin-zip` — the
+  `files` allowlist explicitly includes `src/runtime/engines/*/engine.json`
+  and `src/apps/*/app.json`, which the plugin-zip's Plugin-Handbook
+  default heuristics would otherwise skip.

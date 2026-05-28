@@ -1287,15 +1287,31 @@ multisite network admin always falls through to classic. Extensible via the
 not root entries, so they stay classic and surface in the workspace nav via
 the classic-menu bridge.
 
-**Classic escape hatch.** `?classic=1` (cap: `manage_options`) sets a
-session cookie that makes the hijack stand down for the browser session;
-`?classic=0` clears it. The classic admin bar gains a reciprocal "Back
-to workspace" node while the cookie is set. The cookie is scoped to
-`ADMIN_COOKIE_PATH` so it works on subdirectory / relocated installs;
-the gate matches the exact value `'1'` (a forged non-empty cookie can't
-permanently disable the workspace); and the toggle handler bails on
-ajax / REST / cron / xmlrpc / CLI + non-GET contexts so a stray
-`?classic=` can't short-circuit an exempt endpoint.
+**No nested shell inside iframes.** `passes_base_gates` bails on
+`wp_admin_shell_is_chromeless_request()` (browser `Sec-Fetch-Dest: iframe`
+OR the explicit `?wp_admin_shell_chromeless=1` flag the bridge sets). Both
+the render hijack and the classic→workspace redirect short-circuit, so
+an iframed classic admin page can't recurse through W5 back to `/wp-admin/`
+and trigger another shell mount inside the iframe.
+
+**Escape hatches — persistent toggle and session cookie.** Two surfaces
+let a user opt out of the workspace:
+
+- **`wp_admin_shell_workspace_enabled`** option (default true,
+  REST-exposed, `rest_sanitize_boolean`). When explicitly false,
+  `wp_admin_shell_workspace_active()` returns false regardless of file
+  or legacy active-shell. Surfaces: workspace **Settings → Workspace**
+  (`core:settings-workspace` DataForm screen) and a parallel classic
+  **Settings → WP Admin Shell** (`add_options_page`) so a user who
+  disabled from the workspace can re-enable from classic.
+- **`?classic=1`** (cap: `manage_options`) sets a session cookie that
+  makes the hijack stand down for the browser session; `?classic=0`
+  clears it. The classic admin bar gains a reciprocal "Back to workspace"
+  node while the cookie is set. The cookie is scoped to
+  `ADMIN_COOKIE_PATH` (subdir / relocated installs); the gate matches
+  the exact value `'1'`; and the toggle handler bails on ajax / REST /
+  cron / xmlrpc / CLI + non-GET contexts so a stray `?classic=` can't
+  short-circuit an exempt endpoint.
 
 **Link interception (both directions).** Workspace→classic anchor clicks
 are caught by a capture-phase document listener (`adminLinkInterceptor`):
@@ -1307,7 +1323,12 @@ through. Classic→workspace direct navigations to a mapped screen are
 through). In-iframe clicks (which don't bubble to the parent) route up
 through the chromeless bridge's parent-side `iframeBridge` consumer; the
 bridge is origin- + **mandatorily** source-pinned, and `external-link`
-URLs are scheme-allowlisted (`http`/`https`/`mailto` only). The legacy
+URLs are scheme-allowlisted (`http`/`https`/`mailto` only).
+`target="_parent"` / `target="_top"` (WP's "break out of modal" idiom on
+flow-completion links such as the plugin-install Replace button)
+navigate the **iframe** rather than the parent — the action URL
+including `_wpnonce` is preserved verbatim and the user stays in the
+workspace with the result embedded. Same-origin guarded. The legacy
 mappings live on `screens[].legacy_path` etc., so the JS interceptor and
 the PHP redirect share one source of truth
 (`WP_Admin_Shell_Admin_Routes::legacy_map()`).

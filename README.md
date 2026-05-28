@@ -64,7 +64,7 @@ To produce a `wp-admin-shell.zip` that can be uploaded via **Plugins → Add New
 npm run build:zip
 ```
 
-Output: `wp-admin-shell.zip` at the project root, ~640 KB. It bundles `wp-admin-shell.php`, `includes/`, the compiled `build/`, the seven `shells/`, `assets/`, `core.tokens.json`, `README.md`, and `CHANGELOG.md` — nothing from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+Output: `wp-admin-shell.zip` at the project root, ~740 KB. It bundles `wp-admin-shell.php`, `includes/`, the compiled `build/`, the seven `shells/`, `assets/`, `core.tokens.json`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
 
 ### With wp-env (development)
 
