@@ -591,12 +591,42 @@
 							{
 								"id": "name",
 								"type": "text",
-								"label": "Theme"
+								"label": "Theme",
+								"enableGlobalSearch": true,
+								"enableHiding": false
 							},
 							{
 								"id": "screenshot",
 								"type": "media",
-								"label": "Screenshot"
+								"label": "Screenshot",
+								"enableSorting": false,
+								"enableHiding": false
+							},
+							{
+								"id": "status",
+								"type": "text",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "active",
+										"label": "Active"
+									},
+									{
+										"value": "inactive",
+										"label": "Inactive"
+									}
+								],
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								}
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description",
+								"enableSorting": false
 							},
 							{
 								"id": "version",
@@ -612,13 +642,18 @@
 						"defaultView": {
 							"type": "grid",
 							"perPage": 24,
+							"sort": {
+								"field": "status",
+								"direction": "asc"
+							},
 							"fields": [
 								"status",
 								"description",
 								"version",
 								"author"
 							],
-							"titleField": "name"
+							"titleField": "name",
+							"mediaField": "screenshot"
 						},
 						"actions": [
 							{
