@@ -103,6 +103,18 @@ class WP_Admin_Shell_Hijack {
 		if ( self::is_allowlisted_endpoint() ) {
 			return false;
 		}
+		// Iframe-mounted admin pages never get the workspace treatment —
+		// the W5 redirect would 302 the iframe to `/wp-admin/#/…`, which
+		// is a root entry → W2 renders the shell INSIDE its own
+		// iframe-fallback → that screen mounts the same classic page in
+		// another iframe → infinite recursion. The chromeless-request
+		// signal (`Sec-Fetch-Dest: iframe` OR the explicit
+		// `?wp_admin_shell_chromeless=1` flag the bridge layer sets)
+		// catches every same-origin iframe load.
+		if ( function_exists( 'wp_admin_shell_is_chromeless_request' )
+			&& wp_admin_shell_is_chromeless_request() ) {
+			return false;
+		}
 		// Explicit classic-mode escape hatch (W3). Match the exact value the
 		// toggle sets — a garbage / forged non-empty cookie shouldn't be able
 		// to permanently disable the workspace for a browser.
