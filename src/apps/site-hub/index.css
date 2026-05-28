@@ -61,9 +61,8 @@
  * `min-width: 0` so the wrapper can shrink, and `display: flex` so
  * the anchor child's `flex-grow: 1` actually stretches it (the anchor
  * is inline-flex by @wordpress/ui Button default; flex-grow only
- * applies when its parent is itself a flex container). With both,
- * the anchor's overflow:hidden + text-overflow:ellipsis + white-
- * space:nowrap activate and the title truncates with an ellipsis. */
+ * applies when its parent is itself a flex container). The title text
+ * then truncates inside its own `__title-text` flex item (below). */
 .wp-admin-shell-site-hub__title {
 	display: flex;
 	min-width: 0;
@@ -75,11 +74,26 @@
 	min-width: 0;
 	font-size: var(--wpds-font-size-lg);
 	font-weight: var(--wpds-font-weight-medium);
-	overflow: hidden;
 	position: relative;
 	text-decoration: none;
+	/* @wordpress/ui Button is an inline-flex element centering its
+	 * content; left-align so a long title truncates at its end. */
+	justify-content: flex-start;
+	text-align: start;
+}
+
+/* The title text lives in its own block-level flex item because
+ * text-overflow:ellipsis is ignored on the inline-flex Button itself —
+ * the bare text node is an anonymous flex item the rule can't act on.
+ * padding-inline-end reserves room for the ↗ glyph that fades in on
+ * hover (::after, below) so the ellipsis never sits under it. */
+.wp-admin-shell-site-hub__title-text {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	padding-inline-end: 1.5em;
 }
 
 .wp-admin-shell-site-hub__title :is(button, a):focus {
