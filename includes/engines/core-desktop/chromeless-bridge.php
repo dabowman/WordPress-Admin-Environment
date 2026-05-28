@@ -491,6 +491,17 @@ function wp_admin_shell_chromeless_bridge_script() {
 					return;
 				}
 				var target = link.getAttribute( 'target' );
+				// Respect explicit parent / top targets — WordPress uses
+				// `target="_parent"` on flow-completion links (e.g. the
+				// plugin-install "Replace current with uploaded" + cancel
+				// buttons). The author wants the parent to navigate; the
+				// bridge would otherwise preventDefault + post up, where
+				// the nonce'd URL is then ignored and the button looks
+				// broken. The natural browser navigation is also what the
+				// allowlisted classic endpoint (update.php etc.) needs.
+				if ( target === '_parent' || target === '_top' ) {
+					return;
+				}
 				var absolute;
 				try {
 					absolute = new URL(
