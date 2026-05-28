@@ -1,0 +1,71 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:settings-workspace",
+	"version": 1,
+	"title": "Settings — Workspace",
+	"description": "Activate / deactivate the WP Admin Workspace — toggling the `wp_admin_shell_workspace_enabled` option over the REST settings surface, with a reload prompt when the value flips.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"platform": {
+		"core:dirty-state": true
+	},
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"documentation": {
+		"purpose": "Single-checkbox DataForm over `/wp/v2/settings` — flips `wp_admin_shell_workspace_enabled`. Replaces the toolbar's session-scoped 'Classic wp-admin' button with a persistent setting that survives reload. Re-enabling from classic happens through the parallel Settings → WP Admin Shell page registered in `wp-admin-shell.php`, which writes the same option through the same `wp_admin_shell_settings` registration group.",
+		"data": {
+			"reads": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Current workspace-enabled value.",
+					"fields": [ "wp_admin_shell_workspace_enabled" ]
+				}
+			],
+			"writes": [
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Persist the toggle. The PHP `wp_admin_shell_workspace_active()` gate reads the option on every request; the new value takes effect on the next page load."
+				}
+			]
+		},
+		"states": [
+			{ "id": "loading", "when": "!record", "renders": "Centered Spinner — useEntityRecord('root','site') not yet resolved." },
+			{ "id": "ready", "when": "record && !hasEdits && !pendingReload", "renders": "DataForm populated, Save disabled." },
+			{ "id": "with-edits", "when": "hasEdits && !isSaving", "renders": "DataForm + Save enabled." },
+			{ "id": "saving", "when": "isSaving", "renders": "Save button in loading state." },
+			{ "id": "needs-reload", "when": "pendingReload", "renders": "Notice.Root prompting Reload now after a successful save that flipped the value." }
+		],
+		"interactions": [
+			{ "trigger": "Toggle 'Activate WP Admin Workspace'", "effect": "`edit({ wp_admin_shell_workspace_enabled: bool })`." },
+			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar via `noticesStore`. If the saved value differs from the loaded one, render a Notice.Root with a Reload now action." },
+			{ "trigger": "Click Reload now", "effect": "`window.location.reload()` — workspace_active() re-evaluates against the new option." }
+		],
+		"url": {
+			"reads-slots": [ "_self" ],
+			"writes-slots": [],
+			"navigates": []
+		},
+		"a11y": {
+			"focus-management": "Native DataForm focus order is sufficient. The Notice.Root receives focus order between the form and the Save button so the Reload action is reachable before Save."
+		},
+		"constraints": [
+			{ "concern": "null-guard-record", "note": "Local Spinner null-guard mirrors EntityDataForm — useEntityRecord starts with record=null while resolving." },
+			{ "concern": "lockout-recovery", "note": "Toggling the workspace off in workspace context strands the user in classic with no shell UI. A parallel `add_options_page` registers Settings → WP Admin Shell in classic so users can re-enable from there." },
+			{ "concern": "file-still-trigger", "note": "wp_admin_shell_workspace_active() still requires wp-content/admin.json (or the legacy active-shell option). The enabled flag is a veto layer, not a sufficient condition." }
+		],
+		"design-system-leakage": [
+			{ "import": "@wordpress/ui#Text", "purpose": "Heading + help text." },
+			{ "import": "@wordpress/ui#Notice", "purpose": "Reload-required prompt after value-changing save." },
+			{ "import": "@wordpress/ui#Button + Stack", "purpose": "Save + reload buttons." },
+			{ "import": "@wordpress/components#Spinner", "purpose": "Null-guard loader (no @wordpress/ui port yet)." },
+			{ "import": "@wordpress/dataviews DataForm", "purpose": "Form rendering." }
+		]
+	}
+}

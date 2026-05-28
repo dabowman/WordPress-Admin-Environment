@@ -168,6 +168,10 @@ $saved_shell  = get_option( 'wp_admin_shell_active_shell', null );
 $had_shell    = ( false !== get_option( 'wp_admin_shell_active_shell', false ) );
 delete_option( 'wp_admin_shell_active_shell' );
 
+$saved_enabled = get_option( 'wp_admin_shell_workspace_enabled', null );
+$had_enabled   = ( false !== get_option( 'wp_admin_shell_workspace_enabled', false ) );
+delete_option( 'wp_admin_shell_workspace_enabled' );
+
 $T::use_override( 'override-styles-only.json' );
 $T::ok( 'file present → workspace active', wp_admin_shell_workspace_active() === true );
 
@@ -177,7 +181,20 @@ $T::ok( 'no file + no option → workspace inactive', wp_admin_shell_workspace_a
 update_option( 'wp_admin_shell_active_shell', 'developer-admin' );
 $T::ok( 'no file + explicit option → workspace active', wp_admin_shell_workspace_active() === true );
 
+// Settings → Workspace toggle vetoes the file/legacy triggers.
+$T::use_override( 'override-styles-only.json' );
+update_option( 'wp_admin_shell_workspace_enabled', false );
+$T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_shell_workspace_active() === false );
+delete_option( 'wp_admin_shell_active_shell' );
+$T::ok( 'workspace_enabled=false still false with file only', wp_admin_shell_workspace_active() === false );
+update_option( 'wp_admin_shell_workspace_enabled', true );
+$T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_shell_workspace_active() === true );
+
 // Restore option state.
+delete_option( 'wp_admin_shell_workspace_enabled' );
+if ( $had_enabled ) {
+	update_option( 'wp_admin_shell_workspace_enabled', $saved_enabled );
+}
 if ( $had_shell && is_string( $saved_shell ) ) {
 	update_option( 'wp_admin_shell_active_shell', $saved_shell );
 } else {

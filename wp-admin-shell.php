@@ -306,6 +306,66 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-classic-mode.p
 WP_Admin_Shell_Classic_Mode::init();
 
 /**
+ * Register a classic-wp-admin Settings page (Settings → WP Admin Shell)
+ * that mirrors the workspace's `core:settings-workspace` screen. Without
+ * this, a user who toggles the workspace off would have no UI to turn it
+ * back on — they'd be stuck in classic with no entry point.
+ *
+ * Hooks `admin_menu`, which fires on non-root admin requests (the hijack
+ * exits before this on root entries when the workspace is active, so it's
+ * effectively classic-only).
+ */
+add_action( 'admin_menu', function () {
+	add_options_page(
+		__( 'WP Admin Shell', 'wp-admin-shell' ),
+		__( 'WP Admin Shell', 'wp-admin-shell' ),
+		'manage_options',
+		'wp-admin-shell-workspace',
+		'wp_admin_shell_render_workspace_settings_page'
+	);
+} );
+
+/**
+ * Classic-side render callback for the workspace toggle. The form posts
+ * to options.php with the `wp_admin_shell_settings` group, which is the
+ * same group `register_setting` uses below — the option goes through the
+ * registered `rest_sanitize_boolean` callback either way.
+ *
+ * The hidden 0-value field paired with the checkbox is the standard WP
+ * pattern for capturing an unchecked checkbox (browsers omit unchecked
+ * checkboxes from form submission); options.php picks the last value
+ * sent, so checked → 1, unchecked → 0.
+ */
+function wp_admin_shell_render_workspace_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$enabled = (bool) get_option( 'wp_admin_shell_workspace_enabled', true );
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-shell' ); ?></h1>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Workspace', 'wp-admin-shell' ); ?></th>
+					<td>
+						<label>
+							<input type="hidden" name="wp_admin_shell_workspace_enabled" value="0" />
+							<input type="checkbox" name="wp_admin_shell_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
+							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-shell' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic.', 'wp-admin-shell' ); ?></p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button(); ?>
+		</form>
+	</div>
+	<?php
+}
+
+/**
  * Enqueue shell assets for a workspace takeover request.
  *
  * Runs on `admin_enqueue_scripts` during the hijack's admin-header
@@ -499,6 +559,13 @@ function wp_admin_shell_get_active_config() {
  * @return bool
  */
 function wp_admin_shell_workspace_active() {
+	// Explicit OFF wins over file/legacy triggers. Settings → Workspace
+	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
+	// checkbox; the option defaults to enabled, so a fresh install with a
+	// file present still flips active true.
+	if ( ! get_option( 'wp_admin_shell_workspace_enabled', true ) ) {
+		return false;
+	}
 	if ( class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid() ) {
 		return true;
 	}
@@ -723,6 +790,19 @@ add_action( 'init', function () {
 		'type'              => 'string',
 		'default'           => '',
 		'sanitize_callback' => 'wp_admin_shell_sanitize_active_shell',
+		'show_in_rest'      => true,
+	) );
+
+	// Persistent "Activate WP Admin Workspace" toggle. The site-entity
+	// (/wp/v2/settings) exposes this to the workspace's DataForm settings
+	// screen (`core:settings-workspace`); the classic-side `add_options_page`
+	// below writes it through the standard options.php submission. When
+	// false, wp_admin_shell_workspace_active() returns false regardless of
+	// file presence — the user sees classic until they re-enable.
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_workspace_enabled', array(
+		'type'              => 'boolean',
+		'default'           => true,
+		'sanitize_callback' => 'rest_sanitize_boolean',
 		'show_in_rest'      => true,
 	) );
 

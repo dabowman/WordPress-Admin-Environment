@@ -1211,6 +1211,17 @@
 				]
 			},
 			"mode": "modal"
+		},
+		"settings-workspace": {
+			"label": "Workspace",
+			"icon": "admin-generic",
+			"path": "/settings/workspace",
+			"app": "core:settings-workspace",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		}
 	},
 	"menu": {
@@ -1379,6 +1390,9 @@
 				},
 				"settings-privacy": {
 					"position": 70
+				},
+				"settings-workspace": {
+					"position": 80
 				}
 			}
 		},
