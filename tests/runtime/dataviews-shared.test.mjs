@@ -17,7 +17,7 @@ const projectRoot = resolve( __dirname, '..', '..' );
 const { compileEligibility } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/compileEligibility.mjs' )
 );
-const { buildFields, elementsFromLabels } = await import(
+const { buildFields, elementsFromLabels, withElementCounts } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/buildFields.mjs' )
 );
 
@@ -151,6 +151,70 @@ ok(
 	buildFields( [
 		{ id: 'status', type: 'text', filterBy: { operators: [ 'isAny' ] } },
 	] )[ 0 ].filterBy.operators[ 0 ] === 'isAny'
+);
+
+// --- withElementCounts ----------------------------------------------------
+ok(
+	'withElementCounts returns input untouched when counts missing',
+	withElementCounts( [ { value: 'a', label: 'A' } ], undefined )[ 0 ]
+		.label === 'A'
+);
+
+const counted = withElementCounts(
+	[
+		{ value: 'publish', label: 'Published' },
+		{ value: 'draft', label: 'Draft' },
+	],
+	{ publish: 12 }
+);
+ok(
+	'withElementCounts appends count to matched value',
+	counted[ 0 ].label === 'Published (12)'
+);
+ok(
+	'withElementCounts leaves unmatched value plain',
+	counted[ 1 ].label === 'Draft'
+);
+ok(
+	'withElementCounts treats zero as a real count',
+	withElementCounts( [ { value: 'spam', label: 'Spam' } ], { spam: 0 } )[ 0 ]
+		.label === 'Spam (0)'
+);
+ok(
+	'withElementCounts skips null/undefined counts',
+	withElementCounts( [ { value: 'x', label: 'X' } ], { x: null } )[ 0 ]
+		.label === 'X'
+);
+ok(
+	'withElementCounts preserves the matched value',
+	counted[ 0 ].value === 'publish'
+);
+
+// --- buildFields elementCounts option ------------------------------------
+const fallbackCounted = buildFields( [ { id: 'status', type: 'text' } ], {
+	elementFallbacks: {
+		status: elementsFromLabels( { publish: 'Published' } ),
+	},
+	elementCounts: { status: { publish: 7 } },
+} )[ 0 ];
+ok(
+	'elementCounts merge into fallback elements',
+	fallbackCounted.elements[ 0 ].label === 'Published (7)'
+);
+
+const specCounted = buildFields(
+	[
+		{
+			id: 'roles',
+			type: 'text',
+			elements: [ { value: 'editor', label: 'Editor' } ],
+		},
+	],
+	{ elementCounts: { roles: { editor: 3 } } }
+)[ 0 ];
+ok(
+	'elementCounts merge into spec-declared elements',
+	specCounted.elements[ 0 ].label === 'Editor (3)'
 );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );

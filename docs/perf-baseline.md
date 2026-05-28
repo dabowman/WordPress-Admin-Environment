@@ -52,6 +52,22 @@ Cold-mount for a shell that mounts only chrome apps (navigation, site-hub, toolb
 
 The 1.75 MiB vendors chunk is the dominant cost for the first DataViews-backed mount. Splitting that further (per-app vendor chunks, or aggressive tree-shaking of `@wordpress/dataviews` re-exports) is a Track E candidate, not in C5 scope.
 
+## Filter-element count requests (entity-CRUD apps)
+
+The Posts / Comments / Users / Media apps fire one extra `per_page=1&_fields=id` REST request per filter value at mount via `useEntityElementCounts`, so the status / role / type filter labels can carry counts (`Published (12)`). Numbers per app:
+
+| App | Cold-mount extra requests | Counted axis |
+|---|---:|---|
+| Posts    | 6 | `status` — publish, draft, pending, private, future, trash |
+| Comments | 4 | `status` — approved, hold, spam, trash |
+| Users    | one per role | `roles` — values from the resolved spec |
+| Media    | 4 (+1 when a type filter is active) | `media_type` — image, video, audio, application (`All` reuses the main list's `totalItems` when unfiltered) |
+| Plugins  | 0 | counts derived client-side from the one-shot unpaginated fetch |
+
+These are part of the cold-mount path for any shell that lands on one of those screens. wp-admin gets every status count from a single aggregate query (`wp_count_posts` / `wp_count_comments`); the REST API has no per-status aggregate equivalent today, so the fan-out is inherent to the "global counts" design rather than a defect. The cost is bounded (smallest possible payload per request, X-WP-Total off the header) and counts are global so they don't re-fire on every keystroke. Counts are re-fetched after mutations via `invalidateEntityElementCounts`.
+
+If a future REST aggregate endpoint lands (or a `block_editor_rest_api_preload_paths`-style preload for these queries), the fan-out collapses to one round trip.
+
 ## What's already memoized
 
 - Resolver cache (M2.7) makes repeat mounts essentially free server-side. The cold-mount measurement assumes a fresh resolver miss; warm hits are dominated by the network + parse cost.

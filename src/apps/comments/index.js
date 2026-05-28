@@ -14,6 +14,10 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
@@ -31,6 +35,8 @@ const STATUS_LABELS = {
 	spam: __( 'Spam', 'wp-admin-shell' ),
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
+
+const STATUS_VALUES = Object.keys( STATUS_LABELS );
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
@@ -150,6 +156,13 @@ export default function CommentsApp( { config = {} } ) {
 		queryArgs
 	);
 
+	const statusCounts = useEntityElementCounts(
+		'root',
+		'comment',
+		'status',
+		STATUS_VALUES
+	);
+
 	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -187,6 +200,16 @@ export default function CommentsApp( { config = {} } ) {
 				'comment',
 				queryArgs,
 			] );
+			// Status transitions move comments between buckets, so the
+			// per-status count queries the filter labels read from need
+			// to refresh too — same goes for the trash modal below.
+			invalidateEntityElementCounts(
+				invalidateResolution,
+				'root',
+				'comment',
+				'status',
+				STATUS_VALUES
+			);
 			const failed = results.filter(
 				( r ) => r.status === 'rejected'
 			).length;
@@ -238,8 +261,11 @@ export default function CommentsApp( { config = {} } ) {
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
 				},
+				elementCounts: {
+					status: statusCounts,
+				},
 			} ),
-		[ dataViewConfig ]
+		[ dataViewConfig, statusCounts ]
 	);
 
 	const actions = useMemo( () => {
@@ -257,6 +283,13 @@ export default function CommentsApp( { config = {} } ) {
 					'comment',
 					queryArgs,
 				] );
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'root',
+					'comment',
+					'status',
+					STATUS_VALUES
+				);
 				if ( failed > 0 ) {
 					createErrorNotice(
 						sprintf(

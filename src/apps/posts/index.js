@@ -15,6 +15,10 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import {
+	useEntityElementCounts,
+	invalidateEntityElementCounts,
+} from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 
 /**
@@ -42,6 +46,8 @@ const STATUS_LABELS = {
 	future: __( 'Scheduled', 'wp-admin-shell' ),
 	trash: __( 'Trash', 'wp-admin-shell' ),
 };
+
+const STATUS_VALUES = Object.keys( STATUS_LABELS );
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
@@ -144,6 +150,13 @@ export default function PostsApp( { config } ) {
 		queryArgs
 	);
 
+	const statusCounts = useEntityElementCounts(
+		'postType',
+		postType,
+		'status',
+		STATUS_VALUES
+	);
+
 	const { deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createNotice } = useDispatch( noticesStore );
@@ -175,8 +188,11 @@ export default function PostsApp( { config } ) {
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
 				},
+				elementCounts: {
+					status: statusCounts,
+				},
 			} ),
-		[ dataViewConfig, postType ]
+		[ dataViewConfig, postType, statusCounts ]
 	);
 
 	const actions = useMemo( () => {
@@ -200,6 +216,15 @@ export default function PostsApp( { config } ) {
 					postType,
 					queryArgs,
 				] );
+				// Trash moves rows between statuses, so the count queries
+				// the filter labels read from need to refresh too.
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'postType',
+					postType,
+					'status',
+					STATUS_VALUES
+				);
 				if ( failed > 0 ) {
 					createNotice(
 						'error',

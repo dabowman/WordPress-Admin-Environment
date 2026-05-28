@@ -74,7 +74,7 @@ A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive mo
 - No add-user flow. Adding a user requires a `POST /wp/v2/users` flow with role + email + password fields; that lands as a separate iteration alongside an invite-style UX.
 - No edit-user flow. Click-row-name navigates nowhere; profile lives in `core:profile` for the acting user only.
 - Role filter is single-select; the underlying REST endpoint accepts comma-separated roles in `?roles=`, but the queryArgs mapper only handles the `is` operator.
-- No role counts in the filter dropdown. wp-admin's role tabs show `Administrator (3) | Editor (12) | …`; the DataViews single-role filter renders raw role labels with no counts. Parity gap tracked in `docs/screens/users.md`.
+- Role **counts** now surface on the roles filter elements (`Editor (12)`) via the shared `useEntityElementCounts` hook — one lightweight `per_page=1&_fields=id` request per role, read off the `X-WP-Total` header. Role values come from the resolved spec `roles` elements, so the count set tracks whatever roles the shell exposes. Still rendered as filter-dropdown options, not the standalone tab strip wp-admin uses.
 - No `send-password-reset` bulk action. wp-admin offers it on the Users screen; the v2 app does not surface a REST equivalent.
 - No `change-role` bulk action. wp-admin's "Change role to…" dropdown above the list applies a new role to selected users; the v2 app doesn't ship this.
 - No "View author's posts" row link. wp-admin's screen links each user row to a filtered post list; the v2 app surfaces neither the link nor any per-user post count.

@@ -103,6 +103,19 @@
 					}
 				},
 				{
+					"source": "root/user",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Per-role totals for the roles filter elements (\"Editor (3)\"). One lightweight request per role value via `useEntityElementCounts`; role values come from the resolved spec elements, so the count set tracks whatever roles the shell exposes.",
+					"fields": [ "id" ],
+					"query": {
+						"roles": "{spec.roles.elements[].value}",
+						"per_page": 1,
+						"_fields": "id",
+						"context": "edit"
+					}
+				},
+				{
 					"source": "window.wpAdminShell.userId",
 					"via": "window-global",
 					"purpose": "Identify the acting user so self-delete is blocked + content reassignment target is set."
