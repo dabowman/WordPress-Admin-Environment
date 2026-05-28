@@ -73,6 +73,26 @@ class WP_Admin_Shell_Prefs_REST {
 		if ( ! is_array( $patch ) ) {
 			return new WP_Error( 'rest_invalid_param', __( 'Body must be an object.', 'wp-admin-shell' ), array( 'status' => 400 ) );
 		}
+		// Bound the write — prefs are structural UI state, not a data store.
+		// Without this any logged-in user could POST a multi-MB object that is
+		// then re-read, merged, filtered, and JSON-encoded on every admin page
+		// load (self-inflicted DB bloat + CPU). Mirrors the file origin's
+		// MAX_BYTES guard; the key cap stops a wide-but-shallow payload too.
+		$body = $request->get_body();
+		if ( is_string( $body ) && strlen( $body ) > self::MAX_BYTES ) {
+			return new WP_Error(
+				'rest_request_too_large',
+				__( 'Preferences payload too large.', 'wp-admin-shell' ),
+				array( 'status' => 413 )
+			);
+		}
+		if ( self::count_keys( $patch ) > self::MAX_KEYS ) {
+			return new WP_Error(
+				'rest_request_too_large',
+				__( 'Preferences payload has too many keys.', 'wp-admin-shell' ),
+				array( 'status' => 413 )
+			);
+		}
 		$merged = self::deep_merge( $existing, $patch );
 		update_user_meta( $user_id, self::META_KEY, $merged );
 		return rest_ensure_response( $merged );
@@ -87,6 +107,37 @@ class WP_Admin_Shell_Prefs_REST {
 	}
 
 	const MAX_MERGE_DEPTH = 10;
+
+	/** Max serialized prefs payload — structural config, not a data file. */
+	const MAX_BYTES = 262144;
+
+	/** Max total keys (recursive) in a single prefs write. */
+	const MAX_KEYS = 500;
+
+	/**
+	 * Count keys across a nested array, bounded by the merge depth so a
+	 * pathological payload can't make the counter itself expensive.
+	 *
+	 * @param mixed $value Decoded JSON value.
+	 * @param int   $depth Current depth.
+	 * @return int
+	 */
+	private static function count_keys( $value, $depth = 0 ) {
+		if ( ! is_array( $value ) || $depth >= self::MAX_MERGE_DEPTH ) {
+			return 0;
+		}
+		$count = count( $value );
+		foreach ( $value as $v ) {
+			if ( is_array( $v ) ) {
+				$count += self::count_keys( $v, $depth + 1 );
+				if ( $count > self::MAX_KEYS ) {
+					// Short-circuit — caller only cares whether we crossed it.
+					return $count;
+				}
+			}
+		}
+		return $count;
+	}
 
 	private static function deep_merge( $base, $over, $depth = 0 ) {
 		if ( $depth >= self::MAX_MERGE_DEPTH ) {

@@ -412,12 +412,15 @@ class WP_Admin_Shell_Permissions {
 			? $resolved_perms['roles']
 			: array();
 
-		// Empty OR-set (after app-floor passes) = floor was the only
-		// gate. Allow through. Resolve() already inflates absent
-		// permissions to admin-only, so this only triggers when the
-		// caller explicitly passed `{ capabilities: [], roles: [] }`.
+		// Empty OR-set: allow through ONLY when an app-floor actually gated
+		// this call (the floor caps passed above). With no floor AND no
+		// caps/roles, nothing was specified at all — fail closed rather than
+		// allow-everyone, matching resolve()'s admin-only inflation of an
+		// empty permissions block. resolve() never produces this state (it
+		// inflates), so this only diverges for callers that bypass resolve()
+		// and hand user_passes a raw `{ capabilities: [], roles: [] }`.
 		if ( empty( $caps ) && empty( $roles ) ) {
-			return true;
+			return ! empty( $floor );
 		}
 
 		foreach ( $caps as $cap ) {

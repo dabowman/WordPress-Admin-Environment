@@ -6,6 +6,7 @@ import { __ } from '@wordpress/i18n';
 import { arrowLeft } from '@wordpress/icons';
 import apiFetch from '@wordpress/api-fetch';
 import { navigate } from '../../runtime/routing/router';
+import { injectChromeHide } from '../_shared/iframe/chromeHide.mjs';
 
 /**
  * Block editor via iframe. Handles existing posts and new post (auto-draft) flow.
@@ -84,23 +85,7 @@ export default function EditorApp( { config = {} } ) {
 
 	const onIframeLoad = useCallback( ( event ) => {
 		setIframeLoading( false );
-		try {
-			const doc = event.target.contentDocument;
-			if ( ! doc ) {
-				return;
-			}
-			const style = doc.createElement( 'style' );
-			style.textContent = `
-				#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter {
-					display: none !important;
-				}
-				#wpcontent { margin-left: 0 !important; }
-				html.wp-toolbar { padding-top: 0 !important; }
-			`;
-			doc.head.appendChild( style );
-		} catch ( e ) {
-			// Cross-origin — can't inject styles.
-		}
+		injectChromeHide( event.target );
 	}, [] );
 
 	// Determine which post list to go back to.

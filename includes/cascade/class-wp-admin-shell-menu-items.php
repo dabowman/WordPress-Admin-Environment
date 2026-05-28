@@ -466,13 +466,31 @@ class WP_Admin_Shell_Menu_Items {
 		}
 		$out = array();
 		foreach ( $tree as $id => $item ) {
+			// Recurse first so nested duplicates inside this node's subtree are
+			// resolved before we decide what to do with the node itself.
+			$children = null;
+			if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
+				$children = self::drop_deeper_duplicates( $item['items'], $screens, $min_depths, $depth + 1 );
+			}
+
 			if ( isset( $screens[ $id ], $min_depths[ $id ] ) && $depth > $min_depths[ $id ] ) {
-				// A shallower copy of this screen-bound entry exists; this
-				// one is the duplicate.
+				// A shallower copy of this screen-bound entry exists; this one is
+				// the duplicate, so drop the node's own screen binding. But its
+				// children may be screen-bound ids that appear nowhere shallower
+				// — hoist any survivors up to this level so they aren't silently
+				// lost along with the deduped parent.
+				if ( is_array( $children ) ) {
+					foreach ( $children as $child_id => $child_item ) {
+						if ( ! isset( $out[ $child_id ] ) ) {
+							$out[ $child_id ] = $child_item;
+						}
+					}
+				}
 				continue;
 			}
-			if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
-				$item['items'] = self::drop_deeper_duplicates( $item['items'], $screens, $min_depths, $depth + 1 );
+
+			if ( is_array( $children ) ) {
+				$item['items'] = $children;
 			}
 			$out[ $id ] = $item;
 		}

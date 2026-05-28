@@ -4,11 +4,11 @@ All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https:/
 
 > **Status:** Pre-release. Nothing has shipped publicly; there is no installed base. The canonical architecture lives in `CLAUDE.md` + `docs/`. This file records how the codebase reached its current shape — migration history, deprecation windows, and provenance that `CLAUDE.md` deliberately omits to stay canonical.
 
-## [Unreleased]
+## [0.1.0] - 2026-05-28
 
-### 0.1.0 alpha — workspace as primary admin entry
+### Workspace as primary admin entry
 
-The first public alpha: a `wp-content/admin.json` file turns the WordPress admin into the workspace. Top-line shape (full detail in `docs/wp-admin-shell-design-spec.md` §19 and `docs/alpha-readiness.md`):
+The first public-testing release (`0.1.0`): a `wp-content/admin.json` file turns the WordPress admin into the workspace. (This is the version tracked internally as `1.0.0-beta.1` during the v3 reshape — see the note under that entry below; renumbered to `0.1.0` for the first public cut to signal pre-1.0 API/schema instability.) Top-line shape (full detail in `docs/wp-admin-shell-design-spec.md` §19 and `docs/alpha-readiness.md`):
 
 - **Theme.json-style cascade.** `wp-admin-default` ships as the baseline in the `core` origin slot; `wp-content/admin.json` is a partial delta loaded into the `plugin` slot. Field-aware merge — a one-key `{ "styles": … }` file retints the chrome while every baseline screen/menu/command survives.
 - **Workspace hijack.** `WP_Admin_Shell_Hijack` (admin_init priority 0) renders the shell at `/wp-admin/` / `index.php` / bare `admin.php` via WordPress's own `admin-header.php`/`admin-footer.php`. The legacy `admin.php?page=wp-admin-shell` entry is removed. Allowlist + the cap-gated `?classic=1` session cookie + the persistent **Settings → Workspace** toggle keep classic reachable.
@@ -18,6 +18,14 @@ The first public alpha: a `wp-content/admin.json` file turns the WordPress admin
 - **Distribution.** `npm run build:zip` (wp-scripts `plugin-zip` + the `package.json` `files` allowlist) produces `wp-admin-shell.zip`.
 
 Origin-file defensive stat hardening (`clearstatcache` + `is_file()` + `@`-suppressed reads) so the override file disappearing between requests doesn't leak warnings or break header() calls on Docker bind-mount setups.
+
+#### Pre-public-testing review hardening
+
+A whole-codebase review pass before public testing (PR #93):
+
+- **Security.** The resolved config is now pruned server-side to the screens + menu the current user can reach before it ships to the page (`wp_admin_shell_prune_config_for_user`) — the full admin IA no longer leaks to every logged-in user, and role-only nav gates the client can't evaluate are enforced server-side. `user-prefs` writes are byte/key-bounded. `user_passes()` fails closed on a truly empty permission set (no floor, no OR-set). `menu.**.permissions` joins the consumer-origin deny-list (the matcher gained `**` any-depth glob support). The classic-mode `?classic=1` toggle is nonce-protected and its cap floor lowered to `read` (mirrors the hijack floor) so any logged-in user can escape a workspace bug; the documented "Classic wp-admin" admin-bar escape control now actually ships. The classic-menu bridge skips the shell's own Settings page; the iframe bridge's `_parent`/`_top` branch enforces the wp-admin path floor; the origin-file validator rejects list-shaped object blocks.
+- **Correctness.** Simple-editor remounts on post change (no cross-post content bleed); settings-general re-syncs custom date/time formats; the bulk-confirm modal guards against double-click; taxonomy cache invalidation uses the full 3-element query key; plugins/themes lists paginate their controlled data; users/comments decode HTML entities in name/author columns; the menu shallowest-wins dedupe hoists a deduped node's unique children instead of dropping them.
+- **Distribution.** Added the `License`/`License URI`/`Author`/`Plugin URI` headers, the `WP_ADMIN_SHELL_VERSION` constant, `readme.txt`, `uninstall.php` (options + prefs meta + transient cleanup, multisite-aware), JS i18n (`wp_set_script_translations` + `languages/wp-admin-shell.pot`), and a Gutenberg runtime-dependency gate that stands the hijack down to classic instead of rendering blank. Fixed README/CLI references to the removed demo shells; archived stale process docs under `docs/archive/`.
 
 ### v3 reshape (current shape)
 
@@ -73,7 +81,7 @@ First v1 cut. Branch: `feat/wp-admin-shell-v1`. Five-milestone plan landed (M1 k
 
 ### Changed
 
-- Plugin version bumped to `1.0.0-beta.1`.
+- Plugin version bumped to `1.0.0-beta.1` (internal/pre-release only — later renumbered to `0.1.0` for the first public-testing cut; the shipped header, `WP_ADMIN_SHELL_VERSION`, and `package.json` all read `0.1.0`).
 - MVP `wp_admin_shell_active_config` option migrates to `wp_admin_shell_active_shell`. Reads check the new key first, fall back to the legacy key for one minor cycle.
 - `src/shell/*`, `src/routing/*`, `src/commands/*`, `src/config/*` retired. Surviving presentational helpers relocated to `src/runtime/apps/_components/` and `src/runtime/config/iconMap.js`.
 - `docs/wp-admin-shell-mvp-spec.md` archived to `docs/archive/`.

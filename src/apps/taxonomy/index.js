@@ -156,9 +156,13 @@ export default function TaxonomyApp( { config = {} } ) {
 					force: true,
 				} ),
 			onSettled: ( { results, failed } ) => {
+				// Must match the exact 3-element key the live useEntityRecords
+				// resolved under — core-data invalidates by deep-equal args,
+				// not prefix, so a 2-element key never hits the active query.
 				invalidateResolution( 'getEntityRecords', [
 					'taxonomy',
 					taxonomy,
+					queryArgs,
 				] );
 				if ( failed > 0 ) {
 					const first = results.find(
@@ -188,6 +192,7 @@ export default function TaxonomyApp( { config = {} } ) {
 	}, [
 		dataViewConfig,
 		taxonomy,
+		queryArgs,
 		deleteEntityRecord,
 		invalidateResolution,
 		createSuccessNotice,
@@ -259,6 +264,7 @@ export default function TaxonomyApp( { config = {} } ) {
 						invalidateResolution( 'getEntityRecords', [
 							'taxonomy',
 							taxonomy,
+							queryArgs,
 						] );
 						createSuccessNotice(
 							__( 'Term saved.', 'wp-admin-shell' ),

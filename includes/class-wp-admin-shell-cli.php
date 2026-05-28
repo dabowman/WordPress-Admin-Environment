@@ -56,7 +56,7 @@ class WP_Admin_Shell_CLI {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-shell activate content-author
+	 *     wp admin-shell activate single-pane-demo
 	 *
 	 * @when after_wp_load
 	 */

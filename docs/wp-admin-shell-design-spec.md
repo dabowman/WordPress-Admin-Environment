@@ -1360,10 +1360,10 @@ In-repo:
 - [`core-default-engine.md`](./core-default-engine.md) — engine contract worked example.
 - [`schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
 - [`public/admin-json-reference.md`](./public/admin-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
-- [`admin-customization-prior-art.md`](./admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context.
-- [`shell-architecture-research.md`](./shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design.
-- [`wordpress-design-tokens-catalog.md`](./wordpress-design-tokens-catalog.md) — WPDS surface inventory, three coexisting WP token systems, migration trajectory.
-- [`wp-admin-screen-inventory.md`](./wp-admin-screen-inventory.md) — full surface map of `wp-admin` for porting prioritization.
+- [`archive/research/admin-customization-prior-art.md`](./archive/research/admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context. (Archived.)
+- [`archive/research/shell-architecture-research.md`](./archive/research/shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design. (Archived.)
+- [`archive/wordpress-design-tokens-catalog.md`](./archive/wordpress-design-tokens-catalog.md) — WPDS surface inventory, three coexisting WP token systems, migration trajectory. (Archived.)
+- [`archive/wp-admin-screen-inventory.md`](./archive/wp-admin-screen-inventory.md) — full surface map of `wp-admin` for porting prioritization. (Archived — superseded by `docs/screens/`.)
 
 External:
 

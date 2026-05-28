@@ -1,12 +1,18 @@
 <?php
 /**
  * Plugin Name: WP Admin Shell
+ * Plugin URI: https://github.com/dabowman/WordPress-Admin-Environment
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Requires Plugins: gutenberg
+ * Author: WP Admin Shell Contributors
+ * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wp-admin-shell
+ * Domain Path: /languages
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -18,17 +24,39 @@ defined( 'ABSPATH' ) || exit;
 // it. Without Gutenberg, every @wordpress/ui overlay component throws
 // at module-load and the shell renders empty. Surface a clear notice
 // instead of letting that happen silently.
-add_action( 'admin_notices', function () {
+/**
+ * Whether the hard runtime dependency (the Gutenberg plugin) is active.
+ *
+ * `@wordpress/ui` overlay components transitively import `@wordpress/theme`,
+ * which opts into private APIs only the Gutenberg plugin's `wp-private-apis`
+ * override whitelists. Without it those modules throw at module-load and the
+ * shell renders blank. Checked at the plugin (option) layer plus the runtime
+ * `GUTENBERG_VERSION` constant Gutenberg defines when it loads.
+ *
+ * @return bool
+ */
+function wp_admin_shell_dependencies_met() {
+	if ( defined( 'GUTENBERG_VERSION' ) ) {
+		return true;
+	}
 	if ( ! function_exists( 'is_plugin_active' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
-	if ( ! is_plugin_active( 'gutenberg/gutenberg.php' ) ) {
+	return is_plugin_active( 'gutenberg/gutenberg.php' );
+}
+
+add_action( 'admin_notices', function () {
+	if ( ! wp_admin_shell_dependencies_met() ) {
 		echo '<div class="notice notice-error"><p>';
-		echo esc_html__( 'WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists.', 'wp-admin-shell' );
+		echo esc_html__( 'WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated.', 'wp-admin-shell' );
 		echo '</p></div>';
 	}
 } );
 
+// Single source of truth for the plugin version — keep in sync with the
+// `Version:` header above and `package.json`. Used for asset cache-busting
+// fallbacks and surfaced to support/debug tooling.
+define( 'WP_ADMIN_SHELL_VERSION', '0.1.0' );
 define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
 define( 'WP_ADMIN_SHELL_DB_VERSION', 1 );
@@ -403,6 +431,16 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		true
 	);
 
+	// JS i18n: load translations for every `__()`/`_n()`/`sprintf` string in
+	// the bundle (and lazily-loaded app chunks, which share the handle's
+	// domain). `.json` translation files live in `languages/`; regenerate the
+	// `.pot` with `wp i18n make-pot . languages/wp-admin-shell.pot`.
+	wp_set_script_translations(
+		'wp-admin-shell',
+		'wp-admin-shell',
+		WP_ADMIN_SHELL_PATH . 'languages'
+	);
+
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-shell` as a dependency loads once the kernel has published
@@ -458,8 +496,15 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 
 	$manifest_registry = WP_Admin_Shell_Manifest_Registry::instance();
 
+	// Server-side visibility prune: ship only the screens + menu this user can
+	// reach. The full $config stays available above for engine/preload/style
+	// selection (user-invariant); everything user-facing below reads the
+	// pruned copy so the page source never carries an unreachable screen's
+	// permissions/legacy maps or a role-gated nav item the client can't gate.
+	$client_config = wp_admin_shell_prune_config_for_user( $config, get_current_user_id() );
+
 	wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
-		'config'        => $config,
+		'config'        => $client_config,
 		'siteUrl'       => get_site_url(),
 		'homeUrl'       => home_url(),
 		'adminUrl'      => admin_url(),
@@ -469,7 +514,7 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		// (W4). Keyed by workspace route path → { legacy_path, legacy_query,
 		// legacy_params }. Empty until screens / programmatic routes declare
 		// `legacy_path`.
-		'adminRoutes'   => WP_Admin_Shell_Admin_Routes::legacy_map( $config ),
+		'adminRoutes'   => WP_Admin_Shell_Admin_Routes::legacy_map( $client_config ),
 		'restUrl'       => get_rest_url(),
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),
@@ -496,7 +541,7 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
 			: null,
-		'capabilities'  => wp_admin_shell_resolve_capabilities( $config ),
+		'capabilities'  => wp_admin_shell_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
 		// the imperative registry during the v1→v2 transition.
@@ -636,6 +681,121 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
  * cost only fires when origin signals (option / user-meta / file-mtime)
  * change. Hot path = zero cap checks.
  */
+/**
+ * Prune screens + menu the given user can't reach BEFORE the resolved config
+ * is serialized to the page. Without this the full admin IA — every screen,
+ * each screen's `permissions` block, `legacy_path` maps, the whole menu tree —
+ * ships in page source to every logged-in user down to subscriber, with
+ * capability gating applied client-side only (and roles not evaluable on the
+ * client at all). Entity *data* is still REST-gated; this closes the
+ * structural/metadata leak and makes the server the authority for visibility,
+ * mirroring how wp-admin server-prunes its own menu by capability.
+ *
+ * Operates on a COPY — callers keep the full resolved doc for server-side use
+ * (REST screen-permission floors must still see every screen). Scope is
+ * screens + menu: the `regions`/`routes` escape hatches and `commands` are
+ * left intact (rarely role-gated; a command pointing at a pruned screen just
+ * resolves to no route). The `workspace.default-screen` is always kept so the
+ * kernel always has a landing route — its mounted app cap-gates itself.
+ *
+ * @param array $config  Full resolved admin.json doc.
+ * @param int   $user_id Current user id.
+ * @return array Pruned copy.
+ */
+function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
+	if ( ! is_array( $config ) || ! class_exists( 'WP_Admin_Shell_Permissions' ) ) {
+		return $config;
+	}
+	$user_id = (int) $user_id;
+
+	/**
+	 * Escape hatch — return false to ship the full unpruned config (e.g. to
+	 * debug a shell whose screens vanish unexpectedly). Default true.
+	 *
+	 * @param bool  $prune   Whether to prune.
+	 * @param array $config  The resolved doc.
+	 * @param int   $user_id Current user id.
+	 */
+	if ( ! apply_filters( 'wp_admin_shell_prune_unreachable', true, $config, $user_id ) ) {
+		return $config;
+	}
+
+	$default_screen = isset( $config['workspace']['default-screen'] ) && is_string( $config['workspace']['default-screen'] )
+		? (string) $config['workspace']['default-screen']
+		: '';
+
+	// 1. Prune screens whose resolved permissions the user fails.
+	$removed = array();
+	if ( isset( $config['screens'] ) && is_array( $config['screens'] ) ) {
+		foreach ( $config['screens'] as $screen_id => $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			if ( (string) $screen_id === $default_screen ) {
+				continue;
+			}
+			$resolved = WP_Admin_Shell_Permissions::resolve(
+				$screen['permissions'] ?? null,
+				WP_Admin_Shell_Permissions::app_floor_for( $screen )
+			);
+			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
+				unset( $config['screens'][ $screen_id ] );
+				$removed[ (string) $screen_id ] = true;
+			}
+		}
+	}
+
+	// 2. Prune menu nodes bound to a removed screen, or carrying their own
+	//    failing permissions (the role-gated nav-item leak the client can't
+	//    evaluate). Recursive — drops a deduped subtree along with its parent.
+	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
+		$config['menu'] = wp_admin_shell_prune_menu_for_user( $config['menu'], $removed, $user_id, 0 );
+	}
+
+	return $config;
+}
+
+/**
+ * Recursive helper for {@see wp_admin_shell_prune_config_for_user()}. Drops
+ * menu nodes bound to a removed screen id and nodes whose own `permissions`
+ * fail for the user.
+ *
+ * @param array $tree            Menu (sub-)tree.
+ * @param array $removed_screens Map of removed screen id → true.
+ * @param int   $user_id         Current user id.
+ * @param int   $depth           Recursion guard.
+ * @return array
+ */
+function wp_admin_shell_prune_menu_for_user( $tree, $removed_screens, $user_id, $depth ) {
+	if ( ! is_array( $tree ) || $depth > 20 ) {
+		return $tree;
+	}
+	$out = array();
+	foreach ( $tree as $id => $item ) {
+		if ( isset( $removed_screens[ (string) $id ] ) ) {
+			continue;
+		}
+		if ( is_array( $item ) ) {
+			if ( isset( $item['permissions'] ) && is_array( $item['permissions'] ) ) {
+				$resolved = WP_Admin_Shell_Permissions::resolve( $item['permissions'], array() );
+				if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
+					continue;
+				}
+			}
+			if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
+				$item['items'] = wp_admin_shell_prune_menu_for_user(
+					$item['items'],
+					$removed_screens,
+					$user_id,
+					$depth + 1
+				);
+			}
+		}
+		$out[ $id ] = $item;
+	}
+	return $out;
+}
+
 function wp_admin_shell_resolve_capabilities( $config ) {
 	$declared = array();
 

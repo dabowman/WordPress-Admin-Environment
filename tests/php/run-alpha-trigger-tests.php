@@ -108,6 +108,12 @@ $T::ok( 'empty object treated as no override: load null', WP_Admin_Shell_Origin_
 $T::use_override( 'bad-screens-type.json' );
 $T::ok( 'structurally bad block (screens: string) → load null', WP_Admin_Shell_Origin_File::load() === null );
 
+// A list-shaped object block (`"screens": [ … ]`) is `is_array()`-true but
+// would flow into merge_authoritative against the assoc baseline — reject it
+// the same as a scalar block. (Empty `[]` is ambiguous with `{}` and allowed.)
+$T::use_override( 'list-shaped-screens.json' );
+$T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Shell_Origin_File::load() === null );
+
 $T::use_override( '' );
 $T::ok( 'absent file: load null', WP_Admin_Shell_Origin_File::load() === null );
 $T::ok( 'absent file: exists_and_valid false', ! WP_Admin_Shell_Origin_File::exists_and_valid() );
@@ -178,7 +184,7 @@ $T::ok( 'file present → workspace active', wp_admin_shell_workspace_active() =
 $T::use_override( '' );
 $T::ok( 'no file + no option → workspace inactive', wp_admin_shell_workspace_active() === false );
 
-update_option( 'wp_admin_shell_active_shell', 'developer-admin' );
+update_option( 'wp_admin_shell_active_shell', 'single-pane-demo' );
 $T::ok( 'no file + explicit option → workspace active', wp_admin_shell_workspace_active() === true );
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.

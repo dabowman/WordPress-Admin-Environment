@@ -296,6 +296,25 @@ $T::assert_true(
 	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_with_admin )
 );
 
+// Raw empty OR-set fail-closed (bypassing resolve(), which would inflate).
+// A caller that hands user_passes `{capabilities:[],roles:[],appFloor:[]}`
+// — nothing specified at all — must be DENIED, not allow-everyone. But a
+// floor-only resolve (empty OR-set, non-empty floor that passed) still allows.
+$T::assert_false(
+	'user_passes: raw empty OR-set + no floor → denied (fail-closed)',
+	WP_Admin_Shell_Permissions::user_passes(
+		$admin_id,
+		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array() )
+	)
+);
+$T::assert_true(
+	'user_passes: empty OR-set but passing floor → floor was the gate, allow',
+	WP_Admin_Shell_Permissions::user_passes(
+		$admin_id,
+		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array( 'read' ) )
+	)
+);
+
 // ── 6. unknown slugs fail closed ──────────────────────────────────────
 
 $unknown_cap = WP_Admin_Shell_Permissions::resolve(

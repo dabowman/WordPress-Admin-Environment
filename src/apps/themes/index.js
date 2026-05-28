@@ -266,12 +266,20 @@ export default function ThemesApp( { config = {} } ) {
 		[ dataViewConfig, activate, renderDetailsModal ]
 	);
 
+	// DataViews is controlled and won't auto-slice; with perPage=50 an install
+	// with >50 themes rendered every theme on one page and pinned totalPages to
+	// 1 (inert pager). Slice here and compute the real page count.
+	const paginatedData = useMemo( () => {
+		const start = ( view.page - 1 ) * view.perPage;
+		return data.slice( start, start + view.perPage );
+	}, [ data, view.page, view.perPage ] );
+
 	const paginationInfo = useMemo(
 		() => ( {
 			totalItems: data.length,
-			totalPages: 1,
+			totalPages: Math.max( 1, Math.ceil( data.length / view.perPage ) ),
 		} ),
-		[ data.length ]
+		[ data.length, view.perPage ]
 	);
 
 	return (
@@ -282,7 +290,7 @@ export default function ThemesApp( { config = {} } ) {
 				</div>
 			) : (
 				<DataViews
-					data={ data }
+					data={ paginatedData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }

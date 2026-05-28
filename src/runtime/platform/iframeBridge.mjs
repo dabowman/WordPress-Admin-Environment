@@ -60,9 +60,15 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 			// paths, but mirror the check here so a tampered payload can't
 			// point the iframe at an arbitrary origin).
 			try {
-				const expectedOrigin = new URL( adminUrl ).origin;
-				const targetOrigin = new URL( url, adminUrl ).origin;
-				if ( expectedOrigin !== targetOrigin ) {
+				const base = new URL( adminUrl );
+				const target = new URL( url, adminUrl );
+				if ( base.origin !== target.origin ) {
+					return { type: 'ignore' };
+				}
+				// Mirror the rest of the bridge's wp-admin path floor: a
+				// same-origin but non-admin path (e.g. /wp-content/uploads/x.html)
+				// must not become an iframe.src navigation sink.
+				if ( ! target.pathname.startsWith( base.pathname ) ) {
 					return { type: 'ignore' };
 				}
 			} catch ( e ) {

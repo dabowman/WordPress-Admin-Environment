@@ -260,6 +260,14 @@ export default function PluginsApp( { config = {} } = {} ) {
 		} );
 	}, [ dataViewConfig, setPluginStatus, refresh ] );
 
+	// DataViews is controlled and won't auto-slice the `data` it's handed, so
+	// paginate here — otherwise page 1 shows every plugin and "Next" re-renders
+	// the same unsliced list.
+	const paginatedData = useMemo( () => {
+		const start = ( view.page - 1 ) * view.perPage;
+		return data.slice( start, start + view.perPage );
+	}, [ data, view.page, view.perPage ] );
+
 	const paginationInfo = useMemo(
 		() => ( {
 			totalItems: data.length,
@@ -286,7 +294,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 				</div>
 			) : (
 				<DataViews
-					data={ data }
+					data={ paginatedData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }

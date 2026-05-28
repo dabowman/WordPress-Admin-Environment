@@ -67,6 +67,12 @@ class WP_Admin_Shell_Customizable {
 	 */
 	const DENY_PATTERNS = array(
 		'screens.*.permissions',
+		// `**` = any depth: the menu is a recursive tree (nested `items`), so a
+		// nav node's `permissions` can live at `menu.<id>.items.<id>.permissions`.
+		// Deny at every depth so a consumer origin can't broaden nav-link
+		// visibility (cosmetic — real gates hold via screens.*.permissions and
+		// server-side enforcement — but visibility is still a leak).
+		'menu.**.permissions',
 		'screens.*.app',
 		'commands.*.invoke',
 		'workspace.engine',
@@ -487,25 +493,54 @@ class WP_Admin_Shell_Customizable {
 	private static function path_matches_any_pattern( $path, $patterns ) {
 		$path_segments = explode( '.', $path );
 		foreach ( $patterns as $pattern ) {
-			$pattern_segments = explode( '.', $pattern );
-			if ( count( $path_segments ) < count( $pattern_segments ) ) {
-				continue;
-			}
-			$match = true;
-			foreach ( $pattern_segments as $i => $seg ) {
-				if ( $seg === '*' ) {
-					continue;
-				}
-				if ( ( $path_segments[ $i ] ?? null ) !== $seg ) {
-					$match = false;
-					break;
-				}
-			}
-			if ( $match ) {
+			if ( self::glob_match_segments( explode( '.', $pattern ), $path_segments, 0, 0 ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Segment glob matcher. `*` matches exactly one segment; `**` matches zero
+	 * or more segments. The pattern carries an implicit trailing `**` (it's a
+	 * prefix match — anything under the matched path is also denied), so once
+	 * the pattern is exhausted the path matches regardless of trailing
+	 * segments. This is what lets `menu.**.permissions` deny a `permissions`
+	 * block at any depth in the nested menu tree.
+	 *
+	 * @param string[] $pat  Pattern segments.
+	 * @param string[] $path Path segments.
+	 * @param int      $pi   Pattern index.
+	 * @param int      $si   Path index.
+	 * @return bool
+	 */
+	private static function glob_match_segments( $pat, $path, $pi, $si ) {
+		$pn = count( $pat );
+		$sn = count( $path );
+		while ( $pi < $pn ) {
+			$seg = $pat[ $pi ];
+			if ( '**' === $seg ) {
+				// Match the rest of the pattern at every remaining position,
+				// including consuming zero segments here.
+				for ( $k = $si; $k <= $sn; $k++ ) {
+					if ( self::glob_match_segments( $pat, $path, $pi + 1, $k ) ) {
+						return true;
+					}
+				}
+				return false;
+			}
+			if ( $si >= $sn ) {
+				return false;
+			}
+			if ( '*' !== $seg && $seg !== $path[ $si ] ) {
+				return false;
+			}
+			++$pi;
+			++$si;
+		}
+		// Pattern exhausted → implicit trailing `**`: any remaining path
+		// segments are fine (prefix match preserved).
+		return true;
 	}
 
 	/**

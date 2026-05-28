@@ -38,10 +38,9 @@ When unclear which file to touch, ask the user **what** they want to change (scr
 
 | File | Why useful |
 |---|---|
-| `shells/canonical-demo.json` | Minimal admin.json. Single workspace, simple menu, command, theme tweak. Start here. |
-| `shells/developer-admin.json` | Full shape: `settings.dataViews` + `dataFields`, drill-down menu, multiple bound screens. |
+| `shells/single-pane-demo.json` | Compact full-shape example: bound screens, menu, commands, theme tweak, on the `core:single-pane` engine. Start here. |
 | `shells/wp-admin-default.json` | Largest shell — every wp-admin screen, iframe fallbacks, capability gating, dashboard widgets in `apps[]`. |
-| `shells/single-pane-demo.json` / `desktop-demo.json` | Same set of screens against alternate engines — engine selection is one field. |
+| `shells/desktop-demo.json` | Same screens against the `core:desktop` engine — engine selection is one field. |
 | `src/runtime/engines/core-default/engine.json` | Reference engine manifest. `templates` + `modes` + `defaultRegions` + `default-styles`. |
 | `src/apps/posts/app.json` | Reference app manifest with full `dataView` variants family + `documentation` block. |
 | `src/apps/dashboard-host/app.json` | App that declares a `slots` block (the `grid` slot widgets mount into). |

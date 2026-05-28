@@ -1,7 +1,7 @@
 /* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalDivider has no @wordpress/ui 0.12 port. */
 import './index.css';
 import '../_shared/app.css';
-import { useState } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
 import {
@@ -32,6 +32,33 @@ export default function SettingsGeneralApp() {
 	const [ timeFormatCustom, setTimeFormatCustom ] = useState(
 		editedRecord?.time_format || ''
 	);
+
+	// `editedRecord` is null on first render (the Spinner returns before the
+	// record resolves), so the `useState` seeds above latch to ''. Re-sync the
+	// custom-format memory from the resolved record once, so a site already on
+	// a non-preset format keeps it when the user toggles preset → Custom
+	// instead of silently writing the 'Y-m-d'/'H:i' fallback.
+	const formatInitRef = useRef( false );
+	useEffect( () => {
+		if ( formatInitRef.current || ! record || ! data ) {
+			return;
+		}
+		formatInitRef.current = true;
+		const datePresets = data.dateFormats.map( ( o ) => o.value );
+		const timePresets = data.timeFormats.map( ( o ) => o.value );
+		if (
+			record.date_format &&
+			! datePresets.includes( record.date_format )
+		) {
+			setDateFormatCustom( record.date_format );
+		}
+		if (
+			record.time_format &&
+			! timePresets.includes( record.time_format )
+		) {
+			setTimeFormatCustom( record.time_format );
+		}
+	}, [ record, data ] );
 
 	const isMultisite = !! data?.isMultisite;
 

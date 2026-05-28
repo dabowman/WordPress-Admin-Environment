@@ -47,9 +47,23 @@ Three artifact types, three responsibilities:
 
 ## Installation
 
+### From a release zip (recommended)
+
+Most installs want the prebuilt zip — no Node toolchain required on the server:
+
+1. Activate the **Gutenberg** plugin first (hard runtime dependency).
+2. In wp-admin, go to **Plugins → Add New → Upload Plugin**, choose
+   `wp-admin-shell.zip`, and install.
+3. Activate **WP Admin Shell**.
+
+Grab `wp-admin-shell.zip` from the releases page, or build one yourself with
+`npm run build:zip` (see below).
+
+### From source (development)
+
 ```bash
-git clone https://github.com/your-org/wp-admin-shell.git
-cd wp-admin-shell
+git clone https://github.com/dabowman/WordPress-Admin-Environment.git
+cd WordPress-Admin-Environment
 npm install
 npm run build
 ```
@@ -64,7 +78,7 @@ To produce a `wp-admin-shell.zip` that can be uploaded via **Plugins → Add New
 npm run build:zip
 ```
 
-Output: `wp-admin-shell.zip` at the project root, ~740 KB. It bundles `wp-admin-shell.php`, `includes/`, the compiled `build/`, the seven `shells/`, `assets/`, `core.tokens.json`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+Output: `wp-admin-shell.zip` at the project root. It bundles `wp-admin-shell.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `shells/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
 
 ### With wp-env (development)
 
@@ -82,7 +96,8 @@ through from the baseline.
 
 ```bash
 # Quickstart: copy a starter template, then visit /wp-admin/
-cp wp-content/plugins/wp-admin-shell/shells/developer-admin.json wp-content/admin.json
+# (any valid admin.json here turns the workspace on)
+cp wp-content/plugins/wp-admin-shell/shells/single-pane-demo.json wp-content/admin.json
 ```
 
 1. Activate the plugin (and Gutenberg).
@@ -93,9 +108,10 @@ cp wp-content/plugins/wp-admin-shell/shells/developer-admin.json wp-content/admi
    level. With no file present (and no legacy option set), wp-admin stays
    classic and untouched.
 
-`Cmd/Ctrl+K` opens the command palette. Administrators get a **Classic
-wp-admin** toolbar button (session-scoped escape hatch); the classic admin bar
-shows a reciprocal **Back to workspace** link.
+`Cmd/Ctrl+K` opens the command palette. The workspace admin bar shows a
+**Classic wp-admin** button (a session-scoped, nonce-protected escape hatch
+available to every logged-in user, down to the `read` floor); the classic admin
+bar shows a reciprocal **Back to workspace** link.
 
 > The legacy `admin.php?page=wp-admin-shell` entry is gone as of `0.1.0`. The
 > file is the trigger and the configuration. See
@@ -115,12 +131,8 @@ shows a reciprocal **Back to workspace** link.
 | Slug | Notes |
 |---|---|
 | `wp-admin-default` | Default install. Mirrors stock wp-admin via capability-gated screens + iframe fallbacks + the classic-menu bridge. |
-| `developer-admin` | Native apps (users / comments / settings / site editor) + drilldown menu containers. |
-| `content-author` | Minimal writing environment — collapsed sidebar, Posts / Pages / Media. |
-| `client-portal` | Branded shell with custom logo + accent, scoped nav, "View Site" link. |
 | `single-pane-demo` | `core:single-pane` engine demo. |
 | `desktop-demo` | `core:desktop` engine demo. |
-| `canonical-demo` | Canonical admin.json shape on `core:default`. |
 
 ## `admin.json` schema
 

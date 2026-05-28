@@ -363,6 +363,46 @@ $T::assert_true(
 	! isset( $filtered['screens']['users']['app'] )
 );
 
+// Hardcoded deny — menu.**.permissions NEVER writable at ANY depth (the
+// `**` pattern walks the nested menu tree), so a consumer can't broaden
+// nav-link visibility even with a matching `customizable` allowlist.
+$upstream = array(
+	'menu' => array(
+		'tools' => array(
+			'label'        => 'Tools',
+			'permissions'  => array( 'roles' => array( 'administrator' ) ),
+			'customizable' => array( 'permissions', 'permissions.roles', 'items' ),
+			'items'        => array(
+				'reports' => array(
+					'label'       => 'Reports',
+					'permissions' => array( 'roles' => array( 'administrator' ) ),
+				),
+			),
+		),
+	),
+);
+$downstream = array(
+	'menu' => array(
+		'tools' => array(
+			'permissions' => array( 'roles' => array( 'subscriber' ) ),
+			'items'       => array(
+				'reports' => array(
+					'permissions' => array( 'roles' => array( 'subscriber' ) ),
+				),
+			),
+		),
+	),
+);
+$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$T::assert_true(
+	'hardcoded deny: menu.*.permissions rejected (top level)',
+	! isset( $filtered['menu']['tools']['permissions'] )
+);
+$T::assert_true(
+	'hardcoded deny: menu.**.permissions rejected (nested items)',
+	! isset( $filtered['menu']['tools']['items']['reports']['permissions'] )
+);
+
 // Hardcoded deny — commands[].invoke NEVER writable.
 $upstream = array(
 	'commands' => array(

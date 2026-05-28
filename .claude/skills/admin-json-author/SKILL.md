@@ -18,7 +18,7 @@ Always set `"version": 3`.
 | `docs/schema-sketch.md` | Design doc. Cascade semantics, OR-semantic permissions w/ trust tiers, mode catalog, slot vocabulary, classic wp-admin menu bridge, programmatic registration. |
 | `docs/dataview-config.md` | dataView 3-axis registry (`kind/name/variant`), `extends`, filter hooks, REST endpoints. |
 | `docs/wp-admin-shell-design-spec.md` | Master spec — runtime architecture, region vocabulary, URL routing, capability gating, theming model, extension points. Read §5 (regions) and §6 (routing) when using the escape hatches. |
-| `shells/canonical-demo.json` | Smallest example — start here. |
+| `shells/single-pane-demo.json` | Compact example — start here. |
 | `shells/wp-admin-default.json` | Largest example — every wp-admin screen, iframe fallbacks, multi-app screens. |
 
 ## Top-level shape (cheat sheet)

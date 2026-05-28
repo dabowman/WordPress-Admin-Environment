@@ -7,6 +7,7 @@ import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
@@ -139,9 +140,9 @@ export default function UsersApp( { config = {} } = {} ) {
 		}
 		return records.map( ( record ) => ( {
 			id: record.id,
-			name: record.name,
+			name: decodeEntities( record.name || '' ),
 			email: record.email || '',
-			username: record.username,
+			username: decodeEntities( record.username || '' ),
 			roles: ( record.roles || [] ).join( ', ' ),
 			registered_date: record.registered_date,
 			rawRecord: record,

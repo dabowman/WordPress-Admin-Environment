@@ -1,5 +1,6 @@
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
+import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -46,6 +47,10 @@ export function createBulkConfirmModal( {
 		closeModal,
 		onActionPerformed,
 	} ) {
+		// Re-entry guard: the confirm handler is async and `closeModal()` only
+		// runs after the await, so without this a fast second click fires a
+		// second destructive batch (duplicate DELETEs + spurious failures).
+		const [ isBusy, setIsBusy ] = useState( false );
 		const targets = filterItems ? filterItems( items ) : items;
 		const disabled = isConfirmDisabled
 			? isConfirmDisabled( targets )
@@ -73,8 +78,13 @@ export function createBulkConfirmModal( {
 					<DestructiveButton
 						variant="primary"
 						isDestructive
-						disabled={ disabled }
+						disabled={ disabled || isBusy }
+						isBusy={ isBusy }
 						onClick={ async () => {
+							if ( isBusy ) {
+								return;
+							}
+							setIsBusy( true );
 							let results = [];
 							let failed = 0;
 							let succeeded = targets;
