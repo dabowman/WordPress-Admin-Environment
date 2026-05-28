@@ -80,22 +80,37 @@ class WP_Admin_Shell_Origin_File {
 		self::$memo['loaded'] = true;
 
 		$path = self::path();
-		if ( ! is_readable( $path ) ) {
+		// Force a fresh stat — the realpath cache can lie when the file was
+		// removed between requests (PHP keeps a cached "exists + readable"
+		// entry that survives until the next clearstatcache, and some Docker
+		// bind-mount setups are flaky enough that even is_readable() returns
+		// the stale answer). is_file() blocks dir paths the filter might
+		// return.
+		clearstatcache( true, $path );
+		if ( ! is_readable( $path ) || ! is_file( $path ) ) {
 			self::$memo['doc'] = null;
 			return null;
 		}
 
 		// Size guard — the override is structural config, not a data file.
 		// Caps the read + the json_decode work on a cache-cold admin request.
-		$size = filesize( $path );
-		if ( false !== $size && $size > self::MAX_BYTES ) {
+		// `@`-suppressed because we already handle a false return; without
+		// it, a race between the readability check and the stat would leak
+		// a `filesize(): stat failed` warning to output.
+		$size = @filesize( $path );
+		if ( false === $size ) {
+			self::$memo['doc'] = null;
+			return null;
+		}
+		if ( $size > self::MAX_BYTES ) {
 			self::warn_invalid( $path );
 			self::$memo['doc'] = null;
 			return null;
 		}
 
-		$json = file_get_contents( $path );
-		if ( $json === false || $json === '' ) {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- handled below; suppression keeps a stat-race from emitting "Failed to open stream".
+		$json = @file_get_contents( $path );
+		if ( false === $json || '' === $json ) {
 			self::$memo['doc'] = null;
 			return null;
 		}
@@ -127,7 +142,12 @@ class WP_Admin_Shell_Origin_File {
 	 */
 	public static function mtime() {
 		$path = self::path();
-		return is_readable( $path ) ? (int) filemtime( $path ) : 0;
+		clearstatcache( true, $path );
+		if ( ! is_readable( $path ) || ! is_file( $path ) ) {
+			return 0;
+		}
+		$mtime = @filemtime( $path );
+		return false !== $mtime ? (int) $mtime : 0;
 	}
 
 	/**
@@ -142,10 +162,16 @@ class WP_Admin_Shell_Origin_File {
 	 */
 	public static function signal() {
 		$path = self::path();
-		if ( ! is_readable( $path ) ) {
+		clearstatcache( true, $path );
+		if ( ! is_readable( $path ) || ! is_file( $path ) ) {
 			return '0:0';
 		}
-		return (int) filemtime( $path ) . ':' . (int) filesize( $path );
+		$mtime = @filemtime( $path );
+		$size  = @filesize( $path );
+		if ( false === $mtime || false === $size ) {
+			return '0:0';
+		}
+		return (int) $mtime . ':' . (int) $size;
 	}
 
 	/**
