@@ -56,6 +56,16 @@ npm run build
 
 Copy the directory into `wp-content/plugins/`, then activate **WP Admin Shell** (activate Gutenberg first).
 
+### Building a distributable zip
+
+To produce a `wp-admin-shell.zip` that can be uploaded via **Plugins → Add New → Upload Plugin** on any WordPress site:
+
+```bash
+npm run build:zip
+```
+
+Output: `wp-admin-shell.zip` at the project root, ~640 KB. It bundles `wp-admin-shell.php`, `includes/`, the compiled `build/`, the seven `shells/`, `assets/`, `core.tokens.json`, `README.md`, and `CHANGELOG.md` — nothing from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+
 ### With wp-env (development)
 
 ```bash
