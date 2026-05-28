@@ -105,6 +105,9 @@ $T::ok( 'JSON array (not object): load null', WP_Admin_Shell_Origin_File::load()
 $T::use_override( 'empty-object.json' );
 $T::ok( 'empty object treated as no override: load null', WP_Admin_Shell_Origin_File::load() === null );
 
+$T::use_override( 'bad-screens-type.json' );
+$T::ok( 'structurally bad block (screens: string) → load null', WP_Admin_Shell_Origin_File::load() === null );
+
 $T::use_override( '' );
 $T::ok( 'absent file: load null', WP_Admin_Shell_Origin_File::load() === null );
 $T::ok( 'absent file: exists_and_valid false', ! WP_Admin_Shell_Origin_File::exists_and_valid() );

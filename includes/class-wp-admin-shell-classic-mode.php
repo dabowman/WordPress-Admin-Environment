@@ -47,6 +47,25 @@ class WP_Admin_Shell_Classic_Mode {
 		if ( ! isset( $_GET['classic'] ) ) {
 			return;
 		}
+		// The toggle is a plain GET link from the workspace toolbar / classic
+		// admin bar. Don't fire its cookie-set + redirect + exit on the
+		// non-page contexts the hijack itself exempts (ajax / REST / cron /
+		// xmlrpc / CLI) or on a non-GET request — a stray `?classic=` there
+		// would short-circuit a request that was never meant to toggle.
+		if ( ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() )
+			|| ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+			|| ( defined( 'DOING_CRON' ) && DOING_CRON )
+			|| ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST )
+			|| ( defined( 'WP_CLI' ) && WP_CLI )
+		) {
+			return;
+		}
+		$method = isset( $_SERVER['REQUEST_METHOD'] )
+			? strtoupper( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) )
+			: 'GET';
+		if ( 'GET' !== $method ) {
+			return;
+		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$value = sanitize_text_field( wp_unslash( $_GET['classic'] ) );
 

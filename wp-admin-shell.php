@@ -415,6 +415,10 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
 		'shells'        => wp_admin_shell_get_available_shells(),
+		// True when a wp-content/admin.json override is active — it wins over
+		// the active-shell option, so the shell switcher hides + switchShell()
+		// refuses (writing the option would be a silent no-op).
+		'workspaceFileActive' => class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid(),
 		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
 		// production builds. PHP `_deprecated_hook` is gated by
 		// `WP_DEBUG_LOG` only and fires regardless of build mode; the

@@ -118,6 +118,27 @@ ok(
 	classifyBridgeMessage( { type: 'wp-admin-shell-external-link' }, ctx )
 		.type === 'ignore'
 );
+ok(
+	'external mailto → external',
+	classifyBridgeMessage(
+		{ type: 'wp-admin-shell-external-link', url: 'mailto:a@b.test' },
+		ctx
+	).type === 'external'
+);
+ok(
+	'external javascript: → ignore (scheme allowlist)',
+	classifyBridgeMessage(
+		{ type: 'wp-admin-shell-external-link', url: 'javascript:alert(1)' },
+		ctx
+	).type === 'ignore'
+);
+ok(
+	'external data: → ignore (scheme allowlist)',
+	classifyBridgeMessage(
+		{ type: 'wp-admin-shell-external-link', url: 'data:text/html,x' },
+		ctx
+	).type === 'ignore'
+);
 
 // ── installIframeBridge ────────────────────────────────────────────
 
@@ -229,6 +250,30 @@ ok( 'external-link opens externally', externalTo === 'https://example.com' );
 
 uninstall();
 ok( 'uninstall removes the handler', ! win.hasHandler );
+
+// Source pin is mandatory: omitting getIframeWindow refuses all messages.
+const win2 = fakeWin();
+let navd2 = null;
+installIframeBridge( {
+	adminUrl: ADMIN_URL,
+	routes: ROUTES,
+	navigate: ( h ) => {
+		navd2 = h;
+	},
+	win: win2,
+} );
+win2.dispatch( {
+	origin: 'https://site.test',
+	source: iframeWindow,
+	data: {
+		type: 'wp-admin-shell-admin-link',
+		url: ADMIN_URL + 'edit.php?post_type=page',
+	},
+} );
+ok(
+	'no getIframeWindow → messages refused (source pin mandatory)',
+	navd2 === null
+);
 
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );

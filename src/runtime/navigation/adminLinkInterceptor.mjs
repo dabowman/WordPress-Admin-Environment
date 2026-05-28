@@ -104,6 +104,12 @@ export function matchLegacyRoute( script, query, routes ) {
 			continue;
 		}
 		const legacyQuery = route.legacy_query || {};
+		// An incidental, possibly state-changing `action` the entry doesn't
+		// itself claim must not be dropped by routing — skip entries that
+		// don't constrain `action` when the URL carries one.
+		if ( query.has( 'action' ) && ! ( 'action' in legacyQuery ) ) {
+			continue;
+		}
 		let matches = true;
 		for ( const key of Object.keys( legacyQuery ) ) {
 			// Absent param compares as '' (matches the PHP `'' === $got`

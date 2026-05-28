@@ -86,6 +86,9 @@ $T::ok( 'bare admin.php is a root entry', $is_root->invoke( null ) === true );
 $T::request( 'admin.php', 'acme-thing' );
 $T::ok( 'admin.php?page=acme-thing is NOT a root entry (plugin page)', $is_root->invoke( null ) === false );
 
+$T::request( 'index.php', 'my-tool' );
+$T::ok( 'index.php?page=my-tool is NOT a root entry (dashboard subpage)', $is_root->invoke( null ) === false );
+
 $T::request( 'edit.php' );
 $T::ok( 'edit.php is NOT a root entry (W5 redirect territory)', $is_root->invoke( null ) === false );
 

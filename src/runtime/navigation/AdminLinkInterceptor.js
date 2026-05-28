@@ -21,7 +21,15 @@ export function AdminLinkInterceptor() {
 	useEffect( () => {
 		const shell =
 			typeof window !== 'undefined' ? window.wpAdminShell : null;
-		const adminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
+		// Always pass an ABSOLUTE admin URL — `classifyAdminLink` does
+		// `new URL( adminUrl )` with no base, which throws on a relative
+		// string and would silently disable all interception. `admin_url()`
+		// is absolute in prod; the fallback must be too.
+		const origin =
+			typeof window !== 'undefined' && window.location
+				? window.location.origin
+				: '';
+		const adminUrl = ( shell && shell.adminUrl ) || origin + '/wp-admin/';
 		const routes = ( shell && shell.adminRoutes ) || {};
 		return installAdminLinkInterceptor( adminUrl, { routes, navigate } );
 	}, [] );

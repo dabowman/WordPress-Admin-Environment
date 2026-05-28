@@ -103,8 +103,10 @@ class WP_Admin_Shell_Hijack {
 		if ( self::is_allowlisted_endpoint() ) {
 			return false;
 		}
-		// Explicit classic-mode escape hatch (W3).
-		if ( ! empty( $_COOKIE['wp_admin_shell_classic'] ) ) {
+		// Explicit classic-mode escape hatch (W3). Match the exact value the
+		// toggle sets — a garbage / forged non-empty cookie shouldn't be able
+		// to permanently disable the workspace for a browser.
+		if ( isset( $_COOKIE['wp_admin_shell_classic'] ) && '1' === $_COOKIE['wp_admin_shell_classic'] ) {
 			return false;
 		}
 		// Workspace must be active (override file present or explicit option).
@@ -127,17 +129,15 @@ class WP_Admin_Shell_Hijack {
 	 */
 	private static function is_root_entry() {
 		$pagenow = isset( $GLOBALS['pagenow'] ) ? (string) $GLOBALS['pagenow'] : '';
-		if ( 'index.php' === $pagenow ) {
-			return true;
-		}
-		// Bare admin.php only — a `page=` (plugin page) or `action=`
-		// (plugin dispatch) request is not a root entry and must reach its
-		// own handler.
+		// Bare dashboard / admin.php only. A `page=` (plugin subpage, incl.
+		// add_dashboard_page() → index.php?page=…) or `action=` (plugin
+		// dispatch) request is not a root entry and must reach its own
+		// handler.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing decision, no state change.
-		if ( 'admin.php' === $pagenow && empty( $_GET['page'] ) && empty( $_GET['action'] ) ) {
-			return true;
+		if ( ! empty( $_GET['page'] ) || ! empty( $_GET['action'] ) ) {
+			return false;
 		}
-		return false;
+		return 'index.php' === $pagenow || 'admin.php' === $pagenow;
 	}
 
 	/**
@@ -249,6 +249,13 @@ class WP_Admin_Shell_Hijack {
 				continue;
 			}
 			$legacy_query = isset( $entry['legacy_query'] ) && is_array( $entry['legacy_query'] ) ? $entry['legacy_query'] : array();
+			// An incidental, possibly state-changing `action` the entry
+			// doesn't itself claim must not be dropped by a redirect — skip
+			// entries that don't constrain `action` when the URL carries one.
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- presence check only.
+			if ( isset( $_GET['action'] ) && ! array_key_exists( 'action', $legacy_query ) ) {
+				continue;
+			}
 			$matches      = true;
 			foreach ( $legacy_query as $key => $value ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only GET routing match.

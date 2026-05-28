@@ -68,7 +68,13 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 	}
 
 	if ( 'wp-admin-shell-external-link' === data.type ) {
-		return url ? { type: 'external', href: url } : { type: 'ignore' };
+		// Defense in depth: only hand http(s) / mailto to window.open, never
+		// a `javascript:` / `data:` URL a compromised same-origin embed might
+		// post (the origin/source pins already gate who can reach here).
+		if ( url && /^(https?:|mailto:)/i.test( url ) ) {
+			return { type: 'external', href: url };
+		}
+		return { type: 'ignore' };
 	}
 
 	return { type: 'ignore' };
@@ -83,7 +89,7 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
  * @param {Function} [options.navigate]         `(hashRoute) => void` workspace nav.
  * @param {Function} [options.onIframeNavigate] `(href) => void` navigate the iframe.
  * @param {Function} [options.openExternal]     `(href) => void` open a new tab.
- * @param {Function} [options.getIframeWindow]  `() => Window` the bound iframe's contentWindow.
+ * @param {Function} options.getIframeWindow    `() => Window` the bound iframe's contentWindow. REQUIRED — the source pin; messages are refused without it.
  * @param {Object}   [options.win]              Window to bind to (defaults to global).
  * @return {Function} Uninstall callback.
  */
@@ -124,12 +130,15 @@ export function installIframeBridge( options = {} ) {
 		if ( ! expectedOrigin || event.origin !== expectedOrigin ) {
 			return;
 		}
-		if ( typeof getIframeWindow === 'function' ) {
-			const iframeWindow = getIframeWindow();
-			// Drop messages from any window other than the bound iframe.
-			if ( ! iframeWindow || event.source !== iframeWindow ) {
-				return;
-			}
+		// Source pin is mandatory — without a bound iframe window to compare
+		// `event.source` against, any same-origin frame/popup could spoof the
+		// message, so refuse rather than fall back to origin-only.
+		if ( typeof getIframeWindow !== 'function' ) {
+			return;
+		}
+		const iframeWindow = getIframeWindow();
+		if ( ! iframeWindow || event.source !== iframeWindow ) {
+			return;
 		}
 
 		const action = classifyBridgeMessage( event.data, {

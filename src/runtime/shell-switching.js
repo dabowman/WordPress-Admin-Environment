@@ -28,6 +28,18 @@ export async function switchShell( slug ) {
 		throw new Error( 'switchShell: slug must be a non-empty string' );
 	}
 
+	// A wp-content/admin.json override wins over the active-shell option, so
+	// writing the option + reloading would be a silent no-op. Fail loudly
+	// instead of pretending the switch took effect.
+	if (
+		typeof window !== 'undefined' &&
+		window.wpAdminShell?.workspaceFileActive
+	) {
+		throw new Error(
+			'switchShell: a wp-content/admin.json override is active and takes precedence over the active-shell option. Edit or remove that file to change the workspace.'
+		);
+	}
+
 	// Client-side pre-flight against the shells list PHP injected on
 	// page load. Catches typos and stale slugs before the option write
 	// puts the admin in a broken-on-next-load state. Server-side

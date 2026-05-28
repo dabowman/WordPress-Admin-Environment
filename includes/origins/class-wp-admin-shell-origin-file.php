@@ -23,6 +23,16 @@
  * to the bare baseline, and a `_doing_it_wrong` notice fires under
  * `WP_DEBUG` so the author sees why.
  *
+ * Trust tier (intended). The override lands in the `plugin` slot — a
+ * TRUSTED origin merged via `merge_authoritative`, bypassing the
+ * `Customizable` deny-list + `Permissions` shrink-only enforcement that
+ * gate the consumer origins (site/role/user). So the file may add+remove
+ * baseline screens (null tombstones), grow `screens[].permissions`, and
+ * change `workspace.engine` — the same authority as the bundled plugin.
+ * That is correct: writing `wp-content/admin.json` requires filesystem
+ * access, which already implies running arbitrary plugin code, so there's
+ * no privilege boundary to defend here. See spec §19.
+ *
  * @package WP_Admin_Shell
  */
 
@@ -121,9 +131,12 @@ class WP_Admin_Shell_Origin_File {
 	}
 
 	/**
-	 * Cache signal — `mtime:size`. Mixing in the file size disambiguates an
-	 * edit made within the same filesystem second (mtime alone is
-	 * 1s-resolution), so a malformed-then-fixed file invalidates promptly.
+	 * Cache signal — `mtime:size`. Mixing in the size catches the common
+	 * size-changing edit that lands in the same filesystem second (mtime is
+	 * 1s-resolution). An equal-byte-length edit within the same second still
+	 * shares a signal and ages out via the cache TTL rather than
+	 * invalidating immediately — acceptable; a per-request content hash
+	 * would cost a full read on every admin page.
 	 *
 	 * @return string
 	 */
@@ -137,19 +150,33 @@ class WP_Admin_Shell_Origin_File {
 
 	/**
 	 * Partial-permissive structural gate. The decoded value must be a
-	 * non-empty JSON object (associative array). A scalar, a JSON array,
-	 * or an empty object (`{}`, which decodes to `array()`) all fail —
-	 * an empty override is treated as "no override", leaving the baseline
-	 * to render alone.
+	 * non-empty JSON object (associative array); a scalar, a JSON array, or
+	 * an empty object (`{}`) all fail — an empty override is "no override".
+	 *
+	 * PHP ships no JSON-Schema validator (schema conformance is the JS-side
+	 * Ajv `test:schema` sweep), so this is a light structural sanity check,
+	 * not full validation: any present known top-level block must be the
+	 * right container type (object), so a grossly malformed file (e.g.
+	 * `"screens": "oops"`) falls back to the baseline instead of corrupting
+	 * the merged tree. Per-field completeness is still enforced post-merge
+	 * by run-shape-tests.php.
 	 *
 	 * @param mixed $doc Decoded JSON.
 	 * @return bool
 	 */
 	private static function is_valid_partial( $doc ) {
-		if ( ! is_array( $doc ) || empty( $doc ) ) {
+		if ( ! is_array( $doc ) || empty( $doc ) || ! WP_Admin_Shell_Merge::is_assoc( $doc ) ) {
 			return false;
 		}
-		return WP_Admin_Shell_Merge::is_assoc( $doc );
+		// Known object-shaped top-level blocks must be objects (assoc arrays)
+		// when present. `preload` / `routes` are lists; `version` etc. are
+		// scalars — not checked here.
+		foreach ( array( 'workspace', 'settings', 'screens', 'menu', 'commands', 'styles' ) as $block ) {
+			if ( isset( $doc[ $block ] ) && ! is_array( $doc[ $block ] ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**

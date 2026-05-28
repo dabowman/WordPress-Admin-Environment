@@ -199,6 +199,22 @@ ok(
 		SHIPPED
 	) === null
 );
+ok(
+	'incidental action on a non-action entry → null (action not dropped)',
+	matchLegacyRoute(
+		'edit.php',
+		new URLSearchParams( 'post_type=post&action=trash' ),
+		SHIPPED
+	) === null
+);
+ok(
+	'entry that constrains action still matches (post.php?post=5&action=edit → /posts/5)',
+	matchLegacyRoute(
+		'post.php',
+		new URLSearchParams( 'post=5&action=edit' ),
+		ROUTES
+	) === '/posts/5'
+);
 
 // ── classifyAdminLink ──────────────────────────────────────────────
 

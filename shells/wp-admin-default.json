@@ -723,14 +723,7 @@
 					"edit_posts"
 				]
 			},
-			"mode": "focus",
-			"legacy_path": "post.php",
-			"legacy_query": {
-				"action": "edit"
-			},
-			"legacy_params": {
-				"id": "post"
-			}
+			"mode": "focus"
 		},
 		"categories": {
 			"label": "Categories",
