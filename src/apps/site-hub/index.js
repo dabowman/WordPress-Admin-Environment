@@ -35,10 +35,8 @@ const SiteHubApp = memo(
 		const { record: site } = useEntityRecord( 'root', 'site' );
 		const restHomeUrl = useSelect(
 			( select ) =>
-				select( coreStore ).getEntityRecord(
-					'root',
-					'__unstableBase'
-				)?.home,
+				select( coreStore ).getEntityRecord( 'root', '__unstableBase' )
+					?.home,
 			[]
 		);
 
