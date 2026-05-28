@@ -109,6 +109,12 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-settings-discussion" */ '../../apps/settings-discussion'
 			),
 	},
+	'core:settings-workspace': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-workspace" */ '../../apps/settings-workspace'
+			),
+	},
 	'core:iframe-fallback': {
 		load: () =>
 			import(

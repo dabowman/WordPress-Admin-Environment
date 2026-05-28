@@ -3,3 +3,6 @@ node_modules/
 .DS_Store
 build/
 .claude/worktrees/
+
+# `npm run build:zip` output
+*.zip

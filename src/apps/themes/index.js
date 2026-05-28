@@ -1,4 +1,5 @@
 import './index.css';
+import { Spinner } from '@wordpress/components';
 import '../_shared/app.css';
 import { useMemo, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -52,17 +53,44 @@ const VIEW_DEFAULTS = {
 	layout: {},
 };
 
+/**
+ * Resolve a theme's screenshot URL. WordPress's `/wp/v2/themes` endpoint
+ * returns `screenshot` only when the theme directory actually contains
+ * `screenshot.{png|gif|jpg|jpeg|webp}`. When core's
+ * `WP_Theme::get_screenshot()` can't find one (some installs / Playground
+ * bundles ship slim themes without the asset, or the REST response is
+ * otherwise missing it), fall back to the canonical theme-directory path.
+ * Browsers silently drop a 404 — strictly an improvement over the empty
+ * DataViews placeholder since at least the WordPress.org-shipped default
+ * themes resolve.
+ *
+ * @param {Object} item Theme record (mapped data item).
+ * @return {string} Absolute URL, or '' when neither path is available.
+ */
+function screenshotUrl( item ) {
+	if ( item?.screenshot ) {
+		return item.screenshot;
+	}
+	if ( ! item?.stylesheet ) {
+		return '';
+	}
+	const siteUrl =
+		( typeof window !== 'undefined' && window.wpAdminShell?.siteUrl ) || '';
+	return `${ siteUrl }/wp-content/themes/${ encodeURIComponent(
+		item.stylesheet
+	) }/screenshot.png`;
+}
+
 // Module-scoped — renderers are stateless and capture no props.
 const FIELD_RENDERERS = {
 	name: ( { item } ) => <Text>{ item.name }</Text>,
-	screenshot: ( { item } ) =>
-		item.screenshot ? (
-			<img
-				src={ item.screenshot }
-				alt={ item.name || '' }
-				loading="lazy"
-			/>
-		) : null,
+	screenshot: ( { item } ) => {
+		const url = screenshotUrl( item );
+		if ( ! url ) {
+			return null;
+		}
+		return <img src={ url } alt={ item.name || '' } loading="lazy" />;
+	},
 	status: ( { item } ) => (
 		<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
 	),
@@ -139,8 +167,8 @@ export default function ThemesApp( { config = {} } ) {
 					gap="md"
 					className="wp-admin-shell-app-themes__details-modal"
 				>
-					{ item.screenshot && (
-						<img src={ item.screenshot } alt="" />
+					{ screenshotUrl( item ) && (
+						<img src={ screenshotUrl( item ) } alt="" />
 					) }
 					<Text variant="heading-md" render={ <h2 /> }>
 						{ item.name }
@@ -248,19 +276,25 @@ export default function ThemesApp( { config = {} } ) {
 
 	return (
 		<div className="wp-admin-shell-app-themes wp-admin-shell-app--fill">
-			<DataViews
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				isLoading={ isResolving }
-				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
-				selection={ selection }
-				onChangeSelection={ setSelection }
-				getItemId={ ( item ) => item.id }
-			/>
+			{ ! themes ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id }
+				/>
+			) }
 		</div>
 	);
 }

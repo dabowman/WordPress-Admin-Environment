@@ -89,6 +89,10 @@ class WP_Admin_Shell_Cache {
 		$signals = array(
 			'shell'       => $context['shell'] ?? '',
 			'core_mtime'  => self::shells_mtime(),
+			// wp-content/admin.json override signal (mtime:size) — edits to
+			// the file invalidate the cached tree automatically, including
+			// a same-second malformed→fixed edit (size disambiguates).
+			'admin_json'  => class_exists( 'WP_Admin_Shell_Origin_File' ) ? WP_Admin_Shell_Origin_File::signal() : '0:0',
 			'site_opt'    => self::option_signal( 'wp_admin_shell_site_config' ),
 			'role_opt'    => self::option_signal( 'wp_admin_shell_role_config' ),
 			'user_id'     => get_current_user_id(),

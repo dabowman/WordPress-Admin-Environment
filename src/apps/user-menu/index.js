@@ -25,7 +25,11 @@ export default function UserMenuApp() {
 
 	const shells = window.wpAdminShell?.shells || [];
 	const switchableShells = shells.filter( ( s ) => s[ 'user-switchable' ] );
-	const showShellSwitcher = switchableShells.length > 1;
+	// Hide the switcher when a wp-content/admin.json override is active — it
+	// wins over the active-shell option, so switching would be a no-op.
+	const showShellSwitcher =
+		switchableShells.length > 1 &&
+		! window.wpAdminShell?.workspaceFileActive;
 
 	const controls = useMemo( () => {
 		const out = [

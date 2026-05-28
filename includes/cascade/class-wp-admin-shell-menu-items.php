@@ -406,8 +406,77 @@ class WP_Admin_Shell_Menu_Items {
 		if ( empty( $screens ) ) {
 			return $doc;
 		}
+		// Screen-binding dedupe (shallowest-wins). When the same screen id
+		// appears at multiple depths in the menu tree — e.g. an override
+		// adds `menu.profile` at the top level while the baseline ships it
+		// nested at `menu.users.items.profile` — the top-level placement
+		// most clearly reflects the author's intent, so keep that one and
+		// drop the deeper duplicate(s). Authors who want both surfaces can
+		// declare the second entry under a different id with an explicit
+		// `href` (no implicit screen binding, no dedupe).
+		$min_depths = array();
+		self::collect_screen_min_depths( $doc['menu'], $screens, 0, $min_depths );
+		$doc['menu'] = self::drop_deeper_duplicates( $doc['menu'], $screens, $min_depths, 0 );
+
 		$doc['menu'] = self::bind_screens_to_tree( $doc['menu'], $screens, 0 );
 		return $doc;
+	}
+
+	/**
+	 * Walk the menu tree recording the SHALLOWEST depth at which each
+	 * screen-bound id appears. Non-screen ids (containers, separators,
+	 * manual href links) are ignored — only items whose key matches a
+	 * declared screen participate in dedupe.
+	 *
+	 * @param array $tree       The (sub-)tree to walk.
+	 * @param array $screens    Resolved `screens` map (id → screen doc).
+	 * @param int   $depth      Current depth.
+	 * @param array $min_depths Out: id → smallest depth seen so far.
+	 */
+	private static function collect_screen_min_depths( $tree, $screens, $depth, &$min_depths ) {
+		if ( $depth >= self::MAX_DEPTH || ! is_array( $tree ) ) {
+			return;
+		}
+		foreach ( $tree as $id => $item ) {
+			if ( isset( $screens[ $id ] ) ) {
+				if ( ! isset( $min_depths[ $id ] ) || $depth < $min_depths[ $id ] ) {
+					$min_depths[ $id ] = $depth;
+				}
+			}
+			if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
+				self::collect_screen_min_depths( $item['items'], $screens, $depth + 1, $min_depths );
+			}
+		}
+	}
+
+	/**
+	 * Drop entries whose screen-bound id appears at a shallower depth
+	 * elsewhere in the tree. The shallowest occurrence survives unchanged.
+	 *
+	 * @param array $tree       The (sub-)tree to walk.
+	 * @param array $screens    Resolved `screens` map.
+	 * @param array $min_depths id → smallest depth from
+	 *                          {@see collect_screen_min_depths()}.
+	 * @param int   $depth      Current depth.
+	 * @return array
+	 */
+	private static function drop_deeper_duplicates( $tree, $screens, $min_depths, $depth ) {
+		if ( $depth >= self::MAX_DEPTH || ! is_array( $tree ) ) {
+			return $tree;
+		}
+		$out = array();
+		foreach ( $tree as $id => $item ) {
+			if ( isset( $screens[ $id ], $min_depths[ $id ] ) && $depth > $min_depths[ $id ] ) {
+				// A shallower copy of this screen-bound entry exists; this
+				// one is the duplicate.
+				continue;
+			}
+			if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
+				$item['items'] = self::drop_deeper_duplicates( $item['items'], $screens, $min_depths, $depth + 1 );
+			}
+			$out[ $id ] = $item;
+		}
+		return $out;
 	}
 
 	private static function bind_screens_to_tree( $tree, $screens, $depth ) {

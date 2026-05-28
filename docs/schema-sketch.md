@@ -208,7 +208,12 @@ Resolver normalizes the shorthand to `apps: [ { "id": "main", "app": "...", "con
 - **`permissions`** declares access (see Permissions section). Default when absent: admin-only.
 - **`preload[]`** lists REST paths to hydrate when the screen activates. Additive with workspace-level `preload[]`.
 - **`hidden`** at any cascade origin suppresses the screen entirely.
+- **`legacy_path` / `legacy_query` / `legacy_params`** map this screen to the classic wp-admin script it replaces (e.g. `edit.php` + `{ "post_type": "page" }`). They drive bidirectional link interception (0.1.0): the JS admin-link interceptor rewrites clicks on the classic URL to this screen's `path`, and the server redirects direct GET navigations to the classic URL into the workspace. Most-specific mapping wins (most satisfied `legacy_query` constraints), so a bare `edit.php` entry can't shadow a constrained sibling. Two WordPress conventions live in the matcher itself: (a) an absent `?post_type=` is compared as `post` (so bare `edit.php` still maps to a `post_type=post`-constrained entry); (b) an entry that doesn't itself constrain `?action=` is skipped when the URL carries one, so a nonce-less state-changing GET isn't redirected with its action dropped. `?_wpnonce` requests are never mapped. Both directions read one source — `WP_Admin_Shell_Admin_Routes::legacy_map()`.
 - **Eligibility is implicit.** Any app may be placed in any slot. App authors who want to enforce constraints do so inside their render (no schema-level eligibility enforcement).
+
+### The `wp-content/admin.json` override origin (0.1.0)
+
+The canonical workspace trigger is a `wp-content/admin.json` file loaded into the `plugin` cascade slot as a **partial delta** over the `wp-admin-default` baseline (now the `core` slot) — the theme.json model. Validation is **partial-permissive**: PHP ships no JSON-Schema validator (schema conformance is the JS-side Ajv `test:schema` sweep), so the runtime gate only requires the file to decode to a JSON object; the schema-`required` top-level keys (`version`/`$wpds`/`name`/`workspace`/`screens`) are NOT required of the override — it's a delta. Completeness of the *merged* doc is enforced post-resolution by `run-shape-tests.php`. A malformed file degrades to the bare baseline (with a `WP_DEBUG` notice). See `docs/wp-admin-shell-design-spec.md` §19.
 
 ### Multi-pane / split-view
 

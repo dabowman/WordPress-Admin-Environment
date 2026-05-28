@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Admin Shell
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
- * Version: 2.0.0-beta.1
+ * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Requires Plugins: gutenberg
@@ -80,6 +80,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-custom
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-file.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
@@ -290,42 +291,93 @@ add_action( 'init', function () {
 	}
 }, 8 );
 
+// Workspace-as-primary-entry hijack. When a workspace is active (see
+// wp_admin_shell_workspace_active()), the shell takes over the admin
+// root (`/wp-admin/`, `index.php`, bare `admin.php`) at admin_init
+// priority 0 — there is no longer a `?page=wp-admin-shell` menu entry.
+// Classic stays reachable via the allowlist + the classic-mode cookie.
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-hijack.php';
+WP_Admin_Shell_Hijack::init();
+
+// Classic-mode escape hatch — cap-gated `?classic=1` cookie toggle that
+// lets an admin drop into classic wp-admin (and back). Runs at admin_init
+// priority -10, before the hijack.
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-classic-mode.php';
+WP_Admin_Shell_Classic_Mode::init();
+
 /**
- * Register the shell admin page and settings.
+ * Register a classic-wp-admin Settings page (Settings → WP Admin Shell)
+ * that mirrors the workspace's `core:settings-workspace` screen. Without
+ * this, a user who toggles the workspace off would have no UI to turn it
+ * back on — they'd be stuck in classic with no entry point.
+ *
+ * Hooks `admin_menu`, which fires on non-root admin requests (the hijack
+ * exits before this on root entries when the workspace is active, so it's
+ * effectively classic-only).
  */
 add_action( 'admin_menu', function () {
-	add_menu_page(
-		__( 'Shell Admin', 'wp-admin-shell' ),
-		__( 'Shell Admin', 'wp-admin-shell' ),
-		'read',
-		'wp-admin-shell',
-		'wp_admin_shell_render_page',
-		'dashicons-layout',
-		2
-	);
-
-	add_submenu_page(
-		'wp-admin-shell',
-		__( 'Shell Settings', 'wp-admin-shell' ),
-		__( 'Settings', 'wp-admin-shell' ),
+	add_options_page(
+		__( 'WP Admin Shell', 'wp-admin-shell' ),
+		__( 'WP Admin Shell', 'wp-admin-shell' ),
 		'manage_options',
-		'wp-admin-shell-settings',
-		'wp_admin_shell_render_settings'
+		'wp-admin-shell-workspace',
+		'wp_admin_shell_render_workspace_settings_page'
 	);
 } );
 
 /**
- * Render the shell page container.
+ * Classic-side render callback for the workspace toggle. The form posts
+ * to options.php with the `wp_admin_shell_settings` group, which is the
+ * same group `register_setting` uses below — the option goes through the
+ * registered `rest_sanitize_boolean` callback either way.
+ *
+ * The hidden 0-value field paired with the checkbox is the standard WP
+ * pattern for capturing an unchecked checkbox (browsers omit unchecked
+ * checkboxes from form submission); options.php picks the last value
+ * sent, so checked → 1, unchecked → 0.
  */
-function wp_admin_shell_render_page() {
-	echo '<div id="wp-admin-shell"></div>';
+function wp_admin_shell_render_workspace_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	$enabled = (bool) get_option( 'wp_admin_shell_workspace_enabled', true );
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-shell' ); ?></h1>
+		<form method="post" action="options.php">
+			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Workspace', 'wp-admin-shell' ); ?></th>
+					<td>
+						<label>
+							<input type="hidden" name="wp_admin_shell_workspace_enabled" value="0" />
+							<input type="checkbox" name="wp_admin_shell_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
+							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-shell' ); ?>
+						</label>
+						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic.', 'wp-admin-shell' ); ?></p>
+					</td>
+				</tr>
+			</table>
+			<?php submit_button(); ?>
+		</form>
+	</div>
+	<?php
 }
 
 /**
- * Enqueue shell assets on the shell page only.
+ * Enqueue shell assets for a workspace takeover request.
+ *
+ * Runs on `admin_enqueue_scripts` during the hijack's admin-header
+ * render (and is harmless elsewhere because it self-gates). The
+ * `$hook` arg is ignored — `wp_admin_shell_is_active_request()` is the
+ * sole gate now that the shell mounts at the admin root rather than a
+ * registered page.
+ *
+ * @param string $hook Admin page hook suffix (unused).
  */
-add_action( 'admin_enqueue_scripts', function ( $hook ) {
-	if ( 'toplevel_page_wp-admin-shell' !== $hook ) {
+function wp_admin_shell_enqueue_assets( $hook = '' ) {
+	if ( ! wp_admin_shell_is_active_request() ) {
 		return;
 	}
 
@@ -413,11 +465,20 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		'adminUrl'      => admin_url(),
 		'dashboardUrl'  => admin_url(),
 		'pluginUrl'     => WP_ADMIN_SHELL_URL,
+		// Classic→workspace legacy-route map for the admin-link interceptor
+		// (W4). Keyed by workspace route path → { legacy_path, legacy_query,
+		// legacy_params }. Empty until screens / programmatic routes declare
+		// `legacy_path`.
+		'adminRoutes'   => WP_Admin_Shell_Admin_Routes::legacy_map( $config ),
 		'restUrl'       => get_rest_url(),
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
 		'shells'        => wp_admin_shell_get_available_shells(),
+		// True when a wp-content/admin.json override is active — it wins over
+		// the active-shell option, so the shell switcher hides + switchShell()
+		// refuses (writing the option would be a silent no-op).
+		'workspaceFileActive' => class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid(),
 		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
 		// production builds. PHP `_deprecated_hook` is gated by
 		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
@@ -430,7 +491,7 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 			'displayName' => $current_user->display_name,
 			'avatarUrl'   => get_avatar_url( $current_user->ID, array( 'size' => 32 ) ),
 			'profileUrl'  => '#/profile',
-			'logoutUrl'   => wp_logout_url( admin_url( 'admin.php?page=wp-admin-shell' ) ),
+			'logoutUrl'   => wp_logout_url( admin_url( '/' ) ),
 		),
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_shell_get_settings_general_data()
@@ -466,7 +527,8 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
 		html.wp-toolbar { padding-top: 0 !important; }
 		#wp-admin-shell { position: fixed; inset: 0; z-index: 99999; }
 	' );
-} );
+}
+add_action( 'admin_enqueue_scripts', 'wp_admin_shell_enqueue_assets' );
 
 /**
  * Read the active admin.json configuration through the M2 cascade resolver.
@@ -479,6 +541,47 @@ add_action( 'admin_enqueue_scripts', function ( $hook ) {
  */
 function wp_admin_shell_get_active_config() {
 	return WP_Admin_Shell_Resolver::resolve();
+}
+
+/**
+ * Whether the workspace should take over the admin.
+ *
+ * Single source of truth for the workspace-as-primary-entry hijack and
+ * the classic-mode escape hatch. True when EITHER:
+ *   - a valid `wp-content/admin.json` override file is present, OR
+ *   - the legacy `wp_admin_shell_active_shell` option was explicitly
+ *     written (back-compat for installs that selected a shell before the
+ *     file-based trigger landed).
+ *
+ * A fresh install with neither returns false, so the workspace never
+ * mounts and classic wp-admin is served untouched.
+ *
+ * @return bool
+ */
+function wp_admin_shell_workspace_active() {
+	// Explicit OFF wins over file/legacy triggers. Settings → Workspace
+	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
+	// checkbox; the option defaults to enabled, so a fresh install with a
+	// file present still flips active true.
+	if ( ! get_option( 'wp_admin_shell_workspace_enabled', true ) ) {
+		return false;
+	}
+	if ( class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid() ) {
+		return true;
+	}
+	$active_shell = get_option( 'wp_admin_shell_active_shell', null );
+	return is_string( $active_shell ) && $active_shell !== '';
+}
+
+/**
+ * Whether the current request is a workspace takeover (the W2 hijack
+ * fired / will fire). Thin wrapper over WP_Admin_Shell_Hijack so the
+ * asset-enqueue gate and other callers don't reach into the class.
+ *
+ * @return bool
+ */
+function wp_admin_shell_is_active_request() {
+	return class_exists( 'WP_Admin_Shell_Hijack' ) && WP_Admin_Shell_Hijack::is_active_request();
 }
 
 /**
@@ -690,6 +793,19 @@ add_action( 'init', function () {
 		'show_in_rest'      => true,
 	) );
 
+	// Persistent "Activate WP Admin Workspace" toggle. The site-entity
+	// (/wp/v2/settings) exposes this to the workspace's DataForm settings
+	// screen (`core:settings-workspace`); the classic-side `add_options_page`
+	// below writes it through the standard options.php submission. When
+	// false, wp_admin_shell_workspace_active() returns false regardless of
+	// file presence — the user sees classic until they re-enable.
+	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_workspace_enabled', array(
+		'type'              => 'boolean',
+		'default'           => true,
+		'sanitize_callback' => 'rest_sanitize_boolean',
+		'show_in_rest'      => true,
+	) );
+
 	// Cascade-origin options live in a separate group — REST-exposed but
 	// not edited by the settings page. Keeping them off the page-form
 	// group avoids the "form posts only one option, options.php NULLs the
@@ -869,45 +985,6 @@ function wp_admin_shell_get_settings_general_data() {
 			return array( 'value' => (string) $i, 'label' => $wp_locale->get_weekday( $i ) );
 		}, range( 0, 6 ) ),
 	);
-}
-
-/**
- * Render the settings page.
- */
-function wp_admin_shell_render_settings() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		return;
-	}
-	$active = get_option( 'wp_admin_shell_active_shell', '' );
-	if ( $active === '' ) {
-		$active = get_option( 'wp_admin_shell_active_config', 'wp-admin-default' );
-	}
-	$shells = wp_admin_shell_get_available_shells();
-	?>
-	<div class="wrap">
-		<h1><?php esc_html_e( 'Shell Settings', 'wp-admin-shell' ); ?></h1>
-		<form method="post" action="options.php">
-			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
-			<table class="form-table">
-				<tr>
-					<th scope="row"><?php esc_html_e( 'Active Shell', 'wp-admin-shell' ); ?></th>
-					<td>
-						<select name="wp_admin_shell_active_shell">
-							<?php foreach ( $shells as $shell ) : ?>
-								<option value="<?php echo esc_attr( $shell['slug'] ); ?>"
-									<?php selected( $active, $shell['slug'] ); ?>>
-									<?php echo esc_html( $shell['title'] ); ?>
-									&mdash; <?php echo esc_html( $shell['description'] ); ?>
-								</option>
-							<?php endforeach; ?>
-						</select>
-					</td>
-				</tr>
-			</table>
-			<?php submit_button(); ?>
-		</form>
-	</div>
-	<?php
 }
 
 /**

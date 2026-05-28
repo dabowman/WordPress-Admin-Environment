@@ -491,6 +491,17 @@ function wp_admin_shell_chromeless_bridge_script() {
 					return;
 				}
 				var target = link.getAttribute( 'target' );
+				// `target=_parent` / `target=_top` are WP's "break out of
+				// modal" idiom (plugin-install Replace/Cancel buttons,
+				// etc.). In our workspace context the iframe-fallback IS
+				// the modal — the analogous behavior is "navigate the
+				// iframe itself" so the action's full URL (including any
+				// nonce + action params we'd otherwise drop) is preserved
+				// and the user stays in the workspace. The bridge posts
+				// admin-link / external-link up with `target` included;
+				// the parent's classifier (iframeBridge.mjs) routes the
+				// parent / top variants to an iframe navigation rather
+				// than to the workspace.
 				var absolute;
 				try {
 					absolute = new URL(
@@ -520,6 +531,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 						type: 'wp-admin-shell-external-link',
 						url: absolute,
 						label: label.slice( 0, 80 ),
+						target: target || '_self',
 					} );
 					return;
 				}
@@ -536,6 +548,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 					type: 'wp-admin-shell-admin-link',
 					url: absolute,
 					label: label.slice( 0, 80 ),
+					target: target || '_self',
 				} );
 			},
 			true

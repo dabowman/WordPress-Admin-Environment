@@ -4,7 +4,7 @@ import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews, DataForm } from '@wordpress/dataviews/wp';
 import { Button, Icon, Stack, Text } from '@wordpress/ui';
-import { Modal } from '@wordpress/components';
+import { Modal, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
@@ -224,21 +224,27 @@ export default function TaxonomyApp( { config = {} } ) {
 				</Button>
 			</Stack>
 
-			<DataViews
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				isLoading={ isResolving }
-				defaultLayouts={
-					dataViewConfig.defaultLayouts ?? { table: {} }
-				}
-				selection={ selection }
-				onChangeSelection={ setSelection }
-				getItemId={ ( item ) => item.id.toString() }
-			/>
+			{ ! records ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={
+						dataViewConfig.defaultLayouts ?? { table: {} }
+					}
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id.toString() }
+				/>
+			) }
 
 			{ ( editTerm || isCreating ) && (
 				<TermEditModal

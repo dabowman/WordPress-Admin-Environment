@@ -370,6 +370,21 @@
 				"customizable": {
 					"$ref": "#/$defs/customizable",
 					"description": "Consumer-origin write allowlist for this screen. Note the hardcoded deny-list still blocks `permissions` and `app` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
+				},
+				"legacy_path": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Classic wp-admin script this screen replaces (e.g. `edit.php`, `upload.php`, `options-general.php`). Powers two directions of link interception: the JS admin-link interceptor rewrites clicks on this classic URL to the screen's workspace `path`, and the server redirects direct navigations to the classic URL into the workspace (W4/W5). GET-only — write endpoints (POST) are never redirected."
+				},
+				"legacy_query": {
+					"type": "object",
+					"additionalProperties": { "type": "string" },
+					"description": "Query-string equalities that must all match for the `legacy_path` mapping to apply (e.g. `{ \"post_type\": \"page\" }` so `edit.php?post_type=page` maps to this screen but `edit.php?post_type=post` does not). Omit when the script needs no query disambiguation."
+				},
+				"legacy_params": {
+					"type": "object",
+					"additionalProperties": { "type": "string" },
+					"description": "Maps `{token}` segments in the screen `path` to classic query keys, so captured ids round-trip (e.g. `{ \"id\": \"post\" }` interpolates `/posts/{id}/edit` from `post.php?post=42`). Tokens without a mapping fall back to a same-named query key."
 				}
 			},
 

@@ -1,4 +1,5 @@
 import '../_shared/app.css';
+import { Spinner } from '@wordpress/components';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
@@ -279,21 +280,27 @@ export default function PluginsApp( { config = {} } = {} ) {
 
 	return (
 		<div className="wp-admin-shell-app-plugins wp-admin-shell-app--fill">
-			<DataViews
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				isLoading={ isResolving }
-				defaultLayouts={
-					dataViewConfig.defaultLayouts ?? { table: {} }
-				}
-				selection={ selection }
-				onChangeSelection={ setSelection }
-				getItemId={ ( item ) => item.id }
-			/>
+			{ ! records ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={
+						dataViewConfig.defaultLayouts ?? { table: {} }
+					}
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id }
+				/>
+			) }
 		</div>
 	);
 }

@@ -15,6 +15,27 @@ class WP_Admin_Shell_Origin_Core {
 
 	const ENGINE_ID = 'core:default';
 
+	/**
+	 * Slug of the shipped default baseline. This is the admin.json that
+	 * fills the cascade `core` slot when a `wp-content/admin.json`
+	 * override file is present — the file then layers over it as a
+	 * partial delta (theme.json model). The file still lives in `shells/`
+	 * for back-compat (the option-driven selector + the shape-test sweep
+	 * still reference it there); only its cascade ROLE changed.
+	 */
+	const BASELINE_SLUG = 'wp-admin-default';
+
+	/**
+	 * Load the shipped default baseline (`shells/wp-admin-default.json`).
+	 * Falls back to {@see empty_doc()} when the file is missing/malformed.
+	 *
+	 * @return array
+	 */
+	public static function load_baseline() {
+		$base = defined( 'WP_ADMIN_SHELL_PATH' ) ? WP_ADMIN_SHELL_PATH : '';
+		return self::load( $base . 'shells/' . self::BASELINE_SLUG . '.json' );
+	}
+
 	public static function load( $shell_path ) {
 		if ( ! file_exists( $shell_path ) ) {
 			return self::empty_doc();

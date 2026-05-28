@@ -56,21 +56,51 @@ npm run build
 
 Copy the directory into `wp-content/plugins/`, then activate **WP Admin Shell** (activate Gutenberg first).
 
+### Building a distributable zip
+
+To produce a `wp-admin-shell.zip` that can be uploaded via **Plugins → Add New → Upload Plugin** on any WordPress site:
+
+```bash
+npm run build:zip
+```
+
+Output: `wp-admin-shell.zip` at the project root, ~740 KB. It bundles `wp-admin-shell.php`, `includes/`, the compiled `build/`, the seven `shells/`, `assets/`, `core.tokens.json`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+
 ### With wp-env (development)
 
 ```bash
 npx wp-env start
 ```
 
-Open `http://localhost:8888/wp-admin/admin.php?page=wp-admin-shell` (login: `admin` / `password`).
-
 ## Usage
 
-1. Activate the plugin (and Gutenberg).
-2. Open **WP Admin Shell** from the wp-admin sidebar — it takes over the viewport with its own navigation, toolbar, and content region.
-3. Switch shells from the settings page or programmatically via `window.wpAdminShell.switchShell('content-author')`.
+The plugin ships the `wp-admin-default` baseline (the cascade `core` origin).
+To turn the workspace on and customize it, drop an `admin.json` **override**
+at `wp-content/admin.json` — it behaves like `theme.json` over core's
+defaults: you declare only what you want to change, and everything else falls
+through from the baseline.
 
-`Cmd/Ctrl+K` opens the command palette.
+```bash
+# Quickstart: copy a starter template, then visit /wp-admin/
+cp wp-content/plugins/wp-admin-shell/shells/developer-admin.json wp-content/admin.json
+```
+
+1. Activate the plugin (and Gutenberg).
+2. Place a valid `wp-content/admin.json` (copy one from `shells/` and edit, or
+   write a small delta like `{ "$schema": "…", "version": 3, "$wpds": "6.9",
+   "name": "mine", "workspace": { … }, "styles": { … } }`).
+3. Visit `/wp-admin/` — the workspace **replaces** classic wp-admin at the URL
+   level. With no file present (and no legacy option set), wp-admin stays
+   classic and untouched.
+
+`Cmd/Ctrl+K` opens the command palette. Administrators get a **Classic
+wp-admin** toolbar button (session-scoped escape hatch); the classic admin bar
+shows a reciprocal **Back to workspace** link.
+
+> The legacy `admin.php?page=wp-admin-shell` entry is gone as of `0.1.0`. The
+> file is the trigger and the configuration. See
+> [`docs/alpha-readiness.md`](docs/alpha-readiness.md) for the full behavior
+> map and the alpha caveats (network admin + customizer stay classic).
 
 ## Bundled engines
 

@@ -114,6 +114,23 @@ class WP_Admin_Shell_Admin_Routes {
 			$route['config'] = $config;
 		}
 
+		// Legacy classic-URL mapping (W4/W5). `legacy_path` names the
+		// classic admin script (`edit.php`), `legacy_query` the query
+		// equalities that must match (`[ 'post_type' => 'page' ]`), and
+		// `legacy_params` maps route tokens to query keys
+		// (`[ 'id' => 'post' ]` → `{id}` ← `?post=`). Used both to
+		// intercept workspace→classic clicks and to redirect classic→
+		// workspace navigations.
+		if ( isset( $args['legacy_path'] ) && is_string( $args['legacy_path'] ) && $args['legacy_path'] !== '' ) {
+			$route['legacy_path'] = $args['legacy_path'];
+		}
+		if ( isset( $args['legacy_query'] ) && is_array( $args['legacy_query'] ) ) {
+			$route['legacy_query'] = $args['legacy_query'];
+		}
+		if ( isset( $args['legacy_params'] ) && is_array( $args['legacy_params'] ) ) {
+			$route['legacy_params'] = $args['legacy_params'];
+		}
+
 		if ( array_key_exists( 'gc_time', $args ) && $args['gc_time'] !== null ) {
 			self::warn_gc_time( $path );
 		}
@@ -129,6 +146,62 @@ class WP_Admin_Shell_Admin_Routes {
 	 */
 	public static function all() {
 		return self::$registry;
+	}
+
+	/**
+	 * Build the classic→workspace legacy-route map from a resolved config.
+	 *
+	 * Walks resolved `screens` (each screen may declare `legacy_path` +
+	 * optional `legacy_query` / `legacy_params`) and the programmatic
+	 * registry, keyed by the workspace route path. Shared by the JS admin-
+	 * link interceptor (W4, emitted as `window.wpAdminShell.adminRoutes`)
+	 * and the classic→workspace redirect (W5).
+	 *
+	 * Keyed by workspace route path; a programmatic route sharing a path
+	 * with a screen overwrites the screen entry (last-write-wins). When two
+	 * entries share a `legacy_path` with equal-or-zero `legacy_query`
+	 * specificity, `match_legacy_hash` / `matchLegacyRoute` break the tie by
+	 * map iteration order (first wins on equal score).
+	 *
+	 * @param array $config Resolved admin.json doc.
+	 * @return array<string, array{legacy_path:string,legacy_query?:array,legacy_params?:array}>
+	 */
+	public static function legacy_map( $config ) {
+		$map = array();
+
+		if ( isset( $config['screens'] ) && is_array( $config['screens'] ) ) {
+			foreach ( $config['screens'] as $screen ) {
+				if ( ! is_array( $screen ) || empty( $screen['legacy_path'] ) || empty( $screen['path'] ) ) {
+					continue;
+				}
+				$map[ (string) $screen['path'] ] = self::legacy_entry( $screen );
+			}
+		}
+
+		foreach ( self::$registry as $path => $route ) {
+			if ( ! empty( $route['legacy_path'] ) ) {
+				$map[ $path ] = self::legacy_entry( $route );
+			}
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Normalize a screen/route into a legacy-map entry.
+	 *
+	 * @param array $src Screen or route doc carrying `legacy_*` keys.
+	 * @return array
+	 */
+	private static function legacy_entry( $src ) {
+		$entry = array( 'legacy_path' => (string) $src['legacy_path'] );
+		if ( ! empty( $src['legacy_query'] ) && is_array( $src['legacy_query'] ) ) {
+			$entry['legacy_query'] = $src['legacy_query'];
+		}
+		if ( ! empty( $src['legacy_params'] ) && is_array( $src['legacy_params'] ) ) {
+			$entry['legacy_params'] = $src['legacy_params'];
+		}
+		return $entry;
 	}
 
 	/**

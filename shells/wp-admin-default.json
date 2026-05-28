@@ -685,6 +685,10 @@
 				"capabilities": [
 					"edit_posts"
 				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post"
 			}
 		},
 		"posts-new": {
@@ -700,7 +704,11 @@
 					"edit_posts"
 				]
 			},
-			"mode": "focus"
+			"mode": "focus",
+			"legacy_path": "post-new.php",
+			"legacy_query": {
+				"post_type": "post"
+			}
 		},
 		"post-edit": {
 			"label": "Edit Post",
@@ -729,6 +737,10 @@
 				"capabilities": [
 					"manage_categories"
 				]
+			},
+			"legacy_path": "edit-tags.php",
+			"legacy_query": {
+				"taxonomy": "category"
 			}
 		},
 		"tags": {
@@ -743,6 +755,10 @@
 				"capabilities": [
 					"manage_categories"
 				]
+			},
+			"legacy_path": "edit-tags.php",
+			"legacy_query": {
+				"taxonomy": "post_tag"
 			}
 		},
 		"pages": {
@@ -759,6 +775,10 @@
 				"capabilities": [
 					"edit_pages"
 				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "page"
 			}
 		},
 		"pages-new": {
@@ -774,7 +794,11 @@
 					"edit_pages"
 				]
 			},
-			"mode": "focus"
+			"mode": "focus",
+			"legacy_path": "post-new.php",
+			"legacy_query": {
+				"post_type": "page"
+			}
 		},
 		"page-edit": {
 			"label": "Edit Page",
@@ -801,7 +825,8 @@
 				"capabilities": [
 					"upload_files"
 				]
-			}
+			},
+			"legacy_path": "upload.php"
 		},
 		"media-new": {
 			"label": "Add Media File",
@@ -813,7 +838,8 @@
 					"upload_files"
 				]
 			},
-			"mode": "takeover"
+			"mode": "takeover",
+			"legacy_path": "media-new.php"
 		},
 		"comments": {
 			"label": "Comments",
@@ -826,7 +852,8 @@
 				"capabilities": [
 					"moderate_comments"
 				]
-			}
+			},
+			"legacy_path": "edit-comments.php"
 		},
 		"appearance": {
 			"label": "Appearance",
@@ -850,7 +877,8 @@
 				"capabilities": [
 					"switch_themes"
 				]
-			}
+			},
+			"legacy_path": "themes.php"
 		},
 		"site-editor": {
 			"label": "Editor",
@@ -863,7 +891,8 @@
 					"edit_theme_options"
 				]
 			},
-			"mode": "focus"
+			"mode": "focus",
+			"legacy_path": "site-editor.php"
 		},
 		"customize": {
 			"label": "Customize",
@@ -886,7 +915,8 @@
 				"capabilities": [
 					"edit_theme_options"
 				]
-			}
+			},
+			"legacy_path": "widgets.php"
 		},
 		"fonts": {
 			"label": "Fonts",
@@ -914,7 +944,8 @@
 				"capabilities": [
 					"activate_plugins"
 				]
-			}
+			},
+			"legacy_path": "plugins.php"
 		},
 		"plugins-new": {
 			"label": "Add Plugin",
@@ -939,7 +970,8 @@
 				"capabilities": [
 					"list_users"
 				]
-			}
+			},
+			"legacy_path": "users.php"
 		},
 		"users-new": {
 			"label": "Add New User",
@@ -951,7 +983,8 @@
 					"create_users"
 				]
 			},
-			"mode": "takeover"
+			"mode": "takeover",
+			"legacy_path": "user-new.php"
 		},
 		"user-edit": {
 			"label": "Edit User",
@@ -964,6 +997,10 @@
 				"capabilities": [
 					"edit_users"
 				]
+			},
+			"legacy_path": "user-edit.php",
+			"legacy_params": {
+				"id": "user_id"
 			}
 		},
 		"profile": {
@@ -975,7 +1012,8 @@
 				"capabilities": [
 					"read"
 				]
-			}
+			},
+			"legacy_path": "profile.php"
 		},
 		"tools": {
 			"label": "Tools",
@@ -986,7 +1024,8 @@
 				"capabilities": [
 					"edit_posts"
 				]
-			}
+			},
+			"legacy_path": "tools.php"
 		},
 		"site-health": {
 			"label": "Site Health",
@@ -997,7 +1036,8 @@
 				"capabilities": [
 					"view_site_health_checks"
 				]
-			}
+			},
+			"legacy_path": "site-health.php"
 		},
 		"import": {
 			"label": "Import",
@@ -1008,7 +1048,8 @@
 				"capabilities": [
 					"import"
 				]
-			}
+			},
+			"legacy_path": "import.php"
 		},
 		"export": {
 			"label": "Export",
@@ -1019,7 +1060,8 @@
 				"capabilities": [
 					"export"
 				]
-			}
+			},
+			"legacy_path": "export.php"
 		},
 		"export-personal-data": {
 			"label": "Export Personal Data",
@@ -1030,7 +1072,8 @@
 				"capabilities": [
 					"export_others_personal_data"
 				]
-			}
+			},
+			"legacy_path": "export-personal-data.php"
 		},
 		"erase-personal-data": {
 			"label": "Erase Personal Data",
@@ -1041,7 +1084,8 @@
 				"capabilities": [
 					"erase_others_personal_data"
 				]
-			}
+			},
+			"legacy_path": "erase-personal-data.php"
 		},
 		"theme-editor": {
 			"label": "Theme File Editor",
@@ -1053,7 +1097,8 @@
 					"edit_themes"
 				]
 			},
-			"mode": "takeover"
+			"mode": "takeover",
+			"legacy_path": "theme-editor.php"
 		},
 		"plugin-editor": {
 			"label": "Plugin File Editor",
@@ -1065,7 +1110,8 @@
 					"edit_plugins"
 				]
 			},
-			"mode": "takeover"
+			"mode": "takeover",
+			"legacy_path": "plugin-editor.php"
 		},
 		"settings": {
 			"label": "Settings",
@@ -1086,7 +1132,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-general.php"
 		},
 		"settings-writing": {
 			"label": "Writing",
@@ -1096,7 +1143,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-writing.php"
 		},
 		"settings-reading": {
 			"label": "Reading",
@@ -1106,7 +1154,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-reading.php"
 		},
 		"settings-discussion": {
 			"label": "Discussion",
@@ -1116,7 +1165,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-discussion.php"
 		},
 		"settings-media": {
 			"label": "Media",
@@ -1126,7 +1176,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-media.php"
 		},
 		"settings-permalinks": {
 			"label": "Permalinks",
@@ -1136,7 +1187,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-permalink.php"
 		},
 		"settings-privacy": {
 			"label": "Privacy",
@@ -1146,7 +1198,8 @@
 				"capabilities": [
 					"manage_options"
 				]
-			}
+			},
+			"legacy_path": "options-privacy.php"
 		},
 		"command-palette": {
 			"label": "Command Palette",
@@ -1158,6 +1211,17 @@
 				]
 			},
 			"mode": "modal"
+		},
+		"settings-workspace": {
+			"label": "Workspace",
+			"icon": "admin-generic",
+			"path": "/settings/workspace",
+			"app": "core:settings-workspace",
+			"permissions": {
+				"capabilities": [
+					"manage_options"
+				]
+			}
 		}
 	},
 	"menu": {
@@ -1326,6 +1390,9 @@
 				},
 				"settings-privacy": {
 					"position": 70
+				},
+				"settings-workspace": {
+					"position": 80
 				}
 			}
 		},
