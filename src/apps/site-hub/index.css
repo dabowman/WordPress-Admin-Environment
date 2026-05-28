@@ -11,7 +11,7 @@
 
 .wp-admin-shell-site-hub__icon-container {
 	height: 64px;
-	width: 64px;
+	width: 60px;
 	flex-shrink: 0;
 }
 
@@ -22,7 +22,7 @@
 .wp-admin-shell-site-hub__icon-button {
 	position: relative;
 	height: 64px;
-	width: 64px;
+	width: 60px;
 	overflow: hidden;
 	padding: 0;
 	display: flex;
@@ -41,18 +41,26 @@
 }
 
 .wp-admin-shell-site-icon__image {
-	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 36px);
-	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 36px);
-	object-fit: contain;
-	border-radius: var(--wpds-border-radius-md);
+	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
+	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
+	aspect-ratio: 1 / 1;
+	object-fit: cover;
+	border-radius: var(--wpds-border-radius-sm);
 }
 
 .wp-admin-shell-site-icon__default {
 	display: flex;
 	height: 64px;
-	width: 64px;
+	width: 60px;
 	justify-content: center;
 	align-items: center;
+}
+
+/* Match the configured-image footprint (34px) so the icon size doesn't
+ * jump between the default mark and a set logo. */
+.wp-admin-shell-site-icon__default svg {
+	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
+	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
 }
 
 /* Title wrapper is a flex item of the inner site-hub Stack. Default
@@ -72,6 +80,7 @@
 .wp-admin-shell-site-hub__title :is(button, a) {
 	flex-grow: 1;
 	min-width: 0;
+	padding: 0;
 	font-size: var(--wpds-font-size-lg);
 	font-weight: var(--wpds-font-weight-medium);
 	position: relative;
@@ -131,4 +140,18 @@
 
 .wp-admin-shell-site-hub__actions {
 	flex-shrink: 0;
+}
+
+/* Command-palette toggle matches the Figma site-hub action button:
+ * 32×32 hit area, 4px padding, 24px glyph, small radius. */
+.wp-admin-shell-site-hub__command-toggle {
+	width: 32px;
+	height: 32px;
+	padding: 4px;
+	border-radius: var(--wpds-border-radius-sm);
+}
+
+.wp-admin-shell-site-hub__command-toggle svg {
+	width: 24px;
+	height: 24px;
 }
