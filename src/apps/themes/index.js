@@ -6,7 +6,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataViews } from '@wordpress/dataviews/wp';
+import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -266,20 +266,14 @@ export default function ThemesApp( { config = {} } ) {
 		[ dataViewConfig, activate, renderDetailsModal ]
 	);
 
-	// DataViews is controlled and won't auto-slice; with perPage=50 an install
-	// with >50 themes rendered every theme on one page and pinned totalPages to
-	// 1 (inert pager). Slice here and compute the real page count.
-	const paginatedData = useMemo( () => {
-		const start = ( view.page - 1 ) * view.perPage;
-		return data.slice( start, start + view.perPage );
-	}, [ data, view.page, view.perPage ] );
-
-	const paginationInfo = useMemo(
-		() => ( {
-			totalItems: data.length,
-			totalPages: Math.max( 1, Math.ceil( data.length / view.perPage ) ),
-		} ),
-		[ data.length, view.perPage ]
+	// DataViews is controlled, so it doesn't filter/sort/paginate the `data` we
+	// hand it — the consumer must. `filterSortAndPaginate` is the package's own
+	// derivation (search across `enableGlobalSearch` fields, the status filter,
+	// view.sort, and the page slice), so the search box / status filter /
+	// column sort / pager all work on installs with >50 themes.
+	const { data: shownData, paginationInfo } = useMemo(
+		() => filterSortAndPaginate( data, view, fields ),
+		[ data, view, fields ]
 	);
 
 	return (
@@ -290,7 +284,7 @@ export default function ThemesApp( { config = {} } ) {
 				</div>
 			) : (
 				<DataViews
-					data={ paginatedData }
+					data={ shownData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }

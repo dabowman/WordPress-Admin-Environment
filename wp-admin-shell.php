@@ -747,7 +747,7 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
 
 	// 2. Prune menu nodes bound to a removed screen, or carrying their own
 	//    failing permissions (the role-gated nav-item leak the client can't
-	//    evaluate). Recursive — drops a deduped subtree along with its parent.
+	//    evaluate). Reachable children of a pruned node are hoisted, not lost.
 	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
 		$config['menu'] = wp_admin_shell_prune_menu_for_user( $config['menu'], $removed, $user_id, 0 );
 	}
@@ -759,6 +759,14 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
  * Recursive helper for {@see wp_admin_shell_prune_config_for_user()}. Drops
  * menu nodes bound to a removed screen id and nodes whose own `permissions`
  * fail for the user.
+ *
+ * When a node is dropped it recurses into `items` first and HOISTS the
+ * surviving (reachable) children up to the dropped node's level rather than
+ * discarding the whole subtree — otherwise a reachable child nested only under
+ * an unreachable parent (e.g. `profile`, `read`-floor, living solely at
+ * `menu.users.items.profile` under the admin-only `users` node) would vanish
+ * from a non-admin's menu even though the screen itself survives. Mirrors
+ * `WP_Admin_Shell_Menu_Items::drop_deeper_duplicates()`.
  *
  * @param array $tree            Menu (sub-)tree.
  * @param array $removed_screens Map of removed screen id → true.
@@ -772,24 +780,38 @@ function wp_admin_shell_prune_menu_for_user( $tree, $removed_screens, $user_id, 
 	}
 	$out = array();
 	foreach ( $tree as $id => $item ) {
-		if ( isset( $removed_screens[ (string) $id ] ) ) {
-			continue;
+		// Recurse first so reachable children can be hoisted if this node
+		// itself turns out to be unreachable.
+		$children = null;
+		if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
+			$children = wp_admin_shell_prune_menu_for_user( $item['items'], $removed_screens, $user_id, $depth + 1 );
 		}
-		if ( is_array( $item ) ) {
-			if ( isset( $item['permissions'] ) && is_array( $item['permissions'] ) ) {
-				$resolved = WP_Admin_Shell_Permissions::resolve( $item['permissions'], array() );
-				if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
-					continue;
+
+		// Is this node itself unreachable — bound to a pruned screen, or its
+		// own (possibly screen-inherited) permissions fail?
+		$drop = isset( $removed_screens[ (string) $id ] );
+		if ( ! $drop && is_array( $item ) && isset( $item['permissions'] ) && is_array( $item['permissions'] ) ) {
+			$resolved = WP_Admin_Shell_Permissions::resolve( $item['permissions'], array() );
+			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
+				$drop = true;
+			}
+		}
+
+		if ( $drop ) {
+			// Hoist the surviving children so a reachable item nested only
+			// under this unreachable node isn't lost with it.
+			if ( is_array( $children ) ) {
+				foreach ( $children as $child_id => $child_item ) {
+					if ( ! isset( $out[ $child_id ] ) ) {
+						$out[ $child_id ] = $child_item;
+					}
 				}
 			}
-			if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-				$item['items'] = wp_admin_shell_prune_menu_for_user(
-					$item['items'],
-					$removed_screens,
-					$user_id,
-					$depth + 1
-				);
-			}
+			continue;
+		}
+
+		if ( is_array( $children ) ) {
+			$item['items'] = $children;
 		}
 		$out[ $id ] = $item;
 	}

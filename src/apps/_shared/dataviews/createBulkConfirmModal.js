@@ -85,27 +85,45 @@ export function createBulkConfirmModal( {
 								return;
 							}
 							setIsBusy( true );
-							let results = [];
-							let failed = 0;
-							let succeeded = targets;
-							if ( targets.length ) {
-								results = await Promise.allSettled(
-									targets.map( ( item ) => mutate( item ) )
-								);
-								failed = results.filter(
-									( r ) => r.status === 'rejected'
-								).length;
-								// Only the items that actually mutated are
-								// "performed"; reporting the failures here would
-								// deselect rows the user likely wants to retry.
-								succeeded = targets.filter(
-									( _item, i ) =>
-										results[ i ]?.status === 'fulfilled'
-								);
+							// `finally` clears the busy flag even if an
+							// app-supplied `onSettled`/`onActionPerformed`
+							// callback throws after the batch — otherwise the
+							// modal stays open with the confirm button stuck
+							// disabled. (`Promise.allSettled` itself never
+							// rejects.)
+							try {
+								let results = [];
+								let failed = 0;
+								let succeeded = targets;
+								if ( targets.length ) {
+									results = await Promise.allSettled(
+										targets.map( ( item ) =>
+											mutate( item )
+										)
+									);
+									failed = results.filter(
+										( r ) => r.status === 'rejected'
+									).length;
+									// Only the items that actually mutated are
+									// "performed"; reporting the failures here
+									// would deselect rows the user likely wants
+									// to retry.
+									succeeded = targets.filter(
+										( _item, i ) =>
+											results[ i ]?.status === 'fulfilled'
+									);
+								}
+								onSettled?.( {
+									items,
+									targets,
+									results,
+									failed,
+								} );
+								onActionPerformed?.( succeeded );
+								closeModal();
+							} finally {
+								setIsBusy( false );
 							}
-							onSettled?.( { items, targets, results, failed } );
-							onActionPerformed?.( succeeded );
-							closeModal();
 						} }
 					>
 						{ label }
