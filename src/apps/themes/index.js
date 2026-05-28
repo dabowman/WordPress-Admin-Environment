@@ -1,4 +1,5 @@
 import './index.css';
+import { Spinner } from '@wordpress/components';
 import '../_shared/app.css';
 import { useMemo, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -275,19 +276,25 @@ export default function ThemesApp( { config = {} } ) {
 
 	return (
 		<div className="wp-admin-shell-app-themes wp-admin-shell-app--fill">
-			<DataViews
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				isLoading={ isResolving }
-				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
-				selection={ selection }
-				onChangeSelection={ setSelection }
-				getItemId={ ( item ) => item.id }
-			/>
+			{ ! themes ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id }
+				/>
+			) }
 		</div>
 	);
 }

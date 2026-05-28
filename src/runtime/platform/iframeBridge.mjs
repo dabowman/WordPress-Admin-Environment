@@ -47,6 +47,29 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 		if ( ! url ) {
 			return { type: 'ignore' };
 		}
+		// `target=_parent` / `target=_top` is WP's "break out of modal"
+		// idiom (plugin-install Replace / cancel, etc.). In our workspace
+		// the iframe-fallback IS the modal — the equivalent behavior is to
+		// navigate the iframe itself, so the action URL (including
+		// `_wpnonce`) is preserved and the user stays in the workspace.
+		// Bypass classifyAdminLink for this case — its `_wpnonce` guard
+		// would otherwise return 'pass' and the click would do nothing.
+		if ( '_parent' === data.target || '_top' === data.target ) {
+			// Defense in depth: only iframe-navigate same-origin admin URLs
+			// (the bridge inside the iframe already filters to wp-admin
+			// paths, but mirror the check here so a tampered payload can't
+			// point the iframe at an arbitrary origin).
+			try {
+				const expectedOrigin = new URL( adminUrl ).origin;
+				const targetOrigin = new URL( url, adminUrl ).origin;
+				if ( expectedOrigin !== targetOrigin ) {
+					return { type: 'ignore' };
+				}
+			} catch ( e ) {
+				return { type: 'ignore' };
+			}
+			return { type: 'iframe', href: url };
+		}
 		const decision = classifyAdminLink( {
 			rawHref: url,
 			resolvedHref: url,

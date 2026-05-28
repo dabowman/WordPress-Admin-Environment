@@ -169,6 +169,21 @@ export default function IframeApp( { app, config = {} } ) {
 			style.textContent = CHROME_HIDE_CSS;
 			iframeDoc.head.appendChild( style );
 			setIsReady( true );
+
+			// Hide again at the START of the next in-iframe navigation
+			// (form submit / link click). Without this, isReady stays
+			// true while the new page loads and the user sees a flash
+			// of un-styled wp-admin chrome before our chrome-hide CSS
+			// runs again on the next onIframeLoad.
+			try {
+				iframeWin.addEventListener(
+					'beforeunload',
+					() => setIsReady( false ),
+					{ once: true }
+				);
+			} catch ( _e ) {
+				// Same-origin attach should succeed; cross-origin throws.
+			}
 		} catch ( e ) {
 			// Same as cross-origin path — reveal anyway.
 			setIsReady( true );

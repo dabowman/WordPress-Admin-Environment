@@ -140,6 +140,48 @@ ok(
 	).type === 'ignore'
 );
 
+// target=_parent / _top is WP's "break out of modal" idiom. In our
+// workspace the iframe-fallback IS the modal, so the equivalent is to
+// navigate the iframe to the full URL — preserving nonces and bypassing
+// the workspace-route mapping that would otherwise drop them.
+const parentNonced = classifyBridgeMessage(
+	{
+		type: 'wp-admin-shell-admin-link',
+		url: ADMIN_URL + 'update.php?action=upload-plugin&_wpnonce=abc',
+		target: '_parent',
+	},
+	ctx
+);
+ok(
+	'target=_parent nonced admin-link → iframe (URL preserved, no drop)',
+	parentNonced.type === 'iframe' &&
+		parentNonced.href.includes( '_wpnonce=abc' )
+);
+const parentMapped = classifyBridgeMessage(
+	{
+		type: 'wp-admin-shell-admin-link',
+		url: ADMIN_URL + 'edit.php?post_type=page',
+		target: '_parent',
+	},
+	ctx
+);
+ok(
+	'target=_parent overrides workspace mapping (stays embedded)',
+	parentMapped.type === 'iframe'
+);
+const parentCrossOrigin = classifyBridgeMessage(
+	{
+		type: 'wp-admin-shell-admin-link',
+		url: 'https://evil.test/something',
+		target: '_parent',
+	},
+	ctx
+);
+ok(
+	'target=_parent to cross-origin URL → ignore (safety net)',
+	parentCrossOrigin.type === 'ignore'
+);
+
 // ── installIframeBridge ────────────────────────────────────────────
 
 console.log( '\n— installIframeBridge —\n' );

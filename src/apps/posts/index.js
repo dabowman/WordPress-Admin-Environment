@@ -1,4 +1,5 @@
 import '../_shared/app.css';
+import { Spinner } from '@wordpress/components';
 import { useMemo } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
@@ -279,19 +280,25 @@ export default function PostsApp( { config } ) {
 
 	return (
 		<div className="wp-admin-shell-app-posts wp-admin-shell-app--fill">
-			<DataViews
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				isLoading={ isResolving }
-				defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
-				selection={ selection }
-				onChangeSelection={ setSelection }
-				getItemId={ ( item ) => item.id.toString() }
-			/>
+			{ ! records ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id.toString() }
+				/>
+			) }
 		</div>
 	);
 }
