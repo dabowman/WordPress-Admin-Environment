@@ -35,6 +35,8 @@
 		"assets",
 		"core.tokens.json",
 		"README.md",
-		"CHANGELOG.md"
+		"CHANGELOG.md",
+		"src/runtime/engines/*/engine.json",
+		"src/apps/*/app.json"
 	]
 }
