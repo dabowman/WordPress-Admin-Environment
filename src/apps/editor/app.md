@@ -12,7 +12,7 @@ The iframe escape hatch is documented in CLAUDE.md as "a feature, not a compromi
 
 Two distinct mount paths share most of the code:
 
-- **`#/editor/{postType}/{postId}`** — set `postId` from the route param, render the iframe.
+- **`#/editor/{postType}/{id}`** — the route maps the captured id into `config.id` (the screen config must spell the key `id`, e.g. `"config": { "postType": "post", "id": "{id}" }`); the app reads `config.id`, sets `postId`, and renders the iframe. Spelling the config key `postId` is the silent-spinner trap — `config.id` stays `undefined`, `Number(undefined)` is `NaN`, and the loading guard never clears.
 - **`#/editor/{postType}/new`** — POST to `/wp/v2/{postType}s` with a seeded empty paragraph, capture the returned id, `history.replaceState` the URL to the existing-post pattern (`history.replaceState`, not `navigate()` — using the router would unmount the app mid-flight), then render the iframe.
 
 CSS injection runs on the iframe's `load` event. The selector list is fragile and tied to wp-admin's class names; expect to rev it after WordPress release upgrades. Cross-origin iframes silently skip the injection (we wrap the document access in try/catch).

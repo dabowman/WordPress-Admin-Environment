@@ -751,7 +751,7 @@
 			"app": "core:editor",
 			"config": {
 				"postType": "post",
-				"postId": "{id}"
+				"id": "{id}"
 			},
 			"permissions": {
 				"capabilities": [
@@ -841,7 +841,7 @@
 			"app": "core:editor",
 			"config": {
 				"postType": "page",
-				"postId": "{id}"
+				"id": "{id}"
 			},
 			"permissions": {
 				"capabilities": [

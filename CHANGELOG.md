@@ -27,6 +27,10 @@ A whole-codebase review pass before public testing (PR #93):
 - **Correctness.** Simple-editor remounts on post change (no cross-post content bleed); settings-general re-syncs custom date/time formats; the bulk-confirm modal guards against double-click; taxonomy cache invalidation uses the full 3-element query key; plugins/themes lists paginate their controlled data; users/comments decode HTML entities in name/author columns; the menu shallowest-wins dedupe hoists a deduped node's unique children instead of dropping them.
 - **Distribution.** Added the `License`/`License URI`/`Author`/`Plugin URI` headers, the `WP_ADMIN_SHELL_VERSION` constant, `readme.txt`, `uninstall.php` (options + prefs meta + transient cleanup, multisite-aware), JS i18n (`wp_set_script_translations` + `languages/wp-admin-shell.pot`), and a Gutenberg runtime-dependency gate that stands the hijack down to classic instead of rendering blank. Fixed README/CLI references to the removed demo shells; archived stale process docs under `docs/archive/`.
 
+#### Fixed
+
+- **Editor stuck on a permanent spinner.** The `wp-admin-default` post-edit and page-edit screens passed the captured post id into `config.postId`, but `core:editor` reads `config.id`. Since `interpolate()` only carries the keys the screen `config` declares (and the app's `config-schema` is never enforced at mount), `config.id` was `undefined` → `Number(undefined)` is `NaN` → the `! postId` loading guard never cleared, so editing any post or page showed a spinner forever with no error. Aligned both screens to `"id": "{id}"` (matching `single-pane-demo.json`, which was already correct), declared `id` in the editor's `config-schema`, and corrected the `app.json`/`app.md` references that wrongly named the key `postId`. Codified the route-config-key-must-match-what-the-app-reads trap in `CLAUDE.md`.
+
 ### v3 reshape (current shape)
 
 Three artifacts replaced v1's single-file shape:
