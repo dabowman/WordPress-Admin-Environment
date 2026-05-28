@@ -164,6 +164,42 @@ ok(
 		'/all-posts'
 );
 
+// Shipped baseline shape: posts/pages both constrain post_type, so a CPT
+// list falls through to classic instead of being swallowed by /posts.
+const SHIPPED = {
+	'/posts': { legacy_path: 'edit.php', legacy_query: { post_type: 'post' } },
+	'/pages': { legacy_path: 'edit.php', legacy_query: { post_type: 'page' } },
+};
+ok(
+	'bare edit.php → /posts (WP default post_type=post)',
+	matchLegacyRoute( 'edit.php', new URLSearchParams( '' ), SHIPPED ) ===
+		'/posts'
+);
+ok(
+	'edit.php?post_type=post → /posts',
+	matchLegacyRoute(
+		'edit.php',
+		new URLSearchParams( 'post_type=post' ),
+		SHIPPED
+	) === '/posts'
+);
+ok(
+	'edit.php?post_type=page → /pages',
+	matchLegacyRoute(
+		'edit.php',
+		new URLSearchParams( 'post_type=page' ),
+		SHIPPED
+	) === '/pages'
+);
+ok(
+	'CPT edit.php?post_type=product → null (falls through to classic)',
+	matchLegacyRoute(
+		'edit.php',
+		new URLSearchParams( 'post_type=product' ),
+		SHIPPED
+	) === null
+);
+
 // ── classifyAdminLink ──────────────────────────────────────────────
 
 console.log( '\n— classifyAdminLink —\n' );

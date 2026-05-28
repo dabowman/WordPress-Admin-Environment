@@ -686,7 +686,10 @@
 					"edit_posts"
 				]
 			},
-			"legacy_path": "edit.php"
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post"
+			}
 		},
 		"posts-new": {
 			"label": "Add New Post",
@@ -702,7 +705,10 @@
 				]
 			},
 			"mode": "focus",
-			"legacy_path": "post-new.php"
+			"legacy_path": "post-new.php",
+			"legacy_query": {
+				"post_type": "post"
+			}
 		},
 		"post-edit": {
 			"label": "Edit Post",

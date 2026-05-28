@@ -157,6 +157,12 @@ class WP_Admin_Shell_Admin_Routes {
 	 * link interceptor (W4, emitted as `window.wpAdminShell.adminRoutes`)
 	 * and the classic→workspace redirect (W5).
 	 *
+	 * Keyed by workspace route path; a programmatic route sharing a path
+	 * with a screen overwrites the screen entry (last-write-wins). When two
+	 * entries share a `legacy_path` with equal-or-zero `legacy_query`
+	 * specificity, `match_legacy_hash` / `matchLegacyRoute` break the tie by
+	 * map iteration order (first wins on equal score).
+	 *
 	 * @param array $config Resolved admin.json doc.
 	 * @return array<string, array{legacy_path:string,legacy_query?:array,legacy_params?:array}>
 	 */

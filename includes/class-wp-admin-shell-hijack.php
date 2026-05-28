@@ -205,6 +205,13 @@ class WP_Admin_Shell_Hijack {
 		if ( '' === $pagenow || 'index.php' === $pagenow ) {
 			return;
 		}
+		// Plugin pages (`admin.php?page=…`) never carry a `legacy_path`, so
+		// skip the full resolve + map build for them (and any `_wpnonce`'d
+		// action) rather than building a map only to find no match.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only routing pre-check.
+		if ( isset( $_GET['page'] ) || isset( $_GET['_wpnonce'] ) ) {
+			return;
+		}
 
 		$map = WP_Admin_Shell_Admin_Routes::legacy_map( wp_admin_shell_get_active_config() );
 		$hash = self::match_legacy_hash( $pagenow, $map );
@@ -246,6 +253,14 @@ class WP_Admin_Shell_Hijack {
 			foreach ( $legacy_query as $key => $value ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only GET routing match.
 				$got = isset( $_GET[ $key ] ) ? sanitize_text_field( wp_unslash( $_GET[ $key ] ) ) : '';
+				// WordPress convention: edit.php / post-new.php with no
+				// `post_type` means `post_type=post`. Keeps a bare edit.php
+				// matching the `post`-constrained baseline screen while a
+				// CPT (`?post_type=product`) falls through to classic.
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only GET routing match.
+				if ( 'post_type' === $key && ! isset( $_GET[ $key ] ) ) {
+					$got = 'post';
+				}
 				if ( (string) $got !== (string) $value ) {
 					$matches = false;
 					break;
@@ -271,9 +286,10 @@ class WP_Admin_Shell_Hijack {
 				$route_path
 			);
 
-			// Skip entries whose tokens didn't resolve (stray `{...}`) or
-			// that point at the root (would loop with the render hijack).
-			if ( '' === $interpolated || '/' === $interpolated || false !== strpos( $interpolated, '{' ) ) {
+			// Skip entries whose tokens didn't resolve (stray `{...}`), that
+			// collapse an empty segment (`/x//7`), or that point at the root
+			// (would loop with the render hijack). Mirrors the JS matcher.
+			if ( '' === $interpolated || '/' === $interpolated || false !== strpos( $interpolated, '{' ) || false !== strpos( $interpolated, '//' ) ) {
 				continue;
 			}
 			$best       = $interpolated;

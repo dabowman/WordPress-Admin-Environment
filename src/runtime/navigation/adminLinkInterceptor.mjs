@@ -109,7 +109,15 @@ export function matchLegacyRoute( script, query, routes ) {
 			// Absent param compares as '' (matches the PHP `'' === $got`
 			// semantics) so a literal `'null'` constraint can't be matched
 			// by an omitted param.
-			const got = query.has( key ) ? query.get( key ) : '';
+			let got = query.has( key ) ? query.get( key ) : '';
+			// WordPress convention: edit.php / post-new.php with no
+			// `post_type` means `post_type=post`. Without this, a baseline
+			// `posts` entry constrained to `post_type=post` wouldn't match a
+			// bare `edit.php`, and a zero-constraint entry would instead
+			// vacuously swallow every custom-post-type list (`?post_type=product`).
+			if ( 'post_type' === key && ! query.has( key ) ) {
+				got = 'post';
+			}
 			if ( String( got ) !== String( legacyQuery[ key ] ) ) {
 				matches = false;
 				break;
