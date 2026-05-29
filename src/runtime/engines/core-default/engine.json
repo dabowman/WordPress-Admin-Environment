@@ -80,10 +80,8 @@
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
-				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))",
-				"padding-block": "var(--wp-admin-shell--chrome--sidebar--padding-block, var(--wpds-dimension-padding-md))",
-				"padding-inline": "var(--wp-admin-shell--chrome--sidebar--padding-inline, var(--wpds-dimension-padding-md))"
+				"background": "var(--wp-admin-shell--chrome--sidebar--background, transparent)",
+				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
 			}
 		},
 
@@ -96,7 +94,7 @@
 				"flex-shrink": "0",
 				"inline-size": "100%",
 				"box-sizing": "border-box",
-				"background": "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral))",
+				"background": "var(--wp-admin-shell--chrome--toolbar--background, transparent)",
 				"color": "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
 				"border-block-end": "1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
 				"padding-block": "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm))",
@@ -137,7 +135,7 @@
 				"min-inline-size": "0",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral))",
+				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
 				"border-radius": "var(--wpds-border-radius-lg)",
 				"box-shadow": "var(--wpds-elevation-sm)",
 				"margin": "0"
@@ -157,8 +155,7 @@
 				"overflow-x": "hidden",
 				"background": "var(--wp-admin-shell--chrome--detail--card-background, var(--wpds-color-bg-surface-neutral-strong))",
 				"border-radius": "var(--wpds-border-radius-lg)",
-				"box-shadow": "var(--wpds-elevation-sm)",
-				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+				"box-shadow": "var(--wpds-elevation-sm)"
 			}
 		},
 

@@ -35,17 +35,26 @@
 	);
 }
 
+/* The body wrapper owns the region spacing: `padding` insets the whole
+ * sidebar + content + detail group from the layout edges (the canvas
+ * shows through as the gutter), and `gap` separates the sidebar from the
+ * content area — replacing the per-region margin/padding that used to do
+ * this. `box-sizing: border-box` keeps the padding inside the flex-stretched
+ * width (an unprefixed content-box would overflow, same trap as the toolbar). */
 .wp-admin-shell-layout__body {
 	display: flex;
 	flex: 1;
 	min-height: 0;
+	gap: var(--wpds-dimension-gap-lg);
+	padding: var(--wpds-dimension-padding-lg);
+	box-sizing: border-box;
 }
 
 .wp-admin-shell-areas {
 	flex: 1;
 	min-width: 0;
 	display: flex;
-	gap: 0;
+	gap: var(--wpds-dimension-gap-lg);
 }
 
 /* Inner app mount-point — engine-internal, not a region, has no
