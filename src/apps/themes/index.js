@@ -143,12 +143,15 @@ export default function ThemesApp( { config = {} } ) {
 					{ type: 'snackbar' }
 				);
 			} catch ( err ) {
-				const target =
-					( window.wpAdminShell?.adminUrl || '/wp-admin/' ) +
-					`themes.php?action=activate&stylesheet=${ encodeURIComponent(
-						theme.stylesheet
-					) }`;
-				window.location.href = target;
+				createNotice(
+					'error',
+					err?.message ||
+						__(
+							'The theme could not be activated.',
+							'wp-admin-shell'
+						),
+					{ type: 'snackbar', isDismissible: true }
+				);
 			}
 		},
 		[ invalidateResolution, themesQuery, createNotice ]

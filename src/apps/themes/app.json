@@ -66,7 +66,7 @@
 		"icon": "layout"
 	},
 	"documentation": {
-		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the shell's custom `/wp-admin-shell/v1/activate-theme` endpoint with a wp-admin fallback. The Details action opens a modal with full description + version + author + theme-site link.",
+		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the shell's custom `/wp-admin-shell/v1/activate-theme` endpoint (gated on `switch_themes`); on failure it surfaces an error snackbar. The Details action opens a modal with full description + version + author + theme-site link.",
 		"rebuilds": "themes",
 		"data": {
 			"reads": [
@@ -140,7 +140,7 @@
 		"interactions": [
 			{
 				"trigger": "Activate row action",
-				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme`. On failure: `window.location.href` to `themes.php?action=activate&stylesheet=...` so the user falls back to wp-admin.",
+				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme` and show a success snackbar. On failure show an error snackbar with the decoded WP_Error message.",
 				"guards": [
 					"item.status === 'inactive'"
 				]
@@ -167,11 +167,11 @@
 			},
 			{
 				"concern": "no-core-rest-theme-switch",
-				"note": "WordPress core REST does not expose a theme-switch operation. The shell ships a custom `/wp-admin-shell/v1/activate-theme` endpoint; rebuilds must provide the equivalent or implement the wp-admin link fall-back."
+				"note": "WordPress core REST does not expose a theme-switch operation (upstream parity #143). The shell ships a custom `/wp-admin-shell/v1/activate-theme` endpoint (`WP_Admin_Shell_Themes_REST`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`); rebuilds must provide the equivalent server-side hook."
 			},
 			{
-				"concern": "graceful-fallback",
-				"note": "If the custom endpoint 404s (older shell version or stripped feature), the app navigates to wp-admin's `themes.php` flow so the user can complete the action — preserves the right outcome even without the optimized path."
+				"concern": "error-surfacing",
+				"note": "If the endpoint rejects (missing/broken theme, insufficient caps), the app shows an error snackbar with the decoded WP_Error message rather than navigating away."
 			}
 		],
 		"design-system-leakage": [
