@@ -159,6 +159,23 @@
 	padding: 0;
 }
 
+/* DataViews surface — let the region card show through.
+ *
+ * `@wordpress/dataviews` paints its wrapper `background-color:
+ * var(--wp-dataviews-color-background, #fff)` (build/dataviews.css), so an
+ * unset variable hard-codes the panel white over whatever region background
+ * the template/admin.json declared. Scope the package's own override knob to
+ * the region app mount so any DataViews app reads transparent and the region
+ * card's background wins. The sticky list toolbar/filters inherit this
+ * (`background-color: inherit`), so they stay flush with the card too.
+ *
+ * DS-specific (the `.dataviews-*` classes presuppose @wordpress/dataviews),
+ * so it lives engine-side, not in the DS-neutral kernel. */
+.wp-admin-shell-region__app .dataviews-wrapper,
+.wp-admin-shell-region__app .dataviews-picker-wrapper {
+	--wp-dataviews-color-background: transparent;
+}
+
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
 .wp-admin-shell-region__forbidden {
