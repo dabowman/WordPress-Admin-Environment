@@ -168,33 +168,27 @@
 	padding: 0;
 }
 
-/* DataViews surface — let the region card show through.
+/* DataViews surface — paint it with the region's card background instead of
+ * the package's hard-coded white.
  *
- * `@wordpress/dataviews` paints its wrapper `background-color:
- * var(--wp-dataviews-color-background, #fff)` (build/dataviews.css), so an
- * unset variable hard-codes the panel white over whatever region background
- * the template/admin.json declared. Scope the package's own override knob to
- * the region app mount so any DataViews app reads transparent and the region
- * card's background wins. The sticky list toolbar/filters inherit this
- * (`background-color: inherit`), so they stay flush with the card too.
+ * `@wordpress/dataviews` drives its wrapper, the sticky table header (`thead`,
+ * via `background-color: inherit` chaining up to the wrapper), and the sticky
+ * actions column ALL from one knob: `var(--wp-dataviews-color-background,
+ * #fff)`. Point it at the same chrome slot the content card uses, so the whole
+ * list reads the card colour — seamless with the region AND opaque, so the
+ * rows scrolling under the sticky header / behind the horizontally-pinned
+ * actions column are occluded.
+ *
+ * This supersedes an earlier `transparent` value: transparent looked right for
+ * the flat surface but left every sticky element see-through (each one needed
+ * its own opaque patch). Selected-row states paint their own `color-mix`, not
+ * this var, so they keep their highlight.
  *
  * DS-specific (the `.dataviews-*` classes presuppose @wordpress/dataviews),
  * so it lives engine-side, not in the DS-neutral kernel. */
 .wp-admin-shell-region__app .dataviews-wrapper,
 .wp-admin-shell-region__app .dataviews-picker-wrapper {
-	--wp-dataviews-color-background: transparent;
-}
-
-/* …but the table header must NOT be transparent. The sticky `thead`
- * (`position: sticky` + `background-color: inherit`) is what occludes the
- * rows scrolling beneath it; with the wrapper transparent it inherits
- * transparent and the rows bleed through. Repaint the sticky header with the
- * content card background so it matches the surface it floats over and
- * occludes again. (`thead` is the sticky element; its `th` cells stay
- * transparent and render over this.) More specific than the package's
- * `inherit` rule, so no `!important` needed. */
-.wp-admin-shell-region__app .dataviews-view-table thead {
-	background-color: var(
+	--wp-dataviews-color-background: var(
 		--wp-admin-shell--chrome--content--card-background,
 		var(--wpds-color-bg-surface-neutral-strong)
 	);
