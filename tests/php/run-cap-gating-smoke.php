@@ -296,6 +296,25 @@ $T::assert_true(
 	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_with_admin )
 );
 
+// Raw empty OR-set fail-closed (bypassing resolve(), which would inflate).
+// A caller that hands user_passes `{capabilities:[],roles:[],appFloor:[]}`
+// — nothing specified at all — must be DENIED, not allow-everyone. But a
+// floor-only resolve (empty OR-set, non-empty floor that passed) still allows.
+$T::assert_false(
+	'user_passes: raw empty OR-set + no floor → denied (fail-closed)',
+	WP_Admin_Shell_Permissions::user_passes(
+		$admin_id,
+		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array() )
+	)
+);
+$T::assert_true(
+	'user_passes: empty OR-set but passing floor → floor was the gate, allow',
+	WP_Admin_Shell_Permissions::user_passes(
+		$admin_id,
+		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array( 'read' ) )
+	)
+);
+
 // ── 6. unknown slugs fail closed ──────────────────────────────────────
 
 $unknown_cap = WP_Admin_Shell_Permissions::resolve(
@@ -589,6 +608,57 @@ if ( $editor_id !== null ) {
 		$editor_menu_count > ( $author_id !== null
 			? wpas_cap_smoke_count_menu_items( $menu, $screens, $author_id )
 			: 0 )
+	);
+}
+
+// ── Server-side config prune (wp_admin_shell_prune_config_for_user) ────
+//
+// Pruning a screen the user can't reach must NOT take a reachable child menu
+// item down with it — the dropped node's surviving children are hoisted. The
+// canonical case: `profile` (read floor) nested only under the admin-only
+// `users` node. A subscriber loses `users` but must keep `profile`.
+
+if ( function_exists( 'wp_admin_shell_prune_config_for_user' ) && $subscriber_id !== null ) {
+	$prune_cfg = array(
+		'workspace' => array( 'default-screen' => 'dashboard' ),
+		'screens'   => array(
+			'dashboard' => array( 'permissions' => array( 'roles' => array( 'subscriber', 'administrator' ) ) ),
+			'users'     => array( 'permissions' => array( 'capabilities' => array( 'list_users' ) ) ),
+			'profile'   => array( 'permissions' => array( 'roles' => array( 'subscriber', 'administrator' ) ) ),
+		),
+		'menu'      => array(
+			'dashboard' => array(),
+			'users'     => array(
+				'permissions' => array( 'capabilities' => array( 'list_users' ) ),
+				'items'       => array(
+					'profile'  => array( 'href' => '#/profile', 'permissions' => array( 'roles' => array( 'subscriber', 'administrator' ) ) ),
+					'user-new' => array( 'permissions' => array( 'capabilities' => array( 'create_users' ) ) ),
+				),
+			),
+		),
+	);
+	$sub_pruned = wp_admin_shell_prune_config_for_user( $prune_cfg, $subscriber_id );
+	$T::assert_false(
+		'prune: subscriber loses the admin-only users screen',
+		isset( $sub_pruned['screens']['users'] )
+	);
+	$T::assert_true(
+		'prune: subscriber keeps the reachable profile screen',
+		isset( $sub_pruned['screens']['profile'] )
+	);
+	$T::assert_false(
+		'prune: admin-only users menu node dropped for subscriber',
+		isset( $sub_pruned['menu']['users'] )
+	);
+	$T::assert_true(
+		'prune: reachable profile child HOISTED to top level (not lost with users)',
+		isset( $sub_pruned['menu']['profile'] )
+	);
+
+	$admin_pruned = wp_admin_shell_prune_config_for_user( $prune_cfg, $admin_id );
+	$T::assert_true(
+		'prune: admin keeps the users screen + menu node intact',
+		isset( $admin_pruned['screens']['users'] ) && isset( $admin_pruned['menu']['users']['items']['profile'] )
 	);
 }
 

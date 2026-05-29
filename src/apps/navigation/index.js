@@ -129,9 +129,13 @@ function itemPassesPermissions( item ) {
 			return true;
 		}
 	}
-	// No client-side role check today — server-side cap gating is
-	// authoritative. When the only access route is by role, render the
-	// item (server will 403 on the route if it shouldn't be reachable).
+	// No client-side role map, so role-only gates can't be evaluated here.
+	// This is no longer the security boundary: the server prunes screens +
+	// role-gated menu items the user can't reach BEFORE serializing the config
+	// (`wp_admin_shell_prune_config_for_user`), so a `roles:[...]` item the
+	// user fails never reaches this code. Rendering it when present is then
+	// correct — the server already vouched for visibility (and 403s the route
+	// regardless).
 	if ( roles.length > 0 ) {
 		return true;
 	}

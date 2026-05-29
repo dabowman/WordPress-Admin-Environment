@@ -1,5 +1,6 @@
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
+import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
@@ -46,6 +47,10 @@ export function createBulkConfirmModal( {
 		closeModal,
 		onActionPerformed,
 	} ) {
+		// Re-entry guard: the confirm handler is async and `closeModal()` only
+		// runs after the await, so without this a fast second click fires a
+		// second destructive batch (duplicate DELETEs + spurious failures).
+		const [ isBusy, setIsBusy ] = useState( false );
 		const targets = filterItems ? filterItems( items ) : items;
 		const disabled = isConfirmDisabled
 			? isConfirmDisabled( targets )
@@ -73,29 +78,52 @@ export function createBulkConfirmModal( {
 					<DestructiveButton
 						variant="primary"
 						isDestructive
-						disabled={ disabled }
+						disabled={ disabled || isBusy }
+						isBusy={ isBusy }
 						onClick={ async () => {
-							let results = [];
-							let failed = 0;
-							let succeeded = targets;
-							if ( targets.length ) {
-								results = await Promise.allSettled(
-									targets.map( ( item ) => mutate( item ) )
-								);
-								failed = results.filter(
-									( r ) => r.status === 'rejected'
-								).length;
-								// Only the items that actually mutated are
-								// "performed"; reporting the failures here would
-								// deselect rows the user likely wants to retry.
-								succeeded = targets.filter(
-									( _item, i ) =>
-										results[ i ]?.status === 'fulfilled'
-								);
+							if ( isBusy ) {
+								return;
 							}
-							onSettled?.( { items, targets, results, failed } );
-							onActionPerformed?.( succeeded );
-							closeModal();
+							setIsBusy( true );
+							// `finally` clears the busy flag even if an
+							// app-supplied `onSettled`/`onActionPerformed`
+							// callback throws after the batch — otherwise the
+							// modal stays open with the confirm button stuck
+							// disabled. (`Promise.allSettled` itself never
+							// rejects.)
+							try {
+								let results = [];
+								let failed = 0;
+								let succeeded = targets;
+								if ( targets.length ) {
+									results = await Promise.allSettled(
+										targets.map( ( item ) =>
+											mutate( item )
+										)
+									);
+									failed = results.filter(
+										( r ) => r.status === 'rejected'
+									).length;
+									// Only the items that actually mutated are
+									// "performed"; reporting the failures here
+									// would deselect rows the user likely wants
+									// to retry.
+									succeeded = targets.filter(
+										( _item, i ) =>
+											results[ i ]?.status === 'fulfilled'
+									);
+								}
+								onSettled?.( {
+									items,
+									targets,
+									results,
+									failed,
+								} );
+								onActionPerformed?.( succeeded );
+								closeModal();
+							} finally {
+								setIsBusy( false );
+							}
 						} }
 					>
 						{ label }

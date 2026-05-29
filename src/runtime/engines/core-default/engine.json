@@ -33,35 +33,32 @@
 	"modes": {
 		"default": {
 			"label": "Default",
-			"description": "Full workspace chrome — sidebar, toolbar, site-hub, content.",
+			"description": "Full workspace chrome — toolbar + sidebar (with nested site-hub) + content; the detail panel shows when a mirror-routed app is mounted.",
 			"regions": {
-				"sidebar":  { "hidden": false, "compact": false },
-				"toolbar":  { "hidden": false, "compact": false },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": false },
-				"preview":  { "hidden": false }
+				"sidebar": { "hidden": false, "compact": false },
+				"toolbar": { "hidden": false, "compact": false },
+				"content": { "hidden": false, "fullWidth": false },
+				"detail":  { "hidden": false }
 			}
 		},
 		"focus": {
 			"label": "Focus",
-			"description": "Strip the sidebar; compress the toolbar to a back link + save indicator. Editor and authoring surfaces.",
+			"description": "Strip the sidebar (and its nested site-hub) + the detail panel; compact the toolbar to its essential affordances; content fills the width. Editor and authoring surfaces.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "compact": true },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "compact": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 		"takeover": {
 			"label": "Takeover",
-			"description": "All workspace chrome hidden. Full-viewport screen. Customizer, full-screen apps.",
+			"description": "All workspace chrome hidden — toolbar + sidebar + detail panel gone, content fills the viewport. Customizer, full-screen apps.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "hidden": true },
-				"site-hub": { "hidden": true },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "hidden": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 		"modal": {
@@ -83,10 +80,8 @@
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
-				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))",
-				"padding-block": "var(--wp-admin-shell--chrome--sidebar--padding-block, var(--wpds-dimension-padding-md))",
-				"padding-inline": "var(--wp-admin-shell--chrome--sidebar--padding-inline, var(--wpds-dimension-padding-md))"
+				"background": "var(--wp-admin-shell--chrome--sidebar--background, transparent)",
+				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
 			}
 		},
 
@@ -98,10 +93,12 @@
 				"align-items": "center",
 				"flex-shrink": "0",
 				"inline-size": "100%",
-				"background": "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral))",
+				"box-sizing": "border-box",
+				"background": "var(--wp-admin-shell--chrome--toolbar--background, transparent)",
 				"color": "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
-				"border-block-end": "1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
+				"border-block-end": "0px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
 				"padding-block": "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm))",
+				"margin-block-end": "calc(-1 * var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm)))",
 				"padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
 			},
 			"regions": {
@@ -139,10 +136,10 @@
 				"min-inline-size": "0",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral))",
+				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
 				"border-radius": "var(--wpds-border-radius-lg)",
-				"box-shadow": "var(--wpds-elevation-sm)",
-				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+				"box-shadow": "var(--wpds-elevation-xs)",
+				"margin": "0"
 			}
 		},
 
@@ -157,10 +154,9 @@
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
+				"background": "var(--wp-admin-shell--chrome--detail--card-background, var(--wpds-color-bg-surface-neutral-strong))",
 				"border-radius": "var(--wpds-border-radius-lg)",
-				"box-shadow": "var(--wpds-elevation-sm)",
-				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
+				"box-shadow": "var(--wpds-elevation-sm)"
 			}
 		},
 
@@ -213,13 +209,35 @@
 		"theme": {
 			"color": {
 				"primary": "#3858E9",
-				"bg": "#ffffff"
+				"bg": "#fafafa"
 			},
 			"density": "default"
 		}
 	},
 
 	"defaultRegions": {
+		"toolbar": {
+			"template": "core:topbar",
+			"regions": {
+				"start": {
+					"role": "region",
+					"app": "core:toolbar-actions",
+					"style": {
+						"display": "flex",
+						"align-items": "center"
+					}
+				},
+				"end": {
+					"role": "region",
+					"app": "core:user-menu",
+					"style": {
+						"display": "flex",
+						"align-items": "center",
+						"margin-inline-start": "auto"
+					}
+				}
+			}
+		},
 		"sidebar": {
 			"template": "core:sidebar",
 			"regions": {

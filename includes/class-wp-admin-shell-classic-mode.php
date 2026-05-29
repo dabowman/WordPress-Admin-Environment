@@ -7,13 +7,17 @@
  * toggle that sets a session cookie; the workspace hijack (W2) bails
  * whenever the cookie is present, so every classic page becomes reachable.
  *
- *   - `?classic=1` (cap: `manage_options`) → set the `wp_admin_shell_
- *     classic` session cookie, strip the param, redirect. The next request
- *     carries the cookie, so the hijack stands down and classic renders.
+ *   - `?classic=1` (cap: `read` — mirrors the hijack floor so every logged-in
+ *     user has a way out, not just admins; nonce-protected) → set the
+ *     `wp_admin_shell_classic` session cookie, strip the param, redirect. The
+ *     next request carries the cookie, so the hijack stands down and classic
+ *     renders.
  *   - `?classic=0` → clear the cookie, strip the param, redirect. The next
- *     request has no cookie, so the workspace takes over again.
- *   - Classic admin bar gains a "Back to workspace" node while the cookie
- *     is set (only when a workspace is actually active to return to).
+ *     request has no cookie, so the workspace takes over again. Lenient (no
+ *     nonce required) so a user can never get trapped in classic.
+ *   - The workspace admin bar gains a "Classic wp-admin" escape node; the
+ *     classic admin bar gains the reciprocal "Back to workspace" node while
+ *     the cookie is set (both only when a workspace is actually active).
  *
  * The toggle runs at `admin_init` priority -10, before the hijack at
  * priority 0, so the cookie is established and the redirect issued before
@@ -34,6 +38,9 @@ class WP_Admin_Shell_Classic_Mode {
 
 	const COOKIE = 'wp_admin_shell_classic';
 
+	/** Nonce action protecting the cookie-flip toggle. */
+	const NONCE_ACTION = 'wp_admin_shell_classic';
+
 	public static function init() {
 		add_action( 'admin_init', array( __CLASS__, 'handle_toggle' ), -10 );
 		add_action( 'admin_bar_menu', array( __CLASS__, 'admin_bar_node' ), 999 );
@@ -43,7 +50,7 @@ class WP_Admin_Shell_Classic_Mode {
 	 * Process the `?classic=0|1` toggle. No-op when the param is absent.
 	 */
 	public static function handle_toggle() {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- idempotent per-session UI toggle, not a state-changing write; cap-gated below.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce verified below for the activation path; param presence is read-only routing.
 		if ( ! isset( $_GET['classic'] ) ) {
 			return;
 		}
@@ -66,18 +73,30 @@ class WP_Admin_Shell_Classic_Mode {
 		if ( 'GET' !== $method ) {
 			return;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- value read for branching; the state-changing branch verifies the nonce.
 		$value = sanitize_text_field( wp_unslash( $_GET['classic'] ) );
 
 		if ( '1' === $value ) {
-			// Activation is cap-gated. A user without the cap is simply
-			// redirected back without a cookie, so they stay in the
-			// workspace (the toggle is silently ignored).
-			if ( current_user_can( 'manage_options' ) ) {
+			// Activation flips a security-relevant gate (it disables the
+			// workspace for the browser session), so it requires BOTH a valid
+			// nonce and the `read` cap. The nonce closes the CSRF hole — a
+			// nonce-less cross-site top-level navigation to `/wp-admin/
+			// ?classic=1` (the SameSite=Lax auth cookie still rides along) is
+			// now a no-op. The cap floor mirrors the hijack's `read` floor so
+			// any logged-in user — not just admins — can escape a workspace
+			// rendering bug. A failing check is silently ignored: the param is
+			// stripped and the user stays in the workspace.
+			$nonce = isset( $_GET['_wpnonce'] )
+				? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) )
+				: '';
+			if ( wp_verify_nonce( $nonce, self::NONCE_ACTION ) && current_user_can( 'read' ) ) {
 				self::set_cookie( true );
 			}
 		} elseif ( '0' === $value ) {
-			// Anyone may return to the workspace.
+			// Returning to the workspace is the safe default — it re-enables
+			// the hijack rather than disabling it — so it's intentionally
+			// lenient (no nonce) to guarantee a user is never trapped in
+			// classic by a stale/missing nonce.
 			self::set_cookie( false );
 		} else {
 			return;
@@ -87,23 +106,56 @@ class WP_Admin_Shell_Classic_Mode {
 	}
 
 	/**
-	 * Add the reciprocal "Back to workspace" node to the classic admin
-	 * bar while the classic cookie is set and a workspace is active.
+	 * Add the classic-mode toggle node to the admin bar.
+	 *
+	 *   - In the workspace (cookie not set) → a "Classic wp-admin" escape node
+	 *     so every user down to the `read` floor has a documented way out of a
+	 *     workspace rendering bug.
+	 *   - In classic (cookie set) → the reciprocal "Back to workspace" node.
+	 *
+	 * Both only when a workspace is actually active to toggle against. No
+	 * explicit cap check: the admin bar renders only for logged-in users, and
+	 * the workspace itself requires `read` to render, so only readers ever see
+	 * the node. Hrefs are nonce-protected (the toggle verifies the nonce on
+	 * activation).
 	 *
 	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
 	 */
 	public static function admin_bar_node( $wp_admin_bar ) {
-		if ( empty( $_COOKIE[ self::COOKIE ] ) ) {
-			return;
-		}
 		if ( ! function_exists( 'wp_admin_shell_workspace_active' ) || ! wp_admin_shell_workspace_active() ) {
 			return;
 		}
-		$wp_admin_bar->add_node( array(
-			'id'    => 'wp-admin-shell-back-to-workspace',
-			'title' => __( '↩ Back to workspace', 'wp-admin-shell' ),
-			'href'  => add_query_arg( 'classic', '0', admin_url( '/' ) ),
-		) );
+		// Match the hijack's exact predicate (`'1' === …`) so a forged/garbage
+		// truthy cookie (`=yes`) can't drift the two apart — the hijack would
+		// still serve the workspace, so this must show the escape node, not the
+		// "back" node.
+		$in_classic = isset( $_COOKIE[ self::COOKIE ] ) && '1' === $_COOKIE[ self::COOKIE ];
+		if ( $in_classic ) {
+			$wp_admin_bar->add_node( array(
+				'id'    => 'wp-admin-shell-back-to-workspace',
+				'title' => __( '↩ Back to workspace', 'wp-admin-shell' ),
+				'href'  => self::toggle_url( false ),
+			) );
+		} else {
+			$wp_admin_bar->add_node( array(
+				'id'    => 'wp-admin-shell-classic',
+				'title' => __( 'Classic wp-admin', 'wp-admin-shell' ),
+				'href'  => self::toggle_url( true ),
+			) );
+		}
+	}
+
+	/**
+	 * Build a nonce-protected toggle URL.
+	 *
+	 * @param bool $on True → `?classic=1` (into classic); false → `?classic=0`.
+	 * @return string
+	 */
+	private static function toggle_url( $on ) {
+		return wp_nonce_url(
+			add_query_arg( 'classic', $on ? '1' : '0', admin_url( '/' ) ),
+			self::NONCE_ACTION
+		);
 	}
 
 	/**

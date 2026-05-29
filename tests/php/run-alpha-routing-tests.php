@@ -172,11 +172,22 @@ $bar = $make_bar();
 WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
 $T::ok( 'Back-to-workspace node shown when cookie set + workspace active', isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
 
-// Cookie absent → no node.
+// Cookie absent → no back-to-workspace node, but the reciprocal "Classic
+// wp-admin" escape node IS shown (workspace still active → there's something
+// to escape from). The escape control mirrors the hijack's read floor.
 unset( $_COOKIE['wp_admin_shell_classic'] );
 $bar = $make_bar();
 WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
-$T::ok( 'no node when classic cookie absent', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+$T::ok( 'no back-to-workspace node when classic cookie absent', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+$T::ok( 'classic-escape node shown in workspace (cookie absent + active)', isset( $bar->nodes['wp-admin-shell-classic'] ) );
+
+// Garbage truthy cookie (`=yes`) must NOT count as classic — the hijack only
+// stands down on exactly '1', so the bar must show the escape node, not "back".
+$_COOKIE['wp_admin_shell_classic'] = 'yes';
+$bar = $make_bar();
+WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'forged truthy cookie → escape node, not back-to-workspace', isset( $bar->nodes['wp-admin-shell-classic'] ) && ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+unset( $_COOKIE['wp_admin_shell_classic'] );
 
 // Cookie set but workspace inactive (no file + no option) → no node.
 $GLOBALS['wpas_routing_override'] = '';

@@ -4,28 +4,7 @@ import { Spinner } from '@wordpress/components';
 
 import { navigate } from '../../runtime/routing/router';
 import { installIframeBridge } from '../../runtime/platform/iframeBridge.mjs';
-
-// TODO: site-editor chrome-hiding selectors are fragile —
-// rev with each WP release. Verify Style Book canvas layout after upgrades.
-const CHROME_HIDE_CSS = `
-	#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter {
-		display: none !important;
-	}
-	#wpcontent { margin-left: 0 !important; }
-	html.wp-toolbar { padding-top: 0 !important; }
-	#wpbody-content { padding-top: 0; }
-	.edit-site-layout__sidebar-region,
-	.edit-site-layout__sidebar,
-	.edit-site-site-hub,
-	.edit-site-layout__header-container {
-		display: none !important;
-	}
-	.edit-site-layout__canvas-container,
-	.edit-site-layout__canvas {
-		inset: 0 !important;
-		left: 0 !important;
-	}
-`;
+import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
 
 /**
  * Renders a wp-admin page inside an iframe with the default chrome

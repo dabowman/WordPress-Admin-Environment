@@ -260,6 +260,42 @@ export default function PluginsApp( { config = {} } = {} ) {
 		} );
 	}, [ dataViewConfig, setPluginStatus, refresh ] );
 
+	// DataViews is controlled and won't sort or slice the `data` it's handed
+	// (search + status filter are already applied in the `data` memo above, and
+	// it intentionally also searches the description that's rendered inside the
+	// name cell). Apply the column sort, then the page slice — otherwise page 1
+	// shows every plugin and "Next" re-renders the same list, and clicking a
+	// column header does nothing. All sortable columns are strings; `numeric`
+	// collation keeps version segments (1.2.10 > 1.2.9) in order.
+	const paginatedData = useMemo( () => {
+		let rows = data;
+		const sortField = view.sort?.field;
+		if ( sortField ) {
+			const dir = view.sort?.direction === 'desc' ? -1 : 1;
+			rows = [ ...data ].sort(
+				( a, b ) =>
+					dir *
+					String( a[ sortField ] ?? '' ).localeCompare(
+						String( b[ sortField ] ?? '' ),
+						undefined,
+						{ numeric: true }
+					)
+			);
+		}
+		// Clamp the page against the current row count: a bulk delete +
+		// `refresh()` shrinks `data` without going through a controlled view
+		// edit, so `view.page` can outrun the data (page 2 of a now-single-page
+		// list). Slicing from the stale page would return `[]` and the list
+		// renders empty even though the (hidden) paginator collapsed to 1 page.
+		const totalPages = Math.max(
+			1,
+			Math.ceil( rows.length / view.perPage )
+		);
+		const page = Math.min( view.page, totalPages );
+		const start = ( page - 1 ) * view.perPage;
+		return rows.slice( start, start + view.perPage );
+	}, [ data, view.sort, view.page, view.perPage ] );
+
 	const paginationInfo = useMemo(
 		() => ( {
 			totalItems: data.length,
@@ -286,7 +322,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 				</div>
 			) : (
 				<DataViews
-					data={ data }
+					data={ paginatedData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }

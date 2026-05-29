@@ -99,6 +99,15 @@ class WP_Admin_Shell_Hijack {
 		) {
 			return false;
 		}
+		// Hard runtime dep: without the Gutenberg plugin the @wordpress/ui
+		// overlay components throw at module-load and the shell renders blank.
+		// Stand down so classic wp-admin stays reachable (the admin_notices
+		// warning explains why) rather than taking over `/wp-admin/` into a
+		// blank screen.
+		if ( function_exists( 'wp_admin_shell_dependencies_met' )
+			&& ! wp_admin_shell_dependencies_met() ) {
+			return false;
+		}
 		// Allowlisted endpoints always fall through to classic.
 		if ( self::is_allowlisted_endpoint() ) {
 			return false;

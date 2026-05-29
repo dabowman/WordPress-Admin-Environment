@@ -399,14 +399,21 @@
 		transform 180ms ease;
 }
 
+/* `!important` — region templates apply `default-style` (e.g.
+ * `core:desktop-dock`'s inline `display: flex`) as inline style, which
+ * beats an unprefixed rule, so a plain `display: none` never hides. Same
+ * trap and fix documented in the core:default engine CSS. */
 .wp-admin-shell-layout--desktop
 	.wp-admin-shell-region[data-mode-hidden="true"] {
-	display: none;
+	display: none !important;
 }
 
 /* Dock compact — collapse to a hover-revealed strip; engine animates
  * the reveal on pointer-enter via existing JS, this rule just sets the
- * resting height. */
+ * resting height. NOTE: no `!important` here — `transform`/`opacity` are
+ * not in the dock template's inline `default-style`, so the rule already
+ * wins, and the `:hover`/`:focus-within` override below must be able to
+ * out-rank it (adding `!important` here would freeze the dock collapsed). */
 .wp-admin-shell-layout--desktop
 	.wp-admin-shell-region--dock[data-mode-compact="true"] {
 	transform: translateY(calc(100% - 4px));
@@ -423,6 +430,6 @@
 
 .wp-admin-shell-layout--desktop
 	.wp-admin-shell-region[data-mode-full-width="true"] {
-	inline-size: 100%;
-	max-inline-size: 100%;
+	inline-size: 100% !important;
+	max-inline-size: 100% !important;
 }

@@ -108,6 +108,29 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	const segment = postType === 'page' ? 'pages' : 'posts';
 	const backHref = `#/${ segment }`;
 
+	// MountedApp doesn't remount across same-route hash navs
+	// (`/posts/A/edit` → `/posts/B/edit` share one route pattern), so the
+	// `postId` initializer above only runs for the first post. Re-sync when
+	// the route points at a different post. The `createDraft` path uses
+	// `replaceState` (no navigation event), so `postIdRaw` stays at its
+	// 'new'/undefined value there and this guard is a no-op — the draft id
+	// set below survives.
+	const prevRawRef = useRef( postIdRaw );
+	useEffect( () => {
+		if ( prevRawRef.current === postIdRaw ) {
+			return;
+		}
+		prevRawRef.current = postIdRaw;
+		setError( null );
+		if ( isNew ) {
+			setPostId( null );
+			setIsCreating( true );
+		} else {
+			setPostId( Number( postIdRaw ) );
+			setIsCreating( false );
+		}
+	}, [ postIdRaw, isNew ] );
+
 	useEffect( () => {
 		if ( ! isNew ) {
 			return;
@@ -184,7 +207,11 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	}
 
 	return (
+		// `key={ postId }` remounts the editor when the route points at a
+		// different post, resetting the `hydrated` latch + `blocks` state so
+		// the autosave can't write post A's content against post B's record.
 		<SimpleEditor
+			key={ postId }
 			postType={ postType }
 			postId={ postId }
 			backHref={ backHref }

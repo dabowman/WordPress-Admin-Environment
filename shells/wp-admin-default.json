@@ -591,12 +591,42 @@
 							{
 								"id": "name",
 								"type": "text",
-								"label": "Theme"
+								"label": "Theme",
+								"enableGlobalSearch": true,
+								"enableHiding": false
 							},
 							{
 								"id": "screenshot",
 								"type": "media",
-								"label": "Screenshot"
+								"label": "Screenshot",
+								"enableSorting": false,
+								"enableHiding": false
+							},
+							{
+								"id": "status",
+								"type": "text",
+								"label": "Status",
+								"elements": [
+									{
+										"value": "active",
+										"label": "Active"
+									},
+									{
+										"value": "inactive",
+										"label": "Inactive"
+									}
+								],
+								"filterBy": {
+									"operators": [
+										"isAny"
+									]
+								}
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description",
+								"enableSorting": false
 							},
 							{
 								"id": "version",
@@ -612,13 +642,18 @@
 						"defaultView": {
 							"type": "grid",
 							"perPage": 24,
+							"sort": {
+								"field": "status",
+								"direction": "asc"
+							},
 							"fields": [
 								"status",
 								"description",
 								"version",
 								"author"
 							],
-							"titleField": "name"
+							"titleField": "name",
+							"mediaField": "screenshot"
 						},
 						"actions": [
 							{
@@ -704,7 +739,7 @@
 					"edit_posts"
 				]
 			},
-			"mode": "focus",
+			"mode": "takeover",
 			"legacy_path": "post-new.php",
 			"legacy_query": {
 				"post_type": "post"
@@ -716,14 +751,14 @@
 			"app": "core:editor",
 			"config": {
 				"postType": "post",
-				"postId": "{id}"
+				"id": "{id}"
 			},
 			"permissions": {
 				"capabilities": [
 					"edit_posts"
 				]
 			},
-			"mode": "focus"
+			"mode": "takeover"
 		},
 		"categories": {
 			"label": "Categories",
@@ -794,7 +829,7 @@
 					"edit_pages"
 				]
 			},
-			"mode": "focus",
+			"mode": "takeover",
 			"legacy_path": "post-new.php",
 			"legacy_query": {
 				"post_type": "page"
@@ -806,14 +841,14 @@
 			"app": "core:editor",
 			"config": {
 				"postType": "page",
-				"postId": "{id}"
+				"id": "{id}"
 			},
 			"permissions": {
 				"capabilities": [
 					"edit_pages"
 				]
 			},
-			"mode": "focus"
+			"mode": "takeover"
 		},
 		"media": {
 			"label": "Media",
@@ -826,7 +861,8 @@
 					"upload_files"
 				]
 			},
-			"legacy_path": "upload.php"
+			"legacy_path": "upload.php",
+			"mode": "focus"
 		},
 		"media-new": {
 			"label": "Add Media File",
@@ -838,7 +874,7 @@
 					"upload_files"
 				]
 			},
-			"mode": "takeover",
+			"mode": "focus",
 			"legacy_path": "media-new.php"
 		},
 		"comments": {
@@ -878,7 +914,8 @@
 					"switch_themes"
 				]
 			},
-			"legacy_path": "themes.php"
+			"legacy_path": "themes.php",
+			"mode": "focus"
 		},
 		"site-editor": {
 			"label": "Editor",
@@ -891,7 +928,7 @@
 					"edit_theme_options"
 				]
 			},
-			"mode": "focus",
+			"mode": "takeover",
 			"legacy_path": "site-editor.php"
 		},
 		"customize": {
@@ -930,8 +967,7 @@
 				"capabilities": [
 					"edit_theme_options"
 				]
-			},
-			"mode": "takeover"
+			}
 		},
 		"plugins": {
 			"label": "Plugins",
@@ -956,8 +992,7 @@
 				"capabilities": [
 					"install_plugins"
 				]
-			},
-			"mode": "takeover"
+			}
 		},
 		"users": {
 			"label": "Users",
@@ -983,7 +1018,6 @@
 					"create_users"
 				]
 			},
-			"mode": "takeover",
 			"legacy_path": "user-new.php"
 		},
 		"user-edit": {
@@ -1037,7 +1071,8 @@
 					"view_site_health_checks"
 				]
 			},
-			"legacy_path": "site-health.php"
+			"legacy_path": "site-health.php",
+			"mode": "focus"
 		},
 		"import": {
 			"label": "Import",
@@ -1456,6 +1491,11 @@
 	"styles": {
 		"theme": {
 			"density": "compact"
+		},
+		"chrome": {
+			"canvas": {
+				"background": "#fafafa"
+			}
 		}
 	}
 }

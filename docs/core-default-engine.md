@@ -114,7 +114,7 @@ add_filter( 'wp_admin_shell_engine_modes_core:default', function( $modes ) {
     $modes['kiosk'] = [
         'label'   => 'Kiosk',
         'extends' => 'takeover',
-        'regions' => [ 'site-hub' => [ 'hidden' => true ] ],
+        'regions' => [ 'detail' => [ 'hidden' => true ] ],
     ];
     return $modes;
 } );
@@ -131,37 +131,34 @@ Full bodies for each mode:
 	"modes": {
 		"default": {
 			"label": "Default",
-			"description": "Full workspace chrome — sidebar, toolbar, site-hub, content.",
+			"description": "Full workspace chrome — toolbar + sidebar (with nested site-hub) + content; the detail panel shows when a mirror-routed app is mounted.",
 			"regions": {
-				"sidebar":  { "hidden": false, "compact": false },
-				"toolbar":  { "hidden": false, "compact": false },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": false },
-				"preview":  { "hidden": false }
+				"sidebar": { "hidden": false, "compact": false },
+				"toolbar": { "hidden": false, "compact": false },
+				"content": { "hidden": false, "fullWidth": false },
+				"detail":  { "hidden": false }
 			}
 		},
 
 		"focus": {
 			"label": "Focus",
-			"description": "Strip the sidebar; compress the toolbar to a back link + save indicator. Editor and authoring surfaces.",
+			"description": "Strip the sidebar (and its nested site-hub) + the detail panel; compact the toolbar to its essential affordances; content fills the width. Editor and authoring surfaces.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "compact": true },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "compact": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 
 		"takeover": {
 			"label": "Takeover",
-			"description": "All workspace chrome hidden. Full-viewport screen. Customizer, full-screen apps.",
+			"description": "All workspace chrome hidden — toolbar + sidebar + detail panel gone, content fills the viewport. Customizer, full-screen apps.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "hidden": true },
-				"site-hub": { "hidden": true },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "hidden": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 
@@ -218,6 +215,8 @@ function resolveMode( screenId, engineManifest, screens ) {
 - **Document region-state vocabulary in the engine README.** Authors writing screen-level `regions` overrides depend on knowing which keys an engine accepts.
 - **Match the spec's intent across engines.** A `focus` mode should mean "minimize chrome" regardless of engine. A `core:desktop` engine's `focus` could collapse the dock to a hover-revealed strip; a `core:single-pane` `focus` could just hide the drawer toggle. Different paintings, same intent.
 - **`modal` mode is the only one that doesn't change chrome state.** Use it for overlays only; don't recycle the name for other purposes.
+- **Don't bake content padding into the region mount.** `core:default` renders the app mount (`.wp-admin-shell-region__app`) flush — no padding. The mount is non-addressable (no template hook, no `regions[id].style` path), so a default there can't be removed per-app and forces full-bleed apps (DataViews, iframes) to opt out. Apps own their inset via the shared `wp-admin-shell-app--inset` utility (themeable through `styles.chrome.content.inset`); the kernel special-cases no app for layout. See `docs/engines-and-design-systems.md` → "Region content padding."
+- **Put a region's whole flat box model in `default-style`; reserve `index.css` for what inline style can't express.** Template `default-style` is emitted as inline style on the region wrapper and is the *only* surface `regions[id].style` overrides can merge into, so every flat `property: value` (layout literals included) belongs there. `index.css` is for selectors / pseudo-classes / descendant targeting / cascade-layer fixes / queries only. Within `default-style`, give a property a named chrome slot (`var(--wp-admin-shell--chrome--…, var(--wpds-…))`) only when it's worth a stable by-name author knob; leave design-system-tracking values (radius, elevation, rhythm) as bare `--wpds-*`, and layout mechanics as literals. Full value-tier model + the JSON-vs-CSS rationale in `docs/engines-and-design-systems.md` → "`default-style` value tiers + what's themeable."
 
 ## Cascade implications
 

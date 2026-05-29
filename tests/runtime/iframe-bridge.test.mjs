@@ -182,6 +182,22 @@ ok(
 	parentCrossOrigin.type === 'ignore'
 );
 
+// Same-origin but OUTSIDE the wp-admin path tree must also be refused — the
+// _parent/_top branch enforces the path floor, not just the origin, so a
+// tampered payload can't point the iframe at e.g. an uploads file.
+const parentNonAdminPath = classifyBridgeMessage(
+	{
+		type: 'wp-admin-shell-admin-link',
+		url: 'https://site.test/wp-content/uploads/x.html',
+		target: '_parent',
+	},
+	ctx
+);
+ok(
+	'target=_parent same-origin non-admin path → ignore (path floor)',
+	parentNonAdminPath.type === 'ignore'
+);
+
 // ── installIframeBridge ────────────────────────────────────────────
 
 console.log( '\n— installIframeBridge —\n' );

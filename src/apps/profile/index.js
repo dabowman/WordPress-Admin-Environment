@@ -127,7 +127,7 @@ export default function ProfileApp() {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-profile">
+		<div className="wp-admin-shell-app-profile wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-lg" render={ <h2 /> }>
 					{ __( 'Profile', 'wp-admin-shell' ) }

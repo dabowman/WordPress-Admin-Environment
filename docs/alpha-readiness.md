@@ -2,7 +2,7 @@
 
 Manual smoke checklist for the first public alpha (workspace as the primary
 admin entry, driven by a `wp-content/admin.json` override on the
-`wp-admin-default` baseline). Run against the `developer-admin` starter on a
+`wp-admin-default` baseline). Run against the `single-pane-demo` starter on a
 wp-env machine with the Gutenberg plugin active.
 
 This doc is authored for the actual alpha surface — it is **not** the
@@ -26,7 +26,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
   omits `workspace.engine`.
-- [manual] Copy `shells/developer-admin.json` → `wp-content/admin.json`, load
+- [manual] Copy `shells/single-pane-demo.json` → `wp-content/admin.json`, load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
   delta; the baseline's screens/menu stay, only the chrome retints.

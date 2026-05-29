@@ -10,7 +10,11 @@
 	flex-shrink: 0;
 	border-right: var(--wpds-border-width-xs) solid
 		var(--wpds-color-stroke-surface-neutral);
-	padding-right: var(--wpds-dimension-padding-lg);
+	/* The host owns its nav-column inset (the mount is flush by default).
+	 * The active panel brings its own inset via the panel component's
+	 * `wp-admin-shell-app--inset`, so `__panel` adds none — see below. */
+	padding: var(--wpds-dimension-padding-2xl) var(--wpds-dimension-padding-lg)
+		var(--wpds-dimension-padding-2xl) var(--wpds-dimension-padding-2xl);
 }
 
 .wp-admin-shell-app-settings__nav .components-item.is-selected {
@@ -21,6 +25,5 @@
 .wp-admin-shell-app-settings__panel {
 	flex: 1;
 	min-width: 0;
-	padding-left: var(--wpds-dimension-padding-2xl);
 	overflow-y: auto;
 }

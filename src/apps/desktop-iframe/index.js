@@ -28,6 +28,7 @@ import {
 	useWindowEntry,
 } from '../../runtime/engines/core-desktop/windowing/WindowManagerContext';
 import { getAppWindowBlock } from '../../runtime/engines/core-desktop/windowing/appWindowBlock';
+import { injectChromeHide } from '../_shared/iframe/chromeHide.mjs';
 
 import './index.css';
 
@@ -45,20 +46,6 @@ function buildChromelessSrc( rawUrl ) {
 	const join = base.includes( '?' ) ? '&' : '?';
 	return `${ base }${ join }wp_admin_shell_chromeless=1`;
 }
-
-/**
- * Best-effort CSS injection so the iframe looks chromeless even before
- * the PHP bridge ships. Removed once the server-side handler emits the
- * same hide rules unconditionally.
- */
-const CHROME_HIDE_CSS = `
-	#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter {
-		display: none !important;
-	}
-	#wpcontent { margin-left: 0 !important; }
-	html.wp-toolbar { padding-top: 0 !important; }
-	#wpbody-content { padding-top: 0; }
-`;
 
 /**
  * @param {Object} root0
@@ -80,18 +67,10 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 
 	const onIframeLoad = useCallback( ( event ) => {
 		setIsLoading( false );
-		try {
-			const doc = event.target.contentDocument;
-			if ( ! doc ) {
-				return;
-			}
-			const style = doc.createElement( 'style' );
-			style.textContent = CHROME_HIDE_CSS;
-			doc.head.appendChild( style );
-		} catch ( e ) {
-			// Cross-origin iframe — can't inject. The server-side
-			// bridge takes over once it lands.
-		}
+		// Best-effort CSS hide so the window looks chromeless even before the
+		// PHP bridge lands; the server-side handler emits the same rules once
+		// it ships. Cross-origin frames just no-op here.
+		injectChromeHide( event.target );
 	}, [] );
 
 	// Bridge message handlers (P2.T4-A/B observability + T4-B routing).

@@ -7,8 +7,10 @@
  *   - engine root layout shape (.wp-admin-shell-layout)
  *   - engine-internal helper containers (.wp-admin-shell-areas)
  *   - the `__app` mount-point inside a region (not addressable from
- *     templates — apps mount inside this wrapper, not the region itself)
- *   - the `is-fullscreen` opt-in for iframe apps
+ *     templates — apps mount inside this wrapper, not the region itself).
+ *     The mount is flush (no padding); apps own their inset via the
+ *     shared `wp-admin-shell-app--inset` utility, DataViews + iframe
+ *     apps stay full-bleed.
  *
  * Don't add visual properties here. If a property would be overridden
  * by a template default-style or by an admin.json region.style, it
@@ -33,27 +35,41 @@
 	);
 }
 
+/* The body wrapper owns the region spacing: `padding` insets the whole
+ * sidebar + content + detail group from the layout edges (the canvas
+ * shows through as the gutter), and `gap` separates the sidebar from the
+ * content area — replacing the per-region margin/padding that used to do
+ * this. `box-sizing: border-box` keeps the padding inside the flex-stretched
+ * width (an unprefixed content-box would overflow, same trap as the toolbar). */
 .wp-admin-shell-layout__body {
 	display: flex;
 	flex: 1;
 	min-height: 0;
+	gap: var(--wpds-dimension-gap-sm);
+	padding: var(--wpds-dimension-padding-sm);
+	box-sizing: border-box;
 }
 
 .wp-admin-shell-areas {
 	flex: 1;
 	min-width: 0;
 	display: flex;
-	gap: 0;
+	gap: var(--wpds-dimension-gap-lg);
 }
 
 /* Inner app mount-point — engine-internal, not a region, has no
  * template hook. When the parent region carries `role="main"` or
  * `role="complementary"` (the content-card roles), the mount becomes
  * a flex column so apps like DataViews can flex against a known-height
- * ancestor. The mount also carries the visual padding because
- * `is-fullscreen` overrides need a stable target (template default-style
- * applies to the region wrapper as inline style and would beat any CSS
- * rule trying to zero it out for iframe apps). */
+ * ancestor.
+ *
+ * The mount adds NO padding — content sits flush to the card edge by
+ * default. Padding is an app concern: form / native screens apply the
+ * shared `wp-admin-shell-app--inset` utility (themeable via the
+ * `--wp-admin-shell--chrome--content--inset` slot), while DataViews and
+ * iframe apps stay full-bleed. The card's own `border-radius` + clipping
+ * `overflow` (see the `core:main` template) rounds flush children, so
+ * iframe apps need no corner handling here. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region[role="main"]
 	> .wp-admin-shell-region__app,
@@ -64,8 +80,6 @@
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
-	padding: var(--wpds-dimension-padding-2xl);
-	box-sizing: border-box;
 }
 
 .wp-admin-shell-layout
@@ -78,17 +92,6 @@
 	> * {
 	flex: 1;
 	min-height: 0;
-}
-
-.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen {
-	padding: 0;
-}
-
-.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen iframe {
-	border-radius: var(--wpds-border-radius-lg);
-	border: 0;
-	width: 100%;
-	height: 100%;
 }
 
 /* ==========================================================================
@@ -165,6 +168,32 @@
 	padding: 0;
 }
 
+/* DataViews surface — paint it with the region's card background instead of
+ * the package's hard-coded white.
+ *
+ * `@wordpress/dataviews` drives its wrapper, the sticky table header (`thead`,
+ * via `background-color: inherit` chaining up to the wrapper), and the sticky
+ * actions column ALL from one knob: `var(--wp-dataviews-color-background,
+ * #fff)`. Point it at the same chrome slot the content card uses, so the whole
+ * list reads the card colour — seamless with the region AND opaque, so the
+ * rows scrolling under the sticky header / behind the horizontally-pinned
+ * actions column are occluded.
+ *
+ * This supersedes an earlier `transparent` value: transparent looked right for
+ * the flat surface but left every sticky element see-through (each one needed
+ * its own opaque patch). Selected-row states paint their own `color-mix`, not
+ * this var, so they keep their highlight.
+ *
+ * DS-specific (the `.dataviews-*` classes presuppose @wordpress/dataviews),
+ * so it lives engine-side, not in the DS-neutral kernel. */
+.wp-admin-shell-region__app .dataviews-wrapper,
+.wp-admin-shell-region__app .dataviews-picker-wrapper {
+	--wp-dataviews-color-background: var(
+		--wp-admin-shell--chrome--content--card-background,
+		var(--wpds-color-bg-surface-neutral-strong)
+	);
+}
+
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
 .wp-admin-shell-region__forbidden {
@@ -198,30 +227,43 @@
 		padding-block 180ms ease;
 }
 
+/* `!important` is REQUIRED on every rule below. Region templates ship
+ * `default-style` blocks (`display: flex`, `flex: 1`, `padding-block`,
+ * `inline-size`, …) that the kernel applies as INLINE `style="…"` on the
+ * region wrapper. Inline styles beat any stylesheet rule lacking
+ * `!important`, so a plain `display: none` here would lose to the
+ * template's inline `display: flex` and the region would never hide.
+ * Same trap, same fix as the `data-app-mounted` mirror-collapse rule
+ * below. Each property overridden here must out-specify its inline
+ * default-style counterpart. */
+
 /* Hidden — paint-only suppression. `display: none` removes the wrapper
  * from the flow without unmounting the React subtree (React still keeps
  * state, useState references, refs, and effects across the flip — only
  * the DOM is hidden). */
 .wp-admin-shell-layout .wp-admin-shell-region[data-mode-hidden="true"] {
-	display: none;
+	display: none !important;
 }
 
 /* Compact — toolbar shrinks to back link + save indicator chrome;
  * sidebar collapses to icon-rail width. Engines tune per-region. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region--toolbar[data-mode-compact="true"] {
-	padding-block: var(--wpds-dimension-padding-xs);
+	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
 .wp-admin-shell-layout
 	.wp-admin-shell-region--sidebar[data-mode-compact="true"] {
-	inline-size: 64px;
+	inline-size: var(
+		--wp-admin-shell--chrome--sidebar--compact-width,
+		64px
+	) !important;
 }
 
 /* Minimal — stricter than compact. Currently only toolbar consumes it. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region--toolbar[data-mode-minimal="true"] {
-	padding-block: var(--wpds-dimension-padding-2xs);
+	padding-block: var(--wpds-dimension-padding-2xs) !important;
 }
 
 /* Full-width — content / main region expands to claim the space normally
@@ -229,8 +271,24 @@
  * default flex-row arrangement; engines using grid layouts override. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region[data-mode-full-width="true"] {
-	flex: 1 1 100%;
-	max-inline-size: 100%;
+	flex: 1 1 100% !important;
+	max-inline-size: 100% !important;
+}
+
+/* Content-only modes (takeover) — the lone content region fills the
+ * viewport, so drop the body gutter + the content card's rounded corners
+ * for a true full-bleed surface. `data-mode` is emitted on the layout root
+ * by the engine Layout. The body-padding override out-specifies the base
+ * `.wp-admin-shell-layout__body` rule (two classes + attr vs one class), so
+ * no `!important` there; `border-radius` is an inline `default-style` value,
+ * so it needs `!important`. */
+.wp-admin-shell-layout[data-mode="takeover"] .wp-admin-shell-layout__body {
+	padding: 0;
+}
+
+.wp-admin-shell-layout[data-mode="takeover"]
+	.wp-admin-shell-region--content {
+	border-radius: 0 !important;
 }
 
 /* Multi-app layout (3c.4) — mirror-mode peer regions (`detail`,

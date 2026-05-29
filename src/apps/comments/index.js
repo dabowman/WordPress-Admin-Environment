@@ -8,6 +8,7 @@ import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
 	buildFields,
@@ -175,8 +176,8 @@ export default function CommentsApp( { config = {} } ) {
 		}
 		return records.map( ( record ) => ( {
 			id: record.id,
-			author: record.author_name || '',
-			authorEmail: record.author_email || '',
+			author: decodeEntities( record.author_name || '' ),
+			authorEmail: decodeEntities( record.author_email || '' ),
 			content: record.content?.rendered || '',
 			status: record.status,
 			date: record.date,

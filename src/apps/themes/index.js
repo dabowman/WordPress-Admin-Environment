@@ -6,7 +6,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataViews } from '@wordpress/dataviews/wp';
+import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -266,12 +266,14 @@ export default function ThemesApp( { config = {} } ) {
 		[ dataViewConfig, activate, renderDetailsModal ]
 	);
 
-	const paginationInfo = useMemo(
-		() => ( {
-			totalItems: data.length,
-			totalPages: 1,
-		} ),
-		[ data.length ]
+	// DataViews is controlled, so it doesn't filter/sort/paginate the `data` we
+	// hand it — the consumer must. `filterSortAndPaginate` is the package's own
+	// derivation (search across `enableGlobalSearch` fields, the status filter,
+	// view.sort, and the page slice), so the search box / status filter /
+	// column sort / pager all work on installs with >50 themes.
+	const { data: shownData, paginationInfo } = useMemo(
+		() => filterSortAndPaginate( data, view, fields ),
+		[ data, view, fields ]
 	);
 
 	return (
@@ -282,7 +284,7 @@ export default function ThemesApp( { config = {} } ) {
 				</div>
 			) : (
 				<DataViews
-					data={ data }
+					data={ shownData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }

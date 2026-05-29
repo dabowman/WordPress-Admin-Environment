@@ -16,6 +16,10 @@
 			"postType": {
 				"type": "string",
 				"default": "post"
+			},
+			"id": {
+				"type": "string",
+				"description": "Post id from the route capture, or the sentinel \"new\" to create an auto-draft. Read as `config.id` by the app."
 			}
 		},
 		"additionalProperties": false
@@ -34,7 +38,7 @@
 		"icon": "edit"
 	},
 	"documentation": {
-		"purpose": "Iframe-backed adapter for WordPress's full block editor. Routes `#/editor/{postType}/{postId}` to `wp-admin/post.php?post={id}&action=edit` and routes `#/editor/{postType}/new` through an auto-draft creation flow (POST `/wp/v2/{postType}s`) before redirecting to the editor URL. Injects CSS into the iframe document to hide wp-admin chrome so the embedded editor reads as a native shell view. The native `@wordpress/edit-post` mount is deferred to a v2.x cut; the iframe is the contracted MVP path.",
+		"purpose": "Iframe-backed adapter for WordPress's full block editor. Routes `#/editor/{postType}/{id}` to `wp-admin/post.php?post={id}&action=edit` (screen config maps the route capture into `config.id`) and routes `#/editor/{postType}/new` through an auto-draft creation flow (POST `/wp/v2/{postType}s`) before redirecting to the editor URL. Injects CSS into the iframe document to hide wp-admin chrome so the embedded editor reads as a native shell view. The native `@wordpress/edit-post` mount is deferred to a v2.x cut; the iframe is the contracted MVP path.",
 		"rebuilds": "editor-block",
 		"data": {
 			"reads": [
@@ -49,7 +53,7 @@
 					"source": "/wp/v2/posts | /wp/v2/pages",
 					"via": "api-fetch",
 					"operation": "create",
-					"purpose": "Create a draft when navigating to `#/editor/{postType}/new`. Seeds an empty paragraph block in `content` because REST rejects fully-empty posts."
+					"purpose": "Create a draft when the screen routes here with no `config.id` (e.g. `/posts/new`; `\"new\"`/`\"\"` also trigger it). Seeds an empty paragraph block in `content` because REST rejects fully-empty posts."
 				}
 			]
 		},
@@ -60,7 +64,8 @@
 			"navigates": [
 				"#/posts",
 				"#/pages",
-				"#/editor/{postType}/{postId}"
+				"#/posts/{id}/edit",
+				"#/pages/{id}/edit"
 			]
 		},
 		"states": [
@@ -87,8 +92,8 @@
 		],
 		"interactions": [
 			{
-				"trigger": "Mount with `#/editor/{postType}/new`",
-				"effect": "POST a draft, update `postId`, replace URL via `history.replaceState` (not navigate — avoids re-render loop)."
+				"trigger": "Mount on an add-new screen (`config.id` absent, e.g. `/posts/new`)",
+				"effect": "POST a draft, update `postId`, then `history.replaceState` the URL to the canonical edit route `#/{posts|pages}/{id}/edit` (not navigate — avoids re-render loop, and the canonical route survives a refresh)."
 			},
 			{
 				"trigger": "Iframe `load` event",

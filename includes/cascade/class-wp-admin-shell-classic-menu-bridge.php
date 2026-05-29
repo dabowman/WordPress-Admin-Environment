@@ -135,6 +135,11 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		'edit-tags.php?taxonomy=post_tag',
 		'media-new.php',
 		'user-new.php',
+		// The shell's own classic Settings page (`add_options_page` →
+		// `options-general.php?page=wp-admin-shell-workspace`). It's a non-core
+		// child of a core parent, so without this skip the bridge would
+		// synthesize an `ingested-*` entry linking back into classic.
+		'wp-admin-shell-workspace',
 	);
 
 	/**

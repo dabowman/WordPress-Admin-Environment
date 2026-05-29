@@ -196,9 +196,19 @@ class WP_Admin_Shell_Origin_File {
 		}
 		// Known object-shaped top-level blocks must be objects (assoc arrays)
 		// when present. `preload` / `routes` are lists; `version` etc. are
-		// scalars — not checked here.
+		// scalars — not checked here. A non-empty JSON array (`"screens": []`
+		// with entries, or `"screens": [1,2]`) is also rejected: `is_array` is
+		// true for lists, so a scalar check alone lets a list-shaped block
+		// through to `merge_authoritative` against the assoc baseline. An empty
+		// array (`[]`) is ambiguous with `{}` and harmless, so it's allowed.
 		foreach ( array( 'workspace', 'settings', 'screens', 'menu', 'commands', 'styles' ) as $block ) {
-			if ( isset( $doc[ $block ] ) && ! is_array( $doc[ $block ] ) ) {
+			if ( ! isset( $doc[ $block ] ) ) {
+				continue;
+			}
+			if ( ! is_array( $doc[ $block ] ) ) {
+				return false;
+			}
+			if ( ! empty( $doc[ $block ] ) && ! WP_Admin_Shell_Merge::is_assoc( $doc[ $block ] ) ) {
 				return false;
 			}
 		}

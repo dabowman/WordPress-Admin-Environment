@@ -213,6 +213,144 @@ bg/fg; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface
 chrome. Inside WPDS-flavored app/engine code, never hardcode hex —
 use `var(--wpds-*)` so provider seeds flow through.
 
+## `default-style` value tiers + what's themeable
+
+A region template's `default-style` is **data, emitted as inline style on
+the region `<div>`** (`resolveRegion.mjs` merges it into `region.style`;
+`Region.js`'s `toReactStyle` applies it as React `style`). Three value
+tiers appear in it; they differ in *how* — not *whether* — an author can
+override them:
+
+1. **Named chrome slot + WPDS fallback** —
+   `var(--wp-admin-shell--chrome--<surface>--<slot>, var(--wpds-*))`. The
+   outer var is a curated, by-name author knob (`background`, `color`,
+   `border`, padding, key dimensions like sidebar width). Set it via
+   admin.json `styles.chrome.<surface>.<slot>` — the chrome bridge
+   (`compileStyles.mjs`) maps name → var. The inner `--wpds-*` is what it
+   resolves to when the slot is unset.
+2. **Bare WPDS token** — `var(--wpds-border-radius-lg)`,
+   `var(--wpds-elevation-sm)`, the spacing-rhythm `margin`s. No dedicated
+   slot; tracks the engine theme/density uniformly. Deliberately *not*
+   slotted — radius/elevation/rhythm should move with the design system as
+   a set, not be poked per-property, and a slot-per-property would bloat
+   the `chrome.*` namespace.
+3. **Raw literal** — `flex`, `column`, `100%`, `0`, `min(720px, 50%)`,
+   `1px solid`. Pure layout mechanics; no theming intent.
+
+**Two override paths, independent of tier:**
+
+- **Named chrome slot** (`styles.chrome.*`) — works **only for Tier 1**.
+  The stable, intended, by-name author API.
+- **Full property override** (`regions[id].style.<prop>`) — works for
+  **every** property in all three tiers, because `default-style` and
+  `regions[id].style` both land as inline style on the same region wrapper
+  and admin.json wins the merge. Replaces the whole declared value rather
+  than retuning a token.
+
+A third, indirect lever: changing the WPDS theme/density (`styles.theme` /
+engine `default-styles.theme`) shifts the `--wpds-*` tokens, moving both
+Tier 1 fallbacks and Tier 2 values at once — global, not per-region.
+
+To grow the vocabulary, **promote** a property to Tier 1 (wrap it
+`var(--wp-admin-shell--chrome--…, var(--wpds-…))` in the template) when a
+real retune-by-name need surfaces — don't pre-slot every property.
+
+### Why layout literals live in JSON, not `index.css`
+
+`default-style` carries the region's *entire* flat box model as one
+overridable object — Tier 3 literals included. Three reasons they ride
+along in the JSON instead of moving to the stylesheet:
+
+1. **Inline-merge is the override mechanism.** Inline style beats every
+   stylesheet rule, so `regions[id].style.<prop>` wins with no specificity
+   reasoning. Split half the box model into CSS and authors get
+   inconsistent override behavior plus stray inherited layout they can't
+   clear from data (set `display: grid` inline, inherit a stray
+   `flex-direction` from CSS).
+2. **A template is a self-contained, registerable unit**
+   (`wp_admin_shell_register_template`). Its layout *is* its definition — a
+   template shipped as JSON by a third party must work without also
+   shipping engine CSS.
+3. **Per-instance, not per-class.** `default-style` keys to a specific
+   region id; the same template instantiates many times with different
+   overrides. CSS rules target shared selectors and can't give each
+   instance its own merged layout.
+
+The dividing line: **anything expressible as a flat `property: value` on
+the region wrapper → `default-style` (so it's data-overridable). Anything
+needing selectors, pseudo-classes, descendant targeting, cascade layers,
+or media/container queries → `index.css`** — the `__app` mount flex,
+`a:hover`, `svg { fill }`, the `[class*="__stack"]` fix, mode transitions.
+That's exactly what `index.css` is reserved for, and why its header
+forbids flat region-wrapper visual properties.
+
+### Engine CSS that overrides an inline `default-style` property needs `!important`
+
+The flip side of "inline style beats every stylesheet rule" (above): when
+`index.css` legitimately needs to override a property a template also sets
+inline, an unprefixed rule silently loses. This bit the v3 **mode
+region-state** rules — `data-mode-hidden` set `display: none`, but every
+chrome template ships inline `display: flex`, so hidden regions never hid;
+`data-mode-full-width`'s `flex`/`inline-size` lost to the inline box model,
+and `data-mode-compact`'s `padding-block` lost to the toolbar's inline
+padding. The modes emitted the right `data-mode-*` attributes the whole
+time — they just never painted. Fix: `!important` on each mode-state
+property that competes with an inline `default-style` value (the
+`data-app-mounted` mirror-collapse rule already did this). All three
+bundled engines now do.
+
+Two rules of thumb:
+
+- **Overriding a property that lives in some template's `default-style`?
+  Use `!important`.** `display`, `flex`, `inline-size`/`block-size`,
+  `padding`, `margin`, `background`, `border` — anything a `default-style`
+  can carry as a flat box-model value.
+- **Don't reach for `!important` on a property no template sets inline —
+  *especially* when a sibling rule must out-rank it.** The `core:desktop`
+  dock compact `transform`/`opacity` is unprefixed on purpose: no template
+  sets them inline (so the rule already wins) and the `:hover`/
+  `:focus-within` reveal has to beat the resting state — `!important` there
+  would freeze the dock collapsed.
+
+## Region content padding (flush by default; apps own their inset)
+
+The `core:default` engine mount — the `.wp-admin-shell-region__app`
+wrapper `Region.js` renders around every mounted app — adds **no
+padding**. Content sits flush to the region card edge by default. This
+is deliberate: the mount is engine-internal and **non-addressable** (no
+template hook, no `regions[id].style` path), so a padding baked there
+can't be removed per-app from admin.json. A blanket default forced
+full-bleed apps (DataViews tables, iframes) to opt *out*, which is why
+the kernel had grown a hardcoded `is-fullscreen` app-ID list — a DS
+coupling smell, now removed.
+
+The model instead:
+
+- **Flush is the default.** DataViews list apps (they carry
+  `wp-admin-shell-app--fill`) and iframe apps want full-bleed and get it
+  for free. The card's own `border-radius` + clipping `overflow` (see
+  the `core:main` template) rounds flush children, so iframe apps need
+  no corner handling.
+- **Apps opt into breathing room** with the shared
+  `wp-admin-shell-app--inset` utility (`src/apps/_shared/app.css`): add
+  the class to the app's root element and `import '../_shared/app.css'`.
+  It pads via `var(--wp-admin-shell--chrome--content--inset,
+  var(--wpds-dimension-padding-2xl))` and sets `box-sizing: border-box`
+  (so `height: 100%` roots don't overflow).
+- **Authors retune it** via `styles.chrome.content.inset` in admin.json
+  — the chrome bridge maps it to `--wp-admin-shell--chrome--content--inset`
+  exactly like the other `chrome.*` slots.
+- **Composers own their panels' inset, once.** The `core:settings` host
+  doesn't pad `__panel`; each panel component self-pads via the utility,
+  so the same panel renders identically standalone and in-host (no
+  double-inset). The host pads only its own nav column.
+
+Bundled apps carrying the inset: `profile`, `settings-general`,
+`settings-workspace`, the `EntityDataForm` panels (reading/writing/
+discussion), `tools`, `site-health`, `appearance`, `media`. When adding
+a native app that should have padding, add the class — don't add an
+engine-level default.
+
 ## `@wordpress/ui` layered-CSS gotchas (bundled WPDS engines)
 
 `@wordpress/ui` injects component CSS at module-load wrapped in
@@ -264,6 +402,21 @@ theme resets) that stomp `@wordpress/ui` defaults.
   `@wordpress/components` classes). Use the `wp-admin-shell-*` class or
   the `button` element selector inside a chrome wrapper; when render can
   be `<button>` or `<a>`, use `:is(button, a)`.
+- **DataViews paints its own wrapper background** —
+  `@wordpress/dataviews` (`build/dataviews.css`) ships
+  `.dataviews-wrapper, .dataviews-picker-wrapper { background-color:
+  var(--wp-dataviews-color-background, #fff) }`, so an unset variable
+  hard-codes the list panel white over whatever region card background the
+  template declared. `core:default/index.css` scopes the package's own
+  override knob to the region mount —
+  `.wp-admin-shell-region__app .dataviews-wrapper,
+  .wp-admin-shell-region__app .dataviews-picker-wrapper
+  { --wp-dataviews-color-background: transparent }` — so the region card
+  background (Tier 1 `chrome.content.card-background`, see "value tiers"
+  above) shows through. Set the *variable*, not `background-color`: the
+  sticky list toolbar/filters use `background-color: inherit` and pick up
+  the wrapper's resolved value either way, so transparency propagates to
+  them and they stay flush with the card.
 
 ## Region-scoped theming — the `RegionThemedSubtree` seam
 
