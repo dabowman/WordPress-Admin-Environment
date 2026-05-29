@@ -137,9 +137,9 @@
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
 				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
-				"border-radius": "var(--wpds-border-radius-lg)",
-				"box-shadow": "var(--wpds-elevation-xs)",
-				"margin": "0"
+				"border-radius": "var(--wp-admin-shell--chrome--content--card-radius, var(--wpds-border-radius-lg))",
+				"box-shadow": "var(--wp-admin-shell--chrome--content--card-shadow, var(--wpds-elevation-xs))",
+				"margin": "var(--wp-admin-shell--chrome--content--card-margin, 0)"
 			}
 		},
 
@@ -155,8 +155,8 @@
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
 				"background": "var(--wp-admin-shell--chrome--detail--card-background, var(--wpds-color-bg-surface-neutral-strong))",
-				"border-radius": "var(--wpds-border-radius-lg)",
-				"box-shadow": "var(--wpds-elevation-sm)"
+				"border-radius": "var(--wp-admin-shell--chrome--detail--card-radius, var(--wpds-border-radius-lg))",
+				"box-shadow": "var(--wp-admin-shell--chrome--detail--card-shadow, var(--wpds-elevation-sm))"
 			}
 		},
 

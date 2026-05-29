@@ -3,7 +3,10 @@
  * `.wp-admin-shell-region__app` flex-fill rule (engine CSS). The
  * wrapper becomes a flex column; this root div inherits `flex: 1 1
  * 0` from the engine's `* > *` rule and the iframe element below
- * fills via its own flex declaration.
+ * fills via its own flex declaration. Background is transparent —
+ * the window body region paints its own surface so the iframe
+ * loading state inherits the surrounding chrome color via the
+ * parent's painted background.
  */
 .wp-admin-shell-desktop-iframe {
 	display: flex;
@@ -12,10 +15,6 @@
 	min-block-size: 0;
 	inline-size: 100%;
 	position: relative;
-	background: var(
-		--wp-admin-shell--chrome--window-frame--body-background,
-		#1c1c28
-	);
 }
 
 .wp-admin-shell-desktop-iframe__frame {
@@ -32,9 +31,5 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(
-		--wp-admin-shell--chrome--window-frame--body-background,
-		#1c1c28
-	);
 	z-index: 1;
 }
