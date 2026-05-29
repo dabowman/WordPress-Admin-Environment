@@ -284,6 +284,34 @@ or media/container queries → `index.css`** — the `__app` mount flex,
 That's exactly what `index.css` is reserved for, and why its header
 forbids flat region-wrapper visual properties.
 
+### Engine CSS that overrides an inline `default-style` property needs `!important`
+
+The flip side of "inline style beats every stylesheet rule" (above): when
+`index.css` legitimately needs to override a property a template also sets
+inline, an unprefixed rule silently loses. This bit the v3 **mode
+region-state** rules — `data-mode-hidden` set `display: none`, but every
+chrome template ships inline `display: flex`, so hidden regions never hid;
+`data-mode-full-width`'s `flex`/`inline-size` lost to the inline box model,
+and `data-mode-compact`'s `padding-block` lost to the toolbar's inline
+padding. The modes emitted the right `data-mode-*` attributes the whole
+time — they just never painted. Fix: `!important` on each mode-state
+property that competes with an inline `default-style` value (the
+`data-app-mounted` mirror-collapse rule already did this). All three
+bundled engines now do.
+
+Two rules of thumb:
+
+- **Overriding a property that lives in some template's `default-style`?
+  Use `!important`.** `display`, `flex`, `inline-size`/`block-size`,
+  `padding`, `margin`, `background`, `border` — anything a `default-style`
+  can carry as a flat box-model value.
+- **Don't reach for `!important` on a property no template sets inline —
+  *especially* when a sibling rule must out-rank it.** The `core:desktop`
+  dock compact `transform`/`opacity` is unprefixed on purpose: no template
+  sets them inline (so the rule already wins) and the `:hover`/
+  `:focus-within` reveal has to beat the resting state — `!important` there
+  would freeze the dock collapsed.
+
 ## Region content padding (flush by default; apps own their inset)
 
 The `core:default` engine mount — the `.wp-admin-shell-region__app`
