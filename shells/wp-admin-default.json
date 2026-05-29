@@ -430,20 +430,39 @@
 								}
 							},
 							{
-								"id": "spam",
-								"label": "Mark as Spam",
+								"id": "unapprove",
+								"label": "Unapprove",
 								"supportsBulk": true,
-								"isDestructive": true
+								"eligibleWhen": {
+									"status": "approved"
+								}
+							},
+							{
+								"id": "spam",
+								"label": "Mark as spam",
+								"supportsBulk": true,
+								"isDestructive": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"trash"
+									]
+								}
 							},
 							{
 								"id": "trash",
-								"label": "Move to Trash",
+								"label": "Move to trash",
 								"supportsBulk": true,
-								"isDestructive": true
-							},
-							{
-								"id": "reply",
-								"label": "Reply"
+								"isDestructive": true,
+								"icon": "trash",
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"spam"
+									]
+								}
 							}
 						],
 						"defaultLayouts": {
@@ -673,6 +692,72 @@
 							"grid": {},
 							"table": {}
 						}
+					}
+				}
+			},
+			"taxonomy": {
+				"post_tag": {
+					"_default": {
+						"defaultView": {
+							"type": "table",
+							"search": "",
+							"filters": [],
+							"page": 1,
+							"perPage": 20,
+							"sort": {
+								"field": "name",
+								"direction": "asc"
+							},
+							"fields": [
+								"slug",
+								"count",
+								"description"
+							],
+							"titleField": "name",
+							"layout": {}
+						},
+						"defaultLayouts": {
+							"table": {}
+						},
+						"fields": [
+							{
+								"id": "name",
+								"type": "text",
+								"label": "Name",
+								"enableGlobalSearch": true,
+								"enableHiding": false
+							},
+							{
+								"id": "slug",
+								"type": "text",
+								"label": "Slug"
+							},
+							{
+								"id": "count",
+								"type": "integer",
+								"label": "Count"
+							},
+							{
+								"id": "description",
+								"type": "text",
+								"label": "Description"
+							}
+						],
+						"actions": [
+							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"icon": "pencil"
+							},
+							{
+								"id": "delete",
+								"label": "Delete",
+								"isDestructive": true,
+								"supportsBulk": true,
+								"icon": "trash"
+							}
+						]
 					}
 				}
 			}
