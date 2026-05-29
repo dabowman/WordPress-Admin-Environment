@@ -54,7 +54,7 @@ const NON_TOKEN_KEYS = new Set( [
 
 /**
  * Chrome surface → WPDS token bindings. Each entry maps a chrome surface
- * (sidebar / toolbar / site-hub) to its container CSS selector plus the
+ * (canvas / sidebar / toolbar / site-hub) to its container CSS selector plus the
  * `chrome.<surface>.<slot>` → `--wpds-<token>` mappings the compiler emits
  * inside that scope. When a binding's source slot has a value in the
  * resolved chrome tree, the corresponding WPDS variable is set under the
@@ -62,6 +62,20 @@ const NON_TOKEN_KEYS = new Set( [
  * `@wordpress/ui` re-theming.
  */
 const CHROME_WPDS_BINDINGS = {
+	canvas: {
+		selector: '.wp-admin-shell-layout',
+		bindings: {
+			// `background` is intentionally NOT bound. `--wpds-color-bg-
+			// surface-neutral` is the surface ramp `core:main` / `core:detail`
+			// cards consume as their final fallback — binding canvas.background
+			// to it would darken cards under the shell scope. The canvas
+			// itself paints via the chrome slot directly (engine `index.css`
+			// reads `--wp-admin-shell--chrome--canvas--background`); the WPDS
+			// bridge only needs to retheme @wordpress/ui foreground content
+			// rendered directly under `.wp-admin-shell-layout`.
+			foreground: '--wpds-color-fg-content-neutral',
+		},
+	},
 	sidebar: {
 		selector: '.wp-admin-shell-nav, .wp-admin-shell-site-hub',
 		bindings: {

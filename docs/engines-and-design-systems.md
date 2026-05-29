@@ -210,8 +210,25 @@ Two engine-side paths (never kernel):
 Kernel `src/index.css` is ~10 lines: body positioning + a11y fallback
 only. `chrome.canvas.*` is the author entry point for shell-wide
 bg/fg; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface
-chrome. Inside WPDS-flavored app/engine code, never hardcode hex —
-use `var(--wpds-*)` so provider seeds flow through.
+chrome. `core:main`/`core:detail` also expose
+`chrome.content.card-{background,radius,shadow,margin}` /
+`chrome.detail.card-{background,radius,shadow}` so authors retune card
+chrome without per-region inline rules. Inside WPDS-flavored app/engine
+code, never hardcode hex — use `var(--wpds-*)` so provider seeds flow
+through.
+
+**Token-payload short-circuit.** PHP
+`wp_admin_shell_styles_reference_tokens()` scans the resolved `styles`
+tree and skips serializing the whole DTCG `tokens` table to the page
+(emits `{}` via `(object) array()`) when it references zero *foreign*
+aliases — `{path}` not starting `styles.`. Within-doc aliases
+(`{styles.path}`) resolve from admin.json directly and don't need the
+table; the default shell ships seeds + slot overrides only, so the DTCG
+layer is dead weight on the wire. **Contract:** DTCG aliases are valid
+ONLY under `admin.json#styles`. App manifests, engine `default-style`
+blocks, and other surfaces MUST NOT carry `{tokens.*}` references — the
+detector doesn't scan them, so a stray alias outside `styles` silently
+emits a `var(--token-…)` fallback at runtime.
 
 ## `default-style` value tiers + what's themeable
 
@@ -368,7 +385,14 @@ theme resets) that stomp `@wordpress/ui` defaults.
   .wp-admin-shell-site-hub`, …). Buttons/IconButtons/Stacks inside
   inherit the chrome palette automatically. **Do not** add
   `.wp-admin-shell-*-button { color }` rules — extend the bindings
-  table. Engine-private; a non-WPDS engine ships its own.
+  table. Engine-private; a non-WPDS engine ships its own. The `canvas`
+  surface (`.wp-admin-shell-layout`) binds **foreground only** —
+  binding its background to `--wpds-color-bg-surface-neutral` would
+  re-darken the `core:main`/`core:detail` cards that consume that ramp
+  as their final fallback. The canvas paints its own background via the
+  chrome slot directly in `index.css`; the WPDS bridge only re-themes
+  `@wordpress/ui` foreground content rendered directly under the layout.
+  Guarded by `tests/runtime/compile-styles-tokens.test.mjs`.
 - **`Stack` stomped to `display: block`** → children flow vertically
   regardless of inline `flex-direction: row`. `core:default/index.css`
   ships a defensive unlayered `.wp-admin-shell [class*="__stack"]
