@@ -266,6 +266,22 @@
 	max-inline-size: 100% !important;
 }
 
+/* Content-only modes (takeover) — the lone content region fills the
+ * viewport, so drop the body gutter + the content card's rounded corners
+ * for a true full-bleed surface. `data-mode` is emitted on the layout root
+ * by the engine Layout. The body-padding override out-specifies the base
+ * `.wp-admin-shell-layout__body` rule (two classes + attr vs one class), so
+ * no `!important` there; `border-radius` is an inline `default-style` value,
+ * so it needs `!important`. */
+.wp-admin-shell-layout[data-mode="takeover"] .wp-admin-shell-layout__body {
+	padding: 0;
+}
+
+.wp-admin-shell-layout[data-mode="takeover"]
+	.wp-admin-shell-region--content {
+	border-radius: 0 !important;
+}
+
 /* Multi-app layout (3c.4) — mirror-mode peer regions (`detail`,
  * `inspector`, `preview`, future) collapse when no route matches.
  * The kernel emits `data-app-mounted="false"` only on

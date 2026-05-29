@@ -28,6 +28,7 @@ import { SlotFillProvider } from '@wordpress/components';
 
 import { Region } from '../../regions/Region';
 import { getRegionKind } from '../../regions/regionKind';
+import { useMode } from '../../modes/useMode';
 
 const SLOT_IDS = {
 	toolbar: 'toolbar',
@@ -60,6 +61,11 @@ function findById( bucket, id ) {
 export default function CoreSiteEditorLayout( { regions } ) {
 	const buckets = classifyRegions( regions );
 
+	// Surface the active screen's mode on the layout root so engine CSS can
+	// style the whole layout per-mode (not just per-region). E.g. takeover
+	// drops the body gutter + content card radius for a full-bleed surface.
+	const { modeId } = useMode();
+
 	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
 	const sidebar = findById( buckets.persistent, SLOT_IDS.sidebar );
 	const content = findById( buckets.persistent, SLOT_IDS.content );
@@ -83,7 +89,11 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	// `@wordpress/components` Slot/Fill can drop the wrap.
 	return (
 		<SlotFillProvider>
-			<div className="wp-admin-shell-layout" data-engine="core:default">
+			<div
+				className="wp-admin-shell-layout"
+				data-engine="core:default"
+				data-mode={ modeId }
+			>
 				{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
 				<div className="wp-admin-shell-layout__body">
