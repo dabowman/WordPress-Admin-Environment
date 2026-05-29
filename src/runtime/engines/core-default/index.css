@@ -185,6 +185,21 @@
 	--wp-dataviews-color-background: transparent;
 }
 
+/* …but the table header must NOT be transparent. The sticky `thead`
+ * (`position: sticky` + `background-color: inherit`) is what occludes the
+ * rows scrolling beneath it; with the wrapper transparent it inherits
+ * transparent and the rows bleed through. Repaint the sticky header with the
+ * content card background so it matches the surface it floats over and
+ * occludes again. (`thead` is the sticky element; its `th` cells stay
+ * transparent and render over this.) More specific than the package's
+ * `inherit` rule, so no `!important` needed. */
+.wp-admin-shell-region__app .dataviews-view-table thead {
+	background-color: var(
+		--wp-admin-shell--chrome--content--card-background,
+		var(--wpds-color-bg-surface-neutral-strong)
+	);
+}
+
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
 .wp-admin-shell-region__forbidden {
