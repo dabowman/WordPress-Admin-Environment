@@ -18,6 +18,24 @@
 }
 
 /*
+ * Content inset — breathing room between a screen's content and the region
+ * card edge. The engine mount is flush by default (DataViews + iframe apps
+ * stay full-bleed); form / native screens add this class to their root to
+ * opt in. The value flows through the chrome bridge, so an author can retune
+ * it via `styles.chrome.content.inset` in admin.json; the WPDS dimension is
+ * the fallback when unset.
+ */
+.wp-admin-shell-app--inset {
+	padding: var(
+		--wp-admin-shell--chrome--content--inset,
+		var( --wpds-dimension-padding-2xl )
+	);
+	/* Roots that fill the region (`height: 100%` flex columns, e.g. media)
+	 * would overflow without border-box once padding is added. */
+	box-sizing: border-box;
+}
+
+/*
  * Dimmed secondary text — author email, usernames, meta lines. `@wordpress/ui`
  * Text 0.12 has no `color` prop, so the muted treatment lives here. Replaces
  * the inert per-app `__muted` classes that were rendered but never styled.

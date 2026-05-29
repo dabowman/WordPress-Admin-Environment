@@ -106,7 +106,7 @@ export default function SettingsGeneralApp() {
 	];
 
 	return (
-		<div className="wp-admin-shell-app-settings-general">
+		<div className="wp-admin-shell-app-settings-general wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-xl" render={ <h2 /> }>
 					{ __( 'General Settings', 'wp-admin-shell' ) }

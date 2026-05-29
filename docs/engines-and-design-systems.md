@@ -213,6 +213,45 @@ bg/fg; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface
 chrome. Inside WPDS-flavored app/engine code, never hardcode hex —
 use `var(--wpds-*)` so provider seeds flow through.
 
+## Region content padding (flush by default; apps own their inset)
+
+The `core:default` engine mount — the `.wp-admin-shell-region__app`
+wrapper `Region.js` renders around every mounted app — adds **no
+padding**. Content sits flush to the region card edge by default. This
+is deliberate: the mount is engine-internal and **non-addressable** (no
+template hook, no `regions[id].style` path), so a padding baked there
+can't be removed per-app from admin.json. A blanket default forced
+full-bleed apps (DataViews tables, iframes) to opt *out*, which is why
+the kernel had grown a hardcoded `is-fullscreen` app-ID list — a DS
+coupling smell, now removed.
+
+The model instead:
+
+- **Flush is the default.** DataViews list apps (they carry
+  `wp-admin-shell-app--fill`) and iframe apps want full-bleed and get it
+  for free. The card's own `border-radius` + clipping `overflow` (see
+  the `core:main` template) rounds flush children, so iframe apps need
+  no corner handling.
+- **Apps opt into breathing room** with the shared
+  `wp-admin-shell-app--inset` utility (`src/apps/_shared/app.css`): add
+  the class to the app's root element and `import '../_shared/app.css'`.
+  It pads via `var(--wp-admin-shell--chrome--content--inset,
+  var(--wpds-dimension-padding-2xl))` and sets `box-sizing: border-box`
+  (so `height: 100%` roots don't overflow).
+- **Authors retune it** via `styles.chrome.content.inset` in admin.json
+  — the chrome bridge maps it to `--wp-admin-shell--chrome--content--inset`
+  exactly like the other `chrome.*` slots.
+- **Composers own their panels' inset, once.** The `core:settings` host
+  doesn't pad `__panel`; each panel component self-pads via the utility,
+  so the same panel renders identically standalone and in-host (no
+  double-inset). The host pads only its own nav column.
+
+Bundled apps carrying the inset: `profile`, `settings-general`,
+`settings-workspace`, the `EntityDataForm` panels (reading/writing/
+discussion), `tools`, `site-health`, `appearance`, `media`. When adding
+a native app that should have padding, add the class — don't add an
+engine-level default.
+
 ## `@wordpress/ui` layered-CSS gotchas (bundled WPDS engines)
 
 `@wordpress/ui` injects component CSS at module-load wrapped in

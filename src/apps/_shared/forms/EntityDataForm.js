@@ -52,7 +52,11 @@ export function EntityDataForm( {
 	}
 
 	return (
-		<div className={ className }>
+		<div
+			className={ `wp-admin-shell-app--inset${
+				className ? ` ${ className }` : ''
+			}` }
+		>
 			<Stack direction="column" gap="xl">
 				{ heading && (
 					<Text variant={ headingVariant } render={ <h2 /> }>

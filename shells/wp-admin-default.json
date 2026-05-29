@@ -1489,8 +1489,10 @@
 		]
 	],
 	"styles": {
-		"theme": {
-			"density": "compact"
+		"chrome": {
+			"canvas": {
+				"background": "#fafafa"
+			}
 		}
 	}
 }

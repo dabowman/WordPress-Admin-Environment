@@ -1,3 +1,4 @@
+import '../_shared/app.css';
 import { useState, useEffect } from '@wordpress/element';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -147,7 +148,7 @@ export default function AppearanceApp() {
 	const noControls = ! allowDensity && ! allowAccent && ! allowDefaultRoute;
 
 	return (
-		<div className="wp-admin-shell-app-appearance">
+		<div className="wp-admin-shell-app-appearance wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-xl" render={ <h2 /> }>
 					{ __( 'Appearance', 'wp-admin-shell' ) }

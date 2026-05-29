@@ -454,16 +454,8 @@ function renderRegionApp( region, matched ) {
 	if ( ! ref ) {
 		return null;
 	}
-	const isFullscreen =
-		typeof ref.source === 'string' &&
-		( ref.source === 'core:editor' ||
-			ref.source === 'core:iframe-fallback' );
 	return (
-		<div
-			className={ `wp-admin-shell-region__app${
-				isFullscreen ? ' is-fullscreen' : ''
-			}` }
-		>
+		<div className="wp-admin-shell-region__app">
 			<MountedApp appRef={ ref } regionId={ region.id } />
 		</div>
 	);

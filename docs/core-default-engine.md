@@ -218,6 +218,7 @@ function resolveMode( screenId, engineManifest, screens ) {
 - **Document region-state vocabulary in the engine README.** Authors writing screen-level `regions` overrides depend on knowing which keys an engine accepts.
 - **Match the spec's intent across engines.** A `focus` mode should mean "minimize chrome" regardless of engine. A `core:desktop` engine's `focus` could collapse the dock to a hover-revealed strip; a `core:single-pane` `focus` could just hide the drawer toggle. Different paintings, same intent.
 - **`modal` mode is the only one that doesn't change chrome state.** Use it for overlays only; don't recycle the name for other purposes.
+- **Don't bake content padding into the region mount.** `core:default` renders the app mount (`.wp-admin-shell-region__app`) flush — no padding. The mount is non-addressable (no template hook, no `regions[id].style` path), so a default there can't be removed per-app and forces full-bleed apps (DataViews, iframes) to opt out. Apps own their inset via the shared `wp-admin-shell-app--inset` utility (themeable through `styles.chrome.content.inset`); the kernel special-cases no app for layout. See `docs/engines-and-design-systems.md` → "Region content padding."
 
 ## Cascade implications
 

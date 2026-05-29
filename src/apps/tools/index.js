@@ -1,4 +1,5 @@
 /* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalGrid has no @wordpress/ui 0.12 port. */
+import '../_shared/app.css';
 import { Button, Card, Stack, Text } from '@wordpress/ui';
 import { __experimentalGrid as Grid } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -59,7 +60,7 @@ function adminUrl( legacy ) {
 
 export default function ToolsApp() {
 	return (
-		<div className="wp-admin-shell-app-tools">
+		<div className="wp-admin-shell-app-tools wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Stack direction="column" gap="xs">
 					<Text variant="heading-xl" render={ <h1 /> }>

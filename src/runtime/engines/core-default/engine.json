@@ -157,7 +157,7 @@
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--content--card-background, var(--wpds-color-bg-surface-neutral-strong))",
+				"background": "var(--wp-admin-shell--chrome--detail--card-background, var(--wpds-color-bg-surface-neutral-strong))",
 				"border-radius": "var(--wpds-border-radius-lg)",
 				"box-shadow": "var(--wpds-elevation-sm)",
 				"margin": "var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-lg) 0"
@@ -213,7 +213,7 @@
 		"theme": {
 			"color": {
 				"primary": "#3858E9",
-				"bg": "#ffffff"
+				"bg": "#fafafa"
 			},
 			"density": "default"
 		}

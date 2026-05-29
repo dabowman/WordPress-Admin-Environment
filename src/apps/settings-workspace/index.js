@@ -74,7 +74,7 @@ export default function SettingsWorkspaceApp() {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-settings-workspace">
+		<div className="wp-admin-shell-app-settings-workspace wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-xl" render={ <h2 /> }>
 					{ __( 'Workspace', 'wp-admin-shell' ) }

@@ -7,8 +7,10 @@
  *   - engine root layout shape (.wp-admin-shell-layout)
  *   - engine-internal helper containers (.wp-admin-shell-areas)
  *   - the `__app` mount-point inside a region (not addressable from
- *     templates — apps mount inside this wrapper, not the region itself)
- *   - the `is-fullscreen` opt-in for iframe apps
+ *     templates — apps mount inside this wrapper, not the region itself).
+ *     The mount is flush (no padding); apps own their inset via the
+ *     shared `wp-admin-shell-app--inset` utility, DataViews + iframe
+ *     apps stay full-bleed.
  *
  * Don't add visual properties here. If a property would be overridden
  * by a template default-style or by an admin.json region.style, it
@@ -50,10 +52,15 @@
  * template hook. When the parent region carries `role="main"` or
  * `role="complementary"` (the content-card roles), the mount becomes
  * a flex column so apps like DataViews can flex against a known-height
- * ancestor. The mount also carries the visual padding because
- * `is-fullscreen` overrides need a stable target (template default-style
- * applies to the region wrapper as inline style and would beat any CSS
- * rule trying to zero it out for iframe apps). */
+ * ancestor.
+ *
+ * The mount adds NO padding — content sits flush to the card edge by
+ * default. Padding is an app concern: form / native screens apply the
+ * shared `wp-admin-shell-app--inset` utility (themeable via the
+ * `--wp-admin-shell--chrome--content--inset` slot), while DataViews and
+ * iframe apps stay full-bleed. The card's own `border-radius` + clipping
+ * `overflow` (see the `core:main` template) rounds flush children, so
+ * iframe apps need no corner handling here. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region[role="main"]
 	> .wp-admin-shell-region__app,
@@ -64,8 +71,6 @@
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
-	padding: var(--wpds-dimension-padding-2xl);
-	box-sizing: border-box;
 }
 
 .wp-admin-shell-layout
@@ -78,17 +83,6 @@
 	> * {
 	flex: 1;
 	min-height: 0;
-}
-
-.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen {
-	padding: 0;
-}
-
-.wp-admin-shell-layout .wp-admin-shell-region__app.is-fullscreen iframe {
-	border-radius: var(--wpds-border-radius-lg);
-	border: 0;
-	width: 100%;
-	height: 100%;
 }
 
 /* ==========================================================================
@@ -215,7 +209,7 @@
 
 .wp-admin-shell-layout
 	.wp-admin-shell-region--sidebar[data-mode-compact="true"] {
-	inline-size: 64px;
+	inline-size: var(--wp-admin-shell--chrome--sidebar--compact-width, 64px);
 }
 
 /* Minimal — stricter than compact. Currently only toolbar consumes it. */

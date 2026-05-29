@@ -196,7 +196,7 @@ export default function MediaApp() {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-media">
+		<div className="wp-admin-shell-app-media wp-admin-shell-app--inset">
 			<Stack
 				direction="row"
 				align="center"

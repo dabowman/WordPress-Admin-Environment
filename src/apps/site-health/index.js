@@ -1,3 +1,4 @@
+import '../_shared/app.css';
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Badge, Button, Card, Icon, Stack, Text } from '@wordpress/ui';
@@ -96,7 +97,7 @@ export default function SiteHealthApp() {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-site-health">
+		<div className="wp-admin-shell-app-site-health wp-admin-shell-app--inset">
 			<Stack
 				direction="row"
 				align="center"
