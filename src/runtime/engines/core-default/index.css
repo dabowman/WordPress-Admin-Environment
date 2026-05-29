@@ -45,8 +45,8 @@
 	display: flex;
 	flex: 1;
 	min-height: 0;
-	gap: var(--wpds-dimension-gap-lg);
-	padding: var(--wpds-dimension-padding-lg);
+	gap: var(--wpds-dimension-gap-sm);
+	padding: var(--wpds-dimension-padding-sm);
 	box-sizing: border-box;
 }
 
