@@ -96,8 +96,9 @@
 				"box-sizing": "border-box",
 				"background": "var(--wp-admin-shell--chrome--toolbar--background, transparent)",
 				"color": "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral))",
-				"border-block-end": "1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
+				"border-block-end": "0px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
 				"padding-block": "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm))",
+				"margin-block-end": "calc(-1 * var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-sm)))",
 				"padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
 			},
 			"regions": {
