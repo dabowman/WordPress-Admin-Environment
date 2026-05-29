@@ -116,19 +116,24 @@
 		transform 180ms ease;
 }
 
+/* `!important` is required: region templates (`core:appbar`, `core:pane`,
+ * `core:nav-drawer`) ship `default-style` blocks the kernel applies as
+ * INLINE style — inline `display: flex` / `inline-size` beats an
+ * unprefixed rule, so a plain `display: none` never hides. Same trap and
+ * fix documented in the core:default engine CSS. */
 .wp-admin-shell-layout--single-pane .wp-admin-shell-region[data-mode-hidden="true"] {
-	display: none;
+	display: none !important;
 }
 
 .wp-admin-shell-layout--single-pane
 	.wp-admin-shell-region--appbar[data-mode-compact="true"] {
-	padding-block: var(--wpds-dimension-padding-2xs);
+	padding-block: var(--wpds-dimension-padding-2xs) !important;
 }
 
 .wp-admin-shell-layout--single-pane
 	.wp-admin-shell-region[data-mode-full-width="true"] {
-	inline-size: 100%;
-	max-inline-size: 100%;
+	inline-size: 100% !important;
+	max-inline-size: 100% !important;
 }
 
 /* ---------------------------------------------------------------------
