@@ -282,7 +282,17 @@ export default function PluginsApp( { config = {} } = {} ) {
 					)
 			);
 		}
-		const start = ( view.page - 1 ) * view.perPage;
+		// Clamp the page against the current row count: a bulk delete +
+		// `refresh()` shrinks `data` without going through a controlled view
+		// edit, so `view.page` can outrun the data (page 2 of a now-single-page
+		// list). Slicing from the stale page would return `[]` and the list
+		// renders empty even though the (hidden) paginator collapsed to 1 page.
+		const totalPages = Math.max(
+			1,
+			Math.ceil( rows.length / view.perPage )
+		);
+		const page = Math.min( view.page, totalPages );
+		const start = ( page - 1 ) * view.perPage;
 		return rows.slice( start, start + view.perPage );
 	}, [ data, view.sort, view.page, view.perPage ] );
 

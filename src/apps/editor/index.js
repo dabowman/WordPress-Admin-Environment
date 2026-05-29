@@ -1,5 +1,5 @@
 import './index.css';
-import { useState, useEffect, useCallback } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { Button, Icon } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -41,6 +41,32 @@ export default function EditorApp( { config = {} } ) {
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 	const [ iframeLoading, setIframeLoading ] = useState( true );
+
+	// MountedApp doesn't remount across same-route hash navs
+	// (`/posts/A/edit` → `/posts/B/edit` share one route pattern), so the
+	// `postId` initializer above only runs for the first post — the iframe
+	// would keep loading the previous post. Re-sync when the route points at a
+	// different post, resetting `iframeLoading` so the spinner shows while the
+	// new post paints. The auto-draft path uses `replaceState` (no navigation
+	// event), so `postIdParam` stays at its 'new'/undefined value there and
+	// this guard is a no-op — the draft id set below survives. Mirrors
+	// SimpleEditorApp.
+	const prevRawRef = useRef( postIdParam );
+	useEffect( () => {
+		if ( prevRawRef.current === postIdParam ) {
+			return;
+		}
+		prevRawRef.current = postIdParam;
+		setError( null );
+		setIframeLoading( true );
+		if ( isNew ) {
+			setPostId( null );
+			setIsCreating( true );
+		} else {
+			setPostId( Number( postIdParam ) );
+			setIsCreating( false );
+		}
+	}, [ postIdParam, isNew ] );
 
 	// Create auto-draft for new posts.
 	useEffect( () => {

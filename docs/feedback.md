@@ -24,8 +24,6 @@ Types: `bug`, `feat`, `chore`, `doc`, `design`, `perf`, `a11y`, `dx`.
 
 _New items land here. No triage yet._
 
-- **2026-05-28 — [bug] `core:editor` doesn't re-sync `postId` on same-pattern navigation.** Navigating edit-post-A → edit-post-B shares the `/posts/{id}/edit` route pattern, so `MountedApp` doesn't remount and `EditorApp`'s `postId`/`iframeLoading` state stays on A — the iframe keeps showing the wrong post. `SimpleEditorApp` already solved this with a `prevRawRef` re-sync `useEffect` (resets `postId` + creating/iframe state when `config.id` changes). Port that to `EditorApp` (and reset `iframeLoading=true` so the spinner shows during the iframe reload). Discovered while fixing the add-new spinner (2026-05-28); separate from the reported symptom.
-
 - **2026-05-27 — Alpha (0.1.0) deferred work.** Tracked gaps from the
   workspace-as-primary-entry release (`docs/plans/2026-05-27-alpha-release-0.1.0.md`):
   - WP-CLI scaffolder for `wp-content/admin.json` (`wp admin-shell scaffold-config`).
@@ -99,6 +97,10 @@ _Work underway. Link to branch / spec / PR._
 ## Done
 
 _Recently shipped. Prune quarterly._
+
+- [2026-05-29] [bug] **`core:editor` now re-syncs `postId` on same-pattern navigation.** (source: ultrareview, branch `testing/0.1.0-testing`) Navigating edit-post-A → edit-post-B shares the `/posts/{id}/edit` route pattern, so `MountedApp` didn't remount and `EditorApp`'s `postId`/`iframeLoading` state stayed on A — the iframe kept showing the wrong post (and a save would overwrite the wrong record). Ported `SimpleEditorApp`'s `prevRawRef` re-sync `useEffect` to `EditorApp`: resets `postId` + creating state and flips `iframeLoading=true` so the spinner shows during the reload. The auto-draft `replaceState` path is a no-op for the guard (`postIdParam` stays `new`/undefined there). Made reachable on the default shell by the 2026-05-28 `config.postId`→`config.id` fix below.
+
+- [2026-05-29] [bug] **PluginsApp paginator clamps `view.page` to the data.** (source: ultrareview, branch `testing/0.1.0-testing`) A bulk delete + `refresh()` shrinks `data` without a controlled view edit, so a stale `view.page` (page 2 of a now-single-page list) sliced past the end and rendered an empty list with the paginator hidden (`totalPages` collapsed to 1). The `paginatedData` memo now clamps `page = min(view.page, totalPages)` before slicing.
 
 - [2026-05-28] [bug] **Editor stuck on permanent spinner — fixed (two paths).** (source: user report 2026-05-28)
   - *Edit:* `wp-admin-default`'s post-edit/page-edit screens passed the captured id into `config.postId`, but `core:editor` reads `config.id`. `interpolate()` only carries declared `config` keys and `config-schema` is never enforced at mount, so `config.id` was `undefined` → `Number(undefined)` is `NaN` → the `! postId` loading guard never cleared (spinner forever, no error). Aligned both screens to `"id": "{id}"` (matching the already-correct `single-pane-demo.json`), declared `id` in the editor `config-schema`, fixed the `postId` references in `app.json`/`app.md`, and codified the route-config-key trap in `CLAUDE.md`.
