@@ -209,30 +209,43 @@
 		padding-block 180ms ease;
 }
 
+/* `!important` is REQUIRED on every rule below. Region templates ship
+ * `default-style` blocks (`display: flex`, `flex: 1`, `padding-block`,
+ * `inline-size`, …) that the kernel applies as INLINE `style="…"` on the
+ * region wrapper. Inline styles beat any stylesheet rule lacking
+ * `!important`, so a plain `display: none` here would lose to the
+ * template's inline `display: flex` and the region would never hide.
+ * Same trap, same fix as the `data-app-mounted` mirror-collapse rule
+ * below. Each property overridden here must out-specify its inline
+ * default-style counterpart. */
+
 /* Hidden — paint-only suppression. `display: none` removes the wrapper
  * from the flow without unmounting the React subtree (React still keeps
  * state, useState references, refs, and effects across the flip — only
  * the DOM is hidden). */
 .wp-admin-shell-layout .wp-admin-shell-region[data-mode-hidden="true"] {
-	display: none;
+	display: none !important;
 }
 
 /* Compact — toolbar shrinks to back link + save indicator chrome;
  * sidebar collapses to icon-rail width. Engines tune per-region. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region--toolbar[data-mode-compact="true"] {
-	padding-block: var(--wpds-dimension-padding-xs);
+	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
 .wp-admin-shell-layout
 	.wp-admin-shell-region--sidebar[data-mode-compact="true"] {
-	inline-size: var(--wp-admin-shell--chrome--sidebar--compact-width, 64px);
+	inline-size: var(
+		--wp-admin-shell--chrome--sidebar--compact-width,
+		64px
+	) !important;
 }
 
 /* Minimal — stricter than compact. Currently only toolbar consumes it. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region--toolbar[data-mode-minimal="true"] {
-	padding-block: var(--wpds-dimension-padding-2xs);
+	padding-block: var(--wpds-dimension-padding-2xs) !important;
 }
 
 /* Full-width — content / main region expands to claim the space normally
@@ -240,8 +253,8 @@
  * default flex-row arrangement; engines using grid layouts override. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region[data-mode-full-width="true"] {
-	flex: 1 1 100%;
-	max-inline-size: 100%;
+	flex: 1 1 100% !important;
+	max-inline-size: 100% !important;
 }
 
 /* Multi-app layout (3c.4) — mirror-mode peer regions (`detail`,
