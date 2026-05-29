@@ -114,7 +114,7 @@ add_filter( 'wp_admin_shell_engine_modes_core:default', function( $modes ) {
     $modes['kiosk'] = [
         'label'   => 'Kiosk',
         'extends' => 'takeover',
-        'regions' => [ 'site-hub' => [ 'hidden' => true ] ],
+        'regions' => [ 'detail' => [ 'hidden' => true ] ],
     ];
     return $modes;
 } );
@@ -131,37 +131,34 @@ Full bodies for each mode:
 	"modes": {
 		"default": {
 			"label": "Default",
-			"description": "Full workspace chrome — sidebar, toolbar, site-hub, content.",
+			"description": "Full workspace chrome — toolbar + sidebar (with nested site-hub) + content; the detail panel shows when a mirror-routed app is mounted.",
 			"regions": {
-				"sidebar":  { "hidden": false, "compact": false },
-				"toolbar":  { "hidden": false, "compact": false },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": false },
-				"preview":  { "hidden": false }
+				"sidebar": { "hidden": false, "compact": false },
+				"toolbar": { "hidden": false, "compact": false },
+				"content": { "hidden": false, "fullWidth": false },
+				"detail":  { "hidden": false }
 			}
 		},
 
 		"focus": {
 			"label": "Focus",
-			"description": "Strip the sidebar; compress the toolbar to a back link + save indicator. Editor and authoring surfaces.",
+			"description": "Strip the sidebar (and its nested site-hub) + the detail panel; compact the toolbar to its essential affordances; content fills the width. Editor and authoring surfaces.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "compact": true },
-				"site-hub": { "hidden": false },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "compact": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 
 		"takeover": {
 			"label": "Takeover",
-			"description": "All workspace chrome hidden. Full-viewport screen. Customizer, full-screen apps.",
+			"description": "All workspace chrome hidden — toolbar + sidebar + detail panel gone, content fills the viewport. Customizer, full-screen apps.",
 			"regions": {
-				"sidebar":  { "hidden": true },
-				"toolbar":  { "hidden": true },
-				"site-hub": { "hidden": true },
-				"content":  { "hidden": false, "fullWidth": true },
-				"preview":  { "hidden": true }
+				"sidebar": { "hidden": true },
+				"toolbar": { "hidden": true },
+				"content": { "hidden": false, "fullWidth": true },
+				"detail":  { "hidden": true }
 			}
 		},
 
