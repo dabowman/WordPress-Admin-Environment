@@ -83,6 +83,12 @@ export default function SettingsReadingApp() {
 				label: __( 'Homepage', 'wp-admin-shell' ),
 				Edit: 'select',
 				elements: pageOptions,
+				// Opt out of DataViews' implicit elements-membership validation:
+				// `pageOptions` is lazy-loaded and capped at `per_page: 100`, so a
+				// stored id outside the first page (or a draft/private page, or one
+				// still resolving) isn't in the list and would lock Save — even
+				// while the select is hidden (validation ignores `isVisible`).
+				isValid: { elements: false },
 				isVisible: showsStaticPage,
 				getValue: ( { item } ) => String( item.page_on_front ?? 0 ),
 				setValue: ( { value } ) => ( {
@@ -95,6 +101,12 @@ export default function SettingsReadingApp() {
 				label: __( 'Posts page', 'wp-admin-shell' ),
 				Edit: 'select',
 				elements: pageOptions,
+				// Opt out of DataViews' implicit elements-membership validation:
+				// `pageOptions` is lazy-loaded and capped at `per_page: 100`, so a
+				// stored id outside the first page (or a draft/private page, or one
+				// still resolving) isn't in the list and would lock Save — even
+				// while the select is hidden (validation ignores `isVisible`).
+				isValid: { elements: false },
 				isVisible: showsStaticPage,
 				getValue: ( { item } ) => String( item.page_for_posts ?? 0 ),
 				setValue: ( { value } ) => ( {

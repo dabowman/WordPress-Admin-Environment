@@ -43,14 +43,14 @@ export function EntityDataForm( {
 		useEntityRecord( ...entity );
 	const handleSave = useEntitySave( save, messages );
 
-	// Wire `isValid` field rules into live validation. Must run before the
-	// null-guard early return so the hook order stays stable across renders;
-	// `useFormValidity` reports `isValid: true` for an empty/loading record.
-	const { validity, isValid } = useFormValidity(
-		editedRecord ?? {},
-		fields,
-		form
-	);
+	// Live field validation: enforces author-declared `isValid` rules plus the
+	// type-default `elements`-membership check DataViews auto-enables for any
+	// option-backed field that doesn't opt out (`isValid: { elements: false }`).
+	// Must run before the null-guard early return so hook order stays stable.
+	// While the record loads `editedRecord` is an empty object and `validate()`
+	// may flag it invalid, but the Save button only renders past the spinner
+	// gate below, so a transient `isValid: false` is never visible.
+	const { validity, isValid } = useFormValidity( editedRecord, fields, form );
 
 	if ( ! record ) {
 		return (

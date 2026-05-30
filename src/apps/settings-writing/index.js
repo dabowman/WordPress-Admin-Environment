@@ -42,6 +42,11 @@ export default function SettingsWritingApp() {
 				label: __( 'Default Post Category', 'wp-admin-shell' ),
 				Edit: 'select',
 				elements: categoryOptions,
+				// Opt out of DataViews' implicit elements-membership validation:
+				// `categoryOptions` is lazy-loaded and capped at `per_page: 100`, so a
+				// default category beyond the first page (or an unset `''`) isn't in
+				// the list and would lock Save on an otherwise-valid panel.
+				isValid: { elements: false },
 				getValue: ( { item } ) => String( item.default_category ?? '' ),
 				setValue: ( { value } ) => ( {
 					default_category: parseInt( value, 10 ),
