@@ -381,8 +381,22 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 
 ### Current shell coverage
 - **Source:** `core:settings-general` → `src/apps/SettingsGeneralApp.js`
-- **What works:** Title, Tagline, Timezone (string only), Date Format, Time Format, Week Starts On, Language read-only display. Saves via `useEntityRecord('root','site')`. Uses WPDS (`@wordpress/ui` `InputControl`, `Stack`) + `@wordpress/components` (`SelectControl` for optgroup support).
+- **What works:** Title, Tagline, Timezone (city/`timezone_string` only), Date Format, Time Format, Week Starts On, Language read-only display. Saves via `useEntityRecord('root','site')`. Uses WPDS (`@wordpress/ui` `InputControl`, `Stack`) + `@wordpress/components` (`SelectControl` for optgroup support).
 - **Notices:** wired to `core/notices` since M4.
+
+#### Known deviations (current shell)
+
+The app renders several controls that **silently no-op** because the underlying option is not `show_in_rest`, so `/wp/v2/settings` drops the key — the control accepts input and the save reports "Settings saved." but the value never persists. Distinct from the unbuilt gaps in the table below (these *look* present):
+
+| Control | Option | Deviation |
+|---|---|---|
+| Site Address (Home) | `home` | Bound via `edit({ home })`, but `home` isn't `show_in_rest` → discarded on save (no error). |
+| Membership (anyone can register) | `users_can_register` | Bound, not `show_in_rest` → discarded silently. |
+| New User Default Role | `default_role` | Bound, not `show_in_rest` → discarded silently. |
+| Timezone (manual UTC offset entry) | `gmt_offset` | The grouped select offers UTC-offset entries, but selecting one writes the `timezone` (`timezone_string`) field only. `gmt_offset` isn't `show_in_rest`, so a manual-offset choice **reverts to the prior value on save** — only city/`timezone_string` selections persist. |
+| Administration Email | `email` (`admin_email`) | The `email` field *is* REST-writable, but writing it changes `admin_email` **instantly**, bypassing core's confirm-by-link flow (`new_admin_email` pending option + verification email). A typo locks the admin out of email-gated recovery with no undo. |
+
+Closing the no-op bindings is tracked in `docs/parity/roadmap.md` group A-P1 (`register_setting( show_in_rest )` shims); the instant-email-change safeguard is group B-P2.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |

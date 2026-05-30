@@ -120,7 +120,7 @@ The list uses `_embed=author,up` to avoid N+1 fetches.
 
 | List tab | REST `status` value | Notes |
 |---|---|---|
-| All | n/a — needs union | REST does not accept `status: 'any'` for comments. Either two requests (`approve` + `hold`) merged client-side, or a custom REST endpoint, or omit the All tab and default to All-but-Trash-Spam (most authors' "active comments") |
+| All | `status: 'any'` (7.0+) | The Comments REST endpoint accepts `status: 'any'` as of WordPress 7.0 — a single `context=edit` request returns every status the user can moderate. Pre-7.0 fallback: two requests (`approve` + `hold`) merged client-side, or omit the All tab and default to All-but-Trash-Spam (most authors' "active comments") |
 | Mine | `author={me}` (any status) | per-author filter |
 | Pending | `hold` | the moderation queue |
 | Approved | `approve` | |
