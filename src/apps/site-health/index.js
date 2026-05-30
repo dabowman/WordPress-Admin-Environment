@@ -73,7 +73,7 @@ export default function SiteHealthApp() {
 							...prev,
 							[ t.id ]: res,
 						} ) );
-					} catch ( err ) {
+					} catch {
 						// Match classic: an unreachable test is a soft
 						// "recommended" notice, not a critical failure that
 						// tanks the score (site-health.js:333-349).
