@@ -63,6 +63,13 @@ const CONTRACTS = {
 		isPlainObject( m ) &&
 		m.type === 'wp-admin-shell-external-link' &&
 		isNonEmptyString( m.url ),
+	// Sub-system 15: block-editor dirty-state relay. Read by
+	// `installIframeBridge`'s `onDirty` (src/apps/editor/index.js). The
+	// boolean is the whole payload; the listener coerces with `!!`.
+	'wp-admin-shell-dirty-state': ( m ) =>
+		isPlainObject( m ) &&
+		m.type === 'wp-admin-shell-dirty-state' &&
+		typeof m.dirty === 'boolean',
 };
 
 // ── positive: each documented type has a valid example ─────────────
@@ -110,6 +117,18 @@ ok(
 	} )
 );
 
+ok(
+	'dirty-state envelope: type + boolean dirty',
+	CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
+		type: 'wp-admin-shell-dirty-state',
+		dirty: true,
+	} ) &&
+		CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
+			type: 'wp-admin-shell-dirty-state',
+			dirty: false,
+		} )
+);
+
 // ── negative: missing required keys must reject ────────────────────
 
 console.log( '\n— envelopes missing required keys are rejected —' );
@@ -141,6 +160,14 @@ ok(
 	'iframe-ready with missing url rejected',
 	! CONTRACTS[ 'wp-admin-shell-iframe-ready' ]( {
 		type: 'wp-admin-shell-iframe-ready',
+	} )
+);
+
+ok(
+	'dirty-state with non-boolean dirty rejected',
+	! CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
+		type: 'wp-admin-shell-dirty-state',
+		dirty: 'yes',
 	} )
 );
 
