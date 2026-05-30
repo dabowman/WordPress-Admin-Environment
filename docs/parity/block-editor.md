@@ -23,7 +23,7 @@ Both are explicitly positioned as interim (`app.md` "v2-beta concession" / "MVP 
   - `core:editor` (iframe): writes only — `POST /wp/v2/posts | /wp/v2/pages` (auto-draft creation, `src/apps/editor/index.js:81-95`). All editing data flows through the *iframed* `post.php`, which uses core's full preload + REST stack. Reads `window.wpAdminShell.adminUrl` for the iframe `src`.
   - `core:simple-editor` (native): `useEntityRecord('postType', postType, postId)` (`src/apps/simple-editor/index.js:228-236`) — `GET`/`PUT /wp/v2/{posts|pages}/{id}` with `context: 'edit'` (declared in `app.json:45`). Auto-draft create: `POST /wp/v2/{posts|pages}` (`index.js:143-151`). **Does not touch** `/autosaves`, `/revisions`, block-types, block-patterns, blocks, global-styles, or `/batch/v1`.
 
-- **Project screen spec:** `docs/screens/editor-block.md` (overview/header/canvas/save) + `docs/screens/editor-block-inspector.md` + `docs/screens/editor-block-modes.md` + `docs/screens/editor-block-data.md` (REST/preload/autosave/revisions). This is the most complete tier-2 spec in the repo; the §15 gap tables there already enumerate most of what follows. **No `editor-classic.md` exists** despite §16 referencing it — minor doc gap.
+- **Project screen spec:** `docs/screens/editor-block.md` (overview/header/canvas/save) + `docs/screens/editor-block-inspector.md` + `docs/screens/editor-block-modes.md` + `docs/screens/editor-block-data.md` (REST/preload/autosave/revisions). This is the most complete tier-2 spec in the repo; the §15 gap tables there already enumerate most of what follows. The classic TinyMCE editor that §16 cross-references is specced separately in `docs/screens/editor-classic.md` (a full tier-2 spec, landed in PR #36) — the earlier "no `editor-classic.md` exists" note was a stale-snapshot artifact of this 2026-05-29 audit.
 
 ## Feature parity matrix
 
@@ -191,4 +191,4 @@ Not blockers (REST-reachable, just unbuilt in simple-editor): featured image (`f
 
 12. **Upstream: expose `preview_nonce` (or a draft-preview URL) in the posts REST schema** (blocker #5) so a native editor can offer draft preview without a server round-trip. *Upstream.*
 
-13. **Author `docs/screens/editor-classic.md`** — referenced by `editor-block.md` §16 but absent. *Doc gap.*
+13. ✅ **Done — `docs/screens/editor-classic.md` exists.** A full tier-2 classic-editor spec landed in PR #36; this audit's 2026-05-29 snapshot predated it. Correctly cross-referenced by `editor-block.md` §16. *No action.*
