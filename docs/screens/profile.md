@@ -399,7 +399,7 @@ Decide for each whether to preserve, replace with a shell slot, or drop.
 | Basic password-change field (+ client confirm + strength meter) | High | `password` is REST-writable; document no current-password re-auth + no server weak-gate. **Shell-side** (B9 not a hard blocker). |
 | Username (read-only) + avatar/Gravatar (read-only) display | Medium | Cheap parity wins; both REST-readable. **Shell-side.** |
 | Personal Options (color scheme, editor toggles, shortcuts, toolbar) | Medium | Blocked — meta not in REST. **B1–B2:** [upstream] `register_meta(... show_in_rest ...)`, **or** [shell] bridge through `WP_Admin_Shell_Prefs_REST` to `update_user_meta`. |
-| **Email pending-change confirmation flow + Cancel** | Medium | **B4** — own-email REST writes are immediate, bypassing the confirm-by-link safeguard. Security-relevant. [upstream] to route through the flow; **document loudly now**. |
+| **Email pending-change confirmation flow + Cancel** | Medium (security) | **B4** — own-email REST writes are immediate, bypassing the confirm-by-link safeguard. Security-relevant. [upstream] to route through the flow; **document loudly now**. |
 | Field-level error mapping | Medium | Map `WP_Error` `data.params` to per-field messages instead of one banner. **Shell-side.** |
 | Nickname-required + URL normalization | Medium | Mark required + normalize bare host on save. **Shell-side.** |
 | Plugin contact methods → REST | Low | **B3** — core auto-registration is the clean fix. [upstream] preferred. |
