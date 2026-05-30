@@ -3,7 +3,7 @@
 **Status:** Tier 2 — full spec, split into four files.
 **Source PHP:** `wp-admin/post.php` (router) + `wp-admin/post-new.php` (new entry) + `wp-admin/edit-form-blocks.php` (renderer)
 **JS package surface:** `@wordpress/edit-post`, `@wordpress/editor`, `@wordpress/block-editor`, `@wordpress/blocks`, `@wordpress/core-data`, `@wordpress/commands`, `@wordpress/preferences`, `@wordpress/notices`
-**Current shell coverage:** `core:editor` → `src/apps/EditorApp.js` (iframe escape hatch into `wp-admin/post.php`); `core:simple-editor` → `src/apps/SimpleEditorApp.js` (native, restricted block set, no inspector). **Native full block editor not yet shell-mounted.**
+**Current shell coverage:** `core:editor` → `src/apps/editor/index.js` (iframe escape hatch into `wp-admin/post.php`); `core:simple-editor` → `src/apps/simple-editor/index.js` (native, restricted block set, no inspector). **Native full block editor not yet shell-mounted.**
 
 This is the largest screen in WordPress. The spec is split into four files. Read them in order:
 
@@ -678,8 +678,8 @@ For shells that do not need the full block editor, the existing `core:editor` if
 - URL details: `wp-includes/rest-api/endpoints/class-wp-rest-url-details-controller.php`
 - Navigation fallback: `wp-includes/rest-api/endpoints/class-wp-rest-navigation-fallback-controller.php`
 - Editor JS package: Gutenberg `packages/edit-post/src/editor.js`, `packages/editor/src/components/`
-- Current iframe shell impl: `src/apps/EditorApp.js`
-- Current native shell impl: `src/apps/SimpleEditorApp.js`
+- Current iframe shell impl: `src/apps/editor/index.js`
+- Current native shell impl: `src/apps/simple-editor/index.js`
 - WordPress 6.9 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-9/`
 - WordPress 6.8 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-8/`
 - WordPress 6.7 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-7/`

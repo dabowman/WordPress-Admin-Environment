@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/upload.php` + `wp-admin/media-new.php` + `wp-admin/media.php` (deprecated redirect) + `wp-admin/media-upload.php` (modal picker iframe) + `WP_Media_List_Table` (`wp-admin/includes/class-wp-media-list-table.php`)
-**Current shell coverage:** `core:media` → `src/apps/MediaApp.js` (partial — see "Gaps" below)
+**Current shell coverage:** `core:media` → `src/apps/media/index.js` (partial — see "Gaps" below)
 
 This spec describes the **semantic surface** of the Media Library screen — list, grid, upload, edit (including image-edit canvas), and the embedded media-picker — so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -565,7 +565,7 @@ Plugin compatibility: third-party media plugins relying on `media_row_actions`, 
 
 ### Current shell coverage
 
-- **Source:** `core:media` → `src/apps/MediaApp.js`
+- **Source:** `core:media` → `src/apps/media/index.js`
 - **What works:** grid layout, upload via `apiFetch`, detail modal (basic fields), delete with confirm
 - **What does not:** list mode, image edit, bulk select+delete, type/date/author filters, search by filename, picker mode, attached/detached filter, progress-bar polish, multi-tab picker, EXIF display
 
@@ -631,5 +631,5 @@ For v1 of any new shell config, `iframe:upload.php?mode=grid` is acceptable as e
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-attachments-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/media/`
 - Image-edit endpoint added: 5.5.0; `flip` + `modifiers[]` added: 6.9.0
-- Current shell impl: `src/apps/MediaApp.js`
+- Current shell impl: `src/apps/media/index.js`
 - Shell config example: `shells/content-author.json`

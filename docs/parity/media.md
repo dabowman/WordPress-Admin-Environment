@@ -21,7 +21,7 @@
   - Metadata save via `saveEntityRecord('root','media', { id, title, alt_text, caption, description })` — index.js:386-405.
   - Delete via `deleteEntityRecord('root','media', id, { force:true })` — index.js:151-177.
   - Controller: `WP_REST_Attachments_Controller extends WP_REST_Posts_Controller` (`wp-includes/rest-api/endpoints/class-wp-rest-attachments-controller.php`).
-- **Project screen spec:** `docs/screens/media.md` (Tier 2, full). **Note: doc drift** — the spec's "Current shell coverage" cites `src/apps/MediaApp.js` (lines 5, 568, 634), a stale path; the file is `src/apps/media/index.js`. The spec also predates the type-count feature (`useEntityElementCounts`), which has since landed.
+- **Project screen spec:** `docs/screens/media.md` (Tier 2, full). **Note** — the spec predates the type-count feature (`useEntityElementCounts`), which has since landed; refresh its coverage notes (tracked in the screen spec's Gaps).
 
 ## Feature parity matrix
 

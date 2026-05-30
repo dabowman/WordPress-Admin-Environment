@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/edit-tags.php` (list + add) + `wp-admin/term.php` (edit single) + `wp-admin/edit-tag-form.php` (form partial) + `WP_Terms_List_Table` (`wp-admin/includes/class-wp-terms-list-table.php`)
-**Current shell coverage:** **Not implemented** — `core:taxonomy` is not yet a registered source. v1 ships only `core:posts`, `core:editor`, `core:simple-editor`, `core:media`, `core:profile`, `core:settings*`, `core:users`, `core:comments`, and the iframe escape hatch.
+**Current shell coverage:** `core:taxonomy` → `src/apps/taxonomy/index.js` (native; DataViews table + `@wordpress/dataviews` `DataForm` modal over the `taxonomy` entity, parameterized by `config.taxonomy` — defaults to `category`; registered in `src/runtime/registry/builtins.js`). See `src/apps/taxonomy/app.md`.
 
 This spec describes the **semantic surface** of the Taxonomy management screen — list, add, edit, and delete terms — for any taxonomy registered with `show_in_rest: true` (Categories, Tags, custom taxonomies). It does not prescribe component names, CSS, or specific React APIs.
 
@@ -436,7 +436,9 @@ Plugin compatibility: third-party taxonomy plugins (custom term meta UIs, hierar
 
 ### Current shell coverage
 
-- **Source:** **Not registered yet.** No `core:taxonomy` source exists. The bundled shells fall back to `iframe:edit-tags.php?taxonomy={tax}` for the developer-admin shell (acceptable interim).
+- **Source:** `core:taxonomy` → `src/apps/taxonomy/index.js`, registered in `src/runtime/registry/builtins.js`. Parameterized by `config.taxonomy` (defaults to `category`); mount the app once per taxonomy to surface tags / custom taxonomies.
+- **What works:** native DataViews table with a `@wordpress/dataviews` `DataForm` create/edit modal (name / slug / description), search, sort, and bulk delete via `createBulkConfirmModal`. See `src/apps/taxonomy/app.md`.
+- **Note:** the Gaps table below predates the native app (it still lists "Register `core:taxonomy` source" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
 ### Gaps vs. this spec
 
