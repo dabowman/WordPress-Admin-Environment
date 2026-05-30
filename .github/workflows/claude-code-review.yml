@@ -32,40 +32,39 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          # Run the code-review skill at MAX effort and post findings as a
-          # single FORMAL pull request review with inline comments — never a
-          # silent pass. This is a WordPress plugin: the repo ships WordPress
-          # skills under .claude/skills/ — load whichever are relevant to the
-          # changed files so the review reflects WordPress + project conventions.
+          # Post findings via the action's OWN GitHub MCP tools — NOT
+          # `gh pr review`. claude-code-action@v1 sandboxes the agent: arbitrary
+          # `gh`/Bash calls are permission-denied, so the old "submit a formal
+          # review via gh pr review" prompt racked up 50–89 denials per run and
+          # posted nothing while still exiting "success" (silent pass). The
+          # supported channels are `mcp__github_inline_comment__create_inline_comment`
+          # (buffered, then flushed by the action's post step) for inline
+          # findings and `update_claude_comment` for the summary. `track_progress`
+          # creates the tracking comment the agent edits and is what wires up the
+          # inline-comment flow. Both tools MUST be allowlisted in claude_args
+          # below. This is a WordPress plugin: the repo ships WordPress skills
+          # under .claude/skills/ — load whichever match the changed files.
+          track_progress: true
           prompt: |
             Review this pull request: ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
 
-            Run the `/code-review:code-review` skill at **max** effort. Then
-            publish ALL findings as a SINGLE formal GitHub pull request review
-            (a real review object with inline threads), NOT as one aggregated
-            issue comment:
+            Run the `/code-review:code-review` skill at **max** effort, then
+            publish findings using the action's GitHub MCP tools. Do NOT use
+            `gh pr review` or the REST reviews endpoint — those are
+            permission-denied in this sandbox and will silently post nothing.
 
-            - Anchor each finding to its exact file and line as an **inline
-              review comment**. Surface everything — include low-severity nits
-              and style/cleanup notes as inline comments too; do not silently
-              drop the small stuff.
-            - Put a **ranked summary + overall verdict** in the review body
-              (findings ordered by severity, plus a one-line bottom line).
-            - **Always submit the review, even when the code is clean.** A
-              passing review must be explicit: if there are no findings, submit
-              a review whose body is an explicit `LGTM ✅` so an approval is
-              never silent.
-            - Submit the review with the **`COMMENT` event** (NOT `APPROVE` /
-              `REQUEST_CHANGES`). The action authenticates as the repo owner and
-              these PRs are owner-authored — GitHub rejects approving or
-              requesting changes on your own PR, so `COMMENT` is the only event
-              that reliably lands. Carry the accept/reject verdict in the body
-              text instead.
-
-            Use the GitHub pull request **review** API (e.g. `gh pr review` /
-            the reviews endpoint: create the review, attach inline comments,
-            submit once) so this lands as a formal review with inline threads
-            rather than a standalone issue comment.
+            - Leave every finding as an **inline comment** anchored to its exact
+              file and line via the
+              `mcp__github_inline_comment__create_inline_comment` tool. Surface
+              everything — include low-severity nits and style/cleanup notes too;
+              do not silently drop the small stuff.
+            - Put a **ranked summary + overall verdict** (findings ordered by
+              severity, plus a one-line bottom line) in the tracking comment via
+              `update_claude_comment`.
+            - **Always post, even when the code is clean.** A passing review must
+              be explicit: if there are no findings, set the tracking comment to
+              an explicit `LGTM ✅` so an approval is never silent. Carry the
+              accept/reject verdict in the summary text.
 
             This repository is a WordPress plugin. Before and during the review,
             load whichever WordPress skills shipped in this repo's
@@ -77,10 +76,18 @@ jobs:
             authoring skills — so the review applies WordPress core, REST,
             DataViews/DataForm, and this project's conventions (see CLAUDE.md
             and docs/). Skip skills unrelated to the diff.
-          # Model + CLI flags go through claude_args — claude-code-action@v1
-          # has no top-level `model` input (passing one is ignored with a
-          # warning). Pin Opus for this heavy finder/verifier review. No
-          # --max-turns cap: the multi-agent pass was hitting the 60-turn limit
-          # and getting cut off mid-review on larger PRs; let it run to
-          # completion.
-          claude_args: '--model claude-opus-4-8'
+          # All CLI flags go through claude_args — claude-code-action@v1 has no
+          # top-level `model` input (passing one is ignored with a warning).
+          #   --allowedTools: CRITICAL. Without the two MCP posting tools the
+          #     agent cannot comment at all — this was the silent-pass bug. The
+          #     gh read commands let the skill inspect the PR. (This list is
+          #     ADDITIVE to the action's default analysis tools, per the
+          #     upstream pr-review-comprehensive.yml example.)
+          #   --max-turns 150: the action defaults to 60; the multi-agent
+          #     max-effort pass blew through it on larger PRs (hit error_max_turns
+          #     at turn 61). Lift it so the review runs to completion.
+          #   --model: pin Opus for the heavy finder/verifier review.
+          claude_args: >-
+            --model claude-opus-4-8
+            --max-turns 150
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,mcp__github_comment__update_claude_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
