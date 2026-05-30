@@ -15,7 +15,7 @@
   - `useEntityRecords('root', 'theme', { context: 'edit', status: 'active,inactive' })` → `GET /wp/v2/themes` (`WP_REST_Themes_Controller`, `class-wp-rest-themes-controller.php`). **Read-only controller** — only `WP_REST_Server::READABLE` routes registered (lines 43–75).
   - `useDataView(screenId)` → resolved `settings.dataViews.root.theme._default` from the kernel config snapshot (or `/wp-admin-shell/v1/data-view`).
   - `apiFetch` POST to `/wp-admin-shell/v1/activate-theme` — **this endpoint does not exist** (no `register_rest_route` for it anywhere in `includes/`; the only theme-related server code is `add_action('switch_theme', …)` cache flushers).
-  - `window.wpAdminShell.{siteUrl,adminUrl}` (`wp-admin-shell.php:508,510`) for the screenshot fallback URL and the wp-admin activate fallback link. Note: `app.md` claims a read of `window.wpAdminShell.activeTheme`, but **that global is not emitted** (verified by grep of `wp-admin-shell.php`); the app never actually reads it.
+  - `window.wpAdminShell.{siteUrl,adminUrl}` (`wp-admin-shell.php:508,510`) for the screenshot fallback URL and the wp-admin activate fallback link. (A prior `app.json` `data.reads[]` entry claimed a `window.wpAdminShell.activeTheme` read, but **that global is not emitted** by `wp-admin-shell.php`; the app derives active-ness from each record's `status` field. The bogus entry was removed — issue #173.)
 - **Project screen spec:** `docs/screens/themes.md` — full Tier-2 spec. Present and unusually thorough (it already enumerates the REST gaps and proposes the missing endpoints). Its "Current shell coverage" line is stale ("None — no `core:themes` source registered"), since `core:themes` now exists; that line should be refreshed.
 
 ## Feature parity matrix
@@ -121,8 +121,8 @@ The hard parity blockers. Each verified against live WP 7.0 source.
    - `wp_prepare_themes_for_js` computes `actions.customize` server-side: block themes → `site-editor.php?wp_theme_preview={slug}`, classic → `wp_customize_url($slug)` (`theme.php`). REST exposes `is_block_theme` (schema:557) but not the prebuilt preview URL.
    - **To close:** `[shell]` derive the URL client-side from `is_block_theme` + `stylesheet` and render an `<a href>` (so the admin-link interceptor handles it). No core change needed — but note the shell currently doesn't even request `is_block_theme`.
 
-8. **Active-theme global not emitted (minor).** `[shell]`
-   - `app.md` documents a read of `window.wpAdminShell.activeTheme`, but `wp-admin-shell.php:506–564` does not emit it (grep confirms). The app actually derives active-ness from the record's `status` field, so this is a doc bug, not a runtime one — but a rebuild following `app.md` would look for a non-existent global.
+8. **Active-theme global not emitted (minor).** `[shell]` — ✅ **resolved (issue #173).**
+   - `app.json` `data.reads[]` documented a read of `window.wpAdminShell.activeTheme`, but `wp-admin-shell.php:506–564` does not emit it (grep confirms). The app actually derives active-ness from the record's `status` field, so this was a doc bug, not a runtime one — but a rebuild following the documentation block would have looked for a non-existent global. The bogus `data.reads[]` entry has been removed.
 
 ## DataViews / DataForms review
 
@@ -149,8 +149,8 @@ Net: the DataViews usage is correct and idiomatic; the parity gap is **scope** (
 - `[shell]` As a belt-and-suspenders, fix the fallback link in `index.js:146–151` to carry a real `&_wpnonce=` — expose a `wp_create_nonce('switch-theme_'.$slug)` per theme (e.g. fold into the `root/theme` REST response via `register_rest_field`, or a small map in `wpAdminShell`). Until one of these lands, the app's only write action is a no-op.
 - `[shell]` Show an error `Notice` on activate failure instead of silently `window.location.href`-ing away (`index.js:145`).
 
-**P1 — fix the doc/spec drift.**
-- `[shell]` `app.md` claims a `window.wpAdminShell.activeTheme` read that doesn't exist — remove or implement. `docs/screens/themes.md:5` "Current shell coverage: None" is stale — update to reflect `core:themes`.
+**P1 — fix the doc/spec drift.** ✅ **done (issue #173).**
+- `[shell]` ✅ The `app.json` `data.reads[]` entry claiming a `window.wpAdminShell.activeTheme` read that doesn't exist was removed (the app derives active-ness from each record's `status`). `docs/screens/themes.md:5` "Current shell coverage: None" was stale and now reflects `core:themes`.
 
 **P2 — close the cheap read-side gaps (no upstream needed).**
 - `[shell]` Add `enableGlobalSearch: true` to `description` and `author` in `app.json` (and the `wp-admin-default.json` redeclaration) so search matches classic scope.
