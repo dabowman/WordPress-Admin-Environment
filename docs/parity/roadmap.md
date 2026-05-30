@@ -203,7 +203,7 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 4. **Author `docs/screens/editor-classic.md`** — the block/classic post editor (`core:editor` + `core:simple-editor`) has no dedicated screen spec. ([block-editor.md](block-editor.md))
 
-5. **Author a dedicated `docs/screens/profile.md`** — Profile is currently only a sub-section of `users.md`; own-vs-other-user branching and the email-confirm flow get light coverage. ([profile.md](profile.md))
+5. ~~**Author a dedicated `docs/screens/profile.md`**~~ — **Done.** `docs/screens/profile.md` now exists as a full Tier-2 spec covering the own-vs-other-user branching and the email pending-change confirmation flow; `users.md` cross-links it. ([profile.md](profile.md))
 
 ### P3 — accuracy touch-ups
 

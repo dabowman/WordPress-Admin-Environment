@@ -15,6 +15,8 @@ The five screens are documented as one app cluster (`core:users`) because they s
 
 `core:user-edit` and `core:profile` share a single underlying form. Differences are conditional rendering (admin-only fields hidden when `IS_PROFILE_PAGE`, editor-only fields visible otherwise).
 
+> **Profile has its own spec.** The own-vs-other-user branching and the email pending-change confirmation flow are documented in full in **`docs/screens/profile.md`**. This cluster spec remains authoritative for the list / add-user / authorize-application surfaces; the two overlap on the shared edit/profile form and cross-reference each other.
+
 ---
 
 ## 1. Identity
