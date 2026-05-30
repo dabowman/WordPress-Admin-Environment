@@ -4,7 +4,7 @@
 **Source PHP:** `wp-admin/options-discussion.php`, `wp-admin/options.php` (legacy save handler)
 **Current shell coverage:** `core:settings-discussion` → `src/apps/settings-panels/SettingsDiscussionApp.js` (M4 — REST-native, partial; majority of fields are non-REST and require fallback)
 
-This spec describes the **semantic surface** of the Discussion Settings screen. This panel has the largest non-REST surface area of any Settings screen — only three of ~24 options are REST-exposed.
+This spec describes the **semantic surface** of the Discussion Settings screen. This panel has the largest non-REST surface area of any Settings screen — only two of ~24 options are REST-exposed.
 
 ---
 
@@ -55,11 +55,10 @@ Jobs to be done:
 
 ### REST-exposed fields
 
-Only three fields here are exposed to REST. Verified against `register_initial_settings()` in `wp-includes/option.php` (lines 2944–2971).
+Only two fields here are exposed to REST. Verified against `register_initial_settings()` in `wp-includes/option.php` (lines 2944–2971).
 
 | Form field | Option name | REST key | Type | Default | Notes |
 |---|---|---|---|---|---|
-| Attempt to notify any blogs linked from the post | `default_pingback_flag` | `default_pingback_flag` | boolean | true | Ping outgoing links on publish |
 | Allow link notifications from other blogs | `default_ping_status` | `default_ping_status` | string | `open` | enum `open`/`closed` |
 | Allow people to submit comments on new posts | `default_comment_status` | `default_comment_status` | string | `open` | enum `open`/`closed` |
 
@@ -69,6 +68,7 @@ The bulk of the panel.
 
 | Option | Form field | Type | Default | Notes |
 |---|---|---|---|---|
+| `default_pingback_flag` | Attempt to notify any blogs linked from the post | bool | true | Ping outgoing links on publish. **NOT** `show_in_rest` — legacy form/option save only. |
 | `require_name_email` | Comment author must fill out name and email | bool | true | |
 | `comment_registration` | Users must be registered and logged in to comment | bool | false | |
 | `close_comments_for_old_posts` | Automatically close comments on old posts | bool | false | |
@@ -167,7 +167,7 @@ Nested affordances visually indented; PHP version uses `<ul><li>` under the pare
 ## 7. Actions
 
 ### Primary action
-- **Save Changes** — REST POST for the three exposed keys; non-REST batch via custom endpoint or sequential `update_option` calls.
+- **Save Changes** — REST POST for the two exposed keys; non-REST batch via custom endpoint or sequential `update_option` calls.
 
 ### No bulk / per-row / inline actions.
 
@@ -182,7 +182,7 @@ N/A.
 ## 9. Forms & inputs
 
 ### Default post settings (group of 3 checkboxes)
-- `default_pingback_flag` — REST exposed; bool checkbox
+- `default_pingback_flag` — **NOT** REST exposed (legacy form/option save only); bool checkbox
 - `default_ping_status` — REST exposed; checkbox writes "open" or "closed" string
 - `default_comment_status` — REST exposed; checkbox writes "open" or "closed" string
 - Helper: "Individual posts may override these settings. Changes here will only be applied to new posts."
@@ -236,7 +236,7 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- REST handles 3 fields; non-REST batch covers ~21 fields. Recommended to use a single shell-custom endpoint (`/wp-admin-shell/v1/options/discussion`) that wraps `update_option` calls inside `manage_options` cap check, rather than 21 sequential AJAX requests.
+- REST handles 2 fields; non-REST batch covers ~22 fields. Recommended to use a single shell-custom endpoint (`/wp-admin-shell/v1/options/discussion`) that wraps `update_option` calls inside `manage_options` cap check, rather than 21 sequential AJAX requests.
 - Validation: server authoritative. Client may pre-validate numeric mins/enum values.
 
 ---
@@ -304,7 +304,7 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 
 ### Current shell coverage
 - **Source:** `core:settings-discussion` → `src/apps/settings-panels/SettingsDiscussionApp.js`
-- **What works:** the three REST-exposed keys (default_pingback_flag, default_ping_status, default_comment_status). Saves via `core/notices`.
+- **What works:** the two REST-exposed keys (default_ping_status, default_comment_status). Saves via `core/notices`.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
