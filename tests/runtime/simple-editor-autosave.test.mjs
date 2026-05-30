@@ -6,7 +6,7 @@ import {
 } from '../../src/apps/simple-editor/autosave.mjs';
 
 test( 'draft-like statuses autosave to the parent record', () => {
-	for ( const status of [ 'draft', 'auto-draft', 'pending' ] ) {
+	for ( const status of [ 'draft', 'auto-draft' ] ) {
 		assert.equal(
 			autosaveTarget( status ),
 			'parent',
@@ -15,8 +15,11 @@ test( 'draft-like statuses autosave to the parent record', () => {
 	}
 } );
 
-test( 'published / private / scheduled route to the autosaves endpoint', () => {
-	for ( const status of [ 'publish', 'private', 'future' ] ) {
+test( 'pending / published / private / scheduled route to the autosaves endpoint', () => {
+	// Core's autosaves controller only updates the parent in place for
+	// draft/auto-draft; pending (and everything above it) gets a per-user
+	// revision, so the live/under-review record is never PUT by a debounce.
+	for ( const status of [ 'pending', 'publish', 'private', 'future' ] ) {
 		assert.equal(
 			autosaveTarget( status ),
 			'autosave',
@@ -34,9 +37,5 @@ test( 'unknown / missing status defaults to the safe autosave path', () => {
 } );
 
 test( 'PARENT_AUTOSAVE_STATUSES is the draft-like set', () => {
-	assert.deepEqual( PARENT_AUTOSAVE_STATUSES, [
-		'draft',
-		'auto-draft',
-		'pending',
-	] );
+	assert.deepEqual( PARENT_AUTOSAVE_STATUSES, [ 'draft', 'auto-draft' ] );
 } );

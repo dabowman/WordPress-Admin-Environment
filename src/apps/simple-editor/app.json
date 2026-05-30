@@ -57,13 +57,13 @@
 					"source": "postType/{config.postType}",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Auto-save (`save()` from useEntityRecord) every 2s of inactivity while `hasEdits` — but only for draft / auto-draft / pending posts; Publish/Update button flushes immediately for any status."
+					"purpose": "Auto-save (`save()` from useEntityRecord) every 2s of inactivity while `hasEdits` — but only for draft / auto-draft posts; Publish/Update button flushes immediately for any status."
 				},
 				{
 					"source": "/wp/v2/posts/{id}/autosaves | /wp/v2/pages/{id}/autosaves",
 					"via": "api-fetch",
 					"operation": "create",
-					"purpose": "Debounced auto-save for published / private / scheduled posts — writes a per-user autosave revision instead of PUTting the live record, mirroring core's autosaves controller (issue #101). The live record is only updated when the author clicks Update."
+					"purpose": "Debounced auto-save for pending / published / private / scheduled posts — writes a per-user autosave revision instead of PUTting the live record, mirroring core's autosaves controller (issue #101). The live record is only updated when the author clicks Update."
 				},
 				{
 					"source": "/wp/v2/posts | /wp/v2/pages",
@@ -117,7 +117,7 @@
 			{
 				"id": "autosaved",
 				"when": "saveStatus === 'autosaved'",
-				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns."
+				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a pending/published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns."
 			},
 			{
 				"id": "save-failed",
@@ -149,7 +149,7 @@
 			},
 			{
 				"trigger": "Auto-save tick (2s after last edit)",
-				"effect": "Draft / auto-draft / pending: `save()` PUTs the live record, saveStatus `saving → saved`. Published / private / scheduled: `POST .../autosaves` writes a per-user autosave revision, saveStatus `saving → autosaved`, live record untouched. Both fade after 2s. On failure: `saveStatus = 'error'` with `err.message`."
+				"effect": "Draft / auto-draft: `save()` PUTs the live record, saveStatus `saving → saved`. Pending / published / private / scheduled: `POST .../autosaves` writes a per-user autosave revision, saveStatus `saving → autosaved`, live record untouched. Both fade after 2s. On failure: `saveStatus = 'error'` with `err.message`."
 			},
 			{
 				"trigger": "Click Publish/Update",

@@ -277,7 +277,6 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 				path: `/wp/v2/${ segment }/${ postId }/autosaves`,
 				method: 'POST',
 				data: {
-					id: postId,
 					title: readRaw( editedRecord?.title ),
 					content: readRaw( editedRecord?.content ),
 					excerpt: readRaw( editedRecord?.excerpt ),
