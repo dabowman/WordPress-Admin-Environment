@@ -13,7 +13,7 @@ import {
 	Modal,
 	TextareaControl,
 } from '@wordpress/components';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { upload, trash, copy } from '@wordpress/icons';
 import { withElementCounts } from '../_shared/dataviews/buildFields.mjs';
 import {
@@ -142,6 +142,19 @@ export default function MediaApp() {
 					}
 				}
 				if ( uploaded > 0 ) {
+					createSuccessNotice(
+						sprintf(
+							/* translators: %d: number of files uploaded. */
+							_n(
+								'%d file uploaded.',
+								'%d files uploaded.',
+								uploaded,
+								'wp-admin-shell'
+							),
+							uploaded
+						),
+						{ type: 'snackbar' }
+					);
 					invalidateResolution( 'getEntityRecords', [
 						'root',
 						'media',
@@ -168,7 +181,12 @@ export default function MediaApp() {
 				}
 			}
 		},
-		[ queryArgs, invalidateResolution, createErrorNotice ]
+		[
+			queryArgs,
+			invalidateResolution,
+			createErrorNotice,
+			createSuccessNotice,
+		]
 	);
 
 	const handleDelete = useCallback(
