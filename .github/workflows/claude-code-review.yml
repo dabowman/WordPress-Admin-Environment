@@ -1,35 +1,29 @@
 name: Claude Code Review
 
+# Label-gated, on-demand review. Add the `claude-review` label to a PR to
+# trigger a max-effort review; while the label remains, every subsequent push
+# re-reviews. Remove the label to stop. (To review every PR instead, switch
+# `types` to [opened, synchronize] and drop the `if` label check below.)
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    types: [labeled, synchronize, reopened]
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
-
+    if: contains(github.event.pull_request.labels.*.name, 'claude-review')
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write   # post inline review comments + summary
       issues: read
       id-token: write
+      actions: read          # read CI results on the PR
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0       # full history so the PR diff resolves
 
       - name: Run Claude Code Review
         id: claude-review
@@ -38,7 +32,26 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          # Run the code-review skill at MAX effort and post findings inline.
+          # This is a WordPress plugin: the repo ships WordPress skills under
+          # .claude/skills/ — load whichever are relevant to the changed files
+          # so the review reflects WordPress + project conventions.
+          prompt: |
+            Review this pull request: ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
 
+            Run the `/code-review:code-review` skill at **max** effort, and post
+            the findings as inline PR comments (use the skill's `--comment`
+            behavior) plus a summary comment.
+
+            This repository is a WordPress plugin. Before and during the review,
+            load whichever WordPress skills shipped in this repo's
+            `.claude/skills/` directory are relevant to the files changed in this
+            PR — e.g. `wordpress-rest-api`, `wordpress-dataviews`,
+            `wordpress-core-data`, `wordpress-design-system`,
+            `wordpress-plugin-development`, and the `admin-shell-author` /
+            `app-json-author` / `engine-json-author` / `admin-json-author`
+            authoring skills — so the review applies WordPress core, REST,
+            DataViews/DataForm, and this project's conventions (see CLAUDE.md
+            and docs/). Skip skills unrelated to the diff.
+          # Allow the skill's finder/verifier sub-agents and the gh CLI it uses.
+          claude_args: '--max-turns 60'
