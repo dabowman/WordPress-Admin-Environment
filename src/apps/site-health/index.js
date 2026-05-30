@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Badge, Button, Card, Icon, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
 
 const ASYNC_TESTS = [
@@ -58,18 +58,41 @@ export default function SiteHealthApp() {
 					try {
 						const res = await apiFetch( {
 							path: `/wp-site-health/v1/tests/${ t.id }`,
+							// The authorization-header test probes whether the
+							// server strips the Authorization header; classic
+							// sends this Basic header so the endpoint can observe
+							// it (class-wp-site-health.php:2975). Without it the
+							// result is meaningless.
+							...( t.id === 'authorization-header' && {
+								headers: {
+									Authorization: 'Basic dXNlcjpwd2Q=',
+								},
+							} ),
 						} );
 						setResults( ( prev ) => ( {
 							...prev,
 							[ t.id ]: res,
 						} ) );
-					} catch ( err ) {
+					} catch {
+						// Match classic: an unreachable test is a soft
+						// "recommended" notice, not a critical failure that
+						// tanks the score (site-health.js:333-349).
 						setResults( ( prev ) => ( {
 							...prev,
 							[ t.id ]: {
-								status: 'critical',
-								label: t.label,
-								description: err.message,
+								status: 'recommended',
+								label: __(
+									'A test is unavailable',
+									'wp-admin-shell'
+								),
+								description: `<p>${ sprintf(
+									// translators: %s: the name of the Site Health test.
+									__(
+										'The “%s” test could not be run.',
+										'wp-admin-shell'
+									),
+									t.label
+								) }</p>`,
 							},
 						} ) );
 					}
