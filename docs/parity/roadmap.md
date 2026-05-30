@@ -197,7 +197,7 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 2. **Fix "Current shell coverage: None" / stale-app-path lines** in `docs/screens/dashboard-home.md`, `docs/screens/themes.md`, `docs/screens/plugins.md`, `docs/screens/taxonomy.md` (says "Not implemented" but the app exists), and the `src/apps/settings-panels/*` → `src/apps/settings-*/index.js` path drift across multiple screen specs + the stale `src/apps/MediaApp.js` references in `docs/screens/media.md`. ([dashboard.md](dashboard.md), [themes.md](themes.md), [plugins.md](plugins.md), [taxonomy.md](taxonomy.md), [media.md](media.md))
 
-3. **Fix app.md claims of non-existent window globals.** themes `app.md` references a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verify and remove. ([themes.md](themes.md))
+3. **Fix app.md claims of non-existent window globals.** ✅ **done (issue #173).** The themes app's `app.json` `data.reads[]` referenced a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verified and removed (the app derives active-ness from each record's `status`). ([themes.md](themes.md))
 
 ### P2 — screen spec coverage
 
