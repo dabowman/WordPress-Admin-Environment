@@ -32,16 +32,40 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          # Run the code-review skill at MAX effort and post findings inline.
-          # This is a WordPress plugin: the repo ships WordPress skills under
-          # .claude/skills/ — load whichever are relevant to the changed files
-          # so the review reflects WordPress + project conventions.
+          # Run the code-review skill at MAX effort and post findings as a
+          # single FORMAL pull request review with inline comments — never a
+          # silent pass. This is a WordPress plugin: the repo ships WordPress
+          # skills under .claude/skills/ — load whichever are relevant to the
+          # changed files so the review reflects WordPress + project conventions.
           prompt: |
             Review this pull request: ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
 
-            Run the `/code-review:code-review` skill at **max** effort, and post
-            the findings as inline PR comments (use the skill's `--comment`
-            behavior) plus a summary comment.
+            Run the `/code-review:code-review` skill at **max** effort. Then
+            publish ALL findings as a SINGLE formal GitHub pull request review
+            (a real review object with inline threads), NOT as one aggregated
+            issue comment:
+
+            - Anchor each finding to its exact file and line as an **inline
+              review comment**. Surface everything — include low-severity nits
+              and style/cleanup notes as inline comments too; do not silently
+              drop the small stuff.
+            - Put a **ranked summary + overall verdict** in the review body
+              (findings ordered by severity, plus a one-line bottom line).
+            - **Always submit the review, even when the code is clean.** A
+              passing review must be explicit: if there are no findings, submit
+              a review whose body is an explicit `LGTM ✅` so an approval is
+              never silent.
+            - Submit the review with the **`COMMENT` event** (NOT `APPROVE` /
+              `REQUEST_CHANGES`). The action authenticates as the repo owner and
+              these PRs are owner-authored — GitHub rejects approving or
+              requesting changes on your own PR, so `COMMENT` is the only event
+              that reliably lands. Carry the accept/reject verdict in the body
+              text instead.
+
+            Use the GitHub pull request **review** API (e.g. `gh pr review` /
+            the reviews endpoint: create the review, attach inline comments,
+            submit once) so this lands as a formal review with inline threads
+            rather than a standalone issue comment.
 
             This repository is a WordPress plugin. Before and during the review,
             load whichever WordPress skills shipped in this repo's
