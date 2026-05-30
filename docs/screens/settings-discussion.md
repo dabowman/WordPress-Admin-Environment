@@ -236,7 +236,7 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- REST handles 2 fields; non-REST batch covers ~22 fields. Recommended to use a single shell-custom endpoint (`/wp-admin-shell/v1/options/discussion`) that wraps `update_option` calls inside `manage_options` cap check, rather than 21 sequential AJAX requests.
+- REST handles 2 fields; non-REST batch covers ~22 fields. Recommended to use a single shell-custom endpoint (`/wp-admin-shell/v1/options/discussion`) that wraps `update_option` calls inside `manage_options` cap check, rather than 22 sequential AJAX requests.
 - Validation: server authoritative. Client may pre-validate numeric mins/enum values.
 
 ---
