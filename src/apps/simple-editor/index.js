@@ -409,6 +409,13 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 
 	const isPublished = record?.status === 'publish';
 
+	// `useEntityRecord`'s `isSaving` only flips for the parent `save()` PUT, so
+	// it stays false during a published-post autosave (which goes through
+	// `apiFetch` to `.../autosaves`). Fold in `saveStatus === 'saving'` — set by
+	// both save paths — so the Update button is disabled for the whole
+	// in-flight window regardless of which path runs.
+	const isBusy = isSaving || saveStatus === 'saving';
+
 	return (
 		<div className="wp-admin-shell-app-simple-editor">
 			<div className="wp-admin-shell-app-simple-editor__toolbar">
@@ -431,8 +438,8 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 					variant="solid"
 					size="compact"
 					onClick={ handlePublish }
-					disabled={ isSaving }
-					loading={ isSaving }
+					disabled={ isBusy }
+					loading={ isBusy }
 				>
 					{ isPublished
 						? __( 'Update', 'wp-admin-shell' )
