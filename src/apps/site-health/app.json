@@ -27,7 +27,7 @@
 		"icon": "wordpress"
 	},
 	"documentation": {
-		"purpose": "Runs WordPress's async site-health checks (`/wp-site-health/v1/tests/{id}`) in parallel on mount and on user re-run. Surfaces a per-test card with status (Good / Recommended / Critical) and a HTML description; the toolbar summarizes counts per category and offers a re-run button. Five tests today: WordPress.org communication, background updates, loopback requests, HTTPS status, authorization header.",
+		"purpose": "Runs WordPress's async site-health checks (`/wp-site-health/v1/tests/{id}`) in parallel on mount and on user re-run. Surfaces a per-test card with status (Good / Recommended / Critical) and a HTML description; the toolbar summarizes counts per category and offers a re-run button. Five tests today: WordPress.org communication, background updates, loopback requests, HTTPS status, authorization header. The authorization-header test is probed with an `Authorization: Basic` header (mirroring classic) so the server can observe whether it strips the header.",
 		"rebuilds": "site-health",
 		"data": {
 			"reads": [
@@ -62,7 +62,7 @@
 			{
 				"id": "per-test-error",
 				"when": "A test request rejected",
-				"renders": "That test's card shows status=critical with `err.message` as description."
+				"renders": "That test's card shows status=recommended with an \"A test is unavailable\" label and a friendly description naming the test — matching classic's soft \"unavailable\" notice rather than a critical failure that would skew the score."
 			}
 		],
 		"interactions": [
@@ -86,7 +86,7 @@
 			},
 			{
 				"concern": "promise-all-with-per-error-catch",
-				"note": "Each test's request is wrapped in try/catch so one failing test doesn't reject the `Promise.all`. Failed tests show as critical with the error message — preserves partial results."
+				"note": "Each test's request is wrapped in try/catch so one failing test doesn't reject the `Promise.all`. Failed tests show as recommended (\"A test is unavailable\") rather than critical — matching classic, so a transient network blip doesn't read as a critical failure. Preserves partial results."
 			},
 			{
 				"concern": "spinner-fallback",
