@@ -57,7 +57,7 @@
 					{ "id": "date", "type": "datetime", "label": "Date" }
 				],
 				"actions": [
-					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil" },
+					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil", "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } },
 					{ "id": "view", "label": "View", "icon": "external", "eligibleWhen": { "status": "publish" } },
 					{ "id": "trash", "label": "Move to Trash", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } }
 				]
@@ -83,7 +83,10 @@
 					"filters": [ { "field": "status", "operator": "is", "value": "trash" } ]
 				},
 				"actions": [
-					{ "id": "restore", "label": "Restore", "isPrimary": true, "supportsBulk": true, "eligibleWhen": { "status": "trash" } },
+					{ "id": "edit", "label": "Edit", "__tombstone": true },
+					{ "id": "view", "label": "View", "__tombstone": true },
+					{ "id": "trash", "label": "Move to Trash", "__tombstone": true },
+					{ "id": "restore", "label": "Restore", "isPrimary": true, "supportsBulk": true, "icon": "update", "eligibleWhen": { "status": "trash" } },
 					{ "id": "delete-permanent", "label": "Delete Permanently", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": "trash" } }
 				]
 			}

@@ -1,6 +1,6 @@
 import '../_shared/app.css';
 import { Spinner } from '@wordpress/components';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -163,6 +163,11 @@ export default function PostsApp( { config } ) {
 		useDispatch( coreStore );
 	const { createNotice } = useDispatch( noticesStore );
 
+	// Re-entry guard for the non-modal `restore` callback — mirrors the
+	// `isBusy` guard the confirm-modal flows get from `createBulkConfirmModal`,
+	// so a fast double-click can't fire two restore batches.
+	const restoreBusy = useRef( false );
+
 	const data = useMemo( () => {
 		if ( ! records ) {
 			return [];
@@ -229,7 +234,7 @@ export default function PostsApp( { config } ) {
 			confirmLabel: __( 'Move to Trash', 'wp-admin-shell' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'postType', postType, item.id ),
-			onSettled: ( { items, failed } ) => {
+			onSettled: ( { targets, failed } ) => {
 				refreshAfterMutation();
 				if ( failed > 0 ) {
 					createNotice(
@@ -243,7 +248,22 @@ export default function PostsApp( { config } ) {
 								'wp-admin-shell'
 							),
 							failed,
-							items.length
+							targets.length
+						),
+						{ type: 'snackbar' }
+					);
+				} else {
+					createNotice(
+						'success',
+						sprintf(
+							/* translators: %d: trashed item count */
+							_n(
+								'%d item moved to trash.',
+								'%d items moved to trash.',
+								targets.length,
+								'wp-admin-shell'
+							),
+							targets.length
 						),
 						{ type: 'snackbar' }
 					);
@@ -269,7 +289,7 @@ export default function PostsApp( { config } ) {
 				deleteEntityRecord( 'postType', postType, item.id, {
 					force: true,
 				} ),
-			onSettled: ( { items, failed } ) => {
+			onSettled: ( { targets, failed } ) => {
 				refreshAfterMutation();
 				if ( failed > 0 ) {
 					createNotice(
@@ -283,7 +303,22 @@ export default function PostsApp( { config } ) {
 								'wp-admin-shell'
 							),
 							failed,
-							items.length
+							targets.length
+						),
+						{ type: 'snackbar' }
+					);
+				} else {
+					createNotice(
+						'success',
+						sprintf(
+							/* translators: %d: permanently deleted item count */
+							_n(
+								'%d item permanently deleted.',
+								'%d items permanently deleted.',
+								targets.length,
+								'wp-admin-shell'
+							),
+							targets.length
 						),
 						{ type: 'snackbar' }
 					);
@@ -295,50 +330,64 @@ export default function PostsApp( { config } ) {
 		// pre-trash status (`_wp_trash_meta_status`); REST doesn't expose that
 		// meta, so we restore to `draft` — an accepted divergence documented in
 		// docs/parity/posts.md (blocker #4).
-		const restore = async ( items ) => {
-			const results = await Promise.allSettled(
-				items.map( ( item ) =>
-					saveEntityRecord( 'postType', postType, {
-						id: item.id,
-						status: 'draft',
-					} )
-				)
-			);
-			refreshAfterMutation();
-			const failed = results.filter(
-				( r ) => r.status === 'rejected'
-			).length;
-			if ( failed > 0 ) {
-				createNotice(
-					'error',
-					sprintf(
-						/* translators: 1: failed item count, 2: total item count */
-						_n(
-							'%1$d of %2$d item failed to restore.',
-							'%1$d of %2$d items failed to restore.',
+		const restore = async ( items, { onActionPerformed } = {} ) => {
+			if ( restoreBusy.current ) {
+				return;
+			}
+			restoreBusy.current = true;
+			try {
+				const results = await Promise.allSettled(
+					items.map( ( item ) =>
+						saveEntityRecord( 'postType', postType, {
+							id: item.id,
+							status: 'draft',
+						} )
+					)
+				);
+				refreshAfterMutation();
+				const failed = results.filter(
+					( r ) => r.status === 'rejected'
+				).length;
+				if ( failed > 0 ) {
+					createNotice(
+						'error',
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d item failed to restore.',
+								'%1$d of %2$d items failed to restore.',
+								failed,
+								'wp-admin-shell'
+							),
 							failed,
-							'wp-admin-shell'
+							items.length
 						),
-						failed,
-						items.length
-					),
-					{ type: 'snackbar' }
-				);
-			} else {
-				createNotice(
-					'success',
-					sprintf(
-						/* translators: %d: restored item count */
-						_n(
-							'%d item restored to draft.',
-							'%d items restored to draft.',
-							items.length,
-							'wp-admin-shell'
+						{ type: 'snackbar' }
+					);
+				} else {
+					createNotice(
+						'success',
+						sprintf(
+							/* translators: %d: restored item count */
+							_n(
+								'%d item restored to draft.',
+								'%d items restored to draft.',
+								items.length,
+								'wp-admin-shell'
+							),
+							items.length
 						),
-						items.length
-					),
-					{ type: 'snackbar' }
+						{ type: 'snackbar' }
+					);
+				}
+				// Clear the selection for the rows that actually restored —
+				// mirrors the modal flows' onActionPerformed(succeeded).
+				const succeeded = items.filter(
+					( _item, i ) => results[ i ]?.status === 'fulfilled'
 				);
+				onActionPerformed?.( succeeded );
+			} finally {
+				restoreBusy.current = false;
 			}
 		};
 
