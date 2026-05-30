@@ -139,6 +139,27 @@ export function useEntityDataView( {
 		}
 		const durable = pickDurableView( rawView );
 		const serialized = JSON.stringify( durable );
+		// A view that exactly matches the screen's freshly-reconstructed
+		// state (seed + the currently-saved durable view for THIS screen) is
+		// not a user edit — it's the result of seeding, rehydrating saved
+		// prefs, or flipping to this screen. Skip writing it (keeping the
+		// baseline synced) so navigation between two screens served by the
+		// SAME app instance — Posts↔Pages / Categories↔Tags / Profile↔user-
+		// edit all reuse one MountedApp with only `screenId` flipping — can't
+		// write the destination screen's own view straight back to itself.
+		// The stale-render window during a screen flip (new screenId, old
+		// rawView) is still caught by the null-baseline guard below; this
+		// guard catches the follow-up commit (new rawView) where the baseline
+		// would otherwise hold the previous screen's durable. Only a genuine
+		// divergence from the saved/seeded state schedules a write.
+		const saved = readSavedView( prefsRef.current, screenId );
+		const clean = JSON.stringify(
+			pickDurableView( applySavedView( seed(), saved ) )
+		);
+		if ( serialized === clean ) {
+			lastPersisted.current = serialized;
+			return undefined;
+		}
 		// First run for this screen establishes the baseline (the seed/saved
 		// value just applied) without writing it back.
 		if ( lastPersisted.current === null ) {
@@ -172,6 +193,7 @@ export function useEntityDataView( {
 		// must NOT cancel an already-scheduled durable write. The debounce is
 		// enforced by the clearTimeout above (a fresh durable change replaces a
 		// pending one); unmount cleanup lives in its own effect below.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [ rawView, screenId ] );
 
 	// Cancel any pending write on unmount so a debounced timer doesn't fire

@@ -360,5 +360,25 @@ ok(
 		applySavedView( seed, rt ).search === 'seed-search'
 );
 
+// Clean-reconstruction idempotence — the invariant the persist effect's
+// "don't write a view that matches the freshly-reconstructed clean state"
+// guard relies on: re-projecting an already-reconciled view through the same
+// seed+saved reconstruction yields a byte-identical durable projection, so a
+// freshly-seeded / rehydrated / screen-flipped view never looks like an edit.
+const cleanSaved = { perPage: 25, fields: [ 'title' ], type: 'table' };
+const reconstructedOnce = pickDurableView( applySavedView( seed, cleanSaved ) );
+const reconstructedTwice = pickDurableView(
+	applySavedView( applySavedView( seed, cleanSaved ), cleanSaved )
+);
+ok(
+	'clean reconstruction is idempotent (no spurious-write on re-seed)',
+	JSON.stringify( reconstructedOnce ) === JSON.stringify( reconstructedTwice )
+);
+ok(
+	'a genuine edit diverges from the clean reconstruction',
+	JSON.stringify( pickDurableView( { ...seed, perPage: 999 } ) ) !==
+		JSON.stringify( reconstructedOnce )
+);
+
 console.log( `\n${ pass } passed, ${ fail } failed` );
 process.exit( fail > 0 ? 1 : 0 );
