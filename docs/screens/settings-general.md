@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-general.php` (form), `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-general` → `src/apps/SettingsGeneralApp.js` (M4 — REST-native, partial; admin-email confirmation flow is the main gap)
+**Current shell coverage:** `core:settings-general` → `src/apps/settings-general/index.js` (M4 — REST-native, partial; admin-email confirmation flow is the main gap)
 
 This spec describes the **semantic surface** of the General Settings screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -380,9 +380,23 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** `core:settings-general` → `src/apps/SettingsGeneralApp.js`
-- **What works:** Title, Tagline, Timezone (string only), Date Format, Time Format, Week Starts On, Language read-only display. Saves via `useEntityRecord('root','site')`. Uses WPDS (`@wordpress/ui` `InputControl`, `Stack`) + `@wordpress/components` (`SelectControl` for optgroup support).
+- **Source:** `core:settings-general` → `src/apps/settings-general/index.js`
+- **What works:** Title, Tagline, Timezone (city/`timezone_string` only), Date Format, Time Format, Week Starts On, Language read-only display. Saves via `useEntityRecord('root','site')`. Uses WPDS (`@wordpress/ui` `InputControl`, `Stack`) + `@wordpress/components` (`SelectControl` for optgroup support).
 - **Notices:** wired to `core/notices` since M4.
+
+#### Known deviations (current shell)
+
+The app renders several controls that **silently no-op** because the underlying option is not `show_in_rest`, so `/wp/v2/settings` drops the key — the control accepts input and the save reports "Settings saved." but the value never persists. Distinct from the unbuilt gaps in the table below (these *look* present):
+
+| Control | Option | Deviation |
+|---|---|---|
+| Site Address (Home) | `home` | Bound via `edit({ home })`, but `home` isn't `show_in_rest` → discarded on save (no error). |
+| Membership (anyone can register) | `users_can_register` | Bound, not `show_in_rest` → discarded silently. |
+| New User Default Role | `default_role` | Bound, not `show_in_rest` → discarded silently. |
+| Timezone (manual UTC offset entry) | `gmt_offset` | The grouped select offers UTC-offset entries, but selecting one writes the `timezone` (`timezone_string`) field only. `gmt_offset` isn't `show_in_rest`, so a manual-offset choice **reverts to the prior value on save** — only city/`timezone_string` selections persist. |
+| Administration Email | `email` (`admin_email`) | The `email` field *is* REST-writable, but writing it changes `admin_email` **instantly**, bypassing core's confirm-by-link flow (`new_admin_email` pending option + verification email). A typo locks the admin out of email-gated recovery with no undo. |
+
+Closing the no-op bindings is tracked in `docs/parity/roadmap.md` group A-P1 (`register_setting( show_in_rest )` shims); the instant-email-change safeguard is group B-P2.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
@@ -422,6 +436,6 @@ For shells that need full parity, `iframe:options-general.php` is the escape hat
 - Settings registration: `wp-includes/option.php::register_initial_settings()` lines 2742–2855
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/SettingsGeneralApp.js`
-- Settings host: `src/apps/SettingsApp.js`
+- Current shell impl: `src/apps/settings-general/index.js`
+- Settings host: `src/apps/settings/index.js`
 - Doc reference: `docs/admin-json-api-validation.md` for API coverage analysis

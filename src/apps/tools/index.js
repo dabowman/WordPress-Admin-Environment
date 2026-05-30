@@ -5,6 +5,13 @@ import { __experimentalGrid as Grid } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
 
+// Each card routes to its in-shell screen via the router (`navigate`),
+// keeping the user inside the workspace chrome. `path` is the screen's
+// `path` in admin.json (the route key the kernel synthesizes), NOT a bare
+// screen id — `navigate()` operates on URL paths, so it must match the
+// resolved route exactly. The default shell wraps the legacy
+// import/export/personal-data tools in `iframe:` screens at these paths;
+// Site Health is a native sibling app on the same `/tools/*` prefix.
 const TOOLS = [
 	{
 		id: 'site-health',
@@ -13,7 +20,7 @@ const TOOLS = [
 			'Check that your site is running on the latest WordPress and that key services are reachable.',
 			'wp-admin-shell'
 		),
-		appId: 'site-health',
+		path: '/tools/site-health',
 	},
 	{
 		id: 'import',
@@ -22,7 +29,7 @@ const TOOLS = [
 			'Pull content into this site from another WordPress install or a third-party platform.',
 			'wp-admin-shell'
 		),
-		legacy: 'import.php',
+		path: '/tools/import',
 	},
 	{
 		id: 'export',
@@ -31,7 +38,7 @@ const TOOLS = [
 			'Download an XML archive of posts, pages, comments, custom fields, terms, and authors.',
 			'wp-admin-shell'
 		),
-		legacy: 'export.php',
+		path: '/tools/export',
 	},
 	{
 		id: 'export-personal-data',
@@ -40,7 +47,7 @@ const TOOLS = [
 			'Generate a privacy-compliant export of a user’s personal data on request.',
 			'wp-admin-shell'
 		),
-		legacy: 'export-personal-data.php',
+		path: '/tools/export-personal-data',
 	},
 	{
 		id: 'erase-personal-data',
@@ -49,14 +56,9 @@ const TOOLS = [
 			'Delete a user’s personal data on request.',
 			'wp-admin-shell'
 		),
-		legacy: 'erase-personal-data.php',
+		path: '/tools/erase-personal-data',
 	},
 ];
-
-function adminUrl( legacy ) {
-	const base = window.wpAdminShell?.adminUrl || '/wp-admin/';
-	return base + legacy;
-}
 
 export default function ToolsApp() {
 	return (
@@ -68,7 +70,7 @@ export default function ToolsApp() {
 					</Text>
 					<Text variant="body-md">
 						{ __(
-							'Routine maintenance tasks. Some still link out to the legacy WordPress screens.',
+							'Routine maintenance tasks. Each opens inside the workspace; some are presented as the classic WordPress screen.',
 							'wp-admin-shell'
 						) }
 					</Text>
@@ -92,28 +94,13 @@ export default function ToolsApp() {
 									<Text variant="body-sm">
 										{ tool.description }
 									</Text>
-									{ tool.appId ? (
-										<Button
-											tone="neutral"
-											variant="outline"
-											onClick={ () =>
-												navigate( tool.appId )
-											}
-										>
-											{ __( 'Open', 'wp-admin-shell' ) }
-										</Button>
-									) : (
-										<Button
-											tone="neutral"
-											variant="outline"
-											onClick={ () =>
-												( window.location.href =
-													adminUrl( tool.legacy ) )
-											}
-										>
-											{ __( 'Open', 'wp-admin-shell' ) }
-										</Button>
-									) }
+									<Button
+										tone="neutral"
+										variant="outline"
+										onClick={ () => navigate( tool.path ) }
+									>
+										{ __( 'Open', 'wp-admin-shell' ) }
+									</Button>
 								</Stack>
 							</Card.Content>
 						</Card.Root>

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/index.php` (boots `wp-admin/_index.php`) + `wp-admin/includes/dashboard.php`
-**Current shell coverage:** None — `core:dashboard` is not yet registered as an application source. The MVP shell currently lands users on the first nav item (typically Posts) instead of a dashboard.
+**Current shell coverage:** `core:dashboard` → `src/apps/dashboard/index.js` (native; registered in `src/runtime/registry/builtins.js`). See `src/apps/dashboard/app.md` for the app contract.
 
 This spec describes the **semantic surface** of the WordPress Dashboard "Home" screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -361,9 +361,9 @@ Plugin compatibility note: the dashboard ecosystem is large (Yoast SEO, Jetpack,
 
 ### Current shell coverage
 
-- **Source:** none. `core:dashboard` is not yet registered.
-- **What works:** N/A — users land on the first nav item (typically Posts).
-- **MVP behavior:** the shell skips a dashboard entirely; bundled `developer-admin` shell uses `iframe:index.php` only when explicitly added.
+- **Source:** `core:dashboard` → `src/apps/dashboard/index.js`, registered in `src/runtime/registry/builtins.js`.
+- **What works:** native landing screen — time-of-day greeting plus At-a-Glance-style counts (published posts/pages, pending comments, users) via the `per_page=1` + `X-WP-Total` trick, a recent-drafts card, and a pending-comments card. See `src/apps/dashboard/app.md` for the contract.
+- **Note:** the Gaps table below predates the native app and may overstate what's missing; treat `app.md` as canonical for current behavior.
 
 ### Gaps vs. this spec
 

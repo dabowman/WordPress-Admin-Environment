@@ -21,7 +21,7 @@
   - Metadata save via `saveEntityRecord('root','media', { id, title, alt_text, caption, description })` — index.js:386-405.
   - Delete via `deleteEntityRecord('root','media', id, { force:true })` — index.js:151-177.
   - Controller: `WP_REST_Attachments_Controller extends WP_REST_Posts_Controller` (`wp-includes/rest-api/endpoints/class-wp-rest-attachments-controller.php`).
-- **Project screen spec:** `docs/screens/media.md` (Tier 2, full). **Note: doc drift** — the spec's "Current shell coverage" cites `src/apps/MediaApp.js` (lines 5, 568, 634), a stale path; the file is `src/apps/media/index.js`. The spec also predates the type-count feature (`useEntityElementCounts`), which has since landed.
+- **Project screen spec:** `docs/screens/media.md` (Tier 2, full). **Note** — the spec predates the type-count feature (`useEntityElementCounts`), which has since landed; refresh its coverage notes (tracked in the screen spec's Gaps).
 
 ## Feature parity matrix
 
@@ -43,7 +43,7 @@
 | **Upload (click-to-pick)** | Plupload + browser fallback (`media-new.php:78`) | Hidden `<input type="file" multiple>` → `apiFetch` per file (index.js:105-149) | 🟡 partial | Works, but minimal |
 | **Drag-drop upload** | Full-window drop zone, multi-file (`media-new.php:53` help text; plupload) | None | ❌ missing | App.md "Known limitations" confirms: click-to-pick only |
 | **Upload progress** | Per-file progress bar + queue rows (plupload `media-items`) | Button `loading` state only (index.js:225) | 🟡 partial | No per-file %, no queue UI |
-| **Upload error handling** | Per-file error row; `wp_die()` server-side on hard fail | `try/finally` with **no `catch`** (index.js:113-146) | ❌ missing | A failed upload throws an unhandled rejection — **no error notice shown** (see Divergences) |
+| **Upload error handling** | Per-file error row; `wp_die()` server-side on hard fail | Per-file `try/catch` → `createErrorNotice` (`Could not upload "<name>": <reason>`); batch continues past a failed file (index.js) | ✅ full | Resolved: each failed file surfaces its own dismissible error notice instead of a silent rejection |
 | **Add-New dedicated screen** | `media-new.php` full uploader | Reachable as `iframe:media-new.php` menu child (`wp-admin-default.json:867`) | 🟡 partial | Iframe escape hatch only; MediaApp toolbar has no link to it |
 | **Attachment-details modal** | Backbone modal: preview + metadata + Edit Image + arrow nav, **autosaved** | `Modal` (preview + 4 fields + actions), **explicit Save** (index.js:368-508) | 🟡 partial | No autosave, no arrow nav, no Edit Image, fewer fields |
 | → Title | text, autosave | `InputControl`, save on submit (index.js:429-433) | ✅ full | |
@@ -71,7 +71,7 @@
 | **Taxonomy columns** | Category/tag/custom-tax columns when `show_admin_column` (`get_columns():371-395`) | None | ❌ missing | Rare; attachment taxonomies |
 | **Comments column** | When `wp_attachment_pages_enabled` (`get_columns():401`) | None | ⚪ n/a | Off by default in 7.0 |
 | **Empty state** | "No media files found." (`no_items():288`) | "No media items found." + Upload CTA (index.js:250-278) | ✅ full | Shell arguably nicer (onboarding CTA) |
-| **Error state** | `wp_die()` / admin notice | Delete/save errors uncaught; only copy-URL has error notice (index.js:188-192) | 🟡 partial | Upload/save/delete failures surface no user-facing notice |
+| **Error state** | `wp_die()` / admin notice | Upload + copy-URL errors surface notices; delete/save errors still uncaught (index.js) | 🟡 partial | Upload now surfaces per-file error notices; save/delete failures still surface none |
 | **Loading state** | n/a (server render) | Centered `Spinner` while resolving (index.js:243-249) | ✅ full | |
 | **Capability gating** | `upload_files` to view; per-row `edit_post`/`delete_post` (`upload.php:12`; `column_cb():451`) | Screen-level `upload_files` (`wp-admin-default.json:859`); REST enforces per-item | 🟡 partial | No per-tile cap check; relies on REST 403 (silent) |
 | **Nonce / security** | `bulk-media` nonce on actions; `media-form` on upload (`upload.php:260`; `media-new.php:31`) | `apiFetch`/core-data inject the REST nonce automatically | ✅ full | Handled by the data layer |
@@ -90,7 +90,7 @@ Behaviors present in both that work differently:
 
 2. **Delete shows no confirmation.** Classic's permanent-delete row action carries `onclick='return showNotice.warn();'` (`class-wp-media-list-table.php:835`, when not using trash). The shell fires `deleteEntityRecord(..., { force:true })` immediately on the modal's Delete click with no confirm step (`index.js:477-485`). Consequence: a misclick permanently deletes a file (media has no trash). The shell's own DataViews bulk apps use `createBulkConfirmModal` for exactly this, but Media (not DataViews-based) skips it.
 
-3. **Upload has no error path.** Classic surfaces per-file plupload errors and `wp_die()`s on a hard server failure (`media-new.php:34`). The shell's `handleUpload` wraps the loop in `try { … } finally { setIsUploading(false) }` with **no `catch`** (`index.js:113-146`). Consequence: an upload that 4xx/5xx's (oversize file, disallowed MIME, quota) rejects silently — the spinner clears, nothing appears, no error notice. Contrast the copy-URL handler, which *does* catch and `createErrorNotice` (`index.js:187-193`).
+3. ~~**Upload has no error path.**~~ **Resolved (#103).** Classic surfaces per-file plupload errors and `wp_die()`s on a hard server failure (`media-new.php:34`). The shell's `handleUpload` previously wrapped the loop in `try { … } finally { setIsUploading(false) }` with no `catch`, so an upload that 4xx/5xx'd (oversize file, disallowed MIME, quota) rejected silently. Each `apiFetch` is now wrapped in its own `try/catch` that fires `createErrorNotice` (`Could not upload "<name>": <reason>`) and lets the batch continue past the failed file; cache invalidation runs only when at least one file uploaded.
 
 4. **Coarse type filter using `media_type` vs. mime groups.** Classic filters on `post_mime_type:` strings and exposes Spreadsheets/Archives sub-buckets derived from `wp_match_mime_types()` (`class-wp-media-list-table.php:161-179`). The shell filters on the 5-value `media_type` enum (`index.js:26-32`) — "Documents" collapses `application/*` and there is no spreadsheet/archive distinction. Consequence: narrower filtering granularity, though for most users the coarse buckets suffice.
 
@@ -159,7 +159,7 @@ The detail modal hand-rolls form controls (`InputControl` ×2, `TextareaControl`
 
 1. **Migrate MediaApp to `@wordpress/dataviews` with `layout:'grid'` + `layout:'table'`.** *(shell)* Adopt `src/apps/_shared/dataviews/*` like the other six list apps. Immediately yields: list/grid toggle, sortable columns, selection model, search, filters, and the extensibility hooks the screen spec calls for. Where: replace `src/apps/media/index.js` grid/filter/pagination with `useEntityDataView` + a `DataViews` mount. This is the single highest-leverage change.
 2. **Bulk select + bulk delete with confirmation.** *(shell)* Falls out of #1 plus `createBulkConfirmModal` (`_shared/dataviews/createBulkConfirmModal.js`); delete is N parallel `DELETE …?force=true` (no batch endpoint — blocker #6, but the parallel pattern is the established workaround). Add the self-safe `force:true` everywhere (already correct).
-3. **Add `catch` to `handleUpload` + per-file error surfacing.** *(shell)* `src/apps/media/index.js:113-146` — wrap each `apiFetch` so a failed file produces a `createErrorNotice` instead of a silent unhandled rejection. Low effort, fixes divergence #3.
+3. ~~**Add `catch` to `handleUpload` + per-file error surfacing.**~~ **Done (#103).** Each `apiFetch` in `src/apps/media/index.js` is wrapped in its own `try/catch` so a failed file produces a `createErrorNotice` instead of a silent unhandled rejection; the batch continues past the failure. Resolves divergence #3.
 4. **Search, date, author, Mine, Unattached filters.** *(shell)* All REST-ready (`author[]`, `after`/`before`, `s`, `parent[]=0`). Wire as DataViews `filters`/`search` after #1.
 5. **Inline image editor (crop / rotate / flip).** *(shell)* Build a canvas editor that POSTs `modifiers[]` to `/wp/v2/media/{id}/edit`. Crop/rotate/flip are fully supported (controller:1635-1745). Surface "Edit Image" in the detail modal for `media_type==='image'`. Note the response is a **new attachment** (blocker #1) — design the UX around "saves as a copy" and let the caller re-point references.
 

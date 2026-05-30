@@ -6,7 +6,7 @@ Prose accompanying `app.json#documentation` for the themes browser.
 
 ThemesApp surfaces every installed theme through a DataViews host bound to the `root/theme` entity. The default layout is **grid** (screenshot tiles with name + status + truncated description); the secondary **table** layout offers sortable columns for power users. Status sorts ascending by default so the lone `active` theme floats above the `inactive` block — DataViews' built-in pagination, filtering, and selection take it from there.
 
-Activation runs through an out-of-band custom endpoint because WordPress core REST does not expose a theme-switch operation natively — and falls back to wp-admin's classic activate link when the endpoint is missing. This **graceful-fallback** pattern is the most interesting thing here: when an optimized native path can't be guaranteed (custom endpoint missing, plugin gated, etc.), the right answer is often "navigate the user back into wp-admin to complete the action" rather than failing loudly. The user gets the correct outcome with one extra page load — preferable to a broken Activate button.
+Activation runs through an out-of-band custom endpoint (`POST /wp-admin-shell/v1/activate-theme`, gated on `switch_themes`) because WordPress core REST does not expose a theme-switch operation natively. On failure the app surfaces an error snackbar and keeps the user in place rather than navigating away — see the known-limitations note below.
 
 ## Architecture
 

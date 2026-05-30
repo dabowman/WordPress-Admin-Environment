@@ -101,11 +101,6 @@
 						"context": "edit",
 						"status": "active,inactive"
 					}
-				},
-				{
-					"source": "window.wpAdminShell.activeTheme",
-					"via": "window-global",
-					"purpose": "Fallback for active stylesheet lookup before core-data hydrates."
 				}
 			],
 			"writes": [

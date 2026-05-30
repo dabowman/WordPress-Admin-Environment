@@ -98,8 +98,24 @@ export default function UsersApp( { config = {} } = {} ) {
 			args.search = view.search;
 		}
 		for ( const filter of view.filters ) {
-			if ( filter.field === 'roles' && filter.operator === 'is' ) {
-				args.roles = filter.value;
+			if ( filter.field !== 'roles' ) {
+				continue;
+			}
+			// `is` carries a single role; `isAny` (emitted by the
+			// `administrators` variant and by DataViews multi-select) carries an
+			// array. REST `?roles=a,b` is OR-multi (`role__in`); there is no
+			// AND-multi equivalent, so `isAll` is deliberately not mapped.
+			if ( filter.operator === 'is' ) {
+				if ( filter.value ) {
+					args.roles = filter.value;
+				}
+			} else if ( filter.operator === 'isAny' ) {
+				const values = Array.isArray( filter.value )
+					? filter.value
+					: [ filter.value ];
+				if ( values.length ) {
+					args.roles = values.join( ',' );
+				}
 			}
 		}
 		return args;
