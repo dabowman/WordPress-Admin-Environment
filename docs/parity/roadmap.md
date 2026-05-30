@@ -27,7 +27,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 6. **Wire (or remove) core:editor's declared dirty-state + install `iframeBridge` + port session-expiry recovery.** *core:editor.* `core:dirty-state` is declared in the manifest but never wired, so a sidebar click discards unsaved iframe edits with no confirm; `installIframeBridge` (already used by iframe-fallback) is absent, so View-Post / post-trash redirects break out of the workspace; a mid-edit timeout shows a stripped login form silently. ([block-editor.md](block-editor.md))
 
-7. **Add `catch` + per-file error notice to media upload.** *core:media.* `handleUpload` has `try/finally` but no `catch`, so a failed upload (oversize / bad MIME / quota) rejects silently with no notice. ([media.md](media.md))
+7. ~~**Add `catch` + per-file error notice to media upload.**~~ **Done (#103).** *core:media.* `handleUpload` now wraps each `apiFetch` in its own `try/catch`; a failed upload (oversize / bad MIME / quota) surfaces a per-file `createErrorNotice` and the batch continues past the failure. ([media.md](media.md))
 
 8. **Wire the already-declared-but-inert Posts trash actions + a Trash view.** *core:posts.* Restore + Delete-Permanently are declared in `app.json` but have no callbacks in `index.js`, so they're inert. Wire `updateEntityRecord(status:'draft')` and `deleteEntityRecord(force:true)`. ([posts.md](posts.md))
 
