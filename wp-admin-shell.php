@@ -1139,7 +1139,9 @@ add_action( 'init', function () {
  * independent control). Intercept the write before `update_option()` runs and
  * mirror `wp-admin/options.php`: a `UTC±X` selection sets `gmt_offset` and
  * clears `timezone_string`; any other value (an IANA zone, or bare `UTC`)
- * stores `timezone_string` and clears `gmt_offset`.
+ * stores `timezone_string` and leaves `gmt_offset` to core, which keeps it
+ * in sync with the zone's current offset (and which `wp_timezone()` ignores
+ * while a zone is set).
  *
  * Keyed on `option_name` rather than the REST field name so it stays correct
  * if core renames the exposed field. The /wp/v2/settings endpoint already
@@ -1159,11 +1161,18 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $request, $ar
 	$value = isset( $request[ $name ] ) ? $request[ $name ] : '';
 
 	if ( is_string( $value ) && preg_match( '/^UTC[+-]/', $value ) ) {
+		// Manual offset: store gmt_offset, clear the zone. Clearing the zone
+		// does not re-derive gmt_offset (no zone to derive from), so the
+		// offset sticks.
 		update_option( 'gmt_offset', (float) substr( $value, 3 ) );
 		update_option( 'timezone_string', '' );
 	} else {
+		// IANA zone (or bare `UTC`): store the zone and let core keep
+		// gmt_offset in sync with it. wp_timezone() prefers a non-empty
+		// timezone_string, so gmt_offset is moot while a zone is set — and
+		// core's pre_update_option_gmt_offset would override an explicit
+		// clear back to the zone's derived offset anyway.
 		update_option( 'timezone_string', $value );
-		update_option( 'gmt_offset', '' );
 	}
 
 	return true;

@@ -12,9 +12,9 @@
  *     `/wp/v2/settings` can read + write them.
  *   - The `rest_pre_update_setting` filter routes a manual `UTC±X` timezone
  *     write to `gmt_offset` (clearing `timezone_string`), and an IANA zone
- *     write to `timezone_string` (clearing `gmt_offset`) — mirroring
- *     `wp-admin/options.php` so the manual-offset option no longer reverts
- *     silently.
+ *     write to `timezone_string` (leaving `gmt_offset` to core's zone sync) —
+ *     mirroring `wp-admin/options.php` so the manual-offset option no longer
+ *     reverts silently.
  *
  * Class-scoped state — `wp eval-file` wraps in eval() and breaks `global`.
  */
@@ -99,11 +99,14 @@ WPAS_Settings_Shim_Test_Runner::assert_eq( 'UTC+5 → timezone_string cleared', 
 $run_filter( 'UTC-3.5' );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'UTC-3.5 → gmt_offset -3.5', (float) get_option( 'gmt_offset' ), -3.5 );
 
-// IANA city zone clears the offset and stores the zone.
+// IANA city zone: stores the zone. We do NOT assert gmt_offset here — core
+// keeps it in sync with the zone (its value is the zone's *current* UTC
+// offset, which is DST-dependent: -4 for America/New_York in summer, -5 in
+// winter), and `wp_timezone()` ignores it while a zone is set. The meaningful,
+// DST-independent invariant is that the effective timezone is the zone.
 $run_filter( 'America/New_York' );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'IANA zone → timezone_string set', get_option( 'timezone_string' ), 'America/New_York' );
-// Cleared offset reads as zero regardless of how the value is stored ('' vs '0').
-WPAS_Settings_Shim_Test_Runner::assert_eq( 'IANA zone → gmt_offset cleared', (float) get_option( 'gmt_offset' ), 0.0 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'IANA zone → effective timezone is the zone', wp_timezone_string(), 'America/New_York' );
 
 // Bare `UTC` is a valid IANA-ish zone, not a manual offset — must NOT be
 // parsed as an offset (no sign after `UTC`).
