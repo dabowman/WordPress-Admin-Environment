@@ -5,9 +5,9 @@ import { compileEligibility } from './compileEligibility.mjs';
  * Shared DataViews action compiler for the entity-CRUD apps.
  *
  * Every app compiles the same action shape — `{ id, label, isPrimary,
- * isDestructive, supportsBulk, icon, isEligible }` — then attaches EITHER a
- * `RenderModal` (confirmation / detail modals) OR a `callback` (fire-and-go
- * actions). The differences are entirely in the data passed in:
+ * supportsBulk, icon, isEligible }` — then attaches EITHER a `RenderModal`
+ * (confirmation / detail modals) OR a `callback` (fire-and-go actions). The
+ * differences are entirely in the data passed in:
  *
  * - `labels`               — ACTION_LABELS table (id → translated label).
  * - `callbacks`            — id → `(items) => void` for simple actions.
@@ -39,7 +39,6 @@ export function buildActions(
 				id: spec.id,
 				label: labels[ spec.id ] ?? spec.label,
 				isPrimary: !! spec.isPrimary,
-				isDestructive: !! spec.isDestructive,
 				supportsBulk: !! spec.supportsBulk,
 				icon: spec.icon ? resolveIcon( spec.icon ) : undefined,
 				isEligible:

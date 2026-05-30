@@ -1,5 +1,5 @@
 import '../app.css';
-import { DataForm } from '@wordpress/dataviews/wp';
+import { DataForm, useFormValidity } from '@wordpress/dataviews/wp';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
@@ -43,6 +43,15 @@ export function EntityDataForm( {
 		useEntityRecord( ...entity );
 	const handleSave = useEntitySave( save, messages );
 
+	// Live field validation: enforces author-declared `isValid` rules plus the
+	// type-default `elements`-membership check DataViews auto-enables for any
+	// option-backed field that doesn't opt out (`isValid: { elements: false }`).
+	// Must run before the null-guard early return so hook order stays stable.
+	// While the record loads `editedRecord` is an empty object and `validate()`
+	// may flag it invalid, but the Save button only renders past the spinner
+	// gate below, so a transient `isValid: false` is never visible.
+	const { validity, isValid } = useFormValidity( editedRecord, fields, form );
+
 	if ( ! record ) {
 		return (
 			<div className="wp-admin-shell-app__center">
@@ -67,6 +76,7 @@ export function EntityDataForm( {
 					data={ editedRecord }
 					fields={ fields }
 					form={ form }
+					validity={ validity }
 					onChange={ edit }
 				/>
 				{ children }
@@ -75,7 +85,7 @@ export function EntityDataForm( {
 						tone="brand"
 						variant="solid"
 						onClick={ handleSave }
-						disabled={ ! hasEdits || isSaving }
+						disabled={ ! hasEdits || ! isValid || isSaving }
 						loading={ isSaving }
 					>
 						{ saveLabel || __( 'Save Changes', 'wp-admin-shell' ) }
