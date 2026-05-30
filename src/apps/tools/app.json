@@ -24,20 +24,18 @@
 		"icon": "tool"
 	},
 	"documentation": {
-		"purpose": "Landing screen for the Tools navigation entry. Renders a 2-column grid of cards, one per available tool. Each card opens either a sibling shell app (Site Health → `#/site-health`) or a wp-admin page (Import, Export, Export Personal Data, Erase Personal Data — all four still link out to `import.php`, `export.php`, etc. because the wp-admin equivalents have no REST surface and no v2 native equivalent yet).",
+		"purpose": "Landing screen for the Tools navigation entry. Renders a 2-column grid of cards, one per available tool. Each card navigates in-shell (via the router) to the tool's screen: Site Health is a native v2 app, while Import, Export, Export Personal Data, and Erase Personal Data resolve to `iframe:` screens in the default shell (those wp-admin equivalents have no REST surface and no native v2 app yet, so they render the classic screen inside the workspace chrome).",
 		"rebuilds": "tools",
 		"data": {
-			"reads": [
-				{
-					"source": "window.wpAdminShell.adminUrl",
-					"via": "window-global",
-					"purpose": "Base URL for legacy wp-admin links."
-				}
-			]
+			"reads": []
 		},
 		"url": {
 			"navigates": [
-				"#/site-health"
+				"#/tools/site-health",
+				"#/tools/import",
+				"#/tools/export",
+				"#/tools/export-personal-data",
+				"#/tools/erase-personal-data"
 			]
 		},
 		"states": [
@@ -49,12 +47,8 @@
 		],
 		"interactions": [
 			{
-				"trigger": "Click Open on a tool card with `appId`",
-				"effect": "`navigate('site-health')` (or whichever tool's app id)."
-			},
-			{
-				"trigger": "Click Open on a tool card with `legacy`",
-				"effect": "`window.location.href = adminUrl + tool.legacy` — leaves the shell into wp-admin."
+				"trigger": "Click Open on a tool card",
+				"effect": "`navigate(tool.path)` — in-shell router navigation to the tool's screen path (e.g. `/tools/import`). Never leaves the workspace."
 			}
 		],
 		"a11y": {
@@ -62,8 +56,12 @@
 		},
 		"constraints": [
 			{
-				"concern": "legacy-link-fallback",
-				"note": "Import / Export / Personal Data Export / Personal Data Erase have no REST coverage and no native v2 app yet. Their cards navigate out to wp-admin and lose the user's place in the shell."
+				"concern": "iframe-screen-fallback",
+				"note": "Import / Export / Personal Data Export / Personal Data Erase have no REST coverage and no native v2 app yet. Their cards navigate in-shell to `iframe:` screens that render the classic wp-admin page inside the workspace chrome."
+			},
+			{
+				"concern": "default-shell-coupling",
+				"note": "Card `path` values assume the default shell's `/tools/*` screen layout. A shell that remounts `core:tools` without those screens would navigate to dead routes."
 			},
 			{
 				"concern": "static-tool-list",
