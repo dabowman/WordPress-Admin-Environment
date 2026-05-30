@@ -16,11 +16,15 @@ aborts the session).
 2. **Setup script** field — paste this single line:
 
    ```bash
-   bash "$(git rev-parse --show-toplevel)/scripts/cloud-setup.sh"
+   bash scripts/cloud-setup.sh
    ```
 
    Keeping the logic in the committed script means changes ship with the repo;
-   only this one-liner lives in the UI.
+   only this one-liner lives in the UI. Use a **plain relative path** — do NOT
+   wrap it in `$(...)` command substitution. The platform re-wraps the setup
+   field in its own shell, where command substitution + quotes fail with
+   `syntax error near unexpected token ')'`. The repo is cloned and the working
+   directory is the repo root when the setup script runs.
 
 3. **Network access** — the default *Trusted* allowlist already covers Docker
    Hub, npm, and GitHub, but **not** WordPress.org or the Playwright browser

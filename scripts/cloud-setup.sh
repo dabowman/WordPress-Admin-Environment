@@ -2,14 +2,16 @@
 #
 # Cloud-environment setup for WP Admin Shell (Claude Code on the web).
 #
-# This file is committed to the repo so it stays version-controlled, but the
-# Claude Code cloud "Setup script" field can't reference a repo path that
-# doesn't exist yet at provision time — so paste this ONE LINE into the
-# Setup script box at claude.ai/code  ▸ environment ▸ Setup script:
+# This file is committed to the repo so it stays version-controlled. Paste this
+# ONE LINE into the Setup script box at claude.ai/code ▸ environment:
 #
-#     bash "$(git rev-parse --show-toplevel)/scripts/cloud-setup.sh"
+#     bash scripts/cloud-setup.sh
 #
-# (The repo is already cloned when the setup script runs.)
+# Use a plain relative path — NOT a $(...) command substitution. The platform
+# re-wraps the setup-script field in its own shell, where command substitution
+# + quotes break ("syntax error near unexpected token )"). The repo is already
+# cloned and the working directory is the repo root when this runs; the script
+# also self-locates its repo root internally, so the relative path is enough.
 #
 # What it does, mirroring our local toolchain:
 #   1. Ensures the Docker daemon is running (wp-env needs it).
