@@ -410,7 +410,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 
 ### Current shell coverage
 - **Source:** `core:themes` → `src/apps/themes/index.js`, registered in `src/runtime/registry/builtins.js`.
-- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via a custom endpoint that falls back to the classic wp-admin activate link when the endpoint is absent. See `src/apps/themes/app.md`.
+- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via the custom `POST /wp-admin-shell/v1/activate-theme` endpoint (cap-gated on `switch_themes`); on failure it surfaces an error snackbar and keeps the user in the shell. See `src/apps/themes/app.md`.
 - **What's still iframe-only:** Add-new (.org browse) and ZIP upload (`iframe:theme-install.php`).
 - **Note:** the Gaps table below predates the native app (it still lists "Register `core:themes`" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 

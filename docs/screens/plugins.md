@@ -563,7 +563,7 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 
 ### Current shell coverage
 - **Source:** `core:plugins` → `src/apps/plugins/index.js`, registered in `src/runtime/registry/builtins.js`.
-- **What works:** native installed-plugins list — `useEntityRecords('root','plugin')` read with client-side search + status filter, plus activate / deactivate / delete actions (cap-gated on `activate_plugins`) via `apiFetch` PATCH with manual cache invalidation. See `src/apps/plugins/app.md`.
+- **What works:** native installed-plugins list — `useEntityRecords('root','plugin')` read with client-side search + status filter, plus activate / deactivate (`POST /wp/v2/plugins/{plugin}` with `{ status }`) / delete (`DELETE`) actions (cap-gated on `activate_plugins`) via `apiFetch` with manual cache invalidation. See `src/apps/plugins/app.md`.
 - **What's still iframe-only:** `plugin-install.php` (add / browse / upload) and `plugin-editor.php`.
 - **Note:** the Gaps table below predates the native list app (it still lists "`core:plugins` native list app" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
