@@ -120,7 +120,7 @@ The list uses `_embed=author,up` to avoid N+1 fetches.
 
 | List tab | REST `status` value | Notes |
 |---|---|---|
-| All | `status: 'any'` (7.0+) | The Comments REST endpoint accepts `status: 'any'` as of WordPress 7.0 — a single `context=edit` request returns every status the user can moderate. Pre-7.0 fallback: two requests (`approve` + `hold`) merged client-side, or omit the All tab and default to All-but-Trash-Spam (most authors' "active comments") |
+| All | `status: 'any'` | The Comments REST `status` param has no `enum` — it sanitizes via `sanitize_key` and passes straight through to `WP_Comment_Query`, which treats `'any'` as "all statuses" (`// 'any' overrides other statuses`). A single `context=edit` request returns every status the user can moderate (non-`approve` statuses require `moderate_comments`). This works on the documented WP 6.9 baseline — `src/apps/comments/index.js` already sends `{ context: 'edit', status: 'any' }` unconditionally. *(The original spec's claim that REST **rejects** `status: 'any'` was the factual error being corrected here.)* |
 | Mine | `author={me}` (any status) | per-author filter |
 | Pending | `hold` | the moderation queue |
 | Approved | `approve` | |
