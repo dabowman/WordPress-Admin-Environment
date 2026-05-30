@@ -101,16 +101,15 @@ export default function UsersApp( { config = {} } = {} ) {
 			if ( filter.field !== 'roles' ) {
 				continue;
 			}
-			// `is` carries a single role; the multi-value operators
-			// (`isAny`/`isAll`, emitted by the `administrators` variant and by
-			// DataViews multi-select) carry an array. REST `?roles=a,b` does
-			// OR-multi filtering (`role__in`) for either, so flatten to a CSV.
+			// `is` carries a single role; `isAny` (emitted by the
+			// `administrators` variant and by DataViews multi-select) carries an
+			// array. REST `?roles=a,b` is OR-multi (`role__in`); there is no
+			// AND-multi equivalent, so `isAll` is deliberately not mapped.
 			if ( filter.operator === 'is' ) {
-				args.roles = filter.value;
-			} else if (
-				filter.operator === 'isAny' ||
-				filter.operator === 'isAll'
-			) {
+				if ( filter.value ) {
+					args.roles = filter.value;
+				}
+			} else if ( filter.operator === 'isAny' ) {
 				const values = Array.isArray( filter.value )
 					? filter.value
 					: [ filter.value ];
