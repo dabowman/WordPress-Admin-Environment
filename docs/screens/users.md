@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/users.php`, `wp-admin/user-new.php`, `wp-admin/user-edit.php`, `wp-admin/profile.php`, `wp-admin/authorize-application.php`, `WP_Users_List_Table` (`wp-admin/includes/class-wp-users-list-table.php`)
-**Current shell coverage:** `core:users` → DataViews list (M4), `core:profile` → `src/apps/ProfileApp.js` (partial — see "Gaps").
+**Current shell coverage:** `core:users` → DataViews list (M4), `core:profile` → `src/apps/profile/index.js` (partial — see "Gaps").
 
 This spec describes the **semantic surface** of the user-management screens so an agent can rebuild them in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs. Single-site context — multisite-specific behavior is called out where relevant; network-admin-only variants are out of scope.
 
@@ -14,6 +14,8 @@ The five screens are documented as one app cluster (`core:users`) because they s
 - `core:authorize-application` → application password authorization handshake
 
 `core:user-edit` and `core:profile` share a single underlying form. Differences are conditional rendering (admin-only fields hidden when `IS_PROFILE_PAGE`, editor-only fields visible otherwise).
+
+> **Profile has its own spec.** The own-vs-other-user branching and the email pending-change confirmation flow are documented in full in **`docs/screens/profile.md`**. This cluster spec remains authoritative for the list / add-user / authorize-application surfaces; the two overlap on the shared edit/profile form and cross-reference each other.
 
 ---
 
@@ -725,7 +727,7 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
 
 ### Current shell coverage
 - **Source `core:users`** → DataViews list (M4): list, search, role filter (single/multi), pagination, sort, bulk delete with reassign-content step, edit/view/trash actions.
-- **Source `core:profile`** → `src/apps/ProfileApp.js`: name, email, biographical info, contact info via `useEntityRecord('root', 'user', userId)`. Optimistic edits.
+- **Source `core:profile`** → `src/apps/profile/index.js`: name, email, biographical info, contact info via `useEntityRecord('root', 'user', userId)`. Optimistic edits.
 - **No source for `core:user-new`, `core:user-edit`, `core:authorize-application`.**
 
 ### Gaps vs. this spec
@@ -802,6 +804,6 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
 - Capability map: `wp-includes/class-wp-roles.php`, `wp-admin/includes/capabilities.php` (`map_meta_cap` cases for `delete_user`, `edit_user`, `promote_user`, `remove_user`, `list_app_passwords`, `read_app_password`, `edit_app_password`, `delete_app_password`)
 - Authorize Application validators: `wp-includes/user.php::wp_is_authorize_application_password_request_valid`
 - Current shell impls:
-  - `src/apps/ProfileApp.js`
+  - `src/apps/profile/index.js`
   - `core:users` registration in `src/runtime/registry/builtins.js`
 - Cross-link: `docs/screens/posts.md` (analogous list pattern), `docs/screens/plugins.md` (analogous list-with-detail pattern), `docs/screens/personal-data.md` (privacy export/erase — pending)

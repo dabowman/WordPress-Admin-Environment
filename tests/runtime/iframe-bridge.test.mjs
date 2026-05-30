@@ -198,6 +198,30 @@ ok(
 	parentNonAdminPath.type === 'ignore'
 );
 
+// ── dirty-state relay ──────────────────────────────────────────────
+
+const dirtyTrue = classifyBridgeMessage(
+	{ type: 'wp-admin-shell-dirty-state', dirty: true },
+	ctx
+);
+ok(
+	'dirty-state true → dirty action with dirty=true',
+	dirtyTrue.type === 'dirty' && dirtyTrue.dirty === true
+);
+const dirtyFalse = classifyBridgeMessage(
+	{ type: 'wp-admin-shell-dirty-state', dirty: false },
+	ctx
+);
+ok(
+	'dirty-state false → dirty action with dirty=false',
+	dirtyFalse.type === 'dirty' && dirtyFalse.dirty === false
+);
+ok(
+	'dirty-state with missing flag → dirty=false (coerced)',
+	classifyBridgeMessage( { type: 'wp-admin-shell-dirty-state' }, ctx )
+		.dirty === false
+);
+
 // ── installIframeBridge ────────────────────────────────────────────
 
 console.log( '\n— installIframeBridge —\n' );
@@ -233,6 +257,7 @@ const win = fakeWin();
 let navigatedTo = null;
 let iframeNavTo = null;
 let externalTo = null;
+let dirtyTo = null;
 const uninstall = installIframeBridge( {
 	adminUrl: ADMIN_URL,
 	routes: ROUTES,
@@ -244,6 +269,9 @@ const uninstall = installIframeBridge( {
 	},
 	openExternal: ( h ) => {
 		externalTo = h;
+	},
+	onDirty: ( d ) => {
+		dirtyTo = d;
 	},
 	getIframeWindow: () => iframeWindow,
 	win,
@@ -305,6 +333,32 @@ win.dispatch( {
 	data: { type: 'wp-admin-shell-external-link', url: 'https://example.com' },
 } );
 ok( 'external-link opens externally', externalTo === 'https://example.com' );
+
+// Dirty-state relay → onDirty, with the same origin/source pins.
+win.dispatch( {
+	origin: 'https://evil.test',
+	source: iframeWindow,
+	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+} );
+ok( 'dirty-state from wrong origin dropped', dirtyTo === null );
+win.dispatch( {
+	origin: 'https://site.test',
+	source: otherWindow,
+	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+} );
+ok( 'dirty-state from spoofed source dropped', dirtyTo === null );
+win.dispatch( {
+	origin: 'https://site.test',
+	source: iframeWindow,
+	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+} );
+ok( 'dirty-state true relayed to onDirty', dirtyTo === true );
+win.dispatch( {
+	origin: 'https://site.test',
+	source: iframeWindow,
+	data: { type: 'wp-admin-shell-dirty-state', dirty: false },
+} );
+ok( 'dirty-state false relayed to onDirty', dirtyTo === false );
 
 uninstall();
 ok( 'uninstall removes the handler', ! win.hasHandler );

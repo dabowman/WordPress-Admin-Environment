@@ -23,11 +23,11 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 4. **Fix the `isAny` role-filter drop.** *core:users.* The `administrators` variant declares its role filter with operator `isAny` but the queryArgs mapper only handles `is`, so that filter — and any multi-select role filter — is silently dropped from the REST query. Map `isAny`→`args.roles = value.join(',')` (REST `role__in` already supports it). A correctness bug. ([users.md](users.md))
 
-5. **Stop simple-editor auto-saving PUBLISHED posts to the live record.** *core:simple-editor.* The 2s debounce PUTs the live published record where core would write a safe per-user autosave — a data-integrity divergence. Gate the debounce to draft/pending and route published autosaves to `POST .../autosaves`, or disable auto-save for published. ([block-editor.md](block-editor.md))
+5. **Stop simple-editor auto-saving PUBLISHED posts to the live record.** ✅ **Done (#101).** *core:simple-editor.* The 2s debounce is now status-gated (`autosave.mjs` `autosaveTarget()`): draft/auto-draft flush to the parent via `save()`; pending/published/private/scheduled route to `POST .../autosaves`, leaving the live record untouched until an explicit Update (matching core's autosaves controller, which only updates the parent for draft/auto-draft). Recovery banner (`modified_gmt` compare on load) remains open — see block-editor.md blocker #3. ([block-editor.md](block-editor.md))
 
-6. **Wire (or remove) core:editor's declared dirty-state + install `iframeBridge` + port session-expiry recovery.** *core:editor.* `core:dirty-state` is declared in the manifest but never wired, so a sidebar click discards unsaved iframe edits with no confirm; `installIframeBridge` (already used by iframe-fallback) is absent, so View-Post / post-trash redirects break out of the workspace; a mid-edit timeout shows a stripped login form silently. ([block-editor.md](block-editor.md))
+6. ✅ **DONE (issue #102).** Wired core:editor's declared dirty-state + installed `iframeBridge` + ported session-expiry recovery. The chromeless bridge now relays `core/editor`'s `isEditedPostDirty()` (sub-system 15) which `core:editor` consumes via `installIframeBridge`'s `onDirty` → `useDirtyState`, so a sidebar click while dirty confirms instead of discarding; the shared bridge routes View-Post / post-trash redirects to a workspace screen (or keeps them embedded); and login-form detection + a `heartbeat-tick` reload surface the wp-auth-check modal on a mid-edit timeout. ([block-editor.md](block-editor.md))
 
-7. **Add `catch` + per-file error notice to media upload.** *core:media.* `handleUpload` has `try/finally` but no `catch`, so a failed upload (oversize / bad MIME / quota) rejects silently with no notice. ([media.md](media.md))
+7. ~~**Add `catch` + per-file error notice to media upload.**~~ **Done (#103).** *core:media.* `handleUpload` now wraps each `apiFetch` in its own `try/catch`; a failed upload (oversize / bad MIME / quota) surfaces a per-file `createErrorNotice` and the batch continues past the failure. ([media.md](media.md))
 
 8. **Wire the already-declared-but-inert Posts trash actions + a Trash view.** *core:posts.* Restore + Delete-Permanently are declared in `app.json` but have no callbacks in `index.js`, so they're inert. Wire `updateEntityRecord(status:'draft')` and `deleteEntityRecord(force:true)`. ([posts.md](posts.md))
 
@@ -197,13 +197,13 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 2. **Fix "Current shell coverage: None" / stale-app-path lines** in `docs/screens/dashboard-home.md`, `docs/screens/themes.md`, `docs/screens/plugins.md`, `docs/screens/taxonomy.md` (says "Not implemented" but the app exists), and the `src/apps/settings-panels/*` → `src/apps/settings-*/index.js` path drift across multiple screen specs + the stale `src/apps/MediaApp.js` references in `docs/screens/media.md`. ([dashboard.md](dashboard.md), [themes.md](themes.md), [plugins.md](plugins.md), [taxonomy.md](taxonomy.md), [media.md](media.md))
 
-3. **Fix app.md claims of non-existent window globals.** themes `app.md` references a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verify and remove. ([themes.md](themes.md))
+3. **Fix app.md claims of non-existent window globals.** ✅ **done (issue #173).** The themes app's `app.json` `data.reads[]` referenced a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verified and removed (the app derives active-ness from each record's `status`). ([themes.md](themes.md))
 
-### P2 — missing screen specs
+### P2 — screen spec coverage
 
-4. **Author `docs/screens/editor-classic.md`** — the block/classic post editor (`core:editor` + `core:simple-editor`) has no dedicated screen spec. ([block-editor.md](block-editor.md))
+4. ✅ **Done — `docs/screens/editor-classic.md` exists.** A full tier-2 classic-editor spec landed in PR #36; this audit's 2026-05-29 snapshot predated it. The block editor (`core:editor` + `core:simple-editor`) is separately specced by `docs/screens/editor-block.md` + `editor-block-{data,inspector,modes}.md`. ([block-editor.md](block-editor.md))
 
-5. **Author a dedicated `docs/screens/profile.md`** — Profile is currently only a sub-section of `users.md`; own-vs-other-user branching and the email-confirm flow get light coverage. ([profile.md](profile.md))
+5. ~~**Author a dedicated `docs/screens/profile.md`**~~ — **Done.** `docs/screens/profile.md` now exists as a full Tier-2 spec covering the own-vs-other-user branching and the email pending-change confirmation flow; `users.md` cross-links it. ([profile.md](profile.md))
 
 ### P3 — accuracy touch-ups
 
@@ -217,7 +217,7 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 - **Two shipped, user-facing regressions/no-ops in the default shell.** Theme **Activate** POSTs to an unregistered endpoint and silently fails to activate; the **Tags** screen renders a blank table (empty DataView); the default-shell **Comments** action set drops Unapprove and ships an inert Reply button. These are *worse than missing features* — they look present and don't work. All shell-side (A-P1 #1-3). ([themes.md](themes.md), [taxonomy.md](taxonomy.md), [comments.md](comments.md))
 
-- **simple-editor writes published posts to the live record + editor integration seams are broken.** A debounced auto-save PUTs the live published record where core writes a safe per-user autosave (data-integrity risk); `core:editor` declares dirty-state but never wires it (sidebar clicks discard unsaved edits), has no iframeBridge, and no session-expiry recovery. Mostly shell-side (A-P1 #5-6), with post-lock + revision-restore + preview-nonce as upstream backstops (B-P2 #7, #14). ([block-editor.md](block-editor.md))
+- **simple-editor writes published posts to the live record.** A debounced auto-save PUTs the live published record where core writes a safe per-user autosave (data-integrity risk; A-P1 #5). `core:editor`'s integration seams — dirty-state, iframeBridge, session-expiry recovery — were fixed in issue #102 (A-P1 #6, DONE). Post-lock + revision-restore + preview-nonce remain upstream backstops (B-P2 #7, #14). ([block-editor.md](block-editor.md))
 
 - **Quick Edit / Bulk Edit / inline Reply are blocked by a missing DataViews primitive.** wp-admin's most-used editing affordances have no editable-cell primitive in `@wordpress/dataviews` — the data is fully REST-writable, but the UX requires either an upstream inline-edit primitive (C-P1 #1) or a hand-rolled `RenderModal`+`DataForm` stand-in. Affects posts, taxonomy, and comments. ([dataviews-dataforms-limitations.md](dataviews-dataforms-limitations.md), [posts.md](posts.md), [comments.md](comments.md))
 

@@ -13,7 +13,7 @@ import {
 	Modal,
 	TextareaControl,
 } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { upload, trash, copy } from '@wordpress/icons';
 import { withElementCounts } from '../_shared/dataviews/buildFields.mjs';
 import {
@@ -111,33 +111,69 @@ export default function MediaApp() {
 
 			setIsUploading( true );
 			try {
+				let uploaded = 0;
+				// Upload each file independently so a single failure
+				// (oversize / disallowed MIME / quota) surfaces its own error
+				// notice without aborting the rest of the batch.
 				for ( const file of files ) {
 					const formData = new FormData();
 					formData.append( 'file', file );
-					await apiFetch( {
-						path: '/wp/v2/media',
-						method: 'POST',
-						body: formData,
-					} );
+					try {
+						await apiFetch( {
+							path: '/wp/v2/media',
+							method: 'POST',
+							body: formData,
+						} );
+						uploaded += 1;
+					} catch ( err ) {
+						createErrorNotice(
+							sprintf(
+								/* translators: 1: file name, 2: error message. */
+								__(
+									'Could not upload "%1$s": %2$s',
+									'wp-admin-shell'
+								),
+								file.name,
+								err?.message ||
+									__( 'Upload failed.', 'wp-admin-shell' )
+							),
+							{ isDismissible: true }
+						);
+					}
 				}
-				invalidateResolution( 'getEntityRecords', [
-					'root',
-					'media',
-					queryArgs,
-				] );
-				// Uploads grow the per-type and unfiltered totals.
-				invalidateEntityElementCounts(
-					invalidateResolution,
-					'root',
-					'media',
-					'media_type',
-					MEDIA_TYPE_VALUES
-				);
-				invalidateResolution( 'getEntityRecords', [
-					'root',
-					'media',
-					ALL_COUNT_QUERY,
-				] );
+				if ( uploaded > 0 ) {
+					createSuccessNotice(
+						sprintf(
+							/* translators: %d: number of files uploaded. */
+							_n(
+								'%d file uploaded.',
+								'%d files uploaded.',
+								uploaded,
+								'wp-admin-shell'
+							),
+							uploaded
+						),
+						{ type: 'snackbar' }
+					);
+					invalidateResolution( 'getEntityRecords', [
+						'root',
+						'media',
+						queryArgs,
+					] );
+					// Uploads grow the per-type and unfiltered totals.
+					invalidateEntityElementCounts(
+						invalidateResolution,
+						'root',
+						'media',
+						'media_type',
+						MEDIA_TYPE_VALUES
+					);
+					invalidateResolution( 'getEntityRecords', [
+						'root',
+						'media',
+						ALL_COUNT_QUERY,
+					] );
+				}
 			} finally {
 				setIsUploading( false );
 				if ( fileInputRef.current ) {
@@ -145,7 +181,12 @@ export default function MediaApp() {
 				}
 			}
 		},
-		[ queryArgs, invalidateResolution ]
+		[
+			queryArgs,
+			invalidateResolution,
+			createErrorNotice,
+			createSuccessNotice,
+		]
 	);
 
 	const handleDelete = useCallback(

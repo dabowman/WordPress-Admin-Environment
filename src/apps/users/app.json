@@ -34,7 +34,7 @@
 				"fields": [
 					{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
 					{ "id": "email", "type": "text", "label": "Email", "enableGlobalSearch": true },
-					{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is" ] } },
+					{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is", "isAny" ] } },
 					{ "id": "registered_date", "type": "datetime", "label": "Registered" }
 				],
 				"actions": [

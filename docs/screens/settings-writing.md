@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-writing.php` (form), `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-writing` → `src/apps/settings-panels/SettingsWritingApp.js` (M4 — REST-native, partial; Post via Email and Update Services unimplemented per current scope)
+**Current shell coverage:** `core:settings-writing` → `src/apps/settings-writing/index.js` (M4 — REST-native, partial; Post via Email and Update Services unimplemented per current scope)
 
 This spec describes the **semantic surface** of the Writing Settings screen so an agent can rebuild it in any UI library or framework.
 
@@ -297,7 +297,7 @@ Shell hash route: `#/settings/writing`.
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** `core:settings-writing` → `src/apps/settings-panels/SettingsWritingApp.js`
+- **Source:** `core:settings-writing` → `src/apps/settings-writing/index.js`
 - **What works:** Default Post Category and Default Post Format via REST. Saves through `core/notices`.
 
 ### Gaps vs. this spec
@@ -331,5 +331,5 @@ Shell hash route: `#/settings/writing`.
 - Settings registration: `wp-includes/option.php` lines 2857–2898
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-panels/SettingsWritingApp.js`
-- Settings host: `src/apps/SettingsApp.js`
+- Current shell impl: `src/apps/settings-writing/index.js`
+- Settings host: `src/apps/settings/index.js`
