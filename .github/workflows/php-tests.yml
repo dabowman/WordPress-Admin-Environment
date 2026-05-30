@@ -1,0 +1,76 @@
+name: PHP tests (wp-env)
+
+# Runs the WordPress-integration suites: the tests/php/run-*.php scripts that
+# need a live WordPress (+ Gutenberg) install, executed via `wp eval-file`
+# inside the wp-env container. The pure-Node suites (test:schema / test:parity
+# / test:runtime / test:engines) don't need WordPress and are not covered here.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-tests:
+    name: WordPress integration (wp-env)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install wp-env
+        # Pin a version (e.g. @wordpress/env@10) for fully reproducible runs.
+        run: npm install -g @wordpress/env
+
+      # wp-env reads .wp-env.json: mounts this repo as a plugin and pulls the
+      # Gutenberg plugin (a hard runtime dependency of the shell). The shell's
+      # build/ assets aren't needed — the plugin bootstrap bails gracefully
+      # when build/index.asset.php is absent, and the PHP suites load the
+      # cascade/REST classes directly.
+      - name: Start WordPress
+        run: wp-env start
+
+      - name: Run PHP test suites
+        run: |
+          set -uo pipefail
+          # wp-env mounts "." as a plugin named after the checkout directory
+          # (the repo name), so the in-container path is:
+          #   wp-content/plugins/<repo>/tests/php/run-*.php
+          plugin_dir="wp-content/plugins/${GITHUB_REPOSITORY##*/}"
+          shopt -s nullglob
+          failed=()
+          for f in tests/php/run-*.php; do
+            name="$(basename "$f")"
+            echo "::group::$name"
+            if wp-env run cli wp eval-file "$plugin_dir/$f"; then
+              echo "PASS  $name"
+            else
+              echo "FAIL  $name"
+              failed+=("$name")
+            fi
+            echo "::endgroup::"
+          done
+          echo
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "::error::${#failed[@]} PHP suite(s) failed: ${failed[*]}"
+            exit 1
+          fi
+          echo "All PHP suites passed."
+
+      - name: Dump WordPress debug.log on failure
+        if: failure()
+        run: wp-env run cli cat wp-content/debug.log || true

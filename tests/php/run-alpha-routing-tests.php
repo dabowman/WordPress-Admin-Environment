@@ -260,3 +260,5 @@ $T::ok( 'baseline does NOT map allowlisted plugin-install', ! isset( $lm['/plugi
 echo "\n────────────────────────────\n";
 echo 'PASS: ' . WPAS_Alpha_Routing_Runner::$pass . '  FAIL: ' . WPAS_Alpha_Routing_Runner::$fail . "\n";
 echo ( WPAS_Alpha_Routing_Runner::$fail > 0 ? "RESULT: FAIL\n" : "RESULT: PASS\n" );
+
+exit( WPAS_Alpha_Routing_Runner::$fail > 0 ? 1 : 0 );

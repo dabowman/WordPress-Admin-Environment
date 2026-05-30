@@ -228,3 +228,5 @@ if ( WPAS_Alpha_Trigger_Runner::$fail > 0 ) {
 } else {
 	echo "RESULT: PASS\n";
 }
+
+exit( WPAS_Alpha_Trigger_Runner::$fail > 0 ? 1 : 0 );
