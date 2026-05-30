@@ -30,9 +30,6 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Pin Opus for this label-gated, max-effort review — the heavy
-          # multi-finder/verifier pass wants the strongest model.
-          model: 'claude-opus-4-8'
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           # Run the code-review skill at MAX effort and post findings as a
@@ -80,6 +77,10 @@ jobs:
             authoring skills — so the review applies WordPress core, REST,
             DataViews/DataForm, and this project's conventions (see CLAUDE.md
             and docs/). Skip skills unrelated to the diff.
-          # No --max-turns cap: a max-effort review with finder/verifier
-          # sub-agents was hitting the 60-turn limit and getting cut off
-          # mid-review on larger PRs. Let it run to completion.
+          # Model + CLI flags go through claude_args — claude-code-action@v1
+          # has no top-level `model` input (passing one is ignored with a
+          # warning). Pin Opus for this heavy finder/verifier review. No
+          # --max-turns cap: the multi-agent pass was hitting the 60-turn limit
+          # and getting cut off mid-review on larger PRs; let it run to
+          # completion.
+          claude_args: '--model claude-opus-4-8'
