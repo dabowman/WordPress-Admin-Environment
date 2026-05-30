@@ -167,7 +167,7 @@ Nested affordances visually indented; PHP version uses `<ul><li>` under the pare
 ## 7. Actions
 
 ### Primary action
-- **Save Changes** — REST POST for the three exposed keys; non-REST batch via custom endpoint or sequential `update_option` calls.
+- **Save Changes** — single REST POST to `/wp/v2/settings`. The three exposed keys save today; the remaining ~21 are unblocked by re-registering each option with `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )` (the option's existing `sanitize_callback` still runs), so they fold into the same POST. No custom endpoint needed.
 
 ### No bulk / per-row / inline actions.
 
@@ -236,7 +236,7 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- REST handles 3 fields; non-REST batch covers ~21 fields. Recommended to use a single shell-custom endpoint (`/wp-admin-shell/v1/options/discussion`) that wraps `update_option` calls inside `manage_options` cap check, rather than 21 sequential AJAX requests.
+- REST handles 3 fields today; the ~21 remaining are reachable through the same `/wp/v2/settings` POST once each option is re-registered via `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )`. The Settings-API `sanitize_option` path runs server-side regardless, so no custom `/wp-admin-shell/v1/options/discussion` endpoint is required — prefer the `register_setting` shim over a bespoke endpoint or 21 sequential AJAX requests.
 - Validation: server authoritative. Client may pre-validate numeric mins/enum values.
 
 ---
@@ -309,7 +309,7 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| All non-REST options (~21 fields) | High | Single biggest gap of any settings panel. Recommend custom endpoint shim. |
+| All non-REST options (~21 fields) | High | Single biggest gap of any settings panel. Closable shell-side via `register_setting( show_in_rest )` shims (no custom endpoint needed) — see §7 Save semantics. |
 | Threaded comments + depth dependency | Medium | UI conditional logic |
 | Comment pagination dependency group | Medium | UI conditional logic |
 | Avatar Display → toggles avatar groups | Medium | Conditional |

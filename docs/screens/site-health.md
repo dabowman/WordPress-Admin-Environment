@@ -75,7 +75,6 @@ Default cap: granted to administrators (`single`-site) and super-admins (multisi
     'php_default_timezone' => …,
     'php_sessions'      => …,
     'sql_server'        => …,
-    'utf8mb4_support'   => …,
     'ssl_support'       => …,
     'scheduled_events'  => …,
     'http_requests'     => …,
@@ -86,7 +85,6 @@ Default cap: granted to administrators (`single`-site) and super-admins (multisi
     'available_updates_disk_space' => …,
     'update_temp_backup_writable' => …,
     'persistent_object_cache' => …,
-    'page_cache'        => …,
   ],
   'async'  => [
     'background_updates'   => [ 'has_rest' => true, 'test' => 'background-updates' ],
@@ -94,6 +92,7 @@ Default cap: granted to administrators (`single`-site) and super-admins (multisi
     'https_status'         => …,
     'dotorg_communication' => …,
     'authorization_header' => …,
+    'page_cache'           => [ 'has_rest' => true, 'test' => 'page-cache', 'async_direct_test' => … ],
   ],
 ]
 ```

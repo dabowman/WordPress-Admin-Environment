@@ -33,7 +33,7 @@ Three engines ship: `core:default` + `core:single-pane` + `core:desktop`. Seven 
 5. Read `docs/dataview-config.md` — author-facing guide for the dataView primitive (3-axis registry: `kind/name/variant`, `extends` chain, filter hooks, REST endpoints, React hook overloads, field collections).
 6. Read `docs/core-default-engine.md` — engine contract worked example for `core:default`: modes catalog, slots, region templates, default-styles.
 7. Read `docs/admin-json-api-validation.md` — REST API coverage per app source.
-8. Consult `docs/screens/` — 42 tier-2 functional specs covering every wp-admin screen. Source of truth when (re)building any `core:*` app. Gaps section = REST rebuild tickets.
+8. Consult `docs/screens/` — 43 tier-2 functional specs covering every wp-admin screen. Source of truth when (re)building any `core:*` app. Gaps section = REST rebuild tickets.
 9. Skim `docs/feedback.md` — Inbox/Triaged/In-progress/Done triage log.
 10. Read `docs/engines-and-design-systems.md` — kernel-vs-engine-vs-app DS boundary + three contracts (reuse-WPDS, token-bridge, engine-native apps). Authoritative for any work on a non-WPDS engine.
 11. Read `docs/desktop-engine-readiness.md` if working on `core:desktop` — manual smoke checklist + known issues + automated test gates.

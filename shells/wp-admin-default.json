@@ -165,10 +165,50 @@
 						},
 						"actions": [
 							{
+								"id": "edit",
+								"label": "Edit",
+								"eligibleWhen": {
+									"status": [
+										"publish",
+										"future",
+										"draft",
+										"pending",
+										"private"
+									]
+								}
+							},
+							{
+								"id": "view",
+								"label": "View",
+								"eligibleWhen": {
+									"status": [
+										"publish",
+										"future",
+										"draft",
+										"pending",
+										"private"
+									]
+								}
+							},
+							{
+								"id": "trash",
+								"label": "Move to Trash",
+								"eligibleWhen": {
+									"status": [
+										"publish",
+										"future",
+										"draft",
+										"pending",
+										"private"
+									]
+								}
+							},
+							{
 								"id": "restore",
 								"label": "Restore",
 								"isPrimary": true,
 								"supportsBulk": true,
+								"icon": "update",
 								"eligibleWhen": {
 									"status": "trash"
 								}
@@ -178,6 +218,7 @@
 								"label": "Delete Permanently",
 								"isDestructive": true,
 								"supportsBulk": true,
+								"icon": "trash",
 								"eligibleWhen": {
 									"status": "trash"
 								}
@@ -881,6 +922,28 @@
 				"taxonomy": "post_tag"
 			}
 		},
+		"posts-trash": {
+			"label": "Trash",
+			"icon": "trash",
+			"description": "Trashed posts — restore or permanently delete.",
+			"path": "/posts/trash",
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"status": "trash"
+			},
+			"dataViewRef": "postType/post/trash",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post",
+				"post_status": "trash"
+			}
+		},
 		"pages": {
 			"label": "Pages",
 			"icon": "page",
@@ -1371,6 +1434,9 @@
 				},
 				"tags": {
 					"position": 40
+				},
+				"posts-trash": {
+					"position": 50
 				}
 			}
 		},

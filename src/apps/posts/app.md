@@ -88,13 +88,13 @@ Two patterns to preserve:
 - No inline edit (DataViews supports it; not wired up here).
 - Status filter is a single-select today. The `filterBy.operators: ['isAny']` declaration exists but the queryArgs mapper only handles the `isAny`/`is` operators against the `status` field.
 - Site-editor post types (`wp_template`, `wp_block`, `wp_navigation`) navigate through `editHref()` but `editHref()` only special-cases `page`. Their URL-encoded slug-shaped IDs would need a new edit pattern + decode step; deferred until those screens land.
-- The trash action is hard-coded. A future iteration may surface restore / delete-permanently as separate eligible actions once the post is in trash status.
+- The `trash` variant adds `restore` and `delete-permanent` actions (status-gated to trashed rows). `restore` calls `saveEntityRecord(..., { status: 'draft' })` — REST exposes no pre-trash status meta, so a restored post lands on draft rather than its previous status (accepted divergence; see `docs/parity/posts.md` blocker #4). `delete-permanent` confirms, then calls `deleteEntityRecord(..., { force: true })`. Surface the variant via a screen with `dataViewRef: "postType/post/trash"` (the `wp-admin-default` shell ships a Posts → Trash screen for this).
 
 Parity gaps versus `docs/screens/posts.md` not surfaced in the v2 app:
 
 - Status **counts** now surface on the status filter elements (`Published (12)`, `Draft (3)`) via the shared `useEntityElementCounts` hook — one lightweight `per_page=1&_fields=id` request per status value, read back off the `X-WP-Total` header, global (search/page-independent) to mirror wp-admin's status links. Still rendered as filter-dropdown options, **not** the classic standalone subsubsub tab strip (`All (N) | Mine (N) | …`), and there is no `Mine` count.
 - No author / date / taxonomy column filters. wp-admin offers a separate dropdown per axis; the v2 app exposes only the status filter.
-- No trash view + Restore + Delete Permanently actions. Trashed posts are filtered out by `status: any` and the app never surfaces them.
+- Trash view + Restore + Delete Permanently are now wired (trash variant + the `wp-admin-default` Posts → Trash screen). Remaining gap: no **Empty Trash** bulk button, and restore lands on draft rather than the pre-trash status (REST limitation).
 - No undo snackbar after trash. We emit a plain success notice; wp-admin offers "Move to trash · Undo".
 - No keyboard shortcuts (J/K navigation, X to select, T to trash). DataViews has no built-in shortcut layer.
 - No hierarchical pages tree. The Pages screen in wp-admin indents child pages under parents; DataViews renders a flat list ordered by `menu_order` and date.

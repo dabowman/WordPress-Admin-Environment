@@ -35,13 +35,24 @@ import { classifyAdminLink } from '../navigation/adminLinkInterceptor.mjs';
  * @param {Object} ctx          Context.
  * @param {string} ctx.adminUrl Admin base URL.
  * @param {Object} ctx.routes   Admin-route registry (legacy map).
- * @return {{ type: 'navigate'|'iframe'|'external'|'ignore', hashRoute?: string, href?: string }} Action.
+ * @return {{ type: 'navigate'|'iframe'|'external'|'dirty'|'ignore', hashRoute?: string, href?: string, dirty?: boolean }} Action.
  */
 export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 	if ( ! data || typeof data !== 'object' || typeof data.type !== 'string' ) {
 		return { type: 'ignore' };
 	}
 	const url = typeof data.url === 'string' ? data.url : '';
+
+	// Unsaved-changes signal from the embedded editor. The iframe-side
+	// chromeless bridge subscribes to `core/editor`'s
+	// `isEditedPostDirty()` and posts this on every transition; the
+	// parent maps it onto the shell's dirty-state service so a sidebar
+	// click is guarded the same way a native app's `useDirtyState` is.
+	// No URL — only the boolean matters; the origin/source pins in
+	// `installIframeBridge` still gate who may send it.
+	if ( 'wp-admin-shell-dirty-state' === data.type ) {
+		return { type: 'dirty', dirty: !! data.dirty };
+	}
 
 	if ( 'wp-admin-shell-admin-link' === data.type ) {
 		if ( ! url ) {
@@ -118,6 +129,7 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
  * @param {Function} [options.navigate]         `(hashRoute) => void` workspace nav.
  * @param {Function} [options.onIframeNavigate] `(href) => void` navigate the iframe.
  * @param {Function} [options.openExternal]     `(href) => void` open a new tab.
+ * @param {Function} [options.onDirty]          `(dirty: boolean) => void` the embedded editor's unsaved-changes state changed.
  * @param {Function} options.getIframeWindow    `() => Window` the bound iframe's contentWindow. REQUIRED — the source pin; messages are refused without it.
  * @param {Object}   [options.win]              Window to bind to (defaults to global).
  * @return {Function} Uninstall callback.
@@ -129,6 +141,7 @@ export function installIframeBridge( options = {} ) {
 		navigate,
 		onIframeNavigate,
 		openExternal,
+		onDirty,
 		getIframeWindow,
 		win,
 	} = options;
@@ -188,6 +201,8 @@ export function installIframeBridge( options = {} ) {
 					: ( href ) =>
 							w.open( href, '_blank', 'noopener,noreferrer' );
 			open( action.href );
+		} else if ( 'dirty' === action.type && typeof onDirty === 'function' ) {
+			onDirty( action.dirty );
 		}
 	};
 
