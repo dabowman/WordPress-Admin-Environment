@@ -1012,10 +1012,16 @@ function wp_admin_shell_tree_has_token_alias( $node ) {
 /**
  * Register the shell settings.
  *
- * Also extend core `general` options so SettingsGeneralApp can read/write
- * them via /wp/v2/settings. Core registers blogname/blogdescription/url/email/
- * timezone/date_format/time_format/start_of_week/language but skips home,
- * users_can_register, default_role.
+ * Also extend core `general` + `reading` options so the Settings apps can
+ * read/write them via /wp/v2/settings. Core registers blogname/blogdescription/
+ * url/email/timezone/date_format/time_format/start_of_week/language +
+ * show_on_front/page_on_front/page_for_posts/posts_per_page but skips home,
+ * users_can_register, default_role (general) and posts_per_rss, rss_use_excerpt
+ * (reading). Without these shims those controls render, accept input, report
+ * "Settings saved.", and silently discard the value because the REST settings
+ * controller only iterates options carrying `show_in_rest` (issue #106). The
+ * manual-UTC-offset case is handled separately by the `rest_pre_update_setting`
+ * filter below, since it has no dedicated REST-registerable option.
  */
 add_action( 'init', function () {
 	// Active shell (canonical v1 key). Sole setting on the
@@ -1100,7 +1106,86 @@ add_action( 'init', function () {
 			'description'  => __( 'Default role for new users.', 'wp-admin-shell' ),
 		) );
 	}
+
+	// Reading-group options the SettingsReadingApp renders but core never
+	// REST-registers. Not multisite-sensitive, so register unconditionally.
+	// Feed templates read these via get_option(); the boolean cast of
+	// rss_use_excerpt stores '1'/'' which those truthy checks honor.
+	register_setting( 'reading', 'posts_per_rss', array(
+		'show_in_rest' => array(
+			// Floor of 1 mirrors the classic options-reading.php `min=1`
+			// number input and the app's clampPerPage — a 0/negative feed
+			// length is meaningless. The schema validator rejects out-of-range
+			// writes (the type-only schema would otherwise accept `-3`).
+			'schema' => array( 'minimum' => 1 ),
+		),
+		'type'         => 'integer',
+		'default'      => 10,
+		'description'  => __( 'Number of items shown in syndication feeds.', 'wp-admin-shell' ),
+	) );
+
+	register_setting( 'reading', 'rss_use_excerpt', array(
+		'show_in_rest' => true,
+		'type'         => 'boolean',
+		'default'      => false,
+		'description'  => __( 'Whether syndication feeds show an excerpt rather than full text.', 'wp-admin-shell' ),
+	) );
 } );
+
+/**
+ * Route a manual UTC-offset timezone write to `gmt_offset`.
+ *
+ * The Timezone select (wp_admin_shell_get_settings_general_data) offers a
+ * "Manual offsets" optgroup of `UTC±X` values alongside the IANA city zones.
+ * Both write the single REST `timezone` field (core option `timezone_string`).
+ * For a `UTC±X` value `sanitize_option('timezone_string')` rejects the
+ * non-IANA string and reverts to the stored value, so the save is silently
+ * lost (issue #106) — and `gmt_offset`, the option classic wp-admin actually
+ * writes for an offset, is not REST-registerable on its own (it carries no
+ * independent control). Intercept the write before `update_option()` runs and
+ * mirror `wp-admin/options.php`: a `UTC±X` selection sets `gmt_offset` and
+ * clears `timezone_string`; any other value (an IANA zone, or bare `UTC`)
+ * stores `timezone_string` and leaves `gmt_offset` untouched — core's
+ * `wp_timezone_override_offset()` (on the `pre_option_gmt_offset` read filter)
+ * makes `get_option('gmt_offset')` report the zone's current offset while a
+ * zone is set, so the stored value is moot.
+ *
+ * Keyed on `option_name` rather than the REST field name so it stays correct
+ * if core renames the exposed field. The /wp/v2/settings endpoint already
+ * gates the write on `manage_options`.
+ *
+ * @param bool   $updated Whether the setting was already handled by a prior filter.
+ * @param string $name    REST setting name being written.
+ * @param object $request The REST request.
+ * @param array  $args    Registered option args (includes `option_name`).
+ * @return bool Whether the setting write was handled here.
+ */
+add_filter( 'rest_pre_update_setting', function ( $updated, $name, $request, $args ) {
+	if ( $updated || empty( $args['option_name'] ) || 'timezone_string' !== $args['option_name'] ) {
+		return $updated;
+	}
+
+	$value = isset( $request[ $name ] ) ? $request[ $name ] : '';
+
+	if ( is_string( $value ) && preg_match( '/^UTC[+-]/', $value ) ) {
+		// Manual offset: store gmt_offset, clear the zone. With timezone_string
+		// empty, get_option('gmt_offset') returns the stored number (the
+		// pre_option_gmt_offset override below only fires while a zone is set),
+		// so the offset sticks.
+		update_option( 'gmt_offset', (float) substr( $value, 3 ) );
+		update_option( 'timezone_string', '' );
+	} else {
+		// IANA zone (or bare `UTC`): store the zone and leave gmt_offset alone.
+		// Core hooks wp_timezone_override_offset() onto `pre_option_gmt_offset`,
+		// so get_option('gmt_offset') returns the zone's *current* offset
+		// (ignoring the stored value) whenever timezone_string is non-empty —
+		// writing gmt_offset here would be pointless, and wp_timezone() prefers
+		// the zone regardless.
+		update_option( 'timezone_string', $value );
+	}
+
+	return true;
+}, 10, 4 );
 
 /**
  * Build the data payload that SettingsGeneralApp consumes (timezone groups,
