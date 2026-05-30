@@ -16,7 +16,9 @@ SimpleEditorApp is the Substack-style entry: title + a constrained block tree + 
 
 **Auto-save.** A single `setTimeout` ref scheduled on every change while `hasEdits`. Two-second debounce; if another edit lands first, the existing timer is cleared. Publish/Update flushes the pending timer + calls `save()` synchronously so there's no double-save race.
 
-**Status indicator.** The `saveStatus` state machine (`idle | saving | saved | error`) drives the toolbar status text. `saved` auto-fades back to `idle` after 2s via a second `setTimeout`.
+The autosave target is status-gated to mirror core's autosaves controller (`autosaveTarget()` in `autosave.mjs`): **draft / auto-draft / pending** posts flush the accumulated edits to the live record via `save()` (`PUT`), just as core's controller calls `wp_update_post` on the parent. **Published / private / scheduled (`future`)** posts route the debounced autosave to `POST /wp/v2/{segment}/{id}/autosaves` instead, writing a per-user autosave revision and leaving the live public record untouched. The edits stay accumulated in `editedRecord` (`hasEdits` remains true) until the author explicitly clicks **Update**, which calls `save()` and pushes them live. Any unknown/missing status fails closed to the autosaves path so an unrecognised state can never clobber a live record. This closes the issue-#101 data-integrity divergence where every 2s debounce PUT the live published post.
+
+**Status indicator.** The `saveStatus` state machine (`idle | saving | saved | autosaved | error`) drives the toolbar status text. `saved` is a live-record flush; `autosaved` is the per-user revision path for published/scheduled posts (the live record still has pending edits). Both auto-fade back to `idle` after 2s via a second `setTimeout`; after an `autosaved` fade the `Unsaved changes` indicator returns because `hasEdits` is still true.
 
 **Dirty-state.** `useDirtyState(regionId, hasEdits, { blocksNavigation: true })` reports unsaved-state to the kernel. The NavigationGuard component (shell-level) shows the standard "unsaved changes" confirmation on `beforeunload`, Navigation API, and intra-shell route changes.
 
@@ -29,7 +31,7 @@ The Gutenberg primitives are tightly coupled — `BlockEditorProvider` expects a
 1. **Toolbar with back, status, save** — Stack of three controls. Back navigates to the list; status reflects save state; save is the primary action with `loading` indicator + label that flips between Publish/Update.
 2. **Title + body layout** — Native input for the title, rich-text editor below it. Tab/Enter from title focuses first body element.
 3. **Entity-record save semantics** — Local accumulator of edits + `save()` flush. Don't write to the server on every keystroke; batch via the auto-save timer.
-4. **Auto-save debounce** — Single timer ref, cancellable on flush. 2s feels about right; tighter risks spam, looser feels stale.
+4. **Auto-save debounce** — Single timer ref, cancellable on flush. 2s feels about right; tighter risks spam, looser feels stale. **Gate the autosave target by status**: only draft-like posts (draft / auto-draft / pending) should write back to the live record; published/scheduled posts must write a per-user autosave revision (`POST .../autosaves`) so an in-progress autosave never overwrites public content.
 5. **Dirty-state contract** — Report unsaved state to whatever NavigationGuard your host shell ships; block navigation when dirty.
 6. **Draft seed for new posts** — REST rejects empty-everything posts; seed a placeholder block (any non-empty content) so the auto-draft saves before the user types.
 
@@ -40,3 +42,4 @@ The Gutenberg primitives are tightly coupled — `BlockEditorProvider` expects a
 - **Hydration is one-shot.** Reloading the record from elsewhere in the app (e.g. an external panel mutating status) would not re-parse the block tree. Edge case but worth flagging.
 - **Block library registers all ~30 core blocks** even though `allowedBlockTypes` restricts the slash menu to nine. A future iteration may switch to per-block lazy registration via `registerCoreBlock` to avoid loading unused blocks.
 - **`editedRecord.title` shape inconsistency** — sometimes a string (from a previous local edit), sometimes an object (from REST). The titleValue reader handles both; `core-data` should arguably normalize this.
+- **No "newer autosave" recovery banner.** Published/scheduled autosaves now land in a per-user autosave revision (issue #101), but the app does not yet read it back: there is no `modified_gmt` comparison on load and no banner offering to restore a newer autosave. So an autosave for a published post is write-only — it protects the live record but the author can only recover the edits within the same session (the edits remain in `editedRecord` until Update). Full parity needs the recovery banner (parity audit, block-editor.md API blocker #3).

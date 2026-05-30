@@ -24,6 +24,7 @@ import {
 } from '@wordpress/block-editor';
 import { navigate } from '../../runtime/routing/router';
 import { useDirtyState } from '../../runtime/dirty-state/useDirtyState';
+import { autosaveTarget } from './autosave.mjs';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;
@@ -31,6 +32,11 @@ function SaveStatus( { status, hasEdits, isSaving, error } ) {
 		label = error || __( 'Save failed', 'wp-admin-shell' );
 	} else if ( isSaving || status === 'saving' ) {
 		label = __( 'Saving…', 'wp-admin-shell' );
+	} else if ( status === 'autosaved' ) {
+		// Published/scheduled posts route autosaves to a per-user revision;
+		// the live record is intentionally untouched, so distinguish it from
+		// a real "Saved" of the live record.
+		label = __( 'Auto-saved', 'wp-admin-shell' );
 	} else if ( status === 'saved' ) {
 		label = __( 'Saved', 'wp-admin-shell' );
 	} else if ( hasEdits ) {
@@ -241,6 +247,8 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const [ saveError, setSaveError ] = useState( null );
 	const autoSaveTimerRef = useRef( null );
 
+	const segment = postType === 'page' ? 'pages' : 'posts';
+
 	const runSave = useCallback( async () => {
 		setSaveStatus( 'saving' );
 		try {
@@ -255,13 +263,47 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 		}
 	}, [ save ] );
 
+	// Published / private / scheduled posts: route the debounced autosave to
+	// the per-user autosaves endpoint instead of PUTting the live record, so an
+	// in-progress autosave can never clobber the public post (issue #101). The
+	// edits stay accumulated in `editedRecord` (hasEdits remains true) until the
+	// author explicitly flushes them live via the Update button.
+	const runAutosave = useCallback( async () => {
+		setSaveStatus( 'saving' );
+		try {
+			const readRaw = ( field ) =>
+				typeof field === 'string' ? field : field?.raw ?? '';
+			await apiFetch( {
+				path: `/wp/v2/${ segment }/${ postId }/autosaves`,
+				method: 'POST',
+				data: {
+					id: postId,
+					title: readRaw( editedRecord?.title ),
+					content: readRaw( editedRecord?.content ),
+					excerpt: readRaw( editedRecord?.excerpt ),
+				},
+			} );
+			setSaveStatus( 'autosaved' );
+			setSaveError( null );
+		} catch ( err ) {
+			setSaveStatus( 'error' );
+			setSaveError(
+				err?.message || __( 'Save failed.', 'wp-admin-shell' )
+			);
+		}
+	}, [ editedRecord, postId, segment ] );
+
 	useEffect( () => {
 		if ( ! hasEdits ) {
 			return;
 		}
 		autoSaveTimerRef.current = setTimeout( () => {
 			autoSaveTimerRef.current = null;
-			runSave();
+			if ( autosaveTarget( record?.status ) === 'parent' ) {
+				runSave();
+			} else {
+				runAutosave();
+			}
 		}, 2000 );
 
 		return () => {
@@ -270,10 +312,10 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 				autoSaveTimerRef.current = null;
 			}
 		};
-	}, [ hasEdits, editedRecord, runSave ] );
+	}, [ hasEdits, editedRecord, runSave, runAutosave, record?.status ] );
 
 	useEffect( () => {
-		if ( saveStatus !== 'saved' ) {
+		if ( saveStatus !== 'saved' && saveStatus !== 'autosaved' ) {
 			return;
 		}
 		const handle = setTimeout( () => setSaveStatus( 'idle' ), 2000 );
