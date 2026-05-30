@@ -98,8 +98,25 @@ export default function UsersApp( { config = {} } = {} ) {
 			args.search = view.search;
 		}
 		for ( const filter of view.filters ) {
-			if ( filter.field === 'roles' && filter.operator === 'is' ) {
+			if ( filter.field !== 'roles' ) {
+				continue;
+			}
+			// `is` carries a single role; the multi-value operators
+			// (`isAny`/`isAll`, emitted by the `administrators` variant and by
+			// DataViews multi-select) carry an array. REST `?roles=a,b` does
+			// OR-multi filtering (`role__in`) for either, so flatten to a CSV.
+			if ( filter.operator === 'is' ) {
 				args.roles = filter.value;
+			} else if (
+				filter.operator === 'isAny' ||
+				filter.operator === 'isAll'
+			) {
+				const values = Array.isArray( filter.value )
+					? filter.value
+					: [ filter.value ];
+				if ( values.length ) {
+					args.roles = values.join( ',' );
+				}
 			}
 		}
 		return args;
