@@ -581,6 +581,14 @@ The block editor extension surface is **JavaScript-side**, not PHP-side. Any reb
 | `core:editor` | Iframes `wp-admin/post.php?post={id}&action=edit`; `EditorApp.js` injects CSS to hide wp-admin chrome (`#adminmenu`, `#wpadminbar`, `#wpfooter`) | `edit_post` |
 | `core:simple-editor` | Native `BlockEditorProvider` with **9 allowed blocks** (paragraph, heading, image, quote, list, list-item, code, separator, embed). Title input + body. Debounced 2s autosave. Publish/Update button. **No inspector. No list view. No patterns. No featured image. No taxonomy. No revisions. No code editor.** | `edit_post` |
 
+### Known deviations (current shell)
+
+These are behaviors that work but diverge from core — distinct from the unbuilt gaps below.
+
+| Deviation | Impact | Correct behavior |
+|---|---|---|
+| **Live-record autosave on published posts** | The 2s debounce PUTs the *live* record via `saveEntityRecord`. For a **published** post this overwrites the public content on every keystroke-debounce, where core would instead write a per-user autosave revision (`POST /wp/v2/{rest_base}/{id}/autosaves`) and leave the live record untouched until an explicit Update. This is a data-integrity divergence: an interrupted edit session can leave half-finished content live. | Gate the debounce to `draft`/`pending` (route published autosaves to `…/autosaves`), or disable autosave for published posts. Tracked in `docs/parity/roadmap.md` group A-P1. |
+
 ### Gaps vs. this spec
 
 This is the v2 milestone. Each row is one or more rebuild tickets.
