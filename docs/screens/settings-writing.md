@@ -28,7 +28,6 @@ Configure defaults applied to newly authored posts and configure side channels f
 
 Jobs to be done:
 - **Set new-post defaults** — default category and post format for the editor.
-- **Toggle real-time collaboration** — enable shared editing on supported posts.
 - **Configure post-via-email** — POP3 mailbox to harvest content from (legacy, opt-out via filter).
 - **Notify update services** — ping aggregators on publish (legacy, ignored when site is non-public).
 
@@ -61,7 +60,6 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 |---|---|---|---|---|---|
 | Default Post Category | `default_category` | `default_category` | integer | 1 (Uncategorized) | term ID |
 | Default Post Format | `default_post_format` | `default_post_format` | string | `0` (standard) | enum from `get_post_format_strings()` |
-| Real-time Collaboration | `wp_collaboration_enabled` | `wp_collaboration_enabled` | boolean | false | new in 6.x; `wp_is_collaboration_allowed()` gates display |
 | Convert emoticons (legacy) | `use_smilies` | `use_smilies` | boolean | true | only registered when `initial_db_version < 32453` (very old installs) |
 
 ### Non-REST options (legacy form save only — gaps)
@@ -80,7 +78,6 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 ### Filters that gate sections
 - `enable_post_by_email_configuration` (default true) — set to `false` to hide entire Post via Email block. Common in modern hosting plugins.
 - `enable_update_services_configuration` (default true) — set to `false` to hide Update Services block.
-- `wp_is_collaboration_allowed()` — gates the collaboration toggle.
 
 ### Aggregate data
 - Categories: `GET /wp/v2/categories?per_page=100&hide_empty=false&context=edit` — populates Default Post Category dropdown (hierarchical).
@@ -100,7 +97,6 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 │  ├─ Formatting (legacy, hidden on modern installs)           │
 │  ├─ Default Post Category    [select w/ hierarchy]           │
 │  ├─ Default Post Format      [select]                        │
-│  ├─ Collaboration            [checkbox or warning notice]    │
 │  └─ Default Link Category    [select — conditional]          │
 ├─────────────────────────────────────────────────────────────┤
 │ FORM section "Post via email"  (filter-gated)                │
@@ -134,7 +130,6 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 | Saved | Save success | Snackbar via `core/notices` |
 | Error | REST 4xx/5xx | Inline notice |
 | Permission denied | 403 | 403 view |
-| Collaboration disabled | `wp_is_collaboration_allowed()` false | Inline warning notice replaces checkbox: "Real-time collaboration has been disabled." |
 | Update Services suppressed | `blog_public !== '1'` | Read-only notice + link to Reading Settings instead of textarea |
 | Post via email disabled | `enable_post_by_email_configuration` filter returns false | Whole section hidden |
 
@@ -178,12 +173,6 @@ N/A — settings panel.
 - Options: `Standard` + theme-supported formats from `get_post_format_strings()`
 - Empty/non-supported: render `Standard` only when theme supports no formats.
 - Validation: enum-checked server-side.
-
-### Real-time Collaboration
-- Type: checkbox
-- REST: `wp_collaboration_enabled` (writable)
-- Helper: "Enable early access to real-time collaboration. Real-time collaboration may affect your website's performance."
-- Visibility gate: `wp_is_collaboration_allowed()` — when false, replace input with a warning notice.
 
 ### Default Link Category (conditional)
 - Type: select
@@ -258,7 +247,6 @@ Shell hash route: `#/settings/writing`.
 |---|---|
 | Save success | Snackbar: "Settings saved." |
 | Save partial failure | Banner: "Some settings could not be saved." with per-field details |
-| Collaboration disabled by config | Inline warning notice (persistent until config changes) |
 | Update Services suppressed | Inline info notice with link to Reading panel |
 | Email password copied | Brief snackbar: "Password copied" (when click-to-copy is implemented) |
 
@@ -290,7 +278,6 @@ Shell hash route: `#/settings/writing`.
 | `do_settings_fields( 'writing', 'default' )` | Plugin-added fields under "Default" | `core:settings.panels` sub-slot or accept gap |
 | `do_settings_fields( 'writing', 'remote_publishing' )` | Deprecated section | Drop |
 | `do_settings_fields( 'writing', 'post_via_email' )` | Plugin-added Post via Email fields | Drop or accept gap |
-| `wp_is_collaboration_allowed()` | Gate collaboration toggle | Honor |
 
 ---
 
@@ -303,7 +290,6 @@ Shell hash route: `#/settings/writing`.
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Real-time Collaboration toggle | Medium | REST-exposed; just needs UI wire-up. |
 | Post via email section | Low | Legacy; recommend hiding via `enable_post_by_email_configuration` filter in shell deployments. Non-REST. |
 | Update Services section | Low | Legacy; non-REST; gated by `blog_public`. |
 | Default Link Category | Low | Only relevant if Link Manager plugin used. |
