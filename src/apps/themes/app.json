@@ -171,7 +171,7 @@
 			},
 			{
 				"concern": "error-surfacing",
-				"note": "If the endpoint rejects (missing/broken theme, insufficient caps), the app shows an error snackbar with the decoded WP_Error message rather than navigating away."
+				"note": "If the endpoint rejects (missing/broken/incompatible/disallowed theme, insufficient caps), the app shows an error snackbar with the decoded WP_Error message rather than navigating away. `activate()` returns a success boolean so the details-modal Activate button only closes on success."
 			}
 		],
 		"design-system-leakage": [

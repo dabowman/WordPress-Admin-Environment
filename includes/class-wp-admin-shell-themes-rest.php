@@ -60,8 +60,10 @@ class WP_Admin_Shell_Themes_REST {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public static function activate( $request ) {
+		// REST sanitizes `stylesheet` to a string before dispatch; `required`
+		// asserts presence, not non-emptiness, so an empty value reaches here.
 		$stylesheet = $request->get_param( 'stylesheet' );
-		if ( ! is_string( $stylesheet ) || '' === $stylesheet ) {
+		if ( '' === $stylesheet ) {
 			return new WP_Error(
 				'rest_invalid_param',
 				__( 'A theme stylesheet is required.', 'wp-admin-shell' ),
@@ -78,12 +80,36 @@ class WP_Admin_Shell_Themes_REST {
 			);
 		}
 
+		// Mirror core themes.php: on multisite a site admin with `switch_themes`
+		// must not activate a theme the super-admin network/site-disabled.
+		// `is_allowed()` returns true on single-site, so this is multisite-only.
+		if ( ! $theme->is_allowed() ) {
+			return new WP_Error(
+				'rest_theme_not_allowed',
+				__( 'This theme is not allowed on this site.', 'wp-admin-shell' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		$errors = $theme->errors();
 		if ( $errors instanceof WP_Error ) {
 			return new WP_Error(
 				'rest_theme_broken',
 				/* translators: %s: theme error message. */
 				sprintf( __( 'The theme cannot be activated: %s', 'wp-admin-shell' ), $errors->get_error_message() ),
+				array( 'status' => 400 )
+			);
+		}
+
+		// `WP_Theme::errors()` reports only missing/broken files — never
+		// RequiresWP/RequiresPHP. Without this pre-check an intact-but-
+		// incompatible theme reaches switch_theme(), which wp_die()s mid-REST
+		// (a 500 carrying literal <strong> markup). Validate up front instead.
+		$requirements = validate_theme_requirements( $theme->get_stylesheet() );
+		if ( is_wp_error( $requirements ) ) {
+			return new WP_Error(
+				'rest_theme_requirements',
+				wp_strip_all_tags( $requirements->get_error_message() ),
 				array( 'status' => 400 )
 			);
 		}

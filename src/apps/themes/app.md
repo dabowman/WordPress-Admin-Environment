@@ -20,8 +20,10 @@ Four pieces of state drive the app:
 The Activate action calls a `useCallback` `activate(theme)` that:
 
 1. POSTs `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`.
-2. On success: `invalidateResolution` on the theme query + emits a success snackbar.
-3. On failure: emits an error snackbar with the decoded WP_Error message (no navigation away).
+2. On success: `invalidateResolution` on the theme query + emits a success snackbar; returns `true`.
+3. On failure: emits an error snackbar with the decoded WP_Error message (no navigation away); returns `false`.
+
+The inline Activate button in the details modal awaits that boolean and only calls `closeModal()` on `true`, so a failed activation keeps the modal open (with the error snackbar) rather than dismissing as if it succeeded.
 
 The Details action uses DataViews' `RenderModal` shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app renders the full description + version + author + Theme site link + an inline Activate button (visible only when `status !== 'active'`).
 

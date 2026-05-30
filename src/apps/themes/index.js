@@ -124,6 +124,8 @@ export default function ThemesApp( { config = {} } ) {
 		viewDefaults: VIEW_DEFAULTS,
 	} );
 
+	// Returns true on success / false on failure so callers (e.g. the details
+	// modal) can keep themselves open when activation fails.
 	const activate = useCallback(
 		async ( theme ) => {
 			try {
@@ -142,6 +144,7 @@ export default function ThemesApp( { config = {} } ) {
 					__( 'Theme activated.', 'wp-admin-shell' ),
 					{ type: 'snackbar' }
 				);
+				return true;
 			} catch ( err ) {
 				createNotice(
 					'error',
@@ -152,6 +155,7 @@ export default function ThemesApp( { config = {} } ) {
 						),
 					{ type: 'snackbar', isDismissible: true }
 				);
+				return false;
 			}
 		},
 		[ invalidateResolution, themesQuery, createNotice ]
@@ -210,8 +214,10 @@ export default function ThemesApp( { config = {} } ) {
 								tone="brand"
 								variant="solid"
 								onClick={ async () => {
-									await activate( item );
-									closeModal();
+									const ok = await activate( item );
+									if ( ok ) {
+										closeModal();
+									}
 								} }
 							>
 								{ __( 'Activate', 'wp-admin-shell' ) }
