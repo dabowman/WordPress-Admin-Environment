@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/edit-comments.php` (list) + `wp-admin/comment.php` (single edit/moderate confirm) + `wp-admin/edit-form-comment.php` (form partial) + `WP_Comments_List_Table` (`wp-admin/includes/class-wp-comments-list-table.php`)
-**Current shell coverage:** `core:comments` → `src/apps/CommentsApp.js` (M4) — DataViews list + approve/unapprove/spam/trash actions; full edit and inline reply not yet implemented
+**Current shell coverage:** `core:comments` → `src/apps/comments/index.js` (M4) — DataViews list + approve/unapprove/spam/trash actions; full edit and inline reply not yet implemented
 
 This spec describes the **semantic surface** of the Comments management screen — list, moderate, edit single, and reply — so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -487,7 +487,7 @@ Plugin compatibility note: third-party plugins relying on these hooks won't work
 
 ### Current shell coverage
 
-- **Source:** `core:comments` → `src/apps/CommentsApp.js`
+- **Source:** `core:comments` → `src/apps/comments/index.js`
 - **What works (M4):** DataViews list, single status filter, approve/unapprove/spam/trash/restore actions via partial `saveEntityRecord`, basic search, pagination
 - **What does not yet:** All-status union (only one status at a time), counts in tab labels, Mine tab, Type filter, inline Reply, Quick Edit, full Edit screen, Empty Spam / Empty Trash, undo snackbar, bulk actions
 
@@ -542,5 +542,5 @@ For v1 of any new shell config, `iframe:edit-comments.php` is acceptable as esca
 - Quick Edit handler (admin-ajax): `wp-admin/includes/ajax-actions.php::wp_ajax_edit_comment()` — REST replacement: `PUT /wp/v2/comments/{id}`
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-comments-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/comments/`
-- Current shell impl: `src/apps/CommentsApp.js`
+- Current shell impl: `src/apps/comments/index.js`
 - Shell config example: `shells/developer-admin.json`

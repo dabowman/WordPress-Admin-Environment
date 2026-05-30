@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-reading.php`, `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-reading` → `src/apps/settings-panels/SettingsReadingApp.js` (M4 — REST-native, partial)
+**Current shell coverage:** `core:settings-reading` → `src/apps/settings-reading/index.js` (M4 — REST-native, partial)
 
 This spec describes the **semantic surface** of the Reading Settings screen so an agent can rebuild it in any UI library or framework.
 
@@ -282,7 +282,7 @@ Shell hash route: `#/settings/reading`.
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** `core:settings-reading` → `src/apps/settings-panels/SettingsReadingApp.js`
+- **Source:** `core:settings-reading` → `src/apps/settings-reading/index.js`
 - **What works:** `show_on_front`, `page_on_front`, `page_for_posts`, `posts_per_page` via REST. Inline warnings for same-page collisions. Saves via `core/notices`.
 
 ### Gaps vs. this spec
@@ -316,4 +316,4 @@ Shell hash route: `#/settings/reading`.
 - Settings registration: `wp-includes/option.php` lines 2900–2942
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-panels/SettingsReadingApp.js`
+- Current shell impl: `src/apps/settings-reading/index.js`

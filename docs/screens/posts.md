@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Serves as the template for all other tier-2 specs.
 **Source PHP:** `wp-admin/edit.php` + `WP_Posts_List_Table` (`wp-admin/includes/class-wp-posts-list-table.php`)
-**Current shell coverage:** `core:posts` → `src/apps/PostsApp.js` (partial — see "Gaps" below)
+**Current shell coverage:** `core:posts` → `src/apps/posts/index.js` (partial — see "Gaps" below)
 
 This spec describes the **semantic surface** of the Posts list screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -372,7 +372,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** `core:posts` → `src/apps/PostsApp.js`
+- **Source:** `core:posts` → `src/apps/posts/index.js`
 - **What works:** list, search, status filter (single/multi), pagination, sort by date, edit/view/trash actions, bulk trash
 - **Layout:** table (DataViews `table` type)
 
@@ -421,7 +421,7 @@ For v1 of any new shell config, `iframe:edit.php?post_type={type}` is acceptable
 - Bulk Edit handler (admin-ajax): `wp-admin/includes/ajax-actions.php::wp_ajax_inline_save()`
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-posts-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/posts/`
-- Current shell impl: `src/apps/PostsApp.js`
+- Current shell impl: `src/apps/posts/index.js`
 - Shell config example: `shells/content-author.json`
 
 ---

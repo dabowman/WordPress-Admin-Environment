@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/plugins.php`, `wp-admin/plugin-install.php`, `wp-admin/plugin-editor.php`, `WP_Plugins_List_Table` (`wp-admin/includes/class-wp-plugins-list-table.php`), `WP_Plugin_Install_List_Table` (`wp-admin/includes/class-wp-plugin-install-list-table.php`)
-**Current shell coverage:** none — `iframe:plugins.php` only (developer-admin shell).
+**Current shell coverage:** `core:plugins` → `src/apps/plugins/index.js` (native installed-plugins list with activate / deactivate / delete, cap-gated on `activate_plugins`; registered in `src/runtime/registry/builtins.js`). See `src/apps/plugins/app.md`. The add / file-editor screens remain iframe-only.
 
 This spec describes the **semantic surface** of the three plugin-management screens so an agent can rebuild them in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs. Single-site context only — network-admin variants of these screens live in a separate `network-admin/plugins.md` spec.
 
@@ -562,9 +562,10 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** none. `iframe:plugins.php` only in `developer-admin` shell.
-- **What works:** original wp-admin rendered inside iframe. Chrome hidden via injected CSS.
-- **What doesn't:** no native rebuild.
+- **Source:** `core:plugins` → `src/apps/plugins/index.js`, registered in `src/runtime/registry/builtins.js`.
+- **What works:** native installed-plugins list — `useEntityRecords('root','plugin')` read with client-side search + status filter, plus activate / deactivate / delete actions (cap-gated on `activate_plugins`) via `apiFetch` PATCH with manual cache invalidation. See `src/apps/plugins/app.md`.
+- **What's still iframe-only:** `plugin-install.php` (add / browse / upload) and `plugin-editor.php`.
+- **Note:** the Gaps table below predates the native list app (it still lists "`core:plugins` native list app" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
 ### Gaps vs. this spec
 

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/themes.php` (installed grid) + `wp-admin/theme-install.php` (browse/install) + `wp-admin/includes/class-wp-theme-install-list-table.php`
-**Current shell coverage:** None — no `core:themes` source registered. Iframe escape hatch (`iframe:themes.php`) is the only path today.
+**Current shell coverage:** `core:themes` → `src/apps/themes/index.js` (native; DataViews grid + table over the `root/theme` entity, registered in `src/runtime/registry/builtins.js`). See `src/apps/themes/app.md`. Add-new (.org browse) / ZIP upload remain iframe-only.
 
 This spec describes the **semantic surface** of the Themes screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -409,8 +409,10 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** none registered.
-- **Workaround:** `iframe:themes.php` — works with caveats (chrome hidden via injected CSS; navigation between Themes / Add New / Customize loses shell context).
+- **Source:** `core:themes` → `src/apps/themes/index.js`, registered in `src/runtime/registry/builtins.js`.
+- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via a custom endpoint that falls back to the classic wp-admin activate link when the endpoint is absent. See `src/apps/themes/app.md`.
+- **What's still iframe-only:** Add-new (.org browse) and ZIP upload (`iframe:theme-install.php`).
+- **Note:** the Gaps table below predates the native app (it still lists "Register `core:themes`" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |

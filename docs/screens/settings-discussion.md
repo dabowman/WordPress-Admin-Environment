@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-discussion.php`, `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-discussion` → `src/apps/settings-panels/SettingsDiscussionApp.js` (M4 — REST-native, partial; majority of fields are non-REST and require fallback)
+**Current shell coverage:** `core:settings-discussion` → `src/apps/settings-discussion/index.js` (M4 — REST-native, partial; majority of fields are non-REST and require fallback)
 
 This spec describes the **semantic surface** of the Discussion Settings screen. This panel has the largest non-REST surface area of any Settings screen — only three of ~24 options are REST-exposed.
 
@@ -303,7 +303,7 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 ## 15. Mapping & implementation status
 
 ### Current shell coverage
-- **Source:** `core:settings-discussion` → `src/apps/settings-panels/SettingsDiscussionApp.js`
+- **Source:** `core:settings-discussion` → `src/apps/settings-discussion/index.js`
 - **What works:** the three REST-exposed keys (default_pingback_flag, default_ping_status, default_comment_status). Saves via `core/notices`.
 
 ### Gaps vs. this spec
@@ -338,4 +338,4 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 - Settings registration: `wp-includes/option.php` lines 2944–2971
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-panels/SettingsDiscussionApp.js`
+- Current shell impl: `src/apps/settings-discussion/index.js`
