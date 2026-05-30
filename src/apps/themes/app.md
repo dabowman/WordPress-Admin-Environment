@@ -20,8 +20,10 @@ Four pieces of state drive the app:
 The Activate action calls a `useCallback` `activate(theme)` that:
 
 1. POSTs `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`.
-2. On success: `invalidateResolution` on the theme query + emits a success snackbar.
-3. On failure: `window.location.href = adminUrl + 'themes.php?action=activate&stylesheet=...'` so the user lands in wp-admin's flow.
+2. On success: `invalidateResolution` on the theme query + emits a success snackbar; returns `true`.
+3. On failure: emits an error snackbar with the decoded WP_Error message (no navigation away); returns `false`.
+
+The inline Activate button in the details modal awaits that boolean and only calls `closeModal()` on `true`, so a failed activation keeps the modal open (with the error snackbar) rather than dismissing as if it succeeded.
 
 The Details action uses DataViews' `RenderModal` shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app renders the full description + version + author + Theme site link + an inline Activate button (visible only when `status !== 'active'`).
 
@@ -73,7 +75,7 @@ For a non-WPDS / non-DataViews rebuild:
 
 - **List/grid component** with media-aware grid cards + sortable table fallback. MUI's `DataGrid` works for the table half; the grid half is a flex/grid layout + media field renderer.
 - **REST/core-data adapter** that exposes `root/theme` records with `{ context: 'edit', status: 'active,inactive' }`.
-- **Custom theme-switch endpoint** (or fall back to wp-admin's `themes.php?action=activate&stylesheet=...&_wpnonce=…` link). Rebuilds need their own server-side hook.
+- **Custom theme-switch endpoint.** The shell ships `WP_Admin_Shell_Themes_REST` (`POST /wp-admin-shell/v1/activate-theme`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`). Rebuilds need their own equivalent server-side hook — WordPress core REST exposes no theme-switch operation (upstream parity #143).
 - **Action modal** that DataViews-style accepts `{ items, closeModal, onActionPerformed }`. Any modal primitive works; the contract is open-on-invoke, await close.
 
 Two patterns to preserve:
@@ -87,8 +89,7 @@ Two patterns to preserve:
 - No theme preview (live preview via Customizer or block-theme preview).
 - Screenshots are loaded directly from the theme record; no resizing or `srcset`.
 - Description truncation is hard 140 chars in the grid card. Full description lives in the details modal.
-- The fallback URL flow loses the user's place in the shell; we don't restore it on return.
-- **The classic-activate fallback link is missing `_wpnonce`.** `themes.php?action=activate&stylesheet=…` requires a fresh nonce or it silently bounces back to the themes list without activating. Per `docs/research/app-validation-2026-05-04.md`, this fallback path should either (a) call `wp_create_nonce('switch-theme_'.stylesheet)` from PHP and inject the resulting `&_wpnonce=…` into the link, or (b) route through a small PHP shim that performs the activation server-side. Until then, the fallback is best-effort only.
+- Activation runs entirely through the shell REST endpoint (`WP_Admin_Shell_Themes_REST`); apiFetch sends the REST nonce automatically. On failure the app surfaces an error snackbar instead of navigating away, so the user keeps their place in the shell.
 - DataViews' built-in client-side pagination is used (the full theme list returns in one request); the `paginationInfo` is hard-coded to `totalPages: 1` because themes-per-install rarely exceeds the page size.
 
 Parity gaps versus `docs/screens/themes.md` not surfaced in the v2 app:
