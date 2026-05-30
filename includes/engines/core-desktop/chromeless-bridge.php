@@ -805,8 +805,9 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 *
 	 * Guarded on the `core/editor` store existing, so this is a no-op on
 	 * every non-editor iframe page the bridge also injects into. Polls
-	 * briefly for the store because `wp.data`/`core/editor` register
-	 * after this footer script runs; gives up after a few seconds.
+	 * for the store because `wp.data`/`core/editor` register after this
+	 * footer script runs; gives up after ~10s (40 × 250ms) on a page
+	 * that never registers it.
 	 */
 	( function _installDirtyStateRelay() {
 		function hasEditorStore() {
@@ -838,7 +839,14 @@ function wp_admin_shell_chromeless_bridge_script() {
 				} catch ( _err ) { /* store gone mid-teardown — swallow */ }
 			}
 			try {
-				window.wp.data.subscribe( report );
+				// Scope the listener to core/editor so it fires only on
+				// editor transitions, not every store mutation on a
+				// heavy editor page (keystrokes, selection moves, REST
+				// resolutions across all stores). Older wp.data ignores
+				// the 2nd arg and subscribes globally — still correct,
+				// just chattier. Not unsubscribed: the subscription
+				// lives for the iframe document's lifetime.
+				window.wp.data.subscribe( report, 'core/editor' );
 				report();
 			} catch ( _err ) { /* swallow */ }
 		}

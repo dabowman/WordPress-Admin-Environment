@@ -178,11 +178,14 @@ export default function EditorApp( { config = {}, regionId } ) {
 			navigate,
 			onIframeNavigate: ( href ) => {
 				if ( iframeRef.current ) {
-					// A new in-iframe navigation (e.g. the post-trash
-					// redirect that had no workspace mapping) starts a
-					// fresh load — clear dirty + show the spinner.
-					setIframeLoading( true );
-					setIsDirty( false );
+					// Navigate the frame, but do NOT optimistically
+					// clear dirty or raise the spinner here. Gutenberg's
+					// beforeunload guard can still cancel this nav
+					// ("Stay"), and the dirty relay only re-emits on a
+					// *transition* — an optimistic clear would leave the
+					// parent stuck clean (the silent-discard this PR
+					// closes) and the spinner stuck up. onIframeLoad
+					// clears dirty once the new document actually loads.
 					iframeRef.current.src = href;
 				}
 			},
@@ -209,9 +212,10 @@ export default function EditorApp( { config = {}, regionId } ) {
 			const authed = !! data[ 'wp-auth-check' ];
 			if ( wasUnauthed && authed && iframeRef.current ) {
 				setIframeLoading( true );
-				setIsDirty( false );
 				// Reset src to itself to force a re-fetch — the iframe is
-				// currently showing the WordPress login form.
+				// currently showing the WordPress login form (no editor,
+				// so no beforeunload to cancel the reload). onIframeLoad
+				// clears dirty once the real editor reloads.
 				// eslint-disable-next-line no-self-assign
 				iframeRef.current.src = iframeRef.current.src;
 			}
@@ -266,6 +270,14 @@ export default function EditorApp( { config = {}, regionId } ) {
 			}
 		}
 
+		// A fresh document finished loading, so any unsaved state from
+		// the previously loaded editor is gone (saved, discarded via a
+		// confirmed in-iframe nav, or this is a different page). Clear
+		// the parent flag here — NOT optimistically at nav time, so a
+		// cancelled "Stay" can't strand it clean. The bridge relay then
+		// re-asserts the new document's real dirty value if it is itself
+		// an editor.
+		setIsDirty( false );
 		setIframeLoading( false );
 		injectChromeHide( iframe );
 	}, [] );
