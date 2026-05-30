@@ -8,7 +8,7 @@ This spec describes the **semantic surface** of the Profile screen so an agent c
 
 Profile and its admin-facing twin Edit User are a **single template** (`user-edit.php`) that branches on whether you are editing yourself or someone else. `profile.php` is a 17-line shim that defines `IS_PROFILE_PAGE` then `require`s `user-edit.php` (`profile.php:14-17`). This spec owns the **form** surface (both branches) and the per-user account-management affordances. The surrounding users **list** + **add-user** + **authorize-application** screens live in the cluster spec `docs/screens/users.md`; the two specs deliberately overlap on the shared form and cross-reference each other. Single-site context — multisite-specific behavior (Super Admin grant, site-membership removal) is called out where relevant; network-admin-only variants are out of scope.
 
-> **Why this exists separately from `users.md`.** The combined users cluster spec covers the form, but the **own-vs-other-user branching** and the **email pending-change confirmation flow** get only light treatment there. Those two behaviors are the security-relevant heart of the Profile screen, so they are documented in full here (§3, §4 "Email confirmation flow", §6, §9). `users.md` remains authoritative for the list/add/authorize surfaces.
+> **Why this exists separately from `users.md`.** The combined users cluster spec covers the form, but the **own-vs-other-user branching** and the **email pending-change confirmation flow** get only light treatment there. Those two behaviors are the security-relevant heart of the Profile screen, so they are documented in full here (§3, §4 → "Email confirmation flow", §6, §9). `users.md` remains authoritative for the list/add/authorize surfaces.
 
 ---
 
