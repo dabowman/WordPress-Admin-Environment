@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/themes.php` (installed grid) + `wp-admin/theme-install.php` (browse/install) + `wp-admin/includes/class-wp-theme-install-list-table.php`
-**Current shell coverage:** `core:themes` — a native DataViews app (`src/apps/themes/`) renders the installed-themes grid + details modal + activate action. Theme install/browse is not yet ported; the iframe escape hatch (`iframe:theme-install.php`) covers that.
+**Current shell coverage:** `core:themes` — a native DataViews app (`src/apps/themes/`) renders the installed-themes grid + details modal + activate action. Theme install/browse is not yet ported; reach it via classic wp-admin (`theme-install.php`).
 
 This spec describes the **semantic surface** of the Themes screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 

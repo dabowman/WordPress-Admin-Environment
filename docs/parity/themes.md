@@ -14,9 +14,9 @@
 - **REST / core-data surface the shell app uses:**
   - `useEntityRecords('root', 'theme', { context: 'edit', status: 'active,inactive' })` → `GET /wp/v2/themes` (`WP_REST_Themes_Controller`, `class-wp-rest-themes-controller.php`). **Read-only controller** — only `WP_REST_Server::READABLE` routes registered (lines 43–75).
   - `useDataView(screenId)` → resolved `settings.dataViews.root.theme._default` from the kernel config snapshot (or `/wp-admin-shell/v1/data-view`).
-  - `apiFetch` POST to `/wp-admin-shell/v1/activate-theme` — **this endpoint does not exist** (no `register_rest_route` for it anywhere in `includes/`; the only theme-related server code is `add_action('switch_theme', …)` cache flushers).
+  - `apiFetch` POST to `/wp-admin-shell/v1/activate-theme` — registered in `includes/class-wp-admin-shell-themes-rest.php` (commit `5780ea6`): permission `current_user_can('switch_themes')`, REST-nonce protected, wraps `switch_theme()`.
   - `window.wpAdminShell.{siteUrl,adminUrl}` (`wp-admin-shell.php:508,510`) for the screenshot fallback URL and the wp-admin activate fallback link. (A prior `app.json` `data.reads[]` entry claimed a `window.wpAdminShell.activeTheme` read, but **that global is not emitted** by `wp-admin-shell.php`; the app derives active-ness from each record's `status` field. The bogus entry was removed — issue #173.)
-- **Project screen spec:** `docs/screens/themes.md` — full Tier-2 spec. Present and unusually thorough (it already enumerates the REST gaps and proposes the missing endpoints). Its "Current shell coverage" line is stale ("None — no `core:themes` source registered"), since `core:themes` now exists; that line should be refreshed.
+- **Project screen spec:** `docs/screens/themes.md` — full Tier-2 spec. Present and unusually thorough (it already enumerates the REST gaps and proposes the missing endpoints). Its "Current shell coverage" line was stale ("None — no `core:themes` source registered") since `core:themes` now exists; that line has been refreshed.
 
 ## Feature parity matrix
 
@@ -144,10 +144,10 @@ Net: the DataViews usage is correct and idiomatic; the parity gap is **scope** (
 
 ## Recommendations / future work
 
-**P1 — make Activate actually work (the headline bug).**
-- `[shell]` Register `POST /wp-admin-shell/v1/activate-theme` in a new `includes/class-wp-admin-shell-themes-rest.php`: permission `current_user_can('switch_themes')`, REST-nonce protected, validates `wp_get_theme($stylesheet)->exists() && ->is_allowed()`, calls `switch_theme()`. This removes the dependency on the broken fallback. (`src/apps/themes/index.js:130` already targets this path.)
-- `[shell]` As a belt-and-suspenders, fix the fallback link in `index.js:146–151` to carry a real `&_wpnonce=` — expose a `wp_create_nonce('switch-theme_'.$slug)` per theme (e.g. fold into the `root/theme` REST response via `register_rest_field`, or a small map in `wpAdminShell`). Until one of these lands, the app's only write action is a no-op.
-- `[shell]` Show an error `Notice` on activate failure instead of silently `window.location.href`-ing away (`index.js:145`).
+**P1 — make Activate actually work (the headline bug).** ✅ **done (commit `5780ea6`).**
+- `[shell]` ✅ `POST /wp-admin-shell/v1/activate-theme` is registered in `includes/class-wp-admin-shell-themes-rest.php`: permission `current_user_can('switch_themes')`, REST-nonce protected, validates the theme before calling `switch_theme()`. `src/apps/themes/index.js:132` targets this path.
+- `[shell]` ✅ The nonce-less `window.location` fallback was dropped — the app's only write path is now the `apiFetch` POST (api-fetch carries the REST nonce automatically), so the action is no longer a no-op.
+- `[shell]` ✅ Activate failure surfaces an error snackbar via `createNotice('error', …)` (`index.js:149`) instead of silently navigating away.
 
 **P1 — fix the doc/spec drift.** ✅ **done (issue #173).**
 - `[shell]` ✅ The `app.json` `data.reads[]` entry claiming a `window.wpAdminShell.activeTheme` read that doesn't exist was removed (the app derives active-ness from each record's `status`). `docs/screens/themes.md:5` "Current shell coverage: None" was stale and now reflects `core:themes`.
