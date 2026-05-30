@@ -16,15 +16,23 @@ aborts the session).
 2. **Setup script** field — paste this single line:
 
    ```bash
-   bash scripts/cloud-setup.sh
+   find / -path /proc -prune -o -path /sys -prune -o -path /dev -prune -o -name cloud-setup.sh -path '*scripts*' -exec bash {} ';' || true
    ```
 
    Keeping the logic in the committed script means changes ship with the repo;
-   only this one-liner lives in the UI. Use a **plain relative path** — do NOT
-   wrap it in `$(...)` command substitution. The platform re-wraps the setup
-   field in its own shell, where command substitution + quotes fail with
-   `syntax error near unexpected token ')'`. The repo is cloned and the working
-   directory is the repo root when the setup script runs.
+   only this self-locating one-liner lives in the UI. It looks odd for two
+   reasons, both learned the hard way:
+
+   - **The working directory is _not_ the repo root**, and the clone path isn't
+     known ahead of time, so `bash scripts/cloud-setup.sh` fails with exit 127
+     (`No such file or directory`). `find` resolves the script wherever the repo
+     was cloned.
+   - **No `$(...)`, no double quotes, no backslashes.** The platform re-wraps the
+     setup field in its own shell, where command substitution + quotes fail with
+     `syntax error near unexpected token ')'`. The `find` form avoids all three.
+
+   `|| true` guarantees a clean exit so the session always launches; the script
+   then `cd`s to its own repo root internally.
 
 3. **Network access** — the default *Trusted* allowlist already covers Docker
    Hub, npm, and GitHub, but **not** WordPress.org or the Playwright browser
