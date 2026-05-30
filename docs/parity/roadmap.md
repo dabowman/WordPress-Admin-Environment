@@ -199,9 +199,9 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 3. **Fix app.md claims of non-existent window globals.** themes `app.md` references a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verify and remove. ([themes.md](themes.md))
 
-### P2 — missing screen specs
+### P2 — screen spec coverage
 
-4. **Author `docs/screens/editor-classic.md`** — the block/classic post editor (`core:editor` + `core:simple-editor`) has no dedicated screen spec. ([block-editor.md](block-editor.md))
+4. ✅ **Done — `docs/screens/editor-classic.md` exists.** A full tier-2 classic-editor spec landed in PR #36; this audit's 2026-05-29 snapshot predated it. The block editor (`core:editor` + `core:simple-editor`) is separately specced by `docs/screens/editor-block.md` + `editor-block-{data,inspector,modes}.md`. ([block-editor.md](block-editor.md))
 
 5. ~~**Author a dedicated `docs/screens/profile.md`**~~ — **Done.** `docs/screens/profile.md` now exists as a full Tier-2 spec covering the own-vs-other-user branching and the email pending-change confirmation flow; `users.md` cross-links it. ([profile.md](profile.md))
 
