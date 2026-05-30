@@ -5,13 +5,18 @@
 # This file is committed to the repo so it stays version-controlled. Paste this
 # ONE LINE into the Setup script box at claude.ai/code ▸ environment:
 #
-#     bash scripts/cloud-setup.sh
+#     find / -path /proc -prune -o -path /sys -prune -o -path /dev -prune -o -name cloud-setup.sh -path '*scripts*' -exec bash {} ';' || true
 #
-# Use a plain relative path — NOT a $(...) command substitution. The platform
-# re-wraps the setup-script field in its own shell, where command substitution
-# + quotes break ("syntax error near unexpected token )"). The repo is already
-# cloned and the working directory is the repo root when this runs; the script
-# also self-locates its repo root internally, so the relative path is enough.
+# Why this shape and not just `bash scripts/cloud-setup.sh`:
+#   - The setup field's working directory is NOT the repo root, so a relative
+#     path fails with exit 127 (No such file or directory), and the clone path
+#     isn't known ahead of time.
+#   - The platform re-wraps the field in its own shell, where $(...) command
+#     substitution + quotes break ("syntax error near unexpected token )").
+# So we self-locate: `find` resolves this script wherever the repo was cloned,
+# using no command substitution, no double quotes, and no backslashes. `|| true`
+# guarantees a clean exit so the session always launches; this script then
+# self-locates its own repo root (below) and cd's there.
 #
 # What it does, mirroring our local toolchain:
 #   1. Ensures the Docker daemon is running (wp-env needs it).
