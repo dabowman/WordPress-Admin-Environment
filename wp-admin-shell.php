@@ -1112,7 +1112,13 @@ add_action( 'init', function () {
 	// Feed templates read these via get_option(); the boolean cast of
 	// rss_use_excerpt stores '1'/'' which those truthy checks honor.
 	register_setting( 'reading', 'posts_per_rss', array(
-		'show_in_rest' => true,
+		'show_in_rest' => array(
+			// Floor of 1 mirrors the classic options-reading.php `min=1`
+			// number input and the app's clampPerPage — a 0/negative feed
+			// length is meaningless. The schema validator rejects out-of-range
+			// writes (the type-only schema would otherwise accept `-3`).
+			'schema' => array( 'minimum' => 1 ),
+		),
 		'type'         => 'integer',
 		'default'      => 10,
 		'description'  => __( 'Number of items shown in syndication feeds.', 'wp-admin-shell' ),
@@ -1139,9 +1145,10 @@ add_action( 'init', function () {
  * independent control). Intercept the write before `update_option()` runs and
  * mirror `wp-admin/options.php`: a `UTC±X` selection sets `gmt_offset` and
  * clears `timezone_string`; any other value (an IANA zone, or bare `UTC`)
- * stores `timezone_string` and leaves `gmt_offset` to core, which keeps it
- * in sync with the zone's current offset (and which `wp_timezone()` ignores
- * while a zone is set).
+ * stores `timezone_string` and leaves `gmt_offset` untouched — core's
+ * `wp_timezone_override_offset()` (on the `pre_option_gmt_offset` read filter)
+ * makes `get_option('gmt_offset')` report the zone's current offset while a
+ * zone is set, so the stored value is moot.
  *
  * Keyed on `option_name` rather than the REST field name so it stays correct
  * if core renames the exposed field. The /wp/v2/settings endpoint already
@@ -1161,17 +1168,19 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $request, $ar
 	$value = isset( $request[ $name ] ) ? $request[ $name ] : '';
 
 	if ( is_string( $value ) && preg_match( '/^UTC[+-]/', $value ) ) {
-		// Manual offset: store gmt_offset, clear the zone. Clearing the zone
-		// does not re-derive gmt_offset (no zone to derive from), so the
-		// offset sticks.
+		// Manual offset: store gmt_offset, clear the zone. With timezone_string
+		// empty, get_option('gmt_offset') returns the stored number (the
+		// pre_option_gmt_offset override below only fires while a zone is set),
+		// so the offset sticks.
 		update_option( 'gmt_offset', (float) substr( $value, 3 ) );
 		update_option( 'timezone_string', '' );
 	} else {
-		// IANA zone (or bare `UTC`): store the zone and let core keep
-		// gmt_offset in sync with it. wp_timezone() prefers a non-empty
-		// timezone_string, so gmt_offset is moot while a zone is set — and
-		// core's pre_update_option_gmt_offset would override an explicit
-		// clear back to the zone's derived offset anyway.
+		// IANA zone (or bare `UTC`): store the zone and leave gmt_offset alone.
+		// Core hooks wp_timezone_override_offset() onto `pre_option_gmt_offset`,
+		// so get_option('gmt_offset') returns the zone's *current* offset
+		// (ignoring the stored value) whenever timezone_string is non-empty —
+		// writing gmt_offset here would be pointless, and wp_timezone() prefers
+		// the zone regardless.
 		update_option( 'timezone_string', $value );
 	}
 
