@@ -300,3 +300,5 @@ WPAS_Mode_Resolution_Test_Runner::assert_not_has_key(
 echo "\nTOTAL: " . WPAS_Mode_Resolution_Test_Runner::$pass . " passed, " .
 	WPAS_Mode_Resolution_Test_Runner::$fail . " failed of " .
 	( WPAS_Mode_Resolution_Test_Runner::$pass + WPAS_Mode_Resolution_Test_Runner::$fail ) . "\n";
+
+exit( WPAS_Mode_Resolution_Test_Runner::$fail > 0 ? 1 : 0 );
