@@ -61,6 +61,8 @@ const ACTION_LABELS = {
 	edit: __( 'Edit', 'wp-admin-shell' ),
 	view: __( 'View', 'wp-admin-shell' ),
 	trash: __( 'Move to Trash', 'wp-admin-shell' ),
+	restore: __( 'Restore', 'wp-admin-shell' ),
+	'delete-permanent': __( 'Delete Permanently', 'wp-admin-shell' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -157,7 +159,7 @@ export default function PostsApp( { config } ) {
 		STATUS_VALUES
 	);
 
-	const { deleteEntityRecord, invalidateResolution } =
+	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createNotice } = useDispatch( noticesStore );
 
@@ -196,6 +198,23 @@ export default function PostsApp( { config } ) {
 	);
 
 	const actions = useMemo( () => {
+		// Status mutations move rows between filters, so the list query and the
+		// per-status count queries the filter labels read from both refresh.
+		const refreshAfterMutation = () => {
+			invalidateResolution( 'getEntityRecords', [
+				'postType',
+				postType,
+				queryArgs,
+			] );
+			invalidateEntityElementCounts(
+				invalidateResolution,
+				'postType',
+				postType,
+				'status',
+				STATUS_VALUES
+			);
+		};
+
 		const trashModal = createBulkConfirmModal( {
 			getMessage: ( items ) =>
 				items.length === 1
@@ -211,20 +230,7 @@ export default function PostsApp( { config } ) {
 			mutate: ( item ) =>
 				deleteEntityRecord( 'postType', postType, item.id ),
 			onSettled: ( { items, failed } ) => {
-				invalidateResolution( 'getEntityRecords', [
-					'postType',
-					postType,
-					queryArgs,
-				] );
-				// Trash moves rows between statuses, so the count queries
-				// the filter labels read from need to refresh too.
-				invalidateEntityElementCounts(
-					invalidateResolution,
-					'postType',
-					postType,
-					'status',
-					STATUS_VALUES
-				);
+				refreshAfterMutation();
 				if ( failed > 0 ) {
 					createNotice(
 						'error',
@@ -245,6 +251,97 @@ export default function PostsApp( { config } ) {
 			},
 		} );
 
+		// Delete Permanently is irreversible (force: true skips trash), so it
+		// confirms before mutating like the trash flow does.
+		const deletePermanentModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __(
+							'Are you sure you want to permanently delete this item? This cannot be undone.',
+							'wp-admin-shell'
+					  )
+					: __(
+							'Are you sure you want to permanently delete these items? This cannot be undone.',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Delete Permanently', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				deleteEntityRecord( 'postType', postType, item.id, {
+					force: true,
+				} ),
+			onSettled: ( { items, failed } ) => {
+				refreshAfterMutation();
+				if ( failed > 0 ) {
+					createNotice(
+						'error',
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d item failed to delete.',
+								'%1$d of %2$d items failed to delete.',
+								failed,
+								'wp-admin-shell'
+							),
+							failed,
+							items.length
+						),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		// Restore untrashes the selected rows. Classic wp-admin restores to the
+		// pre-trash status (`_wp_trash_meta_status`); REST doesn't expose that
+		// meta, so we restore to `draft` — an accepted divergence documented in
+		// docs/parity/posts.md (blocker #4).
+		const restore = async ( items ) => {
+			const results = await Promise.allSettled(
+				items.map( ( item ) =>
+					saveEntityRecord( 'postType', postType, {
+						id: item.id,
+						status: 'draft',
+					} )
+				)
+			);
+			refreshAfterMutation();
+			const failed = results.filter(
+				( r ) => r.status === 'rejected'
+			).length;
+			if ( failed > 0 ) {
+				createNotice(
+					'error',
+					sprintf(
+						/* translators: 1: failed item count, 2: total item count */
+						_n(
+							'%1$d of %2$d item failed to restore.',
+							'%1$d of %2$d items failed to restore.',
+							failed,
+							'wp-admin-shell'
+						),
+						failed,
+						items.length
+					),
+					{ type: 'snackbar' }
+				);
+			} else {
+				createNotice(
+					'success',
+					sprintf(
+						/* translators: %d: restored item count */
+						_n(
+							'%d item restored to draft.',
+							'%d items restored to draft.',
+							items.length,
+							'wp-admin-shell'
+						),
+						items.length
+					),
+					{ type: 'snackbar' }
+				);
+			}
+		};
+
 		return buildActions( dataViewConfig.actions, {
 			labels: ACTION_LABELS,
 			callbacks: {
@@ -257,13 +354,18 @@ export default function PostsApp( { config } ) {
 						'noopener,noreferrer'
 					);
 				},
+				restore,
 			},
-			modals: { trash: trashModal },
+			modals: {
+				trash: trashModal,
+				'delete-permanent': deletePermanentModal,
+			},
 		} );
 	}, [
 		dataViewConfig,
 		postType,
 		deleteEntityRecord,
+		saveEntityRecord,
 		invalidateResolution,
 		queryArgs,
 		createNotice,

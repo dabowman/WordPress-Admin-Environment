@@ -881,6 +881,28 @@
 				"taxonomy": "post_tag"
 			}
 		},
+		"posts-trash": {
+			"label": "Trash",
+			"icon": "trash",
+			"description": "Trashed posts — restore or permanently delete.",
+			"path": "/posts/trash",
+			"app": "core:posts",
+			"config": {
+				"postType": "post",
+				"status": "trash"
+			},
+			"dataViewRef": "postType/post/trash",
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post",
+				"post_status": "trash"
+			}
+		},
 		"pages": {
 			"label": "Pages",
 			"icon": "page",
@@ -1371,6 +1393,9 @@
 				},
 				"tags": {
 					"position": 40
+				},
+				"posts-trash": {
+					"position": 50
 				}
 			}
 		},

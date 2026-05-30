@@ -167,6 +167,24 @@
 					"invalidates": [
 						"postType/{config.postType}"
 					]
+				},
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Restore trashed posts (trash-variant `restore` action). `saveEntityRecord` with `status: 'draft'` — REST exposes no pre-trash status meta, so restore lands on draft (an accepted divergence from classic wp-admin; see docs/parity/posts.md blocker #4).",
+					"invalidates": [
+						"postType/{config.postType}"
+					]
+				},
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Permanently delete trashed posts (trash-variant `delete-permanent` action). `deleteEntityRecord(..., { force: true })` after a confirm modal — skips trash, irreversible.",
+					"invalidates": [
+						"postType/{config.postType}"
+					]
 				}
 			]
 		},
@@ -221,6 +239,20 @@
 			{
 				"trigger": "Trash bulk action",
 				"effect": "Open the confirm modal with a pluralized message; on confirm `Promise.allSettled(items.map(deleteEntityRecord(...)))` is awaited."
+			},
+			{
+				"trigger": "Restore row/bulk action (trash variant)",
+				"effect": "`saveEntityRecord('postType', postType, { id, status: 'draft' })` over the selected rows; success/partial-failure snackbar; list + status counts refresh. Restores to draft, not the pre-trash status (REST limitation).",
+				"guards": [
+					"item.status === 'trash'"
+				]
+			},
+			{
+				"trigger": "Delete Permanently row/bulk action (trash variant)",
+				"effect": "Open the confirm modal; on confirm `deleteEntityRecord('postType', postType, item.id, { force: true })` over the selected rows — irreversible.",
+				"guards": [
+					"item.status === 'trash'"
+				]
 			},
 			{
 				"trigger": "Change DataViews view (search / filter / sort / layout / page / perPage)",
