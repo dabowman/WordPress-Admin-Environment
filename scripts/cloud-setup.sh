@@ -61,18 +61,41 @@ else
 	warn "docker is not available — wp-env (PHP tests / live WP) will not start"
 fi
 
-# Optional Docker Hub auth. wp-env pulls mariadb + phpmyadmin from Docker Hub;
-# cloud sessions share an egress IP, so the ANONYMOUS pull rate limit is easy to
-# trip ("You have reached your unauthenticated pull rate limit" → 403 mid-pull).
-# Authenticating raises the ceiling dramatically. Set DOCKERHUB_USERNAME +
-# DOCKERHUB_TOKEN (a Docker Hub access token) as environment secrets to enable.
-if [ -n "${DOCKERHUB_TOKEN:-}" ] && [ -n "${DOCKERHUB_USERNAME:-}" ]; then
-	log "authenticating to Docker Hub as ${DOCKERHUB_USERNAME} (raises pull rate limit)..."
-	printf '%s' "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin >/dev/null 2>&1 \
-		&& log "Docker Hub login OK" \
-		|| warn "Docker Hub login failed — continuing anonymously (may hit pull rate limit)"
-else
-	log "no DOCKERHUB_USERNAME/DOCKERHUB_TOKEN set — pulling anonymously (subject to Docker Hub rate limit)"
+# --- Docker Hub images (credential-free, cache-aware) ----------------------
+# wp-env pulls four images from Docker Hub: mariadb:lts, phpmyadmin, and the
+# `wordpress` / `wordpress:cli` bases for its WP + CLI service builds. Cloud
+# sessions share an egress IP, so the ANONYMOUS pull rate limit can trip ("You
+# have reached your unauthenticated pull rate limit" → 403 mid-pull). Two things
+# keep this credential-free:
+#   - Docker images persist in /var/lib/docker between sessions, so we SKIP any
+#     image already cached — a warm session makes ZERO Docker Hub requests (even
+#     a cached re-pull spends a manifest request against the quota).
+#   - A cold pull retries with backoff to ride out transient throttling. A fully
+#     exhausted shared-IP quota only resets with time (~6h); the retry can't beat
+#     that, so we fail soft and let the agent retry the pull in-session later.
+ensure_image() {
+	img="$1"
+	if docker image inspect "$img" >/dev/null 2>&1; then
+		log "image cached, skipping pull: $img"
+		return 0
+	fi
+	for attempt in 1 2 3 4; do
+		if docker pull "$img" >/dev/null 2>&1; then
+			log "pulled: $img"
+			return 0
+		fi
+		warn "pull failed for $img (attempt ${attempt}/4) — backing off..."
+		sleep $(( attempt * attempt * 3 ))
+	done
+	warn "could not pull $img (Docker Hub rate limit?) — wp-env start may fail; retry in-session"
+	return 1
+}
+
+if docker info >/dev/null 2>&1; then
+	log "warming Docker Hub image cache (skips anything already cached)..."
+	for img in mariadb:lts phpmyadmin wordpress wordpress:cli; do
+		ensure_image "$img" || true
+	done
 fi
 
 # --- 2. Node dependencies + plugin build ----------------------------------
@@ -85,8 +108,18 @@ npm run build || warn "build failed — check the log above"
 # --- 3. WordPress via wp-env ----------------------------------------------
 # Pulls WP core + the Gutenberg plugin zip from *.wordpress.org and starts the
 # Docker stack. --update keeps core/plugins fresh; falls back to plain start.
-log "starting wp-env (first run pulls images + downloads WordPress)..."
-if npx wp-env start --update || npx wp-env start; then
+# Images were warmed above, so a healthy run starts containers without pulling.
+log "starting wp-env (first run downloads WordPress + builds containers)..."
+wp_env_up=""
+for attempt in 1 2 3; do
+	if npx wp-env start --update || npx wp-env start; then
+		wp_env_up="yes"
+		break
+	fi
+	warn "wp-env start failed (attempt ${attempt}/3) — backing off then retrying..."
+	sleep $(( attempt * 5 ))
+done
+if [ -n "$wp_env_up" ]; then
 	log "wp-env is up — dev site http://localhost:8888  |  test site http://localhost:8889"
 	# Sanity check that wp-cli works inside the container (this is how PHP tests run).
 	npx wp-env run cli wp core version 2>/dev/null \
@@ -94,11 +127,12 @@ if npx wp-env start --update || npx wp-env start; then
 		|| warn "wp-cli not reachable yet — give the DB a moment, then retry in-session"
 else
 	warn "wp-env start failed. Common causes, in order of likelihood:"
-	warn "  1. Docker Hub pull rate limit (403 'unauthenticated pull rate limit')"
-	warn "     → set DOCKERHUB_USERNAME + DOCKERHUB_TOKEN env secrets (see above)."
+	warn "  1. Docker Hub pull rate limit (403 'unauthenticated pull rate limit')."
+	warn "     Cached images make this a non-issue after the first successful run;"
+	warn "     a fully exhausted shared-IP quota resets with time (~6h). Retry"
+	warn "     in-session with: npx wp-env start"
 	warn "  2. *.wordpress.org not allowlisted (no WP core / Gutenberg to install)."
 	warn "  3. docker daemon not up (see step 1 above)."
-	warn "     Retry in-session with: npx wp-env start"
 fi
 
 # --- 4. Headless browser for screenshot review ----------------------------
