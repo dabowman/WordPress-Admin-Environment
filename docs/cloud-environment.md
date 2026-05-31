@@ -46,9 +46,31 @@ aborts the session).
    Without `*.wordpress.org`, `wp-env start` fails (no WordPress to install).
    Without the Playwright CDN, screenshots are unavailable but tests still run.
 
+4. **Docker Hub pull rate limit (recommended).** wp-env pulls the `mariadb` and
+   `phpmyadmin` images from Docker Hub. Cloud sessions share an egress IP, so the
+   **anonymous** pull limit is easy to trip — it surfaces as a `403 Forbidden`
+   mid-pull ("You have reached your unauthenticated pull rate limit") and
+   `wp-env start` aborts. Authenticating raises the ceiling substantially. Add
+   two **environment secrets**:
+
+   | Secret | Value |
+   |---|---|
+   | `DOCKERHUB_USERNAME` | your Docker Hub username |
+   | `DOCKERHUB_TOKEN` | a Docker Hub **access token** (Account → Security → New Access Token; read-only scope is enough) |
+
+   The setup script runs `docker login` with these before `wp-env start`. They're
+   optional — without them the script pulls anonymously and warns if it gets
+   rate-limited.
+
 That's it. New sessions re-run the setup script automatically. Docker **images**
 are cached between sessions; **containers** start fresh, so `wp-env start` runs
 each session (fast once images are cached).
+
+> **`@wordpress/env` is a committed devDependency.** It is otherwise only an
+> *optional* peer dependency of `@wordpress/scripts`, so `npm ci` would skip it
+> and every `npx wp-env …` call would 404 against the npm registry (there is no
+> bare `wp-env` package). It is pinned in `package.json` so `npm ci` always
+> installs the `wp-env` CLI.
 
 ## What the setup script provisions
 
@@ -106,6 +128,14 @@ Defaults match wp-env (`admin` / `password` on `:8888`). Override via
 
 ## Troubleshooting
 
+- **`wp-env start` fails with `403 Forbidden` / "unauthenticated pull rate
+  limit"** — Docker Hub throttled the shared egress IP. Set `DOCKERHUB_USERNAME`
+  + `DOCKERHUB_TOKEN` env secrets (see step 4 above) so the setup script
+  authenticates, or wait ~6h for the anonymous limit to reset, then
+  `npx wp-env start`.
+- **`npx wp-env` errors with `404 Not Found … 'wp-env@*' is not in this
+  registry`** — `@wordpress/env` isn't installed. Run `npm ci` (it's a committed
+  devDependency); npx 404s because there is no bare `wp-env` npm package.
 - **`wp-env start` hangs or fails** — confirm `*.wordpress.org` is allowlisted
   and `docker info` succeeds. Re-run `npx wp-env start`.
 - **`wp-cli not reachable`** — the DB container needs a few seconds after start;

@@ -61,6 +61,20 @@ else
 	warn "docker is not available — wp-env (PHP tests / live WP) will not start"
 fi
 
+# Optional Docker Hub auth. wp-env pulls mariadb + phpmyadmin from Docker Hub;
+# cloud sessions share an egress IP, so the ANONYMOUS pull rate limit is easy to
+# trip ("You have reached your unauthenticated pull rate limit" → 403 mid-pull).
+# Authenticating raises the ceiling dramatically. Set DOCKERHUB_USERNAME +
+# DOCKERHUB_TOKEN (a Docker Hub access token) as environment secrets to enable.
+if [ -n "${DOCKERHUB_TOKEN:-}" ] && [ -n "${DOCKERHUB_USERNAME:-}" ]; then
+	log "authenticating to Docker Hub as ${DOCKERHUB_USERNAME} (raises pull rate limit)..."
+	printf '%s' "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin >/dev/null 2>&1 \
+		&& log "Docker Hub login OK" \
+		|| warn "Docker Hub login failed — continuing anonymously (may hit pull rate limit)"
+else
+	log "no DOCKERHUB_USERNAME/DOCKERHUB_TOKEN set — pulling anonymously (subject to Docker Hub rate limit)"
+fi
+
 # --- 2. Node dependencies + plugin build ----------------------------------
 log "installing npm dependencies..."
 npm ci || npm install || warn "npm install failed"
@@ -79,15 +93,23 @@ if npx wp-env start --update || npx wp-env start; then
 		&& log "wp-cli reachable inside the container" \
 		|| warn "wp-cli not reachable yet — give the DB a moment, then retry in-session"
 else
-	warn "wp-env start failed — verify *.wordpress.org egress and that docker is up"
+	warn "wp-env start failed. Common causes, in order of likelihood:"
+	warn "  1. Docker Hub pull rate limit (403 'unauthenticated pull rate limit')"
+	warn "     → set DOCKERHUB_USERNAME + DOCKERHUB_TOKEN env secrets (see above)."
+	warn "  2. *.wordpress.org not allowlisted (no WP core / Gutenberg to install)."
+	warn "  3. docker daemon not up (see step 1 above)."
+	warn "     Retry in-session with: npx wp-env start"
 fi
 
 # --- 4. Headless browser for screenshot review ----------------------------
-# Installed globally so it doesn't touch package.json / package-lock.json.
-# scripts/screenshot.mjs resolves playwright from either a global or local install.
+# @wordpress/scripts pulls Playwright in as a local (transitive) dependency, and
+# scripts/screenshot.mjs resolves the LOCAL playwright first. Install the browser
+# for THAT exact version via the local binary so versions never skew (a global
+# `playwright` of a different version downloads a mismatched Chromium build the
+# launch then can't find). `--with-deps` adds the OS libraries Chromium needs.
 log "installing Playwright + Chromium for screenshots..."
-if npm install -g playwright >/dev/null 2>&1 \
-	&& npx --yes playwright install --with-deps chromium >/dev/null 2>&1; then
+if npx --no-install playwright install --with-deps chromium >/dev/null 2>&1 \
+	|| npx --yes playwright install --with-deps chromium >/dev/null 2>&1; then
 	log "Playwright Chromium ready — use: node scripts/screenshot.mjs <path> [out.png]"
 else
 	warn "Playwright/Chromium install failed — allowlist the Playwright CDN (see docs/cloud-environment.md)"
