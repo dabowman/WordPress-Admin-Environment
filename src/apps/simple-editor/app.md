@@ -4,7 +4,9 @@ Prose accompanying `app.json#documentation` for the inline minimal block editor.
 
 ## Overview
 
-SimpleEditorApp is the Substack-style entry: title + a constrained block tree + auto-save. It exists to prove the kernel can host a block editor inline (not iframed), and to be the reference implementation for shells that want a writer-focused editor without the full `@wordpress/edit-post` surface (post settings, plugins panel, distraction-free mode, etc.). Composes Gutenberg's primitives directly: `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList`. The block list renders in the shell's DOM tree so block styles inherit from the engine's ThemeProvider — no iframe boundary.
+SimpleEditorApp is the Substack-style entry: title + a constrained block tree + a native document-settings sidebar + auto-save. It exists to prove the kernel can host a block editor inline (not iframed), and to be the reference implementation for shells that want a writer-focused editor without the full `@wordpress/edit-post` surface (block inspector, plugins panel, distraction-free mode, etc.). Composes Gutenberg's primitives directly: `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList`. The block list renders in the shell's DOM tree so block styles inherit from the engine's ThemeProvider — no iframe boundary.
+
+**Guiding principle (issue #119).** `core:simple-editor` is a lightweight **content-creation** surface — writing / blogging, Substack-style — *not* page-building or design. The sidebar reuses core *plumbing* (the post entity, the `/autosaves` endpoint, `@wordpress/dataviews` / `@wordpress/components` control primitives, the core media modal) but **not** core's document **UI** (`@wordpress/editor`'s `EditorProvider` / `PostSchedule` / `PostTaxonomies`, which drag the heavy editor store in). It is native, built from `DataForm`-style field controls + a hand-rolled `PublishPanel`.
 
 ## Architecture
 
@@ -14,9 +16,26 @@ SimpleEditorApp is the Substack-style entry: title + a constrained block tree + 
 
 **Block-tree hydration.** A one-shot — parse `record.content.raw` after the first record arrives, set the `hydrated` flag, never re-parse. Re-parsing on subsequent records updates would clobber in-progress edits. Block state lives in local `useState` so the BlockEditorProvider has a stable identity; `onChange` syncs serialized HTML back to the entity edit via `edit({ content })`.
 
-**Auto-save.** A single `setTimeout` ref scheduled on every change while `hasEdits`. Two-second debounce; if another edit lands first, the existing timer is cleared. Publish/Update flushes the pending timer + calls `save()` synchronously so there's no double-save race.
+**Auto-save (shared hook).** The 2s-debounce autosave is the shared `useEntityAutosave` hook (`src/apps/_shared/forms/useEntityAutosave.js`), extracted from this app (issue #119) so the document-settings sidebar — and any future autosave-inspector host (e.g. #109 Media) — commits through one path. The hook owns: a single `setTimeout` ref scheduled on every change while `hasEdits` (cleared if another edit lands first), the save-status state machine, `useRestBase` (CPT `rest_base` derivation, issue #210), and the parent-vs-revision routing below. It returns `{ saveStatus, saveError, isBusy, runSave, flush, cancelPending }`. Publish/Update calls `flush()` (cancel pending timer + `save()` synchronously) so there's no double-save race.
 
-The autosave target is status-gated to mirror core's autosaves controller (`autosaveTarget()` in `autosave.mjs`): **draft / auto-draft** posts flush the accumulated edits to the live record via `save()` (`PUT`), just as core's controller calls `wp_update_post` on the parent. **Pending / published / private / scheduled (`future`)** posts route the debounced autosave to `POST /wp/v2/{segment}/{id}/autosaves` instead, writing a per-user autosave revision and leaving the live record untouched. The edits stay accumulated in `editedRecord` (`hasEdits` remains true) until the author explicitly clicks **Update**, which calls `save()` and pushes them live. Any unknown/missing status fails closed to the autosaves path so an unrecognised state can never clobber a live record. This closes the issue-#101 data-integrity divergence where every 2s debounce PUT the live published post.
+The autosave target is status-gated to mirror core's autosaves controller (`autosaveTarget()` in `autosave.mjs`, the pure unit-tested primitive the hook consumes): **draft / auto-draft** posts flush the accumulated edits to the live record via `save()` (`PUT`), just as core's controller calls `wp_update_post` on the parent. **Pending / published / private / scheduled (`future`)** posts route the debounced autosave to `POST /wp/v2/{rest_base}/{id}/autosaves` instead, writing a per-user autosave revision and leaving the live record untouched. The edits stay accumulated in `editedRecord` (`hasEdits` remains true) until the author explicitly clicks **Update**, which calls `save()` and pushes them live. Any unknown/missing status fails closed to the autosaves path so an unrecognised state can never clobber a live record. This closes the issue-#101 data-integrity divergence where every 2s debounce PUT the live published post.
+
+**Document-settings sidebar (issue #119).** A native sidebar rendered as `<Fill name="core:editor.sidebar">` (in `DocumentSettingsSidebar.js`), composing with the editor's `<Slot>` of the same name — plugin fills render alongside (after) the native panels, so the slot is never monopolized (the #20 plugin-extension vision). Every panel mutates the **same** `postType:{type}:{id}` entity via buffered `edit()`; the shared autosave debounce commits the changes. No new endpoint. Panels (each gated where appropriate on the resolved post-type entity's `supports` / `taxonomies` / `capabilities`):
+
+| Panel | Field(s) | Control |
+|---|---|---|
+| Status & visibility / Publish-Schedule (`PublishPanel`, hand-rolled) | `status` (`private`) + `password`, `date` | visibility `SelectControl`, password input, `datetime-local` |
+| URL | `slug` | text input |
+| Categories | `categories[]` | `CheckboxControl` checklist (taxonomy `categories`) |
+| Tags | `tags[]` | `FormTokenField` (taxonomy `tags`) |
+| Excerpt | `excerpt.raw` | `TextareaControl` |
+| Featured image | `featured_media` | `MediaUpload` / `MediaUploadCheck` (core media modal) |
+| Author | `author` | `SelectControl`, cap-gated on `edit_others_posts` |
+| Discussion | `comment_status`, `ping_status` | `FormToggle` ×2 (gated on comment support) |
+
+`PublishPanel` is the one deliberately hand-rolled bit — the *simple* version of core's publish matrix (Draft / Publish / Schedule / Private + password), bounded by the `block-editor.md` §4 field mapping. The toolbar Publish button sets `status` to `publish` / `private` / `future` (future-dated) and flushes.
+
+**Scope fences (explicit).** Document-tab metadata **only** — **NO Block tab / per-block inspector / block supports / design controls**, **NO Page Attributes** (parent / `menu_order` / template), **NO custom fields / meta**, **NO post-format / sticky**. The canvas stays the constrained core-block writing surface; design is left to future pre-made patterns, never this sidebar.
 
 > Core *also* gates the parent-update on the editor being the post author; this helper is status-only, so an admin autosaving someone else's draft PUTs the parent where core would write a revision. Lower-frequency, accepted divergence.
 
@@ -39,8 +58,9 @@ The Gutenberg primitives are tightly coupled — `BlockEditorProvider` expects a
 
 ## Known limitations
 
-- **Featured image, taxonomy, excerpt, scheduling** — out of scope for MVP. Future "post settings panel" adds them.
-- **Slot is exposed but no plugin contributes today.** `core:editor.sidebar` slot accepts `{ postId, postType, status }` fillProps; extensions would use this hook to add side panels without forking the app.
+- **Page Attributes / templates / custom meta / post-format / sticky** — deliberately **out of scope** (issue #119 scope fences), not a gap to be closed. The simple editor stays a writing surface; structural/design metadata belongs to the full `core:editor` (iframed) or to future pattern tooling.
+- **Tags create-on-the-fly is not supported.** The tag token field only assigns *existing* term ids — unknown tokens are dropped rather than creating a new tag via REST. Core's editor creates missing tags inline; matching that needs a `saveEntityRecord('taxonomy','tags',…)` per new token before assignment.
+- **`core:editor.sidebar` is a shared slot.** The native document-settings panels fill it via `<Fill>`; plugin fills (`{ postId, postType, status }` fillProps) render alongside. No plugin ships one today, but the slot is no longer empty.
 - **Hydration is one-shot.** Reloading the record from elsewhere in the app (e.g. an external panel mutating status) would not re-parse the block tree. Edge case but worth flagging.
 - **Block library registers all ~30 core blocks** even though `allowedBlockTypes` restricts the slash menu to nine. A future iteration may switch to per-block lazy registration via `registerCoreBlock` to avoid loading unused blocks.
 - **`editedRecord.title` shape inconsistency** — sometimes a string (from a previous local edit), sometimes an object (from REST). The titleValue reader handles both; `core-data` should arguably normalize this.

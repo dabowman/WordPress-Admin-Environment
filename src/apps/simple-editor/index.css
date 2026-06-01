@@ -33,6 +33,25 @@
 	color: var(--wpds-color-fg-content-success-weak);
 }
 
+.wp-admin-shell-app-simple-editor__main {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+}
+
+.wp-admin-shell-app-simple-editor__sidebar {
+	flex-shrink: 0;
+	width: 280px;
+	overflow: auto;
+	border-left: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
+	background: var(--wpds-color-bg-surface-neutral-strong);
+}
+
+.wp-admin-shell-app-simple-editor__sidebar:empty {
+	display: none;
+}
+
 .wp-admin-shell-app-simple-editor__body {
 	flex: 1;
 	overflow: auto;
