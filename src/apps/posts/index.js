@@ -214,6 +214,14 @@ function buildFieldRenderers( postType ) {
 // inputs, mirroring how wp-admin omits Sticky/Format on the Pages list.
 const POST_ONLY_BULK_FIELDS = [ 'sticky', 'format', 'categories', 'tags' ];
 
+// Filter/column field specs whose categorical options only populate for `post`:
+// `categories` resolves the category taxonomy and `format` the post-format set.
+// On a non-`post` binding (the Pages screen reuses PostsApp) these field specs
+// would otherwise surface in the DataViews filter UI with empty option sets, so
+// drop the specs entirely — mirroring how POST_ONLY_BULK_FIELDS gates the
+// bulk-edit form.
+const POST_ONLY_FILTER_FIELDS = [ 'categories', 'format' ];
+
 /**
  * Bulk-edit DataForm fields. Every field is seeded to the `NO_CHANGE` sentinel
  * by `createBulkEditModal`; `fieldsWithNoChange` injects the matching
@@ -478,33 +486,40 @@ export default function PostsApp( { config } ) {
 		} ) );
 	}, [ records ] );
 
-	const fields = useMemo(
-		() =>
-			buildFields( dataViewConfig.fields, {
-				labels: FIELD_LABELS,
-				renderers: buildFieldRenderers( postType ),
-				elementFallbacks: {
-					status: elementsFromLabels( STATUS_LABELS ),
-					// `format` is a finite known set — feed a static element list
-					// so the categorical filter dropdown has options. (`post`
-					// only; `format` isn't a registered REST param elsewhere.)
-					...( postType === 'post'
-						? { format: elementsFromLabels( FORMAT_LABELS ) }
-						: {} ),
-				},
-				elementCounts: {
-					status: statusCounts,
-				},
-				// `categories` options are dynamic — DataViews resolves them
-				// lazily via `getElements` (fetching the category terms through
-				// core-data). `post` only, mirroring the registered taxonomy.
-				getElements:
-					postType === 'post'
-						? { categories: makeTaxonomyElements( 'category' ) }
-						: {},
-			} ),
-		[ dataViewConfig, postType, statusCounts ]
-	);
+	const fields = useMemo( () => {
+		// On a non-`post` binding the `categories`/`format` filters carry no
+		// resolvable options, so drop their field specs rather than surface
+		// empty filter dropdowns (mirrors the POST_ONLY_BULK_FIELDS gate).
+		const fieldSpecs =
+			postType === 'post'
+				? dataViewConfig.fields
+				: dataViewConfig.fields.filter(
+						( f ) => ! POST_ONLY_FILTER_FIELDS.includes( f.id )
+				  );
+		return buildFields( fieldSpecs, {
+			labels: FIELD_LABELS,
+			renderers: buildFieldRenderers( postType ),
+			elementFallbacks: {
+				status: elementsFromLabels( STATUS_LABELS ),
+				// `format` is a finite known set — feed a static element list
+				// so the categorical filter dropdown has options. (`post`
+				// only; `format` isn't a registered REST param elsewhere.)
+				...( postType === 'post'
+					? { format: elementsFromLabels( FORMAT_LABELS ) }
+					: {} ),
+			},
+			elementCounts: {
+				status: statusCounts,
+			},
+			// `categories` options are dynamic — DataViews resolves them
+			// lazily via `getElements` (fetching the category terms through
+			// core-data). `post` only, mirroring the registered taxonomy.
+			getElements:
+				postType === 'post'
+					? { categories: makeTaxonomyElements( 'category' ) }
+					: {},
+		} );
+	}, [ dataViewConfig, postType, statusCounts ] );
 
 	const actions = useMemo( () => {
 		// Status mutations move rows between filters, so the list query and the
