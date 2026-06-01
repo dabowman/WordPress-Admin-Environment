@@ -2,9 +2,23 @@
 /**
  * Tests for `src/apps/_shared/dataviews/buildQueryArgs.mjs`.
  *
- * Verifies that the declarative view→REST mapper produces the same query-args
- * object that the three hand-rolled `useMemo` mappers in posts/users/comments
- * produce, so those apps can adopt it without behavioral regressions.
+ * Verifies that the declarative view→REST mapper produces query-args objects
+ * shaped like the three hand-rolled `useMemo` mappers in posts/users/comments,
+ * so those apps can adopt it.
+ *
+ * IMPORTANT — these are SYNTHETIC parity snapshots, not diffs of the live
+ * mappers. The "parity" blocks below (Posts / Users / Comments) hand-code the
+ * expected REST args; they do NOT `import` and run the real `useMemo` mappers
+ * from `src/apps/{posts,users,comments}/index.js` and deep-equal against them.
+ * So the suite proves `buildQueryArgs` is internally self-consistent and emits
+ * the *intended* shape — it does NOT prove byte-for-byte equivalence with the
+ * code being replaced. Known intentional divergences from the hand-rolled
+ * mappers (documented in buildQueryArgs.mjs): `is` skips ''/null/undefined
+ * (some mappers assign unconditionally), `isAny` drops empty array members
+ * before joining (some mappers raw-join), and `per_page`/`page` are omitted
+ * when absent (mappers assign undefined). When the apps actually adopt
+ * buildQueryArgs (#214), add a real diff-test: run both old + new fns over a
+ * view matrix and assert deep-equal. Don't over-trust these snapshots.
  *
  * Coverage:
  *   - Pagination (perPage / page, default param names, custom param names)
@@ -224,7 +238,7 @@ ok(
 );
 
 ok(
-	'`is` filter with falsy value (null) is skipped',
+	'`is` filter with null value is skipped',
 	! (
 		'status' in
 		buildQueryArgs(
@@ -232,6 +246,47 @@ ok(
 			{ filters: { status: { is: 'status' } } }
 		)
 	)
+);
+
+ok(
+	'`is` filter with undefined value is skipped',
+	! (
+		'status' in
+		buildQueryArgs(
+			{
+				filters: [
+					{ field: 'status', operator: 'is', value: undefined },
+				],
+			},
+			{ filters: { status: { is: 'status' } } }
+		)
+	)
+);
+
+// Pinning test for review finding (d): the skip is ''/null/undefined ONLY,
+// NOT a blanket falsy check. A numeric `0` filter value must pass through.
+ok(
+	'`is` filter KEEPS value 0 (not skipped — 0 is not empty/null/undefined)',
+	( () => {
+		const r = buildQueryArgs(
+			{ filters: [ { field: 'author', operator: 'is', value: 0 } ] },
+			{ filters: { author: { is: 'author' } } }
+		);
+		return 'author' in r && r.author === 0;
+	} )()
+);
+
+// Pinning test for review finding (d): a boolean `false` filter value must
+// also pass through, since `false` is falsy but not ''/null/undefined.
+ok(
+	'`is` filter KEEPS value false (not skipped — false is not empty/null/undefined)',
+	( () => {
+		const r = buildQueryArgs(
+			{ filters: [ { field: 'sticky', operator: 'is', value: false } ] },
+			{ filters: { sticky: { is: 'sticky' } } }
+		);
+		return 'sticky' in r && r.sticky === false;
+	} )()
 );
 
 ok(
@@ -312,6 +367,27 @@ ok(
 			{ filters: { roles: { isAny: 'roles' } } }
 		);
 		return r.roles === 'admin';
+	} )()
+);
+
+// Pinning test for review finding (d): the per-member drop is ''/null/undefined
+// ONLY — `0` and `false` members survive the join (not a blanket falsy filter).
+ok(
+	'`isAny` KEEPS 0 / false members within array (drops only ""/null/undefined)',
+	( () => {
+		const r = buildQueryArgs(
+			{
+				filters: [
+					{
+						field: 'flags',
+						operator: 'isAny',
+						value: [ 0, '', false, null, undefined, 1 ],
+					},
+				],
+			},
+			{ filters: { flags: { isAny: 'flags' } } }
+		);
+		return r.flags === '0,false,1';
 	} )()
 );
 

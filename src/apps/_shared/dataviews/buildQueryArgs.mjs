@@ -29,13 +29,24 @@
  *     defaultDirection: 'desc',
  *   },
  *
- *   // Pagination: REST param names for perPage / page.
+ *   // Pagination: REST param names. `view.perPage` → `per_page`,
+ *   // `view.page` → `page` (the REST defaults). A `null`/`undefined`
+ *   // `perPage`/`page` omits the key entirely rather than emitting an
+ *   // undefined value — functionally equivalent at the REST layer (the
+ *   // server falls back to its own default), and in practice `view` always
+ *   // carries both from VIEW_DEFAULTS so the guard is rarely hit.
  *   pagination: {
  *     perPage: 'per_page',  // default
  *     page: 'page',         // default
  *   },
  *
- *   // Filters: per-field config keyed by DataViews field id.
+ *   // Filters: per-field config keyed by DataViews field id. The value at
+ *   // each operator key (`is` / `isAny`) is the REST param name to emit —
+ *   // this matches what posts/users/comments REST expect: `is` → a single
+ *   // scalar param (e.g. `status=draft`, `author=5`), `isAny` → the same
+ *   // param carrying a CSV of the selected values (e.g. `status=draft,pending`,
+ *   // `roles=editor,author`). DataViews' multi-select filters surface as
+ *   // `isAny`; single-select as `is`.
  *   filters: {
  *     status: {
  *       // 'is' operator → REST param = filter.value (scalar).
@@ -59,10 +70,14 @@
  *
  * | Operator | Behaviour |
  * |----------|-----------|
- * | `is`     | Sets `restParam = filter.value` (scalar). Skipped when value is
- * |          | falsy (empty string, null, undefined). |
- * | `isAny`  | Joins `filter.value[]` as CSV into `restParam`. Skipped when the
- * |          | normalised array is empty. Non-array value is wrapped. |
+ * | `is`     | Sets `restParam = filter.value` (scalar). Skipped when the value
+ * |          | is empty string, null, or undefined — but `0` and `false` are
+ * |          | kept (a numeric `author: 0` or a boolean filter must pass
+ * |          | through). NOT a blanket falsy check. |
+ * | `isAny`  | Joins `filter.value[]` as CSV into `restParam`. Empty-string /
+ * |          | null / undefined members are dropped before joining (`0` and
+ * |          | `false` are kept). Skipped when the normalised array is empty.
+ * |          | Non-array value is wrapped. |
  *
  * Unrecognised operators are silently ignored — this matches the current
  * hand-rolled behavior (`isAll` is explicitly unhandled everywhere).
