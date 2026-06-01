@@ -410,15 +410,18 @@ $T::assert_eq(
 
 // --- contribute(): custom container label preserved across origins ------
 // The shared `ingested` container only collects submenus parented to a
-// CORE wp-admin slug (orphans the shell doesn't mirror natively). Use
-// such a submenu so ensure_container()'s preserve branch is exercised.
+// CORE wp-admin slug the shell does NOT mirror natively (orphans). Use
+// `import.php` — a core slug NOT in $CORE_PARENT_MENU — so the fallback
+// `ingested` container branch + ensure_container()'s preserve path are
+// exercised. (tools.php / options-general.php now nest under their real
+// shell parent — see the #127 "core nest" block below.)
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
-	array( 'Tools', 'edit_posts', 'tools.php', 'Tools', '', '', 'dashicons-admin-tools' ),
+	array( 'Import', 'import', 'import.php', 'Import', '', '', 'dashicons-download' ),
 );
 $GLOBALS['submenu'] = array(
-	'tools.php' => array(
+	'import.php' => array(
 		array( 'Custom Tool', 'manage_options', 'custom-tool-page' ),
 	),
 );
@@ -444,7 +447,7 @@ $T::assert_eq(
 );
 $T::assert_true(
 	'contribute: bridge writes the core-parented orphan into the custom-labeled container',
-	isset( $doc['menu']['ingested']['items']['ingested-tools-php'] )
+	isset( $doc['menu']['ingested']['items']['ingested-import-php'] )
 );
 
 // --- contribute(): idempotency — filter twice doesn't duplicate ---------
@@ -502,30 +505,34 @@ $T::assert_true(
 	isset( $doc['menu']['ingested-my-plugin-page']['items']['ingested-my-plugin-settings'] )
 );
 
-// --- contribute(): synthesized container under core parent --------------
+// --- contribute(): synthesized container under UNMAPPED core parent -----
+// import.php is a core slug NOT in $CORE_PARENT_MENU, so its orphan plugin
+// children get a synthesized container inside the generic `ingested`
+// bucket. (Mapped core parents — tools.php / options-general.php — nest
+// directly under their real shell parent; see the #127 "core nest" block.)
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
-	array( 'Tools', 'edit_posts', 'tools.php', 'Tools', '', '', 'dashicons-admin-tools' ),
+	array( 'Import', 'import', 'import.php', 'Import', '', '', 'dashicons-download' ),
 );
 $GLOBALS['submenu'] = array(
-	'tools.php' => array(
+	'import.php' => array(
 		array( 'Custom Tool', 'manage_options', 'custom-tool-page' ),
 	),
 );
 $doc = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
 $T::assert_true(
 	'contribute: synthesized container screen created for core parent',
-	isset( $doc['screens']['ingested-tools-php'] )
+	isset( $doc['screens']['ingested-import-php'] )
 );
 $T::assert_true(
 	'contribute: synthesized container screen is hidden',
-	! empty( $doc['screens']['ingested-tools-php']['hidden'] )
+	! empty( $doc['screens']['ingested-import-php']['hidden'] )
 );
 $T::assert_eq(
 	'contribute: synthesized container has the core parent label',
-	$doc['menu']['ingested']['items']['ingested-tools-php']['label'],
-	'Tools'
+	$doc['menu']['ingested']['items']['ingested-import-php']['label'],
+	'Import'
 );
 $T::assert_true(
 	'contribute: synthesized container child screen created',
@@ -533,7 +540,7 @@ $T::assert_true(
 );
 $T::assert_true(
 	'contribute: synthesized container child nested in menu tree',
-	isset( $doc['menu']['ingested']['items']['ingested-tools-php']['items']['ingested-custom-tool-page'] )
+	isset( $doc['menu']['ingested']['items']['ingested-import-php']['items']['ingested-custom-tool-page'] )
 );
 
 // --- scan(): wp-admin separator rows are skipped ------------------------
@@ -673,6 +680,207 @@ $T::assert_eq(
 	$collision_doc['menu']['ingested-my-plugin-page']['label'],
 	'Custom override label'
 );
+
+// --- #127: map_icon_source() — arbitrary-icon escape hatch ---------------
+
+$T::assert_eq(
+	'icon source: dashicons-* → null (name registry covers it)',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( 'dashicons-cart' ),
+	null
+);
+$T::assert_eq(
+	'icon source: empty → null',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( '' ),
+	null
+);
+$T::assert_eq(
+	'icon source: "none" sentinel → null',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( 'none' ),
+	null
+);
+$T::assert_eq(
+	'icon source: data-URI SVG → { type: url, value }',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' ),
+	array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' )
+);
+$T::assert_eq(
+	'icon source: absolute http(s) image URL → { type: url, value }',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( 'https://example.com/wp-content/plugins/acme/icon.png' ),
+	array( 'type' => 'url', 'value' => 'https://example.com/wp-content/plugins/acme/icon.png' )
+);
+$T::assert_eq(
+	'icon source: site-relative image path → { type: url, value }',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( '/wp-content/plugins/acme/icon.svg' ),
+	array( 'type' => 'url', 'value' => '/wp-content/plugins/acme/icon.svg' )
+);
+$T::assert_eq(
+	'icon source: protocol-relative URL → { type: url, value }',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( '//cdn.example.com/icon.png' ),
+	array( 'type' => 'url', 'value' => '//cdn.example.com/icon.png' )
+);
+$T::assert_eq(
+	'icon source: bare non-image relative path → null (not an icon URL)',
+	WP_Admin_Shell_Classic_Menu_Bridge::map_icon_source( '/some/path' ),
+	null
+);
+
+// --- #127: scan() carries numeric position + iconSource -----------------
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+// Keys are the wp-admin numeric position. A data-URI icon exercises
+// iconSource; a dashicon entry confirms iconSource stays null there.
+$GLOBALS['menu'] = array(
+	58 => array( 'Acme', 'manage_options', 'acme-page', 'Acme', '', '', 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' ),
+	72 => array( 'Beta', 'manage_options', 'beta-page', 'Beta', '', '', 'dashicons-admin-tools' ),
+);
+$pos_records = WP_Admin_Shell_Classic_Menu_Bridge::scan();
+$acme = null;
+$beta = null;
+foreach ( $pos_records as $r ) {
+	if ( $r['id'] === 'ingested-acme-page' ) {
+		$acme = $r;
+	}
+	if ( $r['id'] === 'ingested-beta-page' ) {
+		$beta = $r;
+	}
+}
+$T::assert_eq(
+	'scan: numeric position carried from the menu array key (acme)',
+	$acme['position'],
+	58
+);
+$T::assert_eq(
+	'scan: numeric position carried from the menu array key (beta)',
+	$beta['position'],
+	72
+);
+$T::assert_eq(
+	'scan: data-URI icon → iconSource { type: url }, name icon falls back to menu',
+	array( $acme['icon'], $acme['iconSource'] ),
+	array( 'menu', array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' ) )
+);
+$T::assert_eq(
+	'scan: dashicon icon → iconSource null (name registry covers it)',
+	$beta['iconSource'],
+	null
+);
+
+// --- #127: contribute() stamps position + iconSource on menu/screen -----
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	58 => array( 'Acme', 'manage_options', 'acme-page', 'Acme', '', '', 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' ),
+);
+$pos_doc = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
+$T::assert_eq(
+	'contribute: menu item carries the numeric position',
+	$pos_doc['menu']['ingested-acme-page']['position'],
+	58
+);
+$T::assert_eq(
+	'contribute: menu item carries iconSource for a data-URI icon',
+	$pos_doc['menu']['ingested-acme-page']['iconSource'],
+	array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' )
+);
+$T::assert_eq(
+	'contribute: screen carries iconSource for a data-URI icon',
+	$pos_doc['screens']['ingested-acme-page']['iconSource'],
+	array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' )
+);
+
+// --- #127: core-parented submenu nests under the REAL shell parent ------
+// A plugin submenu under tools.php nests under `menu.tools.items`, NOT the
+// generic `ingested` container. options-general.php → `menu.settings.items`.
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Tools', 'edit_posts', 'tools.php', 'Tools', '', '', 'dashicons-admin-tools' ),
+	array( 'Settings', 'manage_options', 'options-general.php', 'Settings', '', '', 'dashicons-admin-settings' ),
+);
+$GLOBALS['submenu'] = array(
+	'tools.php'           => array(
+		array( 'Acme Export', 'manage_options', 'acme-export' ),
+	),
+	'options-general.php' => array(
+		array( 'Acme Settings', 'manage_options', 'acme-settings' ),
+	),
+);
+$nest_doc = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
+$T::assert_true(
+	'core nest: tools.php child nests under menu.tools.items (real shell parent)',
+	isset( $nest_doc['menu']['tools']['items']['ingested-acme-export'] )
+);
+$T::assert_true(
+	'core nest: options-general.php child nests under menu.settings.items (real shell parent)',
+	isset( $nest_doc['menu']['settings']['items']['ingested-acme-settings'] )
+);
+$T::assert_true(
+	'core nest: NO generic ingested container created for mapped core parents',
+	! isset( $nest_doc['menu']['ingested'] )
+);
+$T::assert_true(
+	'core nest: tools.php child still gets a backing screen',
+	isset( $nest_doc['screens']['ingested-acme-export'] )
+);
+$T::assert_eq(
+	'core nest: tools.php child screen iframe app id',
+	$nest_doc['screens']['ingested-acme-export']['app'],
+	'iframe:admin.php?page=acme-export'
+);
+
+// --- #127: an UNMAPPED core parent still falls back to ingested ---------
+// import.php is a core slug but NOT in $CORE_PARENT_MENU, so its orphaned
+// plugin children land in the generic `ingested` container as before.
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Import', 'import', 'import.php', 'Import', '', '', 'dashicons-download' ),
+);
+$GLOBALS['submenu'] = array(
+	'import.php' => array(
+		array( 'Acme Importer', 'manage_options', 'acme-importer' ),
+	),
+);
+$fallback_doc = WP_Admin_Shell_Classic_Menu_Bridge::contribute( array() );
+$T::assert_true(
+	'core fallback: unmapped core parent (import.php) uses the ingested container',
+	isset( $fallback_doc['menu']['ingested']['items']['ingested-import-php'] )
+);
+
+// --- #127: menu-items bind_screens flows screen iconSource onto item ----
+// The third-party top-level menu emits a bare menu node + a screen carrying
+// iconSource; bind_screens (priority 5, post-merge) must copy it onto the
+// bound item the same way it copies `icon`.
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
+$bind_doc = array(
+	'screens' => array(
+		'ingested-acme-page' => array(
+			'label'      => 'Acme',
+			'icon'       => 'menu',
+			'iconSource' => array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' ),
+			'path'       => '/admin/acme-page',
+			'app'        => 'iframe:admin.php?page=acme-page',
+		),
+	),
+	'menu'    => array(
+		'ingested-acme-page' => array( 'position' => 58 ),
+	),
+);
+$bound = WP_Admin_Shell_Menu_Items::bind_screens( $bind_doc );
+$T::assert_eq(
+	'bind_screens: screen iconSource flows onto the bound menu item',
+	$bound['menu']['ingested-acme-page']['iconSource'],
+	array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' )
+);
+
+wpas_cmb_reset_globals();
+WP_Admin_Shell_Classic_Menu_Bridge::reset();
 
 // --- Restore globals -----------------------------------------------------
 

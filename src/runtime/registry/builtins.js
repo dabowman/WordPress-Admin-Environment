@@ -155,12 +155,6 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-site-editor" */ '../../apps/site-editor'
 			),
 	},
-	'core:dashboard': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard" */ '../../apps/dashboard'
-			),
-	},
 	'core:plugins': {
 		load: () =>
 			import(
@@ -241,6 +235,18 @@ const APP_LOADERS = {
 		load: () =>
 			import(
 				/* webpackChunkName: "app-dashboard-host" */ '../../apps/dashboard-host'
+			),
+	},
+	'core:dashboard-widget-at-a-glance': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-at-a-glance" */ '../../apps/dashboard-widget-at-a-glance'
+			),
+	},
+	'core:dashboard-widget-activity': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-activity" */ '../../apps/dashboard-widget-activity'
 			),
 	},
 	'core:dashboard-widget-recent-posts': {

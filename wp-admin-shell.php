@@ -118,6 +118,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preloa
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-chrome-harvest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
@@ -572,6 +573,18 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		'engineModes'   => $active_engine_manifest
 			? WP_Admin_Shell_Modes::resolve_engine_modes( $active_engine_manifest )
 			: WP_Admin_Shell_Modes::synthesize_default_catalog(),
+		// #128 — admin-bar runtime harvest. Plugin admin-bar nodes the
+		// shell doesn't own first-class (site-hub / user-menu / +New are
+		// skipped), folded submenus → dropdowns. `core:toolbar-actions`
+		// reads this global. Empty array when no plugin registers a node.
+		'adminBar'      => WP_Admin_Shell_Chrome_Harvest::harvest_admin_bar(),
+		// #128 — buffered global `admin_notices` HTML (admin trust, same as
+		// classic). `core:notices-banner` renders it alongside its
+		// `@wordpress/notices` source. Empty string when none fire.
+		// Documented limitation: only GLOBAL notices that fire on the
+		// shell's own page load are captured (per-screen notices keyed on
+		// `$pagenow` don't fire) — see the harvest class docblock.
+		'adminNotices'  => WP_Admin_Shell_Chrome_Harvest::capture_admin_notices(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '

@@ -874,6 +874,16 @@
 					"app": "core:dashboard-host"
 				},
 				{
+					"id": "at-a-glance",
+					"app": "core:dashboard-widget-at-a-glance",
+					"slot": "grid"
+				},
+				{
+					"id": "activity",
+					"app": "core:dashboard-widget-activity",
+					"slot": "grid"
+				},
+				{
 					"id": "recent-posts",
 					"app": "core:dashboard-widget-recent-posts",
 					"slot": "grid"

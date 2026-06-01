@@ -10,6 +10,7 @@ import { Stack } from '@wordpress/ui';
 import { chevronDown, chevronRight } from '@wordpress/icons';
 
 import { resolveIcon } from '../../../runtime/config/iconMap';
+import ArbitraryIcon from '../../_shared/icons/ArbitraryIcon';
 import SidebarNavigationItem from '../_components/SidebarNavigationItem';
 import {
 	hashPrimary,
@@ -112,7 +113,13 @@ function TreeBranch( { item, currentPrimary, depth } ) {
 					align="center"
 					gap="sm"
 				>
-					{ depth === 0 && item.icon && (
+					{ depth === 0 && item.iconSource && (
+						<ArbitraryIcon
+							iconSource={ item.iconSource }
+							size={ 24 }
+						/>
+					) }
+					{ depth === 0 && ! item.iconSource && item.icon && (
 						<Icon
 							style={ { fill: 'currentcolor' } }
 							icon={ resolveIcon( item.icon ) }
@@ -144,6 +151,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 			<SidebarNavigationItem
 				uid={ `ext-${ item.id || index }` }
 				icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
+				iconSource={ depth === 0 ? item.iconSource : undefined }
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
@@ -169,6 +177,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 		<SidebarNavigationItem
 			uid={ `nav-${ item.id || index }` }
 			icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
+			iconSource={ depth === 0 ? item.iconSource : undefined }
 			isActive={ isActive }
 			href={ item.href }
 			style={ depthStyle( depth ) }

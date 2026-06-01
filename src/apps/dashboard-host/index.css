@@ -1,3 +1,29 @@
+.wp-admin-shell-dashboard {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpds-dimension-padding-xl);
+	inline-size: 100%;
+	box-sizing: border-box;
+}
+
+.wp-admin-shell-dashboard__greeting {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpds-dimension-padding-2xs);
+}
+
+.wp-admin-shell-dashboard__greeting-title {
+	margin: 0;
+	font-size: var(--wpds-font-size-heading-xl, 1.75rem);
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.wp-admin-shell-dashboard__greeting-subtitle {
+	margin: 0;
+	color: var(--wpds-color-fg-content-neutral-weak);
+}
+
 .wp-admin-shell-dashboard-host {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

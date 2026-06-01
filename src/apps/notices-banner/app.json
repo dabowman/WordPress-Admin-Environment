@@ -23,6 +23,11 @@
 					"via": "core-data",
 					"purpose": "All current notices via `getNotices()` selector.",
 					"fields": [ "id", "type", "status", "content", "isDismissible" ]
+				},
+				{
+					"source": "window.wpAdminShell.adminNotices",
+					"via": "window-global",
+					"purpose": "Admin-notices harvest (#128): global `admin_notices` HTML buffered server-side by WP_Admin_Shell_Chrome_Harvest. Rendered unchanged (admin trust) inside one neutral Notice.Root, locally dismissible. Global-only — per-screen `$pagenow`-keyed notices don't fire on the shell page."
 				}
 			],
 			"writes": [
@@ -35,19 +40,22 @@
 			]
 		},
 		"states": [
-			{ "id": "empty", "when": "No default-context notices", "renders": "Nothing (return null)." },
-			{ "id": "ready", "when": "At least one default notice", "renders": "Stack of `Notice.Root` banners (one per notice)." }
+			{ "id": "empty", "when": "No default-context notices and no harvested admin_notices HTML", "renders": "Nothing (return null)." },
+			{ "id": "ready", "when": "At least one default notice OR harvested HTML present", "renders": "Stack of `Notice.Root` banners (one per notice) + (when present) a neutral banner wrapping the harvested admin_notices HTML." }
 		],
 		"interactions": [
 			{ "trigger": "App calls `createNotice('success'|'error'|'warning'|'info', message, { type: 'default', isDismissible })`", "effect": "Banner appears." },
-			{ "trigger": "Click close icon", "effect": "`removeNotice(notice.id)` — banner disappears.", "guards": [ "notice.isDismissible === true" ] }
+			{ "trigger": "Click close icon on a store notice", "effect": "`removeNotice(notice.id)` — banner disappears.", "guards": [ "notice.isDismissible === true" ] },
+			{ "trigger": "Click close icon on the harvested banner", "effect": "Local `useState` hides the harvested HTML for the session (no server round-trip)." }
 		],
 		"a11y": {
-			"screen-reader": "`Notice.Root` from `@wordpress/ui` sets ARIA attributes appropriate to the intent (`role=\"alert\"` for error, `role=\"status\"` for info)."
+			"screen-reader": "`Notice.Root` from `@wordpress/ui` sets ARIA attributes appropriate to the intent (`role=\"alert\"` for error, `role=\"status\"` for info). The harvested banner uses the neutral intent."
 		},
 		"constraints": [
 			{ "concern": "context-filter", "note": "Only `type: 'default'` notices land here. `type: 'snackbar'` notices go to `core:notices-snackbar` (separate app, different region)." },
-			{ "concern": "intent-mapping", "note": "WordPress's notice `status` field maps to WPDS Notice `intent`: `error` → `error`, `warning` → `warning`, `success` → `success`, `info` → `info`. Unknown statuses fall back to `info`." }
+			{ "concern": "intent-mapping", "note": "WordPress's notice `status` field maps to WPDS Notice `intent`: `error` → `error`, `warning` → `warning`, `success` → `success`, `info` → `info`. Unknown statuses fall back to `info`." },
+			{ "concern": "admin-notices-global-only", "note": "`admin_notices` is a per-page-render hook; only GLOBAL notices firing on the shell's own page load are captured (#128). Per-screen notices keyed on `$pagenow`/the current classic screen don't fire and aren't surfaced. Global-only is the accepted interim — proper fix is a notices REST surface (upstream #155)." },
+			{ "concern": "admin-notices-trust", "note": "Harvested `admin_notices` HTML is admin-context (same trust as classic wp-admin), rendered unchanged via `dangerouslySetInnerHTML` inside the already-admin-gated workspace. See docs/runtime-harvest-pattern.md → Trust." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#Notice", "purpose": "Notice.Root + Notice.Description + Notice.Actions + Notice.CloseIcon — banner primitives." },
