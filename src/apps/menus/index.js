@@ -2,7 +2,7 @@ import './index.css';
 import '../_shared/app.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { Badge, Button, Icon, Stack, Text } from '@wordpress/ui';
 import {
@@ -190,6 +190,13 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 	const { createSuccessNotice, createErrorNotice } =
 		useDispatch( noticesStore );
 
+	// `saveEntityRecord` / `deleteEntityRecord` resolve (not reject) on a REST
+	// failure and stash the error in these selectors — the direct-mutation
+	// handlers below consult them to detect server failures. `useSelect`
+	// returns the store's bound selectors directly (stable refs).
+	const { getLastEntitySaveError, getLastEntityDeleteError } =
+		useSelect( coreStore );
+
 	const itemsQuery = useMemo(
 		() => ( {
 			menus: activeMenuId,
@@ -233,15 +240,34 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 	}, [ invalidateResolution ] );
 
 	// ── Persist one menu-item field set, then refresh ──────────────────────
+	// `saveEntityRecord` does NOT reject on a REST failure — it resolves
+	// `undefined` and records the error in `getLastEntitySaveError` (see
+	// `_shared/forms/useEntitySave.js:12-21`). Throw on a falsy record so the
+	// `try/catch` blocks in moveItem/indentItem/outdentItem surface the error
+	// notice, mirroring the `if ( ! record ) throw` guard in MenuItemModal.
 	const patchItem = useCallback(
 		async ( id, payload ) => {
 			const saved = await saveEntityRecord( 'root', 'menuItem', {
 				id,
 				...payload,
 			} );
+			if ( ! saved ) {
+				const saveError = getLastEntitySaveError(
+					'root',
+					'menuItem',
+					id
+				);
+				throw new Error(
+					saveError?.message ||
+						__(
+							'The menu item could not be saved.',
+							'wp-admin-shell'
+						)
+				);
+			}
 			return saved;
 		},
-		[ saveEntityRecord ]
+		[ saveEntityRecord, getLastEntitySaveError ]
 	);
 
 	// ── Reorder: move an item up/down among its siblings ───────────────────
@@ -270,13 +296,18 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
 					await patchItem( c.id, { menu_order: c.menu_order } );
 				}
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to reorder item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync regardless of mid-loop failure: earlier PATCHes have
+				// already committed server-side, so refresh to whatever state
+				// the server actually holds rather than leaving the list in a
+				// partially-reordered / duplicate-`menu_order` shape.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
@@ -298,13 +329,16 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					parent: newParent.id,
 					menu_order: newOrder,
 				} );
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to indent item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync on success or failure so the tree reflects the
+				// server's actual state after the reparent attempt.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
@@ -347,13 +381,18 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
 					await patchItem( c.id, { menu_order: c.menu_order } );
 				}
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to outdent item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync regardless of mid-sequence failure: the reparent and
+				// any earlier sibling PATCHes have already committed
+				// server-side, so refresh to the server's actual state rather
+				// than leaving a partially-applied move on screen.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
@@ -362,10 +401,24 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 	const removeItem = useCallback(
 		async ( item ) => {
 			try {
-				// Menu items have no trash → force delete.
+				// Menu items have no trash → force delete. `deleteEntityRecord`
+				// defaults to `throwOnError: false` — on a REST failure it
+				// resolves and records the error in `getLastEntityDeleteError`,
+				// so check that before claiming success.
 				await deleteEntityRecord( 'root', 'menuItem', item.id, {
 					force: true,
 				} );
+				const deleteError = getLastEntityDeleteError(
+					'root',
+					'menuItem',
+					item.id
+				);
+				if ( deleteError ) {
+					throw new Error(
+						deleteError.message ||
+							__( 'Failed to remove item.', 'wp-admin-shell' )
+					);
+				}
 				refreshItems();
 				createSuccessNotice(
 					__( 'Menu item removed.', 'wp-admin-shell' ),
@@ -381,6 +434,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 		},
 		[
 			deleteEntityRecord,
+			getLastEntityDeleteError,
 			refreshItems,
 			createSuccessNotice,
 			createErrorNotice,
@@ -392,9 +446,23 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			return;
 		}
 		try {
+			// `deleteEntityRecord` resolves on a REST failure (records the error
+			// in `getLastEntityDeleteError`), so check it before claiming the
+			// menu was deleted.
 			await deleteEntityRecord( 'root', 'menu', activeMenu.id, {
 				force: true,
 			} );
+			const deleteError = getLastEntityDeleteError(
+				'root',
+				'menu',
+				activeMenu.id
+			);
+			if ( deleteError ) {
+				throw new Error(
+					deleteError.message ||
+						__( 'Failed to delete menu.', 'wp-admin-shell' )
+				);
+			}
 			refreshMenus();
 			onSelectMenu( null );
 			createSuccessNotice( __( 'Menu deleted.', 'wp-admin-shell' ), {
@@ -410,6 +478,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 	}, [
 		activeMenu,
 		deleteEntityRecord,
+		getLastEntityDeleteError,
 		refreshMenus,
 		onSelectMenu,
 		createSuccessNotice,
@@ -433,10 +502,28 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 				? [ ...assignedLocations, locationName ]
 				: assignedLocations.filter( ( l ) => l !== locationName );
 			try {
-				await saveEntityRecord( 'root', 'menu', {
+				// `saveEntityRecord` resolves (not rejects) on a REST failure;
+				// the error lives in `getLastEntitySaveError`. Check the returned
+				// record and that selector so a failed assignment surfaces an
+				// error notice instead of silently reverting the checkbox.
+				const saved = await saveEntityRecord( 'root', 'menu', {
 					id: activeMenu.id,
 					locations: nextLocations,
 				} );
+				if ( ! saved ) {
+					const saveError = getLastEntitySaveError(
+						'root',
+						'menu',
+						activeMenu.id
+					);
+					throw new Error(
+						saveError?.message ||
+							__(
+								'Failed to update menu locations.',
+								'wp-admin-shell'
+							)
+					);
+				}
 				refreshMenus();
 			} catch ( err ) {
 				createErrorNotice(
@@ -453,6 +540,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			activeMenu,
 			assignedLocations,
 			saveEntityRecord,
+			getLastEntitySaveError,
 			refreshMenus,
 			createErrorNotice,
 		]

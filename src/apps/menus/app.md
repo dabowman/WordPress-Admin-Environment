@@ -41,11 +41,13 @@ All three carry `baseURLParams: { context: 'edit' }` as the entity default; the 
 
 The reorder handlers in `index.js` compose these:
 
-- **Up / Down** (`moveItem`) — swap the item with its adjacent sibling, then `reorderSiblings` → PATCH the changed orders in parallel.
+- **Up / Down** (`moveItem`) — swap the item with its adjacent sibling, then `reorderSiblings` → PATCH the changed orders sequentially (per-record save lock; the set is small so serial latency is negligible).
 - **Indent** (`indentItem`) — reparent under the immediately-preceding sibling, placed last among that sibling's children. No-op for the first sibling (nothing to nest under).
 - **Outdent** (`outdentItem`) — promote to the grandparent level, positioned right after the old parent; reparent first, then settle sibling orders. No-op when already top-level.
 
-Each reorder is a small batch of `saveEntityRecord('root','menuItem', { id, … })` PATCHes followed by `invalidateResolution('getEntityRecords', ['root','menuItem', itemsQuery])` (the exact 3-element key the live query resolved under). Failures surface a dismissible error notice.
+Each reorder is a small batch of `saveEntityRecord('root','menuItem', { id, … })` PATCHes followed by `invalidateResolution('getEntityRecords', ['root','menuItem', itemsQuery])` (the exact 3-element key the live query resolved under). The refresh runs in a `finally`, so it fires on **both** the success and the error path: because `patchItem` throws mid-sequence on a server failure and the earlier PATCHes have already committed, refreshing unconditionally resyncs the tree to the server's actual state instead of leaving a partially-reordered / duplicate-`menu_order` list on screen. Failures also surface a dismissible error notice.
+
+**Server-error detection.** `saveEntityRecord` / `deleteEntityRecord` do **not** reject on a REST 4xx/5xx — they resolve (`saveEntityRecord` → `undefined`; `deleteEntityRecord` defaults `throwOnError: false`) and stash the error in `getLastEntitySaveError` / `getLastEntityDeleteError` (see `_shared/forms/useEntitySave.js`). So the direct-mutation handlers do **not** trust a resolved promise as success: `patchItem` (used by move/indent/outdent) throws when the returned record is falsy (consulting `getLastEntitySaveError('root','menuItem', id)` for the message), `toggleLocation` checks the returned menu record + `getLastEntitySaveError('root','menu', id)`, and `removeItem` / `deleteMenu` check `getLastEntityDeleteError` **before** firing the success snackbar. A failed server write now surfaces an error notice instead of a silent revert or a false "removed/deleted" snackbar.
 
 ### Item modal (`MenuItemModal.js`)
 

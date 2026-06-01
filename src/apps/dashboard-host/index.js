@@ -98,11 +98,15 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 	const { config: kernelConfig } = useKernel();
 
 	const userId = window.wpAdminShell?.userId;
-	// `window.wpAdminShell.userId` is always present in practice; the `|| 0`
-	// fallback only keeps the hook order stable. (Note: an id of 0 still
-	// triggers a /wp/v2/users/0 request that 404s — it is not a real
-	// short-circuit — but the falsy-id path is unreachable here.)
-	const { record: user } = useEntityRecord( 'root', 'user', userId || 0 );
+	// `window.wpAdminShell.userId` is always present in practice. When it's
+	// falsy, `enabled: false` skips resolution entirely (the established
+	// fail-closed idiom — see dashboard-widget-recent-posts/index.js:29,
+	// preview-pane, simple-editor). A bare `undefined` id would NOT skip:
+	// the resolver defaults the missing key to '' and the request collapses
+	// to the /wp/v2/users collection endpoint.
+	const { record: user } = useEntityRecord( 'root', 'user', userId, {
+		enabled: !! userId,
+	} );
 	const greeting = useMemo( greetingForNow, [] );
 	const displayName = user?.name || user?.first_name || '';
 	const heading = displayName
