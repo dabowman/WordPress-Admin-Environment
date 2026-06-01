@@ -24,7 +24,9 @@ A non-WPDS rebuild needs a Notice / Alert primitive with intent variants + a clo
 
 ## Harvested admin_notices (server side)
 
-`WP_Admin_Shell_Chrome_Harvest::capture_admin_notices()` wraps `ob_start()` around `do_action('admin_notices')` + `do_action('all_admin_notices')` on the shell's own render pass and returns the captured HTML. The markup is admin-context (same trust as classic wp-admin) and rendered via `dangerouslySetInnerHTML` — the shell only ever renders it inside the already-admin-gated workspace, so there's no new exposure.
+`WP_Admin_Shell_Chrome_Harvest::capture_admin_notices()` wraps `ob_start()` around `do_action('admin_notices')` + `do_action('all_admin_notices')` on the shell's own render pass and returns the captured HTML. The markup is admin-context (same author-trust as classic wp-admin) and rendered via `dangerouslySetInnerHTML` — the shell only ever renders it inside the already-admin-gated workspace.
+
+**Double-dispatch guard.** Capture runs from `wp_admin_shell_enqueue_assets()` on `admin_enqueue_scripts` (top of `admin-header.php`), which the hijack renders the shell through — and `admin-header.php` fires those same two actions AGAIN near its bottom. So immediately after buffering, the harvest `remove_all_actions()` on both hooks: the later native pass becomes a no-op (no double side effects, no duplicate markup beside the shell mount), and the buffered HTML is the single source this banner renders. The capture is memoized so a second call returns the same HTML without re-dispatching a now-drained hook. See the harvest class docblock.
 
 ## Known limitations
 

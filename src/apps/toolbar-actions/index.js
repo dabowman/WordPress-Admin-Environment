@@ -33,15 +33,42 @@ import ArbitraryIcon, {
  *      admin HTML → rendered through the engine-side arbitrary-icon
  *      escape hatch (`TrustedNodeTitle`), NOT the kernel icon registry.
  *
- * IconButton's `label` prop doubles as the assistive-tech label and the
- * tooltip. `render={<a/>}` swaps the underlying element for an anchor so
- * middle-click / Cmd-click / right-click → "Copy link" work natively.
+ * Name-icon actions render through `@wordpress/ui` `IconButton` (its
+ * `icon` prop doubles as the assistive-tech label + tooltip via `label`;
+ * `render={<a/>}` swaps the element for an anchor so middle-click /
+ * Cmd-click / right-click → "Copy link" work natively). Actions that
+ * render ARBITRARY content — a harvested node-title HTML blob or an
+ * `iconSource` <img> — use a plain styled anchor instead, since
+ * `IconButton` is icon-prop-based and not a reliable host for arbitrary
+ * children (it would risk rendering blank).
  */
 
 const COMMAND_HREFS = {
 	'core/new-post': '#/posts/new',
 	'core/new-page': '#/pages/new',
 };
+
+/**
+ * Internal `show_in_rest` post types that are creatable for an admin but
+ * deliberately EXCLUDED from wp-admin's `+New` menu. Classic gates each
+ * type on `$ptype_obj->show_in_admin_bar` (not exposed in the REST `types`
+ * response), so `rest_base` + the create cap alone over-enumerate — these
+ * editor-infrastructure types would surface as "Patterns", "Navigation
+ * Menu", "Templates", etc. Mirror classic with an explicit denylist by
+ * slug (matched against `type.slug`).
+ *
+ * @type {Set<string>}
+ */
+const NEW_CONTENT_TYPE_DENYLIST = new Set( [
+	'attachment', // Media has no editor-create flow.
+	'wp_block', // Reusable blocks / patterns.
+	'wp_navigation', // Navigation menus.
+	'wp_template', // Block templates.
+	'wp_template_part', // Block template parts.
+	'wp_font_family', // Font Library.
+	'wp_font_face', // Font Library.
+	'wp_global_styles', // Global styles record.
+] );
 
 export default function ToolbarActionsApp( { config = {} } ) {
 	const left = Array.isArray( config.left ) ? config.left : [];
@@ -96,10 +123,14 @@ function useNewContentItems() {
 		const items = [];
 		for ( const type of postTypes ) {
 			// Skip non-creatable / internal types. wp-admin's +New shows
-			// types with a UI + a REST base; `rest_base` presence + the
-			// create cap mirror that. Media has no editor-create flow.
+			// content types gated on `show_in_admin_bar` (not exposed in the
+			// REST `types` response). `rest_base` presence + the create cap
+			// alone over-enumerate — the editor-infrastructure types
+			// (wp_block / wp_navigation / wp_template* / fonts) are
+			// creatable for an admin but excluded from classic's +New. The
+			// denylist mirrors that exclusion.
 			const restBase = type?.rest_base;
-			if ( ! restBase || type?.slug === 'attachment' ) {
+			if ( ! restBase || NEW_CONTENT_TYPE_DENYLIST.has( type?.slug ) ) {
 				continue;
 			}
 			const canCreate = core.canUser( 'create', {
@@ -183,22 +214,21 @@ function AdminBarNode( { node } ) {
 			return null;
 		}
 		const external = target === '_blank';
+		// The node title is arbitrary admin HTML (`TrustedNodeTitle`).
+		// `@wordpress/ui` `IconButton` is icon-prop-based and isn't a
+		// reliable host for arbitrary children, so render a plain styled
+		// anchor — guarantees the harvested title paints (never blank).
 		return (
-			<IconButton
-				tone="neutral"
-				variant="minimal"
-				size="compact"
-				label={ tooltip }
-				render={
-					<a
-						href={ node.href }
-						target={ target || undefined }
-						rel={ external ? 'noopener noreferrer' : undefined }
-					/>
-				}
+			<a
+				className="wp-admin-shell-toolbar-action"
+				href={ node.href }
+				target={ target || undefined }
+				rel={ external ? 'noopener noreferrer' : undefined }
+				aria-label={ tooltip }
+				title={ tooltip }
 			>
 				<TrustedNodeTitle html={ node.title } />
-			</IconButton>
+			</a>
 		);
 	}
 
@@ -241,13 +271,36 @@ function renderAction( action, key ) {
 		return null;
 	}
 	const isExternal = !! action.external;
+
+	// Arbitrary-icon escape hatch (#127/#128): an `iconSource` descriptor
+	// renders an <img>/dashicon through `ArbitraryIcon`. `@wordpress/ui`
+	// `IconButton` is icon-prop-based and isn't a reliable host for
+	// arbitrary children — use a plain styled anchor so the harvested icon
+	// always paints. The name-icon path below keeps `IconButton` (its
+	// `icon` prop is the supported route).
+	if ( action.iconSource ) {
+		return (
+			<a
+				key={ key }
+				className="wp-admin-shell-toolbar-action"
+				href={ href }
+				target={ isExternal ? '_blank' : undefined }
+				rel={ isExternal ? 'noopener noreferrer' : undefined }
+				aria-label={ action.label }
+				title={ action.label }
+			>
+				<ArbitraryIcon iconSource={ action.iconSource } size={ 24 } />
+			</a>
+		);
+	}
+
 	return (
 		<IconButton
 			key={ key }
 			tone="neutral"
 			variant="minimal"
 			size="compact"
-			icon={ action.iconSource ? undefined : resolveIcon( action.icon ) }
+			icon={ resolveIcon( action.icon ) }
 			label={ action.label }
 			render={
 				<a
@@ -256,11 +309,7 @@ function renderAction( action, key ) {
 					rel={ isExternal ? 'noopener noreferrer' : undefined }
 				/>
 			}
-		>
-			{ action.iconSource ? (
-				<ArbitraryIcon iconSource={ action.iconSource } size={ 24 } />
-			) : null }
-		</IconButton>
+		/>
 	);
 }
 

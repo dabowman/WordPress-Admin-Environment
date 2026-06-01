@@ -10,10 +10,14 @@
  *       * core nodes (site-name / my-account / new-content) skipped,
  *       * third-party top-level node ingested,
  *       * plugin child node folded into the parent's children[] dropdown,
- *       * group container nodes flattened transparently,
+ *       * group container nodes flattened transparently (via the boolean
+ *         `group` property — incl. a TITLED group, which the no-title
+ *         fallback would miss),
  *       * node meta (target / tooltip) normalized,
  *       * child of a CORE node is NOT surfaced (parent skipped).
- *   - capture_admin_notices() buffers do_action('admin_notices') output.
+ *   - capture_admin_notices() buffers do_action('admin_notices') output and
+ *     DETACHES the core notice hooks so the later native admin-header.php
+ *     pass renders nothing (no double-dispatch / double side effects).
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
@@ -126,6 +130,45 @@ $harvest_cb = function ( $bar ) {
 			'href'   => 'https://example.com/x',
 		)
 	);
+	// A TOP-LEVEL group container that HAS a title (and no href). This must
+	// be skipped via the boolean `group` property — NOT the no-href/no-title
+	// fallback (the title defeats the fallback). Catches the `$node->type`
+	// regression: unbound get_nodes() never sets `type`, so a `type==='group'`
+	// check would emit this wrapper as a top-level record.
+	$bar->add_node(
+		array(
+			'id'    => 'acme-titled-group',
+			'title' => 'Titled Group Wrapper',
+			'group' => true,
+		)
+	);
+	// A second plugin top-level node whose submenu lives inside a CHILD group
+	// container that itself carries a title. The titled child group must
+	// still flatten (via `group`, not the fallback) so the real item beneath
+	// it surfaces in the parent's children[].
+	$bar->add_node(
+		array(
+			'id'    => 'beta',
+			'title' => 'Beta',
+			'href'  => 'https://example.com/wp-admin/admin.php?page=beta',
+		)
+	);
+	$bar->add_node(
+		array(
+			'id'     => 'beta-titled-group',
+			'parent' => 'beta',
+			'title'  => 'Beta Group Title',
+			'group'  => true,
+		)
+	);
+	$bar->add_node(
+		array(
+			'id'     => 'beta-item',
+			'parent' => 'beta-titled-group',
+			'title'  => 'Beta Item',
+			'href'   => 'https://example.com/wp-admin/admin.php?page=beta-item',
+		)
+	);
 };
 
 add_action( 'admin_bar_menu', $harvest_cb, 100 );
@@ -197,11 +240,45 @@ $T::assert_true(
 	! $has_under_core
 );
 
+// A titled top-level group wrapper must be skipped via the boolean `group`
+// property (the title defeats the no-href/no-title fallback).
+$has_titled_group = false;
+$beta             = null;
+foreach ( $nodes as $n ) {
+	if ( $n['id'] === 'acme-titled-group' ) {
+		$has_titled_group = true;
+	}
+	if ( $n['id'] === 'beta' ) {
+		$beta = $n;
+	}
+}
+$T::assert_true(
+	'harvest: titled top-level group wrapper skipped via boolean `group` (not the no-title fallback)',
+	! $has_titled_group
+);
+$T::assert_true(
+	'harvest: beta (group-nested submenu) ingested',
+	$beta !== null
+);
+if ( $beta !== null ) {
+	$T::assert_eq(
+		'harvest: titled CHILD group flattened — beta has exactly one child',
+		count( $beta['children'] ),
+		1
+	);
+	$T::assert_eq(
+		'harvest: flattened child of a titled group is beta-item',
+		$beta['children'][0]['id'],
+		'beta-item'
+	);
+}
+
 remove_action( 'admin_bar_menu', $harvest_cb, 100 );
 WP_Admin_Shell_Chrome_Harvest::reset();
 
 // --- capture_admin_notices(): buffers do_action('admin_notices') ---------
 
+WP_Admin_Shell_Chrome_Harvest::reset();
 $notice_cb = function () {
 	echo '<div class="notice notice-warning"><p>Plugin global notice</p></div>';
 };
@@ -211,8 +288,32 @@ $T::assert_true(
 	'capture_admin_notices: global admin_notices HTML buffered',
 	strpos( $captured, 'Plugin global notice' ) !== false
 );
+
+// Double-dispatch guard: the first capture detaches the core notice hooks,
+// so a re-dispatch (admin-header.php's later native pass) fires no callbacks
+// and the test callback runs exactly once.
+$second_native_pass = '';
+ob_start();
+do_action( 'admin_notices' );
+do_action( 'all_admin_notices' );
+$second_native_pass = trim( ob_get_clean() );
+$T::assert_eq(
+	'capture_admin_notices: hooks detached after capture → native re-pass renders nothing (no double-render / double side effects)',
+	$second_native_pass,
+	''
+);
+
+// A second capture_admin_notices() in the SAME request returns the memo
+// without re-dispatching (hooks are already drained).
+$memoized = WP_Admin_Shell_Chrome_Harvest::capture_admin_notices();
+$T::assert_true(
+	'capture_admin_notices: second call returns the memoized HTML (no re-buffer of a drained hook)',
+	strpos( $memoized, 'Plugin global notice' ) !== false
+);
 remove_action( 'admin_notices', $notice_cb );
 
+// After reset(), with no notice callbacks registered, capture is empty.
+WP_Admin_Shell_Chrome_Harvest::reset();
 $empty_capture = WP_Admin_Shell_Chrome_Harvest::capture_admin_notices();
 $T::assert_eq(
 	'capture_admin_notices: no notices → empty string',

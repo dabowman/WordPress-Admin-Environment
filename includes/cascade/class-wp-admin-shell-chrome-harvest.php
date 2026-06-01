@@ -38,10 +38,32 @@
  *      fire and are not surfaced. **Global-only is the accepted interim** —
  *      the proper fix is a notices REST surface (upstream #155).
  *
+ *      **Double-dispatch guard.** `capture_admin_notices()` is invoked from
+ *      `wp_admin_shell_enqueue_assets()` (hooked on `admin_enqueue_scripts`,
+ *      fired near the TOP of `wp-admin/admin-header.php`). The hijack then
+ *      renders the shell through that same `admin-header.php`, which fires
+ *      `do_action( 'admin_notices' )` + `do_action( 'all_admin_notices' )`
+ *      AGAIN near the bottom. Without intervention every notice callback
+ *      would run twice — double side effects (counters, dismiss-and-set,
+ *      follow-up enqueues) plus the same markup rendered both natively (into
+ *      `#wpbody-content`, beside the shell mount) AND in the harvested
+ *      banner. So once a capture pass runs, the harvest DETACHES the core
+ *      notice hooks (`remove_all_actions`) — the later native pass becomes a
+ *      no-op, and the captured HTML is the single source rendered by
+ *      `core:notices-banner`. Guarded by `$notices_captured` so a second
+ *      `capture_admin_notices()` call doesn't re-buffer an already-drained
+ *      hook (returns the memoized HTML).
+ *
  * **Trust.** Harvested HTML (notice markup, admin-bar node titles) is
- * admin-context — the same trust level at which classic wp-admin renders it.
- * No new exposure; the shell only renders it inside the already-admin-gated
- * workspace.
+ * admin-context — the same author-trust boundary at which classic wp-admin
+ * renders it. The shell only renders it inside the already-admin-gated
+ * workspace. Awareness note: the threat *surface* isn't byte-identical to
+ * classic. An event-handler attribute injected into a node title (e.g.
+ * `<img onerror=…>`) executes in the shell SPA's document context — which
+ * carries `wp.data`, REST nonces, and the kernel runtime on `window` — not
+ * just the classic admin-bar render. It remains the same author-trust call
+ * (a plugin that can inject here can already act as admin), so this is an
+ * accepted-risk decision, not "zero new exposure".
  *
  * @package WP_Admin_Shell
  */
@@ -108,6 +130,15 @@ class WP_Admin_Shell_Chrome_Harvest {
 	 * @var string[]|null
 	 */
 	private static $core_node_ids_cache = null;
+
+	/**
+	 * Request-scoped memo of the captured admin-notices HTML. Set on the
+	 * first `capture_admin_notices()` pass; a second call returns this
+	 * instead of re-buffering an already-drained hook (the first pass
+	 * detaches the core notice actions — see the class docblock).
+	 * @var string|null
+	 */
+	private static $notices_captured = null;
 
 	/**
 	 * Resolve the filtered set of core admin-bar node ids to skip.
@@ -226,7 +257,12 @@ class WP_Admin_Shell_Chrome_Harvest {
 			// `group` nodes are invisible containers — skip the wrapper at
 			// the top level (rare; defensive). Its descendants stay reachable
 			// via the parent map for any real node that parents to it.
-			if ( isset( $node->type ) && $node->type === 'group' ) {
+			// NOTE: `get_nodes()` returns UNBOUND nodes — the `type` property
+			// (`'group'`/`'item'`) is only assigned in `WP_Admin_Bar::_bind()`
+			// at render time, which the harvest never runs. The reliable
+			// signal on a raw node is the boolean `group` property (set from
+			// the `'group' => true` add_node() arg).
+			if ( ! empty( $node->group ) ) {
 				continue;
 			}
 
@@ -264,11 +300,13 @@ class WP_Admin_Shell_Chrome_Harvest {
 				continue;
 			}
 			$has_href = isset( $child->href ) && $child->href !== '';
-			// A group node is an invisible container — WP_Admin_Bar marks it
-			// `type === 'group'`; defensively also treat a node with neither
-			// href nor title as a container. Flatten its children up into the
-			// current level.
-			$is_group = ( isset( $child->type ) && $child->type === 'group' )
+			// A group node is an invisible container. On the UNBOUND nodes
+			// `get_nodes()` returns, `type` is never set (it's assigned in
+			// `_bind()` at render); the reliable signal is the boolean `group`
+			// property. Defensively also treat a node with neither href nor
+			// title as a container. Flatten its children up into the current
+			// level.
+			$is_group = ! empty( $child->group )
 				|| ( ! $has_href && ( ! isset( $child->title ) || (string) $child->title === '' ) );
 			if ( $is_group ) {
 				$out = array_merge(
@@ -319,6 +357,14 @@ class WP_Admin_Shell_Chrome_Harvest {
 	 * @return string Captured admin-notices HTML (may be empty).
 	 */
 	public static function capture_admin_notices() {
+		// Already captured this request — return the memo without
+		// re-dispatching. The first pass detached the core notice hooks, so
+		// a second buffer would yield nothing AND mislead callers into
+		// thinking there were no notices.
+		if ( self::$notices_captured !== null ) {
+			return self::$notices_captured;
+		}
+
 		ob_start();
 		/**
 		 * Core / plugin global admin notices. Per-screen notices keyed on
@@ -328,7 +374,19 @@ class WP_Admin_Shell_Chrome_Harvest {
 		do_action( 'admin_notices' );
 		do_action( 'all_admin_notices' );
 		$html = ob_get_clean();
-		return is_string( $html ) ? trim( $html ) : '';
+		$html = is_string( $html ) ? trim( $html ) : '';
+
+		// Prevent the double-dispatch: `admin-header.php` (which the hijack
+		// renders the shell through) fires these same two actions again near
+		// the bottom of its output. Detach every callback now so that later
+		// native pass is a no-op — no double side effects, and the captured
+		// HTML is the single source `core:notices-banner` renders. See the
+		// class docblock's "Double-dispatch guard".
+		remove_all_actions( 'admin_notices' );
+		remove_all_actions( 'all_admin_notices' );
+
+		self::$notices_captured = $html;
+		return self::$notices_captured;
 	}
 
 	/**
@@ -339,5 +397,6 @@ class WP_Admin_Shell_Chrome_Harvest {
 	public static function reset() {
 		self::$admin_bar_cache     = null;
 		self::$core_node_ids_cache = null;
+		self::$notices_captured    = null;
 	}
 }

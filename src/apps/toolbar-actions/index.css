@@ -33,3 +33,36 @@
 	vertical-align: middle;
 	object-fit: contain;
 }
+
+/*
+ * Plain styled anchor for harvested actions that render ARBITRARY content
+ * (a node-title HTML blob or an iconSource <img>). `@wordpress/ui`
+ * `IconButton` is an icon-prop-based component — it isn't a reliable host
+ * for arbitrary children — so these cases use a hand-styled anchor instead
+ * of routing arbitrary markup through `IconButton`'s children. Styled to
+ * sit in the toolbar row like the `IconButton`-backed actions.
+ */
+.wp-admin-shell-toolbar-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var( --wpds-dimension-padding-xs, 4px );
+	min-width: 32px;
+	height: 32px;
+	padding: 0 var( --wpds-dimension-padding-sm, 6px );
+	border: 0;
+	border-radius: var( --wpds-dimension-radius-md, 4px );
+	background: transparent;
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wp-admin-shell-toolbar-action:hover,
+.wp-admin-shell-toolbar-action:focus-visible {
+	background: var(
+		--wpds-color-background-neutral-secondary-hover,
+		rgba( 0, 0, 0, 0.06 )
+	);
+}

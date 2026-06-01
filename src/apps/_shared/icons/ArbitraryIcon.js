@@ -92,8 +92,14 @@ export default function ArbitraryIcon( {
  * issue #128). Harvested admin-bar node `title` strings are arbitrary
  * HTML/icon markup the emitting plugin already rendered at admin trust in
  * classic wp-admin; we render it unchanged inside the admin-gated
- * workspace (no new exposure — see `docs/runtime-harvest-pattern.md` →
- * "Trust"). App-space, never the kernel.
+ * workspace. App-space, never the kernel.
+ *
+ * Trust awareness: this is the same author-trust boundary as classic, but
+ * NOT a byte-identical threat surface — an event-handler attribute injected
+ * into a node title executes in the shell SPA's document context (`wp.data`,
+ * REST nonces, the kernel runtime on `window`), not just the classic
+ * admin-bar render. Accepted risk (a plugin that can inject here is already
+ * admin-trusted); see `docs/runtime-harvest-pattern.md` → "Trust".
  *
  * @param {Object} root0
  * @param {string} root0.html Trusted admin-context HTML.
