@@ -83,6 +83,39 @@ function ensureBlocksRegistered() {
 }
 
 /**
+ * Known REST bases for built-in post types. Lets `useRestBase` return
+ * synchronously on the first render without waiting for the entity to load.
+ *
+ * @type {Record<string, string>}
+ */
+const BUILTIN_REST_BASES = { post: 'posts', page: 'pages' };
+
+/**
+ * Returns the REST base for a given post type, or `undefined` while the
+ * post-type entity is still resolving. Built-in types (`post` → `posts`,
+ * `page` → `pages`) resolve synchronously via `BUILTIN_REST_BASES` so they
+ * never return `undefined`.
+ *
+ * Shared by `SimpleEditorApp` (draft-creation gate) and `SimpleEditor`
+ * (autosaves endpoint). Promoted here because both components need it —
+ * per CLAUDE.md "promote on second consumer".
+ *
+ * @param {string} postType Post type slug.
+ * @return {string|undefined} REST base, or `undefined` while resolving.
+ */
+function useRestBase( postType ) {
+	const entityBase = useSelect(
+		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
+		[ postType ]
+	);
+	// Entity base wins when available; fall back to the built-in lookup for
+	// the first-render tick before the entity request completes. CPTs that
+	// have no entry in BUILTIN_REST_BASES return `undefined` until the entity
+	// resolves — the draft-creation gate in `SimpleEditorApp` relies on this.
+	return entityBase ?? BUILTIN_REST_BASES[ postType ];
+}
+
+/**
  * Substack-style simplified block editor.
  *
  * Routes:
@@ -112,15 +145,10 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 
-	// Derive the REST base from the post-type entity so custom post types with
-	// their own `rest_base` resolve to the correct REST route. Fall back to the
-	// classic ternary only while the entity is still loading (null).
-	const postTypeRestBase = useSelect(
-		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
-		[ postType ]
-	);
-	const restBase =
-		postTypeRestBase ?? ( postType === 'page' ? 'pages' : 'posts' );
+	// `undefined` while a CPT's entity is still resolving; built-in types
+	// resolve synchronously so they never produce `undefined` here.
+	const postTypeRestBase = useRestBase( postType );
+	const restBase = postTypeRestBase ?? 'posts';
 
 	const backHref = `#/${ restBase }`;
 
@@ -149,6 +177,15 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 
 	useEffect( () => {
 		if ( ! isNew ) {
+			return;
+		}
+		// Wait until the post-type entity resolves so we know the correct REST
+		// base. For built-in types (post/page) this is always immediately
+		// available via the fallback ternary, so there is no extra tick for the
+		// common case. For CPTs, firing before resolution would use the `posts`
+		// fallback and create a stray `post` draft before the correct route
+		// is known.
+		if ( postTypeRestBase === undefined ) {
 			return;
 		}
 
@@ -193,7 +230,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ isNew, postType, restBase ] );
+	}, [ isNew, postTypeRestBase, restBase ] );
 
 	if ( error ) {
 		return (
@@ -257,14 +294,10 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const [ saveError, setSaveError ] = useState( null );
 	const autoSaveTimerRef = useRef( null );
 
-	// Derive the REST base from the post-type entity so CPTs with a custom
-	// `rest_base` route to the correct autosaves endpoint.
-	const postTypeRestBase = useSelect(
-		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
-		[ postType ]
-	);
-	const restBase =
-		postTypeRestBase ?? ( postType === 'page' ? 'pages' : 'posts' );
+	// Resolves synchronously for built-in types; waits one tick for CPTs.
+	// By the time `hasEdits` is true and the autosave timer fires, the entity
+	// has resolved and the correct REST base is in place.
+	const restBase = useRestBase( postType ) ?? 'posts';
 
 	const runSave = useCallback( async () => {
 		setSaveStatus( 'saving' );
