@@ -47,6 +47,8 @@ The reorder handlers in `index.js` compose these:
 
 Each reorder is a small batch of `saveEntityRecord('root','menuItem', { id, … })` PATCHes followed by `invalidateResolution('getEntityRecords', ['root','menuItem', itemsQuery])` (the exact 3-element key the live query resolved under). Failures surface a dismissible error notice.
 
+**Server-error detection.** `saveEntityRecord` / `deleteEntityRecord` do **not** reject on a REST 4xx/5xx — they resolve (`saveEntityRecord` → `undefined`; `deleteEntityRecord` defaults `throwOnError: false`) and stash the error in `getLastEntitySaveError` / `getLastEntityDeleteError` (see `_shared/forms/useEntitySave.js`). So the direct-mutation handlers do **not** trust a resolved promise as success: `patchItem` (used by move/indent/outdent) throws when the returned record is falsy (consulting `getLastEntitySaveError('root','menuItem', id)` for the message), `toggleLocation` checks the returned menu record + `getLastEntitySaveError('root','menu', id)`, and `removeItem` / `deleteMenu` check `getLastEntityDeleteError` **before** firing the success snackbar. A failed server write now surfaces an error notice instead of a silent revert or a false "removed/deleted" snackbar.
+
 ### Item modal (`MenuItemModal.js`)
 
 Three item kinds, matching wp-admin's "Add menu items" panel:
