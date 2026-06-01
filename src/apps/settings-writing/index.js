@@ -141,6 +141,7 @@ export default function SettingsWritingApp() {
 						<UnavailableViaApi
 							kind="option"
 							name={ option.name }
+							value="<value>"
 							classicPath="options-writing.php"
 						/>
 					</Stack>

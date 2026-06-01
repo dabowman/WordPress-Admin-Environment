@@ -1202,7 +1202,6 @@ add_action( 'init', function () {
 		'page_comments'                => false,
 		'comments_notify'              => true,
 		'moderation_notify'            => true,
-		'wp_notes_notify'              => true,
 		'comment_moderation'           => false,
 		'comment_previously_approved'  => true,
 		'show_avatars'                 => true,
@@ -1216,11 +1215,16 @@ add_action( 'init', function () {
 		) );
 	}
 
-	// Integer clamps — mirror the classic number-input mins.
+	// Integer clamps — mirror the classic number-input mins. The floor lives in
+	// the `sanitize_callback`, NOT a schema `minimum`: the settings REST
+	// controller validates each arg against its schema BEFORE the sanitize
+	// callback runs, so a schema `minimum` would 400 a sub-floor write before the
+	// clamp-up can fire. Dropping it lets the value reach the callback, making
+	// `max( floor, … )` the sole `[floor, max]` authority (mirroring classic
+	// wp-admin, which clamps rather than rejects). `type: 'integer'` still
+	// rejects non-integers at the schema layer.
 	register_setting( 'discussion', 'close_comments_days_old', array(
-		'show_in_rest'      => array(
-			'schema' => array( 'minimum' => 0 ),
-		),
+		'show_in_rest'      => true,
 		'type'              => 'integer',
 		'default'           => 14,
 		'sanitize_callback' => static function ( $value ) {
@@ -1229,9 +1233,7 @@ add_action( 'init', function () {
 	) );
 
 	register_setting( 'discussion', 'comments_per_page', array(
-		'show_in_rest'      => array(
-			'schema' => array( 'minimum' => 1 ),
-		),
+		'show_in_rest'      => true,
 		'type'              => 'integer',
 		'default'           => 50,
 		'sanitize_callback' => static function ( $value ) {
@@ -1240,9 +1242,7 @@ add_action( 'init', function () {
 	) );
 
 	register_setting( 'discussion', 'comment_max_links', array(
-		'show_in_rest'      => array(
-			'schema' => array( 'minimum' => 0 ),
-		),
+		'show_in_rest'      => true,
 		'type'              => 'integer',
 		'default'           => 2,
 		'sanitize_callback' => static function ( $value ) {
@@ -1254,10 +1254,10 @@ add_action( 'init', function () {
 	// is 10 (filterable via `thread_comments_depth_max`); honor the live filter
 	// server-side so a theme raising the max still validates. The shell's UI
 	// hardcodes 10 as a documented parity caveat (no read endpoint for the max).
+	// As above, the clamp is the sole authority — no schema `minimum` (it would
+	// 400 a sub-floor write before the sanitize clamp-up to 1 could run).
 	register_setting( 'discussion', 'thread_comments_depth', array(
-		'show_in_rest'      => array(
-			'schema' => array( 'minimum' => 1 ),
-		),
+		'show_in_rest'      => true,
 		'type'              => 'integer',
 		'default'           => 5,
 		'sanitize_callback' => static function ( $value ) {

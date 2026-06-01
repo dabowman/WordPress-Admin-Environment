@@ -20,7 +20,7 @@ Nested fields gate on their parent toggle via DataForm `isVisible(item)`.
 
 Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm` — a static `FIELDS` array + `FORM` field order, no data dependencies beyond the site record. The shared shell owns the null-guard spinner, `DataForm`, Save button, and save handler.
 
-Value-mapping idioms: `open`/`closed` ↔ boolean for the two ping/comment status fields; integer clamps (floor 0 or 1) on the numeric fields; enum selects/radios for thread depth, pagination order, avatar rating + default. Server-side sanitize fidelity (bool `'1'`/`''` storage, enum validation, int clamps, key-list newline normalization) lives in the `register_setting` shims in `wp-admin-shell.php`.
+Value-mapping idioms: `open`/`closed` ↔ boolean for the two ping/comment status fields; integer clamps (floor 0 or 1) on the numeric fields; enum selects/radios for thread depth, pagination order, avatar rating + default. Server-side sanitize fidelity (bool `'1'`/`''` storage, enum validation, int clamps, key-list newline normalization) lives in the `register_setting` shims in `wp-admin-shell.php`. The integer fields (`thread_comments_depth`, `comments_per_page`, `comment_max_links`, `close_comments_days_old`) use a **clamp-only** model: the floor lives solely in each option's `sanitize_callback` (`max( floor, … )`), NOT a schema `minimum`, because the settings REST controller validates the schema *before* the sanitize callback runs — a schema `minimum` would 400 a sub-floor write before the clamp-up could fire. So a write below the floor (e.g. `thread_comments_depth=0`) is clamped up to the floor rather than rejected, matching classic wp-admin.
 
 Mounted two ways:
 
@@ -38,5 +38,5 @@ Parity gaps vs `docs/screens/settings-discussion.md`:
 - **Maximum thread depth** is hardcoded to 10 (core's default `thread_comments_depth_max`). The filter is honored server-side by the `thread_comments_depth` sanitize_callback, but the depth select only offers up to 10 levels — there is no read endpoint for the live filtered max.
 - **`avatar_default`** lists core's built-in set only; styles a theme adds via the `avatar_defaults` filter are not surfaced (same fixed-set caveat).
 - **Avatar previews** — the default-avatar radios render text labels, not the per-style `<img>` previews classic wp-admin shows.
-- **`wp_notes_notify`** is registered server-side (per the issue) but not rendered — it is not a core option in WP 6.9, so a checkbox would be a confusing no-op.
+- **`wp_notes_notify`** is intentionally not rendered and not registered server-side — it is not a core option in WP 6.9 (it's a Jetpack/WordPress.com option), so a `show_in_rest` registration would be a write-to-nowhere phantom surface and a checkbox would be a confusing no-op.
 - **Multisite signup-off note** beside `comment_registration` and plugin `do_settings_fields` extensions are not rendered.
