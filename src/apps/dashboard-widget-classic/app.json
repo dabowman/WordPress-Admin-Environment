@@ -1,0 +1,100 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:dashboard-widget-classic",
+	"version": 1,
+	"title": "Classic dashboard widget",
+	"description": "Captured-HTML tile for an un-ported classic dashboard widget bridged into the dashboard-host grid (#134). Lazily fetches the widget's rendered HTML and renders it at admin trust, with a per-tile iframe fallback to classic index.php.",
+	"designSystem": "@wordpress/ui",
+	"role": "region",
+	"capabilities": [ "read" ],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false,
+		"properties": {
+			"widgetId": {
+				"type": "string",
+				"description": "Classic dashboard meta-box id (REST endpoint key)."
+			},
+			"title": {
+				"type": "string",
+				"description": "Display title harvested from the meta-box."
+			}
+		}
+	},
+	"script": "wp-admin-shell",
+	"slotHints": {
+		"defaultSize": { "w": 1, "h": 1 },
+		"minSize": { "w": 1, "h": 1 },
+		"position": "auto"
+	},
+	"documentation": {
+		"purpose": "Render half of the classic dashboard-widget bridge (#134). One shared tile app the PHP harvest mounts once per surviving plugin dashboard widget, with per-tile config.widgetId. Fetches that widget's captured HTML lazily so a slow widget doesn't block the grid. Surfaces un-ported third-party dashboard widgets in the workspace without anyone writing shell config — the dashboard sibling of the #128 admin-bar / notices chrome harvest.",
+		"data": {
+			"reads": [
+				{
+					"source": "/wp-admin-shell/v1/dashboard-widget/{widgetId}",
+					"via": "api-fetch",
+					"purpose": "Lazy per-tile fetch of the classic widget's ob_start-captured HTML (admin trust). Non-entity HTML capture — the documented api-fetch exception. The endpoint re-runs wp_dashboard_setup, locates the callback by id, buffers its echoed HTML, and returns { id, title, html }. Permission floor: logged-in + read; the requested id must be a non-core widget the bridge surfaces (404 otherwise)."
+				},
+				{
+					"source": "window.wpAdminShell.adminUrl",
+					"via": "window-global",
+					"purpose": "Base URL for the iframe-fallback src (classic index.php, chromeless)."
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "the per-tile fetch is in flight (status === 'loading')",
+				"renders": "Centered Spinner."
+			},
+			{
+				"id": "ready",
+				"when": "the fetch resolved with HTML",
+				"renders": "The captured classic-widget HTML injected via dangerouslySetInnerHTML (admin trust)."
+			},
+			{
+				"id": "empty",
+				"when": "the fetch resolved but the widget rendered no HTML",
+				"renders": "A short 'rendered nothing' message."
+			},
+			{
+				"id": "error",
+				"when": "the fetch rejected, or no widgetId was supplied (status === 'error')",
+				"renders": "An error message pointing the user at the classic-view toggle."
+			},
+			{
+				"id": "iframe-fallback",
+				"when": "the user clicks 'Open classic view' (useIframe === true)",
+				"renders": "An iframe of classic index.php (chromeless) where the widget's own enqueued JS runs natively."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Click 'Open classic view' / 'Show captured view'",
+				"effect": "Toggles between the captured-HTML render and the chromeless classic-dashboard iframe."
+			}
+		],
+		"constraints": [
+			{
+				"concern": "js-loss-in-captured-html",
+				"note": "Captured HTML is injected via dangerouslySetInnerHTML; React does not execute injected <script> tags, and the widget's enqueued JS / AJAX handles are not loaded on the shell page. Widgets that depend on JS (live feeds, interactive charts) degrade to static HTML. The per-tile iframe fallback ('Open classic view') is the fidelity path — it loads classic index.php where the widget's own JS runs. Same escape-hatch tier as the #128 notices iframe fallback."
+			},
+			{
+				"concern": "admin-trust-html",
+				"note": "The captured HTML is admin-context — identical to what classic wp-admin echoes for the same widget — rendered unchanged via dangerouslySetInnerHTML inside the already-admin-gated workspace. Same author-trust boundary as TrustedNodeTitle / the notices buffer (#128). The endpoint only returns HTML for a widget the dashboard registered this request and which is NOT a shell-native core widget."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Stack, Text, Button",
+				"purpose": "Toolbar toggle + empty/error states."
+			},
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading state — no WPDS 0.12 port."
+			}
+		]
+	}
+}

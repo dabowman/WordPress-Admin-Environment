@@ -169,7 +169,15 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 							</div>
 							<div className="wp-admin-shell-dashboard-tile__body">
 								<MountedApp
-									appRef={ widget.appId }
+									appRef={
+										widget.config
+											? {
+													id: widget.appId,
+													source: widget.appId,
+													config: widget.config,
+											  }
+											: widget.appId
+									}
 									regionId={ `dashboard-widget/${ widget.id }` }
 								/>
 							</div>

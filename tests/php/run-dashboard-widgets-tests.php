@@ -420,6 +420,231 @@ $T::assert_true(
 
 WP_Admin_Shell_Dashboard_Widgets::reset();
 
+// ===========================================================================
+// Classic dashboard-widget BRIDGE (#134).
+// ===========================================================================
+// The bridge (WP_Admin_Shell_Dashboard_Bridge) harvests plugin dashboard
+// meta-boxes into captured-HTML tiles, skipping the core widgets the shell
+// ships native after #133.
+
+WP_Admin_Shell_Dashboard_Bridge::reset();
+
+// --- Skip-list: core widget ids -------------------------------------------
+
+$T::assert_true(
+	'bridge skips dashboard_right_now (native at-a-glance)',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_right_now' )
+);
+$T::assert_true(
+	'bridge skips dashboard_activity (native activity)',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_activity' )
+);
+$T::assert_true(
+	'bridge skips dashboard_quick_press (native quick-draft)',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_quick_press' )
+);
+$T::assert_true(
+	'bridge skips dashboard_primary (news feed)',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_primary' )
+);
+$T::assert_eq(
+	'bridge does NOT skip an arbitrary plugin widget id',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_sales_widget' ),
+	false
+);
+$T::assert_eq(
+	'bridge is_core_widget rejects non-string',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( null ),
+	false
+);
+
+// --- Skip-list filter ------------------------------------------------------
+
+WP_Admin_Shell_Dashboard_Bridge::reset();
+$skip_cb = function ( $ids ) {
+	$ids[] = 'acme_promoted_native';
+	return $ids;
+};
+add_filter( 'wp_admin_shell_dashboard_core_widget_ids', $skip_cb );
+$T::assert_true(
+	'wp_admin_shell_dashboard_core_widget_ids filter extends the skip-list',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' )
+);
+remove_filter( 'wp_admin_shell_dashboard_core_widget_ids', $skip_cb );
+WP_Admin_Shell_Dashboard_Bridge::reset();
+$T::assert_eq(
+	'skip-list filter memo resets — id no longer core after reset',
+	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' ),
+	false
+);
+
+// --- Entry-id derivation (schema-safe + classic- namespace) ----------------
+
+$T::assert_eq(
+	'bridge entry-id: underscores → kebab + classic- prefix',
+	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'acme_sales_stats' ),
+	'classic-acme-sales-stats'
+);
+$T::assert_eq(
+	'bridge entry-id: uppercase + mixed chars normalized',
+	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'My_Plugin.Box-1' ),
+	'classic-my-plugin-box-1'
+);
+$T::assert_eq(
+	'bridge entry-id: empty falls back to classic-widget',
+	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( '___' ),
+	'classic-widget'
+);
+$T::assert_true(
+	'bridge entry-id matches the appsEntry id pattern ^[a-z][a-z0-9-]*$',
+	(bool) preg_match(
+		'/^[a-z][a-z0-9-]*$/',
+		WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'Weird__Id!!' )
+	)
+);
+
+// --- Tile-entry shape ------------------------------------------------------
+
+$tile = WP_Admin_Shell_Dashboard_Bridge::build_tile_entry( array(
+	'widget_id' => 'acme_sales_stats',
+	'entry_id'  => 'classic-acme-sales-stats',
+	'title'     => 'Acme Sales',
+	'context'   => 'normal',
+) );
+$T::assert_eq( 'tile entry id', $tile['id'], 'classic-acme-sales-stats' );
+$T::assert_eq( 'tile entry app is the shared captured-HTML app', $tile['app'], 'core:dashboard-widget-classic' );
+$T::assert_eq( 'tile entry slot is grid', $tile['slot'], 'grid' );
+$T::assert_eq( 'tile entry config.widgetId is the raw meta-box id', $tile['config']['widgetId'], 'acme_sales_stats' );
+$T::assert_eq( 'tile entry config.title is the harvested title', $tile['config']['title'], 'Acme Sales' );
+
+// --- End-to-end harvest + synthesis ----------------------------------------
+// Register a fake plugin widget + a core widget id into the dashboard, run the
+// harvest, and assert the bridge synthesizes a tile for the plugin one only.
+
+WP_Admin_Shell_Dashboard_Bridge::reset();
+
+$register_widgets = function () {
+	// Plugin widget — should be harvested.
+	if ( function_exists( 'wp_add_dashboard_widget' ) ) {
+		wp_add_dashboard_widget(
+			'acme_sales_stats',
+			'Acme Sales <a href="#" class="edit-box">Configure</a>',
+			function () {
+				echo '<p>Acme captured HTML</p>';
+			}
+		);
+		// A widget masquerading as core — should be SKIPPED.
+		wp_add_dashboard_widget(
+			'dashboard_right_now',
+			'Hijacked Right Now',
+			function () {
+				echo 'should not surface';
+			}
+		);
+	}
+};
+add_action( 'wp_dashboard_setup', $register_widgets );
+
+$records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+
+remove_action( 'wp_dashboard_setup', $register_widgets );
+
+// In a CLI/admin context wp_dashboard_setup() is loadable; if for some reason
+// it is not (no dashboard API), harvest returns [] and these assertions are
+// skipped gracefully by guarding on a non-empty record set.
+if ( ! empty( $records ) ) {
+	$ids = array_column( $records, 'widget_id' );
+	$T::assert_true(
+		'harvest surfaces the plugin widget',
+		in_array( 'acme_sales_stats', $ids, true )
+	);
+	$T::assert_true(
+		'harvest skips a core-masquerading widget id',
+		! in_array( 'dashboard_right_now', $ids, true )
+	);
+
+	// Title is tag-stripped for the display label.
+	$acme = null;
+	foreach ( $records as $r ) {
+		if ( $r['widget_id'] === 'acme_sales_stats' ) {
+			$acme = $r;
+			break;
+		}
+	}
+	$T::assert_true( 'harvest record found for plugin widget', is_array( $acme ) );
+	if ( is_array( $acme ) ) {
+		$T::assert_eq(
+			'harvested title strips config-link markup',
+			$acme['title'],
+			'Acme Sales Configure'
+		);
+		$T::assert_eq(
+			'harvested entry id is namespaced classic-',
+			$acme['entry_id'],
+			'classic-acme-sales-stats'
+		);
+	}
+
+	// Cascade contribution synthesizes the tile into the target screen.
+	$bridge_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+	$T::assert_true(
+		'bridge contributes screens[dashboard-widgets].apps[]',
+		isset( $bridge_doc['screens']['dashboard-widgets']['apps'] )
+		&& is_array( $bridge_doc['screens']['dashboard-widgets']['apps'] )
+	);
+	$apps_out = $bridge_doc['screens']['dashboard-widgets']['apps'];
+	$bridge_entry = null;
+	foreach ( $apps_out as $e ) {
+		if ( isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats' ) {
+			$bridge_entry = $e;
+			break;
+		}
+	}
+	$T::assert_true( 'synthesized tile entry present in apps[]', is_array( $bridge_entry ) );
+	if ( is_array( $bridge_entry ) ) {
+		$T::assert_eq( 'synthesized tile mounts the captured-HTML app', $bridge_entry['app'], 'core:dashboard-widget-classic' );
+		$T::assert_eq( 'synthesized tile config.widgetId', $bridge_entry['config']['widgetId'], 'acme_sales_stats' );
+	}
+
+	// First-write-wins: an author entry with the same id is NOT overwritten,
+	// and the bridge appends nothing for that id (idempotent).
+	WP_Admin_Shell_Dashboard_Bridge::reset();
+	add_action( 'wp_dashboard_setup', $register_widgets );
+	$pre_doc = array(
+		'screens' => array(
+			'dashboard-widgets' => array(
+				'apps' => array(
+					array(
+						'id'  => 'classic-acme-sales-stats',
+						'app' => 'plugin:acme/native-tile',
+					),
+				),
+			),
+		),
+	);
+	$after = apply_filters( 'wp_admin_shell_data_plugin', $pre_doc );
+	remove_action( 'wp_dashboard_setup', $register_widgets );
+	$matching = array_filter(
+		$after['screens']['dashboard-widgets']['apps'],
+		function ( $e ) {
+			return isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats';
+		}
+	);
+	$T::assert_eq(
+		'first-write-wins: author entry id appears exactly once',
+		count( $matching ),
+		1
+	);
+	$matching = array_values( $matching );
+	$T::assert_eq(
+		'first-write-wins: author entry survives (bridge did not overwrite)',
+		$matching[0]['app'],
+		'plugin:acme/native-tile'
+	);
+}
+
+WP_Admin_Shell_Dashboard_Bridge::reset();
+
 // --- Summary ---------------------------------------------------------------
 
 $total = WPAS_Dashboard_Widgets_Test_Runner::$pass + WPAS_Dashboard_Widgets_Test_Runner::$fail;

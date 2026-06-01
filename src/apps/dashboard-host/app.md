@@ -95,7 +95,7 @@ A rebuild needs:
 ## Known limitations
 
 - **No drag-to-reorder.** Widget order is config-driven. Authors reorder via the entry order in `apps[]` and `position` overrides.
-- **No WP-core dashboard bridge.** Legacy widgets registered via `wp_add_dashboard_widget()` don't render here — they emit jQuery-bound HTML and need a separate bridge. Deferred.
+- **Classic dashboard widgets surface via the #134 bridge.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Shell_Dashboard_Bridge` into `slot: "grid"` tiles mounting `core:dashboard-widget-classic` (captured HTML + per-tile iframe fallback). Widgets relying on enqueued JS degrade to static HTML — see that app's `app.md` for the JS-loss limitation. The host renders these tiles like any other grid entry; no host-side special-casing.
 - **No min-height enforcement at the widget level.** `minSize` clamps `defaultSize` but the CSS grid's `grid-auto-rows: minmax(160px, auto)` sets the floor uniformly. A widget asking for `minSize: { w: 1, h: 2 }` gets 2 grid-row spans, not 2× the row-min.
 - **Single grid per screen.** The host expects to be one of the apps in a single screen. Multiple grids on the same screen (e.g., split-view with two separate widget regions) aren't modeled — declare a second screen if needed.
 
@@ -103,7 +103,7 @@ A rebuild needs:
 
 The host **is** the workspace dashboard home now — the retired `core:dashboard` monolith (`src/apps/dashboard/`, deleted in #133) was folded into this host plus the four default-tile apps above. Remaining gaps versus wp-admin's dashboard:
 
-- **No WP-core dashboard-widget bridge.** Plugin widgets registered via `wp_add_dashboard_widget()` (jQuery-bound HTML) don't render here — that bridge is tracked in #134, which depends on this fold.
-- **No "Welcome" / Site Health / Events-and-News widgets.** Only the four canonical tiles ship by default.
+- **Classic dashboard-widget bridge (#134) lands them as captured-HTML tiles.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Shell_Dashboard_Bridge` and mounted as `core:dashboard-widget-classic` tiles. JS-driven widgets degrade to static HTML with a per-tile iframe fidelity fallback (see `src/apps/dashboard-widget-classic/app.md`).
+- **No "Welcome" / Site Health / Events-and-News widgets.** Only the four canonical tiles ship by default (the classic Events-and-News / Site Health boxes are core widgets the bridge skips, not yet ported).
 - **At-a-Glance counts don't deep-link** to their filtered list screens yet.
 - **No drag-to-reorder** — widget order is config-driven via `apps[]` order + `position` overrides.
