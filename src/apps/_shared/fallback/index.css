@@ -10,6 +10,15 @@
  * notice or push the Copy button off-screen.
  */
 
+/*
+ * The tiered block is a SIBLING of Notice.Description (not nested inside it —
+ * see UnavailableViaApi.js). Add breathing room so it doesn't crowd the inline
+ * explanation string above it.
+ */
+.wp-admin-shell-unavailable-via-api__tiers {
+	margin-top: var( --wpds-dimension-padding-md, 0.75rem );
+}
+
 .wp-admin-shell-unavailable-via-api__code,
 .wp-admin-shell-unavailable-via-api__agent-prompt {
 	/* Wrap long content rather than overflowing the notice. */

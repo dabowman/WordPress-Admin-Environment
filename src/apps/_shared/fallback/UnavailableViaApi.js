@@ -36,6 +36,12 @@ import './index.css';
  * @param {string} root0.classicPath   Classic wp-admin path, e.g. `options-writing.php`.
  *                                     The capture-phase interceptor maps it to a workspace
  *                                     route when available, or passes through to classic.
+ * @param {string} [root0.label]       Human-readable text for the classic-screen link.
+ *                                     Defaults to a generic "Open the classic screen" string
+ *                                     when omitted — the raw `classicPath` filename is never
+ *                                     used as visible/accessible link text (it's meaningless
+ *                                     to a screen reader). The filename rides the anchor's
+ *                                     `title` attribute instead.
  * @return {JSX.Element} The fallback affordance.
  */
 export function UnavailableViaApi( {
@@ -45,6 +51,7 @@ export function UnavailableViaApi( {
 	command,
 	agentPrompt,
 	classicPath,
+	label,
 } ) {
 	const [ copied, setCopied ] = useState( false );
 	const [ agentCopied, setAgentCopied ] = useState( false );
@@ -141,140 +148,149 @@ export function UnavailableViaApi( {
 		? `${ adminBase }/${ classicPath.replace( /^\/+/, '' ) }`
 		: `${ adminBase }/`;
 
+	// Human-readable link text. Never render the raw `classicPath` filename
+	// (e.g. `options-writing.php`) as the accessible name — it's meaningless to
+	// a screen reader. The filename rides the anchor's `title` attribute.
+	const classicLabel =
+		label || __( 'Open the classic screen', 'wp-admin-shell' );
+
 	return (
 		<Notice.Root
 			intent="info"
 			className="wp-admin-shell-unavailable-via-api"
 		>
+			{ /* Description holds ONLY the inline explanation string. Block-level
+			     content (the value preview + the three tiers below) lives as a
+			     SIBLING of the Description — nesting <div>/<a>/<button> inside a
+			     Description that may render as a <p> would auto-close the
+			     paragraph and reparent the blocks, breaking layout + producing
+			     invalid HTML. */ }
 			<Notice.Description>
-				<Stack direction="column" gap="md">
-					{ /* Explanation */ }
+				{ __(
+					'This setting isn’t writable through the workspace API. Use one of the options below to make the change.',
+					'wp-admin-shell'
+				) }
+			</Notice.Description>
+
+			<Stack
+				direction="column"
+				gap="md"
+				className="wp-admin-shell-unavailable-via-api__tiers"
+			>
+				{ /* Show the entered value when kind="option" so the user
+				     can confirm what they were about to save. */ }
+				{ kind === 'option' && value !== undefined && value !== '' && (
 					<Text variant="body-sm">
+						<strong>{ __( 'Value:', 'wp-admin-shell' ) }</strong>{ ' ' }
+						<code>{ String( value ) }</code>
+					</Text>
+				) }
+
+				{ /* Tier 1 — Classic screen link */ }
+				<Stack direction="column" gap="xs">
+					<Text variant="body-sm">
+						<strong>{ __( 'Option 1:', 'wp-admin-shell' ) }</strong>{ ' ' }
 						{ __(
-							'This setting isn’t writable through the workspace API. Use one of the options below to make the change.',
+							'Open the classic settings screen',
 							'wp-admin-shell'
 						) }
 					</Text>
+					{ /* Plain <a href> — the interceptor handles routing. The
+					     visible/accessible text is a human-readable label; the
+					     raw path filename rides the `title` attribute. */ }
+					<a href={ classicHref } title={ classicPath || undefined }>
+						{ classicLabel }
+					</a>
+				</Stack>
 
-					{ /* Show the entered value when kind="option" so the user
-					     can confirm what they were about to save. */ }
-					{ kind === 'option' &&
-						value !== undefined &&
-						value !== '' && (
-							<Text variant="body-sm">
-								<strong>
-									{ __( 'Value:', 'wp-admin-shell' ) }
-								</strong>{ ' ' }
-								<code>{ String( value ) }</code>
-							</Text>
-						) }
-
-					{ /* Tier 1 — Classic screen link */ }
+				{ /* Tier 2 — WP-CLI copy-paste */ }
+				{ cliCommand && (
 					<Stack direction="column" gap="xs">
 						<Text variant="body-sm">
 							<strong>
-								{ __( 'Option 1:', 'wp-admin-shell' ) }
+								{ __( 'Option 2:', 'wp-admin-shell' ) }
 							</strong>{ ' ' }
 							{ __(
-								'Open the classic settings screen',
+								'Run this WP-CLI command',
 								'wp-admin-shell'
 							) }
 						</Text>
-						{ /* Plain <a href> — the interceptor handles routing. */ }
-						<a href={ classicHref }>
-							{ classicPath || 'wp-admin' }
-						</a>
+						<Stack direction="row" gap="sm" align="center">
+							<code className="wp-admin-shell-unavailable-via-api__code">
+								{ cliCommand }
+							</code>
+							<Button
+								variant="outline"
+								tone="neutral"
+								size="compact"
+								onClick={ handleCopyCli }
+							>
+								{ copied
+									? __( 'Copied!', 'wp-admin-shell' )
+									: __( 'Copy', 'wp-admin-shell' ) }
+							</Button>
+							{ /* sr-only live region so assistive tech hears
+							     the copy succeed — the button label flip is
+							     visual-only. */ }
+							<span
+								className="wp-admin-shell-unavailable-via-api__status"
+								aria-live="polite"
+							>
+								{ copied
+									? __(
+											'Command copied to clipboard',
+											'wp-admin-shell'
+									  )
+									: '' }
+							</span>
+						</Stack>
 					</Stack>
+				) }
 
-					{ /* Tier 2 — WP-CLI copy-paste */ }
-					{ cliCommand && (
-						<Stack direction="column" gap="xs">
-							<Text variant="body-sm">
-								<strong>
-									{ __( 'Option 2:', 'wp-admin-shell' ) }
-								</strong>{ ' ' }
-								{ __(
-									'Run this WP-CLI command',
-									'wp-admin-shell'
-								) }
-							</Text>
-							<Stack direction="row" gap="sm" align="center">
-								<code className="wp-admin-shell-unavailable-via-api__code">
-									{ cliCommand }
-								</code>
-								<Button
-									variant="outline"
-									tone="neutral"
-									size="compact"
-									onClick={ handleCopyCli }
-								>
-									{ copied
-										? __( 'Copied!', 'wp-admin-shell' )
-										: __( 'Copy', 'wp-admin-shell' ) }
-								</Button>
-								{ /* sr-only live region so assistive tech hears
-								     the copy succeed — the button label flip is
-								     visual-only. */ }
-								<span
-									className="wp-admin-shell-unavailable-via-api__status"
-									aria-live="polite"
-								>
-									{ copied
-										? __(
-												'Command copied to clipboard',
-												'wp-admin-shell'
-										  )
-										: '' }
-								</span>
-							</Stack>
+				{ /* Tier 3 — Agent prompt */ }
+				{ resolvedAgentPrompt && (
+					<Stack direction="column" gap="xs">
+						<Text variant="body-sm">
+							<strong>
+								{ __( 'Option 3:', 'wp-admin-shell' ) }
+							</strong>{ ' ' }
+							{ __(
+								'Paste this prompt into your coding agent',
+								'wp-admin-shell'
+							) }
+						</Text>
+						<Stack direction="row" gap="sm" align="center">
+							<span className="wp-admin-shell-unavailable-via-api__agent-prompt">
+								{ resolvedAgentPrompt }
+							</span>
+							<Button
+								variant="outline"
+								tone="neutral"
+								size="compact"
+								onClick={ handleCopyAgent }
+							>
+								{ agentCopied
+									? __( 'Copied!', 'wp-admin-shell' )
+									: __( 'Copy', 'wp-admin-shell' ) }
+							</Button>
+							{ /* sr-only live region so assistive tech hears
+							     the copy succeed — the button label flip is
+							     visual-only. */ }
+							<span
+								className="wp-admin-shell-unavailable-via-api__status"
+								aria-live="polite"
+							>
+								{ agentCopied
+									? __(
+											'Prompt copied to clipboard',
+											'wp-admin-shell'
+									  )
+									: '' }
+							</span>
 						</Stack>
-					) }
-
-					{ /* Tier 3 — Agent prompt */ }
-					{ resolvedAgentPrompt && (
-						<Stack direction="column" gap="xs">
-							<Text variant="body-sm">
-								<strong>
-									{ __( 'Option 3:', 'wp-admin-shell' ) }
-								</strong>{ ' ' }
-								{ __(
-									'Paste this prompt into your coding agent',
-									'wp-admin-shell'
-								) }
-							</Text>
-							<Stack direction="row" gap="sm" align="center">
-								<span className="wp-admin-shell-unavailable-via-api__agent-prompt">
-									{ resolvedAgentPrompt }
-								</span>
-								<Button
-									variant="outline"
-									tone="neutral"
-									size="compact"
-									onClick={ handleCopyAgent }
-								>
-									{ agentCopied
-										? __( 'Copied!', 'wp-admin-shell' )
-										: __( 'Copy', 'wp-admin-shell' ) }
-								</Button>
-								{ /* sr-only live region so assistive tech hears
-								     the copy succeed — the button label flip is
-								     visual-only. */ }
-								<span
-									className="wp-admin-shell-unavailable-via-api__status"
-									aria-live="polite"
-								>
-									{ agentCopied
-										? __(
-												'Prompt copied to clipboard',
-												'wp-admin-shell'
-										  )
-										: '' }
-								</span>
-							</Stack>
-						</Stack>
-					) }
-				</Stack>
-			</Notice.Description>
+					</Stack>
+				) }
+			</Stack>
 		</Notice.Root>
 	);
 }
