@@ -67,7 +67,7 @@
 		"icon": "tag"
 	},
 	"documentation": {
-		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description / parent fields), and bulk delete terms. Hierarchical taxonomies (e.g. category) render rows in true depth-first tree order — parent immediately above its indented children — under the default name-ascending first-page view with no active search (with a visually-hidden `Level N` for assistive tech); other sorts / pages / searches fall back to flat REST order with no indentation. They also offer an indented parent picker on add/edit; the site default category is badged and protected from deletion. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
+		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description / parent fields), and bulk delete terms. Hierarchical taxonomies (e.g. category) render rows in true depth-first tree order — parent immediately above its indented children — under the default name-ascending first-page view with no active search, when the whole tree fits on one page (with a visually-hidden `Level N` for assistive tech); other sorts / pages / searches, or a tree larger than one page, fall back to flat REST order with no indentation (larger trees paginate alphabetically). They also offer an indented parent picker on add/edit; the site default category is badged and protected from deletion. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
 		"rebuilds": "taxonomies",
 		"data": {
 			"reads": [
@@ -174,8 +174,8 @@
 			},
 			{
 				"id": "hierarchical-tree",
-				"when": "taxonomy is hierarchical (taxonomyRecord.hierarchical) && allTerms resolved && view sorted by name asc on page 1 with no active search",
-				"renders": "The page's rows are reordered client-side from the flat REST (alphabetical) order into the term-tree depth-first sequence so a parent renders immediately above its indented children (true wp-admin order). Name column rows are indented by client-computed depth with a visually-hidden `Level N` (screen-reader-text); no `role=treeitem`/`aria-level` (orphaned inside the DataViews table). Flat taxonomies — or any non-default sort / later page / active search — keep the flat REST order with no indentation and no depth announcement."
+				"when": "taxonomy is hierarchical (taxonomyRecord.hierarchical) && allTerms resolved && view sorted by name asc on page 1 with no active search AND the whole tree fits on one page (totalItems <= perPage)",
+				"renders": "The page's rows are reordered client-side from the flat REST (alphabetical) order into the term-tree depth-first sequence so a parent renders immediately above its indented children (true wp-admin order). Name column rows are indented by client-computed depth with a visually-hidden `Level N` (screen-reader-text); no `role=treeitem`/`aria-level` (orphaned inside the DataViews table). Flat taxonomies — or any non-default sort / later page / active search / tree larger than one page — keep the flat REST order with no indentation and no depth announcement (REST pages alphabetically, so a multi-page tree could float an indented child whose parent lands on a later page; larger trees paginate flat)."
 			},
 			{
 				"id": "default-badge",

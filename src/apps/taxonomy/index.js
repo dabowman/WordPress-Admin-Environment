@@ -76,9 +76,10 @@ function buildFieldRenderers( {
 	return {
 		name: ( { item } ) => {
 			// Depth indentation only reads true when the list is in tree order
-			// (name-ascending). Under any other sort — or when paged past the
-			// tree window — rows render flat so a child never appears indented
-			// without its parent visible above it (mirrors wp-admin).
+			// (name-ascending, first page, whole tree on one page). Under any
+			// other sort — or when the tree paginates past one page — rows render
+			// flat so a child never appears indented without its parent visible
+			// above it (mirrors wp-admin).
 			const depth = showDepth ? depthById[ item.id ] || 0 : 0;
 			const isDefault = defaultId !== null && item.id === defaultId;
 			return (
@@ -267,18 +268,25 @@ export default function TaxonomyApp( { config = {} } ) {
 	}, [ termTree ] );
 
 	// Depth indentation only makes sense when the page's rows can be put into
-	// true tree order: name-ascending sort, the first (unpaged) page, and no
-	// active search (a search returns an arbitrary subset whose parents may not
-	// be present). Any other sort / later page / active search renders flat
-	// (mirrors wp-admin collapsing the tree on non-default sort) so an indented
-	// child never floats without its parent. When this holds, `data` is also
-	// reordered into `termTree` depth-first sequence below.
+	// true tree order: name-ascending sort, the first (unpaged) page, no active
+	// search (a search returns an arbitrary subset whose parents may not be
+	// present), AND the entire tree fits on one page. REST paginates
+	// alphabetically (orderby=name), not by tree, so on a multi-page tree page 1
+	// holds only the alphabetically-first `perPage` terms — reordering just those
+	// can still float an indented child whose parent sorts onto page 2. Gating on
+	// `totalItems <= view.perPage` (i.e. totalPages <= 1) keeps indentation off
+	// until the whole tree is visible. Any other sort / later page / active
+	// search / paginated tree renders flat (mirrors wp-admin collapsing the tree
+	// on non-default sort) so an indented child never floats without its parent.
+	// When this holds, `data` is also reordered into `termTree` depth-first
+	// sequence below.
 	const showDepth =
 		hierarchical &&
 		view.sort?.field === 'name' &&
 		( view.sort?.direction || 'asc' ) === 'asc' &&
 		view.page === 1 &&
-		! view.search;
+		! view.search &&
+		( totalItems || 0 ) <= view.perPage;
 
 	// When the page is in tree order (showDepth), reorder the flat alphabetical
 	// REST rows into the `termTree` depth-first sequence so a parent renders
