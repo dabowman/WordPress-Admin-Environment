@@ -79,6 +79,12 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 				array( 'status' => 401 )
 			);
 		}
+		// Defense-in-depth floor: every logged-in user (down to Subscriber)
+		// has `read`, so this only fails on an install that explicitly stripped
+		// the cap. The SUBSTANTIVE authorization is the per-id existence check
+		// in `get_widget_html()` — a caller can only render a widget the
+		// dashboard registered for the requesting user this request, which
+		// re-evaluates each plugin's registration-time cap gate.
 		if ( ! current_user_can( 'read' ) ) {
 			return new WP_Error(
 				'wp_admin_shell_dashboard_widget_forbidden',
@@ -109,53 +115,64 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 			);
 		}
 
-		$box = self::locate_widget( $id );
-		if ( ! is_array( $box ) || ! isset( $box['callback'] ) || ! is_callable( $box['callback'] ) ) {
-			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_not_found',
-				__( 'Unknown dashboard widget.', 'wp-admin-shell' ),
-				array( 'status' => 404 )
-			);
-		}
-
-		$title = isset( $box['title'] ) ? trim( wp_strip_all_tags( (string) $box['title'] ) ) : $id;
-		$args  = isset( $box['args'] ) ? $box['args'] : null;
-
-		// Mirror wp-admin's meta-box dispatch: callback receives the screen
-		// object + a callback-args array `{ id, title, args }`. Buffer the
-		// echoed HTML.
-		$callback_args = array(
-			'id'    => $id,
-			'title' => isset( $box['title'] ) ? $box['title'] : $title,
-			'args'  => $args,
-		);
-
-		ob_start();
+		// The whole locate + render path is wrapped: `locate_widget()` runs
+		// `wp_dashboard_setup()`, which fires the `wp_dashboard_setup` action.
+		// A third-party handler that assumes a dashboard screen (or otherwise
+		// throws) must NOT 500 the endpoint — drain any open buffer and return
+		// an empty render so the tile shows its error/empty state + the iframe
+		// fallback.
+		$title    = $id;
+		$buffered = false;
 		try {
-			call_user_func( $box['callback'], null, $callback_args );
-		} catch ( \Throwable $e ) {
-			// A misbehaving widget callback must not 500 the endpoint — drain
-			// the buffer and surface an empty render. The tile shows its
-			// error/empty state + the iframe fallback.
-			ob_end_clean();
+			$box = self::locate_widget( $id );
+			if ( ! is_array( $box ) || ! isset( $box['callback'] ) || ! is_callable( $box['callback'] ) ) {
+				return new WP_Error(
+					'wp_admin_shell_dashboard_widget_not_found',
+					__( 'Unknown dashboard widget.', 'wp-admin-shell' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			$title = isset( $box['title'] ) ? trim( wp_strip_all_tags( (string) $box['title'] ) ) : $id;
+			$args  = isset( $box['args'] ) ? $box['args'] : null;
+
+			// Mirror wp-admin's meta-box dispatch: `do_meta_boxes()` calls
+			// `call_user_func( $box['callback'], $object, $box )`, where
+			// `$object` is `''` (empty string) for the dashboard screen — not
+			// null. Pass `''` so a callback that inspects / type-hints the first
+			// arg sees what core would pass. Buffer the echoed HTML.
+			$callback_args = array(
+				'id'    => $id,
+				'title' => isset( $box['title'] ) ? $box['title'] : $title,
+				'args'  => $args,
+			);
+
+			ob_start();
+			$buffered = true;
+			call_user_func( $box['callback'], '', $callback_args );
+			$html     = ob_get_clean();
+			$buffered = false;
+			$html     = is_string( $html ) ? $html : '';
+
 			return rest_ensure_response(
 				array(
 					'id'    => $id,
 					'title' => $title,
+					'html'  => $html,
+				)
+			);
+		} catch ( \Throwable $e ) {
+			if ( $buffered ) {
+				ob_end_clean();
+			}
+			return rest_ensure_response(
+				array(
+					'id'    => $id,
+					'title' => is_string( $title ) ? $title : $id,
 					'html'  => '',
 				)
 			);
 		}
-		$html = ob_get_clean();
-		$html = is_string( $html ) ? $html : '';
-
-		return rest_ensure_response(
-			array(
-				'id'    => $id,
-				'title' => $title,
-				'html'  => $html,
-			)
-		);
 	}
 
 	/**

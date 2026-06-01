@@ -26,15 +26,18 @@
  * injected into the SPA via `dangerouslySetInnerHTML` (React doesn't run
  * injected scripts; the widget's enqueued handles aren't loaded on the shell
  * page). Such widgets degrade to static HTML. The tile offers a per-tile
- * **iframe fallback** — a "Open classic view" toggle that swaps the captured
- * HTML for an iframe of classic `index.php` (the full dashboard, chrome
- * hidden), where the widget's own JS runs natively. This is the same
- * escape-hatch tier as the #128 notices iframe fidelity fallback.
+ * **iframe fallback** — an "Open classic dashboard" toggle that swaps the
+ * captured HTML for an iframe of classic `index.php`. NOTE: classic wp-admin
+ * has no single-widget URL, so the iframe loads the **entire** classic
+ * dashboard (every widget), not just this tile's widget — but the widget's own
+ * enqueued JS runs natively there, so it's the fidelity escape hatch for
+ * JS-driven widgets. Same escape-hatch tier as the #128 notices iframe
+ * fidelity fallback.
  *
  * This is app-space rendering — the kernel never learns about the bridge.
  */
 
-import { useEffect, useRef, useState } from '@wordpress/element';
+import { useEffect, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Stack, Text, Button } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
@@ -76,20 +79,15 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 	const [ html, setHtml ] = useState( null );
 	const [ status, setStatus ] = useState( 'loading' ); // loading | ready | error
 	const [ useIframe, setUseIframe ] = useState( false );
-	const isMounted = useRef( true );
-
-	useEffect( () => {
-		isMounted.current = true;
-		return () => {
-			isMounted.current = false;
-		};
-	}, [] );
 
 	useEffect( () => {
 		if ( ! widgetId ) {
 			setStatus( 'error' );
 			return;
 		}
+		// Per-run flag: the cleanup flips it to false before any stale-response
+		// setState can fire, so post-unmount updates are guarded here without a
+		// separate mounted ref.
 		let active = true;
 		setStatus( 'loading' );
 		apiFetch( {
@@ -98,14 +96,14 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 			) }`,
 		} )
 			.then( ( res ) => {
-				if ( ! active || ! isMounted.current ) {
+				if ( ! active ) {
 					return;
 				}
 				setHtml( typeof res?.html === 'string' ? res.html : '' );
 				setStatus( 'ready' );
 			} )
 			.catch( () => {
-				if ( ! active || ! isMounted.current ) {
+				if ( ! active ) {
 					return;
 				}
 				setStatus( 'error' );
@@ -116,13 +114,15 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 	}, [ widgetId ] );
 
 	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
-	// Classic dashboard, chromeless. The bridge widget's own enqueued JS runs
-	// natively inside the iframe — the fidelity fallback for JS-driven widgets.
+	// The ENTIRE classic dashboard, chromeless — wp-admin has no single-widget
+	// URL, so this is the whole dashboard, not just this tile's widget. The
+	// widget's own enqueued JS runs natively inside the iframe, so it's the
+	// fidelity fallback for JS-driven widgets.
 	const iframeSrc = `${ adminUrl }index.php?wp_admin_shell_chromeless=1`;
 
 	const toggleLabel = useIframe
 		? __( 'Show captured view', 'wp-admin-shell' )
-		: __( 'Open classic view', 'wp-admin-shell' );
+		: __( 'Open classic dashboard', 'wp-admin-shell' );
 
 	return (
 		<div className="wp-admin-shell-classic-widget">
@@ -165,7 +165,7 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 							</Text>
 							<Text variant="body-sm">
 								{ __(
-									'Try the classic view above.',
+									'Try the classic dashboard above.',
 									'wp-admin-shell'
 								) }
 							</Text>

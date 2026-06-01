@@ -549,99 +549,163 @@ $records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
 
 remove_action( 'wp_dashboard_setup', $register_widgets );
 
-// In a CLI/admin context wp_dashboard_setup() is loadable; if for some reason
-// it is not (no dashboard API), harvest returns [] and these assertions are
-// skipped gracefully by guarding on a non-empty record set.
-if ( ! empty( $records ) ) {
-	$ids = array_column( $records, 'widget_id' );
-	$T::assert_true(
-		'harvest surfaces the plugin widget',
-		in_array( 'acme_sales_stats', $ids, true )
-	);
-	$T::assert_true(
-		'harvest skips a core-masquerading widget id',
-		! in_array( 'dashboard_right_now', $ids, true )
-	);
+// REGRESSION GUARD (#134 review): `ensure_dashboard_setup()` forces the
+// `dashboard` screen around `wp_dashboard_setup()` so widgets file under
+// `$wp_meta_boxes['dashboard']` regardless of the calling context (shell render
+// = `wp-admin-shell` screen; REST = no screen). The harvest MUST therefore
+// return a non-empty set here — these assertions run unconditionally (no
+// `! empty( $records )` skip-guard) so a screen-context regression fails CI.
+$T::assert_true(
+	'harvest returns a non-empty record set (dashboard screen forced)',
+	! empty( $records )
+);
 
-	// Title is tag-stripped for the display label.
-	$acme = null;
-	foreach ( $records as $r ) {
-		if ( $r['widget_id'] === 'acme_sales_stats' ) {
-			$acme = $r;
-			break;
-		}
-	}
-	$T::assert_true( 'harvest record found for plugin widget', is_array( $acme ) );
-	if ( is_array( $acme ) ) {
-		$T::assert_eq(
-			'harvested title strips config-link markup',
-			$acme['title'],
-			'Acme Sales Configure'
-		);
-		$T::assert_eq(
-			'harvested entry id is namespaced classic-',
-			$acme['entry_id'],
-			'classic-acme-sales-stats'
-		);
-	}
+$ids = array_column( $records, 'widget_id' );
+$T::assert_true(
+	'harvest surfaces the plugin widget',
+	in_array( 'acme_sales_stats', $ids, true )
+);
+$T::assert_true(
+	'harvest skips a core-masquerading widget id',
+	! in_array( 'dashboard_right_now', $ids, true )
+);
 
-	// Cascade contribution synthesizes the tile into the target screen.
-	$bridge_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
-	$T::assert_true(
-		'bridge contributes screens[dashboard-widgets].apps[]',
-		isset( $bridge_doc['screens']['dashboard-widgets']['apps'] )
-		&& is_array( $bridge_doc['screens']['dashboard-widgets']['apps'] )
+// Title is tag-stripped for the display label.
+$acme = null;
+foreach ( $records as $r ) {
+	if ( $r['widget_id'] === 'acme_sales_stats' ) {
+		$acme = $r;
+		break;
+	}
+}
+$T::assert_true( 'harvest record found for plugin widget', is_array( $acme ) );
+if ( is_array( $acme ) ) {
+	$T::assert_eq(
+		'harvested title strips config-link markup',
+		$acme['title'],
+		'Acme Sales Configure'
 	);
-	$apps_out = $bridge_doc['screens']['dashboard-widgets']['apps'];
-	$bridge_entry = null;
-	foreach ( $apps_out as $e ) {
-		if ( isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats' ) {
-			$bridge_entry = $e;
-			break;
-		}
-	}
-	$T::assert_true( 'synthesized tile entry present in apps[]', is_array( $bridge_entry ) );
-	if ( is_array( $bridge_entry ) ) {
-		$T::assert_eq( 'synthesized tile mounts the captured-HTML app', $bridge_entry['app'], 'core:dashboard-widget-classic' );
-		$T::assert_eq( 'synthesized tile config.widgetId', $bridge_entry['config']['widgetId'], 'acme_sales_stats' );
-	}
+	$T::assert_eq(
+		'harvested entry id is namespaced classic-',
+		$acme['entry_id'],
+		'classic-acme-sales-stats'
+	);
+}
 
-	// First-write-wins: an author entry with the same id is NOT overwritten,
-	// and the bridge appends nothing for that id (idempotent).
-	WP_Admin_Shell_Dashboard_Bridge::reset();
-	add_action( 'wp_dashboard_setup', $register_widgets );
-	$pre_doc = array(
-		'screens' => array(
-			'dashboard-widgets' => array(
-				'apps' => array(
-					array(
-						'id'  => 'classic-acme-sales-stats',
-						'app' => 'plugin:acme/native-tile',
-					),
+// Cascade contribution synthesizes the tile into the target screen.
+$bridge_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$T::assert_true(
+	'bridge contributes screens[dashboard-widgets].apps[]',
+	isset( $bridge_doc['screens']['dashboard-widgets']['apps'] )
+	&& is_array( $bridge_doc['screens']['dashboard-widgets']['apps'] )
+);
+$apps_out = $bridge_doc['screens']['dashboard-widgets']['apps'];
+$bridge_entry = null;
+foreach ( $apps_out as $e ) {
+	if ( isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats' ) {
+		$bridge_entry = $e;
+		break;
+	}
+}
+$T::assert_true( 'synthesized tile entry present in apps[]', is_array( $bridge_entry ) );
+if ( is_array( $bridge_entry ) ) {
+	$T::assert_eq( 'synthesized tile mounts the captured-HTML app', $bridge_entry['app'], 'core:dashboard-widget-classic' );
+	$T::assert_eq( 'synthesized tile config.widgetId', $bridge_entry['config']['widgetId'], 'acme_sales_stats' );
+}
+
+// First-write-wins: an author entry with the same id is NOT overwritten,
+// and the bridge appends nothing for that id (idempotent).
+WP_Admin_Shell_Dashboard_Bridge::reset();
+add_action( 'wp_dashboard_setup', $register_widgets );
+$pre_doc = array(
+	'screens' => array(
+		'dashboard-widgets' => array(
+			'apps' => array(
+				array(
+					'id'  => 'classic-acme-sales-stats',
+					'app' => 'plugin:acme/native-tile',
 				),
 			),
 		),
-	);
-	$after = apply_filters( 'wp_admin_shell_data_plugin', $pre_doc );
+	),
+);
+$after = apply_filters( 'wp_admin_shell_data_plugin', $pre_doc );
+remove_action( 'wp_dashboard_setup', $register_widgets );
+$matching = array_filter(
+	$after['screens']['dashboard-widgets']['apps'],
+	function ( $e ) {
+		return isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats';
+	}
+);
+$T::assert_eq(
+	'first-write-wins: author entry id appears exactly once',
+	count( $matching ),
+	1
+);
+$matching = array_values( $matching );
+$T::assert_eq(
+	'first-write-wins: author entry survives (bridge did not overwrite)',
+	$matching[0]['app'],
+	'plugin:acme/native-tile'
+);
+
+// --- Screen-context restoration --------------------------------------------
+// `ensure_dashboard_setup()` forces the `dashboard` screen then restores the
+// prior one. The harvest above must NOT have left the global current screen
+// pointing at `dashboard` (which would corrupt the surrounding shell render /
+// REST request). Prior screen was null here (CLI), so it should be cleared.
+WP_Admin_Shell_Dashboard_Bridge::reset();
+if ( function_exists( 'set_current_screen' ) && function_exists( 'get_current_screen' ) ) {
+	set_current_screen( 'wp-admin-shell' );
+	$before_id = get_current_screen() ? get_current_screen()->id : null;
+	add_action( 'wp_dashboard_setup', $register_widgets );
+	WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
 	remove_action( 'wp_dashboard_setup', $register_widgets );
-	$matching = array_filter(
-		$after['screens']['dashboard-widgets']['apps'],
-		function ( $e ) {
-			return isset( $e['id'] ) && $e['id'] === 'classic-acme-sales-stats';
-		}
-	);
+	$after_id = get_current_screen() ? get_current_screen()->id : null;
 	$T::assert_eq(
-		'first-write-wins: author entry id appears exactly once',
-		count( $matching ),
-		1
-	);
-	$matching = array_values( $matching );
-	$T::assert_eq(
-		'first-write-wins: author entry survives (bridge did not overwrite)',
-		$matching[0]['app'],
-		'plugin:acme/native-tile'
+		'harvest restores the prior current screen (not left on dashboard)',
+		$after_id,
+		$before_id
 	);
 }
+
+// --- entry_id collision disambiguation -------------------------------------
+// Two DISTINCT raw widget ids that kebab-normalize to the same entry_id must
+// both survive — the second is disambiguated with a short hash, not dropped.
+WP_Admin_Shell_Dashboard_Bridge::reset();
+$collide_widgets = function () {
+	if ( function_exists( 'wp_add_dashboard_widget' ) ) {
+		wp_add_dashboard_widget( 'Acme_Box', 'Acme Box A', function () {
+			echo 'a';
+		} );
+		wp_add_dashboard_widget( 'acme-box', 'Acme Box B', function () {
+			echo 'b';
+		} );
+	}
+};
+add_action( 'wp_dashboard_setup', $collide_widgets );
+$collide_records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+remove_action( 'wp_dashboard_setup', $collide_widgets );
+$collide_entries = array_column( $collide_records, 'entry_id' );
+// Both raw ids surface (both have a record).
+$collide_raw = array_column( $collide_records, 'widget_id' );
+$T::assert_true(
+	'collision: both colliding raw widget ids are harvested',
+	in_array( 'Acme_Box', $collide_raw, true ) && in_array( 'acme-box', $collide_raw, true )
+);
+$T::assert_true(
+	'collision: base entry id classic-acme-box is present',
+	in_array( 'classic-acme-box', $collide_entries, true )
+);
+$T::assert_eq(
+	'collision: the two colliding tiles have DISTINCT entry ids',
+	count( array_unique( $collide_entries ) ),
+	count( $collide_entries )
+);
+$T::assert_true(
+	'collision: disambiguated entry id matches the schema pattern',
+	(bool) preg_match( '/^classic-acme-box(-[0-9a-f]{6})?$/', $collide_entries[1] )
+);
 
 WP_Admin_Shell_Dashboard_Bridge::reset();
 

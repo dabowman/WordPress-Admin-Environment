@@ -165,9 +165,25 @@ class WP_Admin_Shell_Dashboard_Bridge {
 	 * `wp_add_dashboard_widget()`. Loads the wp-admin dashboard API (normally
 	 * only included on the dashboard screen) before calling.
 	 *
+	 * **Screen context.** `wp_add_dashboard_widget()` → `add_meta_box()` files
+	 * each widget under `$wp_meta_boxes[ get_current_screen()->id ]`. In every
+	 * context this bridge runs the current screen is NOT `dashboard`: the shell
+	 * render sets `wp-admin-shell` (see `WP_Admin_Shell_Hijack`), and a REST
+	 * request has no admin screen at all (`get_current_screen()` is null, so
+	 * `add_meta_box()` hits its `! isset( $screen->id )` guard and registers
+	 * nothing). Either way `$wp_meta_boxes['dashboard']` stays empty and the
+	 * harvest finds nothing. So we FORCE the dashboard screen around the
+	 * `wp_dashboard_setup()` call, then RESTORE the prior screen so the
+	 * surrounding shell-render / REST context isn't corrupted.
+	 *
 	 * Idempotent — guarded by `$setup_done`. `wp_dashboard_setup()` itself
 	 * is safe to call twice (it re-registers into the same buckets), but the
 	 * guard avoids re-dispatching the action's side effects needlessly.
+	 *
+	 * Perf note: on a config cache-miss this dispatches the full
+	 * `wp_dashboard_setup` action (every plugin's widget registration) just to
+	 * harvest titles — bounded to once per request via `$setup_done`, and the
+	 * heavier per-widget render is deferred to the lazy REST endpoint.
 	 *
 	 * @return bool True when setup ran (or had already run), false when the
 	 *              dashboard API couldn't be loaded.
@@ -186,7 +202,42 @@ class WP_Admin_Shell_Dashboard_Bridge {
 		if ( ! function_exists( 'wp_dashboard_setup' ) ) {
 			return false;
 		}
-		wp_dashboard_setup();
+
+		// `set_current_screen()` / `get_current_screen()` live in
+		// wp-admin/includes/screen.php — loaded on admin requests but NOT in a
+		// plain REST context. Require it before forcing the screen.
+		if ( ! function_exists( 'set_current_screen' ) || ! function_exists( 'get_current_screen' ) ) {
+			$screen_path = ABSPATH . 'wp-admin/includes/screen.php';
+			if ( file_exists( $screen_path ) ) {
+				require_once $screen_path;
+			}
+		}
+		$can_force_screen = function_exists( 'set_current_screen' ) && function_exists( 'get_current_screen' );
+
+		$prior_screen = $can_force_screen ? get_current_screen() : null;
+		if ( $can_force_screen ) {
+			set_current_screen( 'dashboard' );
+		}
+
+		try {
+			wp_dashboard_setup();
+		} finally {
+			// Restore the prior screen so the shell render / REST request that
+			// called us isn't left pointing at `dashboard`. A null prior screen
+			// (REST) is restored by passing the WP_Screen-less sentinel; passing
+			// the prior screen object is the documented round-trip.
+			if ( $can_force_screen ) {
+				if ( $prior_screen instanceof WP_Screen ) {
+					set_current_screen( $prior_screen );
+				} elseif ( is_object( $prior_screen ) && isset( $prior_screen->id ) ) {
+					set_current_screen( $prior_screen->id );
+				} else {
+					// No prior screen (REST) — clear the forced dashboard screen.
+					unset( $GLOBALS['current_screen'] );
+				}
+			}
+		}
+
 		self::$setup_done = true;
 		return true;
 	}
@@ -202,8 +253,12 @@ class WP_Admin_Shell_Dashboard_Bridge {
 	 *     widget_id: string,   // meta-box id (REST endpoint key)
 	 *     entry_id:  string,   // schema-safe screen-app entry id
 	 *     title:     string,   // widget title (tags stripped — display label)
-	 *     context:   string,   // normal|side|column3|column4 (placement hint)
 	 *   }
+	 *
+	 * The meta-box `context` (normal/side/column3/column4) is intentionally
+	 * NOT captured: tiles always land in the host grid's `slot: 'grid'` flow,
+	 * so the classic column placement is never honored — emitting it would
+	 * imply a fidelity the host doesn't provide.
 	 *
 	 * @return array<int, array>
 	 */
@@ -217,9 +272,10 @@ class WP_Admin_Shell_Dashboard_Bridge {
 			return array();
 		}
 
-		$records   = array();
-		$seen_ids  = array();
-		$dashboard = $wp_meta_boxes['dashboard'];
+		$records      = array();
+		$seen_ids     = array();
+		$seen_entries = array();
+		$dashboard    = $wp_meta_boxes['dashboard'];
 
 		foreach ( self::$CONTEXTS as $context ) {
 			if ( ! isset( $dashboard[ $context ] ) || ! is_array( $dashboard[ $context ] ) ) {
@@ -257,11 +313,33 @@ class WP_Admin_Shell_Dashboard_Bridge {
 						$title = $widget_id;
 					}
 
+					// Two DISTINCT raw widget ids can kebab-normalize to the
+					// same entry_id (e.g. `Acme_Box` + `acme-box`). The cascade
+					// dedupes on entry_id, so without disambiguation the second
+					// tile would be silently dropped. On collision, append a
+					// short hash of the raw id so two real widgets can't merge.
+					$entry_id = self::derive_entry_id( $widget_id );
+					if ( isset( $seen_entries[ $entry_id ] ) ) {
+						$entry_id = $entry_id . '-' . substr( md5( $widget_id ), 0, 6 );
+						if ( function_exists( '_doing_it_wrong' ) ) {
+							_doing_it_wrong(
+								__METHOD__,
+								sprintf(
+									/* translators: 1: widget id, 2: disambiguated entry id */
+									esc_html__( 'Dashboard widget id "%1$s" collided with another widget on the derived tile id; disambiguated to "%2$s".', 'wp-admin-shell' ),
+									esc_html( $widget_id ),
+									esc_html( $entry_id )
+								),
+								'1.0.0'
+							);
+						}
+					}
+					$seen_entries[ $entry_id ] = true;
+
 					$records[] = array(
 						'widget_id' => $widget_id,
-						'entry_id'  => self::derive_entry_id( $widget_id ),
+						'entry_id'  => $entry_id,
 						'title'     => $title,
-						'context'   => $context,
 					);
 				}
 			}

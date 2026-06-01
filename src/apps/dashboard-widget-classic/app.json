@@ -66,20 +66,20 @@
 			},
 			{
 				"id": "iframe-fallback",
-				"when": "the user clicks 'Open classic view' (useIframe === true)",
-				"renders": "An iframe of classic index.php (chromeless) where the widget's own enqueued JS runs natively."
+				"when": "the user clicks 'Open classic dashboard' (useIframe === true)",
+				"renders": "An iframe of classic index.php (chromeless). wp-admin has no single-widget URL, so this is the ENTIRE classic dashboard (every widget), not just this tile's widget — but the widget's own enqueued JS runs natively there."
 			}
 		],
 		"interactions": [
 			{
-				"trigger": "Click 'Open classic view' / 'Show captured view'",
-				"effect": "Toggles between the captured-HTML render and the chromeless classic-dashboard iframe."
+				"trigger": "Click 'Open classic dashboard' / 'Show captured view'",
+				"effect": "Toggles between the captured-HTML render and the chromeless classic-dashboard iframe (the whole dashboard, not a single widget)."
 			}
 		],
 		"constraints": [
 			{
 				"concern": "js-loss-in-captured-html",
-				"note": "Captured HTML is injected via dangerouslySetInnerHTML; React does not execute injected <script> tags, and the widget's enqueued JS / AJAX handles are not loaded on the shell page. Widgets that depend on JS (live feeds, interactive charts) degrade to static HTML. The per-tile iframe fallback ('Open classic view') is the fidelity path — it loads classic index.php where the widget's own JS runs. Same escape-hatch tier as the #128 notices iframe fallback."
+				"note": "Captured HTML is injected via dangerouslySetInnerHTML; React does not execute injected <script> tags, and the widget's enqueued JS / AJAX handles are not loaded on the shell page. Widgets that depend on JS (live feeds, interactive charts) degrade to static HTML. The per-tile iframe fallback ('Open classic dashboard') is the fidelity path — it loads classic index.php (the ENTIRE classic dashboard, since wp-admin has no single-widget URL) where the widget's own JS runs. Same escape-hatch tier as the #128 notices iframe fallback."
 			},
 			{
 				"concern": "admin-trust-html",
