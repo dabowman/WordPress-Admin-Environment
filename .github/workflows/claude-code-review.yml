@@ -1,12 +1,26 @@
 name: Claude Code Review
 
-# Label-gated, on-demand review. Add the `claude-review` label to a PR to
-# trigger a max-effort review; while the label remains, every subsequent push
-# re-reviews. Remove the label to stop. (To review every PR instead, switch
-# `types` to [opened, synchronize] and drop the `if` label check below.)
+# Label-gated, on-demand review. Add the `claude-review` label to a PR; while
+# the label remains, the review runs whenever the PR is opened, pushed to
+# (synchronize), reopened, or marked ready-for-review. Remove the label to stop.
+#
+# NOTE: the trigger list deliberately omits the `labeled` action. `track_progress`
+# (below) forces the action into tag mode — the tracking comment + inline-comment
+# flow + `update_claude_comment` summary — and the action HARD-REJECTS
+# `track_progress` on `labeled` events ("track_progress for pull_request events is
+# only supported for actions: opened, synchronize, ready_for_review, reopened").
+# Listening for `labeled` therefore failed every on-demand run at validation,
+# before the agent started. Dropping `track_progress` to satisfy `labeled` is
+# worse: that lands the run in agent mode, which posts inline comments but has no
+# tracking comment and no `update_claude_comment` — i.e. a silent summary drop,
+# the exact regression #203 closed. So we gate on the label and trigger only on
+# track_progress-supported events. Practical consequence: labelling an already-open
+# PR doesn't trigger by itself — push a commit (or reopen / mark ready), or apply
+# the label at PR-creation time so the `opened` event sees it.
+# (To review every PR instead, drop the `if` label check below.)
 on:
   pull_request:
-    types: [labeled, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   claude-review:
