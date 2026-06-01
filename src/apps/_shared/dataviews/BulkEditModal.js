@@ -1,4 +1,3 @@
-import '../app.css';
 import { useState } from '@wordpress/element';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
@@ -68,7 +67,19 @@ export function createBulkEditModal( {
 	const title = messages.title || __( 'Bulk edit', 'wp-admin-shell' );
 	const applyLabel = messages.applyLabel || __( 'Apply', 'wp-admin-shell' );
 
-	/** Seed the form: every field starts at the "no change" sentinel. */
+	/**
+	 * Seed the form: every field starts at the "no change" sentinel.
+	 *
+	 * The sentinel only round-trips cleanly through `elements`-backed controls,
+	 * because `fieldsWithNoChange` injects a matching `— No change —` option for
+	 * those (selects: status / role / comment-status) and the select then renders
+	 * that option as "unchanged." A plain text / integer / date field seeded here
+	 * would render the literal sentinel string in its input — so any non-`elements`
+	 * bulk field needs a custom `getValue`/`setValue` (or placeholder-style control)
+	 * that treats the sentinel as empty. The caller owns that mapping (see the
+	 * `config.fields` docstring above); `fieldsWithNoChange` only covers the common
+	 * `elements` case.
+	 */
 	const seed = () => {
 		const data = {};
 		for ( const field of fields ?? [] ) {
@@ -94,11 +105,24 @@ export function createBulkEditModal( {
 		const payload = computeBulkPayload( data, sentinel );
 		const hasChanges = Object.keys( payload ).length > 0;
 
+		// No client-side `useFormValidity` gate (unlike the sibling
+		// `EntityFormModal`): bulk edit seeds EVERY field to the sentinel, so a
+		// straight validity pass would flag required/typed fields as invalid
+		// *because* they hold the sentinel and would wrongly disable Apply. Every
+		// field here is optional-by-sentinel — only the ones changed away from it
+		// are written — so there is nothing to require. Out-of-domain values are
+		// caught server-side and surfaced through the partial-failure notice
+		// (`%1$d updated, %2$d failed.`). A future inline gate would have to skip
+		// any field still equal to the sentinel.
+
 		const onApply = async () => {
 			if ( isBusy ) {
 				return;
 			}
-			// No field was set away from the sentinel — nothing to apply.
+			// Defensive only: the Apply button is `disabled` on `! hasChanges`
+			// (below), so this guard + `messages.empty` notice is unreachable
+			// through normal UI interaction — it just keeps `onApply` safe if a
+			// caller ever invokes it programmatically with no changes staged.
 			if ( ! hasChanges ) {
 				createErrorNotice(
 					messages.empty ||
