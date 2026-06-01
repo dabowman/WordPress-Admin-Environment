@@ -1,21 +1,39 @@
 # core:dashboard-host
 
-A widget-grid controller. Mounts as a screen's primary app (typically the `dashboard-widgets` screen) and renders every co-mounted app carrying `slot: "grid"` as a tile in a CSS Grid.
+A widget-grid controller and the workspace's **dashboard screen** app. Mounts as a screen's primary app (the bundled `dashboard-home` screen, or a `dashboard-widgets` screen) and renders every co-mounted app carrying `slot: "grid"` as a tile in a CSS Grid, beneath a greeting header.
+
+This app **replaces the retired `core:dashboard` monolith** (issue #133 — "fold + delete"). The monolith's greeting + At-a-Glance + Activity + Recent Drafts were decomposed into host chrome (the greeting) plus four bundled default-tile apps.
+
+## Default tile set
+
+The bundled `wp-admin-default` shell mounts these four tiles on `dashboard-home`:
+
+- **`core:dashboard-widget-at-a-glance`** — site-wide counts (posts / pages / pending comments / users). Aggregate, NOT author-scoped.
+- **`core:dashboard-widget-activity`** — recently published posts + comments awaiting moderation. Site-wide.
+- **`core:dashboard-widget-recent-posts`** — Recent Drafts, **author-scoped** to the acting user (`author: userId` + `enabled: !!userId`, fail-closed; issue #217). Drafts never leak across authors.
+- **`core:dashboard-widget-quick-draft`** — title + body mini form that creates a draft and opens the editor.
+
+The **greeting is host chrome** — a `<header>` above the grid rendering a time-of-day greeting + the acting user's display name (read via `useEntityRecord('root','user', userId)`). It is deliberately NOT a tile (issue #133 design note).
 
 ## Architecture
 
 ```
-Screen: dashboard-widgets
+Screen: dashboard-home
   apps: [
-    { id: "host",         app: "core:dashboard-host"                                },
-    { id: "recent-posts", app: "core:dashboard-widget-recent-posts", slot: "grid"   },
-    { id: "quick-draft",  app: "core:dashboard-widget-quick-draft",  slot: "grid"   },
+    { id: "host",         app: "core:dashboard-host"                                  },
+    { id: "at-a-glance",  app: "core:dashboard-widget-at-a-glance",  slot: "grid"     },
+    { id: "activity",     app: "core:dashboard-widget-activity",     slot: "grid"     },
+    { id: "recent-posts", app: "core:dashboard-widget-recent-posts", slot: "grid"     },
+    { id: "quick-draft",  app: "core:dashboard-widget-quick-draft",  slot: "grid"     },
   ]
 
 ┌────────────────────────────────────────────────────┐
 │ Region: core:main                                  │
 │   ┌── region__app ─────────────────────────────┐   │
 │   │ <core:dashboard-host config={ screenId }>  │   │
+│   │   ├ Greeting header (host chrome)          │   │
+│   │   ├ Tile (at-a-glance → MountedApp)        │   │
+│   │   ├ Tile (activity    → MountedApp)        │   │
 │   │   ├ Tile (recent-posts → MountedApp)       │   │
 │   │   └ Tile (quick-draft  → MountedApp)       │   │
 │   └────────────────────────────────────────────┘   │
@@ -83,4 +101,9 @@ A rebuild needs:
 
 ## Parity gaps vs `docs/screens/dashboard-home.md`
 
-The host does NOT rebuild the wp-admin dashboard home — it ships an extensible widget grid. The original `core:dashboard` app (`src/apps/dashboard/`) still rebuilds `dashboard-home`; the dashboard-host is parallel infrastructure for the `dashboard-widgets` screen.
+The host **is** the workspace dashboard home now — the retired `core:dashboard` monolith (`src/apps/dashboard/`, deleted in #133) was folded into this host plus the four default-tile apps above. Remaining gaps versus wp-admin's dashboard:
+
+- **No WP-core dashboard-widget bridge.** Plugin widgets registered via `wp_add_dashboard_widget()` (jQuery-bound HTML) don't render here — that bridge is tracked in #134, which depends on this fold.
+- **No "Welcome" / Site Health / Events-and-News widgets.** Only the four canonical tiles ship by default.
+- **At-a-Glance counts don't deep-link** to their filtered list screens yet.
+- **No drag-to-reorder** — widget order is config-driven via `apps[]` order + `position` overrides.

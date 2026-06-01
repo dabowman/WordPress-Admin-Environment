@@ -5,6 +5,7 @@ import { isRTL } from '@wordpress/i18n';
 import { chevronRightSmall, chevronLeftSmall } from '@wordpress/icons';
 
 import { useSidebarNavigation } from './SidebarNavigationContext';
+import ArbitraryIcon from '../../_shared/icons/ArbitraryIcon';
 
 /**
  * A single item in the sidebar navigation — modeled after the site editor's
@@ -14,9 +15,16 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  * `Item` and `FlexBlock` are kept from `@wordpress/components` — neither
  * has a WPDS port in 0.12. Layout is provided by `Stack`/`Icon` from
  * `@wordpress/ui`.
+ *
+ * Icon rendering: when `iconSource` (the arbitrary-icon escape hatch, #127)
+ * is present it wins — a harvested data-URI / image-URL plugin menu icon
+ * renders through `ArbitraryIcon` (engine/app-space pass-through). Otherwise
+ * the pre-resolved `icon` object renders through `@wordpress/ui` `Icon`.
+ *
  * @param {Object} root0
  * @param {*}      root0.className
  * @param {*}      root0.icon
+ * @param {*}      root0.iconSource  Escape-hatch descriptor `{ type, value }` (#127).
  * @param {*}      root0.withChevron
  * @param {*}      root0.suffix
  * @param {*}      root0.uid
@@ -28,6 +36,7 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
 export default function SidebarNavigationItem( {
 	className,
 	icon,
+	iconSource,
 	withChevron = false,
 	suffix,
 	uid,
@@ -71,12 +80,16 @@ export default function SidebarNavigationItem( {
 			{ ...props }
 		>
 			<Stack direction="row" justify="flex-start" align="center" gap="sm">
-				{ icon && (
-					<Icon
-						style={ { fill: 'currentcolor' } }
-						icon={ icon }
-						size={ 24 }
-					/>
+				{ iconSource ? (
+					<ArbitraryIcon iconSource={ iconSource } size={ 24 } />
+				) : (
+					icon && (
+						<Icon
+							style={ { fill: 'currentcolor' } }
+							icon={ icon }
+							size={ 24 }
+						/>
+					)
 				) }
 				<FlexBlock>{ children }</FlexBlock>
 				{ withChevron && (

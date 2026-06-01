@@ -12,3 +12,25 @@
 .wp-admin-shell-notices-banner > * {
 	pointer-events: auto;
 }
+
+/* Harvested admin_notices HTML (#128). The captured markup carries
+ * wp-admin's own `.notice` / `.updated` / `.error` classes; neutralize
+ * the inherited fixed margins/borders so it sits cleanly inside the WPDS
+ * Notice container. App-space; admin-context markup rendered unchanged. */
+.wp-admin-shell-notices-banner__harvested .notice,
+.wp-admin-shell-notices-banner__harvested .updated,
+.wp-admin-shell-notices-banner__harvested .error {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+.wp-admin-shell-notices-banner__harvested p {
+	margin: 0 0 var(--wpds-dimension-padding-xs, 4px);
+}
+
+.wp-admin-shell-notices-banner__harvested p:last-child {
+	margin-bottom: 0;
+}

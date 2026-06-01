@@ -72,7 +72,7 @@ The smallest file that customizes the workspace — pins the engine, sets a land
             "label": "Home",
             "icon": "home",
             "path": "/dashboard/home",
-            "app": "core:dashboard"
+            "app": "core:dashboard-host"
         },
         "posts": {
             "label": "Posts",

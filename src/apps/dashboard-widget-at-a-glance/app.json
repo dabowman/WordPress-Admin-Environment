@@ -1,0 +1,77 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:dashboard-widget-at-a-glance",
+	"version": 1,
+	"title": "At a Glance",
+	"description": "Site-wide counts — published posts, published pages, pending comments, registered users.",
+	"designSystem": "@wordpress/ui",
+	"role": "region",
+	"capabilities": [ "read" ],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"slotHints": {
+		"defaultSize": { "w": 2, "h": 1 },
+		"minSize": { "w": 1, "h": 1 },
+		"position": "auto"
+	},
+	"documentation": {
+		"purpose": "Mirrors wp-admin's \"At a Glance\" box — aggregate, site-wide counts. Counts are intentionally NOT author-scoped (only Recent Drafts is, per issue #133's design note).",
+		"data": {
+			"reads": [
+				{
+					"source": "postType/post",
+					"via": "core-data",
+					"context": "view",
+					"purpose": "Published-post count via totalItems (per_page: 1, _fields: id). Default view context so the read cap floor (read-only users) sees real counts.",
+					"query": { "status": "publish", "per_page": 1, "_fields": "id" }
+				},
+				{
+					"source": "postType/page",
+					"via": "core-data",
+					"context": "view",
+					"purpose": "Published-page count via totalItems. Default view context for read-only users.",
+					"query": { "status": "publish", "per_page": 1, "_fields": "id" }
+				},
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Pending-comment count via totalItems (status: hold). Needs moderate_comments; read-only users see — here.",
+					"query": { "status": "hold", "per_page": 1, "_fields": "id", "context": "edit" }
+				},
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"purpose": "Registered-user count via totalItems.",
+					"query": { "per_page": 1, "_fields": "id" }
+				}
+			]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "a query is on its initial load (isResolving && totalItems === undefined)",
+				"renders": "Spinner in the affected stat slot — not shown on background refetches that still hold a value."
+			},
+			{
+				"id": "ready",
+				"when": "queries resolved",
+				"renders": "Four labelled counts (posts / pages / comments / users)."
+			}
+		],
+		"interactions": [],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Stack, Text",
+				"purpose": "Stat layout."
+			},
+			{
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading state — no WPDS 0.12 port."
+			}
+		]
+	}
+}

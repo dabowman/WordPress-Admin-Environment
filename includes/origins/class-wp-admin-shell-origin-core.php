@@ -69,7 +69,7 @@ class WP_Admin_Shell_Origin_Core {
 				'home' => array(
 					'label' => 'Home',
 					'path'  => '/',
-					'app'   => 'core:dashboard',
+					'app'   => 'core:dashboard-host',
 				),
 			),
 			'styles'    => array(),
