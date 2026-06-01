@@ -216,7 +216,7 @@
 			},
 			{
 				"trigger": "Change the Author filter (DataViews)",
-				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to REST `author` (scalar user id) → records refetch. Options resolve lazily via the field's `getElements` provider (fetches content authors through core-data, cached after first open)."
+				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to REST `author` (scalar user id) → records refetch. Options resolve lazily via the field's `getElements` provider (fetches content authors through core-data, cached after first open). When an author filter is active it is the SINGLE author scope: the Mine static `author` arg is skipped, and the Mine toggle shows checked only when the filter's value equals the current user id."
 			},
 			{
 				"trigger": "Change the Date filter (DataViews)",
@@ -228,7 +228,7 @@
 			},
 			{
 				"trigger": "Toggle Mine / Unattached toolbar filters",
-				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query."
+				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query. Mine and the author dropdown filter share the author axis: toggling Mine ON drops any active author filter so Mine owns the scope, and Mine's checked state is derived from the active author scope rather than a standalone boolean (one author scope at a time, no contradiction)."
 			},
 			{
 				"trigger": "Click Upload",

@@ -100,6 +100,30 @@ function applyDateFilters( args, filters ) {
 	return args;
 }
 
+/**
+ * Find the active `author` DataViews view-filter (an `is`-operator entry with a
+ * defined value), if any. The author dropdown filter and the Mine toggle both
+ * scope by author; this lets the app keep them mutually consistent — one author
+ * scope at a time. Returns the filter's value (a user id) or `null` when no
+ * author filter is engaged.
+ *
+ * @param {Array} filters `view.filters`.
+ * @return {number|string|null} The active author filter value, or `null`.
+ */
+function activeAuthorFilterValue( filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if (
+			filter.field === 'author' &&
+			filter.value !== null &&
+			filter.value !== undefined &&
+			filter.value !== ''
+		) {
+			return filter.value;
+		}
+	}
+	return null;
+}
+
 // Cache for the author filter `getElements` provider. DataViews calls
 // `getElements()` each time the filter opens; caching the mapped
 // `{ value, label }` array avoids re-decoding on every open. `resolveSelect`
@@ -185,11 +209,52 @@ export default function MediaApp( { config = {} } ) {
 	const [ editingId, setEditingId ] = useState( null );
 	const fileInputRef = useRef();
 
+	// The author dropdown filter and the Mine toggle are two controls for the
+	// same axis (author scope). Keep exactly one active: when an author
+	// view-filter is engaged it is the single source of author scope, so the
+	// Mine static arg is skipped (otherwise `buildQueryArgs` would overwrite it
+	// with the dropdown value, leaving Mine checked while another author's media
+	// showed — contradictory state).
+	const authorFilterValue = useMemo(
+		() => activeAuthorFilterValue( view.filters ),
+		[ view.filters ]
+	);
+	const authorFilterActive = authorFilterValue !== null;
+
+	// Mine reflects reality, not a standalone boolean: checked when the Mine
+	// static scope is the active author scope (toggle on, no dropdown filter
+	// overriding it) OR when the dropdown's author value happens to be the
+	// current user. Compare as strings so a string filter value ('5') matches a
+	// numeric current-user id (5).
+	const mineChecked = authorFilterActive
+		? String( authorFilterValue ) === String( currentUserId )
+		: showMine;
+
+	// Toggling Mine takes over the author axis: turning it ON drops any active
+	// author dropdown filter (so Mine is the single scope); turning it OFF just
+	// clears the static scope. One author scope at a time, no contradiction.
+	const handleMineToggle = useCallback(
+		( next ) => {
+			if ( next && authorFilterActive ) {
+				setView( ( current ) => ( {
+					...current,
+					filters: ( current.filters ?? [] ).filter(
+						( filter ) => filter.field !== 'author'
+					),
+				} ) );
+			}
+			setShowMine( next );
+		},
+		[ authorFilterActive, setView ]
+	);
+
 	const queryArgs = useMemo( () => {
 		// `_embed: 'author'` so each record carries `_embedded.author[0].name`
 		// for the Author column — `record.author` alone is a bare numeric id.
 		const staticArgs = { context: 'edit', _embed: 'author' };
-		if ( showMine && currentUserId ) {
+		// Skip the Mine static author arg when an explicit author filter is the
+		// active scope — the filter wins and is applied by buildQueryArgs.
+		if ( showMine && currentUserId && ! authorFilterActive ) {
 			staticArgs.author = currentUserId;
 		}
 		if ( showUnattached ) {
@@ -199,7 +264,7 @@ export default function MediaApp( { config = {} } ) {
 		// The DataViews date filter maps to REST `before`/`after`, which
 		// `buildQueryArgs` doesn't express — apply it as a supplemental pass.
 		return applyDateFilters( args, view.filters );
-	}, [ view, showMine, showUnattached, currentUserId ] );
+	}, [ view, showMine, showUnattached, currentUserId, authorFilterActive ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
 		'root',
@@ -449,8 +514,8 @@ export default function MediaApp( { config = {} } ) {
 						<ToggleControl
 							__nextHasNoMarginBottom
 							label={ __( 'Mine', 'wp-admin-shell' ) }
-							checked={ showMine }
-							onChange={ setShowMine }
+							checked={ mineChecked }
+							onChange={ handleMineToggle }
 						/>
 					) : null }
 					<ToggleControl
