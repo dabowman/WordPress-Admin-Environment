@@ -1,0 +1,39 @@
+/**
+ * ViewTabs — pinned segment strip with counts.
+ *
+ * Renders the classic `All | Mine | Pending | …` row above a DataViews list.
+ * Active state is signalled exclusively via `[aria-current="true"]` (never a
+ * redundant `.is-active` class — CLAUDE.md).
+ *
+ * Scoped to `.wp-admin-shell-view-tabs` so it stays engine-private (app-space,
+ * not kernel). Never hardcode hex — use `var(--wpds-*)` tokens.
+ */
+
+.wp-admin-shell-view-tabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+	align-items: center;
+	border-bottom: 1px solid var( --wpds-color-border-subtle, currentColor );
+	padding-inline: var( --wpds-dimension-gap-sm, 8px );
+}
+
+.wp-admin-shell-view-tabs__tab {
+	/* Flush button chrome — ViewTabs draws its own bottom border. */
+	border-radius: 0 !important;
+	border-bottom: 2px solid transparent;
+	padding-block: var( --wpds-dimension-gap-sm, 8px );
+}
+
+/*
+ * Active tab: bottom border in brand colour (the WPDS token that
+ * `tone="brand"` resolves to at the Button level doesn't produce an underline
+ * on its own, so we add one). `[aria-current="true"]` is the sole authority
+ * for active state — CSS does NOT target a redundant class (CLAUDE.md).
+ */
+.wp-admin-shell-view-tabs__tab[aria-current="true"] {
+	border-bottom-color: var(
+		--wpds-color-accent-primary,
+		var( --wp-admin-theme-color, #3858e9 )
+	);
+}
