@@ -232,6 +232,25 @@
 			"description": "A namespaced identifier referencing an app, engine, region template, or iframe escape-hatch target. Format: `core:{name}` (shell-shipped), `plugin:{slug}/{name}` (plugin-contributed), or `iframe:{url}` (wp-admin fallback — e.g. `iframe:options-permalink.php`). The iframe form is accepted on screen `app` fields per the wp-admin-default fixture; engine and template references reject it."
 		},
 
+		"iconSource": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [ "type", "value" ],
+			"description": "Arbitrary-icon escape-hatch descriptor for an icon the kernel's name-based registry can't resolve. Emitted by the classic-menu bridge when harvesting a plugin's `add_menu_page()` icon (data-URI SVG or image URL). Engine nav/toolbar renderers render it through a pass-through `<img src>` / dashicon span — engine-side, DS-specific; the kernel stays name-based + DS-neutral.",
+			"properties": {
+				"type": {
+					"type": "string",
+					"enum": [ "url", "dashicon" ],
+					"description": "Render strategy. `url` → `<img src=value>` (data-URI SVG/PNG or image URL). `dashicon` → a `<span class=\"dashicons dashicons-<value>\">` (reserved for future use; the bridge currently routes `dashicons-*` through the name `icon` field)."
+				},
+				"value": {
+					"type": "string",
+					"minLength": 1,
+					"description": "For `url`: the image `src` (data-URI or URL). For `dashicon`: the dashicon name (without the `dashicons-` prefix)."
+				}
+			}
+		},
+
 		"ariaRole": {
 			"type": "string",
 			"pattern": "^[a-z][a-z]+$",
@@ -286,6 +305,10 @@
 					"type": "string",
 					"minLength": 1,
 					"description": "Icon name resolved via the kernel icon registry (engine-populated). Surfaces in menu items implicitly bound to this screen (unless overridden per-item). Optional — screens without an icon render no icon in menu contexts."
+				},
+				"iconSource": {
+					"$ref": "#/$defs/iconSource",
+					"description": "Arbitrary-icon escape hatch: a descriptor for an icon the name-based registry can't resolve (data-URI SVG, image URL). Emitted by the classic-menu bridge when harvesting a plugin's `add_menu_page()` icon. Engine nav renderers render it through a pass-through `<img src>` / dashicon span; the kernel stays name-based + DS-neutral. When both `icon` and `iconSource` are present, the renderer prefers `iconSource`."
 				},
 				"description": {
 					"type": "string",
@@ -472,6 +495,10 @@
 					"type": "string",
 					"minLength": 1,
 					"description": "Optional override of the bound screen's icon. Required for items not bound to a screen. Children nested inside a parent menu item do NOT inherit the parent's icon — each item renders its own icon, and items without an icon render no icon. See schema-sketch.md §Drill-down icon inheritance."
+				},
+				"iconSource": {
+					"$ref": "#/$defs/iconSource",
+					"description": "Arbitrary-icon escape hatch (see screen `iconSource`). Set on a menu item directly when its icon can't be resolved by name (data-URI / image URL harvested from a classic plugin menu). Engine nav renderers prefer `iconSource` over `icon` when both are present."
 				},
 				"description": {
 					"type": "string",

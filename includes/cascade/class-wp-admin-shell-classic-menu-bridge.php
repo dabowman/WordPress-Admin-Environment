@@ -42,10 +42,31 @@
  * `wp_admin_shell_classic_menu_core_slugs` filter when they
  * additionally ship a custom CPT that the shell mirrors natively.
  *
- * **Out of scope.** Icon SVG harvesting from data-URIs (a future
- * pass — bridge falls back to a generic `menu` icon today). Removing
- * the original entries from `$GLOBALS['menu']` (the bridge is purely
- * additive — wp-admin's native nav is unaffected).
+ * **Menu icon harvesting (#127).** `map_icon()` resolves a
+ * `dashicons-*` class to a kernel-registry icon *name*; for the icon
+ * shapes the name-based registry can't resolve — data-URI SVGs and
+ * plain image URLs — `map_icon_source()` emits an **arbitrary-icon
+ * escape-hatch** descriptor (`{ type: 'url'|'dashicon', value }`) that
+ * rides alongside the entry as `iconSource`. The engine nav renderers
+ * render that descriptor through a pass-through `<img src>` / dashicon
+ * `<span>` (engine-side; the kernel stays name-based + DS-neutral).
+ *
+ * **Core-parented submenu nesting (#127).** A plugin submenu parented
+ * to a *core* wp-admin slug the shell mirrors natively (`tools.php` →
+ * Tools, `options-general.php` → Settings) is nested under the REAL
+ * shell parent screen's menu entry instead of the generic `ingested`
+ * container. The map lives in `$CORE_PARENT_MENU` (core parent slug →
+ * shell menu id). Core parents the shell does NOT mirror natively fall
+ * back to the shared `ingested` container as before.
+ *
+ * **Menu position (#127).** The numeric `position` wp-admin assigns a
+ * top-level entry (`add_menu_page( …, $position )`) is carried onto the
+ * synthesized `menu.*` item so the resolved nav tree orders ingested
+ * plugin entries the same as classic.
+ *
+ * **Out of scope.** Removing the original entries from
+ * `$GLOBALS['menu']` (the bridge is purely additive — wp-admin's native
+ * nav is unaffected).
  *
  * @package WP_Admin_Shell
  */
@@ -84,6 +105,24 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		'tools.php'                  => '/tools',
 		'options-general.php'        => '/settings',
 		'site-health.php'            => '/tools/site-health',
+	);
+
+	/**
+	 * Core wp-admin parent slug → shell menu id (#127). When a plugin
+	 * adds a submenu under one of these core parents (e.g. an "Export"
+	 * tool under `tools.php`, or a settings page under
+	 * `options-general.php`), the bridge nests the ingested child under
+	 * the REAL shell parent's menu entry instead of the generic
+	 * `ingested` container — matching where classic wp-admin would slot
+	 * it. The id values are the bundled shell's top-level menu ids; an
+	 * admin.json that renames/relocates the parent simply won't match
+	 * and the child falls back to the `ingested` container (safe).
+	 *
+	 * @var array<string, string>
+	 */
+	private static $CORE_PARENT_MENU = array(
+		'tools.php'           => 'tools',
+		'options-general.php' => 'settings',
 	);
 
 	/**
@@ -158,6 +197,11 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 *     label:        string,   // menu page title (escaped, plain text)
 	 *     capability:   string,   // capability required (from $GLOBALS['menu'])
 	 *     icon:         string,   // resolved icon name (may be 'menu' fallback)
+	 *     iconSource:   array|null, // arbitrary-icon escape-hatch
+	 *                             // descriptor for data-URI / image-URL /
+	 *                             // dashicon-class icons the name registry
+	 *                             // can't resolve: { type, value }.
+	 *     position:     int|null, // numeric menu position (#127).
 	 *     path:         string,   // synthesized v3 screen path
 	 *     children: [
 	 *       {
@@ -171,6 +215,8 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 *     parent_is_core: bool,   // when true, child entries get a
 	 *                             // synthesized container item using
 	 *                             // the parent slug's label.
+	 *     parent_slug:    string, // (parent_is_core records only) original
+	 *                             // core parent slug → real shell menu id.
 	 *   }
 	 *
 	 * @return array<int, array>
@@ -209,8 +255,12 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			$menu_by_slug[ (string) $entry[2] ] = $entry;
 		}
 
-		// First pass: ingest third-party top-level menu entries.
-		foreach ( $menu as $entry ) {
+		// First pass: ingest third-party top-level menu entries. The
+		// array KEY of a `$GLOBALS['menu']` row is the numeric position
+		// wp-admin sorts by (`add_menu_page( …, $position )`); carry it
+		// onto the record so the resolved nav tree orders ingested
+		// plugin entries the same as classic (#127).
+		foreach ( $menu as $position => $entry ) {
 			if ( ! is_array( $entry ) || ! isset( $entry[2] ) ) {
 				continue;
 			}
@@ -240,6 +290,8 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				'label'          => $label,
 				'capability'     => $capability,
 				'icon'           => $icon ?? 'menu',
+				'iconSource'     => self::map_icon_source( $wp_icon ),
+				'position'       => is_numeric( $position ) ? (int) $position : null,
 				'path'           => self::derive_path( $slug ),
 				'children'       => array(),
 				'parent_is_core' => false,
@@ -288,9 +340,12 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				'label'          => $parent_label,
 				'capability'     => '', // Container only — no bound screen.
 				'icon'           => $icon ?? 'menu',
+				'iconSource'     => self::map_icon_source( $wp_icon ),
+				'position'       => null,
 				'path'           => '',
 				'children'       => $ingested_children,
 				'parent_is_core' => true,
+				'parent_slug'    => $parent_slug,
 			);
 		}
 
@@ -473,11 +528,69 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			}
 			return $name;
 		}
-		// Data URI — out of scope for v3.3 (no inline SVG harvesting).
+		// Data URI / image URL — not a name. `map_icon_source()` emits
+		// an arbitrary-icon escape-hatch descriptor for these; the
+		// name-based `icon` field falls back to `menu`.
 		if ( strpos( $wp_icon, 'data:' ) === 0 ) {
 			return null;
 		}
 		// Bare path / unknown shape — punt.
+		return null;
+	}
+
+	/**
+	 * Emit an arbitrary-icon escape-hatch descriptor (#127) for the icon
+	 * shapes the kernel's name-based registry (`resolveIcon`) can't
+	 * resolve — data-URI SVGs and plain image URLs that wp-admin accepts
+	 * as the `$icon_url` argument to `add_menu_page()`. The engine nav
+	 * renderers render the descriptor through a pass-through `<img src>` /
+	 * dashicon `<span>` (engine-side; the kernel stays name-based).
+	 *
+	 * Returns null for icon shapes the name registry DOES cover
+	 * (`dashicons-*` → name) and for the empty / sentinel cases —
+	 * `icon` carries those.
+	 *
+	 *   - `data:image/...;...`            → { type: 'url', value }
+	 *   - `http(s)://.../foo.png` (or a   → { type: 'url', value }
+	 *     site-relative `/wp-content/...`
+	 *     image path)
+	 *   - `dashicons-foo`                 → null (name registry covers it)
+	 *   - `none`, `div`, `''`             → null
+	 *
+	 * @param string $wp_icon Raw wp-admin menu icon string.
+	 * @return array{type:string,value:string}|null
+	 */
+	public static function map_icon_source( $wp_icon ) {
+		if ( ! is_string( $wp_icon ) || $wp_icon === '' ) {
+			return null;
+		}
+		if ( $wp_icon === 'none' || $wp_icon === 'div' ) {
+			return null;
+		}
+		// Dashicons resolve through the name registry — no escape hatch.
+		if ( strpos( $wp_icon, 'dashicons-' ) === 0 ) {
+			return null;
+		}
+		// Data-URI SVG / PNG — render directly via <img src>.
+		if ( strpos( $wp_icon, 'data:' ) === 0 ) {
+			return array(
+				'type'  => 'url',
+				'value' => $wp_icon,
+			);
+		}
+		// Image URL: absolute http(s), protocol-relative, or a
+		// site-relative path (wp-admin commonly passes a plugin asset URL
+		// like `plugins_url( 'icon.png', __FILE__ )`). Recognize an image
+		// extension OR an http(s)/protocol-relative URL.
+		$is_http     = (bool) preg_match( '#^(https?:)?//#i', $wp_icon );
+		$is_rel_path = ( $wp_icon[0] === '/' );
+		$looks_image = (bool) preg_match( '/\.(svg|png|gif|jpe?g|webp|ico)(\?.*)?$/i', $wp_icon );
+		if ( $is_http || ( $is_rel_path && $looks_image ) ) {
+			return array(
+				'type'  => 'url',
+				'value' => $wp_icon,
+			);
+		}
 		return null;
 	}
 
@@ -514,10 +627,43 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			$id = $record['id'];
 
 			if ( $record['parent_is_core'] ) {
-				// Submenu parented to a CORE wp-admin slug (an orphan the
-				// shell doesn't mirror natively). Group it beneath the
-				// shared `ingested` container (label "Plugins"), created
-				// lazily so it never renders empty.
+				// Submenu parented to a CORE wp-admin slug. When that core
+				// parent maps to a REAL shell menu the shell mirrors
+				// natively (`tools.php` → Tools, `options-general.php` →
+				// Settings — #127), nest the ingested children directly
+				// under that shell parent's existing menu node instead of
+				// the generic `ingested` container, matching where classic
+				// wp-admin slots them. A core parent the shell doesn't
+				// mirror falls back to the shared `ingested` container.
+				$parent_slug   = isset( $record['parent_slug'] ) ? $record['parent_slug'] : '';
+				$shell_menu_id = ( $parent_slug !== '' && isset( self::$CORE_PARENT_MENU[ $parent_slug ] ) )
+					? self::$CORE_PARENT_MENU[ $parent_slug ]
+					: null;
+
+				if ( $shell_menu_id !== null ) {
+					// Nest children straight under the shell parent's menu
+					// node (e.g. `menu.tools.items[...]`). The shell parent
+					// node already exists in the baseline menu tree; if it
+					// somehow doesn't, create a bare node so the children
+					// still surface (label/icon come from the matching
+					// screen via `bind_screens`).
+					if ( ! isset( $doc['menu'][ $shell_menu_id ] ) || ! is_array( $doc['menu'][ $shell_menu_id ] ) ) {
+						$doc['menu'][ $shell_menu_id ] = array();
+					}
+					if ( ! isset( $doc['menu'][ $shell_menu_id ]['items'] ) || ! is_array( $doc['menu'][ $shell_menu_id ]['items'] ) ) {
+						$doc['menu'][ $shell_menu_id ]['items'] = array();
+					}
+					$child_items = &$doc['menu'][ $shell_menu_id ]['items'];
+					foreach ( $record['children'] as $child ) {
+						self::synthesize_child( $doc, $child_items, $child );
+					}
+					unset( $child_items );
+					continue;
+				}
+
+				// Fallback: group beneath the shared `ingested` container
+				// (label "Plugins"), created lazily so it never renders
+				// empty.
 				self::ensure_container( $doc );
 				$container_items = &$doc['menu'][ self::DEFAULT_CONTAINER ]['items'];
 
@@ -534,6 +680,9 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 					$menu_item = array( 'label' => $record['label'] );
 					if ( $record['icon'] !== '' ) {
 						$menu_item['icon'] = $record['icon'];
+					}
+					if ( ! empty( $record['iconSource'] ) ) {
+						$menu_item['iconSource'] = $record['iconSource'];
 					}
 					$container_items[ $id ] = $menu_item;
 				}
@@ -563,6 +712,9 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 					'path'  => $record['path'],
 					'app'   => self::iframe_app_id( $record['slug'] ),
 				);
+				if ( ! empty( $record['iconSource'] ) ) {
+					$screen['iconSource'] = $record['iconSource'];
+				}
 				if ( $record['capability'] !== '' ) {
 					$screen['permissions'] = array(
 						'capabilities' => array( $record['capability'] ),
@@ -571,7 +723,18 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 				$doc['screens'][ $id ] = $screen;
 			}
 			if ( ! isset( $doc['menu'][ $id ] ) ) {
-				$doc['menu'][ $id ] = array();
+				$menu_node = array();
+				// Carry the numeric wp-admin menu position so the resolved
+				// nav tree orders this ingested entry the same as classic
+				// (#127). `bind_screens` folds label/icon/href from the
+				// matching screen; position + iconSource ride alongside.
+				if ( $record['position'] !== null ) {
+					$menu_node['position'] = $record['position'];
+				}
+				if ( ! empty( $record['iconSource'] ) ) {
+					$menu_node['iconSource'] = $record['iconSource'];
+				}
+				$doc['menu'][ $id ] = $menu_node;
 			}
 			if ( ! empty( $record['children'] ) ) {
 				if ( ! isset( $doc['menu'][ $id ]['items'] ) || ! is_array( $doc['menu'][ $id ]['items'] ) ) {

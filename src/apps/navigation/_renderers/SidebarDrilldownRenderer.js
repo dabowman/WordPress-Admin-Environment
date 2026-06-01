@@ -9,6 +9,7 @@ import { useEntityRecord } from '@wordpress/core-data';
 import { decodeEntities } from '@wordpress/html-entities';
 
 import { resolveIcon } from '../../../runtime/config/iconMap';
+import ArbitraryIcon from '../../_shared/icons/ArbitraryIcon';
 import SidebarNavigationScreen from '../_components/SidebarNavigationScreen';
 import SidebarNavigationItem from '../_components/SidebarNavigationItem';
 import SidebarContent from '../_components/SidebarContent';
@@ -91,7 +92,11 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 				className="wp-admin-shell-nav__link"
 				aria-label={ item.label }
 			>
-				<Icon icon={ resolveIcon( item.icon ) } size={ 24 } />
+				{ item.iconSource ? (
+					<ArbitraryIcon iconSource={ item.iconSource } size={ 24 } />
+				) : (
+					<Icon icon={ resolveIcon( item.icon ) } size={ 24 } />
+				) }
 			</a>
 		);
 	}
@@ -100,6 +105,22 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 	}
 	const target = hashPrimary( item.href );
 	const isActive = !! target && currentPrimary === target;
+	// IconButton's name-based `icon` prop can't render an arbitrary-icon
+	// escape-hatch source; when one is present, render an anchor + the
+	// ArbitraryIcon child instead (same active-state + a11y affordances).
+	if ( item.iconSource ) {
+		return (
+			<a
+				key={ item.id || `nav-${ index }` }
+				href={ item.href }
+				className="wp-admin-shell-nav__link"
+				aria-current={ isActive ? 'true' : undefined }
+				aria-label={ item.label || item.id }
+			>
+				<ArbitraryIcon iconSource={ item.iconSource } size={ 24 } />
+			</a>
+		);
+	}
 	return (
 		<IconButton
 			key={ item.id || `nav-${ index }` }
@@ -298,6 +319,7 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 				key={ `screen-${ item.id }` }
 				uid={ `screen-${ item.id }` }
 				icon={ resolveIcon( item.icon ) }
+				iconSource={ item.iconSource }
 				withChevron
 				isActive={ isActive }
 				onClick={ () => {
@@ -345,6 +367,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 				key={ `ext-${ item.id || index }` }
 				uid={ `ext-${ item.id || index }` }
 				icon={ resolveIcon( item.icon ) }
+				iconSource={ item.iconSource }
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
@@ -370,6 +393,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 			key={ item.id || `nav-${ index }` }
 			uid={ `nav-${ item.id || index }` }
 			icon={ resolveIcon( item.icon ) }
+			iconSource={ item.iconSource }
 			isActive={ isActive }
 			href={ item.href }
 		>
