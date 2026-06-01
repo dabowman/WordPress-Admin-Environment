@@ -1,7 +1,8 @@
-import { useState, useCallback } from '@wordpress/element';
+import { useState, useCallback, useEffect, useRef } from '@wordpress/element';
 import { Button, Stack, Text, Notice } from '@wordpress/ui';
 import { __, sprintf } from '@wordpress/i18n';
 import { buildOptionCliCommand } from './buildOptionCliCommand.mjs';
+import './index.css';
 
 /**
  * Tiered "no-API fallback" affordance for wp-admin capabilities that have no
@@ -48,6 +49,17 @@ export function UnavailableViaApi( {
 	const [ copied, setCopied ] = useState( false );
 	const [ agentCopied, setAgentCopied ] = useState( false );
 
+	// Track the "Copied!" reset timers so they can be cleared on unmount —
+	// without this, a state update can fire after the component is gone.
+	const cliTimerRef = useRef();
+	const agentTimerRef = useRef();
+	useEffect( () => {
+		return () => {
+			clearTimeout( cliTimerRef.current );
+			clearTimeout( agentTimerRef.current );
+		};
+	}, [] );
+
 	// Tier 2: CLI command —————————————————————————————————————————————————
 	// For kind="option" we generate the command from name + value unless the
 	// caller overrides it. For kind="action" the caller always supplies it.
@@ -74,33 +86,41 @@ export function UnavailableViaApi( {
 			  )
 			: '' );
 
-	const handleCopyCli = useCallback( () => {
-		if ( ! cliCommand ) {
+	const handleCopyCli = useCallback( async () => {
+		// `navigator.clipboard` is undefined on insecure (HTTP) origins, so
+		// guard before touching `.writeText` — otherwise this throws a
+		// synchronous TypeError. The command stays visible in the <code>
+		// element for manual selection when the API is unavailable.
+		if ( ! cliCommand || ! navigator.clipboard ) {
 			return;
 		}
-		navigator.clipboard
-			.writeText( cliCommand )
-			.then( () => {
-				setCopied( true );
-				setTimeout( () => setCopied( false ), 2000 );
-			} )
-			.catch( () => {
-				// Clipboard access denied — silently ignore; the textarea is
-				// still selectable so the user can copy manually.
-			} );
+		try {
+			await navigator.clipboard.writeText( cliCommand );
+			setCopied( true );
+			clearTimeout( cliTimerRef.current );
+			cliTimerRef.current = setTimeout( () => setCopied( false ), 2000 );
+		} catch {
+			// Clipboard access denied — silently ignore; the command is still
+			// visible in the <code> element for manual selection.
+		}
 	}, [ cliCommand ] );
 
-	const handleCopyAgent = useCallback( () => {
-		if ( ! resolvedAgentPrompt ) {
+	const handleCopyAgent = useCallback( async () => {
+		if ( ! resolvedAgentPrompt || ! navigator.clipboard ) {
 			return;
 		}
-		navigator.clipboard
-			.writeText( resolvedAgentPrompt )
-			.then( () => {
-				setAgentCopied( true );
-				setTimeout( () => setAgentCopied( false ), 2000 );
-			} )
-			.catch( () => {} );
+		try {
+			await navigator.clipboard.writeText( resolvedAgentPrompt );
+			setAgentCopied( true );
+			clearTimeout( agentTimerRef.current );
+			agentTimerRef.current = setTimeout(
+				() => setAgentCopied( false ),
+				2000
+			);
+		} catch {
+			// Clipboard access denied — silently ignore; the prompt is still
+			// visible for manual selection.
+		}
 	}, [ resolvedAgentPrompt ] );
 
 	// Build the classic-screen href. The capture-phase admin-link interceptor
@@ -108,9 +128,18 @@ export function UnavailableViaApi( {
 	// clicks and maps /wp-admin/... hrefs to workspace routes via legacy_path.
 	// Using a real anchor (not window.location.assign) is required so the
 	// interceptor sees the click.
+	//
+	// Derive the admin base from `window.wpAdminShell.adminUrl` (the same
+	// global the interceptor reads) so sites running wp-admin under a custom
+	// path still resolve; fall back to `/wp-admin/` only if absent. Join with
+	// a single slash so neither side double-slashes.
+	const adminBase = ( window.wpAdminShell?.adminUrl || '/wp-admin/' ).replace(
+		/\/+$/,
+		''
+	);
 	const classicHref = classicPath
-		? `/wp-admin/${ classicPath }`
-		: '/wp-admin/';
+		? `${ adminBase }/${ classicPath.replace( /^\/+/, '' ) }`
+		: `${ adminBase }/`;
 
 	return (
 		<Notice.Root
@@ -183,6 +212,20 @@ export function UnavailableViaApi( {
 										? __( 'Copied!', 'wp-admin-shell' )
 										: __( 'Copy', 'wp-admin-shell' ) }
 								</Button>
+								{ /* sr-only live region so assistive tech hears
+								     the copy succeed — the button label flip is
+								     visual-only. */ }
+								<span
+									className="wp-admin-shell-unavailable-via-api__status"
+									aria-live="polite"
+								>
+									{ copied
+										? __(
+												'Command copied to clipboard',
+												'wp-admin-shell'
+										  )
+										: '' }
+								</span>
 							</Stack>
 						</Stack>
 					) }
@@ -213,6 +256,20 @@ export function UnavailableViaApi( {
 										? __( 'Copied!', 'wp-admin-shell' )
 										: __( 'Copy', 'wp-admin-shell' ) }
 								</Button>
+								{ /* sr-only live region so assistive tech hears
+								     the copy succeed — the button label flip is
+								     visual-only. */ }
+								<span
+									className="wp-admin-shell-unavailable-via-api__status"
+									aria-live="polite"
+								>
+									{ agentCopied
+										? __(
+												'Prompt copied to clipboard',
+												'wp-admin-shell'
+										  )
+										: '' }
+								</span>
 							</Stack>
 						</Stack>
 					) }

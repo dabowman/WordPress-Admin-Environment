@@ -54,11 +54,7 @@ ok(
 	basic.includes( "'comment_moderation'" ),
 	basic
 );
-ok(
-	'contains the value quoted',
-	basic.includes( "'1'" ),
-	basic
-);
+ok( 'contains the value quoted', basic.includes( "'1'" ), basic );
 ok(
 	'exact output matches expected',
 	basic === "wp option update 'comment_moderation' '1'",
@@ -80,6 +76,15 @@ ok(
 	'escaped value produces correct shell-safe string',
 	withQuote === "wp option update 'blogname' 'O'\"'\"'Reilly'",
 	withQuote
+);
+
+// The NAME operand must be escaped identically to the value — a name with an
+// embedded single quote must not break the shell string either.
+const nameWithQuote = buildOptionCliCommand( "foo'bar", 'baz' );
+ok(
+	'escaped name produces correct shell-safe string',
+	nameWithQuote === "wp option update 'foo'\"'\"'bar' 'baz'",
+	nameWithQuote
 );
 
 console.log( '\n— buildOptionCliCommand: empty value —\n' );
@@ -107,10 +112,31 @@ const sqlIsh = buildOptionCliCommand(
 	'blogname',
 	"'; DROP TABLE wp_options; --"
 );
+// The whole output is still a `wp option update` command — never raw SQL.
 ok(
-	'SQL injection attempt is shell-quoted, not executed as SQL',
-	! /DROP\s+TABLE/i.test( sqlIsh.replace( /'.+'/s, '' ) ),
+	'SQL-ish value still produces a wp option update command',
+	sqlIsh.startsWith( 'wp option update ' ),
 	sqlIsh
+);
+// The dangerous fragment must survive only inside the single-quoted value arg.
+// Split off the fixed `wp option update '<name>' ` prefix and assert the
+// remaining value arg both opens with a single quote AND contains DROP TABLE —
+// i.e. the fragment is quoted, never a bare unquoted shell token. (Greedily
+// stripping the quoted span — the old approach — could never fail here.)
+const valueArg = sqlIsh.slice( "wp option update 'blogname' ".length );
+ok(
+	'the value arg is single-quoted (opens with a quote)',
+	valueArg.startsWith( "'" ),
+	valueArg
+);
+ok(
+	'DROP TABLE only ever appears inside the quoted value, never unquoted',
+	valueArg.includes( 'DROP TABLE' ) &&
+		// No bare `; DROP TABLE` escaping the quoting: every literal single
+		// quote in the source value is rewritten to the `'"'"'` idiom, so a
+		// run of `; DROP TABLE` is never preceded by an unescaped lone `'`.
+		! /(^|[^"])'; DROP TABLE/.test( valueArg ),
+	valueArg
 );
 
 // ── summary ──────────────────────────────────────────────────────────────────

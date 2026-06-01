@@ -1,0 +1,50 @@
+/*
+ * Styles for the tiered "no-API fallback" affordance (`UnavailableViaApi`).
+ *
+ * App-space, WPDS-flavored — the kernel stays DS-neutral. Imported as a
+ * side-effect by `UnavailableViaApi.js`; webpack folds duplicate copies across
+ * lazy chunks. No hardcoded colors — `var( --wpds-* )` only.
+ *
+ * The CLI command and agent prompt can be long (a full
+ * `wp option update '...' '...'`); wrap + cap them so they don't overflow the
+ * notice or push the Copy button off-screen.
+ */
+
+.wp-admin-shell-unavailable-via-api__code,
+.wp-admin-shell-unavailable-via-api__agent-prompt {
+	/* Wrap long content rather than overflowing the notice. */
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	/* Leave room for the adjacent Copy button in the flex row. */
+	max-width: 100%;
+	min-width: 0;
+}
+
+.wp-admin-shell-unavailable-via-api__code {
+	font-family: var( --wpds-font-family-mono, monospace );
+	font-size: var( --wpds-font-size-sm );
+	padding: var( --wpds-dimension-padding-xs )
+		var( --wpds-dimension-padding-sm );
+	border-radius: var( --wpds-border-radius-sm );
+	background: var( --wpds-color-bg-component-neutral-weak );
+	color: var( --wpds-color-fg-content-neutral-strong );
+}
+
+/*
+ * Visually-hidden live region announcing copy success to assistive tech. The
+ * "Copied!" button-label flip is visual-only; this carries the message to
+ * screen readers without occupying layout.
+ */
+.wp-admin-shell-unavailable-via-api__status {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect( 0 0 0 0 );
+	clip-path: inset( 50% );
+	white-space: nowrap;
+}
