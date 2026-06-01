@@ -62,10 +62,15 @@ const FIELD_LABELS = {
 };
 
 const ACTION_LABELS = {
-    approve:   __( 'Approve',       'wp-admin-shell' ),
-    unapprove: __( 'Unapprove',     'wp-admin-shell' ),
-    spam:      __( 'Mark as spam',  'wp-admin-shell' ),
-    trash:     __( 'Move to trash', 'wp-admin-shell' ),
+    edit:                 __( 'Edit',               'wp-admin-shell' ),
+    reply:                __( 'Reply',              'wp-admin-shell' ),
+    approve:              __( 'Approve',            'wp-admin-shell' ),
+    unapprove:            __( 'Unapprove',          'wp-admin-shell' ),
+    spam:                 __( 'Mark as spam',       'wp-admin-shell' ),
+    unspam:               __( 'Not spam',           'wp-admin-shell' ),
+    trash:                __( 'Move to trash',      'wp-admin-shell' ),
+    untrash:              __( 'Restore',            'wp-admin-shell' ),
+    'delete-permanently': __( 'Delete permanently', 'wp-admin-shell' ),
 };
 ```
 
@@ -78,7 +83,41 @@ compiled.label = ACTION_LABELS[ spec.id ] ?? spec.label;
 
 **Precedence — LABELS wins for ids the app knows; spec wins for ids it doesn't.** `??` ensures plugin extension columns and actions (ids the app didn't author) keep whatever string the cascade supplied. That preserves the third-party authoring path: a plugin adding a new moderation action via `wp_admin_shell_data_view_config_root_comment` filter controls its own label via the spec (wrapped in `__()` PHP-side); a plugin swapping a bundled label relabels via either an `app.json` LABELS contribution (future) or the same filter.
 
-A parallel `STATUS_SUCCESS_LABELS` table holds the snackbar copy keyed by action id (`approve` → "Approved.", `unapprove` → "Set to pending.", `spam` → "Marked as spam."). Inline `__()` literals inside the trash `RenderModal` (modal copy, button labels) translate normally — only spec-supplied DataViews fields needed the recipe.
+A parallel `STATUS_SUCCESS_LABELS` table holds the snackbar copy keyed by action id (`approve` → "Approved.", `unapprove` → "Set to pending.", `spam` → "Marked as spam.", `unspam` → "No longer marked as spam.", `untrash` → "Restored."). Inline `__()` literals inside the confirm `RenderModal`s and the Edit/Reply form modals (modal copy, button labels) translate normally — only spec-supplied DataViews fields needed the recipe.
+
+## Status verbs (issue #113)
+
+The status flow is fully bidirectional. Beyond `approve` / `unapprove` / `spam` / `trash`, the app wires:
+
+- **Not spam (`unspam`)** and **Restore (`untrash`)** — both partial-PATCH `status` to `approved` through the shared `setCommentsStatus` callback (the same `Promise.allSettled` path the other status flips use). Mirroring wp-admin, neither restores the comment's *prior* state (REST does not preserve it); both land in the approved queue. `STATUS_TARGETS` maps `unspam`/`untrash` → `approved`.
+- **Delete permanently (`delete-permanently`)** — `deleteEntityRecord('root','comment', id, { force: true })`, routed through a destructive `createBulkConfirmModal` (the same factory the Trash confirm uses) with an explicit "cannot be undone" message. Eligible only on `spam`/`trash` rows, matching wp-admin where permanent delete is reachable only from those queues.
+
+Every status flip and delete refreshes both the list query and the per-status count queries via the shared `refreshList()` helper (`invalidateResolution` on `getEntityRecords` + `invalidateEntityElementCounts`), so the list, the status filter labels, and the view tabs all re-resolve.
+
+## Author column (issue #112, Comments half)
+
+`FIELD_RENDERERS.author` (the `AuthorCell` component) stacks every author field already present on the `edit`-context REST record:
+
+- **Avatar** from `author_avatar_urls` (prefers 48px, falls back through the available sizes), rendered as a 32px `<img alt="">`.
+- **Name** in bold (falls back to "Anonymous").
+- **Email** as a `mailto:` link.
+- **Author URL** as an external link (`target="_blank" rel="noopener noreferrer"`), label stripped of its protocol for a tidier display.
+- **Author IP** — rendered **only** when `userCan('moderate_comments')` (resolved once at module load from the static cap map). Matches wp-admin's moderator-only IP exposure.
+
+All five ride the same `data` projection (`useMemo` over `records`) — no extra request.
+
+## Edit + Reply modals (issue #114)
+
+Inline-in-row editing is upstream-blocked: DataViews has no editable-cell (#162) or detail-row (#169) primitive. So Quick Edit, full Edit, and Reply ship as **modal actions** built on the shared `createEntityFormModal` factory (`_shared/dataviews/EntityFormModal.js`) — no comments-only modal.
+
+- **Edit** (one modal, Quick Edit ≡ full Edit) — `mode: 'edit'`. Exposes `author_name` / `author_email` (only when `moderate_comments`, gated via the `EDIT_FORM` field list) / `author_url` / `content` (textarea) / `status` (select) / `date`. Commits by PATCHing the buffered `editedRecord` through `useEntityRecord().save()`. `toData` normalizes `content.raw ?? content.rendered` into the textarea string.
+- **Reply** — `mode: 'create'`, content-only POST. `parent` + `post` come from the subject row via `toRecord(draft, item)` and are never user-editable. The clicked comment renders as read-only context ("In reply to …") via the factory's `renderContext(item)` hook. Author defaults to the current moderator and the reply auto-approves, both server-side.
+
+To support Reply's row-derived implicit fields, `createEntityFormModal`'s **create mode** was extended to thread the action's subject row into `toData(undefined, item)`, `toRecord(draft, item)`, and the new optional `renderContext(item)`. This is backward-compatible — existing single-arg `toData`/`toRecord` callers ignore the extra argument — and is the project's first inline-creation instance (the same Modal Create pattern grows to Add New User and create-with-meta).
+
+## View tabs (issue #111, Comments half)
+
+The shared `ViewTabs` strip renders above the list: **All / Pending / Approved / Spam / Trash** segments with live counts from `useEntityElementCounts`. Clicking a segment writes the corresponding `status` filter into `view.filters` (All clears it → unfiltered `status: 'any'`) and resets to page 1. `activeSegmentId(view)` derives the pressed segment back from the current filter, so deep-links and the existing status filter dropdown stay in sync. The counts object feeds both the tabs and the status-column filter labels — one set of requests.
 
 ## Rebuild guide
 
@@ -97,12 +136,12 @@ A non-WPDS rebuild needs:
 
 ## Known limitations
 
-- No reply. wp-admin offers an inline reply form on each row; the v2 design defers this.
-- No Quick Edit. wp-admin's row inline-edit (toggleable form for author / email / URL / content) is not wired up.
-- No full single-comment Edit screen. wp-admin links to `comment.php?action=editcomment` for a full edit form with parent-comment selector + status switcher; the v2 app surfaces neither the link nor the screen.
-- No author / IP / email row-level filtering.
-- The Trash action lacks an undo path. wp-admin's edit-comments has a "Undo" snackbar after trash; we issue a plain success snackbar.
+- **Reply / Edit are modal, not inline.** wp-admin offers an inline reply form + a row Quick Edit toggle; DataViews has no editable-cell (#162) or detail-row (#169) primitive (both `blocked:upstream`), so both ship as modal actions. Swap the host to inline when those primitives land — not a missed requirement.
+- No `Mine` view tab. The strip ships **All / Pending / Approved / Spam / Trash**; `Mine` (scoped to `author=<me>`) is not wired, and there is no `Mine` count.
+- Parent-comment **selector** in Edit. wp-admin's full edit form lets a moderator re-parent a comment; the Edit modal exposes author / content / status / date but not a parent picker.
+- No author / IP / email row-level filtering (the IP is displayed for moderators but not filterable — REST has no `author_ip` collection param).
+- The Trash / spam / delete actions lack an undo path. wp-admin's edit-comments has an "Undo" snackbar; we issue a plain success snackbar.
 - Pagination caps perPage at 100 server-side; the app passes whatever DataViews sends.
-- Status **counts** surface on the status filter elements (`Approved (12)`, `Pending (3)`) via the shared `useEntityElementCounts` hook — one `per_page=1&_fields=id` request per status, read off the `X-WP-Total` header. Rendered as filter-dropdown options, not the standalone `All | Mine | Pending | Approved | Spam | Trash` tab strip wp-admin uses, and there is no `Mine` count.
+- Status **counts** drive both the `ViewTabs` strip and the status-column filter labels (`Approved (12)`, `Pending (3)`) via the shared `useEntityElementCounts` hook — one `per_page=1&_fields=id` request per status, read off the `X-WP-Total` header.
 
 Parity gaps versus `docs/screens/comments.md` not surfaced in the v2 app are tracked in that screen spec; they carry forward unchanged from the pre-C2 implementation.

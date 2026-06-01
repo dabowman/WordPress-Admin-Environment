@@ -17,12 +17,16 @@
  *
  * @param {Object}   params
  * @param {Object}   params.data       The create draft `DataForm` data.
- * @param {Function} [params.toRecord] `(data) => payload` REST mapper.
+ * @param {Function} [params.toRecord] `(data, item?) => payload` REST mapper.
+ * @param {Object}   [params.item]     The action's subject row, threaded to
+ *                                     `toRecord` so an inline-creation modal can
+ *                                     derive implicit fields (e.g. a Reply's
+ *                                     `parent`/`post`) from the clicked row.
  * @return {Object} The REST payload.
  */
-export function buildSubmitPayload( { data, toRecord } ) {
+export function buildSubmitPayload( { data, toRecord, item } ) {
 	const map = typeof toRecord === 'function' ? toRecord : ( d ) => d;
-	return { ...( map( data ?? {} ) ?? {} ) };
+	return { ...( map( data ?? {}, item ) ?? {} ) };
 }
 
 /**

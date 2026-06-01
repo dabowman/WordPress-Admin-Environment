@@ -4,40 +4,72 @@ Prose accompanying `app.json#documentation` for the media library.
 
 ## Overview
 
-MediaApp is the closest the shell gets to WordPress's classic Media Library. It's not built on DataViews because the grid is intentionally simpler — just tile thumbnails with a click-to-detail interaction, plus an upload button and a media-type filter. The detail modal handles per-attachment metadata editing (title, alt text, caption, description) and the destructive operations (copy URL, delete).
+MediaApp is a DataViews host over the `root/media` (attachment) entity — grid + table layouts, search, the media-type filter, selection, and bulk delete — sharing the same `src/apps/_shared/dataviews/` scaffolding as the other six list apps (posts / taxonomy / users / comments / plugins / themes). Two things make Media different from those apps:
 
-Two notable patterns:
+1. **An image-specific media-field renderer.** The `thumbnail` field branches: `media_type === 'image'` renders the attachment's thumbnail `source_url`; everything else renders a labeled file-type tile (`PDF`, `MP4`, …) derived from `mime_type.split('/').pop().toUpperCase()`. The other list apps never need this branch.
+2. **An upload affordance.** DataViews has no upload slot, so the upload control lives in a toolbar **above** the DataViews mount.
 
-- **Multipart upload via raw `apiFetch`.** `core-data`'s `saveEntityRecord` doesn't handle multipart well. Building a FormData manually + POSTing through `apiFetch` is the reliable path. Each file is its own request (no batch upload endpoint); files iterate sequentially in a `for...of` loop and we await each one. Each request is wrapped in its own `try/catch` so a single file's failure (oversize / disallowed MIME / quota) raises a per-file `createErrorNotice` (`Could not upload "<name>": <reason>`) without aborting the rest of the batch. When at least one file uploads, a `createSuccessNotice` snackbar (`N files uploaded.`, pluralized via `_n`) confirms the batch and the cache-invalidation pass fires.
-- **`key={item.id}` on the modal.** The detail modal owns local form state mirroring the entity's title/alt/caption/description. Without a key prop, switching from one item to another while the modal is open would carry over the previous values — wrong. With `key={item.id}` the modal remounts on each item, resetting its local state to that item's values.
+Metadata editing is extracted into a **host-agnostic `MediaDetails` component** (`MediaDetails.js`) so it can later live in a modal, an inspector, or a side-pane without a rewrite.
 
 ## Architecture
 
-`queryArgs` is `useMemo`-derived from `mediaType + page`. Per-page is fixed at 40 (a reasonable visual density for the 3-or-4 column grid). Pagination is local (Prev/Next + page counter), not URL-driven — refreshing returns to page 1.
+### List (DataViews)
 
-The grid is native `<button>` per tile because `<img>` alone isn't keyboard-actionable. Each tile shows either:
+`index.js` wires the shared harness:
 
-- The thumbnail size's `source_url` for `media_type === 'image'`, with `alt={item.alt_text}`.
-- A labeled file-type tile (e.g. `PDF`, `MP4`) for non-image attachments — derived from `mime_type.split('/').pop().toUpperCase()`.
+- `useDataView(screenId)` resolves the `root/media/_default` dataView doc (baseline declared in `app.json#dataView`, injected post-merge by `inject_app_baselines`).
+- `useEntityDataView` owns `view` + `selection` (local state; URL slots are deferred to #136).
+- `buildQueryArgs(view, QUERY_MAPPING, staticArgs)` maps the DataViews `view` → REST query args: `search → search`, `sort → orderby/order`, pagination → `per_page`/`page`, and the `type` filter → `media_type`. The Type filter is **single-select** (`filterBy.operators: ["is"]`) because the attachments controller's `media_type` is a single-value enum (`image | video | audio | text | application`) — a multi-select CSV (`media_type=image,video`) 400s. The static args also carry `_embed: 'author'` so each record exposes `_embedded.author[0].name` for the Author column (the raw `record.author` is a bare numeric id; the column falls back to an em dash while the embed resolves). The **Mine** and **Unattached** toolbar toggles are pseudo-filters (no DataViews filter UI) merged as static args — `author={currentUserId}` and `parent=0` respectively. The Mine toggle is hidden when `window.wpAdminShell.userId` is missing, since the filter would otherwise no-op.
+- `buildFields` / `buildActions` compile the field + action specs, with `FIELD_LABELS` / `ACTION_LABELS` in-app `__()` tables (the cascade reaches DataViews with raw English labels regardless of locale).
+- The media-type filter elements carry counts (`Images (12)`) via the shared `useEntityElementCounts` hook + `buildFields`' `elementCounts` — one `per_page=1&_fields=id` request per type, total read off `X-WP-Total`.
+- **DataViews is gated on `records !== null`** — a centered `<Spinner/>` covers the window between first render and the resolver kicking off; DataViews handles its own loading state for subsequent filters / pagination.
+- The list app carries `wp-admin-shell-app--fill` (full-bleed); the DataViews background is handled engine-side (`--wp-dataviews-color-background`).
 
-The detail modal renders preview-left + form-right. Alt-text input only surfaces for images. The action row at the bottom splits left (copy URL, delete) from right (cancel, save).
+### Upload
 
-## Rebuild guide
+Multipart upload via raw `apiFetch` — the documented exception to the core-data rule (`saveEntityRecord` doesn't handle multipart well). Each file is its own request in a sequential `for...of` loop, each wrapped in its own `try/catch` so one file's failure (oversize / disallowed MIME / quota) raises a per-file `createErrorNotice` without aborting the batch. When ≥1 file uploads, a success snackbar fires and the cache-invalidation pass (`refreshAfterMutation`) refreshes both the list query and the per-type counts.
 
-Two patterns worth preserving:
+### MediaDetails (host-agnostic)
 
-- **Multipart upload pattern.** Raw `fetch` (or your host's `apiFetch` equivalent) + `FormData`. Don't try to shoehorn through the entity-save abstraction.
-- **Per-item modal key.** Whenever a modal mutates one-of-many records, pass `key={item.id}` so per-item state resets between openings. Saves a class of bugs.
+`MediaDetails.js` owns, in one presentation-agnostic unit:
 
-A non-WPDS rebuild needs: grid layout (CSS `grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))` works directly), modal with size variant, text + textarea inputs, select for filtering, file input + click-trigger pattern, native `<button>` tile semantics, and clipboard API access.
+1. **Entity binding** — `useEntityRecord('root','media', id)` with the buffered `edit()` / `save()` / `hasEdits`, threaded through the shared `useEntitySave` so a server-reported error keeps the host open.
+2. **Preview slot** — a `<MediaPreview>` sibling sub-component (image thumbnail, `<audio>`/`<video>` player, or a file-type tile), composed *next to* the form, never fused into it. This is the seam where the #125 image-edit canvas lands.
+3. **Metadata `DataForm`** — title, alt-text (images only, via `form` `isVisible`), caption, description. The `fields` / `form` split lets a future host vary only the `form` layout (compact panel here; expanded sections in a pane) while reusing the same field set + validation.
+4. **Actions** — Copy URL, Delete (permanent, `force: true`), and an explicit Save.
 
-## Known limitations
+The HOST (`MediaDetailsModal` in `index.js`) supplies only chrome — the `@wordpress/components` Modal frame + `onClose` + an `onMutated` invalidation callback. Swapping that host for a region / inspector / side-pane must not touch `MediaDetails.js`.
 
-- **No drag-and-drop upload.** Click-to-pick only.
-- **No bulk select.** Each delete is one-by-one through the detail modal.
-- **No edit-in-place image editing** (crop, rotate, scale). wp-admin has this; the shell doesn't.
-- **Pagination not URL-driven.** Refreshing returns to page 1; deep-linking to a specific page isn't supported.
-- **No search.** Filter is media-type-only. wp-admin's media library has a search box + date filter; the shell omits both.
-- **Type counts on the filter.** The media-type `SelectControl` options now carry counts (`Images (12)`, `All (40)`) via the shared `useEntityElementCounts` hook — one `per_page=1&_fields=id` request per type plus an unfiltered total for `All`, read off the `X-WP-Total` header. Reuses the same `withElementCounts` label helper as the DataViews apps even though Media renders a plain `SelectControl`, not DataViews.
-- **Source URL is single-line.** Long URLs overflow visually; no clamp or scroll.
-- **Copy URL relies on `navigator.clipboard`.** Insecure-origin contexts (HTTP-only dev sites) deny clipboard access; the error notice is the fallback.
+**Commit strategy.** The data flow is autosave-ready: `edit()` buffers every keystroke and the entity exposes `save()` / `hasEdits`, so a future autosaving host (a side-pane, the #119 document-settings sidebar) can wire a debounced/on-blur `save()` without touching the component. Today's modal host renders an explicit Save button (the reassurance superset). Choosing the buffered-edit data flow now is what avoids a rewrite when the pane lands. A shared `useEntityAutosave` should be promoted only when a second autosaving consumer actually needs it — not before (per #109's `_shared/forms` boundary note).
+
+### Delete
+
+Media has no trash, so single + bulk delete both go through `createBulkConfirmModal` with `deleteEntityRecord('root','media', id, { force: true })`, a "permanently delete" confirmation, `Promise.allSettled` over the targets, and partial-failure reporting. No self-delete guard (that's a Users concern). `MediaDetails` also exposes a single Delete inside the editor.
+
+## Extension seams (deferred work)
+
+These are intentional, documented seams — do **not** build them in this app:
+
+- **#125 image editor** — fills the `MediaDetails` `<MediaPreview>` preview slot as its own sibling sub-component (crop / rotate / flip via `POST /wp/v2/media/{id}/edit`). The preview is already isolated so the canvas composes next to the form.
+- **#136 URL slots** — filter / pagination / the open-detail item move to URL state (`?layout=`, `?type=`, `?search=`, `?page=`, `/{id}`). Today `view` + `editingId` are local `useState`; `useEntityDataView` is already the swap point.
+- **#132 fuller filters** — date (`after`/`before`) + category + a richer author picker. The `type` / Mine / Unattached filters land here; date/author wiring is intentionally light. `buildQueryArgs`' `QUERY_MAPPING` + the static-args merge are the extension points.
+
+## Rebuild guide (non-WPDS / non-React)
+
+A non-WPDS rebuild needs: a DataViews-equivalent grid+table host (search / sort / filter / pagination / selection / per-row + bulk actions / action modal); a media-field renderer that branches image-thumbnail vs. file-type tile; an upload toolbar above the list (multipart POST per file, per-file error surfacing); a host-agnostic details unit binding a single attachment with buffered edit + explicit/auto save, a separable preview slot, a metadata form (title / alt — images only / caption / description), and Copy URL + permanent Delete; and clipboard API access.
+
+Preserve two patterns:
+
+- **Multipart upload via raw api-fetch + FormData** — don't shoehorn through the entity-save abstraction.
+- **`MediaDetails` decoupled from its host** — the entity binding + form + actions live in the unit; the host supplies only chrome. This is what lets the #125 image editor and a future side-pane drop in without a rewrite.
+
+## Known limitations / parity gaps vs. `docs/screens/media.md`
+
+- **No image-edit canvas** (crop / rotate / flip / scale). Deferred to #125; the preview slot is the landing seam.
+- **Filters are partial.** Type / Mine / Unattached land here; date (month dropdown), category, and a full author picker are deferred to #132.
+- **No URL state.** Filters / pagination / open-detail are local; deep-linking + back/forward restoration deferred to #136.
+- **No embedded media picker** (selection mode, `media-upload.php` insert-into-post). Out of scope (separate / iframe).
+- **No drag-and-drop upload** — click-to-pick only.
+- **No "Uploaded to" attach/detach** affordance, no EXIF display, no subsize-generation polling. wp-admin has these; the shell omits them for now.
+- **No per-row capability gating** — wp-admin hides checkbox / destructive actions on rows the user can't edit/delete; the shell relies on the screen-level `upload_files` floor.
+- **Copy URL relies on `navigator.clipboard`** — insecure-origin (HTTP-only dev) contexts deny access; the error notice is the fallback.

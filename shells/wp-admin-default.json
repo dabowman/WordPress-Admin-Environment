@@ -459,6 +459,28 @@
 						},
 						"actions": [
 							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"spam"
+									]
+								}
+							},
+							{
+								"id": "reply",
+								"label": "Reply",
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved"
+									]
+								}
+							},
+							{
 								"id": "approve",
 								"label": "Approve",
 								"supportsBulk": true,
@@ -492,6 +514,22 @@
 								}
 							},
 							{
+								"id": "unspam",
+								"label": "Not spam",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "spam"
+								}
+							},
+							{
+								"id": "untrash",
+								"label": "Restore",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
+							},
+							{
 								"id": "trash",
 								"label": "Move to trash",
 								"supportsBulk": true,
@@ -502,6 +540,18 @@
 										"hold",
 										"approved",
 										"spam"
+									]
+								}
+							},
+							{
+								"id": "delete-permanently",
+								"label": "Delete permanently",
+								"supportsBulk": true,
+								"isDestructive": true,
+								"eligibleWhen": {
+									"status": [
+										"spam",
+										"trash"
 									]
 								}
 							}
