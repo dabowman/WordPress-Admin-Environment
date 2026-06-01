@@ -73,7 +73,9 @@ Success → snackbar, failure → dismissible banner, via `@wordpress/notices` �
 
 ## Block-theme fallback (shared signal with #121)
 
-`WP_Admin_Shell_Appearance_Menu` (PHP, `wp_admin_shell_data` priority 4) stamps `workspace.theme-support` with `{ block-theme, theme-supports }` and **also** prunes the `menus`/`nav-menus` screens on block themes (and now gates them on `current_theme_supports('menus')` for classic themes via the `requires` rule). So on a block theme the `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom shell that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `/wp-admin/nav-menus.php` (a real `<a href>` so the admin-link interceptor governs it).
+`WP_Admin_Shell_Appearance_Menu` (PHP, `wp_admin_shell_data` priority 4) stamps `workspace.theme-support` with `{ block-theme, theme-supports }` and **also** prunes the native `menus` screen on block themes (and gates it on `current_theme_supports('menus')` for classic themes via the `requires` rule). The `nav-menus` iframe screen is deliberately **theme-agnostic** — it is NOT in the prune rules, so it survives on every theme as the deterministic full-fidelity classic editor.
+
+So on a block theme the native `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom shell that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `#/nav-menus` (the iframe screen). We link to the **workspace route** `#/nav-menus`, not the raw `/wp-admin/nav-menus.php`: the raw path is claimed by the native `menus` screen's `legacy_path`, so the capture-phase admin-link interceptor would map it back to `#/menus` (this same disabled panel on a block theme). Routing to `#/nav-menus` mounts the iframe screen deterministically — which is why that screen must stay agnostic to the prune.
 
 ## Rebuild guide
 
@@ -97,6 +99,7 @@ Patterns to preserve:
 
 - **No drag-and-drop.** Reorder is explicit Up / Down / Indent / Outdent + numeric Order (Option B). Drag-reorder waits on issue #168.
 - **Relational pickers cap at 100 objects** (`per_page: 100`) and list only published posts/pages. Large sites won't see every candidate; replace with the #115 relational picker (search-backed) when it lands.
+- **Editing an item that points at a non-published or paged-out object shows an empty picker.** The relational pickers query `status: 'publish'` + `per_page: 100`, so when you open the modal on an existing item linked to a draft/private/pending object — or an object beyond the first 100 — the seeded `objectId` matches no option and the `SelectControl` renders nothing selected. The underlying link is intact (the `objectId` state is retained, so re-saving without touching the picker preserves it), but it reads as "no selection." The #115 search-backed picker (which can resolve the currently-linked object explicitly) fixes this; until then, treat an empty picker on an existing relational item as "linked to an object outside the published first-100," not as a broken link.
 - **No bulk add.** wp-admin lets you check several pages/posts and "Add to Menu" at once; this app adds one item per modal submission.
 - **No "Add menu items" accordion** of all candidate objects — the modal picks one object at a time.
 - **No item meta editing** beyond label / URL / order / link target — wp-admin's per-item panel also exposes Title Attribute, CSS Classes, Link Relationship (XFN), and Description. Those fields are writable via REST but not surfaced yet.

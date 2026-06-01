@@ -80,10 +80,14 @@ class WP_Admin_Shell_Appearance_Menu {
 			'show'     => 'classic',
 			'requires' => 'menus',
 		),
-		'nav-menus'          => array(
-			'show'     => 'classic',
-			'requires' => 'menus',
-		),
+
+		// NOTE: the `nav-menus` iframe screen (the full-fidelity classic
+		// Menus editor, `iframe:nav-menus.php`) is INTENTIONALLY NOT gated
+		// here. It is a theme-agnostic escape hatch: the native `core:menus`
+		// editor links to it (`#/nav-menus`) on block themes — where the
+		// native `menus` screen is pruned — so the deterministic iframe
+		// fallback must survive on every theme. Gating it on `menus` support
+		// would 404 that link exactly when it's needed.
 
 		// Classic-theme + declared `add_theme_support()`.
 		'custom-background'  => array(

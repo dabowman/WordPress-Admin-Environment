@@ -20,7 +20,6 @@ import {
 	siblingsOf,
 	reorderSiblings,
 	parentOf,
-	orderOf,
 } from './menuItemTree.mjs';
 import { MenuNameModal } from './MenuNameModal';
 import { MenuItemModal } from './MenuItemModal';
@@ -38,7 +37,25 @@ function readThemeSupport() {
 	);
 }
 
-const NAV_MENUS_FALLBACK = '/wp-admin/nav-menus.php';
+// In-workspace route to the full-fidelity classic Menus iframe screen
+// (`screens['nav-menus']` → `iframe:nav-menus.php` in the shell). We link to
+// the workspace route, NOT the raw `/wp-admin/nav-menus.php`: the latter is
+// claimed by the native `menus` screen's `legacy_path`, so the admin-link
+// interceptor would bounce it back to `#/menus` (this same disabled panel on a
+// block theme). The `#/nav-menus` route mounts the iframe deterministically.
+const NAV_MENUS_FALLBACK = '#/nav-menus';
+
+// Short, translatable labels for the REST `nav_menu_item.type` enum
+// (`custom` / `post_type` / `post_type_archive` / `taxonomy`). Keyed by the raw
+// REST value so translation tooling sees the `__()` literals at module load;
+// `TYPE_LABELS[ item.type ] ?? item.type` falls back to the raw value for any
+// type a plugin registers that we don't know about.
+const TYPE_LABELS = {
+	custom: __( 'Link', 'wp-admin-shell' ),
+	post_type: __( 'Page', 'wp-admin-shell' ),
+	post_type_archive: __( 'Archive', 'wp-admin-shell' ),
+	taxonomy: __( 'Category', 'wp-admin-shell' ),
+};
 
 export default function MenusApp() {
 	const themeSupport = readThemeSupport();
@@ -213,11 +230,15 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			];
 			const changes = reorderSiblings( next );
 			try {
-				await Promise.all(
-					changes.map( ( c ) =>
-						patchItem( c.id, { menu_order: c.menu_order } )
-					)
-				);
+				// Sequential, not Promise.all: core-data's save lock is
+				// per-record, but parallel saves against one entity type can
+				// surface "saving while another save is in progress" edit
+				// collisions on slower backends. The reorder set is small, so
+				// the latency cost of awaiting in series is negligible.
+				for ( const c of changes ) {
+					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
+					await patchItem( c.id, { menu_order: c.menu_order } );
+				}
 				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
@@ -288,12 +309,13 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			const changes = reorderSiblings( reordered );
 			try {
 				// First reparent the moved item, then settle sibling orders.
+				// Sequential (not Promise.all): per-record save lock vs.
+				// parallel saves on one entity type — see moveItem's note.
 				await patchItem( item.id, { parent: grandparent } );
-				await Promise.all(
-					changes.map( ( c ) =>
-						patchItem( c.id, { menu_order: c.menu_order } )
-					)
-				);
+				for ( const c of changes ) {
+					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
+					await patchItem( c.id, { menu_order: c.menu_order } );
+				}
 				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
@@ -729,7 +751,9 @@ function MenuItemRow( {
 						{ title || __( '(no label)', 'wp-admin-shell' ) }
 					</Button>
 					{ item.type && (
-						<Badge intent="neutral">{ item.type }</Badge>
+						<Badge intent="neutral">
+							{ TYPE_LABELS[ item.type ] ?? item.type }
+						</Badge>
 					) }
 				</Stack>
 				<Stack direction="row" align="center" gap="xs">
@@ -842,6 +866,3 @@ function DeleteMenuButton( { onDelete } ) {
 		</Modal>
 	);
 }
-
-// Re-exported for the pure-helper tests' convenience (kept tree-shakeable).
-export { buildItemTree, siblingsOf, reorderSiblings, parentOf, orderOf };

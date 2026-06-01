@@ -16,6 +16,14 @@ import { decodeEntities } from '@wordpress/html-entities';
  *   - **Category / Tag** (`type: 'taxonomy'`, `object: 'category'|'post_tag'`)
  *     — picked from a relational `SelectControl` of existing terms.
  *
+ * Hand-rolled `@wordpress/ui` controls rather than `@wordpress/dataviews`
+ * `DataForm` — an INTENTIONAL deviation from CLAUDE.md's "single-record edit
+ * forms use `DataForm`" convention. The conditional kind→object→relational
+ * field chain (the visible fields change as the user picks Custom/Page/Category
+ * and again as they pick the object type) plus the `saveEntityRecord`-based
+ * create flow don't fit `DataForm`'s flat, `useEntityRecord`-shaped field model
+ * cleanly; the explicit control tree is clearer here.
+ *
  * The relational pickers are the lightweight #115 stand-in: a synchronous
  * `useEntityRecords` of the chosen object type, surfaced as `SelectControl`
  * options. (Swap in the shared relational picker primitive when #115 lands.)

@@ -9,7 +9,8 @@
  *     (block-theme flag + per-feature theme-supports map), reusable by
  *     #120 (native classic Menus).
  *   - Block theme → keeps `site-editor`; drops `customize` / `widgets` /
- *     `menus` / `nav-menus` (screens + menu nodes at any depth).
+ *     `menus` (screens + menu nodes at any depth). The `nav-menus` iframe
+ *     escape hatch is theme-agnostic and survives on every theme.
  *   - Classic theme → keeps `customize` / `widgets` / `menus`; drops
  *     `site-editor`. Custom Background / Header survive only when the
  *     theme `add_theme_support()`s them.
@@ -168,7 +169,15 @@ WPAS_Appearance_Test_Runner::assert_true(
 	is_array( $block_doc['workspace']['theme-support']['theme-supports'] )
 );
 
-$classic_doc = WP_Admin_Shell_Appearance_Menu::apply( wpas_appearance_test_doc(), wpas_signal( false ) );
+// A "fully-equipped" classic theme: declares widgets + menus support (so the
+// `requires`-gated Widgets / Menus screens survive — issue #237), but NOT
+// custom-background / custom-header (those are asserted to drop below). Used as
+// the baseline classic doc for the keep/drop assertions that aren't about the
+// add_theme_support() gating itself.
+$classic_doc = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
+);
 WPAS_Appearance_Test_Runner::assert_false(
 	'signal: block-theme flag false for classic theme',
 	$classic_doc['workspace']['theme-support']['block-theme']
@@ -506,28 +515,41 @@ WPAS_Appearance_Test_Runner::assert_true(
 	! isset( $classic_menus_only['screens']['widgets'] )
 );
 
-// The nav-menus iframe-fallback screen is gated on `menus` too.
+// The nav-menus iframe-fallback screen is a theme-AGNOSTIC escape hatch: it is
+// the deterministic full-fidelity classic Menus editor the native `core:menus`
+// app links to (`#/nav-menus`) on block themes — where the native `menus`
+// screen is pruned. Gating it on `menus` support would 404 that link exactly
+// when it's needed, so it survives on every theme (block, classic-supported,
+// classic-unsupported).
 $doc_with_navmenus = wpas_appearance_test_doc();
 $doc_with_navmenus['screens']['nav-menus'] = array(
 	'label' => 'Menus (classic)',
 	'path'  => '/nav-menus',
 	'app'   => 'iframe:nav-menus.php',
 );
-$navmenus_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
+$navmenus_classic_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( false )
 );
-WPAS_Appearance_Test_Runner::assert_false(
-	'requires: nav-menus screen dropped when theme lacks menu support',
-	isset( $navmenus_unsupported['screens']['nav-menus'] )
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus screen kept on classic theme without menu support',
+	isset( $navmenus_classic_unsupported['screens']['nav-menus'] )
 );
-$navmenus_supported = WP_Admin_Shell_Appearance_Menu::apply(
+$navmenus_classic_supported = WP_Admin_Shell_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( false, array( 'menus' => true ) )
 );
 WPAS_Appearance_Test_Runner::assert_true(
-	'requires: nav-menus screen kept when theme supports menus',
-	isset( $navmenus_supported['screens']['nav-menus'] )
+	'agnostic: nav-menus screen kept on classic theme with menu support',
+	isset( $navmenus_classic_supported['screens']['nav-menus'] )
+);
+$navmenus_block = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( true )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus screen kept on block theme (deterministic fallback target)',
+	isset( $navmenus_block['screens']['nav-menus'] )
 );
 
 // -----------------------------------------------------------------------------

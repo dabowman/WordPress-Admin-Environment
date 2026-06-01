@@ -138,7 +138,7 @@
 		"url": {
 			"reads-slots": [],
 			"writes-slots": [],
-			"navigates": [ "#/site-editor" ]
+			"navigates": [ "#/site-editor", "#/nav-menus" ]
 		},
 		"states": [
 			{
@@ -149,7 +149,7 @@
 			{
 				"id": "block-theme-disabled",
 				"when": "workspace['theme-support']['block-theme'] === true",
-				"renders": "Disabled panel explaining classic menus are replaced by the Navigation block, with links to the Site Editor and the classic nav-menus.php fallback."
+				"renders": "Disabled panel explaining classic menus are replaced by the Navigation block, with links to the Site Editor (#/site-editor) and the full-fidelity classic Menus iframe screen (#/nav-menus)."
 			},
 			{
 				"id": "empty",

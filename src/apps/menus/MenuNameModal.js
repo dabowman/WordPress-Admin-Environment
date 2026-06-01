@@ -7,10 +7,15 @@ import { decodeEntities } from '@wordpress/html-entities';
 /**
  * Create or rename a menu container (`root/menu`).
  *
- * Hand-rolled (single text field) rather than `createEntityFormModal` because
- * it isn't mounted through a DataViews action — the Menus editor toggles it
- * from its own toolbar buttons. Mirrors the taxonomy `TermEditModal` pattern:
- * one local `data` state, decode-on-seed to avoid double-encoding.
+ * Hand-rolled `@wordpress/ui` controls rather than `@wordpress/dataviews`
+ * `DataForm` — an INTENTIONAL deviation from CLAUDE.md's "single-record edit
+ * forms use `DataForm`" convention. `DataForm`/`EntityDataForm` is
+ * `useEntityRecord`-shaped (it edits one resolved record in place), but this
+ * modal drives a `saveEntityRecord`-based CREATE-or-rename flow that has no
+ * pre-existing record to edit in create mode. For a single text field the
+ * hand-rolled control is simpler than bending `DataForm` to a create flow.
+ * The structural idioms still mirror the taxonomy term modal: one local state
+ * value, decode-on-seed to avoid double-encoding.
  *
  * @param {Object}      root0
  * @param {Object|null} root0.menu    Menu record to rename, or null to create.
