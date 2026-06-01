@@ -1,10 +1,19 @@
 <?php
 /**
- * Settings REST shim tests — issue #106.
+ * Settings REST shim tests — issues #106, #117, #118 (folds in #212).
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-settings-shims-tests.php`
  *
  * Coverage:
+ *   - #117 (media): the eight image-size / uploads options are registered with
+ *     show_in_rest and round-trip through /wp/v2/settings (integer dimension +
+ *     boolean flags), with the `minimum: 0` schema floor rejecting a negative
+ *     dimension.
+ *   - #118 (discussion, folds in #212): the full standard Discussion option set
+ *     is registered with show_in_rest and writes land through the controller —
+ *     boolean storage shape ('1' / ''), enum validation (valid lands, invalid
+ *     400s), integer clamp (thread depth pulled to [1, thread_comments_depth_max]),
+ *     and key-list CRLF → LF normalization.
  *   - The five core options the Settings apps render but core never
  *     `show_in_rest`-registers — `home`, `users_can_register`, `default_role`
  *     (general, non-multisite) and `posts_per_rss`, `rss_use_excerpt`
@@ -193,6 +202,151 @@ WPAS_Settings_Shim_Test_Runner::assert_eq( 'non-timezone option passes through',
 // Restore.
 update_option( 'gmt_offset', $saved_offset );
 update_option( 'timezone_string', $saved_tz );
+
+// --- media options (issue #117) ---------------------------------------------
+// The eight media options are non-REST in core; the plugin re-registers them in
+// the `media` group with show_in_rest so SettingsMediaApp can read + write them.
+$wpas_media_keys = array(
+	'thumbnail_size_w',
+	'thumbnail_size_h',
+	'medium_size_w',
+	'medium_size_h',
+	'large_size_w',
+	'large_size_h',
+	'thumbnail_crop',
+	'uploads_use_yearmonth_folders',
+);
+foreach ( $wpas_media_keys as $key ) {
+	WPAS_Settings_Shim_Test_Runner::assert_true(
+		"media option `$key` is registered",
+		isset( $registered[ $key ] )
+	);
+	WPAS_Settings_Shim_Test_Runner::assert_true(
+		"media option `$key` carries show_in_rest",
+		isset( $registered[ $key ] ) && ! empty( $registered[ $key ]['show_in_rest'] )
+	);
+}
+
+// End-to-end: integer dimension + boolean flags round-trip through the
+// controller. Snapshot and restore so the site's media config is untouched.
+$saved_media = array();
+foreach ( $wpas_media_keys as $key ) {
+	$saved_media[ $key ] = get_option( $key );
+}
+
+$res = $put_settings( array(
+	'thumbnail_size_w'              => 200,
+	'thumbnail_size_h'             => 180,
+	'thumbnail_crop'               => false,
+	'uploads_use_yearmonth_folders' => false,
+) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'media PUT → 200', $res->get_status(), 200 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'thumbnail_size_w persisted', (int) get_option( 'thumbnail_size_w' ), 200 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'thumbnail_size_h persisted', (int) get_option( 'thumbnail_size_h' ), 180 );
+WPAS_Settings_Shim_Test_Runner::assert_true( 'thumbnail_crop persisted falsy', ! get_option( 'thumbnail_crop' ) );
+WPAS_Settings_Shim_Test_Runner::assert_true( 'uploads_use_yearmonth_folders persisted falsy', ! get_option( 'uploads_use_yearmonth_folders' ) );
+
+// The integer schema floor (minimum 0) rejects a negative dimension.
+$res = $put_settings( array( 'thumbnail_size_w' => -5 ) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'negative dimension rejected (400)', $res->get_status(), 400 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'thumbnail_size_w unchanged after rejected write', (int) get_option( 'thumbnail_size_w' ), 200 );
+
+foreach ( $saved_media as $key => $val ) {
+	update_option( $key, $val );
+}
+
+// --- discussion options (issue #118, folds in #212) -------------------------
+// Core REST-registers only default_comment_status / default_ping_status; the
+// plugin shims expose the full standard set. Verify registration + show_in_rest,
+// then prove the bool-storage / enum / int-clamp / key-normalization writes land
+// through /wp/v2/settings.
+$wpas_discussion_keys = array(
+	'default_pingback_flag',
+	'require_name_email',
+	'comment_registration',
+	'close_comments_for_old_posts',
+	'close_comments_days_old',
+	'show_comments_cookies_opt_in',
+	'thread_comments',
+	'thread_comments_depth',
+	'page_comments',
+	'comments_per_page',
+	'default_comments_page',
+	'comment_order',
+	'comments_notify',
+	'moderation_notify',
+	'comment_moderation',
+	'comment_previously_approved',
+	'comment_max_links',
+	'moderation_keys',
+	'disallowed_keys',
+	'show_avatars',
+	'avatar_rating',
+	'avatar_default',
+);
+foreach ( $wpas_discussion_keys as $key ) {
+	WPAS_Settings_Shim_Test_Runner::assert_true(
+		"discussion option `$key` is registered",
+		isset( $registered[ $key ] )
+	);
+	WPAS_Settings_Shim_Test_Runner::assert_true(
+		"discussion option `$key` carries show_in_rest",
+		isset( $registered[ $key ] ) && ! empty( $registered[ $key ]['show_in_rest'] )
+	);
+}
+
+// Snapshot for restore.
+$saved_discussion = array();
+foreach ( $wpas_discussion_keys as $key ) {
+	$saved_discussion[ $key ] = get_option( $key );
+}
+
+// Boolean storage shape — core's hand-rolled discussion options write '1' / ''.
+// The rest_sanitize_boolean callback returns a PHP bool which $wpdb stringifies
+// the same way, so the stored shape stays '1' / '' (not '1' / '0').
+$res = $put_settings( array(
+	'comment_moderation'   => true,
+	'require_name_email'   => false,
+) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'discussion bool PUT → 200', $res->get_status(), 200 );
+wp_cache_delete( 'comment_moderation', 'options' );
+wp_cache_delete( 'require_name_email', 'options' );
+wp_cache_delete( 'alloptions', 'options' );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'comment_moderation stored shape (true → "1")', get_option( 'comment_moderation' ), '1' );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'require_name_email stored shape (false → "")', get_option( 'require_name_email' ), '' );
+
+// Enum — a valid value lands; an out-of-range value is rejected by the schema.
+$res = $put_settings( array( 'avatar_rating' => 'PG', 'comment_order' => 'desc' ) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'enum PUT → 200', $res->get_status(), 200 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'avatar_rating persisted', get_option( 'avatar_rating' ), 'PG' );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'comment_order persisted', get_option( 'comment_order' ), 'desc' );
+
+$res = $put_settings( array( 'avatar_rating' => 'INVALID' ) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'invalid enum rejected (400)', $res->get_status(), 400 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'avatar_rating unchanged after rejected write', get_option( 'avatar_rating' ), 'PG' );
+
+// Integer clamp — thread_comments_depth clamps to [1, thread_comments_depth_max].
+// A value above the max (default 10) is pulled down by the sanitize_callback.
+$res = $put_settings( array( 'thread_comments_depth' => 99, 'comment_max_links' => 7 ) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'int clamp PUT → 200', $res->get_status(), 200 );
+$wpas_depth_max = (int) apply_filters( 'thread_comments_depth_max', 10 );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'thread_comments_depth clamped to max', (int) get_option( 'thread_comments_depth' ), $wpas_depth_max );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'comment_max_links persisted', (int) get_option( 'comment_max_links' ), 7 );
+
+// A sub-floor depth is clamped up to 1 (the select offers 2.., but the
+// server-side floor is 1, matching core).
+$put_settings( array( 'thread_comments_depth' => 0 ) );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'thread_comments_depth clamped up to floor 1', (int) get_option( 'thread_comments_depth' ), 1 );
+
+// Key-list newline normalization — CRLF collapses to LF on the stored value.
+$put_settings( array( 'moderation_keys' => "spam\r\nbadword\r\nfoo" ) );
+wp_cache_delete( 'moderation_keys', 'options' );
+wp_cache_delete( 'alloptions', 'options' );
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'moderation_keys CRLF normalized to LF', get_option( 'moderation_keys' ), "spam\nbadword\nfoo" );
+
+foreach ( $saved_discussion as $key => $val ) {
+	update_option( $key, $val );
+}
 
 // --- summary ----------------------------------------------------------------
 

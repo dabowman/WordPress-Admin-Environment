@@ -109,6 +109,12 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-settings-discussion" */ '../../apps/settings-discussion'
 			),
 	},
+	'core:settings-media': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-media" */ '../../apps/settings-media'
+			),
+	},
 	'core:settings-workspace': {
 		load: () =>
 			import(

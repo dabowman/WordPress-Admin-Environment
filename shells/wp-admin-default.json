@@ -1423,7 +1423,7 @@
 		"settings-media": {
 			"label": "Media",
 			"path": "/settings/media",
-			"app": "iframe:options-media.php",
+			"app": "core:settings-media",
 			"permissions": {
 				"capabilities": [
 					"manage_options"

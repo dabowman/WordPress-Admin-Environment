@@ -1,9 +1,10 @@
 import './index.css';
 import { useMemo } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
-import { Text } from '@wordpress/ui';
+import { Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { EntityDataForm } from '../_shared/forms/EntityDataForm';
+import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 
 const POST_FORMAT_OPTIONS = [
 	{ value: 'standard', label: __( 'Standard', 'wp-admin-shell' ) },
@@ -21,6 +22,49 @@ const POST_FORMAT_OPTIONS = [
 const FORM = {
 	fields: [ 'default_category', 'default_post_format' ],
 };
+
+// Legacy Writing options with no REST surface. Every modern Writing option is
+// already REST (`default_category`, `default_post_format`, rendered above);
+// these four are legacy — Post-via-Email (`mailserver_*`), Update Services
+// (`ping_sites`), Link Manager (`default_link_category`), and `use_balanceTags`.
+// Instead of silently hiding them we surface them through the shared No-API
+// Fallback (issue #118 / #216) — a classic-screen link + a copy-paste
+// `wp option update` command + an agent prompt per option. We DELIBERATELY omit
+// `mailserver_pass` (the Post-via-Email password) — it is kept out of REST and
+// must not be pre-filled into a copy-paste affordance.
+const LEGACY_WRITING_OPTIONS = [
+	{
+		name: 'mailserver_url',
+		label: __( 'Mail Server (Post via Email)', 'wp-admin-shell' ),
+	},
+	{
+		name: 'mailserver_login',
+		label: __( 'Mail Server Login (Post via Email)', 'wp-admin-shell' ),
+	},
+	{
+		name: 'mailserver_port',
+		label: __( 'Mail Server Port (Post via Email)', 'wp-admin-shell' ),
+	},
+	{
+		name: 'default_email_category',
+		label: __( 'Default Mail Category (Post via Email)', 'wp-admin-shell' ),
+	},
+	{
+		name: 'ping_sites',
+		label: __( 'Update Services', 'wp-admin-shell' ),
+	},
+	{
+		name: 'default_link_category',
+		label: __( 'Default Link Category', 'wp-admin-shell' ),
+	},
+	{
+		name: 'use_balanceTags',
+		label: __(
+			'Correct invalidly nested XHTML automatically',
+			'wp-admin-shell'
+		),
+	},
+];
 
 export default function SettingsWritingApp() {
 	const categories = useEntityRecords( 'taxonomy', 'category', {
@@ -76,12 +120,33 @@ export default function SettingsWritingApp() {
 				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
 			} }
 		>
-			<Text variant="body-sm">
-				{ __(
-					'Post via email and remote-publishing settings are not exposed by the WordPress REST API. Use the legacy Writing Settings screen for those fields.',
-					'wp-admin-shell'
-				) }
-			</Text>
+			<Stack direction="column" gap="md">
+				<Text variant="heading-md" render={ <h3 /> }>
+					{ __(
+						'Settings not available through the workspace API',
+						'wp-admin-shell'
+					) }
+				</Text>
+				<Text variant="body-sm">
+					{ __(
+						'Post via email, update services, the Link Manager default category, and the XHTML auto-correction toggle have no REST surface. Use the classic screen, WP-CLI, or your coding agent to change them.',
+						'wp-admin-shell'
+					) }
+				</Text>
+				{ LEGACY_WRITING_OPTIONS.map( ( option ) => (
+					<Stack key={ option.name } direction="column" gap="xs">
+						<Text variant="body-sm">
+							<strong>{ option.label }</strong>
+						</Text>
+						<UnavailableViaApi
+							kind="option"
+							name={ option.name }
+							value="<value>"
+							classicPath="options-writing.php"
+						/>
+					</Stack>
+				) ) }
+			</Stack>
 		</EntityDataForm>
 	);
 }

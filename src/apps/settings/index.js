@@ -11,6 +11,7 @@ import SettingsGeneralApp from '../settings-general';
 import SettingsWritingApp from '../settings-writing';
 import SettingsReadingApp from '../settings-reading';
 import SettingsDiscussionApp from '../settings-discussion';
+import SettingsMediaApp from '../settings-media';
 import IframeApp from '../iframe-fallback';
 
 /**
@@ -31,7 +32,9 @@ import IframeApp from '../iframe-fallback';
  *                  home for these "Default post settings" — Reading used
  *                  to duplicate them; removed)
  *   permalinks  — iframed (no REST coverage; needs custom endpoint)
- *   media       — iframed (image-size + uploads-org-by-month not REST-exposed)
+ *   media       — native: image-size dimensions, thumbnail crop, year/month
+ *                  uploads folder (exposed via the plugin's register_setting
+ *                  shims — issue #117)
  *   privacy     — iframed (privacy page not REST-exposed)
  *
  * Shells narrow the panel set via `config.panels[]` (allowlist by id).
@@ -75,7 +78,7 @@ const BUILTIN_PANELS = [
 	{
 		id: 'media',
 		label: __( 'Media', 'wp-admin-shell' ),
-		iframe: 'options-media.php',
+		Component: SettingsMediaApp,
 		capability: 'manage_options',
 	},
 	{
