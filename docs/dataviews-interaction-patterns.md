@@ -142,7 +142,7 @@ Every app's `edit`/`create` action must choose a host. The rule:
 | `_shared/dataviews/buildFields.mjs` (+ renderers) | exists (extend) | Cell-renderer library |
 | `_shared/dataviews/useEntityDataView.js` | exists | view state |
 | `_shared/dataviews/useEntityElementCounts` | exists | counts for ViewTabs / filter labels |
-| `_shared/dataviews/EntityFormModal` | **net-new** | Modal Edit, Modal Create |
+| `_shared/dataviews/EntityFormModal` | exists | Modal Edit, Modal Create |
 | `_shared/dataviews/BulkEditModal` | **net-new** | Bulk Edit |
 | `_shared/dataviews/ViewTabs` | **net-new** | Pinned view tabs |
 | `_shared/dataviews/buildQueryArgs` | **net-new** | view→REST mapper |
@@ -150,6 +150,43 @@ Every app's `edit`/`create` action must choose a host. The rule:
 | `editHref` / Action→Host helper | partly exists (PostsApp) → codify | Navigate-to-edit |
 
 **Kernel boundary:** all of the above live in **app space** (`src/apps/_shared/*`), never `src/runtime/*` — they import `@wordpress/dataviews` / `@wordpress/components` / WPDS, which the kernel must stay free of (see `CLAUDE.md` → "Kernel is DS-neutral").
+
+### `EntityFormModal` usage
+
+`createEntityFormModal` is a factory returning a DataViews `RenderModal`, consumed through the `buildActions` `modals` map — no bespoke `message` handler:
+
+```js
+import { createEntityFormModal } from '../_shared/dataviews/EntityFormModal';
+import { buildActions } from '../_shared/dataviews/buildActions';
+
+const editComment = createEntityFormModal( {
+	entity: [ 'root', 'comment' ],   // [ kind, name ]
+	mode: 'edit',                    // 'edit' | 'create'
+	fields: COMMENT_FIELDS,          // DataForm field defs
+	form: COMMENT_FORM,              // DataForm layout
+	toData: ( record ) => ( {        // edit: editedRecord → form data
+		content: record?.content?.raw ?? '',
+		author_name: record?.author_name ?? '',
+	} ),
+	toRecord: ( data ) => data,      // form data → REST payload
+	messages: { saved: __( 'Comment updated.' ), error: __( 'Failed to save.' ) },
+} );
+
+const replyToPost = createEntityFormModal( {
+	entity: [ 'root', 'comment' ],
+	mode: 'create',
+	fields: REPLY_FIELDS,
+	form: REPLY_FORM,
+	toData: () => ( { content: '', post: currentPostId } ), // seed the draft
+	onSaved: ( record ) => invalidate( record ),
+} );
+
+const actions = buildActions( specs, { modals: { edit: editComment, reply: replyToPost } } );
+```
+
+- **Edit:** buffers through `useEntityRecord( kind, name, item.id ).edit()` (`data = editedRecord`), keyed `key={item.id}` so per-item state resets between openings; explicit **Save** via `useEntitySave` (snackbar / notice); **Cancel** discards the buffer.
+- **Create:** seeds a local draft from `toData(undefined)`, **Submit** `POST`s via `saveEntityRecord` (blocking — returns the new record), then `onSaved(record)`.
+- **Explicit-save modal only** (contract #2). Autosaving hosts share the same `fields` / `form` but commit elsewhere — do not route them through this factory.
 
 **Cascade caution:** any app shipping a new dataView family (e.g. `root/media/_default`) must declare its `defaultView` (incl. `mediaField` / `titleField`) **completely** — a shell that redeclares the triple wins outright and a partial copy silently drops baseline keys (`CLAUDE.md` → "A shell that redeclares a `settings.dataViews` triple wins OUTRIGHT").
 

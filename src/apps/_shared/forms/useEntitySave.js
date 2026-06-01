@@ -13,7 +13,12 @@ import { __ } from '@wordpress/i18n';
  * @param {string}   [messages.success] Snackbar copy on success.
  * @param {string}   [messages.error]   Fallback copy on failure (the error's own
  *                                      message wins when present).
- * @return {() => Promise<void>} The save handler.
+ * @return {() => Promise<boolean>} The save handler. Resolves `true` on success,
+ *                                  `false` when the save threw (the error notice
+ *                                  is shown either way). Callers that need to
+ *                                  branch on the outcome — e.g. a modal host
+ *                                  that should stay open on failure — can await
+ *                                  the boolean; existing callers ignore it.
  */
 export function useEntitySave( save, messages = {} ) {
 	const { createSuccessNotice, createErrorNotice } =
@@ -27,10 +32,12 @@ export function useEntitySave( save, messages = {} ) {
 		try {
 			await save();
 			createSuccessNotice( successMessage, { type: 'snackbar' } );
+			return true;
 		} catch ( err ) {
 			createErrorNotice( err.message || errorMessage, {
 				isDismissible: true,
 			} );
+			return false;
 		}
 	}, [
 		save,
