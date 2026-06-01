@@ -110,6 +110,15 @@
 			],
 			"writes": [
 				{
+					"source": "root/plugin",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Install-by-slug — `saveEntityRecord( 'root', 'plugin', { slug, status } )` POSTs `/wp/v2/plugins { slug, status }` (status `active` when 'Activate after install' is checked, else `inactive`). Wired via the shared `createEntityFormModal` create mode behind the 'Add New Plugin' header action.",
+					"invalidates": [
+						"root/plugin"
+					]
+				},
+				{
 					"source": "/wp/v2/plugins/{plugin}",
 					"via": "api-fetch",
 					"operation": "partial-update",
@@ -149,6 +158,16 @@
 				"id": "delete-confirm",
 				"when": "User triggered Delete action",
 				"renders": "Confirm modal with destructive primary."
+			},
+			{
+				"id": "install",
+				"when": "User clicked the 'Add New Plugin' header action",
+				"renders": "`@wordpress/components` `Modal` hosting the shared `createEntityFormModal` create-mode body: a `DataForm` with a `slug` text field + an 'Activate after install' boolean, and an Install / Cancel footer."
+			},
+			{
+				"id": "upload-fallback",
+				"when": "User clicked the 'Upload plugin (.zip)' header action",
+				"renders": "`Modal` hosting the shared `UnavailableViaApi` (`kind=\"action\"`) — the documented no-API fallback. Links to classic `plugin-install.php?tab=upload`, a `wp plugin install` WP-CLI command, and an advisory agent prompt."
 			}
 		],
 		"interactions": [
@@ -183,6 +202,17 @@
 			{
 				"trigger": "Change view (search / filter / sort / page)",
 				"effect": "Local `view` updates; client-side filter recomputes (single REST request returns the full list)."
+			},
+			{
+				"trigger": "Click 'Add New Plugin' header action, enter a slug, submit",
+				"effect": "`saveEntityRecord( 'root', 'plugin', { slug, status } )` → `POST /wp/v2/plugins`; success snackbar + invalidate `root/plugin`; modal closes. On failure the modal stays open with an error notice.",
+				"guards": [
+					"slug is required and rejects whitespace-only input (DataForm `isValid.required` + `isValid.custom`), so the Install button stays disabled until a real slug is entered"
+				]
+			},
+			{
+				"trigger": "Click 'Upload plugin (.zip)' header action",
+				"effect": "Open a modal hosting the `UnavailableViaApi` no-API fallback (classic-screen link + WP-CLI command + agent prompt). No REST surface exists for zip upload."
 			}
 		],
 		"a11y": {
@@ -199,7 +229,11 @@
 			},
 			{
 				"concern": "api-fetch-not-coredata",
-				"note": "Status changes + delete go through `apiFetch` because `core-data`'s `saveEntityRecord` / `deleteEntityRecord` don't have a clean payload shape for the plugin endpoint's `{ status }` PATCH. After mutating, manually `invalidateResolution` on the entity records query."
+				"note": "Status changes + delete go through `apiFetch` because `core-data`'s `saveEntityRecord` / `deleteEntityRecord` don't have a clean payload shape for the plugin endpoint's `{ status }` PATCH. Install-by-slug is the exception — it's a create against the collection, which `saveEntityRecord( 'root', 'plugin', { slug, status } )` maps cleanly (the shared `createEntityFormModal` create mode uses it). After mutating, manually `invalidateResolution` on the entity records query."
+			},
+			{
+				"concern": "zip-upload-no-rest",
+				"note": "`POST /wp/v2/plugins` `create_item` accepts a wordpress.org `slug` only — there is no multipart/file path for a `.zip`. The 'Upload plugin (.zip)' header action renders the shared `UnavailableViaApi` (`kind=\"action\"`) pointing at classic `plugin-install.php?tab=upload`, the documented no-API fallback treatment."
 			},
 			{
 				"concern": "plugin-file-encoding",
@@ -216,16 +250,24 @@
 				"purpose": "DataViews + DataForm components, field descriptor shape. Table view with actions."
 			},
 			{
-				"import": "@wordpress/ui#Button, Notice, Stack, Text",
-				"purpose": "Modal layout + error banner + cells."
+				"import": "@wordpress/ui#Button, Icon, Notice, Stack, Text",
+				"purpose": "Toolbar (heading + Add New / Upload actions) + error banner + cells."
 			},
 			{
-				"import": "@wordpress/components#Button (as DestructiveButton)",
-				"purpose": "Destructive primary in delete-confirm modal."
+				"import": "@wordpress/components#Modal, Spinner",
+				"purpose": "Header-action modal host (install-by-slug + zip-upload fallback) + loading spinner."
 			},
 			{
-				"import": "@wordpress/icons#trash, external, check, closeSmall",
-				"purpose": "Action icons."
+				"import": "@wordpress/icons#plus",
+				"purpose": "Toolbar Add-New icon. The delete/visit action icons (trash/external) come via the dataView action specs, resolved by name through the kernel icon registry (resolveIcon)."
+			},
+			{
+				"import": "_shared/dataviews/EntityFormModal#createEntityFormModal",
+				"purpose": "Install-by-slug create form (create mode) hosted in the Add-New modal."
+			},
+			{
+				"import": "_shared/fallback/UnavailableViaApi#UnavailableViaApi",
+				"purpose": "No-API fallback for the zip-upload path (no REST surface)."
 			}
 		]
 	}

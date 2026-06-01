@@ -171,6 +171,21 @@ ok(
 	] )[ 0 ].filterBy.operators[ 0 ] === 'isAny'
 );
 
+const withGetElements = buildFields(
+	[ { id: 'categories', type: 'text', filterBy: { operators: [ 'is' ] } } ],
+	{ getElements: { categories: async () => [ { value: 1, label: 'News' } ] } }
+)[ 0 ];
+ok(
+	'getElements provider attached to matching id',
+	typeof withGetElements.getElements === 'function'
+);
+ok(
+	'getElements only applies to matching id',
+	buildFields( [ { id: 'name', type: 'text' } ], {
+		getElements: { categories: async () => [] },
+	} )[ 0 ].getElements === undefined
+);
+
 // --- withElementCounts ----------------------------------------------------
 ok(
 	'withElementCounts returns input untouched when counts missing',
@@ -410,6 +425,21 @@ ok(
 	'buildSubmitPayload is create-only — no id stamping',
 	buildSubmitPayload( { data: { name: 'x' }, toRecord: ( d ) => d } ).id ===
 		undefined
+);
+ok(
+	'buildSubmitPayload threads the subject row into toRecord (inline-create: Reply parent/post)',
+	( () => {
+		const payload = buildSubmitPayload( {
+			data: { content: 'hi' },
+			item: { id: 7, post: 42 },
+			toRecord: ( d, item ) => ( {
+				content: d.content,
+				parent: item?.id,
+				post: item?.post,
+			} ),
+		} );
+		return payload.parent === 7 && payload.post === 42;
+	} )()
 );
 
 ok(
