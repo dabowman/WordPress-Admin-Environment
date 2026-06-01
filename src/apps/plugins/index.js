@@ -64,7 +64,17 @@ const INSTALL_FIELDS = [
 			'The wordpress.org directory slug, e.g. "hello-dolly" or "akismet".',
 			'wp-admin-shell'
 		),
-		isValid: { required: true },
+		// `required: true` passes any non-empty string, including whitespace-only
+		// input like "   " — `toRecord` then trims it to "" and the POST fires
+		// empty. Reject whitespace-only here so the disabled-button guard catches
+		// it client-side instead of surfacing the generic install-failed notice.
+		isValid: {
+			required: true,
+			custom: ( item, field ) =>
+				( field.getValue( { item } ) || '' ).trim()
+					? null
+					: __( 'Plugin slug is required.', 'wp-admin-shell' ),
+		},
 	},
 	{
 		id: 'activate',
@@ -361,10 +371,10 @@ export default function PluginsApp( { config = {} } = {} ) {
 					error: __( 'Failed to install plugin.', 'wp-admin-shell' ),
 					createLabel: __( 'Install', 'wp-admin-shell' ),
 				},
-				onSaved: () => {
-					refresh();
-					setIsInstalling( false );
-				},
+				// `CreateBody.onSubmit` already calls `closeModal()` on success,
+				// which our host wires to `setIsInstalling( false )` — so the
+				// close is the modal host's job. Just invalidate the list here.
+				onSaved: () => refresh(),
 			} ),
 		[ refresh ]
 	);

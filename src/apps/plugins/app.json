@@ -207,7 +207,7 @@
 				"trigger": "Click 'Add New Plugin' header action, enter a slug, submit",
 				"effect": "`saveEntityRecord( 'root', 'plugin', { slug, status } )` → `POST /wp/v2/plugins`; success snackbar + invalidate `root/plugin`; modal closes. On failure the modal stays open with an error notice.",
 				"guards": [
-					"slug is required (DataForm `isValid.required`)"
+					"slug is required and rejects whitespace-only input (DataForm `isValid.required` + `isValid.custom`), so the Install button stays disabled until a real slug is entered"
 				]
 			},
 			{
@@ -255,11 +255,11 @@
 			},
 			{
 				"import": "@wordpress/components#Modal, Spinner",
-				"purpose": "Header-action modal host (install-by-slug + zip-upload fallback) + loading spinner. `Button as DestructiveButton` for the delete-confirm modal."
+				"purpose": "Header-action modal host (install-by-slug + zip-upload fallback) + loading spinner."
 			},
 			{
-				"import": "@wordpress/icons#plus, trash, external, check, closeSmall",
-				"purpose": "Toolbar Add-New + action icons."
+				"import": "@wordpress/icons#plus",
+				"purpose": "Toolbar Add-New icon. The delete/visit action icons (trash/external) come via the dataView action specs, resolved by name through the kernel icon registry (resolveIcon)."
 			},
 			{
 				"import": "_shared/dataviews/EntityFormModal#createEntityFormModal",
