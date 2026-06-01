@@ -17,12 +17,21 @@
  *
  * Pure (no imports) so `tests/runtime/*` can import it directly.
  *
+ * `getElements` forwards an async/lazy element provider (DataViews calls it to
+ * resolve the option set for a categorical filter at filter-open time) for ids
+ * whose options aren't known statically — e.g. a taxonomy filter that fetches
+ * `/wp/v2/categories`. A `getElements[id]` wins over a static `elements`
+ * spec/fallback for the same id.
+ *
+ * Pure (no imports) so `tests/runtime/*` can import it directly.
+ *
  * @param {Array}  fieldSpecs                 View-config field specs.
  * @param {Object} [options]
  * @param {Object} [options.labels]           id → translated label.
  * @param {Object} [options.renderers]        id → render callback.
  * @param {Object} [options.elementFallbacks] id → elements[] used when the spec omits `elements`.
  * @param {Object} [options.elementCounts]    id → { value: count } merged into the field's elements.
+ * @param {Object} [options.getElements]      id → async element provider; sets the field's `getElements`.
  * @return {Array} Compiled DataViews fields.
  */
 export function buildFields(
@@ -32,6 +41,7 @@ export function buildFields(
 		renderers = {},
 		elementFallbacks = {},
 		elementCounts = {},
+		getElements = {},
 	} = {}
 ) {
 	return ( fieldSpecs ?? [] )
@@ -62,6 +72,9 @@ export function buildFields(
 					elements,
 					elementCounts[ spec.id ]
 				);
+			}
+			if ( typeof getElements[ spec.id ] === 'function' ) {
+				compiled.getElements = getElements[ spec.id ];
 			}
 			if ( spec.filterBy ) {
 				compiled.filterBy = spec.filterBy;

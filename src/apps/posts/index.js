@@ -2,7 +2,7 @@ import '../_shared/app.css';
 import { Spinner } from '@wordpress/components';
 import { useMemo, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Text } from '@wordpress/ui';
@@ -149,6 +149,40 @@ function applyDateFilters( args, filters ) {
 	return args;
 }
 
+// Per-taxonomy element cache for the categorical filter `getElements` providers.
+// DataViews calls `getElements()` each time a filter opens; without a cache that
+// would re-fetch the taxonomy every open. `resolveSelect` already memoizes the
+// underlying core-data resolution, but caching the mapped `{ value, label }`
+// array avoids re-decoding on every call too.
+const taxonomyElementsCache = new Map();
+
+/**
+ * Build an async DataViews `getElements` provider for a taxonomy filter. Fetches
+ * the terms via core-data (`resolveSelect`, never raw `fetch`) and maps them to
+ * `{ value: termId, label: name }`. The result is cached per taxonomy so
+ * re-opening the filter doesn't re-resolve.
+ * @param {string} taxonomy Taxonomy rest base, e.g. `'category'`.
+ * @return {Function} `async () => [ { value, label } ]`.
+ */
+function makeTaxonomyElements( taxonomy ) {
+	return async () => {
+		if ( taxonomyElementsCache.has( taxonomy ) ) {
+			return taxonomyElementsCache.get( taxonomy );
+		}
+		const terms = await resolveSelect( coreStore ).getEntityRecords(
+			'taxonomy',
+			taxonomy,
+			{ per_page: 100, orderby: 'name', order: 'asc', _fields: 'id,name' }
+		);
+		const elements = ( terms ?? [] ).map( ( term ) => ( {
+			value: term.id,
+			label: decodeEntities( term.name ),
+		} ) );
+		taxonomyElementsCache.set( taxonomy, elements );
+		return elements;
+	};
+}
+
 /**
  * Field id → render callback. View-config declares the *shape*; the React
  * layer supplies the row renderer. Unknown ids fall through to DataViews'
@@ -172,6 +206,14 @@ function buildFieldRenderers( postType ) {
 	};
 }
 
+// Bulk-edit fields whose REST params are only registered for post types that
+// support those features — `sticky` / `format` need `post`-format/sticky
+// support, `categories` / `tags` need those taxonomies attached. Default
+// (non-`post`) post types like `page` don't register them, so WP REST silently
+// ignores the params: gate these fields on `post` to avoid presenting no-op
+// inputs, mirroring how wp-admin omits Sticky/Format on the Pages list.
+const POST_ONLY_BULK_FIELDS = [ 'sticky', 'format', 'categories', 'tags' ];
+
 /**
  * Bulk-edit DataForm fields. Every field is seeded to the `NO_CHANGE` sentinel
  * by `createBulkEditModal`; `fieldsWithNoChange` injects the matching
@@ -179,8 +221,14 @@ function buildFieldRenderers( postType ) {
  * fields (author / parent / categories / tags) map the sentinel to an empty
  * input via `getValue` so the literal sentinel string never renders, and
  * `computeBulkPayload` drops them unless the user types a value.
+ *
+ * The post-only fields (`sticky` / `format` / `categories` / `tags`) are
+ * omitted entirely for non-`post` post types — their REST params aren't
+ * registered there, so editing them would be a silent no-op.
+ * @param {string} postType Active post type id from app config.
  */
-function buildBulkEditFields() {
+function buildBulkEditFields( postType ) {
+	const isPost = postType === 'post';
 	const sentinelToText =
 		( id ) =>
 		( { item } ) =>
@@ -243,26 +291,36 @@ function buildBulkEditFields() {
 			label: __( 'Tags (comma-separated IDs)', 'wp-admin-shell' ),
 			getValue: sentinelToText( 'tags' ),
 		},
-	];
+	].filter(
+		( field ) => isPost || ! POST_ONLY_BULK_FIELDS.includes( field.id )
+	);
 
 	return fieldsWithNoChange( base, {
 		ids: [ 'status', 'sticky', 'format', 'comment_status' ],
 	} );
 }
 
-const BULK_EDIT_FORM = {
-	type: 'regular',
-	fields: [
-		'status',
-		'author',
-		'sticky',
-		'parent',
-		'format',
-		'comment_status',
-		'categories',
-		'tags',
-	],
-};
+/**
+ * Bulk-edit DataForm field order. Post-only fields are dropped for non-`post`
+ * post types so the form doesn't reference fields `buildBulkEditFields` omits.
+ * @param {string} postType Active post type id from app config.
+ */
+function buildBulkEditForm( postType ) {
+	const isPost = postType === 'post';
+	return {
+		type: 'regular',
+		fields: [
+			'status',
+			'author',
+			'sticky',
+			'parent',
+			'format',
+			'comment_status',
+			'categories',
+			'tags',
+		].filter( ( id ) => isPost || ! POST_ONLY_BULK_FIELDS.includes( id ) ),
+	};
+}
 
 /**
  * Parse a comma-separated id list into an array of positive integers.
@@ -286,11 +344,26 @@ function parseIdList( value ) {
  * Translate the changed bulk-edit payload into a REST body. Only fields the
  * user actually changed reach here (`computeBulkPayload` already dropped the
  * sentinel-valued ones), so each branch fires only when present.
+ *
+ * The free-text fields (author / parent / categories / tags) map the
+ * `NO_CHANGE` sentinel to an empty input for display (`getValue` in
+ * `buildBulkEditFields`). Focusing then clearing such a field stores `''`
+ * rather than the sentinel, so `computeBulkPayload` would treat the blank as a
+ * real edit — writing `author=undefined` or, worse, `parent=0` (which *removes*
+ * a post's parent). Treat an empty string for these fields as no-change here so
+ * only a non-empty value counts: drop the key before coercing.
  * @param {Object} payload Changed-field payload, keyed by field id.
  * @return {Object} REST body (without `id`, which the modal merges in).
  */
 function bulkToRecord( payload ) {
 	const body = { ...payload };
+	// Blank free-text fields mean "leave unchanged" — strip them before any
+	// coercion so a cleared-but-touched field can't write a spurious value.
+	for ( const id of [ 'author', 'parent', 'categories', 'tags' ] ) {
+		if ( id in body && ( body[ id ] === '' || body[ id ] === undefined ) ) {
+			delete body[ id ];
+		}
+	}
 	if ( 'sticky' in body ) {
 		body.sticky = body.sticky === 'true' || body.sticky === true;
 	}
@@ -362,11 +435,13 @@ export default function PostsApp( { config } ) {
 		'author',
 		currentUserId ? [ currentUserId ] : []
 	);
+	// Sticky is `post`-only — pass no values for other post types so the hook
+	// short-circuits (no `?sticky=true` request that would count all rows).
 	const stickyCount = useEntityElementCounts(
 		'postType',
 		postType,
 		'sticky',
-		[ true ]
+		postType === 'post' ? [ true ] : []
 	);
 
 	// Total across all statuses for the "All" tab — one extra count keyed by the
@@ -410,10 +485,23 @@ export default function PostsApp( { config } ) {
 				renderers: buildFieldRenderers( postType ),
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
+					// `format` is a finite known set — feed a static element list
+					// so the categorical filter dropdown has options. (`post`
+					// only; `format` isn't a registered REST param elsewhere.)
+					...( postType === 'post'
+						? { format: elementsFromLabels( FORMAT_LABELS ) }
+						: {} ),
 				},
 				elementCounts: {
 					status: statusCounts,
 				},
+				// `categories` options are dynamic — DataViews resolves them
+				// lazily via `getElements` (fetching the category terms through
+				// core-data). `post` only, mirroring the registered taxonomy.
+				getElements:
+					postType === 'post'
+						? { categories: makeTaxonomyElements( 'category' ) }
+						: {},
 			} ),
 		[ dataViewConfig, postType, statusCounts ]
 	);
@@ -438,8 +526,8 @@ export default function PostsApp( { config } ) {
 
 		const bulkEditModal = createBulkEditModal( {
 			entity: [ 'postType', postType ],
-			fields: buildBulkEditFields(),
-			form: BULK_EDIT_FORM,
+			fields: buildBulkEditFields( postType ),
+			form: buildBulkEditForm( postType ),
 			toRecord: bulkToRecord,
 			messages: {
 				applyLabel: __( 'Update', 'wp-admin-shell' ),
@@ -686,15 +774,21 @@ export default function PostsApp( { config } ) {
 				id: 'pending',
 				label: STATUS_LABELS.pending,
 				filter: { field: 'status', operator: 'is', value: 'pending' },
-			},
-			{
+			}
+		);
+		// Sticky is a `post`-only REST param — `?sticky=true` is silently
+		// ignored on post types that don't register it (e.g. `page`), so the
+		// count would return ALL rows and the tab wouldn't filter. Omit it for
+		// non-`post` post types, mirroring wp-admin's Pages list.
+		if ( postType === 'post' ) {
+			segments.push( {
 				id: 'sticky',
 				label: __( 'Sticky', 'wp-admin-shell' ),
 				filter: { field: 'sticky', operator: 'is', value: true },
-			}
-		);
+			} );
+		}
 		return segments;
-	}, [ currentUserId ] );
+	}, [ currentUserId, postType ] );
 
 	// Merge the multi-source counts into one { filterValue: count } map keyed
 	// the way ViewTabs/mergeSegmentCounts looks them up.

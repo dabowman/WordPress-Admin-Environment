@@ -87,6 +87,7 @@ A `ViewTabs` strip ([`_shared/dataviews/ViewTabs.js`](../_shared/dataviews/ViewT
 The `bulk-edit` action (`supportsBulk: true`, declared in `app.json`) attaches the shared `createBulkEditModal` ([`_shared/dataviews/BulkEditModal.js`](../_shared/dataviews/BulkEditModal.js)) via `buildActions(..., { modals: { 'bulk-edit': … } })`. The modal renders a DataForm over **status / author / sticky / parent / format / comment_status / categories / tags**.
 
 - Every field is seeded to the `NO_CHANGE` sentinel; `fieldsWithNoChange` injects the `— No change —` option for the four `elements`-backed selects (status / sticky / format / comment_status). The non-elements fields (author / parent integers, categories / tags CSV-of-ids text) supply a `getValue` that maps the sentinel to an empty input so the literal sentinel never renders.
+- **Touch-then-clear is no-change.** Because the sentinel maps to `''` for display, focusing and then blanking a free-text field stores `''` (not the sentinel) — which `computeBulkPayload` would treat as a real edit, writing `author=undefined` or, worse, `parent=0` (removing a post's parent). `bulkToRecord` defends against this: it drops empty-string `author` / `parent` / `categories` / `tags` keys *before* coercion, so only a non-empty value counts as a change.
 - On Apply, the modal's `computeBulkPayload` reduces the form to only the changed fields, and a `Promise.allSettled` fans `saveEntityRecord` over the selection with `{ id, ...toRecord(payload) }`. `bulkToRecord` coerces the form values to REST shapes — sticky `'true'`/`'false'` → boolean, author/parent → int, categories/tags CSV → positive-int array. Partial failures keep the failed rows selected and the staged values intact for a retry.
 - `onApplied` invalidates the list + status-count resolutions so the table and the tab/filter counts refresh.
 
@@ -94,7 +95,26 @@ Quick Edit (single-row inline) is still not wired — Bulk Edit is the first inl
 
 ### Column filters (#132)
 
-`categories` and `format` are declared as filterable text fields (`filterBy.operators: ['is']`) and wired through the `QUERY_MAPPING` to the REST `categories` / `format` params; `date` declares `before` / `after` operators wired through `applyDateFilters` to REST's `before` / `after` ISO params. These columns are filter-only by default (not in `defaultView.fields`), mirroring wp-admin's filter dropdowns rather than always-on columns. Author filtering rides the existing `author` mapping (also used by the Mine tab).
+`categories` and `format` are declared as filterable text fields (`filterBy.operators: ['is']`) and wired through the `QUERY_MAPPING` to the REST `categories` / `format` params; `date` declares `before` / `after` operators wired through `applyDateFilters` to REST's `before` / `after` ISO params. These columns are filter-only — they carry `enableHiding: false` so a user can't toggle them on as (blank) columns — mirroring wp-admin's filter dropdowns rather than always-on columns. Author filtering rides the existing `author` mapping (also used by the Mine tab).
+
+A categorical (`is`) filter renders its dropdown from the field's `elements` (static) or `getElements` (async). Those two fields ship neither in `app.json`, so `index.js` supplies them at compile time via the shared `buildFields` harness:
+
+- **`format`** — a finite known set. `elementFallbacks: { format: elementsFromLabels( FORMAT_LABELS ) }` feeds the dropdown a static option list.
+- **`categories`** — dynamic. `getElements: { categories: makeTaxonomyElements( 'category' ) }` hands DataViews an async provider that resolves the `category` taxonomy through core-data (`resolveSelect(coreStore).getEntityRecords('taxonomy', 'category', …)`, never a raw `fetch`) and maps the terms to `{ value: id, label: name }`, cached per taxonomy so re-opening the filter doesn't re-resolve. `buildFields` grew a `getElements` passthrough (id → async provider) for this — shared, pinned by `tests/runtime/dataviews-shared.test.mjs`.
+
+Both option sets are wired **only when `config.postType === 'post'`** — `format` / `categories` are `post`-only REST params, so on the Pages screen the dropdowns would have nothing to resolve. (See "Post-type gating" below.)
+
+The `date` filter is a **one-sided date bound**, not a two-ended range: DataViews holds one filter per field, so a user applies `before X` *or* `after Y`, not both simultaneously. `applyDateFilters` maps whichever operator is active to the matching REST param.
+
+### Post-type gating (Pages / CPTs)
+
+PostsApp is rebindable to any post type via `config.postType`, but `sticky` / `format` / `categories` / `tags` are only registered REST params for post types that support those features (the default `post`, not `page`). WP REST silently *ignores* unregistered query params rather than erroring, which would make those affordances misleading no-ops on the Pages list:
+
+- The **Sticky view-tab** segment is only pushed when `postType === 'post'`, and its count query passes an empty value set (so no `?sticky=true` request that would otherwise count *all* pages).
+- The post-only **bulk-edit fields** (`sticky` / `format` / `categories` / `tags`) are filtered out of both `buildBulkEditFields( postType )` and `buildBulkEditForm( postType )` for non-`post` post types.
+- The **`format` static / `categories` dynamic filter options** are only wired for `postType === 'post'`.
+
+This mirrors how classic wp-admin hides Sticky / Format on the Pages list. The gate is `postType === 'post'` rather than a live post-type-supports lookup because `window.wpAdminShell` doesn't expose per-post-type supports today; a richer capability check can swap in here later without touching the call sites.
 
 ## Rebuild guide
 
@@ -120,12 +140,12 @@ Two patterns to preserve:
 Parity gaps versus `docs/screens/posts.md` not surfaced in the v2 app:
 
 - Status **counts** surface both on the status filter elements (`Published (12)`, `Draft (3)`) AND on the **view-tab strip** (`All | Mine | Published | Draft | Pending | Sticky`) added in wave 2 (#111) — one lightweight `per_page=1&_fields=id` request per value, read off the `X-WP-Total` header, global (search/page-independent) to mirror wp-admin's status links. Remaining gap: no Scheduled / Trash tabs in the strip (Trash has its own variant + screen), and "Mine" is not auto-scoped for low-privilege users.
-- Author / date / category / format **filters are now wired** (#132) — `categories` / `format` as `is`-filter columns, `date` as a `before`/`after` range, `author` via the Mine tab + mapping. wp-admin's per-axis *dropdown* chrome (month picker, category select) is approximated through DataViews' generic filter UI rather than the classic bespoke dropdowns; tag filtering and the months-list affordance are not yet surfaced.
+- Author / date / category / format **filters are now wired** (#132) — `categories` (dynamic taxonomy options via `getElements`) / `format` (static option list) as `is`-filter columns, `date` as a one-sided `before`/`after` bound (one filter per field — not a two-ended range), `author` via the Mine tab + mapping. `categories` / `format` options are only wired for `postType === 'post'`. wp-admin's per-axis *dropdown* chrome (month picker, category select) is approximated through DataViews' generic filter UI rather than the classic bespoke dropdowns; tag filtering and the months-list affordance are not yet surfaced.
 - Trash view + Restore + Delete Permanently are now wired (trash variant + the `wp-admin-default` Posts → Trash screen). Remaining gap: no **Empty Trash** bulk button, and restore lands on draft rather than the pre-trash status (REST limitation).
 - No undo snackbar after trash. We emit a plain success notice; wp-admin offers "Move to trash · Undo".
 - No keyboard shortcuts (J/K navigation, X to select, T to trash). DataViews has no built-in shortcut layer.
 - No hierarchical pages tree. The Pages screen in wp-admin indents child pages under parents; DataViews renders a flat list ordered by `menu_order` and date.
 - No grid-card layout polish (cover image, excerpt). DataViews ships a grid variant but the v2 fields config doesn't emit a thumbnail / excerpt-aware card template.
 - No "Quick Edit" inline form. wp-admin's per-row toggle for status / author / sticky / template is not wired up (Bulk Edit covers the multi-row case).
-- **Bulk Edit is now wired** (#107) — a DataForm panel over status / author / sticky / parent / format / comment_status / categories / tags, writing only the changed fields. Gaps versus classic Bulk Edit: no title/slug/date/password fields, and the author/parent/categories/tags inputs take raw IDs rather than autocomplete pickers.
+- **Bulk Edit is now wired** (#107) — a DataForm panel over status / author / sticky / parent / format / comment_status / categories / tags, writing only the changed fields (post-only fields are dropped for non-`post` post types). Gaps versus classic Bulk Edit: no title/slug/date/password fields, and the author/parent/categories/tags inputs take raw IDs rather than autocomplete pickers.
 - ARIA + screen-reader polish: DataViews ships its own announcements; the v2 app doesn't layer on the wp-admin-specific live-region copy.

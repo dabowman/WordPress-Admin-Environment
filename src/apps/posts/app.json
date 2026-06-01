@@ -54,8 +54,8 @@
 					{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
 					{ "id": "status", "type": "text", "label": "Status", "filterBy": { "operators": [ "isAny" ] } },
 					{ "id": "author", "type": "text", "label": "Author" },
-					{ "id": "categories", "type": "text", "label": "Categories", "enableSorting": false, "filterBy": { "operators": [ "is" ] } },
-					{ "id": "format", "type": "text", "label": "Format", "enableSorting": false, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "categories", "type": "text", "label": "Categories", "enableSorting": false, "enableHiding": false, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "format", "type": "text", "label": "Format", "enableSorting": false, "enableHiding": false, "filterBy": { "operators": [ "is" ] } },
 					{ "id": "date", "type": "datetime", "label": "Date", "filterBy": { "operators": [ "before", "after" ] } }
 				],
 				"actions": [
@@ -172,7 +172,7 @@
 					"source": "postType/{config.postType}",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Mine + Sticky view-tab counts. `author={currentUserId}` and `sticky=true` count requests (same lightweight per_page=1 / _fields=id shape) feed the Mine and Sticky tabs in the view-tab strip.",
+					"purpose": "Mine + Sticky view-tab counts. `author={currentUserId}` and `sticky=true` count requests (same lightweight per_page=1 / _fields=id shape) feed the Mine and Sticky tabs in the view-tab strip. The Sticky count is only fetched when `config.postType === 'post'` (sticky is a `post`-only REST param; otherwise the request is skipped and the Sticky tab is omitted).",
 					"fields": [ "id" ],
 					"query": {
 						"author": "{currentUserId}",
@@ -181,6 +181,19 @@
 						"_fields": "id",
 						"context": "edit"
 					}
+				},
+				{
+					"source": "taxonomy/category",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Category options for the `categories` filter. DataViews resolves the field's `getElements` lazily when the filter opens — one `resolveSelect(getEntityRecords)` over the `category` taxonomy (per_page=100, ordered by name, `_fields=id,name`), mapped to `{ value: id, label: name }` and cached per taxonomy. Fetched only when `config.postType === 'post'`.",
+					"fields": [ "id", "name" ],
+					"query": {
+						"per_page": 100,
+						"orderby": "name",
+						"order": "asc",
+						"_fields": "id,name"
+					}
 				}
 			],
 			"writes": [
@@ -188,7 +201,7 @@
 					"source": "postType/{config.postType}",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Bulk Edit (`bulk-edit` bulk action). A DataForm-driven panel (`createBulkEditModal`) over status / author / sticky / parent / format / comment_status / categories / tags; every field is seeded to a `— No change —` sentinel and only the fields the user changed are written. On Apply, `Promise.allSettled` fans `saveEntityRecord` over the selection with the changed-field payload merged with each row id; partial failures keep the failed rows selected for retry.",
+					"purpose": "Bulk Edit (`bulk-edit` bulk action). A DataForm-driven panel (`createBulkEditModal`) over status / author / sticky / parent / format / comment_status / categories / tags; every field is seeded to a `— No change —` sentinel and only the fields the user changed are written. The post-only fields (sticky / format / categories / tags) are omitted when `config.postType !== 'post'` since their REST params aren't registered there. A free-text field (author / parent / categories / tags) that is focused then cleared is treated as no-change (`bulkToRecord` drops empty strings) so blanking a touched field never writes `author=undefined` or removes a post's parent. On Apply, `Promise.allSettled` fans `saveEntityRecord` over the selection with the changed-field payload merged with each row id; partial failures keep the failed rows selected for retry.",
 					"invalidates": [
 						"postType/{config.postType}"
 					]
@@ -252,7 +265,7 @@
 			{
 				"id": "view-tabs",
 				"when": "records !== null",
-				"renders": "A `ViewTabs` strip above the list — All / Mine / Published / Draft / Pending / Sticky segments, each with a live count and `aria-pressed` for the active segment. The active segment is derived from the live `view.filters`."
+				"renders": "A `ViewTabs` strip above the list — All / Mine / Published / Draft / Pending / Sticky segments, each with a live count and `aria-pressed` for the active segment. The Sticky segment is only emitted when `config.postType === 'post'` (sticky is a `post`-only REST param). The active segment is derived from the live `view.filters`."
 			},
 			{
 				"id": "bulk-edit",
@@ -300,7 +313,7 @@
 			},
 			{
 				"trigger": "Change DataViews view (search / filter / sort / layout / page / perPage)",
-				"effect": "Local `view` state updates; `queryArgs` recomputes via `buildQueryArgs(view, QUERY_MAPPING, staticArgs)` (status / author / categories / format → REST params) plus a supplemental date pass (`before`/`after` operators → REST `before`/`after`); `useEntityRecords` re-fetches."
+				"effect": "Local `view` state updates; `queryArgs` recomputes via `buildQueryArgs(view, QUERY_MAPPING, staticArgs)` (status / author / categories / format → REST params) plus a supplemental date pass (`before`/`after` operators → REST `before`/`after`); `useEntityRecords` re-fetches. The `categories` filter resolves its options lazily (`getElements` → category terms) and `format` from a static element list; both are wired only for `config.postType === 'post'`. The date filter is a one-sided date bound (apply `before X` OR `after Y`, not both at once — DataViews holds one filter per field), not a two-ended range."
 			},
 			{
 				"trigger": "Click a view tab (All / Mine / Published / Draft / Pending / Sticky)",
