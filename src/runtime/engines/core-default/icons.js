@@ -42,6 +42,10 @@ import {
 	closeSmall,
 	copy,
 	upload,
+	chevronUp,
+	chevronDown,
+	chevronLeft,
+	chevronRight,
 } from '@wordpress/icons';
 
 export const iconTable = {
@@ -80,6 +84,10 @@ export const iconTable = {
 	closeSmall,
 	copy,
 	upload,
+	chevronUp,
+	chevronDown,
+	chevronLeft,
+	chevronRight,
 };
 
 export const fallbackIcon = wordpress;

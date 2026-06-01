@@ -1172,6 +1172,31 @@
 			},
 			"legacy_path": "widgets.php"
 		},
+		"menus": {
+			"label": "Menus",
+			"icon": "navigation",
+			"description": "Build and assign classic navigation menus (classic themes).",
+			"path": "/menus",
+			"app": "core:menus",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			},
+			"legacy_path": "nav-menus.php"
+		},
+		"nav-menus": {
+			"label": "Menus (classic)",
+			"icon": "navigation",
+			"description": "Full-fidelity classic Menus editor (iframe fallback).",
+			"path": "/nav-menus",
+			"app": "iframe:nav-menus.php",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
+		},
 		"fonts": {
 			"label": "Fonts",
 			"icon": "typography",
@@ -1565,6 +1590,9 @@
 				},
 				"widgets": {
 					"position": 50
+				},
+				"menus": {
+					"position": 60
 				}
 			}
 		},

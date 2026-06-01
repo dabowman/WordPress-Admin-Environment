@@ -1,0 +1,38 @@
+/*
+ * core:menus — native classic-menu editor (issue #120, Option B, no DnD).
+ *
+ * WPDS-flavored, app-space styling. The kernel stays DS-neutral; these classes
+ * only style the hand-rolled item list + reorder controls.
+ */
+
+.wp-admin-shell-app-menus__locations {
+	border: 1px solid var( --wpds-color-border-neutral-secondary, #ddd );
+	border-radius: var( --wpds-border-radius-md, 4px );
+	padding: var( --wpds-dimension-padding-md, 12px );
+	margin: 0;
+}
+
+.wp-admin-shell-app-menus__locations-list {
+	margin-block-start: var( --wpds-dimension-padding-sm, 8px );
+}
+
+.wp-admin-shell-app-menus__items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var( --wpds-dimension-padding-xs, 4px );
+}
+
+.wp-admin-shell-app-menus__item {
+	border: 1px solid var( --wpds-color-border-neutral-secondary, #ddd );
+	border-radius: var( --wpds-border-radius-md, 4px );
+	padding: var( --wpds-dimension-padding-sm, 8px )
+		var( --wpds-dimension-padding-md, 12px );
+	background: var( --wpds-color-bg-neutral-secondary, #fff );
+}
+
+.wp-admin-shell-app-menus__item-label {
+	font-weight: 600;
+}

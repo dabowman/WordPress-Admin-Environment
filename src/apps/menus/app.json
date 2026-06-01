@@ -1,0 +1,280 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:menus",
+	"version": 1,
+	"title": "Menus",
+	"description": "Native classic-menu editor (Appearance → Menus). Create / rename / delete menus, add custom-link / page / term items, reorder with explicit up-down-indent-outdent controls plus a numeric order field (no drag-and-drop), and assign menus to theme locations. Classic-theme only — disabled with a Site-Editor pointer on block themes.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"config-schema": {
+		"type": "object",
+		"properties": {},
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"window": {
+		"defaultSize": {
+			"w": 960,
+			"h": 720
+		},
+		"minSize": {
+			"w": 520,
+			"h": 420
+		},
+		"multiInstance": false,
+		"icon": "navigation"
+	},
+	"documentation": {
+		"purpose": "Native editor for WordPress classic navigation menus, rebuilding Appearance → Menus (`nav-menus.php`) over the nav-menu REST entities. It serves site authors on classic themes who still rely on `wp_nav_menu()` locations. Authors pick a menu from a selector (or create / rename / delete one), add items of three kinds — custom links, existing pages/posts, or existing categories/tags via lightweight relational pickers — reorder and nest items with explicit Up / Down / Indent / Outdent buttons plus a numeric Order field (Option B: no drag-and-drop, per issue #120), and assign the menu to theme-declared locations. On a block theme the app short-circuits to a disabled panel that points to the Site Editor's Navigation block and offers the classic `nav-menus.php` iframe fallback, because classic menus are superseded there. It consumes the shared `workspace.theme-support` block-theme signal (stamped PHP-side by `WP_Admin_Shell_Appearance_Menu`) to make that determination.",
+		"rebuilds": "menus",
+		"data": {
+			"reads": [
+				{
+					"source": "root/menu",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "All menu containers — the menu selector + the active menu's name and assigned `locations`.",
+					"fields": [ "id", "name", "locations" ],
+					"query": {
+						"per_page": 100,
+						"context": "edit"
+					}
+				},
+				{
+					"source": "root/menuItem",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Items belonging to the selected menu, built into a depth-first tree (parent + menu_order).",
+					"fields": [
+						"id",
+						"title",
+						"url",
+						"type",
+						"object",
+						"object_id",
+						"parent",
+						"menu_order",
+						"menus"
+					],
+					"query": {
+						"menus": "activeMenuId",
+						"per_page": 100,
+						"context": "edit"
+					}
+				},
+				{
+					"source": "root/menuLocation",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Theme-declared menu locations (keyed by name) for the assignment checkboxes.",
+					"fields": [ "name", "description", "menu" ]
+				},
+				{
+					"source": "postType/{page|post}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Relational picker options when adding a Page/Post item (published only). Fetched only while the item-modal kind is `post_type` (issue #115 stand-in).",
+					"fields": [ "id", "title" ]
+				},
+				{
+					"source": "taxonomy/{category|post_tag}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Relational picker options when adding a Category/Tag item. Fetched only while the item-modal kind is `taxonomy`.",
+					"fields": [ "id", "name" ]
+				},
+				{
+					"source": "workspace.theme-support",
+					"via": "kernel-config",
+					"purpose": "Block-theme signal (from `window.wpAdminShell.config.workspace['theme-support']`, stamped by `WP_Admin_Shell_Appearance_Menu`). When `block-theme` is true the app disables itself and shows the Site-Editor / iframe fallback.",
+					"fields": [ "block-theme" ]
+				}
+			],
+			"writes": [
+				{
+					"source": "root/menu",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Create a new menu from the Create-menu modal.",
+					"invalidates": [ "root/menu" ]
+				},
+				{
+					"source": "root/menu",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Rename a menu, or assign / unassign theme locations (writes the menu's `locations` array).",
+					"invalidates": [ "root/menu" ]
+				},
+				{
+					"source": "root/menu",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Delete the active menu (`force: true` — menus have no trash).",
+					"invalidates": [ "root/menu" ]
+				},
+				{
+					"source": "root/menuItem",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Add a menu item (custom link / page-post / term) to the active menu.",
+					"invalidates": [ "root/menuItem" ]
+				},
+				{
+					"source": "root/menuItem",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Edit an item's label / link / order, or reorder via Up/Down/Indent/Outdent (which PATCH `parent` + `menu_order`).",
+					"invalidates": [ "root/menuItem" ]
+				},
+				{
+					"source": "root/menuItem",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Remove a menu item (`force: true` — menu items have no trash).",
+					"invalidates": [ "root/menuItem" ]
+				}
+			]
+		},
+		"url": {
+			"reads-slots": [],
+			"writes-slots": [],
+			"navigates": [ "#/site-editor" ]
+		},
+		"states": [
+			{
+				"id": "loading",
+				"when": "menusLoading && !menus",
+				"renders": "Centered spinner while the menu list resolves."
+			},
+			{
+				"id": "block-theme-disabled",
+				"when": "workspace['theme-support']['block-theme'] === true",
+				"renders": "Disabled panel explaining classic menus are replaced by the Navigation block, with links to the Site Editor and the classic nav-menus.php fallback."
+			},
+			{
+				"id": "empty",
+				"when": "menus.length === 0",
+				"renders": "Empty-state copy prompting the author to create their first menu."
+			},
+			{
+				"id": "ready",
+				"when": "activeMenu !== null",
+				"renders": "Menu selector + theme-location checkboxes + item tree with reorder controls + Add item / Create menu / Rename / Delete menu actions."
+			},
+			{
+				"id": "items-loading",
+				"when": "itemsLoading && !items",
+				"renders": "Centered spinner in the item-list area while the selected menu's items resolve."
+			},
+			{
+				"id": "editing-item",
+				"when": "itemModal !== null",
+				"renders": "Modal with item-type selector, relational/url fields, navigation label, and numeric Order field."
+			},
+			{
+				"id": "editing-menu",
+				"when": "menuModal !== null",
+				"renders": "Modal with a single Menu name field (create or rename)."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Select a menu from the dropdown",
+				"effect": "Sets the active menu id; its items + location assignments refetch."
+			},
+			{
+				"trigger": "Click Create menu / Rename",
+				"effect": "Opens the menu-name modal; on save `saveEntityRecord('root','menu', …)`, invalidate the menu query, snackbar, and (on create) select the new menu."
+			},
+			{
+				"trigger": "Click Delete menu and confirm",
+				"effect": "`deleteEntityRecord('root','menu', id, { force: true })`, invalidate, clear selection, snackbar."
+			},
+			{
+				"trigger": "Toggle a theme-location checkbox",
+				"effect": "`saveEntityRecord('root','menu', { id, locations })` with the location added/removed; invalidate the menu query."
+			},
+			{
+				"trigger": "Click Add item",
+				"effect": "Opens the item modal in create mode seeded with the next sibling order."
+			},
+			{
+				"trigger": "Submit the item modal",
+				"effect": "`saveEntityRecord('root','menuItem', payload)` — custom → `type:custom`+url; relational → `type`+`object`+`object_id`. Invalidate the items query + snackbar.",
+				"guards": [
+					"custom link requires a non-empty URL",
+					"relational item requires a selected object_id"
+				]
+			},
+			{
+				"trigger": "Click Up / Down on an item",
+				"effect": "Swaps the item with its adjacent sibling and PATCHes the changed `menu_order` values (contiguous, gap-free)."
+			},
+			{
+				"trigger": "Click Indent on an item",
+				"effect": "Reparents the item under its immediately-preceding sibling at the end of that sibling's children (`parent` + `menu_order`).",
+				"guards": [ "item is not the first among its siblings" ]
+			},
+			{
+				"trigger": "Click Outdent on an item",
+				"effect": "Promotes the item to its grandparent level, positioned right after its old parent; reparents then settles sibling orders.",
+				"guards": [ "item is not already top-level" ]
+			},
+			{
+				"trigger": "Click Remove on an item",
+				"effect": "`deleteEntityRecord('root','menuItem', id, { force: true })`, invalidate, snackbar."
+			}
+		],
+		"a11y": {
+			"focus-management": "Modals (item / menu-name / delete-confirm) use `@wordpress/components` Modal, which traps focus and restores it to the trigger on close. Reorder controls are icon buttons with `aria-label`s (Move up / Move down / Indent / Outdent)."
+		},
+		"constraints": [
+			{
+				"concern": "force-delete",
+				"note": "Both `root/menu` and `root/menuItem` have no trash. `deleteEntityRecord` must pass `{ force: true }` or the request 400s."
+			},
+			{
+				"concern": "context-edit",
+				"note": "Menus are private-by-default since WP 6.8 — all reads pass `context: 'edit'` (the entity default for these three) so `title.raw` and the full item fields are returned."
+			},
+			{
+				"concern": "no-drag-and-drop",
+				"note": "Reorder is explicit (Up/Down/Indent/Outdent + numeric Order field) — Option B per issue #120. Swap in drag-reorder when the upstream primitive (#168) lands."
+			},
+			{
+				"concern": "relational-picker-stand-in",
+				"note": "Page/Post and Category/Tag pickers are a lightweight `useEntityRecords` + SelectControl stand-in (capped at per_page 100). Replace with the shared relational picker primitive when #115 lands."
+			},
+			{
+				"concern": "block-theme-only",
+				"note": "Consumes `workspace.theme-support` (shared with #121). On a block theme the editor is disabled — classic menus are superseded by the Site Editor's Navigation block."
+			},
+			{
+				"concern": "decode-name-entities",
+				"note": "Menu names + item titles may carry HTML entities. Pass through `decodeEntities` before rendering and when seeding modals, or re-save double-encodes."
+			},
+			{
+				"concern": "invalidate-after-mutate",
+				"note": "All menu / menu-item mutations call `invalidateResolution('getEntityRecords', …)` with the exact query key — `saveEntityRecord` / `deleteEntityRecord` do not bust the parent query."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/ui#Badge, Button, Icon, InputControl, Stack, Text",
+				"purpose": "Toolbar, item rows, reorder icon buttons, modal inputs, headings."
+			},
+			{
+				"import": "@wordpress/components#SelectControl, CheckboxControl, Modal, Spinner",
+				"purpose": "Menu / object pickers, location checkboxes, modal container, loading filler — WPDS 0.12 gaps."
+			},
+			{
+				"import": "@wordpress/notices#store",
+				"purpose": "Success snackbars / error banners for every mutation."
+			},
+			{
+				"import": "@wordpress/icons#plus (+ kernel registry chevronUp/Down/Left/Right)",
+				"purpose": "Add-item / create-menu icon, and the reorder control icons resolved through the kernel icon registry."
+			}
+		]
+	}
+}

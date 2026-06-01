@@ -443,6 +443,94 @@ WPAS_Appearance_Test_Runner::assert_true(
 );
 
 // -----------------------------------------------------------------------------
+// Issue #237 nit — widgets / menus gated on actual theme support
+// -----------------------------------------------------------------------------
+
+// Classic theme that supports neither widgets nor menus → both screens drop,
+// alongside the unsupported background/header. Customize (no `requires`) stays.
+$classic_no_support = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false ) // every feature false.
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: widgets screen dropped when theme lacks widget support',
+	isset( $classic_no_support['screens']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: menus screen dropped when theme lacks menu support',
+	isset( $classic_no_support['screens']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: widgets menu node dropped when unsupported',
+	isset( $classic_no_support['menu']['appearance']['items']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: menus menu node dropped when unsupported',
+	isset( $classic_no_support['menu']['appearance']['items']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: customize survives (no requires gate) on unsupported classic theme',
+	isset( $classic_no_support['screens']['customize'] )
+);
+
+// Classic theme that DOES support widgets + menus → both survive.
+$classic_with_nav = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: widgets screen kept when theme supports widgets',
+	isset( $classic_with_nav['screens']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus screen kept when theme supports menus',
+	isset( $classic_with_nav['screens']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: widgets menu node kept when supported',
+	isset( $classic_with_nav['menu']['appearance']['items']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus menu node kept when supported',
+	isset( $classic_with_nav['menu']['appearance']['items']['menus'] )
+);
+
+// Partial support — menus yes, widgets no — gates independently.
+$classic_menus_only = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus kept while widgets dropped (independent gating)',
+	isset( $classic_menus_only['screens']['menus'] ) &&
+	! isset( $classic_menus_only['screens']['widgets'] )
+);
+
+// The nav-menus iframe-fallback screen is gated on `menus` too.
+$doc_with_navmenus = wpas_appearance_test_doc();
+$doc_with_navmenus['screens']['nav-menus'] = array(
+	'label' => 'Menus (classic)',
+	'path'  => '/nav-menus',
+	'app'   => 'iframe:nav-menus.php',
+);
+$navmenus_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( false )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: nav-menus screen dropped when theme lacks menu support',
+	isset( $navmenus_unsupported['screens']['nav-menus'] )
+);
+$navmenus_supported = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( false, array( 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: nav-menus screen kept when theme supports menus',
+	isset( $navmenus_supported['screens']['nav-menus'] )
+);
+
+// -----------------------------------------------------------------------------
 // Summary
 // -----------------------------------------------------------------------------
 

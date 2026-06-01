@@ -181,6 +181,10 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-taxonomy" */ '../../apps/taxonomy'
 			),
 	},
+	'core:menus': {
+		load: () =>
+			import( /* webpackChunkName: "app-menus" */ '../../apps/menus' ),
+	},
 	'core:command-palette': {
 		load: () =>
 			import(
