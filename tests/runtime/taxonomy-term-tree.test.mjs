@@ -4,7 +4,8 @@
  *
  * Pins the client-side hierarchy rebuild that drives the Categories indented
  * list + parent-picker (issue #115): depth-first ordering, depth annotation,
- * orphan-as-root recovery, self-/cyclic-parent guards, and the indent-label
+ * orphan-as-root recovery, self-/cyclic-parent guards, the depth-first id
+ * flatten (used to reorder the list page into tree order), and the indent-label
  * prefix.
  */
 import { resolve, dirname } from 'node:path';
@@ -13,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
-const { buildTermTree, indentLabel } = await import(
+const { buildTermTree, flattenTreeOrder, indentLabel } = await import(
 	resolve( projectRoot, 'src/apps/taxonomy/termTree.mjs' )
 );
 
@@ -95,6 +96,61 @@ console.log( '\n— empty / non-array input is safe —' );
 {
 	eq( 'undefined → []', buildTermTree( undefined ), [] );
 	eq( 'empty → []', buildTermTree( [] ), [] );
+}
+
+console.log(
+	'\n— flattenTreeOrder yields depth-first ids; reorders flat rows into tree order —'
+);
+{
+	// Tree: Zebra(1, root) → Apple(2, child); Mango(3, root).
+	const tree = buildTermTree( [
+		{ id: 1, name: 'Zebra', parent: 0 },
+		{ id: 2, name: 'Apple', parent: 1 },
+		{ id: 3, name: 'Mango', parent: 0 },
+	] );
+	eq( 'depth-first id sequence', flattenTreeOrder( tree ), [ 1, 2, 3 ] );
+	eq( 'non-array → []', flattenTreeOrder( undefined ), [] );
+
+	// The list rows arrive flat-alphabetical from REST (Apple, Mango, Zebra).
+	// Sorting by tree-order index puts Zebra immediately above its child Apple.
+	const order = flattenTreeOrder( tree );
+	const rank = new Map( order.map( ( id, i ) => [ id, i ] ) );
+	const fallback = order.length;
+	const rows = [
+		{ id: 2, name: 'Apple' },
+		{ id: 3, name: 'Mango' },
+		{ id: 1, name: 'Zebra' },
+	];
+	const reordered = rows
+		.map( ( row, i ) => ( { row, i } ) )
+		.sort( ( a, b ) => {
+			const ra = rank.has( a.row.id ) ? rank.get( a.row.id ) : fallback;
+			const rb = rank.has( b.row.id ) ? rank.get( b.row.id ) : fallback;
+			return ra - rb || a.i - b.i;
+		} )
+		.map( ( entry ) => entry.row.id );
+	eq( 'flat rows reorder into tree order (parent above child)', reordered, [
+		1, 2, 3,
+	] );
+
+	// Rows outside the tree window sort last, stably (original order kept).
+	const withOrphans = [
+		{ id: 99, name: 'Beyond cap A' },
+		{ id: 2, name: 'Apple' },
+		{ id: 98, name: 'Beyond cap B' },
+		{ id: 1, name: 'Zebra' },
+	];
+	const reordered2 = withOrphans
+		.map( ( row, i ) => ( { row, i } ) )
+		.sort( ( a, b ) => {
+			const ra = rank.has( a.row.id ) ? rank.get( a.row.id ) : fallback;
+			const rb = rank.has( b.row.id ) ? rank.get( b.row.id ) : fallback;
+			return ra - rb || a.i - b.i;
+		} )
+		.map( ( entry ) => entry.row.id );
+	eq( 'tree rows first, orphans last in stable order', reordered2, [
+		1, 2, 99, 98,
+	] );
 }
 
 console.log( '\n— indentLabel prefixes by depth —' );

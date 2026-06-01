@@ -4,8 +4,12 @@
  * The REST term list is flat — every term carries a `parent` id (0 = top
  * level). wp-admin's PHP recurses this into an indented tree; the shell rebuilds
  * the same depth ordering client-side so the Categories list can render
- * parent-indented rows (with `aria-level`) and the add/edit form can offer an
- * indented `wp_dropdown_categories`-style parent picker.
+ * parent-indented rows (each nested row carries a visually-hidden `Level N`
+ * announcement — not `role="treeitem"`/`aria-level`, which would be invalid
+ * inside the DataViews table) and the add/edit form can offer an indented
+ * `wp_dropdown_categories`-style parent picker. `flattenTreeOrder` exposes the
+ * depth-first id sequence so the list rows can be reordered into true tree
+ * order (parent immediately above its indented children).
  *
  * Pure (no imports) so `tests/runtime/*` can import it directly without a
  * webpack/jest harness.
@@ -81,6 +85,19 @@ export function buildTermTree( terms ) {
 		}
 	} );
 	return out;
+}
+
+/**
+ * Map a depth-first tree (from `buildTermTree`) to an ordered list of term ids.
+ * Callers sort the current page's rows by each row's index in this list to put
+ * the visible rows into true wp-admin-style tree order (parent immediately above
+ * its indented children) rather than the flat alphabetical order REST returns.
+ *
+ * @param {Array} tree Output of `buildTermTree` (`[ { id, depth, … } ]`).
+ * @return {Array} Term ids in depth-first order.
+ */
+export function flattenTreeOrder( tree ) {
+	return Array.isArray( tree ) ? tree.map( ( node ) => node.id ) : [];
 }
 
 /**

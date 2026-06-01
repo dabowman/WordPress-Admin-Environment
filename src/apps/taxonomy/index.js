@@ -17,7 +17,7 @@ import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
-import { buildTermTree, indentLabel } from './termTree.mjs';
+import { buildTermTree, flattenTreeOrder, indentLabel } from './termTree.mjs';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
@@ -266,15 +266,47 @@ export default function TaxonomyApp( { config = {} } ) {
 		];
 	}, [ termTree ] );
 
-	// Depth indentation only makes sense when the list is in tree order:
-	// name-ascending sort AND the first (unpaged) page. Any other sort or a
-	// later page renders flat (mirrors wp-admin collapsing the tree on
-	// non-default sort) so an indented child never floats without its parent.
+	// Depth indentation only makes sense when the page's rows can be put into
+	// true tree order: name-ascending sort, the first (unpaged) page, and no
+	// active search (a search returns an arbitrary subset whose parents may not
+	// be present). Any other sort / later page / active search renders flat
+	// (mirrors wp-admin collapsing the tree on non-default sort) so an indented
+	// child never floats without its parent. When this holds, `data` is also
+	// reordered into `termTree` depth-first sequence below.
 	const showDepth =
 		hierarchical &&
 		view.sort?.field === 'name' &&
 		( view.sort?.direction || 'asc' ) === 'asc' &&
-		view.page === 1;
+		view.page === 1 &&
+		! view.search;
+
+	// When the page is in tree order (showDepth), reorder the flat alphabetical
+	// REST rows into the `termTree` depth-first sequence so a parent renders
+	// immediately above its indented children (true wp-admin order) — the flat
+	// REST order alone would float an alphabetically-earlier child above its
+	// parent. Rows whose id isn't in the tree window sort last, stably. Under
+	// any other sort / page / search, keep the flat REST order untouched.
+	const orderedData = useMemo( () => {
+		if ( ! showDepth || ! termTree ) {
+			return data;
+		}
+		const order = flattenTreeOrder( termTree );
+		const rank = new Map( order.map( ( id, i ) => [ id, i ] ) );
+		const fallback = order.length;
+		return data
+			.map( ( row, i ) => ( { row, i } ) )
+			.sort( ( a, b ) => {
+				const ra = rank.has( a.row.id )
+					? rank.get( a.row.id )
+					: fallback;
+				const rb = rank.has( b.row.id )
+					? rank.get( b.row.id )
+					: fallback;
+				// Stable: fall back to original index on ties.
+				return ra - rb || a.i - b.i;
+			} )
+			.map( ( entry ) => entry.row );
+	}, [ data, showDepth, termTree ] );
 
 	const fields = useMemo(
 		() =>
@@ -394,7 +426,7 @@ export default function TaxonomyApp( { config = {} } ) {
 				</div>
 			) : (
 				<DataViews
-					data={ data }
+					data={ orderedData }
 					fields={ fields }
 					view={ view }
 					onChangeView={ setView }
