@@ -24,4 +24,6 @@ Read `default_category` + `default_post_format` from `GET /wp/v2/settings`; rend
 
 ## Known limitations
 
-Parity gap vs `docs/screens/settings-writing.md`: **post-via-email** and **remote-publishing (XML-RPC / Press This)** settings are not exposed by `/wp/v2/settings`, so they are omitted. The panel renders an in-form notice directing users to the legacy `options-writing.php` screen for those fields.
+Parity gap vs `docs/screens/settings-writing.md`: the remaining Writing options are all **legacy** and have no REST surface — Post-via-Email (`mailserver_url` / `mailserver_login` / `mailserver_port` / `default_email_category`), Update Services (`ping_sites`), the Link Manager default category (`default_link_category`), and the XHTML auto-correction toggle (`use_balanceTags`). Rather than silently hiding them, the panel renders the shared **No-API Fallback** (`src/apps/_shared/fallback/UnavailableViaApi`, `docs/no-api-fallback-pattern.md`) per option: a classic-screen link to `options-writing.php`, a copy-paste `wp option update` command, and a paste-to-agent prompt.
+
+The Post-via-Email password (`mailserver_pass`) is **deliberately kept out of REST and out of the fallback** — a credential must never be pre-filled into a copy-paste affordance.
