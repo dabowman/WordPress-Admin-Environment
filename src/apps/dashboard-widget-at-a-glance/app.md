@@ -4,12 +4,16 @@ Site-wide counts tile, decomposed from the retired `core:dashboard` monolith (is
 
 ## Rebuild guide
 
-- Query four entities with `per_page: 1` + `_fields: id` and read each result's `totalItems` (the `X-WP-Total` header):
-  - `postType/post` `{ status: 'publish', context: 'edit' }` → published posts.
-  - `postType/page` `{ status: 'publish', context: 'edit' }` → published pages.
-  - `root/comment` `{ status: 'hold', context: 'edit' }` → pending comments.
+- Query four entities with `per_page: 1` + `_fields: id` and read each result's `totalItems` (the `X-WP-Total` header — returned in default `view` context, so no `context: 'edit'` is needed for a count):
+  - `postType/post` `{ status: 'publish' }` → published posts (`view` context; published content is publicly countable).
+  - `postType/page` `{ status: 'publish' }` → published pages (`view` context).
+  - `root/comment` `{ status: 'hold', context: 'edit' }` → pending comments (needs `moderate_comments`).
   - `root/user` → registered users.
-- Render four labelled counts; show a `Spinner` per slot while its query resolves.
+- Render four labelled counts; show a `Spinner` per slot only on initial load (`isResolving && totalItems === undefined`), not on background refetches.
+
+## Capability behavior
+
+The tile's cap floor is `read`, so any logged-in user mounts it. The published-post and published-page counts use default `view` context and resolve for read-only users (real counts). The pending-comments count uses `context: 'edit'` because it inherently requires `moderate_comments` — read-only users correctly see `—` there rather than a real count. The registered-user count needs `list_users` and likewise degrades to `—` for users without it.
 
 ## Known limitations
 

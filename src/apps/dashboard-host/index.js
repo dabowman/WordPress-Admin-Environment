@@ -98,8 +98,10 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 	const { config: kernelConfig } = useKernel();
 
 	const userId = window.wpAdminShell?.userId;
-	// useEntityRecord short-circuits on a falsy id, so the hook order
-	// stays stable whether or not the acting-user id is known.
+	// `window.wpAdminShell.userId` is always present in practice; the `|| 0`
+	// fallback only keeps the hook order stable. (Note: an id of 0 still
+	// triggers a /wp/v2/users/0 request that 404s — it is not a real
+	// short-circuit — but the falsy-id path is unreachable here.)
 	const { record: user } = useEntityRecord( 'root', 'user', userId || 0 );
 	const greeting = useMemo( greetingForNow, [] );
 	const displayName = user?.name || user?.first_name || '';

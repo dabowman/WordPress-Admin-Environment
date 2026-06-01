@@ -24,22 +24,22 @@
 				{
 					"source": "postType/post",
 					"via": "core-data",
-					"context": "edit",
-					"purpose": "Published-post count via totalItems (per_page: 1, _fields: id).",
-					"query": { "status": "publish", "per_page": 1, "_fields": "id", "context": "edit" }
+					"context": "view",
+					"purpose": "Published-post count via totalItems (per_page: 1, _fields: id). Default view context so the read cap floor (read-only users) sees real counts.",
+					"query": { "status": "publish", "per_page": 1, "_fields": "id" }
 				},
 				{
 					"source": "postType/page",
 					"via": "core-data",
-					"context": "edit",
-					"purpose": "Published-page count via totalItems.",
-					"query": { "status": "publish", "per_page": 1, "_fields": "id", "context": "edit" }
+					"context": "view",
+					"purpose": "Published-page count via totalItems. Default view context for read-only users.",
+					"query": { "status": "publish", "per_page": 1, "_fields": "id" }
 				},
 				{
 					"source": "root/comment",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Pending-comment count via totalItems (status: hold).",
+					"purpose": "Pending-comment count via totalItems (status: hold). Needs moderate_comments; read-only users see — here.",
 					"query": { "status": "hold", "per_page": 1, "_fields": "id", "context": "edit" }
 				},
 				{
@@ -53,8 +53,8 @@
 		"states": [
 			{
 				"id": "loading",
-				"when": "any query isResolving",
-				"renders": "Spinner in the affected stat slot."
+				"when": "a query is on its initial load (isResolving && totalItems === undefined)",
+				"renders": "Spinner in the affected stat slot — not shown on background refetches that still hold a value."
 			},
 			{
 				"id": "ready",

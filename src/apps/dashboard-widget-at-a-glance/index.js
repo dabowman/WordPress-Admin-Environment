@@ -34,15 +34,21 @@ function Stat( { label, value, isLoading } ) {
 }
 
 export default function DashboardWidgetAtAGlanceApp() {
+	// Count-only queries: `totalItems` reads the `X-WP-Total` header, returned
+	// in default `view` context, so no `context: 'edit'` — that would raise the
+	// permission floor (this tile's cap floor is `read`) and 403 published
+	// posts/pages counts for read-only users. Published content is publicly
+	// countable in `view` context.
 	const publishedQuery = useMemo(
 		() => ( {
 			per_page: 1,
 			status: 'publish',
-			context: 'edit',
 			_fields: 'id',
 		} ),
 		[]
 	);
+	// Pending comments inherently need `moderate_comments` — keep
+	// `context: 'edit'`; read-only users correctly see `—` here.
 	const pendingCommentsQuery = useMemo(
 		() => ( {
 			per_page: 1,
@@ -68,22 +74,30 @@ export default function DashboardWidgetAtAGlanceApp() {
 			<Stat
 				label={ __( 'Published posts', 'wp-admin-shell' ) }
 				value={ posts.totalItems }
-				isLoading={ posts.isResolving }
+				isLoading={
+					posts.isResolving && posts.totalItems === undefined
+				}
 			/>
 			<Stat
 				label={ __( 'Published pages', 'wp-admin-shell' ) }
 				value={ pages.totalItems }
-				isLoading={ pages.isResolving }
+				isLoading={
+					pages.isResolving && pages.totalItems === undefined
+				}
 			/>
 			<Stat
 				label={ __( 'Pending comments', 'wp-admin-shell' ) }
 				value={ comments.totalItems }
-				isLoading={ comments.isResolving }
+				isLoading={
+					comments.isResolving && comments.totalItems === undefined
+				}
 			/>
 			<Stat
 				label={ __( 'Users', 'wp-admin-shell' ) }
 				value={ users.totalItems }
-				isLoading={ users.isResolving }
+				isLoading={
+					users.isResolving && users.totalItems === undefined
+				}
 			/>
 		</Stack>
 	);
