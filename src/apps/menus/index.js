@@ -192,17 +192,10 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 
 	// `saveEntityRecord` / `deleteEntityRecord` resolve (not reject) on a REST
 	// failure and stash the error in these selectors — the direct-mutation
-	// handlers below consult them to detect server failures.
-	const { getLastEntitySaveError, getLastEntityDeleteError } = useSelect(
-		( select ) => {
-			const store = select( coreStore );
-			return {
-				getLastEntitySaveError: store.getLastEntitySaveError,
-				getLastEntityDeleteError: store.getLastEntityDeleteError,
-			};
-		},
-		[]
-	);
+	// handlers below consult them to detect server failures. `useSelect`
+	// returns the store's bound selectors directly (stable refs).
+	const { getLastEntitySaveError, getLastEntityDeleteError } =
+		useSelect( coreStore );
 
 	const itemsQuery = useMemo(
 		() => ( {
@@ -303,13 +296,18 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
 					await patchItem( c.id, { menu_order: c.menu_order } );
 				}
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to reorder item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync regardless of mid-loop failure: earlier PATCHes have
+				// already committed server-side, so refresh to whatever state
+				// the server actually holds rather than leaving the list in a
+				// partially-reordered / duplicate-`menu_order` shape.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
@@ -331,13 +329,16 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					parent: newParent.id,
 					menu_order: newOrder,
 				} );
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to indent item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync on success or failure so the tree reflects the
+				// server's actual state after the reparent attempt.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
@@ -380,13 +381,18 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					// eslint-disable-next-line no-await-in-loop -- intentional serialization; see comment.
 					await patchItem( c.id, { menu_order: c.menu_order } );
 				}
-				refreshItems();
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
 						__( 'Failed to outdent item.', 'wp-admin-shell' ),
 					{ isDismissible: true }
 				);
+			} finally {
+				// Resync regardless of mid-sequence failure: the reparent and
+				// any earlier sibling PATCHes have already committed
+				// server-side, so refresh to the server's actual state rather
+				// than leaving a partially-applied move on screen.
+				refreshItems();
 			}
 		},
 		[ items, patchItem, refreshItems, createErrorNotice ]
