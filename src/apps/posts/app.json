@@ -54,11 +54,14 @@
 					{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
 					{ "id": "status", "type": "text", "label": "Status", "filterBy": { "operators": [ "isAny" ] } },
 					{ "id": "author", "type": "text", "label": "Author" },
-					{ "id": "date", "type": "datetime", "label": "Date" }
+					{ "id": "categories", "type": "text", "label": "Categories", "enableSorting": false, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "format", "type": "text", "label": "Format", "enableSorting": false, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "date", "type": "datetime", "label": "Date", "filterBy": { "operators": [ "before", "after" ] } }
 				],
 				"actions": [
 					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "pencil", "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } },
 					{ "id": "view", "label": "View", "icon": "external", "eligibleWhen": { "status": "publish" } },
+					{ "id": "bulk-edit", "label": "Edit", "supportsBulk": true, "icon": "edit", "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } },
 					{ "id": "trash", "label": "Move to Trash", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "publish", "future", "draft", "pending", "private" ] } }
 				]
 			},
@@ -105,7 +108,7 @@
 		"icon": "post"
 	},
 	"documentation": {
-		"purpose": "DataViews table over any single post type. Defaults to 20 rows per page sorted by date descending, with title / status / author / date columns. Authors filter by status, search the title field, switch between table and grid layouts, paginate, and run per-row or bulk actions (edit, view in new tab, move to trash). Used in every bundled shell for the Posts and Pages screens, and rebindable to custom post types through the `postType` config key.",
+		"purpose": "DataViews table over any single post type. Defaults to 20 rows per page sorted by date descending, with title / status / author / date columns. Authors filter by status / categories / format / date-range, switch view via the All / Mine / Published / Draft / Pending / Sticky tab strip, search the title field, switch between table and grid layouts, paginate, and run per-row or bulk actions (edit, bulk-edit, view in new tab, move to trash). Used in every bundled shell for the Posts and Pages screens, and rebindable to custom post types through the `postType` config key.",
 		"rebuilds": "posts",
 		"data": {
 			"reads": [
@@ -144,17 +147,36 @@
 						"status": "config.status||any|filter.status",
 						"context": "edit",
 						"search": "view.search",
-						"author": "filter.author"
+						"author": "filter.author|tab.mine",
+						"sticky": "tab.sticky",
+						"categories": "filter.categories",
+						"format": "filter.format",
+						"before": "filter.date.before",
+						"after": "filter.date.after"
 					}
 				},
 				{
 					"source": "postType/{config.postType}",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Per-status totals for the status filter elements (\"Published (12)\"). One lightweight request per status value via `useEntityElementCounts`; the total comes from the X-WP-Total header. Global counts — they ignore the active search/page so they mirror wp-admin's status links.",
+					"purpose": "Per-status totals for the status filter elements (\"Published (12)\") and the view-tab strip. One lightweight request per status value via `useEntityElementCounts`; the total comes from the X-WP-Total header. Global counts — they ignore the active search/page so they mirror wp-admin's status links.",
 					"fields": [ "id" ],
 					"query": {
-						"status": "publish|draft|pending|private|future|trash",
+						"status": "publish|draft|pending|private|future|trash|any",
+						"per_page": 1,
+						"_fields": "id",
+						"context": "edit"
+					}
+				},
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Mine + Sticky view-tab counts. `author={currentUserId}` and `sticky=true` count requests (same lightweight per_page=1 / _fields=id shape) feed the Mine and Sticky tabs in the view-tab strip.",
+					"fields": [ "id" ],
+					"query": {
+						"author": "{currentUserId}",
+						"sticky": true,
 						"per_page": 1,
 						"_fields": "id",
 						"context": "edit"
@@ -162,6 +184,15 @@
 				}
 			],
 			"writes": [
+				{
+					"source": "postType/{config.postType}",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Bulk Edit (`bulk-edit` bulk action). A DataForm-driven panel (`createBulkEditModal`) over status / author / sticky / parent / format / comment_status / categories / tags; every field is seeded to a `— No change —` sentinel and only the fields the user changed are written. On Apply, `Promise.allSettled` fans `saveEntityRecord` over the selection with the changed-field payload merged with each row id; partial failures keep the failed rows selected for retry.",
+					"invalidates": [
+						"postType/{config.postType}"
+					]
+				},
 				{
 					"source": "postType/{config.postType}",
 					"via": "core-data",
@@ -217,6 +248,16 @@
 				"id": "trash-confirm",
 				"when": "User clicked Trash row/bulk action",
 				"renders": "Modal asking to confirm the destructive action with Cancel + Move to Trash buttons."
+			},
+			{
+				"id": "view-tabs",
+				"when": "records !== null",
+				"renders": "A `ViewTabs` strip above the list — All / Mine / Published / Draft / Pending / Sticky segments, each with a live count and `aria-pressed` for the active segment. The active segment is derived from the live `view.filters`."
+			},
+			{
+				"id": "bulk-edit",
+				"when": "User clicked the Edit bulk action with a multi-row selection",
+				"renders": "A `createBulkEditModal` DataForm panel with status / author / sticky / parent / format / comment_status / categories / tags fields, each seeded to a `— No change —` sentinel. The Update button is disabled until at least one field is changed."
 			}
 		],
 		"interactions": [
@@ -259,7 +300,18 @@
 			},
 			{
 				"trigger": "Change DataViews view (search / filter / sort / layout / page / perPage)",
-				"effect": "Local `view` state updates; `queryArgs` recomputes via `useMemo` and `useEntityRecords` re-fetches."
+				"effect": "Local `view` state updates; `queryArgs` recomputes via `buildQueryArgs(view, QUERY_MAPPING, staticArgs)` (status / author / categories / format → REST params) plus a supplemental date pass (`before`/`after` operators → REST `before`/`after`); `useEntityRecords` re-fetches."
+			},
+			{
+				"trigger": "Click a view tab (All / Mine / Published / Draft / Pending / Sticky)",
+				"effect": "Rewrites `view.filters`: drops any existing status / author / sticky filter and applies the segment's filter (All clears the status scope; Mine → `author={currentUserId}`; Sticky → `sticky=true`; status segments → `status=<value>`). Resets to page 1. Date / categories / format filters are preserved."
+			},
+			{
+				"trigger": "Edit bulk action (multi-row)",
+				"effect": "Opens the bulk-edit DataForm modal; on Update only the changed fields are written via `Promise.allSettled(saveEntityRecord)` across the selection. `bulkToRecord` maps the form values to REST (sticky string → boolean, author/parent → int, categories/tags CSV → id array). Partial failures keep failed rows selected.",
+				"guards": [
+					"selection.length >= 1"
+				]
 			}
 		],
 		"a11y": {
@@ -305,8 +357,16 @@
 				"purpose": "Destructive primary button in trash-confirm modal — WPDS 0.12 has no `tone=\"critical\"`."
 			},
 			{
-				"import": "@wordpress/icons#pencil, external, trash",
-				"purpose": "Row action icons."
+				"import": "@wordpress/icons#pencil, external, edit, trash",
+				"purpose": "Row + bulk action icons (edit is aliased to pencil in the engine icon table)."
+			},
+			{
+				"import": "_shared/dataviews/ViewTabs",
+				"purpose": "The All / Mine / Published / Draft / Pending / Sticky view-tab strip. WPDS `Button` segments under the hood (`@wordpress/ui`)."
+			},
+			{
+				"import": "_shared/dataviews/BulkEditModal",
+				"purpose": "The Bulk Edit DataForm panel host (`createBulkEditModal` + `fieldsWithNoChange`). Renders a `@wordpress/dataviews/wp` `DataForm` + WPDS `Button`/`Stack`/`Text` inside DataViews' own action modal."
 			}
 		]
 	}

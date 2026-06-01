@@ -21,6 +21,13 @@ import {
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import {
+	createBulkEditModal,
+	fieldsWithNoChange,
+} from '../_shared/dataviews/BulkEditModal';
+import { NO_CHANGE } from '../_shared/dataviews/bulkEditPayload.mjs';
+import { buildQueryArgs } from '../_shared/dataviews/buildQueryArgs.mjs';
+import ViewTabs from '../_shared/dataviews/ViewTabs';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
@@ -49,17 +56,45 @@ const STATUS_LABELS = {
 
 const STATUS_VALUES = Object.keys( STATUS_LABELS );
 
+// Bulk-edit status options — the writable statuses a row can be moved to. Trash
+// has its own (confirmed) action and `future` is date-driven, so neither is a
+// straight bulk-settable target.
+const BULK_STATUS_LABELS = {
+	publish: __( 'Published', 'wp-admin-shell' ),
+	draft: __( 'Draft', 'wp-admin-shell' ),
+	pending: __( 'Pending', 'wp-admin-shell' ),
+	private: __( 'Private', 'wp-admin-shell' ),
+};
+
+// Post formats wp-admin's Bulk Edit exposes. REST writes these via the `format`
+// param; `standard` clears the format.
+const FORMAT_LABELS = {
+	standard: __( 'Standard', 'wp-admin-shell' ),
+	aside: __( 'Aside', 'wp-admin-shell' ),
+	gallery: __( 'Gallery', 'wp-admin-shell' ),
+	link: __( 'Link', 'wp-admin-shell' ),
+	image: __( 'Image', 'wp-admin-shell' ),
+	quote: __( 'Quote', 'wp-admin-shell' ),
+	status: __( 'Status', 'wp-admin-shell' ),
+	video: __( 'Video', 'wp-admin-shell' ),
+	audio: __( 'Audio', 'wp-admin-shell' ),
+	chat: __( 'Chat', 'wp-admin-shell' ),
+};
+
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	title: __( 'Title', 'wp-admin-shell' ),
 	status: __( 'Status', 'wp-admin-shell' ),
 	author: __( 'Author', 'wp-admin-shell' ),
+	categories: __( 'Categories', 'wp-admin-shell' ),
+	format: __( 'Format', 'wp-admin-shell' ),
 	date: __( 'Date', 'wp-admin-shell' ),
 };
 
 const ACTION_LABELS = {
 	edit: __( 'Edit', 'wp-admin-shell' ),
 	view: __( 'View', 'wp-admin-shell' ),
+	'bulk-edit': __( 'Edit', 'wp-admin-shell' ),
 	trash: __( 'Move to Trash', 'wp-admin-shell' ),
 	restore: __( 'Restore', 'wp-admin-shell' ),
 	'delete-permanent': __( 'Delete Permanently', 'wp-admin-shell' ),
@@ -75,6 +110,44 @@ const VIEW_DEFAULTS = {
 	fields: [],
 	layout: {},
 };
+
+/**
+ * Declarative `view` → REST query mapping consumed by `buildQueryArgs`.
+ * Status / author / categories / format all collapse to single REST params;
+ * the date `before`/`after` operators are applied in a supplemental pass (the
+ * shared mapper only speaks `is`/`isAny`).
+ */
+const QUERY_MAPPING = {
+	sort: { defaultField: 'date', defaultDirection: 'desc' },
+	filters: {
+		status: { is: 'status', isAny: 'status' },
+		author: { is: 'author' },
+		categories: { is: 'categories' },
+		format: { is: 'format' },
+	},
+};
+
+/**
+ * Apply the DataViews date filter (`before` / `after` operators) to the REST
+ * args. `buildQueryArgs` only handles `is`/`isAny`, so the date range — which
+ * maps to REST's `before` / `after` ISO params — is wired here.
+ * @param {Object} args    REST args produced by `buildQueryArgs`.
+ * @param {Array}  filters `view.filters`.
+ * @return {Object} `args` with `before`/`after` applied where present.
+ */
+function applyDateFilters( args, filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if ( filter.field !== 'date' || ! filter.value ) {
+			continue;
+		}
+		if ( filter.operator === 'before' ) {
+			args.before = filter.value;
+		} else if ( filter.operator === 'after' ) {
+			args.after = filter.value;
+		}
+	}
+	return args;
+}
 
 /**
  * Field id → render callback. View-config declares the *shape*; the React
@@ -99,9 +172,147 @@ function buildFieldRenderers( postType ) {
 	};
 }
 
+/**
+ * Bulk-edit DataForm fields. Every field is seeded to the `NO_CHANGE` sentinel
+ * by `createBulkEditModal`; `fieldsWithNoChange` injects the matching
+ * `— No change —` option for the `elements`-backed selects. The non-elements
+ * fields (author / parent / categories / tags) map the sentinel to an empty
+ * input via `getValue` so the literal sentinel string never renders, and
+ * `computeBulkPayload` drops them unless the user types a value.
+ */
+function buildBulkEditFields() {
+	const sentinelToText =
+		( id ) =>
+		( { item } ) =>
+			item?.[ id ] === NO_CHANGE ? '' : item?.[ id ] ?? '';
+
+	const base = [
+		{
+			id: 'status',
+			label: __( 'Status', 'wp-admin-shell' ),
+			elements: elementsFromLabels( BULK_STATUS_LABELS ),
+		},
+		{
+			id: 'sticky',
+			label: __( 'Sticky', 'wp-admin-shell' ),
+			elements: [
+				{ value: 'true', label: __( 'Sticky', 'wp-admin-shell' ) },
+				{
+					value: 'false',
+					label: __( 'Not sticky', 'wp-admin-shell' ),
+				},
+			],
+		},
+		{
+			id: 'format',
+			label: __( 'Format', 'wp-admin-shell' ),
+			elements: elementsFromLabels( FORMAT_LABELS ),
+		},
+		{
+			id: 'comment_status',
+			label: __( 'Comments', 'wp-admin-shell' ),
+			elements: [
+				{ value: 'open', label: __( 'Allow', 'wp-admin-shell' ) },
+				{
+					value: 'closed',
+					label: __( 'Do not allow', 'wp-admin-shell' ),
+				},
+			],
+		},
+		{
+			id: 'author',
+			type: 'integer',
+			label: __( 'Author (user ID)', 'wp-admin-shell' ),
+			getValue: sentinelToText( 'author' ),
+		},
+		{
+			id: 'parent',
+			type: 'integer',
+			label: __( 'Parent (post ID)', 'wp-admin-shell' ),
+			getValue: sentinelToText( 'parent' ),
+		},
+		{
+			id: 'categories',
+			type: 'text',
+			label: __( 'Categories (comma-separated IDs)', 'wp-admin-shell' ),
+			getValue: sentinelToText( 'categories' ),
+		},
+		{
+			id: 'tags',
+			type: 'text',
+			label: __( 'Tags (comma-separated IDs)', 'wp-admin-shell' ),
+			getValue: sentinelToText( 'tags' ),
+		},
+	];
+
+	return fieldsWithNoChange( base, {
+		ids: [ 'status', 'sticky', 'format', 'comment_status' ],
+	} );
+}
+
+const BULK_EDIT_FORM = {
+	type: 'regular',
+	fields: [
+		'status',
+		'author',
+		'sticky',
+		'parent',
+		'format',
+		'comment_status',
+		'categories',
+		'tags',
+	],
+};
+
+/**
+ * Parse a comma-separated id list into an array of positive integers.
+ * @param {string|Array} value Comma-separated id string (or already an array).
+ * @return {Array} Positive integer ids.
+ */
+function parseIdList( value ) {
+	if ( Array.isArray( value ) ) {
+		return value;
+	}
+	if ( typeof value !== 'string' ) {
+		return [];
+	}
+	return value
+		.split( ',' )
+		.map( ( part ) => parseInt( part.trim(), 10 ) )
+		.filter( ( n ) => Number.isInteger( n ) && n > 0 );
+}
+
+/**
+ * Translate the changed bulk-edit payload into a REST body. Only fields the
+ * user actually changed reach here (`computeBulkPayload` already dropped the
+ * sentinel-valued ones), so each branch fires only when present.
+ * @param {Object} payload Changed-field payload, keyed by field id.
+ * @return {Object} REST body (without `id`, which the modal merges in).
+ */
+function bulkToRecord( payload ) {
+	const body = { ...payload };
+	if ( 'sticky' in body ) {
+		body.sticky = body.sticky === 'true' || body.sticky === true;
+	}
+	if ( 'author' in body ) {
+		body.author = parseInt( body.author, 10 ) || undefined;
+	}
+	if ( 'parent' in body ) {
+		body.parent = parseInt( body.parent, 10 ) || 0;
+	}
+	if ( 'categories' in body ) {
+		body.categories = parseIdList( body.categories );
+	}
+	if ( 'tags' in body ) {
+		body.tags = parseIdList( body.tags );
+	}
+	return body;
+}
+
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 	const screenId = config.screenId || null;
+	const currentUserId = window.wpAdminShell?.userId;
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
@@ -113,37 +324,20 @@ export default function PostsApp( { config } ) {
 	} );
 
 	const queryArgs = useMemo( () => {
-		const args = {
-			per_page: view.perPage,
-			page: view.page,
-			order: view.sort?.direction || 'desc',
-			orderby: view.sort?.field || 'date',
+		const args = buildQueryArgs( view, QUERY_MAPPING, {
 			status: config.status || 'any',
 			context: 'edit',
 			_embed: 'author',
-		};
-
-		if ( view.search ) {
-			args.search = view.search;
-		}
-
+		} );
+		// Sticky is a boolean REST param surfaced through the Sticky view tab
+		// (it has no DataViews filter field), so it's applied off the raw view
+		// filters here rather than through the declarative mapping.
 		for ( const filter of view.filters ) {
-			if ( filter.field === 'status' ) {
-				if (
-					filter.operator === 'isAny' &&
-					Array.isArray( filter.value )
-				) {
-					args.status = filter.value.join( ',' );
-				} else if ( filter.operator === 'is' ) {
-					args.status = filter.value;
-				}
-			}
-			if ( filter.field === 'author' && filter.operator === 'is' ) {
-				args.author = filter.value;
+			if ( filter.field === 'sticky' && filter.operator === 'is' ) {
+				args.sticky = filter.value === true || filter.value === 'true';
 			}
 		}
-
-		return args;
+		return applyDateFilters( args, view.filters );
 	}, [ view, config.status ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
@@ -158,6 +352,28 @@ export default function PostsApp( { config } ) {
 		'status',
 		STATUS_VALUES
 	);
+
+	// Counts for the "Mine" and "Sticky" view tabs ride their own count queries
+	// (different REST fields than status). Keyed by the value each tab's filter
+	// applies so `mergeSegmentCounts` can match them.
+	const mineCount = useEntityElementCounts(
+		'postType',
+		postType,
+		'author',
+		currentUserId ? [ currentUserId ] : []
+	);
+	const stickyCount = useEntityElementCounts(
+		'postType',
+		postType,
+		'sticky',
+		[ true ]
+	);
+
+	// Total across all statuses for the "All" tab — one extra count keyed by the
+	// `any` filter value the All tab applies.
+	const anyCount = useEntityElementCounts( 'postType', postType, 'status', [
+		'any',
+	] );
 
 	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
@@ -219,6 +435,17 @@ export default function PostsApp( { config } ) {
 				STATUS_VALUES
 			);
 		};
+
+		const bulkEditModal = createBulkEditModal( {
+			entity: [ 'postType', postType ],
+			fields: buildBulkEditFields(),
+			form: BULK_EDIT_FORM,
+			toRecord: bulkToRecord,
+			messages: {
+				applyLabel: __( 'Update', 'wp-admin-shell' ),
+			},
+			onApplied: refreshAfterMutation,
+		} );
 
 		const trashModal = createBulkConfirmModal( {
 			getMessage: ( items ) =>
@@ -406,6 +633,7 @@ export default function PostsApp( { config } ) {
 				restore,
 			},
 			modals: {
+				'bulk-edit': bulkEditModal,
 				trash: trashModal,
 				'delete-permanent': deletePermanentModal,
 			},
@@ -419,6 +647,119 @@ export default function PostsApp( { config } ) {
 		queryArgs,
 		createNotice,
 	] );
+
+	// --- View tabs (#111) ----------------------------------------------------
+	// Status / Mine / Sticky one-click view switches above the list, mirroring
+	// wp-admin's subsubsub strip. Each segment's `filter` is the `view.filters`
+	// entry the tab applies; the count is keyed by `filter.value`.
+	const tabSegments = useMemo( () => {
+		const segments = [
+			{
+				id: 'all',
+				label: __( 'All', 'wp-admin-shell' ),
+				filter: { field: 'status', operator: 'is', value: 'any' },
+			},
+		];
+		if ( currentUserId ) {
+			segments.push( {
+				id: 'mine',
+				label: __( 'Mine', 'wp-admin-shell' ),
+				filter: {
+					field: 'author',
+					operator: 'is',
+					value: currentUserId,
+				},
+			} );
+		}
+		segments.push(
+			{
+				id: 'publish',
+				label: STATUS_LABELS.publish,
+				filter: { field: 'status', operator: 'is', value: 'publish' },
+			},
+			{
+				id: 'draft',
+				label: STATUS_LABELS.draft,
+				filter: { field: 'status', operator: 'is', value: 'draft' },
+			},
+			{
+				id: 'pending',
+				label: STATUS_LABELS.pending,
+				filter: { field: 'status', operator: 'is', value: 'pending' },
+			},
+			{
+				id: 'sticky',
+				label: __( 'Sticky', 'wp-admin-shell' ),
+				filter: { field: 'sticky', operator: 'is', value: true },
+			}
+		);
+		return segments;
+	}, [ currentUserId ] );
+
+	// Merge the multi-source counts into one { filterValue: count } map keyed
+	// the way ViewTabs/mergeSegmentCounts looks them up.
+	const tabCounts = useMemo(
+		() => ( {
+			...statusCounts,
+			...anyCount,
+			...( currentUserId !== undefined
+				? { [ currentUserId ]: mineCount[ currentUserId ] }
+				: {} ),
+			true: stickyCount.true,
+		} ),
+		[ statusCounts, anyCount, mineCount, stickyCount, currentUserId ]
+	);
+
+	// Derive the active tab from the live view filters: an author=me filter →
+	// Mine, a sticky filter → Sticky, a status filter → that status (or All for
+	// `any` / no status filter). Author/sticky filters take precedence so the
+	// Mine/Sticky tabs stay highlighted even with a status default present.
+	const activeTab = useMemo( () => {
+		const filters = view.filters || [];
+		if (
+			currentUserId &&
+			filters.some(
+				( f ) => f.field === 'author' && f.value === currentUserId
+			)
+		) {
+			return 'mine';
+		}
+		if (
+			filters.some(
+				( f ) =>
+					f.field === 'sticky' &&
+					( f.value === true || f.value === 'true' )
+			)
+		) {
+			return 'sticky';
+		}
+		const statusFilter = filters.find( ( f ) => f.field === 'status' );
+		const value = statusFilter?.value;
+		if ( ! value || value === 'any' ) {
+			return 'all';
+		}
+		const match = tabSegments.find(
+			( seg ) =>
+				seg.filter.field === 'status' && seg.filter.value === value
+		);
+		return match ? match.id : undefined;
+	}, [ view.filters, currentUserId, tabSegments ] );
+
+	const onSelectTab = ( segment ) => {
+		// Replace any status / author / sticky filter with the segment's filter;
+		// preserve other filters (date / categories / format). The "All" tab
+		// clears the status scope entirely rather than pinning `status=any` as a
+		// filter chip.
+		const preserved = ( view.filters || [] ).filter(
+			( f ) =>
+				f.field !== 'status' &&
+				f.field !== 'author' &&
+				f.field !== 'sticky'
+		);
+		const nextFilters =
+			segment.id === 'all' ? preserved : [ ...preserved, segment.filter ];
+		setView( { ...view, filters: nextFilters, page: 1 } );
+	};
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -435,19 +776,27 @@ export default function PostsApp( { config } ) {
 					<Spinner />
 				</div>
 			) : (
-				<DataViews
-					data={ data }
-					fields={ fields }
-					view={ view }
-					onChangeView={ setView }
-					actions={ actions }
-					paginationInfo={ paginationInfo }
-					isLoading={ isResolving }
-					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
-					selection={ selection }
-					onChangeSelection={ setSelection }
-					getItemId={ ( item ) => item.id.toString() }
-				/>
+				<>
+					<ViewTabs
+						segments={ tabSegments }
+						currentValue={ activeTab }
+						onSelect={ onSelectTab }
+						counts={ tabCounts }
+					/>
+					<DataViews
+						data={ data }
+						fields={ fields }
+						view={ view }
+						onChangeView={ setView }
+						actions={ actions }
+						paginationInfo={ paginationInfo }
+						isLoading={ isResolving }
+						defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+						selection={ selection }
+						onChangeSelection={ setSelection }
+						getItemId={ ( item ) => item.id.toString() }
+					/>
+				</>
 			) }
 		</div>
 	);
