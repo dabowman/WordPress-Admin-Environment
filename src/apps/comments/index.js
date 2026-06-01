@@ -514,7 +514,11 @@ export default function CommentsApp( { config = {} } ) {
 			toData: ( record ) => ( {
 				...record,
 				content:
-					record?.content?.raw ?? record?.content?.rendered ?? '',
+					typeof record?.content === 'string'
+						? record.content
+						: record?.content?.raw ??
+						  record?.content?.rendered ??
+						  '',
 			} ),
 			messages: {
 				saved: __( 'Comment updated.', 'wp-admin-shell' ),
