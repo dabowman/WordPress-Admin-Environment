@@ -1,8 +1,9 @@
+import '../app.css';
 import { useState, useCallback } from '@wordpress/element';
 import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { DataForm } from '@wordpress/dataviews/wp';
+import { DataForm, useFormValidity } from '@wordpress/dataviews/wp';
 import { Button, Stack } from '@wordpress/ui';
 import { Modal, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -41,10 +42,10 @@ import { buildSubmitPayload, firstItem } from './entityFormPayload.mjs';
  * @param {'edit'|'create'} [config.mode]     Commit mode. Defaults to `'edit'`.
  * @param {Array}           config.fields     `DataForm` field definitions.
  * @param {Object}          config.form       `DataForm` layout config (`regular` / `panel` / `sections`).
- * @param {Function}        [config.toData]   `(record|undefined) => DataForm data`. Edit: maps `editedRecord` → form data. Create: `toData(undefined)` seeds the draft. Defaults to identity (`record ?? {}`).
- * @param {Function}        [config.toRecord] `(data) => REST payload`. Defaults to identity.
+ * @param {Function}        [config.toData]   `(record|undefined) => DataForm data`. Edit: maps `editedRecord` → form data (keep it near-identity — edit commits the buffered record, not a re-mapped payload). Create: `toData(undefined)` seeds the draft. Defaults to identity (`record ?? {}`).
+ * @param {Function}        [config.toRecord] **Create-only.** `(data) => REST payload` for the `POST`. Defaults to identity. Edit does NOT apply `toRecord` — it commits the buffered `editedRecord` through `useEntityRecord().save()` (matching `EntityDataForm`), so an edit modal can omit it.
  * @param {Object}          [config.messages] `{ saved, error }` copy for the save notices and `{ editTitle, createTitle }` modal titles plus `{ saveLabel, createLabel }` button text.
- * @param {Function}        [config.onSaved]  `(record) => void` after a successful commit (e.g. navigate to the new id, invalidate a list resolution).
+ * @param {Function}        [config.onSaved]  `(record) => void` after a successful commit. CREATE receives the freshly-saved record (with its new id). EDIT receives the record refetched after `save()` resolves (the up-to-date server record, not the pre-save buffer).
  * @return {Function} A DataViews `RenderModal` component.
  */
 export function createEntityFormModal( {
@@ -84,16 +85,32 @@ export function createEntityFormModal( {
 	function EditBody( { item, closeModal, onActionPerformed } ) {
 		const { record, editedRecord, edit, save, hasEdits, isSaving } =
 			useEntityRecord( kind, name, item.id );
-		const handleSave = useEntitySave( save, saveMessages );
+		// Thread the entity coords so `useEntitySave` consults
+		// `getLastEntitySaveError` after `save()` — `saveEditedEntityRecord`
+		// resolves (doesn't throw) on a REST failure, so the boolean is the
+		// only reliable success signal. Keep the modal open on a `false`.
+		const handleSave = useEntitySave( save, saveMessages, {
+			kind,
+			name,
+			recordId: item.id,
+		} );
+
+		// Gate Save on field validity, same as `EntityDataForm`. Must run
+		// before the null-guard early return so hook order stays stable.
+		const formData = mapToData( editedRecord );
+		const { validity, isValid } = useFormValidity( formData, fields, form );
 
 		const onSave = useCallback( async () => {
 			// `useEntitySave` shows the success / error notice itself and
-			// resolves `true` only when the save committed. Keep the modal open
-			// on failure so the user can correct + retry.
+			// resolves `true` only when the save committed (server error
+			// included, via the threaded coords). Keep the modal open on
+			// failure so the user can correct + retry.
 			const saved = await handleSave();
 			if ( ! saved ) {
 				return;
 			}
+			// `record` here is the post-save server record (core-data refetched
+			// once `save()` resolved), not the pre-save buffer.
 			onSaved?.( record );
 			onActionPerformed?.( [ item ] );
 			closeModal();
@@ -110,9 +127,10 @@ export function createEntityFormModal( {
 		return (
 			<Stack direction="column" gap="md">
 				<DataForm
-					data={ mapToData( editedRecord ) }
+					data={ formData }
 					fields={ fields }
 					form={ form }
+					validity={ validity }
 					onChange={ edit }
 				/>
 				<Stack direction="row" justify="flex-end" gap="sm">
@@ -128,7 +146,7 @@ export function createEntityFormModal( {
 						variant="solid"
 						onClick={ onSave }
 						loading={ isSaving }
-						disabled={ ! hasEdits || isSaving }
+						disabled={ ! hasEdits || ! isValid || isSaving }
 					>
 						{ saveLabel }
 					</Button>
@@ -153,6 +171,13 @@ export function createEntityFormModal( {
 		const { saveEntityRecord } = useDispatch( coreStore );
 		const { createSuccessNotice, createErrorNotice } =
 			useDispatch( noticesStore );
+		const getLastEntitySaveError = useSelect(
+			( select ) => select( coreStore ).getLastEntitySaveError,
+			[]
+		);
+
+		// Gate the submit button on field validity, same as `EntityDataForm`.
+		const { validity, isValid } = useFormValidity( data, fields, form );
 
 		const onSubmit = async () => {
 			if ( isSaving ) {
@@ -160,20 +185,30 @@ export function createEntityFormModal( {
 			}
 			setIsSaving( true );
 			try {
-				const payload = buildSubmitPayload( {
-					mode: 'create',
-					data,
-					toRecord,
-				} );
+				const payload = buildSubmitPayload( { data, toRecord } );
 				// Blocking: the new record (with its id) is returned so
 				// `onSaved` can navigate to / invalidate the new id.
 				const record = await saveEntityRecord( kind, name, payload );
+				// `saveEntityRecord` RESOLVES `undefined` on a REST failure
+				// (it doesn't throw), so a falsy record means the create
+				// failed. Surface the server error and KEEP the modal open
+				// rather than show a false success snackbar + close.
+				if ( ! record ) {
+					const saveError = getLastEntitySaveError( kind, name );
+					createErrorNotice(
+						saveError?.message ||
+							messages.error ||
+							__( 'Failed to create.', 'wp-admin-shell' ),
+						{ isDismissible: true }
+					);
+					return;
+				}
 				createSuccessNotice(
 					messages.saved || __( 'Created.', 'wp-admin-shell' ),
 					{ type: 'snackbar' }
 				);
 				onSaved?.( record );
-				onActionPerformed?.( record ? [ record ] : [] );
+				onActionPerformed?.( [ record ] );
 				closeModal();
 			} catch ( err ) {
 				createErrorNotice(
@@ -193,6 +228,7 @@ export function createEntityFormModal( {
 					data={ data }
 					fields={ fields }
 					form={ form }
+					validity={ validity }
 					onChange={ ( edits ) =>
 						setData( ( prev ) => ( { ...prev, ...edits } ) )
 					}
@@ -210,7 +246,7 @@ export function createEntityFormModal( {
 						variant="solid"
 						onClick={ onSubmit }
 						loading={ isSaving }
-						disabled={ isSaving }
+						disabled={ ! isValid || isSaving }
 					>
 						{ createLabel }
 					</Button>

@@ -164,11 +164,12 @@ const editComment = createEntityFormModal( {
 	mode: 'edit',                    // 'edit' | 'create'
 	fields: COMMENT_FIELDS,          // DataForm field defs
 	form: COMMENT_FORM,              // DataForm layout
-	toData: ( record ) => ( {        // edit: editedRecord → form data
+	toData: ( record ) => ( {        // edit: editedRecord → form data (near-identity)
 		content: record?.content?.raw ?? '',
 		author_name: record?.author_name ?? '',
 	} ),
-	toRecord: ( data ) => data,      // form data → REST payload
+	// NOTE: no `toRecord` on an edit modal — edit commits the buffered record
+	// through `useEntityRecord().save()` and never re-maps the payload.
 	messages: { saved: __( 'Comment updated.' ), error: __( 'Failed to save.' ) },
 } );
 
@@ -178,14 +179,17 @@ const replyToPost = createEntityFormModal( {
 	fields: REPLY_FIELDS,
 	form: REPLY_FORM,
 	toData: () => ( { content: '', post: currentPostId } ), // seed the draft
+	toRecord: ( data ) => data,      // create-only: form data → POST payload
 	onSaved: ( record ) => invalidate( record ),
 } );
 
 const actions = buildActions( specs, { modals: { edit: editComment, reply: replyToPost } } );
 ```
 
-- **Edit:** buffers through `useEntityRecord( kind, name, item.id ).edit()` (`data = editedRecord`), keyed `key={item.id}` so per-item state resets between openings; explicit **Save** via `useEntitySave` (snackbar / notice); **Cancel** discards the buffer.
-- **Create:** seeds a local draft from `toData(undefined)`, **Submit** `POST`s via `saveEntityRecord` (blocking — returns the new record), then `onSaved(record)`.
+- **Edit:** buffers through `useEntityRecord( kind, name, item.id ).edit()` (`data = editedRecord`, mapped near-identically by `toData`), keyed `key={item.id}` so per-item state resets between openings; **Save** commits the buffer via `useEntityRecord().save()` (wrapped by `useEntitySave`, which is threaded the entity coords so a REST failure is detected and the modal stays open — `saveEditedEntityRecord` resolves on error, so the success boolean, not a thrown catch, is authoritative); **Cancel** discards the buffer. `onSaved` receives the post-save server record.
+- **Create:** seeds a local draft from `toData(undefined)`, maps it to the POST body with `toRecord`, **Submit** `POST`s via `saveEntityRecord` (blocking — returns the new record, or `undefined` on a REST failure, in which case the error notice shows and the modal stays open), then `onSaved(record)`.
+- **`toRecord` is create-only.** Edit does NOT apply it; an edit modal that passes `toRecord` is a no-op for the value (only the create path consumes it). Keep `toData` for edit a near-identity projection of the buffered record.
+- **Validation gating.** Both edit and create run `useFormValidity( data, fields, form )` and disable the commit button while `! isValid` (plus `! hasEdits` on edit) — same as `EntityDataForm`.
 - **Explicit-save modal only** (contract #2). Autosaving hosts share the same `fields` / `form` but commit elsewhere — do not route them through this factory.
 
 **Cascade caution:** any app shipping a new dataView family (e.g. `root/media/_default`) must declare its `defaultView` (incl. `mediaField` / `titleField`) **completely** — a shell that redeclares the triple wins outright and a partial copy silently drops baseline keys (`CLAUDE.md` → "A shell that redeclares a `settings.dataViews` triple wins OUTRIGHT").

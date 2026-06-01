@@ -399,32 +399,13 @@ ok(
 	buildSubmitPayload( { mode: 'create', data: { a: 1 } } ).a === 1
 );
 ok(
-	'buildSubmitPayload stamps id on edit',
-	buildSubmitPayload( { mode: 'edit', data: { name: 'x' }, id: 42 } ).id ===
-		42
-);
-ok(
-	'buildSubmitPayload omits id on create',
-	buildSubmitPayload( { mode: 'create', data: { name: 'x' }, id: 42 } ).id ===
-		undefined
-);
-ok(
-	'buildSubmitPayload never clobbers an explicit id from toRecord',
-	buildSubmitPayload( {
-		mode: 'edit',
-		data: {},
-		toRecord: () => ( { id: 7 } ),
-		id: 42,
-	} ).id === 7
-);
-ok(
 	'buildSubmitPayload tolerates null data',
 	JSON.stringify( buildSubmitPayload( { mode: 'create', data: null } ) ) ===
 		'{}'
 );
 ok(
-	'buildSubmitPayload does not stamp a null id on edit',
-	buildSubmitPayload( { mode: 'edit', data: { a: 1 }, id: null } ).id ===
+	'buildSubmitPayload is create-only — no id stamping',
+	buildSubmitPayload( { data: { name: 'x' }, toRecord: ( d ) => d } ).id ===
 		undefined
 );
 
