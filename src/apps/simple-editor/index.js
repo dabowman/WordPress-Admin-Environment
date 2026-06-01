@@ -6,7 +6,8 @@ import {
 	useCallback,
 	useRef,
 } from '@wordpress/element';
-import { useEntityRecord } from '@wordpress/core-data';
+import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
+import { useSelect } from '@wordpress/data';
 import { Button, Icon } from '@wordpress/ui';
 import { Spinner, Slot } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -111,8 +112,17 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
-	const backHref = `#/${ segment }`;
+	// Derive the REST base from the post-type entity so custom post types with
+	// their own `rest_base` resolve to the correct REST route. Fall back to the
+	// classic ternary only while the entity is still loading (null).
+	const postTypeRestBase = useSelect(
+		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
+		[ postType ]
+	);
+	const restBase =
+		postTypeRestBase ?? ( postType === 'page' ? 'pages' : 'posts' );
+
+	const backHref = `#/${ restBase }`;
 
 	// MountedApp doesn't remount across same-route hash navs
 	// (`/posts/A/edit` → `/posts/B/edit` share one route pattern), so the
@@ -147,7 +157,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		async function createDraft() {
 			try {
 				const result = await apiFetch( {
-					path: `/wp/v2/${ postType === 'page' ? 'pages' : 'posts' }`,
+					path: `/wp/v2/${ restBase }`,
 					method: 'POST',
 					data: {
 						status: 'draft',
@@ -162,7 +172,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 					window.history.replaceState(
 						null,
 						'',
-						`#/${ segment }/${ result.id }/edit`
+						`#/${ restBase }/${ result.id }/edit`
 					);
 				}
 			} catch ( err ) {
@@ -183,7 +193,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ isNew, postType, segment ] );
+	}, [ isNew, postType, restBase ] );
 
 	if ( error ) {
 		return (
@@ -247,7 +257,14 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const [ saveError, setSaveError ] = useState( null );
 	const autoSaveTimerRef = useRef( null );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
+	// Derive the REST base from the post-type entity so CPTs with a custom
+	// `rest_base` route to the correct autosaves endpoint.
+	const postTypeRestBase = useSelect(
+		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
+		[ postType ]
+	);
+	const restBase =
+		postTypeRestBase ?? ( postType === 'page' ? 'pages' : 'posts' );
 
 	const runSave = useCallback( async () => {
 		setSaveStatus( 'saving' );
@@ -274,7 +291,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 			const readRaw = ( field ) =>
 				typeof field === 'string' ? field : field?.raw ?? '';
 			await apiFetch( {
-				path: `/wp/v2/${ segment }/${ postId }/autosaves`,
+				path: `/wp/v2/${ restBase }/${ postId }/autosaves`,
 				method: 'POST',
 				data: {
 					title: readRaw( editedRecord?.title ),
@@ -290,7 +307,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 				err?.message || __( 'Save failed.', 'wp-admin-shell' )
 			);
 		}
-	}, [ editedRecord, postId, segment ] );
+	}, [ editedRecord, postId, restBase ] );
 
 	useEffect( () => {
 		if ( ! hasEdits ) {
