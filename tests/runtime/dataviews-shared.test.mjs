@@ -426,6 +426,21 @@ ok(
 	buildSubmitPayload( { data: { name: 'x' }, toRecord: ( d ) => d } ).id ===
 		undefined
 );
+ok(
+	'buildSubmitPayload threads the subject row into toRecord (inline-create: Reply parent/post)',
+	( () => {
+		const payload = buildSubmitPayload( {
+			data: { content: 'hi' },
+			item: { id: 7, post: 42 },
+			toRecord: ( d, item ) => ( {
+				content: d.content,
+				parent: item?.id,
+				post: item?.post,
+			} ),
+		} );
+		return payload.parent === 7 && payload.post === 42;
+	} )()
+);
 
 ok(
 	'firstItem returns items[0]',

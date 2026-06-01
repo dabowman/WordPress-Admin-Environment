@@ -8,3 +8,20 @@
 .wp-admin-shell-app-comments__excerpt p {
 	margin: 0 0 0.5em;
 }
+
+.wp-admin-shell-app-comments__avatar {
+	flex-shrink: 0;
+	border-radius: var(--wpds-border-radius-small, 2px);
+}
+
+.wp-admin-shell-app-comments__author-email,
+.wp-admin-shell-app-comments__author-url {
+	font-size: var(--wpds-font-size-sm);
+	word-break: break-word;
+}
+
+.wp-admin-shell-app-comments__reply-context {
+	padding: var(--wpds-dimension-padding-md, 12px);
+	background: var(--wpds-color-gray-100, rgba(0, 0, 0, 0.04));
+	border-radius: var(--wpds-border-radius-small, 2px);
+}
