@@ -74,14 +74,18 @@ export default function ViewTabs( {
 	}
 
 	return (
-		<div className="wp-admin-shell-view-tabs">
+		<div
+			className="wp-admin-shell-view-tabs"
+			role="group"
+			aria-label={ __( 'Filter view', 'wp-admin-shell' ) }
+		>
 			{ enriched.map( ( segment ) => {
 				const active = isSegmentActive( segment, currentValue );
 				const label =
 					segment.count !== undefined
 						? sprintf(
 								/* translators: 1: segment label, 2: item count. */
-								__( '%1$s (%2$s)' ),
+								__( '%1$s (%2$s)', 'wp-admin-shell' ),
 								segment.label,
 								segment.count.toLocaleString()
 						  )
