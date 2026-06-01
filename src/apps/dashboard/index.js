@@ -47,8 +47,9 @@ export default function DashboardApp() {
 			context: 'edit',
 			orderby: 'modified',
 			order: 'desc',
+			...( userId ? { author: userId } : {} ),
 		} ),
-		[]
+		[ userId ]
 	);
 	const pendingComments = useMemo(
 		() => ( { per_page: 5, status: 'hold', context: 'edit' } ),
