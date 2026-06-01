@@ -193,10 +193,10 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-preview-pane" */ '../../apps/preview-pane'
 			),
 	},
-	'core:appearance': {
+	'core:appearance-preferences': {
 		load: () =>
 			import(
-				/* webpackChunkName: "app-appearance" */ '../../apps/appearance'
+				/* webpackChunkName: "app-appearance-preferences" */ '../../apps/appearance-preferences'
 			),
 	},
 	'core:user-menu': {

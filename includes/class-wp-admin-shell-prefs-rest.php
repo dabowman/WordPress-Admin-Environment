@@ -2,7 +2,7 @@
 /**
  * /wp-admin-shell/v1/user-prefs — read + write the user-origin slice.
  *
- * Backs `core:appearance`. Returns the full `wp_admin_shell_user_prefs`
+ * Backs `core:appearance-preferences`. Returns the full `wp_admin_shell_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
  * `customizable` paths the active shell exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save

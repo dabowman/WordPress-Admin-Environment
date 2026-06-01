@@ -7,7 +7,7 @@ import IframeApp from '../iframe-fallback';
  * v2.0.0-beta.1 ships iframe; native mount is deferred to a v2.x cut
  * for these reasons:
  *
- *   1. Preferences-store collision with `core:appearance` — both write
+ *   1. Preferences-store collision with `core:appearance-preferences` — both write
  *      `wp.data.dispatch('core/preferences')` namespaced state and need
  *      a routing rule for which one owns which keys.
  *   2. Command-palette double-registration — `@wordpress/edit-site`

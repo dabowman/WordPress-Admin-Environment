@@ -1,10 +1,12 @@
-# core:appearance
+# core:appearance-preferences
 
-Prose accompanying `app.json#documentation` for the appearance / user-prefs screen.
+Prose accompanying `app.json#documentation` for the per-user appearance-preferences screen.
+
+> **Naming note.** This app was renamed from `core:appearance` in issue #121. It is the **personalization panel** (density / accent / default-route), NOT the wp-admin Appearance hub (themes / editor / menus). The rename freed the "Appearance" section name for the real Appearance menu group, and moved this prefs screen under **Settings → Appearance Preferences** so it is reachable (previously it was orphaned: bound to the Appearance group node, which has `items` and so renders as a drilldown container rather than navigating to its own href).
 
 ## Overview
 
-AppearanceApp is a customizability-aware preferences screen. The active shell declares `customizable` — either `true`, `false`, or a string-array allowlist — on its `styles` block; this app reads that declaration and renders only the controls the shell permits. MVP controls cover density (compact / default / comfortable radio), accent color (single-token override), and default-route override (text input).
+AppearancePreferencesApp is a customizability-aware preferences screen. The active shell declares `customizable` — either `true`, `false`, or a string-array allowlist — on its `styles` block; this app reads that declaration and renders only the controls the shell permits. MVP controls cover density (compact / default / comfortable radio), accent color (single-token override), and default-route override (text input).
 
 The customizability declaration is **server-authoritative**: the cascade resolver enforces the same `customizable` allowlist on writes. Hiding controls client-side is a UX nicety, not a security boundary. A user who hand-crafts a POST to `/wp-admin-shell/v1/user-prefs` setting a non-customizable field gets a 403 / silent drop.
 

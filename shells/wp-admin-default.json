@@ -1098,15 +1098,15 @@
 			},
 			"legacy_path": "edit-comments.php"
 		},
-		"appearance": {
-			"label": "Appearance",
+		"appearance-preferences": {
+			"label": "Appearance Preferences",
 			"icon": "appearance",
-			"description": "Themes, customizer, widgets.",
-			"path": "/appearance",
-			"app": "core:appearance",
+			"description": "Per-user personalization: density, accent color, default route.",
+			"path": "/appearance-preferences",
+			"app": "core:appearance-preferences",
 			"permissions": {
 				"capabilities": [
-					"switch_themes"
+					"read"
 				]
 			}
 		},
@@ -1535,6 +1535,9 @@
 			"position": 65
 		},
 		"appearance": {
+			"label": "Appearance",
+			"icon": "appearance",
+			"description": "Themes, editor, fonts.",
 			"position": 70,
 			"items": {
 				"themes": {
@@ -1638,6 +1641,9 @@
 				},
 				"settings-workspace": {
 					"position": 80
+				},
+				"appearance-preferences": {
+					"position": 90
 				}
 			}
 		},

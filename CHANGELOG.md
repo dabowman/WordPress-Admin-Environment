@@ -4,6 +4,13 @@ All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https:/
 
 > **Status:** Pre-release. Nothing has shipped publicly; there is no installed base. The canonical architecture lives in `CLAUDE.md` + `docs/`. This file records how the codebase reached its current shape — migration history, deprecation windows, and provenance that `CLAUDE.md` deliberately omits to stay canonical.
 
+## [Unreleased]
+
+### Appearance lane (issue #121)
+
+- **Renamed `core:appearance` → `core:appearance-preferences`.** The app is the per-user personalization panel (density / accent / default-route), not the wp-admin Appearance hub. The rename frees the "Appearance" section name and fixes the app's orphaned screen wiring: it previously bound to the Appearance group menu node (which has `items` and therefore renders as a drilldown container, never navigating to its own href), so it was reachable only by typing `/appearance`. It now binds the `appearance-preferences` screen (path `/appearance-preferences`, cap `read`) surfaced under **Settings → Appearance Preferences**, and the `appearance` group node carries its own explicit label/icon. No back-compat (unshipped). Updated everywhere: `src/apps/appearance-preferences/` (dir + `app.json` id + `app.md`), `src/runtime/registry/builtins.js`, `src/runtime/shell-switching.js`, `includes/class-wp-admin-shell-prefs-rest.php`, `shells/wp-admin-default.json`, `src/apps/site-editor/*` (collision references), `docs/code-map.md`.
+- **Appearance-menu prune by theme support.** New `WP_Admin_Shell_Appearance_Menu` (`includes/cascade/`) runs on `wp_admin_shell_data` at priority 4 (before `bind_screens`). It reads `wp_is_block_theme()` + `current_theme_supports()` and prunes the Appearance group to match the active theme: block themes keep the Site Editor and drop Customize / Widgets / classic Menus; classic themes keep Customize / Widgets / Menus (+ Custom Background / Header only when `add_theme_support()`ed) and drop the Site Editor. Dropped screens are removed from both `screens` and the `menu` tree. The pass stamps a reusable **block-theme signal** at `workspace.theme-support` (`block-theme` bool + `theme-supports` map) that issue #120 (native classic Menus) consumes. Schema documents the synthetic read-only block; tests in `tests/php/run-appearance-menu-tests.php`.
+
 ## [0.1.0] - 2026-05-28
 
 ### Workspace as primary admin entry

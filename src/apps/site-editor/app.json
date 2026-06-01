@@ -72,7 +72,7 @@
 			},
 			{
 				"concern": "native-mount-blockers",
-				"note": "Top-of-file comment in `SiteEditorApp.js` lists five blockers: preferences-store collision (with `core:appearance`), command-palette double-registration (edit-site ships its own commands), full-screen-mode CSS, hash-router collision, and missing `@wordpress/edit-site` from BUNDLED_PACKAGES. All five must be resolved before native mount can land."
+				"note": "Top-of-file comment in `SiteEditorApp.js` lists five blockers: preferences-store collision (with `core:appearance-preferences`), command-palette double-registration (edit-site ships its own commands), full-screen-mode CSS, hash-router collision, and missing `@wordpress/edit-site` from BUNDLED_PACKAGES. All five must be resolved before native mount can land."
 			},
 			{
 				"concern": "stable-id-policy",

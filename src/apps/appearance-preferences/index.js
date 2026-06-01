@@ -10,7 +10,12 @@ import { __ } from '@wordpress/i18n';
 import { useKernel } from '../../runtime/kernel-context';
 
 /**
- * core:appearance — user-prefs UI.
+ * core:appearance-preferences — per-user appearance-preferences UI.
+ *
+ * This is the personalization panel (density / accent / default-route),
+ * NOT the wp-admin Appearance hub (themes / editor / menus). It was
+ * renamed from `core:appearance` to free the "Appearance" section name
+ * for the real Appearance menu group (issue #121).
  *
  * Reads the active shell's `customizable` declarations off the resolved
  * config and renders only the controls that shell allows. MVP control
@@ -57,14 +62,14 @@ function isCustomizable( declaration, path ) {
 		warnedDeclarations.add( declaration );
 		// eslint-disable-next-line no-console
 		console.warn(
-			'wp-admin-shell AppearanceApp: malformed customizable declaration; expected boolean | string[]. Got:',
+			'wp-admin-shell AppearancePreferencesApp: malformed customizable declaration; expected boolean | string[]. Got:',
 			declaration
 		);
 	}
 	return false;
 }
 
-export default function AppearanceApp() {
+export default function AppearancePreferencesApp() {
 	const { config } = useKernel();
 	const { createSuccessNotice, createErrorNotice } =
 		useDispatch( noticesStore );
@@ -151,7 +156,7 @@ export default function AppearanceApp() {
 		<div className="wp-admin-shell-app-appearance wp-admin-shell-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'Appearance', 'wp-admin-shell' ) }
+					{ __( 'Appearance Preferences', 'wp-admin-shell' ) }
 				</Text>
 
 				{ noControls && (
