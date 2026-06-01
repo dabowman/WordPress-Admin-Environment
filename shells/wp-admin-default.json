@@ -897,7 +897,8 @@
 			"path": "/posts",
 			"app": "core:posts",
 			"config": {
-				"postType": "post"
+				"postType": "post",
+				"author": "{author}"
 			},
 			"dataViewRef": "postType/post/_default",
 			"permissions": {

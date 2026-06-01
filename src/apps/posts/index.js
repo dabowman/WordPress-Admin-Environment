@@ -8,7 +8,7 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
-import { navigate } from '../../runtime/routing/router';
+import { navigate, useRoute } from '../../runtime/routing/router';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
 	buildFields,
@@ -390,18 +390,59 @@ function bulkToRecord( payload ) {
 	return body;
 }
 
+/**
+ * Coerce a raw author value (URL string or number) to a positive integer
+ * author (user) id, or `null` when absent / non-numeric. Mirrors the
+ * positive-int guard `parseIdList` applies — an interpolation miss leaves the
+ * literal `"{author}"` placeholder, which must NOT seed a filter.
+ * @param {*} raw Author value from `config.author` / the URL `?author=` slot.
+ * @return {number|null} Positive author id, or null.
+ */
+function authorIdFromConfig( raw ) {
+	const n = parseInt( raw, 10 );
+	return Number.isInteger( n ) && n > 0 ? n : null;
+}
+
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 	const screenId = config.screenId || null;
 	const currentUserId = window.wpAdminShell?.userId;
 
+	// "View posts" (Users screen) scopes the list to one author via the
+	// `?author=N` URL slot. The `posts` screen declares `config.author:
+	// "{author}"`, but the primary content region resolves on `_self` (the
+	// URL primary path), and `_self` interpolation only carries path params —
+	// query params don't reach `config`. So read the slot directly off the URL
+	// (`useRoute().params.author`) and fall back to `config.author` for any
+	// region wiring that DOES interpolate it (e.g. a query-mode slot route).
+	const routeAuthor = useRoute().params?.author;
+	const authorFilterId = authorIdFromConfig( routeAuthor ?? config.author );
+
 	const { config: dataViewConfig } = useDataView( screenId );
+
+	// Seed the author scope once as an initial `author` view-filter — the same
+	// filter field the "Mine" tab toggles, so `buildQueryArgs` emits `?author=N`
+	// to REST. Folded into `viewDefaults` (a transient axis), so it survives the
+	// resync re-seed and is NOT overwritten by saved durable prefs. Clearing it
+	// via the filter UI updates the view and is respected until a screen flip.
+	const viewDefaults = useMemo( () => {
+		if ( authorFilterId === null ) {
+			return VIEW_DEFAULTS;
+		}
+		return {
+			...VIEW_DEFAULTS,
+			filters: [
+				...VIEW_DEFAULTS.filters,
+				{ field: 'author', operator: 'is', value: authorFilterId },
+			],
+		};
+	}, [ authorFilterId ] );
 
 	const { view, setView, selection, setSelection } = useEntityDataView( {
 		screenId,
 		dataViewConfig,
-		viewDefaults: VIEW_DEFAULTS,
-		resyncKeys: [ postType ],
+		viewDefaults,
+		resyncKeys: [ postType, authorFilterId ],
 	} );
 
 	const queryArgs = useMemo( () => {

@@ -67,9 +67,14 @@ function editHref( id ) {
 }
 
 /**
- * Workspace route for "View posts" — the author-filtered Posts list. Uses the
- * `?author=` query slot the Posts screen reads (router nav, never
- * `window.location`, so the admin-link interceptor governs it).
+ * Workspace route for "View posts" — the author-scoped Posts list. Navigates to
+ * the Posts screen with the `?author=N` URL slot set. `core:posts` reads that
+ * slot (`useRoute().params.author`, with `config.author` — declared on the
+ * screen as `"{author}"` — as the fallback) and seeds it once as an initial
+ * `author` view-filter, so the shared `buildQueryArgs` mapper emits `?author=N`
+ * to REST and the list is scoped to that author (the same author-filter
+ * mechanism the Posts "Mine" tab uses). Router nav, never `window.location`, so
+ * the admin-link interceptor governs it.
  *
  * @param {number} id Author (user) id.
  * @return {string} Hash route.

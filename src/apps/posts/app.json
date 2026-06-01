@@ -16,6 +16,13 @@
 			"status": {
 				"type": "string"
 			},
+			"author": {
+				"type": [
+					"string",
+					"number"
+				],
+				"description": "Optional author (user) id the list is scoped to. Interpolated from the `?author=` URL slot (see the `posts` screen's `config.author: \"{author}\"`); seeded once as an initial `author` view-filter so REST emits `?author=N`. Cleared by the user via the filter UI; re-seeded on screen flip. Powers the Users screen's \"View posts\" row action."
+			},
 			"variant": {
 				"type": "string",
 				"description": "Optional DataView variant id to consume (e.g. 'drafts'). When the v3 compiler synthesizes screens from v2 routes, `config.variant` stays on `screen.config.variant` and the resolver's step-3 manifest-inference path reads it directly — v2-shape shells still reach the right `settings.dataViews.postType.<postType>.<variant>` triple without a separate `dataViewVariant` stamp."
@@ -147,7 +154,7 @@
 						"status": "config.status||any|filter.status",
 						"context": "edit",
 						"search": "view.search",
-						"author": "filter.author|tab.mine",
+						"author": "filter.author|tab.mine|url.author",
 						"sticky": "tab.sticky",
 						"categories": "filter.categories",
 						"format": "filter.format",
@@ -236,6 +243,9 @@
 			]
 		},
 		"url": {
+			"reads-slots": [
+				"author"
+			],
 			"navigates": [
 				"#/posts/{id}/edit",
 				"#/pages/{id}/edit"
