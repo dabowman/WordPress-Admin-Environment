@@ -4,7 +4,9 @@ Prose accompanying `app.json#documentation` for the user list.
 
 ## Overview
 
-UsersApp is a DataViews list of WordPress users with a single, carefully-guarded bulk action: permanent delete with content reassignment. WordPress has no user trash, so deletion is irreversible — the app's responsibility is to make the consequences clear (modal copy varies by selection size + self-skip) and to ensure the request succeeds atomically (filter the acting user out before issuing the REST calls).
+UsersApp is a DataViews list of WordPress users with two carefully-guarded bulk actions — permanent delete with content reassignment, and **"Change role to…"** — plus per-row **Edit** and **View posts** navigation. WordPress has no user trash, so deletion is irreversible — the app's responsibility is to make the consequences clear (modal copy varies by selection size + self-skip) and to ensure the request succeeds atomically (filter the acting user out before issuing the REST calls). Both bulk actions strip the acting user from the target set: delete would orphan the acting account, and a self-demote would strip the admin's own caps mid-flight (the server-side `check_role_update` enforces the same).
+
+The primary **username cell** mirrors classic wp-admin: a 32px avatar (from `avatar_urls['48']`) beside a stacked display-name link (to the edit surface), the username, and a `mailto:` email. The **Role** column renders translated role display names (sourced from the resolved `roles` field `elements`, falling back to a standard-role table) instead of raw slugs.
 
 Read shape follows PostsApp: `useEntityRecords('root', 'user', queryArgs)` with `context: 'edit'`. Without `edit` context the response omits email + roles — those columns would render empty and any future role-edit feature would silently fail. Filter by role is wired up but only the `is` operator is honored (single-role filter); multi-role filtering would need REST-side `roles__in` support.
 
@@ -17,8 +19,13 @@ UsersApp reads its DataViews spec via `useDataView(screenId)`. The baseline (fie
 
 The JSON layer carries only the *shape* — locale-agnostic labels + structural flags. Render callbacks stay in `index.js`, keyed by spec id:
 
-- **`buildFieldRenderers()`** maps `name` → `<Stack>` with display name + username, `email` → `<Text>`, `roles` → joined `<Text>`. Unknown ids fall through to DataViews' default renderer for the declared type.
-- **`buildActions(actions, ctx)`** compiles each `dataView.actions[]` entry into the DataViews action shape. The `delete` id attaches the `RenderModal` body (self-delete guard + confirm UI); all other ids fall through with no callback (extension hook for plugin-contributed actions, deferred).
+- **`buildFieldRenderers(elementLabel)`** maps `name` → the avatar + name-link + username + mailto cell, `email` → a `mailto:` anchor, `roles` → a comma-joined list of **translated** role names (via `roleDisplayName(slug, elementLabel)`, where `elementLabel` is the `value`→`label` map built from the resolved `roles` field `elements`). Unknown ids fall through to DataViews' default renderer for the declared type.
+- **`buildActions(actions, ctx)`** compiles each `dataView.actions[]` entry into the DataViews action shape:
+  - `delete` → `RenderModal` (self-delete guard + confirm UI).
+  - `change-role` → `RenderModal` built with the shared `createBulkEditModal` + `fieldsWithNoChange` (a single `role` select seeded to the "— No change —" sentinel). On Apply, the modal fans `saveEntityRecord('root','user', { id, roles:[role] })` across the (self-filtered) selection — REST `PUT /wp/v2/users/{id}` with a roles-only body needs only `promote_users`. The acting user is stripped by an action-level wrapper before the modal opens (self-demote guard).
+  - `edit` → callback navigating to `#/users/{id}/edit` (the shell binds that to `core:profile`).
+  - `view` ("View posts") → callback navigating to `#/posts?author={id}` (router nav, never `window.location`, so the admin-link interceptor governs it).
+  - Other ids fall through with no callback (extension hook for plugin-contributed actions, deferred).
 - **`buildFields(fields, renderers)`** compiles each `dataView.fields[]` entry into a DataViews field, copying through `enableGlobalSearch`, `enableHiding`, `enableSorting`, `elements`, `filterBy`, and attaching the matching renderer if one exists.
 
 ### Translation recipe
@@ -28,12 +35,16 @@ DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — labels 
 ```js
 const FIELD_LABELS = {
 	name: __( 'Name', 'wp-admin-shell' ),
+	username: __( 'Username', 'wp-admin-shell' ),
 	email: __( 'Email', 'wp-admin-shell' ),
-	roles: __( 'Roles', 'wp-admin-shell' ),
+	roles: __( 'Role', 'wp-admin-shell' ),
 	registered_date: __( 'Registered', 'wp-admin-shell' ),
 };
 
 const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	view: __( 'View posts', 'wp-admin-shell' ),
+	'change-role': __( 'Change role to…', 'wp-admin-shell' ),
 	delete: __( 'Delete', 'wp-admin-shell' ),
 };
 ```
@@ -71,12 +82,12 @@ A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive mo
 
 ## Known limitations
 
-- No add-user flow. Adding a user requires a `POST /wp/v2/users` flow with role + email + password fields; that lands as a separate iteration alongside an invite-style UX.
-- No edit-user flow. Click-row-name navigates nowhere; profile lives in `core:profile` for the acting user only.
+- **Add-user flow now lives in `core:user-new`** (the `users-new` screen), not here — a `POST /wp/v2/users` form. See `src/apps/user-new/app.md`.
+- **No dedicated Edit User app.** The `edit` action + the username-cell link navigate to `#/users/{id}/edit`, which the `wp-admin-default` shell binds to `core:profile` with `config.userId`. `core:profile` was authored for the acting user's own profile; using it as a generic edit surface is the current stopgap. A purpose-built Edit User app (covering role, capabilities, send-password-reset) is a parity gap.
+- "View posts" links to `#/posts?author={id}` (the author-filtered Posts list). wp-admin also shows a per-user **post count** in that column; that count is PHP-only (`count_many_users_posts`) with no REST equivalent, so it is not rendered.
 - Role filter is single-select; the underlying REST endpoint accepts comma-separated roles in `?roles=`, but the queryArgs mapper only handles the `is` operator.
 - Role **counts** now surface on the roles filter elements (`Editor (12)`) via the shared `useEntityElementCounts` hook — one lightweight `per_page=1&_fields=id` request per role, read off the `X-WP-Total` header. Role values come from the resolved spec `roles` elements, so the count set tracks whatever roles the shell exposes. Still rendered as filter-dropdown options, not the standalone tab strip wp-admin uses.
-- No `send-password-reset` bulk action. wp-admin offers it on the Users screen; the v2 app does not surface a REST equivalent.
-- No `change-role` bulk action. wp-admin's "Change role to…" dropdown above the list applies a new role to selected users; the v2 app doesn't ship this.
-- No "View author's posts" row link. wp-admin's screen links each user row to a filtered post list; the v2 app surfaces neither the link nor any per-user post count.
+- No `send-password-reset` bulk action. wp-admin offers it on the Users screen; the v2 app does not surface a REST equivalent (no `retrieve_password` REST endpoint).
+- **`change-role` bulk action shipped** ("Change role to…", `promote_users`-gated, self-demote-guarded). The role chooser is sourced from the resolved `roles` field `elements`; if a shell ships no elements, the action falls back to the standard WordPress roles. The delete reassignment target remains hard-coded to the acting user (no chooser / no "delete all content" option) — that UI divergence is unchanged.
 - The plugin-contributed row-actions slot (`core:users.row-actions` per M4.5) is documented but not yet wired up.
 - Roles filter `elements` are not declared in the manifest baseline because the available role list is site-dependent. Plugin authors wanting a typed dropdown can override `settings.dataViews.root.user._default.fields[id=roles].elements` in admin.json (whole-entry override semantics — restate the full spec) or hook `wp_admin_shell_data_view_config_root_user` to inject the live role list at filter time.

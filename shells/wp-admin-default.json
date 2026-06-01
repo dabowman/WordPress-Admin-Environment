@@ -372,6 +372,16 @@
 								"isPrimary": true
 							},
 							{
+								"id": "view",
+								"label": "View posts"
+							},
+							{
+								"id": "change-role",
+								"label": "Change role to…",
+								"supportsBulk": true,
+								"icon": "people"
+							},
+							{
 								"id": "delete",
 								"label": "Delete",
 								"isDestructive": true,
@@ -1160,7 +1170,7 @@
 			"label": "Add New User",
 			"icon": "plus",
 			"path": "/users/new",
-			"app": "iframe:user-new.php",
+			"app": "core:user-new",
 			"permissions": {
 				"capabilities": [
 					"create_users"
