@@ -40,6 +40,10 @@ export default function DashboardApp() {
 		} ),
 		[]
 	);
+	// Fail-closed: only issue the drafts query when userId is known.
+	// Without an author filter the query returns every author's drafts, leaking
+	// other users' unpublished content (issue #217). When userId is absent,
+	// `enabled: false` skips the request entirely and the empty state renders.
 	const draftQuery = useMemo(
 		() => ( {
 			per_page: 5,
@@ -47,7 +51,7 @@ export default function DashboardApp() {
 			context: 'edit',
 			orderby: 'modified',
 			order: 'desc',
-			...( userId ? { author: userId } : {} ),
+			author: userId,
 		} ),
 		[ userId ]
 	);
@@ -67,7 +71,9 @@ export default function DashboardApp() {
 	const usersQuery = useMemo( () => ( { per_page: 1, _fields: 'id' } ), [] );
 
 	const posts = useEntityRecords( 'postType', 'post', postsQuery );
-	const drafts = useEntityRecords( 'postType', 'post', draftQuery );
+	const drafts = useEntityRecords( 'postType', 'post', draftQuery, {
+		enabled: !! userId,
+	} );
 	const pages = useEntityRecords( 'postType', 'page', pagesQuery );
 	const comments = useEntityRecords( 'root', 'comment', pendingComments );
 	const users = useEntityRecords( 'root', 'user', usersQuery );
