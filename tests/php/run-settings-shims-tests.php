@@ -12,7 +12,8 @@
  *     `/wp/v2/settings` can read + write them.
  *   - End-to-end `PUT /wp/v2/settings` (real `rest_do_request` dispatch as an
  *     admin) lands the reading shims — `posts_per_rss` integer coercion +
- *     `>= 1` schema floor, `rss_use_excerpt` boolean (truthy and falsy).
+ *     `>= 1` schema floor, `rss_use_excerpt` boolean (truthy and falsy) +
+ *     exact stored-string shape (`'1'` / `''`, not `'1'` / `'0'`).
  *   - End-to-end `PUT` of the `timezone` setting routes a manual `UTC±X` value
  *     to `gmt_offset` (clearing `timezone_string`), and an IANA zone to
  *     `timezone_string` (leaving `gmt_offset` to core's read-time override) —
@@ -109,9 +110,23 @@ $res = $put_settings( array(
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'reading PUT → 200', $res->get_status(), 200 );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'posts_per_rss persisted', (int) get_option( 'posts_per_rss' ), 25 );
 WPAS_Settings_Shim_Test_Runner::assert_true( 'rss_use_excerpt persisted truthy', (bool) get_option( 'rss_use_excerpt' ) );
+// Pin the exact stored shape: WP's sanitize_option for boolean-type settings
+// stores '1' for true and '' (empty string) for false — not '0'. This diverges
+// from core's '1'/'0' pattern used by hand-rolled options. Feed templates call
+// get_option('rss_use_excerpt') and do a truthy check, so '1' and '' are
+// functionally equivalent to '1' and '0', but a regression (e.g. the shim
+// 'type' changing to 'string') would alter the stored representation without
+// breaking the truthy gate above. These assert_eq calls pin the actual shape
+// so any such drift is caught immediately rather than silently passing.
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'rss_use_excerpt stored shape (true → "1")', get_option( 'rss_use_excerpt' ), '1' );
 
 $put_settings( array( 'rss_use_excerpt' => false ) );
 WPAS_Settings_Shim_Test_Runner::assert_true( 'rss_use_excerpt persisted falsy', ! get_option( 'rss_use_excerpt' ) );
+// Empty string, not '0' — sanitize_option runs wp_validate_boolean() which
+// casts to (bool), and update_option stores that as ''. Any change to the shim
+// that switches storage to '0' would still pass the truthy gate above but would
+// be caught here.
+WPAS_Settings_Shim_Test_Runner::assert_eq( 'rss_use_excerpt stored shape (false → "")', get_option( 'rss_use_excerpt' ), '' );
 
 // posts_per_rss minimum (>= 1) is enforced by the schema validator.
 $res = $put_settings( array( 'posts_per_rss' => 0 ) );
