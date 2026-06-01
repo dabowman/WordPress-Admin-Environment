@@ -30,6 +30,9 @@ const {
 } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/dataViewPrefs.mjs' )
 );
+const { buildSubmitPayload, firstItem } = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/entityFormPayload.mjs' )
+);
 
 let pass = 0;
 let fail = 0;
@@ -96,7 +99,10 @@ ok(
 );
 
 const labelled = buildFields(
-	[ { id: 'title', type: 'text' }, { id: 'ext', type: 'text' } ],
+	[
+		{ id: 'title', type: 'text' },
+		{ id: 'ext', type: 'text' },
+	],
 	{ labels: { title: 'Translated Title' } }
 );
 ok(
@@ -135,7 +141,9 @@ ok(
 );
 
 const fallbackEls = buildFields( [ { id: 'status', type: 'text' } ], {
-	elementFallbacks: { status: elementsFromLabels( { publish: 'Published' } ) },
+	elementFallbacks: {
+		status: elementsFromLabels( { publish: 'Published' } ),
+	},
 } )[ 0 ];
 ok(
 	'element fallback applied when spec omits elements',
@@ -146,10 +154,7 @@ ok(
 const noFallback = buildFields( [ { id: 'name', type: 'text' } ], {
 	elementFallbacks: { status: [ { value: 'a', label: 'A' } ] },
 } )[ 0 ];
-ok(
-	'fallback only applies to matching id',
-	noFallback.elements === undefined
-);
+ok( 'fallback only applies to matching id', noFallback.elements === undefined );
 
 const rendered = buildFields( [ { id: 'title', type: 'text' } ], {
 	renderers: { title: () => null },
@@ -379,6 +384,37 @@ ok(
 	JSON.stringify( pickDurableView( { ...seed, perPage: 999 } ) ) !==
 		JSON.stringify( reconstructedOnce )
 );
+
+// --- entityFormPayload (EntityFormModal commit helpers) ------------------
+ok(
+	'buildSubmitPayload runs data through toRecord',
+	buildSubmitPayload( {
+		mode: 'create',
+		data: { name: 'x' },
+		toRecord: ( d ) => ( { title: d.name } ),
+	} ).title === 'x'
+);
+ok(
+	'buildSubmitPayload defaults toRecord to identity',
+	buildSubmitPayload( { mode: 'create', data: { a: 1 } } ).a === 1
+);
+ok(
+	'buildSubmitPayload tolerates null data',
+	JSON.stringify( buildSubmitPayload( { mode: 'create', data: null } ) ) ===
+		'{}'
+);
+ok(
+	'buildSubmitPayload is create-only — no id stamping',
+	buildSubmitPayload( { data: { name: 'x' }, toRecord: ( d ) => d } ).id ===
+		undefined
+);
+
+ok(
+	'firstItem returns items[0]',
+	firstItem( [ { id: 1 }, { id: 2 } ] ).id === 1
+);
+ok( 'firstItem null on empty array', firstItem( [] ) === null );
+ok( 'firstItem null on non-array', firstItem( undefined ) === null );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );
 process.exit( fail > 0 ? 1 : 0 );
