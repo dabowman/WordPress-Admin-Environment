@@ -33,6 +33,9 @@ const {
 const { buildSubmitPayload, firstItem } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/entityFormPayload.mjs' )
 );
+const { computeBulkPayload, NO_CHANGE } = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/bulkEditPayload.mjs' )
+);
 
 let pass = 0;
 let fail = 0;
@@ -415,6 +418,71 @@ ok(
 );
 ok( 'firstItem null on empty array', firstItem( [] ) === null );
 ok( 'firstItem null on non-array', firstItem( undefined ) === null );
+
+// --- bulkEditPayload (BulkEditModal apply helper) -------------------------
+ok(
+	'computeBulkPayload keeps only changed fields',
+	JSON.stringify(
+		computeBulkPayload( {
+			status: NO_CHANGE,
+			author: 5,
+			role: NO_CHANGE,
+		} )
+	) === JSON.stringify( { author: 5 } )
+);
+ok(
+	'computeBulkPayload returns {} when nothing changed',
+	JSON.stringify(
+		computeBulkPayload( { status: NO_CHANGE, role: NO_CHANGE } )
+	) === '{}'
+);
+ok(
+	'computeBulkPayload drops undefined (unset) fields',
+	JSON.stringify( computeBulkPayload( { a: undefined, b: 2 } ) ) ===
+		JSON.stringify( { b: 2 } )
+);
+ok(
+	'computeBulkPayload forwards null (intentional clear)',
+	JSON.stringify( computeBulkPayload( { parent: null } ) ) ===
+		JSON.stringify( { parent: null } )
+);
+ok(
+	'computeBulkPayload keeps falsy-but-real values (0, "", false)',
+	JSON.stringify(
+		computeBulkPayload( { count: 0, note: '', sticky: false } )
+	) === JSON.stringify( { count: 0, note: '', sticky: false } )
+);
+ok(
+	'computeBulkPayload honors a custom sentinel',
+	JSON.stringify(
+		computeBulkPayload( { status: '__keep__', role: 'editor' }, '__keep__' )
+	) === JSON.stringify( { role: 'editor' } )
+);
+ok(
+	'computeBulkPayload does not mutate its input',
+	( () => {
+		const input = { status: NO_CHANGE, author: 5 };
+		computeBulkPayload( input );
+		return Object.keys( input ).length === 2 && input.status === NO_CHANGE;
+	} )()
+);
+ok(
+	'computeBulkPayload returns a NEW object',
+	( () => {
+		const input = { author: 5 };
+		return computeBulkPayload( input ) !== input;
+	} )()
+);
+ok(
+	'computeBulkPayload tolerates non-object input',
+	JSON.stringify( computeBulkPayload( null ) ) === '{}' &&
+		JSON.stringify( computeBulkPayload( undefined ) ) === '{}' &&
+		JSON.stringify( computeBulkPayload( 'x' ) ) === '{}'
+);
+ok(
+	'NO_CHANGE is a namespaced sentinel string',
+	typeof NO_CHANGE === 'string' && NO_CHANGE.length > 0
+);
 
 console.log( `\n${ pass } passed, ${ fail } failed` );
 process.exit( fail > 0 ? 1 : 0 );

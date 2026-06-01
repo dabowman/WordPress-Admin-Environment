@@ -5,7 +5,7 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataForm, useFormValidity } from '@wordpress/dataviews/wp';
 import { Button, Stack } from '@wordpress/ui';
-import { Modal, Spinner } from '@wordpress/components';
+import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEntitySave } from '../forms/useEntitySave';
 import { buildSubmitPayload, firstItem } from './entityFormPayload.mjs';
@@ -44,7 +44,7 @@ import { buildSubmitPayload, firstItem } from './entityFormPayload.mjs';
  * @param {Object}          config.form       `DataForm` layout config (`regular` / `panel` / `sections`).
  * @param {Function}        [config.toData]   `(record|undefined) => DataForm data`. Edit: maps `editedRecord` → form data (keep it near-identity — edit commits the buffered record, not a re-mapped payload). Create: `toData(undefined)` seeds the draft. Defaults to identity (`record ?? {}`).
  * @param {Function}        [config.toRecord] **Create-only.** `(data) => REST payload` for the `POST`. Defaults to identity. Edit does NOT apply `toRecord` — it commits the buffered `editedRecord` through `useEntityRecord().save()` (matching `EntityDataForm`), so an edit modal can omit it.
- * @param {Object}          [config.messages] `{ saved, error }` copy for the save notices and `{ editTitle, createTitle }` modal titles plus `{ saveLabel, createLabel }` button text.
+ * @param {Object}          [config.messages] `{ saved, error }` copy for the save notices plus `{ saveLabel, createLabel }` button text. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing an `editTitle` / `createTitle`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
  * @param {Function}        [config.onSaved]  `(record) => void` after a successful commit. CREATE receives the freshly-saved record (with its new id). EDIT receives the record refetched after `save()` resolves (the up-to-date server record, not the pre-save buffer).
  * @return {Function} A DataViews `RenderModal` component.
  */
@@ -62,9 +62,6 @@ export function createEntityFormModal( {
 	const mapToData =
 		typeof toData === 'function' ? toData : ( record ) => record ?? {};
 
-	const editTitle = messages.editTitle || __( 'Edit', 'wp-admin-shell' );
-	const createTitle =
-		messages.createTitle || __( 'Add new', 'wp-admin-shell' );
 	const saveLabel = messages.saveLabel || __( 'Save', 'wp-admin-shell' );
 	const createLabel =
 		messages.createLabel || __( 'Add new', 'wp-admin-shell' );
@@ -256,14 +253,18 @@ export function createEntityFormModal( {
 	}
 
 	/**
-	 * The `RenderModal` DataViews mounts. Owns the `Modal` chrome; delegates the
-	 * body to `EditBody` (keyed per item) or `CreateBody`.
+	 * The `RenderModal` DataViews mounts. Returns a BARE body — NO own `<Modal>`.
+	 * DataViews' internal `ActionModal` already wraps this in a `<Modal>` (titled
+	 * from the action's `label` / `modalHeader`), so wrapping our own would double
+	 * the overlay / header / focus trap. Delegates to `EditBody` (keyed per item)
+	 * or `CreateBody`; both render their own Save / Cancel footer. Mirrors
+	 * `createBulkConfirmModal`.
 	 *
 	 * @param {Object}   root0
 	 * @param {Array}    root0.items             The action's subject rows.
 	 * @param {Function} root0.closeModal        DataViews modal-close callback.
 	 * @param {Function} root0.onActionPerformed DataViews post-action callback.
-	 * @return {JSX.Element} The hosted modal.
+	 * @return {JSX.Element} The modal body.
 	 */
 	return function EntityFormModal( {
 		items,
@@ -272,16 +273,16 @@ export function createEntityFormModal( {
 	} ) {
 		const item = firstItem( items );
 
-		let body;
 		if ( mode === 'create' ) {
-			body = (
+			return (
 				<CreateBody
 					closeModal={ closeModal }
 					onActionPerformed={ onActionPerformed }
 				/>
 			);
-		} else if ( item ) {
-			body = (
+		}
+		if ( item ) {
+			return (
 				<EditBody
 					key={ item.id }
 					item={ item }
@@ -289,23 +290,13 @@ export function createEntityFormModal( {
 					onActionPerformed={ onActionPerformed }
 				/>
 			);
-		} else {
-			// Edit with no subject row (shouldn't happen via DataViews) —
-			// render a spinner rather than throwing.
-			body = (
-				<div className="wp-admin-shell-app__center">
-					<Spinner />
-				</div>
-			);
 		}
-
+		// Edit with no subject row (shouldn't happen via DataViews) — render a
+		// spinner rather than throwing.
 		return (
-			<Modal
-				title={ mode === 'create' ? createTitle : editTitle }
-				onRequestClose={ closeModal }
-			>
-				{ body }
-			</Modal>
+			<div className="wp-admin-shell-app__center">
+				<Spinner />
+			</div>
 		);
 	};
 }
