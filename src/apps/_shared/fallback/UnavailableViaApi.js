@@ -151,8 +151,27 @@ export function UnavailableViaApi( {
 	// Human-readable link text. Never render the raw `classicPath` filename
 	// (e.g. `options-writing.php`) as the accessible name — it's meaningless to
 	// a screen reader. The filename rides the anchor's `title` attribute.
+	//
+	// The kind-derived default is settings-flavored for kind="option" and
+	// neutral for kind="action"; an explicit `label` prop always wins.
 	const classicLabel =
-		label || __( 'Open the classic screen', 'wp-admin-shell' );
+		label ||
+		( kind === 'option'
+			? __( 'Open the classic settings screen', 'wp-admin-shell' )
+			: __( 'Open the classic screen', 'wp-admin-shell' ) );
+
+	// Lead-in explanation, also kind-aware: settings-flavored for kind="option",
+	// neutral for kind="action".
+	const leadIn =
+		kind === 'option'
+			? __(
+					'This setting isn’t writable through the workspace API. Use one of the options below to make the change.',
+					'wp-admin-shell'
+			  )
+			: __(
+					'This change isn’t available through the workspace API. Use one of the options below to make the change.',
+					'wp-admin-shell'
+			  );
 
 	return (
 		<div className="wp-admin-shell-unavailable-via-api">
@@ -164,12 +183,7 @@ export function UnavailableViaApi( {
 			     aria-live="polite" "Copied!" spans — live in a SIBLING
 			     <section> OUTSIDE this live region. */ }
 			<Notice.Root intent="info">
-				<Notice.Description>
-					{ __(
-						'This setting isn’t writable through the workspace API. Use one of the options below to make the change.',
-						'wp-admin-shell'
-					) }
-				</Notice.Description>
+				<Notice.Description>{ leadIn }</Notice.Description>
 			</Notice.Root>
 
 			{ /* Interactive tiers — a plain styled container, NOT a live
@@ -188,7 +202,9 @@ export function UnavailableViaApi( {
 								<strong>
 									{ __( 'Value:', 'wp-admin-shell' ) }
 								</strong>{ ' ' }
-								<code>{ String( value ) }</code>
+								<code className="wp-admin-shell-unavailable-via-api__code">
+									{ String( value ) }
+								</code>
 							</Text>
 						) }
 
@@ -196,12 +212,17 @@ export function UnavailableViaApi( {
 					<Stack direction="column" gap="xs">
 						<Text variant="body-sm">
 							<strong>
-								{ __( 'Option 1:', 'wp-admin-shell' ) }
+								{ __( 'Classic screen', 'wp-admin-shell' ) }
 							</strong>{ ' ' }
-							{ __(
-								'Open the classic settings screen',
-								'wp-admin-shell'
-							) }
+							{ kind === 'option'
+								? __(
+										'Open the classic settings screen',
+										'wp-admin-shell'
+								  )
+								: __(
+										'Open the classic screen',
+										'wp-admin-shell'
+								  ) }
 						</Text>
 						{ /* Plain <a href> — the interceptor handles routing.
 						     The visible/accessible text is a human-readable
@@ -220,7 +241,7 @@ export function UnavailableViaApi( {
 						<Stack direction="column" gap="xs">
 							<Text variant="body-sm">
 								<strong>
-									{ __( 'Option 2:', 'wp-admin-shell' ) }
+									{ __( 'WP-CLI', 'wp-admin-shell' ) }
 								</strong>{ ' ' }
 								{ __(
 									'Run this WP-CLI command',
@@ -264,7 +285,7 @@ export function UnavailableViaApi( {
 						<Stack direction="column" gap="xs">
 							<Text variant="body-sm">
 								<strong>
-									{ __( 'Option 3:', 'wp-admin-shell' ) }
+									{ __( 'Coding agent', 'wp-admin-shell' ) }
 								</strong>{ ' ' }
 								{ __(
 									'Paste this prompt into your coding agent',

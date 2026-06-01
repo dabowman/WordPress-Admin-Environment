@@ -35,10 +35,10 @@
 
 .wp-admin-shell-unavailable-via-api__code {
 	font-family: var( --wpds-font-family-mono, monospace );
-	font-size: var( --wpds-font-size-sm );
-	padding: var( --wpds-dimension-padding-xs )
-		var( --wpds-dimension-padding-sm );
-	border-radius: var( --wpds-border-radius-sm );
+	font-size: var( --wpds-font-size-sm, 0.8125rem );
+	padding: var( --wpds-dimension-padding-xs, 0.25rem )
+		var( --wpds-dimension-padding-sm, 0.5rem );
+	border-radius: var( --wpds-border-radius-sm, 4px );
 	background: var(
 		--wpds-color-bg-component-neutral-weak,
 		rgba( 0, 0, 0, 0.06 )
