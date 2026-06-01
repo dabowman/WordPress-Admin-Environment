@@ -45,7 +45,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 		"dashboard-home": {
 			"label": "Home",
 			"path": "/dashboard/home",
-			"app": "core:dashboard"
+			"app": "core:dashboard-host"
 		}
 	}
 }

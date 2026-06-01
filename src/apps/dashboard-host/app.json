@@ -25,9 +25,19 @@
 		}
 	},
 	"documentation": {
-		"purpose": "Host app for the dashboard widget grid. v3 reads `screens[id].apps[]` filtered by `slot: \"grid\"`; manifest `slotHints` provides size + position defaults; per-entry `size` / `position` override per-property at the install layer. Each tile mounts the widget app via the shared `MountedApp` resolver so the existing 4-layer cap gating + theming applies uniformly.",
+		"purpose": "Host app for the dashboard widget grid — and the workspace dashboard screen (replaces the retired core:dashboard monolith, issue #133). Renders a time-of-day greeting header (host chrome) above a CSS Grid of widget tiles. Reads screens[id].apps[] filtered by slot: \"grid\"; manifest slotHints provides size + position defaults; per-entry size / position override per-property at the install layer. Each tile mounts the widget app via the shared MountedApp resolver so the existing 4-layer cap gating + theming applies uniformly.",
 		"data": {
 			"reads": [
+				{
+					"source": "window.wpAdminShell.userId",
+					"via": "window-global",
+					"purpose": "Acting-user id — used to look up the user record for the greeting header's display name."
+				},
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"purpose": "Acting user's display name for the greeting header (useEntityRecord('root','user', userId), null-safe on a falsy id)."
+				},
 				{
 					"source": "config.screenId",
 					"via": "kernel-config",

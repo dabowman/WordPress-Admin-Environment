@@ -14,7 +14,7 @@ import { TextareaControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { navigate } from '../../runtime/routing/router';
-import { RECENT_DRAFTS_QUERY } from '../dashboard-widget-recent-posts/query.mjs';
+import { recentDraftsQuery } from '../dashboard-widget-recent-posts/query.mjs';
 
 import './index.css';
 
@@ -43,12 +43,13 @@ export default function DashboardWidgetQuickDraftApp() {
 					status: 'draft',
 				} );
 				// Refresh the recent-drafts widget's query. The shape
-				// must match `RECENT_DRAFTS_QUERY` exactly — otherwise
+				// must match the Recent Drafts widget's query exactly
+				// (author-scoped to the same acting user) — otherwise
 				// the sibling tile keeps stale data.
 				invalidateResolution( 'getEntityRecords', [
 					'postType',
 					'post',
-					RECENT_DRAFTS_QUERY,
+					recentDraftsQuery( window.wpAdminShell?.userId ),
 				] );
 			} catch ( err ) {
 				setError(
