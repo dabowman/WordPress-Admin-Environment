@@ -15,7 +15,7 @@ import apiFetch from '@wordpress/api-fetch';
  *      route the user was on survives the switch when the new shell
  *      registers a matching app id.
  *
- * v2 will surface a switcher inside `core:appearance` and add a
+ * v2 will surface a switcher inside `core:appearance-preferences` and add a
  * mid-session in-place re-mount path that re-builds the registry's
  * region tree without a hard reload.
  *

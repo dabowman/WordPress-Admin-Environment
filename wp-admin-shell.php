@@ -116,6 +116,7 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-v
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-appearance-menu.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-chrome-harvest.php';

@@ -101,6 +101,22 @@
 				"customizable": {
 					"$ref": "#/$defs/customizable",
 					"description": "Consumer-origin write allowlist for the `workspace` block (e.g. `[ \"default-screen\", \"branding.title\" ]`; relative paths cover `branding.*`, `notices.*`, `widgets.*`). Note the hardcoded deny-list still blocks `workspace.engine` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
+				},
+				"theme-support": {
+					"type": "object",
+					"additionalProperties": true,
+					"description": "READ-ONLY synthetic block stamped by `WP_Admin_Shell_Appearance_Menu` during resolution — authors never declare it. Carries the active-theme determination used to prune the Appearance group: `block-theme` (bool, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → bool, from `current_theme_supports()`). Downstream passes (e.g. native classic Menus) read it instead of re-deriving.",
+					"properties": {
+						"block-theme": {
+							"type": "boolean",
+							"description": "True when the active theme is a block theme (`wp_is_block_theme()`)."
+						},
+						"theme-supports": {
+							"type": "object",
+							"additionalProperties": { "type": "boolean" },
+							"description": "Map of `current_theme_supports()` feature → bool (`menus`, `widgets`, `customize`, `custom-background`, `custom-header`)."
+						}
+					}
 				}
 			}
 		},
