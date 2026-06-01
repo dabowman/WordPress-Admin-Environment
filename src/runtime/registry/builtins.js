@@ -265,6 +265,14 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-dashboard-widget-quick-draft" */ '../../apps/dashboard-widget-quick-draft'
 			),
 	},
+	// #134 — captured-HTML tile for bridged classic dashboard widgets. One
+	// shared app the PHP harvest mounts once per surviving plugin widget.
+	'core:dashboard-widget-classic': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-classic" */ '../../apps/dashboard-widget-classic'
+			),
+	},
 };
 
 const NON_ROUTABLE_APPS = new Set( [

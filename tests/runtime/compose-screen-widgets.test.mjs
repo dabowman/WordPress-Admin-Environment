@@ -397,5 +397,49 @@ console.log( '\n— composeScreenWidgets: ordering preserved —\n' );
 	);
 }
 
+console.log(
+	'\n— composeScreenWidgets: per-entry config pass-through (#134 bridge) —\n'
+);
+
+{
+	// The classic dashboard-widget bridge emits tiles carrying
+	// `config: { widgetId, title }`. The host needs `config` forwarded so the
+	// shared tile app learns which classic widget to fetch, and the title
+	// chain must prefer config.title over the manifest title.
+	const screen = {
+		apps: [
+			{
+				id: 'classic-acme',
+				app: 'core:dashboard-widget-classic',
+				slot: 'grid',
+				config: { widgetId: 'acme_sales', title: 'Acme Sales' },
+			},
+		],
+	};
+	const manifests = {
+		'core:dashboard-widget-classic': { title: 'Classic dashboard widget' },
+	};
+	const out = composeScreenWidgets( { screen, manifests } );
+	ok( 'one tile composed', out.length === 1 );
+	ok(
+		'config forwarded with widgetId',
+		out[ 0 ].config && out[ 0 ].config.widgetId === 'acme_sales'
+	);
+	ok(
+		'config.title wins over manifest title',
+		out[ 0 ].title === 'Acme Sales'
+	);
+}
+
+{
+	// An entry with no config yields `config: null` so the host mounts the
+	// app by id string (the common case for native tiles).
+	const screen = {
+		apps: [ { id: 'a', app: 'core:foo', slot: 'grid' } ],
+	};
+	const out = composeScreenWidgets( { screen, manifests: { 'core:foo': {} } } );
+	ok( 'no-config entry yields config: null', out[ 0 ].config === null );
+}
+
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );

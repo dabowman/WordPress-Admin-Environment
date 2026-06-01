@@ -86,7 +86,7 @@ function clampToMin( size, min ) {
  * @param {Object}                  options
  * @param {Object|null|undefined}   options.screen     The active screen doc (`config.screens[screenId]`).
  * @param {Record<string, Object>}  options.manifests  App-id → manifest doc (typically `window.wpAdminShell.manifests.apps`).
- * @return {Array<{id:string,appId:string,title:string,defaultSize:{w:number,h:number},minSize:{w:number,h:number},position:'auto'|{row:number,col:number}}>}
+ * @return {Array<{id:string,appId:string,title:string,defaultSize:{w:number,h:number},minSize:{w:number,h:number},position:'auto'|{row:number,col:number},config:Object|null}>}
  */
 export function composeScreenWidgets( { screen, manifests } ) {
 	if ( ! screen || typeof screen !== 'object' ) {
@@ -137,12 +137,22 @@ export function composeScreenWidgets( { screen, manifests } ) {
 		const position = pickPosition( entry.position ?? hints.position );
 
 		// Title resolution chain — entry override (admin.json author
-		// intent) > manifest title (intrinsic). The entry-id fallback
-		// is the very last resort and lives on the React side; we ship
-		// `entryId` as a default so the React layer can decorate it
-		// however it likes without re-deriving here.
+		// intent) > entry config.title (e.g. the classic-widget bridge's
+		// harvested meta-box title) > manifest title (intrinsic). The
+		// entry-id fallback is the very last resort and lives on the React
+		// side; we ship `entryId` as a default so the React layer can
+		// decorate it however it likes without re-deriving here.
+		const entryConfig =
+			entry.config && typeof entry.config === 'object'
+				? entry.config
+				: null;
+		const configTitle =
+			entryConfig && typeof entryConfig.title === 'string'
+				? entryConfig.title
+				: '';
 		const title =
 			( typeof entry.title === 'string' && entry.title ) ||
+			configTitle ||
 			( typeof manifest.title === 'string' && manifest.title ) ||
 			entryId;
 
@@ -153,6 +163,10 @@ export function composeScreenWidgets( { screen, manifests } ) {
 			defaultSize,
 			minSize,
 			position,
+			// Per-entry mount config (e.g. the classic-widget bridge's
+			// `widgetId`). Null when the entry declares no config — the
+			// host then mounts the app by id string.
+			config: entryConfig,
 		} );
 	}
 	return out;
