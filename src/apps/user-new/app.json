@@ -1,0 +1,120 @@
+{
+	"$schema": "../../../docs/schemas/admin-app.json",
+	"id": "core:user-new",
+	"version": 1,
+	"title": "Add New User",
+	"description": "Native single-site Add New User form. POSTs to /wp/v2/users via core-data and navigates to the new user's edit screen.",
+	"designSystem": "@wordpress/ui",
+	"role": "main",
+	"capabilities": [
+		"create_users"
+	],
+	"config-schema": {
+		"type": "object",
+		"additionalProperties": false
+	},
+	"script": "wp-admin-shell",
+	"window": {
+		"defaultSize": {
+			"w": 720,
+			"h": 640
+		},
+		"minSize": {
+			"w": 480,
+			"h": 400
+		},
+		"multiInstance": false,
+		"icon": "plus"
+	},
+	"documentation": {
+		"purpose": "Native single-site \"Add New User\" screen. Replaces the legacy `iframe:user-new.php` mount on the `core:users-new` screen. Renders a `DataForm` create flow (username, email, first/last name, website, password, role, send-notification toggle) and POSTs to `/wp/v2/users` via `saveEntityRecord('root','user', payload)`, navigating to the new user's edit screen on success. Role options come from the resolved `root/user` dataView `roles` elements (admin.json-controlled, translated) with the standard WordPress roles as a fallback. Rebuilds the single-site half of wp-admin's `user-new.php` createuser form.",
+		"rebuilds": "user-new",
+		"data": {
+			"reads": [
+				{
+					"source": "settings.dataViews.root.user",
+					"via": "kernel-config",
+					"purpose": "Resolved `root/user` dataView doc — read via `useDataView({ kind, name })` to source the role select options (translated labels) from the `roles` field `elements`. Falls back to the standard WordPress roles when the spec ships no elements.",
+					"fields": [ "fields" ]
+				}
+			],
+			"writes": [
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Create a new user with `saveEntityRecord('root','user', { username, email, first_name, last_name, url, password, roles:[role] })`. The blocking save returns the new record so the app can navigate to its edit screen.",
+					"invalidates": [
+						"root/user"
+					]
+				}
+			]
+		},
+		"url": {
+			"navigates": [
+				"#/users/{id}/edit (the new user's edit screen on success)",
+				"#/users (Cancel)"
+			]
+		},
+		"states": [
+			{
+				"id": "ready",
+				"when": "Form mounted",
+				"renders": "DataForm with username / email / first / last / website / password / role / send-notification, Add New User + Cancel buttons. Add is disabled until required fields are valid."
+			},
+			{
+				"id": "saving",
+				"when": "isSaving === true",
+				"renders": "Add New User button shows loading + disabled state; Cancel disabled."
+			}
+		],
+		"interactions": [
+			{
+				"trigger": "Type in any field / choose role / toggle notification",
+				"effect": "Local create draft `data` updates via DataForm `onChange`."
+			},
+			{
+				"trigger": "Click Add New User",
+				"effect": "`saveEntityRecord('root','user', payload)` (blocking); strips the informational `send_user_notification` flag from the payload; on success: success snackbar + navigate to the new user's edit screen. On failure (resolved `undefined` OR thrown): error notice via `getLastEntitySaveError`, form stays.",
+				"guards": [
+					"isValid (username + email + password required)"
+				]
+			},
+			{
+				"trigger": "Click Cancel",
+				"effect": "Navigate back to `#/users`."
+			}
+		],
+		"a11y": {
+			"focus-management": "DataForm fields are in document order; native focus order is sufficient."
+		},
+		"constraints": [
+			{
+				"concern": "saveentityrecord-resolves-on-error",
+				"note": "`saveEntityRecord` RESOLVES `undefined` on a REST failure (it does not throw). A falsy record means the create failed — read `getLastEntitySaveError('root','user')` and surface it; do not show a false success snackbar."
+			},
+			{
+				"concern": "send-notification-not-in-rest",
+				"note": "`send_user_notification` is NOT in the REST create schema (`POST /wp/v2/users`). The checkbox is rendered read-only + off (with helper text) and stripped from the payload — ignored server-side, so the standard welcome email is not sent. Because of that, the generated password is the user's only credential, so it is generated with a CSPRNG (`window.crypto.getRandomValues`). Closing the email gap needs an upstream `send_user_notification` arg (see docs/parity/users.md blocker #5)."
+			},
+			{
+				"concern": "roles-array-shape",
+				"note": "REST expects `roles` as an array; the single role select value is wrapped (`roles: [ value ]`) before the POST."
+			},
+			{
+				"concern": "no-edit-user-app",
+				"note": "On success the app navigates to `#/users/{id}/edit`, which the wp-admin-default shell binds to `core:profile` with `config.userId` — there is no dedicated Edit User app yet (parity gap)."
+			}
+		],
+		"design-system-leakage": [
+			{
+				"import": "@wordpress/dataviews/wp#DataForm, useFormValidity",
+				"purpose": "Create form + client-side required-field validation."
+			},
+			{
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Heading, helper text, submit / cancel buttons."
+			}
+		]
+	}
+}

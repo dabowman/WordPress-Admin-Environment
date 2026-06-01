@@ -358,8 +358,6 @@
 							"type": "table",
 							"perPage": 25,
 							"fields": [
-								"username",
-								"email",
 								"roles",
 								"registered_date"
 							],
@@ -370,6 +368,16 @@
 								"id": "edit",
 								"label": "Edit",
 								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View posts"
+							},
+							{
+								"id": "change-role",
+								"label": "Change role to…",
+								"supportsBulk": true,
+								"icon": "people"
 							},
 							{
 								"id": "delete",
@@ -889,7 +897,8 @@
 			"path": "/posts",
 			"app": "core:posts",
 			"config": {
-				"postType": "post"
+				"postType": "post",
+				"author": "{author}"
 			},
 			"dataViewRef": "postType/post/_default",
 			"permissions": {
@@ -1210,7 +1219,7 @@
 			"label": "Add New User",
 			"icon": "plus",
 			"path": "/users/new",
-			"app": "iframe:user-new.php",
+			"app": "core:user-new",
 			"permissions": {
 				"capabilities": [
 					"create_users"

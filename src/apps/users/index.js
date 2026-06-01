@@ -1,3 +1,4 @@
+import './index.css';
 import '../_shared/app.css';
 import { Spinner } from '@wordpress/components';
 import { useMemo } from '@wordpress/element';
@@ -8,6 +9,7 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { navigate } from '../../runtime/routing/router';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
@@ -17,16 +19,25 @@ import {
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import {
+	createBulkEditModal,
+	fieldsWithNoChange,
+} from '../_shared/dataviews/BulkEditModal';
+import { DEFAULT_ROLES, roleDisplayName } from '../_shared/roles';
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
 	name: __( 'Name', 'wp-admin-shell' ),
+	username: __( 'Username', 'wp-admin-shell' ),
 	email: __( 'Email', 'wp-admin-shell' ),
-	roles: __( 'Roles', 'wp-admin-shell' ),
+	roles: __( 'Role', 'wp-admin-shell' ),
 	registered_date: __( 'Registered', 'wp-admin-shell' ),
 };
 
 const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	view: __( 'View posts', 'wp-admin-shell' ),
+	'change-role': __( 'Change role to…', 'wp-admin-shell' ),
 	delete: __( 'Delete', 'wp-admin-shell' ),
 };
 
@@ -42,21 +53,98 @@ const VIEW_DEFAULTS = {
 };
 
 /**
+ * Workspace route for the Edit User screen (`user-edit` in wp-admin-default).
+ * The list has no dedicated Edit User app yet — the shell binds `/users/{id}/edit`
+ * to `core:profile` with `config.userId: "{id}"`, and `core:profile` now edits
+ * the user named by `config.userId` (not the acting user) — so "Edit" + the
+ * username cell both edit the *target* user. See app.md "Known limitations".
+ *
+ * @param {number} id User id.
+ * @return {string} Hash route.
+ */
+function editHref( id ) {
+	return `#/users/${ id }/edit`;
+}
+
+/**
+ * Workspace route for "View posts" — the author-scoped Posts list. Navigates to
+ * the Posts screen with the `?author=N` URL slot set. `core:posts` reads that
+ * slot (`useRoute().params.author`, with `config.author` — declared on the
+ * screen as `"{author}"` — as the fallback) and seeds it once as an initial
+ * `author` view-filter, so the shared `buildQueryArgs` mapper emits `?author=N`
+ * to REST and the list is scoped to that author (the same author-filter
+ * mechanism the Posts "Mine" tab uses). Router nav, never `window.location`, so
+ * the admin-link interceptor governs it.
+ *
+ * @param {number} id Author (user) id.
+ * @return {string} Hash route.
+ */
+function viewPostsHref( id ) {
+	return `#/posts?author=${ id }`;
+}
+
+/**
  * Field id → render callback. View-config declares the *shape*; the React
  * layer supplies the row renderer.
+ *
+ * @param {Object} elementLabel `value` → `label` map for role slugs.
+ * @return {Object} Renderer map keyed by field id.
  */
-function buildFieldRenderers() {
+function buildFieldRenderers( elementLabel ) {
 	return {
+		// The username cell mirrors the classic Users screen primary column:
+		// avatar + display name (linking to the edit surface) + username + a
+		// `mailto:` email.
 		name: ( { item } ) => (
-			<Stack direction="column" gap="xs">
-				<Text>{ item.name }</Text>
-				<Text className="wp-admin-shell-app__muted">
-					{ item.username }
-				</Text>
+			<Stack direction="row" gap="sm" align="center">
+				{ item.avatarUrl && (
+					<img
+						className="wp-admin-shell-app-users__avatar"
+						src={ item.avatarUrl }
+						alt=""
+						width={ 32 }
+						height={ 32 }
+						loading="lazy"
+					/>
+				) }
+				<Stack direction="column" gap="xs">
+					<a
+						href={ editHref( item.id ) }
+						className="wp-admin-shell-app-users__name-link"
+					>
+						{ item.name }
+					</a>
+					<Text className="wp-admin-shell-app__muted">
+						{ item.username }
+					</Text>
+					{ item.email && (
+						<a
+							href={ `mailto:${ item.email }` }
+							className="wp-admin-shell-app-users__email"
+						>
+							{ item.email }
+						</a>
+					) }
+				</Stack>
 			</Stack>
 		),
-		email: ( { item } ) => <Text>{ item.email }</Text>,
-		roles: ( { item } ) => <Text>{ item.roles }</Text>,
+		email: ( { item } ) =>
+			item.email ? (
+				<a href={ `mailto:${ item.email }` }>{ item.email }</a>
+			) : (
+				<Text>{ '—' }</Text>
+			),
+		roles: ( { item } ) => (
+			<Text>
+				{ item.roleSlugs.length
+					? item.roleSlugs
+							.map( ( slug ) =>
+								roleDisplayName( slug, elementLabel )
+							)
+							.join( ', ' )
+					: __( 'None', 'wp-admin-shell' ) }
+			</Text>
+		),
 	};
 }
 
@@ -65,9 +153,12 @@ function buildFieldRenderers() {
  *
  * Reads its DataViews spec via `useDataView(screenId)`. Bulk delete uses
  * `deleteEntityRecord( 'root', 'user', id, { reassign, force: true } )` —
- * users have no trash, so deletion is permanent. The acting user is filtered
- * out of the target set (reassign-to-self fails server-side and would error
- * the bulk request mid-flight).
+ * users have no trash, so deletion is permanent. The "Change role to…" bulk
+ * action issues a roles-only `saveEntityRecord` per target (REST `PUT
+ * /wp/v2/users/{id} { roles }` needs only `promote_users`). Both bulk actions
+ * filter the acting user out of the target set: deletion would orphan the
+ * acting account, and a self-demote would strip the admin's own caps
+ * mid-flight.
  *
  * @param {Object} root0          Mount-supplied props.
  * @param {Object} [root0.config] App config — `config.screenId` keys the per-screen view lookup.
@@ -127,16 +218,33 @@ export default function UsersApp( { config = {} } = {} ) {
 		queryArgs
 	);
 
-	// Role values come from the resolved spec (shell-authored `roles`
-	// elements), so the count set tracks whatever roles the shell exposes.
-	const roleValues = useMemo( () => {
+	// Role elements come from the resolved spec (shell-authored `roles`
+	// elements). One source of truth for: the filter dropdown counts, the
+	// "Change role to…" select, and the translated cell display names.
+	const roleElements = useMemo( () => {
 		const roleField = ( dataViewConfig.fields ?? [] ).find(
 			( field ) => field.id === 'roles'
 		);
-		return ( roleField?.elements ?? [] ).map(
-			( element ) => element.value
-		);
+		return roleField?.elements ?? [];
 	}, [ dataViewConfig ] );
+
+	// Role slugs for the filter counts + the "Change role to…" select. Falls
+	// back to the standard WordPress roles when a leaner override drops the spec
+	// `elements` — mirrors the cell renderer's `STANDARD_ROLE_LABELS` fallback
+	// and the `core:user-new` app, so the bulk action stays usable (an empty set
+	// would leave the select with only the "— No change —" sentinel).
+	const roleValues = useMemo( () => {
+		const values = roleElements.map( ( element ) => element.value );
+		return values.length ? values : DEFAULT_ROLES;
+	}, [ roleElements ] );
+
+	const elementLabel = useMemo( () => {
+		const map = {};
+		for ( const element of roleElements ) {
+			map[ element.value ] = element.label;
+		}
+		return map;
+	}, [ roleElements ] );
 
 	const roleCounts = useEntityElementCounts(
 		'root',
@@ -154,31 +262,43 @@ export default function UsersApp( { config = {} } = {} ) {
 		if ( ! records ) {
 			return [];
 		}
-		return records.map( ( record ) => ( {
-			id: record.id,
-			name: decodeEntities( record.name || '' ),
-			email: record.email || '',
-			username: decodeEntities( record.username || '' ),
-			roles: ( record.roles || [] ).join( ', ' ),
-			registered_date: record.registered_date,
-			rawRecord: record,
-		} ) );
-	}, [ records ] );
+		return records.map( ( record ) => {
+			const roleSlugs = Array.isArray( record.roles ) ? record.roles : [];
+			const avatars = record.avatar_urls || {};
+			return {
+				id: record.id,
+				name: decodeEntities( record.name || '' ),
+				email: record.email || '',
+				username: decodeEntities( record.username || '' ),
+				roleSlugs,
+				// `roles` stays a translated, comma-joined string so global
+				// search / sort over the column reads naturally; the cell
+				// renderer reads `roleSlugs` for the localized join.
+				roles: roleSlugs
+					.map( ( slug ) => roleDisplayName( slug, elementLabel ) )
+					.join( ', ' ),
+				avatarUrl: avatars[ '48' ] || avatars[ '96' ] || '',
+				registered_date: record.registered_date,
+				rawRecord: record,
+			};
+		} );
+	}, [ records, elementLabel ] );
 
 	const fields = useMemo(
 		() =>
 			buildFields( dataViewConfig.fields, {
 				labels: FIELD_LABELS,
-				renderers: buildFieldRenderers(),
+				renderers: buildFieldRenderers( elementLabel ),
 				elementCounts: {
 					roles: roleCounts,
 				},
 			} ),
-		[ dataViewConfig, roleCounts ]
+		[ dataViewConfig, roleCounts, elementLabel ]
 	);
 
 	const actions = useMemo( () => {
 		const currentUserId = window.wpAdminShell?.userId;
+
 		const deleteModal = createBulkConfirmModal( {
 			filterItems: ( items ) =>
 				items.filter( ( i ) => i.id !== currentUserId ),
@@ -274,9 +394,90 @@ export default function UsersApp( { config = {} } = {} ) {
 			},
 		} );
 
+		// "Change role to…" — a single-field bulk edit. The `role` field is an
+		// `elements`-backed select seeded to the "— No change —" sentinel; the
+		// pure `computeBulkPayload` only emits `roles` when the admin picks a
+		// real role. Per target: REST `PUT /wp/v2/users/{id} { roles:[role] }`
+		// (roles-only update needs only `promote_users`).
+		const roleField = {
+			id: 'role',
+			label: __( 'Role', 'wp-admin-shell' ),
+			Edit: 'select',
+			elements: roleValues.map( ( value ) => ( {
+				value,
+				label: roleDisplayName( value, elementLabel ),
+			} ) ),
+		};
+		const changeRoleModal = createBulkEditModal( {
+			entity: [ 'root', 'user' ],
+			fields: fieldsWithNoChange( [ roleField ], { ids: [ 'role' ] } ),
+			form: {
+				layout: { type: 'regular', labelPosition: 'top' },
+				fields: [ 'role' ],
+			},
+			// Self-demote guard: strip the acting user from the write set before
+			// the batch fans out (mirrors the bulk-delete self-exclusion + the
+			// server-side `check_role_update` rejection). They stay selected; only
+			// others are written. An all-self selection short-circuits to an info
+			// notice in the shared host rather than a phantom "0 users" success.
+			filterItems: ( items ) =>
+				items.filter( ( i ) => i.id !== currentUserId ),
+			// Map the changed-field payload to the per-item REST body.
+			toRecord: ( payload ) => ( { roles: [ payload.role ] } ),
+			messages: {
+				applyLabel: __( 'Change role', 'wp-admin-shell' ),
+				saved: ( ok ) =>
+					sprintf(
+						/* translators: %d: number of users updated. */
+						_n(
+							'Role changed for %d user.',
+							'Role changed for %d users.',
+							ok,
+							'wp-admin-shell'
+						),
+						ok
+					),
+				partial: ( ok, failed ) =>
+					sprintf(
+						/* translators: 1: number updated, 2: number that failed. */
+						__( '%1$d updated, %2$d failed.', 'wp-admin-shell' ),
+						ok,
+						failed
+					),
+				error: __( 'Failed to change role.', 'wp-admin-shell' ),
+				noTargets: __(
+					'You cannot change your own role.',
+					'wp-admin-shell'
+				),
+			},
+			onApplied: () => {
+				invalidateResolution( 'getEntityRecords', [
+					'root',
+					'user',
+					queryArgs,
+				] );
+				// Role changes move users between buckets, so the filter counts
+				// must refresh too.
+				invalidateEntityElementCounts(
+					invalidateResolution,
+					'root',
+					'user',
+					'roles',
+					roleValues
+				);
+			},
+		} );
+
 		return buildActions( dataViewConfig.actions, {
 			labels: ACTION_LABELS,
-			modals: { delete: deleteModal },
+			callbacks: {
+				edit: ( items ) => navigate( editHref( items[ 0 ].id ) ),
+				view: ( items ) => navigate( viewPostsHref( items[ 0 ].id ) ),
+			},
+			modals: {
+				delete: deleteModal,
+				'change-role': changeRoleModal,
+			},
 		} );
 	}, [
 		dataViewConfig,
@@ -284,6 +485,7 @@ export default function UsersApp( { config = {} } = {} ) {
 		invalidateResolution,
 		queryArgs,
 		roleValues,
+		elementLabel,
 		createSuccessNotice,
 		createErrorNotice,
 	] );

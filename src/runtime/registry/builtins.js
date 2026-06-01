@@ -125,6 +125,12 @@ const APP_LOADERS = {
 		load: () =>
 			import( /* webpackChunkName: "app-users" */ '../../apps/users' ),
 	},
+	'core:user-new': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-user-new" */ '../../apps/user-new'
+			),
+	},
 	'core:comments': {
 		load: () =>
 			import(

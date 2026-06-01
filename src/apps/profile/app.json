@@ -11,6 +11,15 @@
 	},
 	"config-schema": {
 		"type": "object",
+		"properties": {
+			"userId": {
+				"type": [
+					"integer",
+					"string"
+				],
+				"description": "User id to edit. The /users/{id}/edit route interpolates {id} here so the form targets the named user. Absent (e.g. the self-service /profile screen) → falls back to window.wpAdminShell.userId (the acting user)."
+			}
+		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
@@ -27,14 +36,14 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the acting user (`window.wpAdminShell.userId`). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Covers the own-profile sub-screen of wp-admin's `users.php?action=editself` flow; the multi-user editor lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminShell.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
-					"source": "root/user/{window.wpAdminShell.userId}",
+					"source": "root/user/{config.userId ?? window.wpAdminShell.userId}",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Profile fields of the acting user.",
+					"purpose": "Profile fields of the edited user (config.userId, else the acting user).",
 					"fields": [
 						"id",
 						"username",
@@ -48,9 +57,14 @@
 					]
 				},
 				{
+					"source": "config.userId",
+					"via": "kernel-config",
+					"purpose": "User id to edit (interpolated from the /users/{id}/edit route); falls back to the acting user when absent."
+				},
+				{
 					"source": "window.wpAdminShell.userId",
 					"via": "window-global",
-					"purpose": "Identify the acting user; absence shows a permission-denied message."
+					"purpose": "Identify the acting user (fallback when config.userId is absent); absence of both shows a permission-denied message."
 				}
 			],
 			"writes": [
