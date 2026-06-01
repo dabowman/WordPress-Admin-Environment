@@ -43,10 +43,15 @@
 					{ "id": "date",    "type": "datetime", "label": "Date" }
 				],
 				"actions": [
-					{ "id": "approve",   "label": "Approve",       "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } },
-					{ "id": "unapprove", "label": "Unapprove",     "supportsBulk": true, "eligibleWhen": { "status": "approved" } },
-					{ "id": "spam",      "label": "Mark as spam",  "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "approved", "trash" ] } },
-					{ "id": "trash",     "label": "Move to trash", "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } }
+					{ "id": "edit",                "label": "Edit",               "isPrimary": true, "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } },
+					{ "id": "reply",               "label": "Reply",              "eligibleWhen": { "status": [ "hold", "approved" ] } },
+					{ "id": "approve",             "label": "Approve",            "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "spam", "trash" ] } },
+					{ "id": "unapprove",           "label": "Unapprove",          "supportsBulk": true, "eligibleWhen": { "status": "approved" } },
+					{ "id": "spam",                "label": "Mark as spam",       "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "hold", "approved", "trash" ] } },
+					{ "id": "unspam",              "label": "Not spam",           "supportsBulk": true, "eligibleWhen": { "status": "spam" } },
+					{ "id": "untrash",             "label": "Restore",            "supportsBulk": true, "eligibleWhen": { "status": "trash" } },
+					{ "id": "trash",               "label": "Move to trash",      "isDestructive": true, "supportsBulk": true, "icon": "trash", "eligibleWhen": { "status": [ "hold", "approved", "spam" ] } },
+					{ "id": "delete-permanently",  "label": "Delete permanently", "isDestructive": true, "supportsBulk": true, "eligibleWhen": { "status": [ "spam", "trash" ] } }
 				]
 			},
 			"pending": {
@@ -85,7 +90,7 @@
 		"icon": "comments"
 	},
 	"documentation": {
-		"purpose": "DataViews-driven comment moderation list. Lists author (name + email), comment content (rendered HTML), status, and date. Bulk + per-row actions: approve, unapprove, mark as spam, trash. Status changes round-trip via partial `saveEntityRecord` PATCH so optimistic edits behave; trash routes through `deleteEntityRecord`.",
+		"purpose": "DataViews-driven comment moderation list. The author cell stacks avatar + name + email (`mailto:`) + author URL link + author IP (moderators only); content renders as HTML; status + date follow. A `ViewTabs` strip above the list mirrors the classic All / Pending / Approved / Spam / Trash status views with live per-status counts. Bulk + per-row status actions: approve, unapprove, mark as spam, not spam (unspam), restore (untrash), move to trash, delete permanently. Status changes round-trip via partial `saveEntityRecord` PATCH; trash routes through `deleteEntityRecord` (no `force`), permanent delete through `deleteEntityRecord(..., { force: true })`. Per-row Edit (Quick Edit ≡ full Edit collapsed into one `createEntityFormModal` edit-mode modal) and Reply (`createEntityFormModal` create-mode, content-only POST with row-derived `parent`/`post`) substitute for the upstream-blocked inline-cell / detail-row primitives.",
 		"rebuilds": "comments",
 		"data": {
 			"reads": [
@@ -110,9 +115,15 @@
 						"id",
 						"author_name",
 						"author_email",
+						"author_url",
+						"author_ip",
+						"author_avatar_urls",
 						"content.rendered",
+						"content.raw",
 						"status",
-						"date"
+						"date",
+						"post",
+						"parent"
 					],
 					"query": {
 						"per_page": "view.perPage",
@@ -143,7 +154,25 @@
 					"source": "root/comment",
 					"via": "core-data",
 					"operation": "partial-update",
-					"purpose": "Approve / unapprove / spam — PATCH `{ id, status }`.",
+					"purpose": "Approve / unapprove / spam / unspam / untrash — PATCH `{ id, status }`. `unspam` and `untrash` both target `approved`.",
+					"invalidates": [
+						"root/comment"
+					]
+				},
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"operation": "update",
+					"purpose": "Modal Edit — PATCH `author_name` / `author_email` (moderators only) / `author_url` / `content` / `status` / `date` via `useEntityRecord().save()` on the buffered record.",
+					"invalidates": [
+						"root/comment"
+					]
+				},
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"operation": "create",
+					"purpose": "Reply — POST `{ content, parent, post }` where `parent`/`post` come from the subject row; author defaults to the current moderator server-side and the reply auto-approves.",
 					"invalidates": [
 						"root/comment"
 					]
@@ -153,6 +182,15 @@
 					"via": "core-data",
 					"operation": "trash",
 					"purpose": "Move comment to trash (no `force`).",
+					"invalidates": [
+						"root/comment"
+					]
+				},
+				{
+					"source": "root/comment",
+					"via": "core-data",
+					"operation": "delete",
+					"purpose": "Delete permanently — `deleteEntityRecord('root','comment', id, { force: true })`. Confirmed via destructive `createBulkConfirmModal`.",
 					"invalidates": [
 						"root/comment"
 					]
@@ -177,11 +215,39 @@
 			},
 			{
 				"id": "trash-confirm",
-				"when": "User triggered Trash action",
+				"when": "User triggered Trash or Delete permanently action",
 				"renders": "Confirm modal with destructive primary."
+			},
+			{
+				"id": "edit-modal",
+				"when": "User triggered Edit action",
+				"renders": "`createEntityFormModal` edit-mode form (author_name / author_email / author_url / content / status / date)."
+			},
+			{
+				"id": "reply-modal",
+				"when": "User triggered Reply action",
+				"renders": "`createEntityFormModal` create-mode form — content textarea above the read-only parent-comment context."
 			}
 		],
 		"interactions": [
+			{
+				"trigger": "Click a view tab (All / Pending / Approved / Spam / Trash)",
+				"effect": "Writes the segment's `status` filter into `view.filters` (or clears it for All) and resets to page 1; counts come from `useEntityElementCounts`."
+			},
+			{
+				"trigger": "Click Edit action",
+				"effect": "Open the edit modal; on save PATCH the buffered record (full field set); invalidate list + counts; success snackbar.",
+				"guards": [
+					"item.status !== 'trash'"
+				]
+			},
+			{
+				"trigger": "Click Reply action",
+				"effect": "Open the reply modal; on submit POST `{ content, parent: item.id, post: item.post }`; invalidate list + counts; success snackbar.",
+				"guards": [
+					"item.status === 'hold' || item.status === 'approved'"
+				]
+			},
 			{
 				"trigger": "Click Approve action",
 				"effect": "Partial-update status to `approved`; success snackbar.",
@@ -204,10 +270,31 @@
 				]
 			},
 			{
+				"trigger": "Click Not spam action",
+				"effect": "Partial-update status to `approved`; success snackbar.",
+				"guards": [
+					"item.status === 'spam'"
+				]
+			},
+			{
+				"trigger": "Click Restore action",
+				"effect": "Partial-update status to `approved`; success snackbar.",
+				"guards": [
+					"item.status === 'trash'"
+				]
+			},
+			{
 				"trigger": "Click Trash action",
 				"effect": "Open confirm modal; on confirm `deleteEntityRecord` (trash, no `force`) per item; invalidate; success snackbar.",
 				"guards": [
 					"item.status !== 'trash'"
+				]
+			},
+			{
+				"trigger": "Click Delete permanently action",
+				"effect": "Open destructive confirm modal; on confirm `deleteEntityRecord(..., { force: true })` per item; invalidate; success snackbar.",
+				"guards": [
+					"item.status === 'spam' || item.status === 'trash'"
 				]
 			},
 			{
@@ -237,17 +324,25 @@
 			},
 			{
 				"concern": "invalidate-after-mutate",
-				"note": "Every action invalidates `getEntityRecords` on `root/comment` so the list reflects the new state."
+				"note": "Every action invalidates `getEntityRecords` on `root/comment` AND the per-status `useEntityElementCounts` queries (via `invalidateEntityElementCounts`) so the list, status filter labels, and view tabs all reflect the new state."
+			},
+			{
+				"concern": "author-ip-moderate-gate",
+				"note": "The author IP is rendered only when `userCan('moderate_comments')` (resolved once at module load from the static cap map). The app cap floor is already `moderate_comments`, so the gate is belt-and-suspenders for a future relaxed floor + matches the wp-admin behavior where IP is moderator-only."
+			},
+			{
+				"concern": "reply-implicit-parent-post",
+				"note": "Reply (`createEntityFormModal` create mode) derives `parent` + `post` from the subject row inside `toRecord(draft, item)` — they are never user-editable fields. The shared factory threads the action's subject row into `toData`/`toRecord`/`renderContext` so this inline-creation pattern needs no comments-only modal."
 			}
 		],
 		"design-system-leakage": [
 			{
 				"import": "@wordpress/dataviews/wp",
-				"purpose": "DataViews + DataForm components, field descriptor shape. Table view + per-row actions."
+				"purpose": "DataViews + DataForm components, field descriptor shape. Table view + per-row actions + Edit/Reply form modals."
 			},
 			{
 				"import": "@wordpress/ui#Button, Stack, Text",
-				"purpose": "Author cell, modal layout, cancel button."
+				"purpose": "Author cell, view-tab strip, modal layout, cancel button."
 			},
 			{
 				"import": "@wordpress/components#Button (as DestructiveButton)",
