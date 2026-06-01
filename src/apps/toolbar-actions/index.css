@@ -1,0 +1,35 @@
+/*
+ * core:toolbar-actions — app-space styling for the arbitrary-icon escape
+ * hatch (#127/#128). Harvested admin-bar node titles are inline HTML
+ * (icon + text); keep them on one line and vertically centered inside
+ * the toolbar buttons. App-space (WPDS-flavored); the kernel stays
+ * DS-neutral.
+ */
+
+.wp-admin-shell-arbitrary-node-title {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpds-dimension-padding-xs, 4px );
+	white-space: nowrap;
+	line-height: 1;
+}
+
+/* Constrain any icon/img a harvested node title carries so a plugin's
+ * oversized markup can't blow out the toolbar row. */
+.wp-admin-shell-arbitrary-node-title img,
+.wp-admin-shell-arbitrary-node-title svg,
+.wp-admin-shell-arbitrary-node-title .ab-icon::before {
+	width: 20px;
+	height: 20px;
+	max-width: 20px;
+	max-height: 20px;
+	font-size: 20px;
+	vertical-align: middle;
+}
+
+/* The data-URI / image-URL menu icon (shared with the nav renderers). */
+.wp-admin-shell-arbitrary-icon {
+	display: inline-block;
+	vertical-align: middle;
+	object-fit: contain;
+}

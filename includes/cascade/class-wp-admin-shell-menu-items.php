@@ -520,6 +520,12 @@ class WP_Admin_Shell_Menu_Items {
 				if ( ! isset( $item['icon'] ) && isset( $screen['icon'] ) ) {
 					$item['icon'] = $screen['icon'];
 				}
+				// Arbitrary-icon escape hatch (#127): a harvested data-URI /
+				// image-URL menu icon rides on the screen as `iconSource`;
+				// flow it onto the bound menu item the same as `icon`.
+				if ( ! isset( $item['iconSource'] ) && isset( $screen['iconSource'] ) && is_array( $screen['iconSource'] ) ) {
+					$item['iconSource'] = $screen['iconSource'];
+				}
 				if ( ! isset( $item['description'] ) && isset( $screen['description'] ) ) {
 					$item['description'] = $screen['description'];
 				}

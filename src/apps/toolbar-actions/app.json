@@ -29,31 +29,49 @@
 				{
 					"source": "config.left + config.right",
 					"via": "kernel-config",
-					"purpose": "Action descriptors — declared inline in admin.json and passed as React props by mountApp."
+					"purpose": "Authored action descriptors — declared inline in admin.json and passed as React props by mountApp. Each is `{ href|command, icon|iconSource, label, external? }`."
+				},
+				{
+					"source": "core/postTypes",
+					"via": "core-data",
+					"purpose": "Dynamic +New (#129): enumerate creatable post types via `getPostTypes({ context: 'edit' })`, gated per-type on `canUser('create', { kind: 'postType', name })`. Builds `#/{rest_base}/new` dropdown items.",
+					"fields": [ "slug", "rest_base", "name", "labels" ]
+				},
+				{
+					"source": "window.wpAdminShell.adminBar",
+					"via": "window-global",
+					"purpose": "Admin-bar harvest (#128): plugin admin-bar nodes harvested server-side by WP_Admin_Shell_Chrome_Harvest (core nodes the shell owns are skipped). Top-level nodes render as buttons; nodes with children render as dropdowns. Titles are arbitrary admin HTML."
 				}
 			]
 		},
 		"states": [
-			{ "id": "empty", "when": "Both arrays empty", "renders": "Nothing (return null)." },
-			{ "id": "ready", "when": "At least one action", "renders": "Row layout — left cluster + spacer + right cluster." }
+			{ "id": "empty", "when": "No authored actions, no creatable post types, and no harvested admin-bar nodes", "renders": "Nothing (return null)." },
+			{ "id": "ready", "when": "At least one source has content", "renders": "Row layout — left cluster (+New dropdown + left actions) + spacer + right cluster (right actions + harvested admin-bar nodes)." }
 		],
 		"interactions": [
 			{ "trigger": "Click an action", "effect": "Native anchor navigation. External actions open in new tab." },
-			{ "trigger": "Middle-click / Cmd-click", "effect": "Native browser behavior — opens in new tab. Works because IconButton renders as `<a>`." }
+			{ "trigger": "Middle-click / Cmd-click", "effect": "Native browser behavior — opens in new tab. Works because IconButton renders as `<a>`." },
+			{ "trigger": "Open +New dropdown", "effect": "Menu of creatable post types; each item navigates to `#/{rest_base}/new`." },
+			{ "trigger": "Open a harvested admin-bar node with children", "effect": "Dropdown of the node's child links." }
 		],
 		"a11y": {
-			"focus-management": "Native anchor focus order.",
-			"screen-reader": "IconButton's `label` prop doubles as the assistive-tech label and the tooltip."
+			"focus-management": "Native anchor focus order; dropdowns use `@wordpress/components` DropdownMenu focus handling.",
+			"screen-reader": "IconButton's `label` prop doubles as the assistive-tech label and the tooltip. Harvested nodes derive their `aria-label` from the node's `meta.title` tooltip or the stripped-tags title."
 		},
 		"constraints": [
 			{ "concern": "command-href-map", "note": "`COMMAND_HREFS` translates legacy `command` ids (`core/new-post`, `core/new-page`) to hash URLs. Adding more requires updating the table." },
 			{ "concern": "iconbutton-anchor-render", "note": "Render-prop swap is required: `<IconButton render={<a href target rel/>}/>`. The plain `href` prop is dropped by Base UI Button." },
-			{ "concern": "no-onclick-actions", "note": "All actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app for command-style invocations." },
+			{ "concern": "no-onclick-actions", "note": "Authored actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app. Harvested admin-bar onclick-handler nodes degrade to links / disabled items (handler strings are dropped server-side)." },
+			{ "concern": "arbitrary-icon-escape-hatch", "note": "An action's `iconSource` (or a harvested node title) bypasses the name-based `resolveIcon` registry: it renders through the engine/app-space `ArbitraryIcon` / `TrustedNodeTitle` pass-through (`<img src>` / trusted HTML). The kernel icon registry stays name-based + DS-neutral (#127/#128). See docs/runtime-harvest-pattern.md." },
+			{ "concern": "new-content-route-coupling", "note": "+New builds `#/{rest_base}/new`. A CPT whose shell list-screen path differs from its `rest_base` produces a mismatched link — keep them in sync." },
+			{ "concern": "admin-bar-global-trust", "note": "`window.wpAdminShell.adminBar` node titles are admin-context HTML (same trust as classic wp-admin), rendered unchanged via `dangerouslySetInnerHTML`. The shell only renders them inside the already-admin-gated workspace." },
 			{ "concern": "chrome-anchor-color-override", "note": "WP-admin's unlayered `a { color: var(--wp-admin-theme-color) }` wins against `@wordpress/ui` IconButton's layered color. The bundled `core:default` engine ships `.wp-admin-shell-region--toolbar a { color: var(--wpds-color-fg-interactive-neutral) }` (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for its toolbar scheme." },
 			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-shell-region--toolbar svg { fill: currentColor }`. A non-WPDS engine MUST do the same." }
 		],
 		"design-system-leakage": [
-			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Toolbar buttons + layout primitives." }
+			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Toolbar buttons + layout primitives." },
+			{ "import": "@wordpress/components#DropdownMenu, MenuGroup, MenuItem", "purpose": "+New + admin-bar node dropdowns (no @wordpress/ui 0.12 menu port)." },
+			{ "import": "_shared/icons/ArbitraryIcon (TrustedNodeTitle)", "purpose": "Arbitrary-icon escape hatch for harvested icons / node titles (#127/#128)." }
 		]
 	}
 }
