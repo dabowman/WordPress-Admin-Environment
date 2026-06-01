@@ -1,12 +1,14 @@
 import '../_shared/app.css';
-import { Spinner } from '@wordpress/components';
+import './index.css';
+import { Modal, Spinner } from '@wordpress/components';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
-import { Notice, Stack, Text } from '@wordpress/ui';
+import { Button, Icon, Notice, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
+import { plus } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
 	buildFields,
@@ -15,6 +17,8 @@ import {
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import { createEntityFormModal } from '../_shared/dataviews/EntityFormModal';
+import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -45,6 +49,33 @@ const VIEW_DEFAULTS = {
 	sort: { field: 'name', direction: 'asc' },
 	fields: [],
 	layout: {},
+};
+
+// Install-by-slug DataForm. `slug` is the wordpress.org directory slug the REST
+// `POST /wp/v2/plugins` create endpoint accepts; `activate` maps to the
+// endpoint's `status` (`active` when checked, `inactive` otherwise) in
+// `toRecord` below.
+const INSTALL_FIELDS = [
+	{
+		id: 'slug',
+		type: 'text',
+		label: __( 'Plugin slug', 'wp-admin-shell' ),
+		description: __(
+			'The wordpress.org directory slug, e.g. "hello-dolly" or "akismet".',
+			'wp-admin-shell'
+		),
+		isValid: { required: true },
+	},
+	{
+		id: 'activate',
+		type: 'boolean',
+		label: __( 'Activate after install', 'wp-admin-shell' ),
+	},
+];
+
+const INSTALL_FORM = {
+	layout: { type: 'regular', labelPosition: 'top' },
+	fields: [ 'slug', 'activate' ],
 };
 
 function buildFieldRenderers() {
@@ -94,6 +125,8 @@ export default function PluginsApp( { config = {} } = {} ) {
 	const { invalidateResolution } = useDispatch( coreStore );
 
 	const [ error, setError ] = useState( null );
+	const [ isInstalling, setIsInstalling ] = useState( false );
+	const [ isUploading, setIsUploading ] = useState( false );
 
 	const refresh = useCallback( () => {
 		invalidateResolution( 'getEntityRecords', [
@@ -304,6 +337,38 @@ export default function PluginsApp( { config = {} } = {} ) {
 		[ data.length, view.perPage ]
 	);
 
+	// Install-by-slug modal body. `createEntityFormModal` create mode seeds a
+	// local draft from `toData(undefined)`, then `POST`s `toRecord(data)` via
+	// `saveEntityRecord( 'root', 'plugin', … )` — which targets the same
+	// `POST /wp/v2/plugins { slug, status }` create endpoint the list reads
+	// from. It returns a BARE body (no `<Modal>`), so we host it in our own
+	// `<Modal>` below (DataViews' `ActionModal` isn't in play for a header
+	// action). `onSaved` invalidates the list so the new plugin appears.
+	const InstallBody = useMemo(
+		() =>
+			createEntityFormModal( {
+				entity: [ 'root', 'plugin' ],
+				mode: 'create',
+				fields: INSTALL_FIELDS,
+				form: INSTALL_FORM,
+				toData: () => ( { slug: '', activate: false } ),
+				toRecord: ( { slug, activate } ) => ( {
+					slug: ( slug || '' ).trim(),
+					status: activate ? 'active' : 'inactive',
+				} ),
+				messages: {
+					saved: __( 'Plugin installed.', 'wp-admin-shell' ),
+					error: __( 'Failed to install plugin.', 'wp-admin-shell' ),
+					createLabel: __( 'Install', 'wp-admin-shell' ),
+				},
+				onSaved: () => {
+					refresh();
+					setIsInstalling( false );
+				},
+			} ),
+		[ refresh ]
+	);
+
 	if ( error ) {
 		return (
 			<div className="wp-admin-shell-app-plugins__error">
@@ -315,27 +380,98 @@ export default function PluginsApp( { config = {} } = {} ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-plugins wp-admin-shell-app--fill">
-			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
-					<Spinner />
-				</div>
-			) : (
-				<DataViews
-					data={ paginatedData }
-					fields={ fields }
-					view={ view }
-					onChangeView={ setView }
-					actions={ actions }
-					paginationInfo={ paginationInfo }
-					isLoading={ isResolving }
-					defaultLayouts={
-						dataViewConfig.defaultLayouts ?? { table: {} }
-					}
-					selection={ selection }
-					onChangeSelection={ setSelection }
-					getItemId={ ( item ) => item.id }
-				/>
+		<div className="wp-admin-shell-app-plugins">
+			<Stack
+				direction="row"
+				align="center"
+				justify="space-between"
+				className="wp-admin-shell-app-plugins__toolbar"
+			>
+				<Text variant="heading-md" render={ <h2 /> }>
+					{ __( 'Plugins', 'wp-admin-shell' ) }
+				</Text>
+				<Stack direction="row" align="center" gap="sm">
+					<Button
+						tone="neutral"
+						variant="outline"
+						size="compact"
+						onClick={ () => setIsUploading( true ) }
+					>
+						{ __( 'Upload plugin (.zip)', 'wp-admin-shell' ) }
+					</Button>
+					<Button
+						tone="brand"
+						variant="solid"
+						size="compact"
+						onClick={ () => setIsInstalling( true ) }
+					>
+						<Icon icon={ plus } size={ 16 } />
+						{ __( 'Add New Plugin', 'wp-admin-shell' ) }
+					</Button>
+				</Stack>
+			</Stack>
+
+			<div className="wp-admin-shell-app-plugins__list wp-admin-shell-app--fill">
+				{ ! records ? (
+					<div className="wp-admin-shell-app__center">
+						<Spinner />
+					</div>
+				) : (
+					<DataViews
+						data={ paginatedData }
+						fields={ fields }
+						view={ view }
+						onChangeView={ setView }
+						actions={ actions }
+						paginationInfo={ paginationInfo }
+						isLoading={ isResolving }
+						defaultLayouts={
+							dataViewConfig.defaultLayouts ?? { table: {} }
+						}
+						selection={ selection }
+						onChangeSelection={ setSelection }
+						getItemId={ ( item ) => item.id }
+					/>
+				) }
+			</div>
+
+			{ isInstalling && (
+				<Modal
+					title={ __( 'Add New Plugin', 'wp-admin-shell' ) }
+					onRequestClose={ () => setIsInstalling( false ) }
+				>
+					{ /* `createEntityFormModal` create mode ignores `items`; it
+					     renders its own DataForm + Install / Cancel footer and
+					     POSTs `{ slug, status }`. `closeModal` flips our state. */ }
+					<InstallBody
+						items={ [] }
+						closeModal={ () => setIsInstalling( false ) }
+					/>
+				</Modal>
+			) }
+
+			{ isUploading && (
+				<Modal
+					title={ __( 'Upload plugin (.zip)', 'wp-admin-shell' ) }
+					onRequestClose={ () => setIsUploading( false ) }
+				>
+					{ /* No REST surface for zip upload — `create_item` accepts a
+					     wordpress.org slug only. Fall back to the classic upload
+					     screen via the shared no-API affordance. */ }
+					<UnavailableViaApi
+						kind="action"
+						classicPath="plugin-install.php?tab=upload"
+						label={ __(
+							'Open the classic Upload Plugin screen',
+							'wp-admin-shell'
+						) }
+						command="wp plugin install /path/to/plugin.zip --activate"
+						agentPrompt={ __(
+							'Install a WordPress plugin from a local .zip archive using `wp plugin install <path-to-zip>`.',
+							'wp-admin-shell'
+						) }
+					/>
+				</Modal>
 			) }
 		</div>
 	);
