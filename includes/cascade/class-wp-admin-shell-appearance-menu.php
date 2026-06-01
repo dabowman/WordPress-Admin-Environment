@@ -65,10 +65,29 @@ class WP_Admin_Shell_Appearance_Menu {
 		'site-editor'        => array( 'show' => 'block' ),
 
 		// Classic-theme-only: Customizer + classic Widgets + classic Menus.
+		// Widgets / Menus additionally require the theme to declare support —
+		// a classic theme that does not `add_theme_support( 'widgets' )` /
+		// `register_nav_menus()` (→ `current_theme_supports( 'menus' )`) has no
+		// widget areas / menu locations, so wp-admin hides those screens too
+		// (issue #237 review nit; mirrors the `custom-background`/`-header`
+		// `requires` gating below).
 		'customize'          => array( 'show' => 'classic' ),
-		'widgets'            => array( 'show' => 'classic' ),
-		'menus'              => array( 'show' => 'classic' ),
-		'nav-menus'          => array( 'show' => 'classic' ),
+		'widgets'            => array(
+			'show'     => 'classic',
+			'requires' => 'widgets',
+		),
+		'menus'              => array(
+			'show'     => 'classic',
+			'requires' => 'menus',
+		),
+
+		// NOTE: the `nav-menus` iframe screen (the full-fidelity classic
+		// Menus editor, `iframe:nav-menus.php`) is INTENTIONALLY NOT gated
+		// here. It is a theme-agnostic escape hatch: the native `core:menus`
+		// editor links to it (`#/nav-menus`) on block themes — where the
+		// native `menus` screen is pruned — so the deterministic iframe
+		// fallback must survive on every theme. Gating it on `menus` support
+		// would 404 that link exactly when it's needed.
 
 		// Classic-theme + declared `add_theme_support()`.
 		'custom-background'  => array(

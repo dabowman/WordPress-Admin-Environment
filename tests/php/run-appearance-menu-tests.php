@@ -9,7 +9,10 @@
  *     (block-theme flag + per-feature theme-supports map), reusable by
  *     #120 (native classic Menus).
  *   - Block theme → keeps `site-editor`; drops `customize` / `widgets` /
- *     `menus` / `nav-menus` (screens + menu nodes at any depth).
+ *     `menus` (screens + menu nodes at any depth). The `nav-menus` iframe
+ *     escape hatch is theme-agnostic and survives on every theme — including
+ *     its Appearance-group menu node, so it stays a reachable nav entry (not a
+ *     hand-typed URL) when the native `menus` editor is pruned on block themes.
  *   - Classic theme → keeps `customize` / `widgets` / `menus`; drops
  *     `site-editor`. Custom Background / Header survive only when the
  *     theme `add_theme_support()`s them.
@@ -168,7 +171,15 @@ WPAS_Appearance_Test_Runner::assert_true(
 	is_array( $block_doc['workspace']['theme-support']['theme-supports'] )
 );
 
-$classic_doc = WP_Admin_Shell_Appearance_Menu::apply( wpas_appearance_test_doc(), wpas_signal( false ) );
+// A "fully-equipped" classic theme: declares widgets + menus support (so the
+// `requires`-gated Widgets / Menus screens survive — issue #237), but NOT
+// custom-background / custom-header (those are asserted to drop below). Used as
+// the baseline classic doc for the keep/drop assertions that aren't about the
+// add_theme_support() gating itself.
+$classic_doc = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
+);
 WPAS_Appearance_Test_Runner::assert_false(
 	'signal: block-theme flag false for classic theme',
 	$classic_doc['workspace']['theme-support']['block-theme']
@@ -440,6 +451,127 @@ $live = WP_Admin_Shell_Appearance_Menu::prune( wpas_appearance_test_doc() );
 WPAS_Appearance_Test_Runner::assert_true(
 	'live prune() stamps the signal from real theme support',
 	isset( $live['workspace']['theme-support']['block-theme'] )
+);
+
+// -----------------------------------------------------------------------------
+// Issue #237 nit — widgets / menus gated on actual theme support
+// -----------------------------------------------------------------------------
+
+// Classic theme that supports neither widgets nor menus → both screens drop,
+// alongside the unsupported background/header. Customize (no `requires`) stays.
+$classic_no_support = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false ) // every feature false.
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: widgets screen dropped when theme lacks widget support',
+	isset( $classic_no_support['screens']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: menus screen dropped when theme lacks menu support',
+	isset( $classic_no_support['screens']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: widgets menu node dropped when unsupported',
+	isset( $classic_no_support['menu']['appearance']['items']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_false(
+	'requires: menus menu node dropped when unsupported',
+	isset( $classic_no_support['menu']['appearance']['items']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: customize survives (no requires gate) on unsupported classic theme',
+	isset( $classic_no_support['screens']['customize'] )
+);
+
+// Classic theme that DOES support widgets + menus → both survive.
+$classic_with_nav = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: widgets screen kept when theme supports widgets',
+	isset( $classic_with_nav['screens']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus screen kept when theme supports menus',
+	isset( $classic_with_nav['screens']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: widgets menu node kept when supported',
+	isset( $classic_with_nav['menu']['appearance']['items']['widgets'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus menu node kept when supported',
+	isset( $classic_with_nav['menu']['appearance']['items']['menus'] )
+);
+
+// Partial support — menus yes, widgets no — gates independently.
+$classic_menus_only = WP_Admin_Shell_Appearance_Menu::apply(
+	wpas_appearance_test_doc(),
+	wpas_signal( false, array( 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'requires: menus kept while widgets dropped (independent gating)',
+	isset( $classic_menus_only['screens']['menus'] ) &&
+	! isset( $classic_menus_only['screens']['widgets'] )
+);
+
+// The nav-menus iframe-fallback screen is a theme-AGNOSTIC escape hatch: it is
+// the deterministic full-fidelity classic Menus editor the native `core:menus`
+// app links to (`#/nav-menus`) on block themes — where the native `menus`
+// screen is pruned. Gating it on `menus` support would 404 that link exactly
+// when it's needed, so it survives on every theme (block, classic-supported,
+// classic-unsupported).
+$doc_with_navmenus = wpas_appearance_test_doc();
+$doc_with_navmenus['screens']['nav-menus']                         = array(
+	'label' => 'Menus (Classic)',
+	'path'  => '/nav-menus',
+	'app'   => 'iframe:nav-menus.php',
+);
+// The shell pins `nav-menus` in the Appearance menu group (a real entry point,
+// not a hand-typed URL). Mirror that placement so the prune is exercised against
+// a menu node, not just a `screens` entry.
+$doc_with_navmenus['menu']['appearance']['items']['nav-menus']     = array( 'position' => 65 );
+
+$navmenus_classic_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( false )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus screen kept on classic theme without menu support',
+	isset( $navmenus_classic_unsupported['screens']['nav-menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus menu node kept on classic theme without menu support',
+	isset( $navmenus_classic_unsupported['menu']['appearance']['items']['nav-menus'] )
+);
+$navmenus_classic_supported = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( false, array( 'menus' => true ) )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus screen kept on classic theme with menu support',
+	isset( $navmenus_classic_supported['screens']['nav-menus'] )
+);
+$navmenus_block = WP_Admin_Shell_Appearance_Menu::apply(
+	$doc_with_navmenus,
+	wpas_signal( true )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus screen kept on block theme (deterministic fallback target)',
+	isset( $navmenus_block['screens']['nav-menus'] )
+);
+// On a block theme the native `menus` node is pruned but `nav-menus` survives in
+// the menu tree — the escape hatch stays reachable as a real nav entry, not a
+// hand-typed URL.
+WPAS_Appearance_Test_Runner::assert_false(
+	'block: native menus menu node dropped (superseded by Site Editor)',
+	isset( $navmenus_block['menu']['appearance']['items']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus menu node survives on block theme (reachable escape hatch)',
+	isset( $navmenus_block['menu']['appearance']['items']['nav-menus'] )
 );
 
 // -----------------------------------------------------------------------------
