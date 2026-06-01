@@ -587,7 +587,9 @@ These are behaviors that work but diverge from core — distinct from the unbuil
 
 | Deviation | Impact | Correct behavior |
 |---|---|---|
-| **Live-record autosave on published posts** | The 2s debounce PUTs the *live* record via `saveEntityRecord`. For a **published** post this overwrites the public content on every keystroke-debounce, where core would instead write a per-user autosave revision (`POST /wp/v2/{rest_base}/{id}/autosaves`) and leave the live record untouched until an explicit Update. This is a data-integrity divergence: an interrupted edit session can leave half-finished content live. | Gate the debounce to `draft`/`pending` (route published autosaves to `…/autosaves`), or disable autosave for published posts. Tracked in `docs/parity/roadmap.md` group A-P1. |
+| **Missing "newer autosave" recovery banner** | `core:simple-editor` does not compare `modified_gmt` of the live record against the user's most-recent autosave revision on load. Core shows a banner — "There is an autosave of this post that is more recent than the version below. View the autosave →" — when the autosave is newer. Without it, a crash or tab-close during a published-post edit silently loses the autosave recovery path. | On mount, fetch `GET /wp/v2/{rest_base}/{id}/autosaves?author={userId}&per_page=1` and compare `autosave.modified_gmt` vs `post.modified_gmt`; show the recovery banner when the autosave is newer. Tracked in `docs/parity/roadmap.md` group A-P1. |
+
+> **Fixed in #198 (issue #101):** The 2s debounce previously PUT the live record on every keystroke-debounce for all post statuses, clobbering published content. `autosaveTarget()` in `src/apps/simple-editor/autosave.mjs` now status-gates the write: `draft`/`auto-draft` flush the parent record in place (matching core), everything else routes to `POST …/autosaves` and leaves the live record untouched.
 
 ### Gaps vs. this spec
 

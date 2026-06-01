@@ -68,7 +68,7 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 | Site Title | `blogname` | `title` | string | "" | renamed in REST |
 | Tagline | `blogdescription` | `description` | string | "Just another WordPress site" | renamed in REST |
 | WordPress Address (URL) | `siteurl` | `url` | string (uri) | install URL | single-site only; **read-only in REST when `WP_SITEURL` defined** |
-| Site Address (URL) | `home` | — | string | install URL | **NOT exposed in REST** — gap |
+| Site Address (URL) | `home` | `home` | string | install URL | single-site only; exposed via `register_setting( show_in_rest )` shim (PR #202) |
 | Administration Email Address | `admin_email` | `email` | string (email) | install email | single-site only; **REST writes directly** without confirmation flow |
 | Site Language | `WPLANG` | `language` | string | `en_US` | locale code |
 | Timezone | `timezone_string` | `timezone` | string | "" | IANA city name OR empty when UTC offset used |
@@ -80,13 +80,12 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 
 | Option | Form field | Type | Notes |
 |---|---|---|---|
-| `home` | Site Address (URL) | string | Saved via `options.php` POST. Workaround: separate `update_option()` via custom endpoint or the `/wp-admin-shell/v1/options/home` shim. |
 | `site_icon` | Site Icon | int (attachment ID) | Picked via media modal. **Not in REST settings**. Workaround: `POST /wp/v2/media` to upload, then `update_option('site_icon', $id)`. Some hosts expose `site_logo` block-theme equivalent. |
-| `gmt_offset` | (Timezone, fallback) | float | Used when `timezone_string` is empty. UI presents both as a single select; on save, choose which option to write. |
-| `users_can_register` | Membership | bool | single-site only |
-| `default_role` | New User Default Role | string | single-site only; enum from `get_editable_roles()` |
+| `gmt_offset` | (Timezone, fallback) | float | Used when `timezone_string` is empty. Written via `rest_pre_update_setting` filter (PR #202): a `UTC±X` selection stores `gmt_offset` and clears `timezone_string`; an IANA city selection stores `timezone_string` and leaves `gmt_offset` alone. |
 | `new_admin_email` | (transient holder) | string | Written to during email-change flow; cleared on confirmation. |
 | `adminhash` | (transient holder) | array | `{ hash: string, newemail: string }` — hash compared to `?adminhash=` URL param to verify ownership. |
+
+> **Fixed in #202 (issue #106):** `home`, `users_can_register`, and `default_role` were previously not `show_in_rest` and were silently discarded on save. The plugin now registers `show_in_rest` shims for all three so they pass through `/wp/v2/settings` correctly. `gmt_offset` is handled separately via the `rest_pre_update_setting` filter described above.
 
 ### Aggregate data
 - Available timezones: `wp_timezone_choice()` (PHP) → list of cities + UTC offsets. No REST endpoint; either render statically (DateTimeZone::listIdentifiers) or expose via shell custom endpoint.
@@ -157,7 +156,7 @@ REST `email` field bypasses this entirely — `POST /wp/v2/settings { email: 'ne
 ## 7. Actions
 
 ### Primary action
-- **Save Changes** — `POST /wp/v2/settings` with the diff of changed REST fields. Non-REST fields (`home`, `site_icon`, `users_can_register`, `default_role`, `gmt_offset`) require fallback (see §15 Gaps).
+- **Save Changes** — `POST /wp/v2/settings` with the diff of changed REST fields. `site_icon` is non-REST and requires a fallback (see §15 Gaps). `home`, `users_can_register`, `default_role`, and `gmt_offset` are handled via `show_in_rest` shims + the `rest_pre_update_setting` filter (PR #202).
 
 ### Secondary actions
 - **Choose Site Icon** — opens media modal scoped to images ≥512×512.
@@ -211,7 +210,7 @@ This is the dominant section for a settings spec.
 
 ### Site Address (URL)
 - Type: url
-- REST: **not exposed** — gap
+- REST: `home` (writable via `register_setting( show_in_rest )` shim, PR #202)
 - Required: yes
 - Validation: valid URL with scheme
 - Helper: "Enter the same address here unless you want your site home page to be different from your WordPress installation directory."
@@ -227,13 +226,13 @@ This is the dominant section for a settings spec.
 ### Membership (single-site only)
 - Type: checkbox
 - Option: `users_can_register` (1/0)
-- REST: **not exposed** — gap
+- REST: `users_can_register` (writable via `register_setting( show_in_rest )` shim, PR #202)
 - Label: "Anyone can register"
 
 ### New User Default Role (single-site only)
 - Type: select
 - Option: `default_role`
-- REST: **not exposed** — gap
+- REST: `default_role` (writable via `register_setting( show_in_rest )` shim, PR #202)
 - Options: from `get_editable_roles()`, with `administrator` and `editor` excluded by default (filterable via `default_role_dropdown_excluded_roles`)
 - Default: `subscriber`
 
@@ -386,24 +385,16 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 
 #### Known deviations (current shell)
 
-The app renders several controls that **silently no-op** because the underlying option is not `show_in_rest`, so `/wp/v2/settings` drops the key — the control accepts input and the save reports "Settings saved." but the value never persists. Distinct from the unbuilt gaps in the table below (these *look* present):
-
 | Control | Option | Deviation |
 |---|---|---|
-| Site Address (Home) | `home` | Bound via `edit({ home })`, but `home` isn't `show_in_rest` → discarded on save (no error). |
-| Membership (anyone can register) | `users_can_register` | Bound, not `show_in_rest` → discarded silently. |
-| New User Default Role | `default_role` | Bound, not `show_in_rest` → discarded silently. |
-| Timezone (manual UTC offset entry) | `gmt_offset` | The grouped select offers UTC-offset entries, but selecting one writes the `timezone` (`timezone_string`) field only. `gmt_offset` isn't `show_in_rest`, so a manual-offset choice **reverts to the prior value on save** — only city/`timezone_string` selections persist. |
-| Administration Email | `email` (`admin_email`) | The `email` field *is* REST-writable, but writing it changes `admin_email` **instantly**, bypassing core's confirm-by-link flow (`new_admin_email` pending option + verification email). A typo locks the admin out of email-gated recovery with no undo. |
+| Administration Email | `email` (`admin_email`) | The `email` field *is* REST-writable, but writing it changes `admin_email` **instantly**, bypassing core's confirm-by-link flow (`new_admin_email` pending option + verification email). A typo locks the admin out of email-gated recovery with no undo. Tracked in `docs/parity/roadmap.md` group B-P2 (issue #160). |
 
-Closing the no-op bindings is tracked in `docs/parity/roadmap.md` group A-P1 (`register_setting( show_in_rest )` shims); the instant-email-change safeguard is group B-P2.
+> **Fixed in #202 (issue #106):** `home`, `users_can_register`, and `default_role` were previously not `show_in_rest` and were silently discarded on save. The plugin now registers `show_in_rest` shims for all three so they pass through `/wp/v2/settings` correctly. `gmt_offset` is handled separately via the `rest_pre_update_setting` filter: a `UTC±X` selection stores `gmt_offset` and clears `timezone_string`; an IANA city selection stores `timezone_string` and leaves `gmt_offset` alone — matching classic wp-admin behaviour.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
 | Site Icon picker | High | Requires media modal + `update_option('site_icon')` (non-REST). |
-| Site Address (`home`) field | High | Non-REST; needs custom endpoint or PHP fallback. |
-| Membership + Default Role | High | Non-REST; both need fallback shim. |
 | Admin Email confirmation flow | High | REST writes directly without confirmation. Need to write to `new_admin_email` instead, trigger confirmation email (server side). |
 | Pending email change notice + Cancel | High | Bound to above. |
 | Language install-on-select | Medium | Detect "downloadable" entries; trigger install on save; show progress. |
