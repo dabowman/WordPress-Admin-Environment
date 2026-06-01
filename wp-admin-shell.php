@@ -1156,16 +1156,14 @@ add_action( 'init', function () {
  *
  * @param bool   $updated Whether the setting was already handled by a prior filter.
  * @param string $name    REST setting name being written.
- * @param object $request The REST request.
+ * @param mixed  $value   The incoming setting value (core passes `$request[ $name ]` here).
  * @param array  $args    Registered option args (includes `option_name`).
  * @return bool Whether the setting write was handled here.
  */
-add_filter( 'rest_pre_update_setting', function ( $updated, $name, $request, $args ) {
+add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args ) {
 	if ( $updated || empty( $args['option_name'] ) || 'timezone_string' !== $args['option_name'] ) {
 		return $updated;
 	}
-
-	$value = isset( $request[ $name ] ) ? $request[ $name ] : '';
 
 	if ( is_string( $value ) && preg_match( '/^UTC[+-]/', $value ) ) {
 		// Manual offset: store gmt_offset, clear the zone. With timezone_string
