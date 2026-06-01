@@ -1,9 +1,13 @@
 import { useMemo, useState } from '@wordpress/element';
-import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
+import {
+	useEntityRecord,
+	useEntityRecords,
+	store as coreStore,
+} from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews, DataForm } from '@wordpress/dataviews/wp';
-import { Button, Icon, Stack, Text } from '@wordpress/ui';
+import { Badge, Button, Icon, Stack, Text } from '@wordpress/ui';
 import { Modal, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -13,6 +17,7 @@ import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import { buildTermTree, indentLabel } from './termTree.mjs';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
@@ -43,6 +48,11 @@ const VIEW_DEFAULTS = {
 	layout: {},
 };
 
+// Upper bound on the all-terms fetch used to build the hierarchy tree + the
+// parent-picker option list. The REST `per_page` cap is 100; trees larger than
+// this degrade gracefully (deeper terms simply fall outside the indented set).
+const TREE_FETCH_PER_PAGE = 100;
+
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
@@ -50,19 +60,54 @@ function stripTags( html ) {
 /**
  * Field id → render callback.
  *
- * @param {Object}   deps
- * @param {Function} deps.onEditTerm Open the edit modal for a raw term record.
+ * @param {Object}      deps
+ * @param {Function}    deps.onEditTerm   Open the edit modal for a raw term record.
+ * @param {boolean}     deps.hierarchical Whether the taxonomy nests terms.
+ * @param {Object}      deps.depthById    term id → depth (0-based) for indentation.
+ * @param {number|null} deps.defaultId    Default-category term id, or null.
+ * @return {Object} id → render callback.
  */
-function buildFieldRenderers( { onEditTerm } ) {
+function buildFieldRenderers( {
+	onEditTerm,
+	hierarchical,
+	depthById,
+	defaultId,
+} ) {
 	return {
-		name: ( { item } ) => (
-			<Button
-				variant="minimal"
-				onClick={ () => onEditTerm( item.rawRecord ) }
-			>
-				{ item.name }
-			</Button>
-		),
+		name: ( { item } ) => {
+			const depth = hierarchical ? depthById[ item.id ] || 0 : 0;
+			const isDefault = defaultId !== null && item.id === defaultId;
+			return (
+				<Stack
+					direction="row"
+					align="center"
+					gap="xs"
+					// Indent nested terms; aria-level (1-based) announces the
+					// tree depth to assistive tech. Flat taxonomies omit both.
+					style={
+						depth > 0
+							? { paddingInlineStart: `${ depth * 1.5 }em` }
+							: undefined
+					}
+					{ ...( hierarchical
+						? { role: 'treeitem', 'aria-level': depth + 1 }
+						: {} ) }
+				>
+					{ depth > 0 && <span aria-hidden="true">&#8212;</span> }
+					<Button
+						variant="minimal"
+						onClick={ () => onEditTerm( item.rawRecord ) }
+					>
+						{ item.name }
+					</Button>
+					{ isDefault && (
+						<Badge intent="neutral">
+							{ __( 'Default', 'wp-admin-shell' ) }
+						</Badge>
+					) }
+				</Stack>
+			);
+		},
 		slug: ( { item } ) => <Text>{ item.slug }</Text>,
 		count: ( { item } ) => <Text>{ item.count }</Text>,
 		description: ( { item } ) => (
@@ -76,6 +121,26 @@ export default function TaxonomyApp( { config = {} } ) {
 	const screenId = config.screenId || null;
 	const heading =
 		config.title || DEFAULT_TAXONOMY_LABEL[ taxonomy ] || taxonomy;
+
+	// The taxonomy record carries the `hierarchical` flag (category → true,
+	// post_tag → false). Loading returns `record: null`; default to flat so the
+	// table renders without waiting on this secondary fetch.
+	const { record: taxonomyRecord } = useEntityRecord(
+		'root',
+		'taxonomy',
+		taxonomy
+	);
+	const hierarchical = !! taxonomyRecord?.hierarchical;
+
+	// Default-category protection is category-only: `default_category` lives in
+	// site settings and identifies the one term WordPress refuses to delete.
+	const { record: site } = useEntityRecord( 'root', 'site' );
+	const defaultCategoryId =
+		taxonomy === 'category' &&
+		site &&
+		Number.isInteger( site.default_category )
+			? site.default_category
+			: null;
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
@@ -107,6 +172,23 @@ export default function TaxonomyApp( { config = {} } ) {
 		queryArgs
 	);
 
+	// For hierarchical taxonomies, fetch the full flat term set (independent of
+	// the paged/sorted/searched list) so the tree depth + the parent picker see
+	// every term, not just the current page. Skipped for flat taxonomies.
+	const { records: allTerms } = useEntityRecords(
+		'taxonomy',
+		taxonomy,
+		{
+			per_page: TREE_FETCH_PER_PAGE,
+			hide_empty: false,
+			orderby: 'name',
+			order: 'asc',
+			_fields: 'id,name,parent',
+			context: 'edit',
+		},
+		{ enabled: hierarchical }
+	);
+
 	const { saveEntityRecord, deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -130,13 +212,49 @@ export default function TaxonomyApp( { config = {} } ) {
 		} ) );
 	}, [ records ] );
 
+	// id → depth map for indentation + aria-level, derived from the full term
+	// set. Empty for flat taxonomies (renderer falls back to depth 0).
+	const depthById = useMemo( () => {
+		if ( ! hierarchical || ! allTerms ) {
+			return {};
+		}
+		const map = {};
+		buildTermTree( allTerms ).forEach( ( node ) => {
+			map[ node.id ] = node.depth;
+		} );
+		return map;
+	}, [ hierarchical, allTerms ] );
+
+	// Indented parent-picker options ("None" + every term, depth-prefixed),
+	// matching wp-admin's `wp_dropdown_categories` rendering.
+	const parentElements = useMemo( () => {
+		if ( ! hierarchical || ! allTerms ) {
+			return null;
+		}
+		return [
+			{ value: 0, label: __( 'None', 'wp-admin-shell' ) },
+			...buildTermTree( allTerms ).map( ( node ) => ( {
+				value: node.id,
+				label: indentLabel(
+					decodeEntities( node.name || '' ),
+					node.depth
+				),
+			} ) ),
+		];
+	}, [ hierarchical, allTerms ] );
+
 	const fields = useMemo(
 		() =>
 			buildFields( dataViewConfig.fields, {
 				labels: FIELD_LABELS,
-				renderers: buildFieldRenderers( { onEditTerm: setEditTerm } ),
+				renderers: buildFieldRenderers( {
+					onEditTerm: setEditTerm,
+					hierarchical,
+					depthById,
+					defaultId: defaultCategoryId,
+				} ),
 			} ),
-		[ dataViewConfig ]
+		[ dataViewConfig, hierarchical, depthById, defaultCategoryId ]
 	);
 
 	const actions = useMemo( () => {
@@ -188,11 +306,19 @@ export default function TaxonomyApp( { config = {} } ) {
 				edit: ( items ) => setEditTerm( items[ 0 ].rawRecord ),
 			},
 			modals: { delete: deleteModal },
+			// The default category cannot be deleted (WordPress rejects it
+			// server-side). Pre-disable Delete on that row so a bulk select +
+			// delete doesn't fail mid-batch with an opaque 500.
+			eligibilityOverrides:
+				defaultCategoryId !== null
+					? { delete: ( item ) => item.id !== defaultCategoryId }
+					: {},
 		} );
 	}, [
 		dataViewConfig,
 		taxonomy,
 		queryArgs,
+		defaultCategoryId,
 		deleteEntityRecord,
 		invalidateResolution,
 		createSuccessNotice,
@@ -255,6 +381,8 @@ export default function TaxonomyApp( { config = {} } ) {
 				<TermEditModal
 					term={ editTerm }
 					taxonomy={ taxonomy }
+					hierarchical={ hierarchical }
+					parentElements={ parentElements }
 					onClose={ () => {
 						setEditTerm( null );
 						setIsCreating( false );
@@ -284,7 +412,7 @@ export default function TaxonomyApp( { config = {} } ) {
 	);
 }
 
-const TERM_FIELDS = [
+const BASE_TERM_FIELDS = [
 	{
 		id: 'name',
 		type: 'text',
@@ -304,14 +432,11 @@ const TERM_FIELDS = [
 	},
 ];
 
-const TERM_FORM = {
-	layout: { type: 'regular', labelPosition: 'top' },
-	fields: [ 'name', 'slug', 'description' ],
-};
-
 function TermEditModal( {
 	term,
 	taxonomy,
+	hierarchical,
+	parentElements,
 	onClose,
 	onSave,
 	onSaved,
@@ -322,13 +447,52 @@ function TermEditModal( {
 		name: term?.name || '',
 		slug: term?.slug || '',
 		description: term?.description || '',
+		parent: term?.parent || 0,
 	} );
 	const [ isSaving, setIsSaving ] = useState( false );
+
+	// The parent field is hierarchical-only and integer-typed. Its `elements`
+	// are the async indented term list; while they're still loading the field
+	// stays out of the form (added once `parentElements` resolves). The edited
+	// term excludes itself as a parent option to prevent a trivial self-parent
+	// cycle.
+	const fields = useMemo( () => {
+		if ( ! hierarchical || ! parentElements ) {
+			return BASE_TERM_FIELDS;
+		}
+		const elements = isNew
+			? parentElements
+			: parentElements.filter( ( el ) => el.value !== term.id );
+		return [
+			...BASE_TERM_FIELDS,
+			{
+				id: 'parent',
+				type: 'integer',
+				label: __( 'Parent', 'wp-admin-shell' ),
+				elements,
+			},
+		];
+	}, [ hierarchical, parentElements, isNew, term ] );
+
+	const form = useMemo(
+		() => ( {
+			layout: { type: 'regular', labelPosition: 'top' },
+			fields: fields.map( ( f ) => f.id ),
+		} ),
+		[ fields ]
+	);
 
 	const handleSave = async () => {
 		setIsSaving( true );
 		try {
-			const payload = { ...data };
+			const payload = {
+				name: data.name,
+				slug: data.slug,
+				description: data.description,
+			};
+			if ( hierarchical ) {
+				payload.parent = Number( data.parent ) || 0;
+			}
 			if ( ! isNew ) {
 				payload.id = term.id;
 			}
@@ -354,8 +518,8 @@ function TermEditModal( {
 			<Stack direction="column" gap="md">
 				<DataForm
 					data={ data }
-					fields={ TERM_FIELDS }
-					form={ TERM_FORM }
+					fields={ fields }
+					form={ form }
 					onChange={ ( edits ) =>
 						setData( ( prev ) => ( { ...prev, ...edits } ) )
 					}

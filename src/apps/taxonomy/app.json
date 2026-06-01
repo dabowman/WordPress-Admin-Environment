@@ -67,7 +67,7 @@
 		"icon": "tag"
 	},
 	"documentation": {
-		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description fields), and bulk delete terms. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
+		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description / parent fields), and bulk delete terms. Hierarchical taxonomies (e.g. category) render parent-indented rows with `aria-level` and offer an indented parent picker on add/edit; the site default category is badged and protected from deletion. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
 		"rebuilds": "taxonomies",
 		"data": {
 			"reads": [
@@ -105,6 +105,25 @@
 						"hide_empty": false,
 						"search": "view.search"
 					}
+				},
+				{
+					"source": "root/taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"purpose": "Reads the taxonomy's `hierarchical` flag (GET /wp/v2/taxonomies/{taxonomy}) to decide whether to render the parent-indented tree + parent picker (issue #115). Loading returns null → defaults to flat so the table paints without waiting.",
+					"fields": [ "hierarchical" ]
+				},
+				{
+					"source": "taxonomy/{config.taxonomy}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Full flat term set (per_page 100, `_fields: id,name,parent`), fetched only for hierarchical taxonomies, to build the depth tree + the indented parent-picker options client-side independent of the paged/sorted/searched list (issue #115).",
+					"fields": [ "id", "name", "parent" ]
+				},
+				{
+					"source": "root/site",
+					"via": "core-data",
+					"purpose": "Reads `default_category` (category taxonomy only) to badge the default term and make it delete-ineligible (issue #116). WordPress refuses to delete the default category server-side.",
+					"fields": [ "default_category" ]
 				}
 			],
 			"writes": [
@@ -112,7 +131,7 @@
 					"source": "taxonomy/{config.taxonomy}",
 					"via": "core-data",
 					"operation": "create",
-					"purpose": "Add a new term via the Add new modal.",
+					"purpose": "Add a new term via the Add new modal (name / slug / description, plus `parent` for hierarchical taxonomies).",
 					"invalidates": [
 						"taxonomy/{config.taxonomy}"
 					]
@@ -121,7 +140,7 @@
 					"source": "taxonomy/{config.taxonomy}",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Edit an existing term (name / slug / description).",
+					"purpose": "Edit an existing term (name / slug / description, plus `parent` for hierarchical taxonomies — the edited term excludes itself from the parent options to prevent a self-parent cycle).",
 					"invalidates": [
 						"taxonomy/{config.taxonomy}"
 					]
@@ -154,9 +173,19 @@
 				"renders": "DataViews empty state."
 			},
 			{
+				"id": "hierarchical-tree",
+				"when": "taxonomy is hierarchical (taxonomyRecord.hierarchical) && allTerms resolved",
+				"renders": "Name column rows indented by client-computed depth with `role=treeitem` + `aria-level`; flat taxonomies render unindented rows with no tree ARIA."
+			},
+			{
+				"id": "default-badge",
+				"when": "taxonomy === 'category' && item.id === site.default_category",
+				"renders": "A neutral `Default` Badge beside the term name; the row's Delete action is ineligible (hidden)."
+			},
+			{
 				"id": "editing",
 				"when": "editTerm !== null",
-				"renders": "Modal with name / slug / description fields populated from the term."
+				"renders": "Modal with name / slug / description fields populated from the term, plus a `parent` integer picker (indented elements) for hierarchical taxonomies."
 			},
 			{
 				"id": "creating",
@@ -189,7 +218,11 @@
 			},
 			{
 				"trigger": "Click Delete action (single or bulk)",
-				"effect": "Open confirm modal; on confirm `deleteEntityRecord(..., { force: true })` for each item + invalidate + success snackbar."
+				"effect": "Open confirm modal; on confirm `deleteEntityRecord(..., { force: true })` for each item + invalidate + success snackbar. The default category (issue #116) is delete-ineligible — its Delete action is hidden, so it can't enter a bulk batch."
+			},
+			{
+				"trigger": "Pick a Parent in the term modal (hierarchical taxonomies)",
+				"effect": "`parent` (integer) is included in the save payload; on add the term nests under the chosen parent, on edit it reparents. The edited term excludes itself from the options."
 			},
 			{
 				"trigger": "Change view (search / sort / page / perPage)",
@@ -223,6 +256,14 @@
 			{
 				"concern": "decode-name-entities",
 				"note": "Term `name` may contain HTML entities (`&amp;`, `&#039;`). Pass through `decodeEntities` before rendering so the table mirrors wp-admin's `wp_specialchars_decode` display."
+			},
+			{
+				"concern": "hierarchical-tree-fetch-cap",
+				"note": "The full-term fetch that drives the tree + parent picker is capped at `per_page: 100` (REST max). Trees larger than 100 terms degrade gracefully — terms beyond the cap fall outside the indented set rather than breaking. Pagination of the tree fetch is a future enhancement (issue #115)."
+			},
+			{
+				"concern": "default-category-rest-only",
+				"note": "Default-category protection (issue #116) works only for `category` — `default_category` is the one default-term option exposed at GET /wp/v2/settings. Custom hierarchical taxonomies' `default_term_{taxonomy}` is NOT REST-readable, so their default term can't be pre-protected; the REST 500 still surfaces on delete."
 			}
 		],
 		"design-system-leakage": [
@@ -231,8 +272,8 @@
 				"purpose": "DataViews + DataForm components, field descriptor shape. Table view with sort/pagination/actions."
 			},
 			{
-				"import": "@wordpress/ui#Button, Stack, Text, InputControl, Icon",
-				"purpose": "Header, modal layout, name + slug inputs, Add-new icon."
+				"import": "@wordpress/ui#Badge, Button, Stack, Text, Icon",
+				"purpose": "Header, modal layout, indented name cell, Add-new icon, and the `Default` term Badge."
 			},
 			{
 				"import": "@wordpress/components#Button (as DestructiveButton), Modal, TextareaControl",

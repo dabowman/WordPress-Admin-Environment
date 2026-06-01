@@ -12,10 +12,21 @@ Four pieces of state drive the app:
 
 1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` bound to `(taxonomy, category)` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.taxonomy.<name>.<variant|_default>` or the `wp_admin_shell_data_view_config_taxonomy_<name>[_<variant>]` filter. For `post_tag` and custom taxonomies the manifest baseline does not apply — those triples consume cascade-only entries or filter overrides (bundled `developer-admin.json` ships a baseline for `post_tag`). **Field renderers and action callbacks live in the React layer** — the spec carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
 2. **`view`** — owned by the shared `useEntityDataView()` hook (`src/apps/_shared/dataviews/`), seeded from `VIEW_DEFAULTS` + `dataView.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. DataViews calls `onChangeView(next)` whenever the user changes anything. The hook's resync `useEffect` (keyed `[screenId, taxonomy]`) reseeds the view when the triple flips on the same hook instance so a `category` → `post_tag` rebind doesn't inherit the previous triple's filters/sort. Field/action compilation also runs through the shared `buildFields` / `buildActions`; the delete confirm is built with `createBulkConfirmModal`.
-3. **`editTerm` / `isCreating`** — modal toggles for the term editor. The same `TermEditModal` covers create and edit; only the payload `id` field and submit button label differ. The modal renders a `@wordpress/dataviews` `DataForm` (name / slug / description) over one local `data` `useState`, so the parent doesn't observe in-progress edits and state cleans up on unmount.
+3. **`editTerm` / `isCreating`** — modal toggles for the term editor. The same `TermEditModal` covers create and edit; only the payload `id` field and submit button label differ. The modal renders a `@wordpress/dataviews` `DataForm` (name / slug / description, plus a `parent` integer picker for hierarchical taxonomies) over one local `data` `useState`, so the parent doesn't observe in-progress edits and state cleans up on unmount.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('taxonomy', config.taxonomy, queryArgs)`. `context: 'edit'` keeps `description` populated.
+5. **`hierarchical`** — read from `useEntityRecord('root', 'taxonomy', config.taxonomy).record.hierarchical` (`GET /wp/v2/taxonomies/{taxonomy}`). Drives the indented tree + the parent picker. Loading returns `record: null` → defaults to flat, so the table paints without blocking on this secondary fetch.
+6. **`allTerms`** — a second `useEntityRecords('taxonomy', config.taxonomy, { per_page: 100, _fields: 'id,name,parent' }, { enabled: hierarchical })`, fetched only for hierarchical taxonomies. Independent of the paged/sorted/searched list so the depth tree + parent options reflect every term, not just the current page.
+7. **`defaultCategoryId`** — `useEntityRecord('root', 'site').record.default_category`, read for the `category` taxonomy only. The matching row gets a `Default` badge and is removed from delete eligibility.
 
 `data` is a `useMemo` projection of `records` into the row shape DataViews wants (`{ id, name, slug, count, description, parent, rawRecord }`). Term `name` may contain HTML entities — `decodeEntities` mirrors wp-admin's `wp_specialchars_decode` display. The original record is kept on `rawRecord` so the row-name renderer and edit action can pass it to the modal without re-fetching.
+
+### Hierarchical display + parent picker (issue #115)
+
+`src/apps/taxonomy/termTree.mjs` is a pure helper (`buildTermTree` + `indentLabel`, no imports → node-importable, unit-tested by `tests/runtime/taxonomy-term-tree.test.mjs`). `buildTermTree` flattens the `allTerms` flat list into depth-first order, annotating each node with its `depth`; orphan terms (parent off the 100-item page) fall back to roots, and a visited-set guard breaks self-/cyclic-parent loops so a corrupt tree can't drop terms or spin forever. The name-column renderer indents each row by `depth` and emits `role="treeitem"` + `aria-level={depth + 1}` for hierarchical taxonomies (flat taxonomies render unindented, no tree ARIA). `indentLabel` prefixes the parent-picker option labels with one em-dash per level, mirroring `wp_dropdown_categories`. The `parent` DataForm field is `type: 'integer'` with the indented `elements` (a `None` (0) option first); on edit, the term excludes itself from the options to prevent a trivial self-parent cycle. `handleSave` only sends `parent` for hierarchical taxonomies. DataViews' table layout has no native nesting, so this is a depth-prefix render, not true row nesting — the documented component constraint.
+
+### Default-category protection (issue #116)
+
+Categories only. `default_category` is the single default-term option exposed at `GET /wp/v2/settings` (custom taxonomies' `default_term_{taxonomy}` is not REST-readable — see app.json constraint `default-category-rest-only`). The name renderer paints a neutral `Default` Badge on that row, and the `delete` action carries an `eligibilityOverrides[ 'delete' ]` (via the shared `buildActions` path) of `( item ) => item.id !== defaultCategoryId`, so Delete is hidden on the default row and it can never enter a bulk-delete batch. This pre-empts the opaque REST 500 WordPress returns when something tries to delete the default category.
 
 The delete-confirm modal is implemented via DataViews' `RenderModal` action shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app uses WPDS `Stack` + `Text` for layout and copy, with the destructive primary button falling back to legacy `@wordpress/components` `Button as DestructiveButton` because WPDS 0.12 has no `tone="critical"`. The action's `id` (`delete`) is what `buildActions()` keys off; plugins overriding the dataView can keep / rename / drop the action via their filter, and the React layer simply skips ids it has no callback for.
 
@@ -83,21 +94,19 @@ Two patterns to preserve:
 
 ## Known limitations
 
-- Hierarchical taxonomies (categories) ignore `parent`. Term creation always lands at the root; editing surfaces no parent picker. A future iteration would add a tree-picker for hierarchical taxonomies.
+- The hierarchy tree + parent picker are capped at the 100-term REST `per_page`. Taxonomies with more than 100 terms paginate the main list normally, but terms beyond the first 100 fall outside the indented tree / parent options. Tree-fetch pagination is a future enhancement (issue #115).
+- Cycle prevention on edit only excludes the edited term itself, not its whole subtree (`exclude_tree`). Reparenting a term under one of its own descendants is not blocked client-side; the REST endpoint accepts it (WordPress does not reject the loop on the terms controller), so a deep cycle is possible until upstream `exclude_tree` parity is added.
 - No bulk update — only bulk delete.
 - The slug field is editable on edit but the REST endpoint may renormalize it server-side. We don't reflect the normalized value back into the form after save.
 - Term content count (`count`) is read-only; clicking it does not filter posts by the term.
-- No default-category protection. wp-admin disables Delete on the site's default category (option `default_category`); the v2 app surfaces a Delete action that the REST endpoint will reject server-side without a clear UX cue.
+- Default-category protection covers `category` only. Custom hierarchical taxonomies' `default_term_{taxonomy}` is not REST-exposed, so their default term can't be pre-protected — the opaque REST 500 still surfaces on delete (upstream gap).
 - No term-reassignment on delete. wp-admin's term delete offers "Reassign to another term" before deleting; the v2 app deletes outright and posts get reparented to the default term by core's fallback.
 
 Parity gaps versus `docs/screens/taxonomy.md` not surfaced in the v2 app:
 
 - No split-pane Add form. wp-admin renders Add new in a left pane next to the list; the v2 app uses a modal toggled by an Add-new button in the toolbar.
 - No Quick Edit (inline name + slug edit on row toggle).
-- No hierarchical tree display for categories. wp-admin recurses into a parent-indented tree; the v2 app renders flat sorted rows. Switching sort on a hierarchical taxonomy already collapses the wp-admin tree, so the flat view matches the sorted state but loses the default tree view.
-- No parent picker on Add / Edit (cycle-prevention `exclude_tree` not surfaced).
-- No `wp_dropdown_categories`-style indented option labels.
-- No default-category badge / delete protection.
+- Tree display is a depth-prefix render (indentation + em-dash + `aria-level`), not true row nesting — DataViews' table layout has no native hierarchy. Switching sort on a hierarchical taxonomy reorders the flat rows (the indent still reflects each term's true depth from `allTerms`, but the rows are no longer in tree order). Subtree cycle-prevention (`exclude_tree`) is not surfaced — only the edited term excludes itself.
 - No "View" archive link per row for public taxonomies.
 - No term-archive count link that drills into the `posts` app filtered by term.
 - No `meta` field rendering from `register_term_meta`.
@@ -105,4 +114,4 @@ Parity gaps versus `docs/screens/taxonomy.md` not surfaced in the v2 app:
 - No Categories-only below-list hint area ("Deleting a category does not delete posts…").
 - No slug-collision feedback after save (when server appends `-2` etc.).
 - No keyboard shortcuts (`/` to focus search, `n` to focus Add form).
-- ARIA polish: no `aria-level` / `aria-setsize` for hierarchical rows, no per-row Default-category announcement.
+- ARIA polish: hierarchical rows now carry `role="treeitem"` + `aria-level`, but not `aria-setsize` / `aria-posinset`; the Default badge is visible-only with no dedicated per-row screen-reader announcement.
