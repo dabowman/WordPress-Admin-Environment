@@ -95,7 +95,7 @@
 			},
 			{
 				"concern": "send-notification-not-in-rest",
-				"note": "`send_user_notification` is NOT in the REST create schema (`POST /wp/v2/users`). The checkbox is offered for parity but stripped from the payload and ignored server-side — the standard welcome email is not sent. Closing this needs an upstream `send_user_notification` arg (see docs/parity/users.md blocker #5)."
+				"note": "`send_user_notification` is NOT in the REST create schema (`POST /wp/v2/users`). The checkbox is rendered read-only + off (with helper text) and stripped from the payload — ignored server-side, so the standard welcome email is not sent. Because of that, the generated password is the user's only credential, so it is generated with a CSPRNG (`window.crypto.getRandomValues`). Closing the email gap needs an upstream `send_user_notification` arg (see docs/parity/users.md blocker #5)."
 			},
 			{
 				"concern": "roles-array-shape",

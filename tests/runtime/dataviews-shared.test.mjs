@@ -33,7 +33,7 @@ const {
 const { buildSubmitPayload, firstItem } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/entityFormPayload.mjs' )
 );
-const { computeBulkPayload, NO_CHANGE } = await import(
+const { computeBulkPayload, resolveBulkTargets, NO_CHANGE } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/bulkEditPayload.mjs' )
 );
 
@@ -482,6 +482,40 @@ ok(
 ok(
 	'NO_CHANGE is a namespaced sentinel string',
 	typeof NO_CHANGE === 'string' && NO_CHANGE.length > 0
+);
+
+// --- resolveBulkTargets (BulkEditModal filterItems guard) -----------------
+const _items = [ { id: 1 }, { id: 2 }, { id: 3 } ];
+ok(
+	'resolveBulkTargets returns items unchanged with no filter (back-compat)',
+	resolveBulkTargets( _items ) === _items
+);
+ok(
+	'resolveBulkTargets applies filterItems',
+	JSON.stringify(
+		resolveBulkTargets( _items, ( items ) =>
+			items.filter( ( i ) => i.id !== 2 )
+		)
+	) === JSON.stringify( [ { id: 1 }, { id: 3 } ] )
+);
+ok(
+	'resolveBulkTargets can filter to empty (drives the no-targets short-circuit)',
+	resolveBulkTargets( [ { id: 1 } ], ( items ) =>
+		items.filter( ( i ) => i.id !== 1 )
+	).length === 0
+);
+ok(
+	'resolveBulkTargets coerces non-array items to []',
+	resolveBulkTargets( null ).length === 0 &&
+		resolveBulkTargets( undefined ).length === 0 &&
+		resolveBulkTargets( 'x' ).length === 0
+);
+ok(
+	'resolveBulkTargets passes the coerced array (not the raw value) to filterItems',
+	resolveBulkTargets( null, ( items ) => {
+		// Would throw if `items` were null rather than [].
+		return items.filter( () => true );
+	} ).length === 0
 );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );

@@ -23,18 +23,7 @@ import {
 	createBulkEditModal,
 	fieldsWithNoChange,
 } from '../_shared/dataviews/BulkEditModal';
-
-// Standard WordPress role display names, used as a translated fallback when the
-// resolved dataView spec does not ship `roles` elements (e.g. a leaner override
-// that drops them). The shell-authored elements win when present — see
-// `roleElements` below.
-const STANDARD_ROLE_LABELS = {
-	administrator: __( 'Administrator', 'wp-admin-shell' ),
-	editor: __( 'Editor', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	contributor: __( 'Contributor', 'wp-admin-shell' ),
-	subscriber: __( 'Subscriber', 'wp-admin-shell' ),
-};
+import { DEFAULT_ROLES, roleDisplayName } from '../_shared/roles';
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
@@ -66,8 +55,9 @@ const VIEW_DEFAULTS = {
 /**
  * Workspace route for the Edit User screen (`user-edit` in wp-admin-default).
  * The list has no dedicated Edit User app yet — the shell binds `/users/{id}/edit`
- * to `core:profile` with `config.userId` — so "Edit" + the username cell both
- * land on that profile-as-edit surface. See app.md "Known limitations".
+ * to `core:profile` with `config.userId: "{id}"`, and `core:profile` now edits
+ * the user named by `config.userId` (not the acting user) — so "Edit" + the
+ * username cell both edit the *target* user. See app.md "Known limitations".
  *
  * @param {number} id User id.
  * @return {string} Hash route.
@@ -86,19 +76,6 @@ function editHref( id ) {
  */
 function viewPostsHref( id ) {
 	return `#/posts?author=${ id }`;
-}
-
-/**
- * Map a role slug to its translated display name. Prefers the shell-authored
- * `roles` field `elements` (so admin.json controls the surfaced set + labels),
- * falling back to the standard-role table, then the raw slug.
- *
- * @param {string} slug         Role slug.
- * @param {Object} elementLabel `value` → `label` map from the spec elements.
- * @return {string} Display name.
- */
-function roleDisplayName( slug, elementLabel ) {
-	return elementLabel[ slug ] ?? STANDARD_ROLE_LABELS[ slug ] ?? slug;
 }
 
 /**
@@ -246,10 +223,15 @@ export default function UsersApp( { config = {} } = {} ) {
 		return roleField?.elements ?? [];
 	}, [ dataViewConfig ] );
 
-	const roleValues = useMemo(
-		() => roleElements.map( ( element ) => element.value ),
-		[ roleElements ]
-	);
+	// Role slugs for the filter counts + the "Change role to…" select. Falls
+	// back to the standard WordPress roles when a leaner override drops the spec
+	// `elements` — mirrors the cell renderer's `STANDARD_ROLE_LABELS` fallback
+	// and the `core:user-new` app, so the bulk action stays usable (an empty set
+	// would leave the select with only the "— No change —" sentinel).
+	const roleValues = useMemo( () => {
+		const values = roleElements.map( ( element ) => element.value );
+		return values.length ? values : DEFAULT_ROLES;
+	}, [ roleElements ] );
 
 	const elementLabel = useMemo( () => {
 		const map = {};
@@ -428,9 +410,14 @@ export default function UsersApp( { config = {} } = {} ) {
 				layout: { type: 'regular', labelPosition: 'top' },
 				fields: [ 'role' ],
 			},
-			// Self-demote guard: the acting user is never role-changed (mirrors
-			// the bulk-delete self-exclusion + the server-side `check_role_update`
-			// rejection). They stay selected; only others are written.
+			// Self-demote guard: strip the acting user from the write set before
+			// the batch fans out (mirrors the bulk-delete self-exclusion + the
+			// server-side `check_role_update` rejection). They stay selected; only
+			// others are written. An all-self selection short-circuits to an info
+			// notice in the shared host rather than a phantom "0 users" success.
+			filterItems: ( items ) =>
+				items.filter( ( i ) => i.id !== currentUserId ),
+			// Map the changed-field payload to the per-item REST body.
 			toRecord: ( payload ) => ( { roles: [ payload.role ] } ),
 			messages: {
 				applyLabel: __( 'Change role', 'wp-admin-shell' ),
@@ -453,6 +440,10 @@ export default function UsersApp( { config = {} } = {} ) {
 						failed
 					),
 				error: __( 'Failed to change role.', 'wp-admin-shell' ),
+				noTargets: __(
+					'You cannot change your own role.',
+					'wp-admin-shell'
+				),
 			},
 			onApplied: () => {
 				invalidateResolution( 'getEntityRecords', [
@@ -472,17 +463,6 @@ export default function UsersApp( { config = {} } = {} ) {
 			},
 		} );
 
-		// The bulk-edit host fans saves across every selected row, so the
-		// self-demote guard runs at action level: strip the acting user before
-		// the modal opens.
-		const ChangeRoleModal = ( props ) =>
-			changeRoleModal( {
-				...props,
-				items: ( props.items || [] ).filter(
-					( i ) => i.id !== currentUserId
-				),
-			} );
-
 		return buildActions( dataViewConfig.actions, {
 			labels: ACTION_LABELS,
 			callbacks: {
@@ -491,7 +471,7 @@ export default function UsersApp( { config = {} } = {} ) {
 			},
 			modals: {
 				delete: deleteModal,
-				'change-role': ChangeRoleModal,
+				'change-role': changeRoleModal,
 			},
 		} );
 	}, [

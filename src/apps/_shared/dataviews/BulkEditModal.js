@@ -5,7 +5,11 @@ import { store as noticesStore } from '@wordpress/notices';
 import { DataForm } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { _n, sprintf, __ } from '@wordpress/i18n';
-import { computeBulkPayload, NO_CHANGE } from './bulkEditPayload.mjs';
+import {
+	computeBulkPayload,
+	resolveBulkTargets,
+	NO_CHANGE,
+} from './bulkEditPayload.mjs';
 
 /**
  * The shared host for **Bulk Edit** — apply a chosen subset of fields to the M
@@ -41,13 +45,14 @@ import { computeBulkPayload, NO_CHANGE } from './bulkEditPayload.mjs';
  * and seeds the form value to the sentinel.
  *
  * @param {Object}   config
- * @param {Array}    config.entity      Entity coords `[ kind, name ]` spread into `saveEntityRecord` (e.g. `[ 'postType', 'post' ]`).
- * @param {Array}    config.fields      `DataForm` field definitions. Each editable field must accept + round-trip the sentinel as its "no change" value.
- * @param {Object}   config.form        `DataForm` layout config (`regular` / `panel` / `sections`).
- * @param {*}        [config.sentinel]  The per-field "no change" marker. Defaults to the shared `NO_CHANGE`. Must be a value the real field domain never produces.
- * @param {Function} [config.toRecord]  `(payload, item) => restBody` maps the changed-field payload to the per-item REST body. Defaults to identity. The `id` is always merged in afterwards, so `toRecord` need not (and should not) set it.
- * @param {Object}   [config.messages]  `{ applyLabel, saved, partial, error, empty }` copy. `saved`/`partial` may be `(n, failed) => string`. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing a `title`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
- * @param {Function} [config.onApplied] `({ items, succeeded, results, failed }) => void` after the batch settles — e.g. `invalidateResolution` for the list cache. Runs even when nothing changed (failed = 0).
+ * @param {Array}    config.entity        Entity coords `[ kind, name ]` spread into `saveEntityRecord` (e.g. `[ 'postType', 'post' ]`).
+ * @param {Array}    config.fields        `DataForm` field definitions. Each editable field must accept + round-trip the sentinel as its "no change" value.
+ * @param {Object}   config.form          `DataForm` layout config (`regular` / `panel` / `sections`).
+ * @param {*}        [config.sentinel]    The per-field "no change" marker. Defaults to the shared `NO_CHANGE`. Must be a value the real field domain never produces.
+ * @param {Function} [config.toRecord]    `(payload, item) => restBody` maps the changed-field payload to the per-item REST body. Defaults to identity. The `id` is always merged in afterwards, so `toRecord` need not (and should not) set it.
+ * @param {Object}   [config.messages]    `{ applyLabel, saved, partial, error, empty, noTargets }` copy. `saved`/`partial` may be `(n, failed) => string`. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing a `title`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
+ * @param {Function} [config.filterItems] `(items) => targets` optional target filter applied before the batch (e.g. users' self-demote guard). Defaults to identity. When it leaves zero targets, Apply short-circuits to an info notice (`messages.noTargets`) + `closeModal()` instead of firing an empty `Promise.allSettled` (which would settle with `failed === 0` and fire a misleading "updated 0 items" success).
+ * @param {Function} [config.onApplied]   `({ items, succeeded, results, failed }) => void` after the batch settles — e.g. `invalidateResolution` for the list cache. Runs even when nothing changed (failed = 0). `items` is the FILTERED target set.
  * @return {Function} A DataViews `RenderModal` component.
  */
 export function createBulkEditModal( {
@@ -57,6 +62,7 @@ export function createBulkEditModal( {
 	sentinel = NO_CHANGE,
 	toRecord,
 	messages = {},
+	filterItems,
 	onApplied,
 } ) {
 	const [ kind, name ] = entity;
@@ -92,14 +98,20 @@ export function createBulkEditModal( {
 		const [ data, setData ] = useState( seed );
 		const [ isBusy, setIsBusy ] = useState( false );
 		const { saveEntityRecord } = useDispatch( coreStore );
-		const { createSuccessNotice, createErrorNotice } =
+		const { createSuccessNotice, createErrorNotice, createInfoNotice } =
 			useDispatch( noticesStore );
 		const getLastEntitySaveError = useSelect(
 			( select ) => select( coreStore ).getLastEntitySaveError,
 			[]
 		);
 
-		const count = Array.isArray( items ) ? items.length : 0;
+		// `filterItems` strips rows the caller never wants written (e.g. the
+		// acting user, for the self-demote guard) BEFORE the batch — so the
+		// excluded rows stay selected but are never saved, and an all-excluded
+		// selection short-circuits rather than firing an empty batch that would
+		// report a phantom "0 items updated" success.
+		const targets = resolveBulkTargets( items, filterItems );
+		const count = targets.length;
 		const payload = computeBulkPayload( data, sentinel );
 		const hasChanges = Object.keys( payload ).length > 0;
 
@@ -115,6 +127,19 @@ export function createBulkEditModal( {
 
 		const onApply = async () => {
 			if ( isBusy ) {
+				return;
+			}
+			// All selected rows were filtered out (e.g. the only selection was
+			// the acting user, stripped by the self-demote guard). Fire an info
+			// notice + close instead of an empty `Promise.allSettled` that would
+			// settle `failed === 0` → a misleading "0 items updated" success.
+			if ( ! targets.length ) {
+				createInfoNotice(
+					messages.noTargets ||
+						__( 'No users to update.', 'wp-admin-shell' ),
+					{ isDismissible: true }
+				);
+				closeModal();
 				return;
 			}
 			// Defensive only: the Apply button is `disabled` on `! hasChanges`
@@ -135,7 +160,6 @@ export function createBulkEditModal( {
 			// modal stays open with the Apply button stuck disabled.
 			// (`Promise.allSettled` itself never rejects.)
 			try {
-				const targets = Array.isArray( items ) ? items : [];
 				const results = await Promise.allSettled(
 					targets.map( ( item ) => {
 						const body = {

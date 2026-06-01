@@ -1,5 +1,11 @@
 import '../_shared/app.css';
-import { useMemo, useState, useCallback } from '@wordpress/element';
+import {
+	useMemo,
+	useState,
+	useCallback,
+	useEffect,
+	useRef,
+} from '@wordpress/element';
 import { store as coreStore } from '@wordpress/core-data';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -8,37 +14,26 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
 import { useDataView } from '../../runtime/dataView/useDataView';
-
-const STANDARD_ROLE_LABELS = {
-	administrator: __( 'Administrator', 'wp-admin-shell' ),
-	editor: __( 'Editor', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	contributor: __( 'Contributor', 'wp-admin-shell' ),
-	subscriber: __( 'Subscriber', 'wp-admin-shell' ),
-};
-
-const DEFAULT_ROLES = [
-	'subscriber',
-	'contributor',
-	'author',
-	'editor',
-	'administrator',
-];
+import { STANDARD_ROLE_LABELS, DEFAULT_ROLES } from '../_shared/roles';
 
 /**
- * Cheap random password generator for the "Generate password" default. Not
- * cryptographically strong — WordPress emails the new user a set-password link
- * anyway and the admin can override the value before submitting. Used only so
- * the create succeeds when the admin leaves the field at its generated default.
+ * Generate the "Generate password" default using a CSPRNG. The REST create path
+ * sends no welcome / set-password email (`send_user_notification` is stripped —
+ * see `onSubmit` + app.md), so whenever the admin leaves this field at its
+ * default the generated value becomes the account's only stored credential. That
+ * makes a non-predictable source mandatory — `window.crypto.getRandomValues`,
+ * available in every browser the shell targets, replaces `Math.random()` (not a
+ * CSPRNG). The admin can still override the value before submitting.
  *
  * @return {string} A 16-char password.
  */
 function generatePassword() {
 	const chars =
 		'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+	const bytes = window.crypto.getRandomValues( new Uint32Array( 16 ) );
 	let out = '';
-	for ( let i = 0; i < 16; i++ ) {
-		out += chars.charAt( Math.floor( Math.random() * chars.length ) );
+	for ( let i = 0; i < bytes.length; i++ ) {
+		out += chars.charAt( bytes[ i ] % chars.length );
 	}
 	return out;
 }
@@ -55,8 +50,10 @@ function generatePassword() {
  * labels), falling back to the standard WordPress roles.
  *
  * Known gap: the welcome-email toggle (`send_user_notification`) is NOT in the
- * REST create schema, so the "Send the new user an email" checkbox is offered
- * but ignored server-side — see `app.md`.
+ * REST create schema, so the "Send the new user an email" checkbox is rendered
+ * read-only + off (with helper text) and stripped from the payload — see
+ * `app.md`. Because no welcome email is sent, the generated password default is
+ * the user's only credential, so it uses a CSPRNG (`generatePassword`).
  */
 export default function UserNewApp() {
 	const { config: userDataView } = useDataView( {
@@ -85,7 +82,11 @@ export default function UserNewApp() {
 		if ( has( 'subscriber' ) ) {
 			return 'subscriber';
 		}
-		return roleElements[ roleElements.length - 1 ]?.value || 'subscriber';
+		// Otherwise prefer the lowest-privilege standard role the set carries —
+		// never default to the LAST element (administrator in the standard set),
+		// which would seed an unexpectedly privileged role.
+		const lowest = DEFAULT_ROLES.find( ( value ) => has( value ) );
+		return lowest || roleElements[ 0 ]?.value || 'subscriber';
 	}, [ roleElements ] );
 
 	const [ data, setData ] = useState( () => ( {
@@ -96,9 +97,27 @@ export default function UserNewApp() {
 		url: '',
 		password: generatePassword(),
 		roles: defaultRole,
-		send_user_notification: true,
+		// Off + disabled: no welcome email is sent on the REST create path (see
+		// the field def + `onSubmit`).
+		send_user_notification: false,
 	} ) );
 	const [ isSaving, setIsSaving ] = useState( false );
+
+	// `useState`'s lazy initializer froze `data.roles` from the first-paint
+	// `defaultRole`. When `useDataView` resolves AFTER first paint (a `root/user`
+	// triple registered post-load → REST fallback), `roleElements` updates but
+	// the seeded `roles` does not — leaving a value that may not be among the
+	// select's options. Re-seed when `defaultRole` changes, but only while the
+	// admin hasn't picked a role themselves (so an explicit choice is preserved).
+	const roleDirtied = useRef( false );
+	useEffect( () => {
+		if ( roleDirtied.current ) {
+			return;
+		}
+		setData( ( prev ) =>
+			prev.roles === defaultRole ? prev : { ...prev, roles: defaultRole }
+		);
+	}, [ defaultRole ] );
 
 	const { saveEntityRecord } = useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -154,6 +173,15 @@ export default function UserNewApp() {
 				type: 'boolean',
 				label: __(
 					'Send the new user an email about their account.',
+					'wp-admin-shell'
+				),
+				// Disabled, off by default: the REST create path sends no welcome
+				// email (the field is stripped before POST — see `onSubmit` +
+				// app.md). Rendered read-only with helper text rather than as an
+				// interactive default-on control that does nothing.
+				readOnly: true,
+				description: __(
+					'The welcome email is not sent when creating a user from the workspace yet.',
 					'wp-admin-shell'
 				),
 			},
@@ -245,9 +273,19 @@ export default function UserNewApp() {
 					fields={ fields }
 					form={ form }
 					validity={ validity }
-					onChange={ ( edits ) =>
-						setData( ( prev ) => ( { ...prev, ...edits } ) )
-					}
+					onChange={ ( edits ) => {
+						// Once the admin picks a role, stop the resolve-time
+						// re-seed from overriding their choice.
+						if (
+							Object.prototype.hasOwnProperty.call(
+								edits,
+								'roles'
+							)
+						) {
+							roleDirtied.current = true;
+						}
+						setData( ( prev ) => ( { ...prev, ...edits } ) );
+					} }
 				/>
 
 				<Stack direction="row" justify="flex-start" gap="sm">
