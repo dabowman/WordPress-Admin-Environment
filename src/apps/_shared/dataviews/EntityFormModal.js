@@ -38,14 +38,15 @@ import { buildSubmitPayload, firstItem } from './entityFormPayload.mjs';
  * navigate to its id.
  *
  * @param {Object}          config
- * @param {Array}           config.entity     Entity coords `[ kind, name ]` spread into `useEntityRecord` / `saveEntityRecord` (e.g. `[ 'root', 'comment' ]`).
- * @param {'edit'|'create'} [config.mode]     Commit mode. Defaults to `'edit'`.
- * @param {Array}           config.fields     `DataForm` field definitions.
- * @param {Object}          config.form       `DataForm` layout config (`regular` / `panel` / `sections`).
- * @param {Function}        [config.toData]   `(record|undefined) => DataForm data`. Edit: maps `editedRecord` → form data (keep it near-identity — edit commits the buffered record, not a re-mapped payload). Create: `toData(undefined)` seeds the draft. Defaults to identity (`record ?? {}`).
- * @param {Function}        [config.toRecord] **Create-only.** `(data) => REST payload` for the `POST`. Defaults to identity. Edit does NOT apply `toRecord` — it commits the buffered `editedRecord` through `useEntityRecord().save()` (matching `EntityDataForm`), so an edit modal can omit it.
- * @param {Object}          [config.messages] `{ saved, error }` copy for the save notices plus `{ saveLabel, createLabel }` button text. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing an `editTitle` / `createTitle`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
- * @param {Function}        [config.onSaved]  `(record) => void` after a successful commit. CREATE receives the freshly-saved record (with its new id). EDIT receives the record refetched after `save()` resolves (the up-to-date server record, not the pre-save buffer).
+ * @param {Array}           config.entity          Entity coords `[ kind, name ]` spread into `useEntityRecord` / `saveEntityRecord` (e.g. `[ 'root', 'comment' ]`).
+ * @param {'edit'|'create'} [config.mode]          Commit mode. Defaults to `'edit'`.
+ * @param {Array}           config.fields          `DataForm` field definitions.
+ * @param {Object}          config.form            `DataForm` layout config (`regular` / `panel` / `sections`).
+ * @param {Function}        [config.toData]        `(record|undefined, item?) => DataForm data`. Edit: maps `editedRecord` → form data (keep it near-identity — edit commits the buffered record, not a re-mapped payload). Create: `toData(undefined, item)` seeds the draft, receiving the action's subject row as the second arg (so an inline-creation modal — e.g. comment Reply — can seed `parent`/`post` from the row).
+ * @param {Function}        [config.toRecord]      **Create-only.** `(data, item?) => REST payload` for the `POST`. Defaults to identity. Receives the subject row second so the payload can carry row-derived implicit fields (`parent`/`post`). Edit does NOT apply `toRecord` — it commits the buffered `editedRecord` through `useEntityRecord().save()` (matching `EntityDataForm`), so an edit modal can omit it.
+ * @param {Function}        [config.renderContext] **Create-only, optional.** `(item) => JSX | null` rendered above the form as read-only context (e.g. the parent comment in a Reply). Returns `null` when there's no subject row.
+ * @param {Object}          [config.messages]      `{ saved, error }` copy for the save notices plus `{ saveLabel, createLabel }` button text. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing an `editTitle` / `createTitle`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
+ * @param {Function}        [config.onSaved]       `(record) => void` after a successful commit. CREATE receives the freshly-saved record (with its new id). EDIT receives the record refetched after `save()` resolves (the up-to-date server record, not the pre-save buffer).
  * @return {Function} A DataViews `RenderModal` component.
  */
 export function createEntityFormModal( {
@@ -55,6 +56,7 @@ export function createEntityFormModal( {
 	form,
 	toData,
 	toRecord,
+	renderContext,
 	messages = {},
 	onSaved,
 } ) {
@@ -158,12 +160,17 @@ export function createEntityFormModal( {
 	 * new record (and its id) is available to `onSaved`.
 	 *
 	 * @param {Object}   root0
+	 * @param {Object}   [root0.item]            The action's subject row (used by
+	 *                                           inline-creation modals to seed
+	 *                                           row-derived implicit fields).
 	 * @param {Function} root0.closeModal        DataViews modal-close callback.
 	 * @param {Function} root0.onActionPerformed DataViews post-action callback.
 	 * @return {JSX.Element} The create body.
 	 */
-	function CreateBody( { closeModal, onActionPerformed } ) {
-		const [ data, setData ] = useState( () => mapToData( undefined ) );
+	function CreateBody( { item, closeModal, onActionPerformed } ) {
+		const [ data, setData ] = useState( () =>
+			mapToData( undefined, item )
+		);
 		const [ isSaving, setIsSaving ] = useState( false );
 		const { saveEntityRecord } = useDispatch( coreStore );
 		const { createSuccessNotice, createErrorNotice } =
@@ -182,7 +189,11 @@ export function createEntityFormModal( {
 			}
 			setIsSaving( true );
 			try {
-				const payload = buildSubmitPayload( { data, toRecord } );
+				const payload = buildSubmitPayload( {
+					data,
+					toRecord,
+					item,
+				} );
 				// Blocking: the new record (with its id) is returned so
 				// `onSaved` can navigate to / invalidate the new id.
 				const record = await saveEntityRecord( kind, name, payload );
@@ -219,8 +230,14 @@ export function createEntityFormModal( {
 			}
 		};
 
+		const context =
+			item && typeof renderContext === 'function'
+				? renderContext( item )
+				: null;
+
 		return (
 			<Stack direction="column" gap="md">
+				{ context }
 				<DataForm
 					data={ data }
 					fields={ fields }
@@ -276,6 +293,7 @@ export function createEntityFormModal( {
 		if ( mode === 'create' ) {
 			return (
 				<CreateBody
+					item={ item }
 					closeModal={ closeModal }
 					onActionPerformed={ onActionPerformed }
 				/>

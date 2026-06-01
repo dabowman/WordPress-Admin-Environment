@@ -10,6 +10,7 @@ import { Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { userCan } from '../../runtime/capabilities/userCan';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -21,15 +22,25 @@ import {
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import { createEntityFormModal } from '../_shared/dataviews/EntityFormModal';
+import ViewTabs from '../_shared/dataviews/ViewTabs';
 
 /**
  * core:comments — moderation list backed by `useEntityRecords('root','comment')`.
  *
- * Status flow: hold → approved | spam | trash. The REST endpoint accepts
- * `status` updates via PATCH; we issue them through `saveEntityRecord` with a
- * partial payload so optimistic edits round-trip cleanly. Comment content
- * arrives HTML-rendered (already sanitized server-side by
- * `wp_filter_comment_content`); we render it via `dangerouslySetInnerHTML`.
+ * Status flow: hold → approved | spam | trash, plus the inverse transitions —
+ * unspam (spam → approved), restore (trash → approved), and permanent delete
+ * (`force`). The REST endpoint accepts `status` updates via PATCH; we issue them
+ * through `saveEntityRecord` with a partial payload so optimistic edits
+ * round-trip cleanly. Comment content arrives HTML-rendered (already sanitized
+ * server-side by `wp_filter_comment_content`); we render it via
+ * `dangerouslySetInnerHTML`.
+ *
+ * Single-comment Edit (Quick Edit ≡ full Edit, collapsed into one modal) and
+ * Reply ride the shared `createEntityFormModal` factory — Edit in edit mode
+ * (PATCH the buffered record), Reply in create mode (content-only POST with the
+ * row's `parent`/`post`). Inline-in-row placement is upstream-blocked (DataViews
+ * has no editable-cell / detail-row primitive), so both ship as modal actions.
  */
 const STATUS_LABELS = {
 	approved: __( 'Approved', 'wp-admin-shell' ),
@@ -49,28 +60,71 @@ const FIELD_LABELS = {
 };
 
 const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	reply: __( 'Reply', 'wp-admin-shell' ),
 	approve: __( 'Approve', 'wp-admin-shell' ),
 	unapprove: __( 'Unapprove', 'wp-admin-shell' ),
 	spam: __( 'Mark as spam', 'wp-admin-shell' ),
+	unspam: __( 'Not spam', 'wp-admin-shell' ),
 	trash: __( 'Move to trash', 'wp-admin-shell' ),
+	untrash: __( 'Restore', 'wp-admin-shell' ),
+	'delete-permanently': __( 'Delete permanently', 'wp-admin-shell' ),
 };
 
 /**
- * Snackbar copy for each non-trash status-change action. Keyed by spec id so a
- * cascade override that renames `spam` → `mark-as-spam` keeps the declared
+ * Snackbar copy for each non-destructive status-change action. Keyed by spec id
+ * so a cascade override that renames `spam` → `mark-as-spam` keeps the declared
  * label but loses the success message — the default fallback covers it.
  */
 const STATUS_SUCCESS_LABELS = {
 	approve: __( 'Approved.', 'wp-admin-shell' ),
 	unapprove: __( 'Set to pending.', 'wp-admin-shell' ),
 	spam: __( 'Marked as spam.', 'wp-admin-shell' ),
+	unspam: __( 'No longer marked as spam.', 'wp-admin-shell' ),
+	untrash: __( 'Restored.', 'wp-admin-shell' ),
 };
 
+/**
+ * Target status for each status-flip action. `unspam` and `untrash` both
+ * resolve to `approved` — mirroring wp-admin, where "Not Spam" and "Restore"
+ * return a comment to the approved queue (not its prior pending state, which
+ * REST does not preserve).
+ */
 const STATUS_TARGETS = {
 	approve: 'approved',
 	unapprove: 'hold',
 	spam: 'spam',
+	unspam: 'approved',
+	untrash: 'approved',
 };
+
+// View-tab segments — the classic All | Pending | Approved | Spam | Trash strip.
+// `filter.value` is the REST `status` arg `useEntityElementCounts` keys on; the
+// counts object is `{ approved, hold, spam, trash }`. "All" carries no count
+// (it's the unfiltered `status: 'any'` base, not a single status value).
+const VIEW_TAB_SEGMENTS = [
+	{ id: 'all', label: __( 'All', 'wp-admin-shell' ), filter: null },
+	{
+		id: 'hold',
+		label: __( 'Pending', 'wp-admin-shell' ),
+		filter: { field: 'status', value: 'hold' },
+	},
+	{
+		id: 'approved',
+		label: __( 'Approved', 'wp-admin-shell' ),
+		filter: { field: 'status', value: 'approved' },
+	},
+	{
+		id: 'spam',
+		label: __( 'Spam', 'wp-admin-shell' ),
+		filter: { field: 'status', value: 'spam' },
+	},
+	{
+		id: 'trash',
+		label: __( 'Trash', 'wp-admin-shell' ),
+		filter: { field: 'status', value: 'trash' },
+	},
+];
 
 const VIEW_DEFAULTS = {
 	type: 'table',
@@ -84,17 +138,101 @@ const VIEW_DEFAULTS = {
 };
 
 /**
+ * Derive the active view-tab segment id from the current `view.filters`. A
+ * single `status` filter (`is`/`isAny` on one value) maps to that segment; an
+ * absent or multi-value status filter falls back to "all".
+ *
+ * @param {Object} view DataViews controlled view shape.
+ * @return {string} The active segment id.
+ */
+function activeSegmentId( view ) {
+	const statusFilter = ( view.filters ?? [] ).find(
+		( f ) => f.field === 'status'
+	);
+	if ( ! statusFilter ) {
+		return 'all';
+	}
+	const { value } = statusFilter;
+	const single = Array.isArray( value ) ? value : [ value ];
+	if ( single.length !== 1 ) {
+		return 'all';
+	}
+	const match = VIEW_TAB_SEGMENTS.find(
+		( seg ) => seg.filter && seg.filter.value === single[ 0 ]
+	);
+	return match ? match.id : 'all';
+}
+
+/**
+ * Author cell renderer. Stacks avatar + name + email (`mailto:`) + author URL
+ * link, and — for users who can `moderate_comments` — the author IP. All fields
+ * already ride the `edit`-context REST record; only the moderate gate hides IP.
+ *
+ * Module-scoped — captures no props. The `canModerate` flag is resolved once at
+ * module load via `userCan` (the cap map is static for the session).
+ *
+ * @param {Object} root0
+ * @param {Object} root0.item The DataViews row.
+ * @return {JSX.Element} The author cell.
+ */
+const canModerate = userCan( 'moderate_comments' );
+
+function AuthorCell( { item } ) {
+	return (
+		<Stack
+			direction="row"
+			gap="sm"
+			align="flex-start"
+			className="wp-admin-shell-app-comments__author"
+		>
+			{ item.avatarUrl ? (
+				<img
+					className="wp-admin-shell-app-comments__avatar"
+					src={ item.avatarUrl }
+					alt=""
+					width={ 32 }
+					height={ 32 }
+				/>
+			) : null }
+			<Stack direction="column" gap="xs">
+				<Text>
+					<strong>
+						{ item.author || __( 'Anonymous', 'wp-admin-shell' ) }
+					</strong>
+				</Text>
+				{ item.authorEmail ? (
+					<a
+						className="wp-admin-shell-app-comments__author-email"
+						href={ `mailto:${ item.authorEmail }` }
+					>
+						{ item.authorEmail }
+					</a>
+				) : null }
+				{ item.authorUrl ? (
+					<a
+						className="wp-admin-shell-app-comments__author-url"
+						href={ item.authorUrl }
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						{ item.authorUrlDisplay }
+					</a>
+				) : null }
+				{ canModerate && item.authorIp ? (
+					<Text className="wp-admin-shell-app__muted">
+						{ item.authorIp }
+					</Text>
+				) : null }
+			</Stack>
+		</Stack>
+	);
+}
+
+/**
  * Field id → render callback. Module-scoped — renderers capture no props.
  */
 const FIELD_RENDERERS = {
-	author: ( { item } ) => (
-		<Stack direction="column" gap="xs">
-			<Text>{ item.author }</Text>
-			<Text className="wp-admin-shell-app__muted">
-				{ item.authorEmail }
-			</Text>
-		</Stack>
-	),
+	author: AuthorCell,
 	// Trust boundary: `item.content` is `record.content.rendered`, which
 	// WordPress core filters server-side via `wp_filter_comment_content`
 	// (kses + the comment-text filter chain). Author-supplied raw HTML has
@@ -108,6 +246,80 @@ const FIELD_RENDERERS = {
 	status: ( { item } ) => (
 		<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
 	),
+};
+
+// ---- Edit / Reply DataForm field + form definitions ------------------------
+
+const STATUS_ELEMENTS = STATUS_VALUES.map( ( value ) => ( {
+	value,
+	label: STATUS_LABELS[ value ],
+} ) );
+
+// Edit-modal fields. `author_email` is gated behind `moderate_comments` via the
+// form layout (built below) — non-moderators never reach this app (the app cap
+// floor is `moderate_comments`), but the gate is kept explicit for parity with
+// the spec and any future relaxed floor.
+const EDIT_FIELDS = [
+	{
+		id: 'author_name',
+		type: 'text',
+		label: __( 'Name', 'wp-admin-shell' ),
+	},
+	{
+		id: 'author_email',
+		type: 'email',
+		label: __( 'Email', 'wp-admin-shell' ),
+	},
+	{
+		id: 'author_url',
+		type: 'text',
+		label: __( 'URL', 'wp-admin-shell' ),
+	},
+	{
+		id: 'content',
+		type: 'text',
+		label: __( 'Comment', 'wp-admin-shell' ),
+		Edit: { control: 'textarea', rows: 6 },
+	},
+	{
+		id: 'status',
+		type: 'text',
+		label: __( 'Status', 'wp-admin-shell' ),
+		elements: STATUS_ELEMENTS,
+		Edit: 'select',
+	},
+	{
+		id: 'date',
+		type: 'datetime',
+		label: __( 'Date', 'wp-admin-shell' ),
+	},
+];
+
+const EDIT_FORM = {
+	layout: { type: 'regular', labelPosition: 'top' },
+	fields: [
+		'author_name',
+		...( canModerate ? [ 'author_email' ] : [] ),
+		'author_url',
+		'content',
+		'status',
+		'date',
+	],
+};
+
+const REPLY_FIELDS = [
+	{
+		id: 'content',
+		type: 'text',
+		label: __( 'Reply', 'wp-admin-shell' ),
+		Edit: { control: 'textarea', rows: 6 },
+		isValid: { required: true },
+	},
+];
+
+const REPLY_FORM = {
+	layout: { type: 'regular', labelPosition: 'top' },
+	fields: [ 'content' ],
 };
 
 export default function CommentsApp( { config = {} } ) {
@@ -174,21 +386,55 @@ export default function CommentsApp( { config = {} } ) {
 		if ( ! records ) {
 			return [];
 		}
-		return records.map( ( record ) => ( {
-			id: record.id,
-			author: decodeEntities( record.author_name || '' ),
-			authorEmail: decodeEntities( record.author_email || '' ),
-			content: record.content?.rendered || '',
-			status: record.status,
-			date: record.date,
-			rawRecord: record,
-		} ) );
+		return records.map( ( record ) => {
+			const avatarUrls = record.author_avatar_urls || {};
+			// Prefer the 48px avatar, fall back to whatever size is present.
+			const avatarUrl =
+				avatarUrls[ '48' ] ||
+				avatarUrls[ '96' ] ||
+				avatarUrls[ '24' ] ||
+				Object.values( avatarUrls )[ 0 ] ||
+				'';
+			const authorUrl = record.author_url || '';
+			return {
+				id: record.id,
+				author: decodeEntities( record.author_name || '' ),
+				authorEmail: decodeEntities( record.author_email || '' ),
+				authorUrl,
+				// Strip the protocol for a tidier display label, like wp-admin.
+				authorUrlDisplay: authorUrl.replace( /^https?:\/\//, '' ),
+				authorIp: record.author_ip || '',
+				avatarUrl,
+				content: record.content?.rendered || '',
+				status: record.status,
+				date: record.date,
+				post: record.post,
+				rawRecord: record,
+			};
+		} );
 	}, [ records ] );
+
+	const refreshList = useCallback( () => {
+		invalidateResolution( 'getEntityRecords', [
+			'root',
+			'comment',
+			queryArgs,
+		] );
+		// Status transitions move comments between buckets, so the per-status
+		// count queries the filter labels + view tabs read from refresh too.
+		invalidateEntityElementCounts(
+			invalidateResolution,
+			'root',
+			'comment',
+			'status',
+			STATUS_VALUES
+		);
+	}, [ invalidateResolution, queryArgs ] );
 
 	const setCommentsStatus = useCallback(
 		async ( items, targetStatus, label ) => {
 			// `allSettled` so one failure in a bulk action doesn't collapse
-			// the rest — symmetric with the trash modal.
+			// the rest — symmetric with the destructive modals.
 			const results = await Promise.allSettled(
 				items.map( ( item ) =>
 					saveEntityRecord( 'root', 'comment', {
@@ -197,21 +443,7 @@ export default function CommentsApp( { config = {} } ) {
 					} )
 				)
 			);
-			invalidateResolution( 'getEntityRecords', [
-				'root',
-				'comment',
-				queryArgs,
-			] );
-			// Status transitions move comments between buckets, so the
-			// per-status count queries the filter labels read from need
-			// to refresh too — same goes for the trash modal below.
-			invalidateEntityElementCounts(
-				invalidateResolution,
-				'root',
-				'comment',
-				'status',
-				STATUS_VALUES
-			);
+			refreshList();
 			const failed = results.filter(
 				( r ) => r.status === 'rejected'
 			).length;
@@ -248,8 +480,7 @@ export default function CommentsApp( { config = {} } ) {
 		},
 		[
 			saveEntityRecord,
-			invalidateResolution,
-			queryArgs,
+			refreshList,
 			createSuccessNotice,
 			createErrorNotice,
 		]
@@ -271,6 +502,69 @@ export default function CommentsApp( { config = {} } ) {
 	);
 
 	const actions = useMemo( () => {
+		// Modal Edit (Quick Edit ≡ full Edit) — PATCH the buffered record.
+		const editModal = createEntityFormModal( {
+			entity: [ 'root', 'comment' ],
+			mode: 'edit',
+			fields: EDIT_FIELDS,
+			form: EDIT_FORM,
+			// Near-identity: edit commits the buffered `editedRecord`, not a
+			// re-mapped payload. We only normalize `content` from the rendered
+			// shape into the raw string the textarea + PATCH expect.
+			toData: ( record ) => ( {
+				...record,
+				content:
+					record?.content?.raw ?? record?.content?.rendered ?? '',
+			} ),
+			messages: {
+				saved: __( 'Comment updated.', 'wp-admin-shell' ),
+				error: __( 'Failed to update comment.', 'wp-admin-shell' ),
+				saveLabel: __( 'Update', 'wp-admin-shell' ),
+			},
+			onSaved: refreshList,
+		} );
+
+		// Reply — content-only POST; `parent`/`post` come from the subject row.
+		// `author` defaults to the current moderator server-side; the reply
+		// auto-approves (the moderator is trusted).
+		const replyModal = createEntityFormModal( {
+			entity: [ 'root', 'comment' ],
+			mode: 'create',
+			fields: REPLY_FIELDS,
+			form: REPLY_FORM,
+			toData: () => ( { content: '' } ),
+			toRecord: ( draft, item ) => ( {
+				content: draft.content,
+				parent: item?.id,
+				post: item?.post,
+			} ),
+			renderContext: ( item ) => (
+				<Stack
+					direction="column"
+					gap="xs"
+					className="wp-admin-shell-app-comments__reply-context"
+				>
+					<Text className="wp-admin-shell-app__muted">
+						{ sprintf(
+							/* translators: %s: comment author name. */
+							__( 'In reply to %s', 'wp-admin-shell' ),
+							item.author || __( 'Anonymous', 'wp-admin-shell' )
+						) }
+					</Text>
+					<div
+						className="wp-admin-shell-app-comments__excerpt"
+						dangerouslySetInnerHTML={ { __html: item.content } }
+					/>
+				</Stack>
+			),
+			messages: {
+				saved: __( 'Reply posted.', 'wp-admin-shell' ),
+				error: __( 'Failed to post reply.', 'wp-admin-shell' ),
+				createLabel: __( 'Reply', 'wp-admin-shell' ),
+			},
+			onSaved: refreshList,
+		} );
+
 		const trashModal = createBulkConfirmModal( {
 			getMessage: ( items ) =>
 				items.length === 1
@@ -280,18 +574,7 @@ export default function CommentsApp( { config = {} } ) {
 			mutate: ( item ) =>
 				deleteEntityRecord( 'root', 'comment', item.id ),
 			onSettled: ( { items, failed } ) => {
-				invalidateResolution( 'getEntityRecords', [
-					'root',
-					'comment',
-					queryArgs,
-				] );
-				invalidateEntityElementCounts(
-					invalidateResolution,
-					'root',
-					'comment',
-					'status',
-					STATUS_VALUES
-				);
+				refreshList();
 				if ( failed > 0 ) {
 					createErrorNotice(
 						sprintf(
@@ -310,6 +593,48 @@ export default function CommentsApp( { config = {} } ) {
 				} else {
 					createSuccessNotice(
 						__( 'Moved to trash.', 'wp-admin-shell' ),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		const deleteModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __(
+							'Permanently delete this comment? This cannot be undone.',
+							'wp-admin-shell'
+					  )
+					: __(
+							'Permanently delete these comments? This cannot be undone.',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Delete permanently', 'wp-admin-shell' ),
+			mutate: ( item ) =>
+				deleteEntityRecord( 'root', 'comment', item.id, {
+					force: true,
+				} ),
+			onSettled: ( { items, failed } ) => {
+				refreshList();
+				if ( failed > 0 ) {
+					createErrorNotice(
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d comment failed to delete.',
+								'%1$d of %2$d comments failed to delete.',
+								failed,
+								'wp-admin-shell'
+							),
+							failed,
+							items.length
+						),
+						{ isDismissible: true }
+					);
+				} else {
+					createSuccessNotice(
+						__( 'Permanently deleted.', 'wp-admin-shell' ),
 						{ type: 'snackbar' }
 					);
 				}
@@ -337,15 +662,31 @@ export default function CommentsApp( { config = {} } ) {
 						STATUS_TARGETS.spam,
 						STATUS_SUCCESS_LABELS.spam
 					),
+				unspam: ( items ) =>
+					setCommentsStatus(
+						items,
+						STATUS_TARGETS.unspam,
+						STATUS_SUCCESS_LABELS.unspam
+					),
+				untrash: ( items ) =>
+					setCommentsStatus(
+						items,
+						STATUS_TARGETS.untrash,
+						STATUS_SUCCESS_LABELS.untrash
+					),
 			},
-			modals: { trash: trashModal },
+			modals: {
+				edit: editModal,
+				reply: replyModal,
+				trash: trashModal,
+				'delete-permanently': deleteModal,
+			},
 		} );
 	}, [
 		dataViewConfig,
 		setCommentsStatus,
 		deleteEntityRecord,
-		invalidateResolution,
-		queryArgs,
+		refreshList,
 		createSuccessNotice,
 		createErrorNotice,
 	] );
@@ -358,6 +699,30 @@ export default function CommentsApp( { config = {} } ) {
 		[ totalItems, totalPages ]
 	);
 
+	const currentSegment = activeSegmentId( view );
+
+	const onSelectSegment = useCallback(
+		( segment ) => {
+			setView( ( prev ) => {
+				// Drop any existing status filter, then add the segment's (if
+				// any). "All" carries no filter → unfiltered `status: 'any'`.
+				const filters = ( prev.filters ?? [] ).filter(
+					( f ) => f.field !== 'status'
+				);
+				if ( segment.filter ) {
+					filters.push( {
+						field: segment.filter.field,
+						operator: 'is',
+						value: segment.filter.value,
+					} );
+				}
+				// Reset to page 1 — the new filter set has its own pagination.
+				return { ...prev, filters, page: 1 };
+			} );
+		},
+		[ setView ]
+	);
+
 	return (
 		<div className="wp-admin-shell-app-comments wp-admin-shell-app--fill">
 			{ ! records ? (
@@ -365,19 +730,27 @@ export default function CommentsApp( { config = {} } ) {
 					<Spinner />
 				</div>
 			) : (
-				<DataViews
-					data={ data }
-					fields={ fields }
-					view={ view }
-					onChangeView={ setView }
-					actions={ actions }
-					paginationInfo={ paginationInfo }
-					isLoading={ isResolving }
-					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
-					selection={ selection }
-					onChangeSelection={ setSelection }
-					getItemId={ ( item ) => item.id.toString() }
-				/>
+				<>
+					<ViewTabs
+						segments={ VIEW_TAB_SEGMENTS }
+						currentValue={ currentSegment }
+						onSelect={ onSelectSegment }
+						counts={ statusCounts }
+					/>
+					<DataViews
+						data={ data }
+						fields={ fields }
+						view={ view }
+						onChangeView={ setView }
+						actions={ actions }
+						paginationInfo={ paginationInfo }
+						isLoading={ isResolving }
+						defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+						selection={ selection }
+						onChangeSelection={ setSelection }
+						getItemId={ ( item ) => item.id.toString() }
+					/>
+				</>
 			) }
 		</div>
 	);
