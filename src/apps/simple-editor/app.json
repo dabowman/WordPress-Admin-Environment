@@ -72,9 +72,9 @@
 					"purpose": "Category checklist + tag token-field options (`useEntityRecords`, view context). Keyed by the taxonomy SLUG (`category` / `post_tag`) — the core-data entity name — NOT the REST base (`categories` / `tags`), which registers no entity and leaves `records` null forever."
 				},
 				{
-					"source": "root/user?capabilities[]=edit_posts",
+					"source": "root/user?who=authors",
 					"via": "core-data",
-					"purpose": "Author select options (cap-gated panel). Uses the WP 5.9+ `capabilities` query (replaces the deprecated `who=authors`)."
+					"purpose": "Author select options (cap-gated panel). Uses `who=authors` (NOT `capabilities[]=edit_posts`): the `capabilities` REST param requires the admin-only `list_users` cap and 403s for Editors/Authors who can reassign authors, whereas `who=authors` has a relaxed `edit_posts` permission branch. `who` is not deprecated and matches `core:media`."
 				},
 				{
 					"source": "postType/attachment",
@@ -147,7 +147,7 @@
 			{
 				"id": "autosaved",
 				"when": "saveStatus === 'autosaved'",
-				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a pending/published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns."
+				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a pending/published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns. Only shown when the buffered edits were content fields the autosave persists (`title`/`content`/`excerpt`); if any non-content metadata field is still buffered, the status is suppressed to `idle` so it never reads as 'saved' for a pending metadata change."
 			},
 			{
 				"id": "save-failed",

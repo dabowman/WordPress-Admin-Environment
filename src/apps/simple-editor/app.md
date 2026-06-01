@@ -30,7 +30,7 @@ The autosave target is status-gated to mirror core's autosaves controller (`auto
 | Tags | `tags[]` | `FormTokenField` (taxonomy slug `post_tag`) |
 | Excerpt | `excerpt.raw` | `TextareaControl` |
 | Featured image | `featured_media` | `MediaUpload` / `MediaUploadCheck` (core media modal) |
-| Author | `author` | `SelectControl`, cap-gated on `edit_others_posts` |
+| Author | `author` | `SelectControl`, cap-gated on `edit_others_posts`. Options come from `useEntityRecords('root','user',{ who:'authors' })` — `who=authors` (NOT `capabilities[]=edit_posts`, which requires the admin-only `list_users` cap and would 403 for the Editors this panel targets). |
 | Discussion | `comment_status`, `ping_status` | `FormToggle` ×2 (gated on comment support) |
 
 `PublishPanel` is the one deliberately hand-rolled bit — the *simple* version of core's publish matrix (Draft / Publish / Schedule / Private + password), bounded by the `block-editor.md` §4 field mapping. The toolbar Publish button sets `status` to `publish` / `private` / `future` (future-dated) and flushes.
@@ -40,6 +40,8 @@ The autosave target is status-gated to mirror core's autosaves controller (`auto
 > Core *also* gates the parent-update on the editor being the post author; this helper is status-only, so an admin autosaving someone else's draft PUTs the parent where core would write a revision. Lower-frequency, accepted divergence.
 
 **Status indicator.** The `saveStatus` state machine (`idle | saving | saved | autosaved | error`) drives the toolbar status text. `saved` is a live-record flush; `autosaved` is the per-user revision path for published/scheduled posts (the live record still has pending edits). Both auto-fade back to `idle` after 2s via a second `setTimeout`; after an `autosaved` fade the `Unsaved changes` indicator returns because `hasEdits` is still true.
+
+The autosaves endpoint only persists `title` / `content` / `excerpt`; the sidebar's metadata edits (slug, categories, tags, featured_media, author, comment_status, date, status, password) stay buffered until the author clicks Update — matching core. So `useEntityAutosave` **suppresses** the `autosaved` status whenever the buffered edit set (read via `getEntityRecordEdits`) contains any non-content field: the content revision is still written, but `saveStatus` drops straight back to `idle` so the toolbar reads `Unsaved changes` (accurate — the metadata change is still pending) rather than flashing a misleading `Auto-saved`.
 
 **Dirty-state.** `useDirtyState(regionId, hasEdits, { blocksNavigation: true })` reports unsaved-state to the kernel. The NavigationGuard component (shell-level) shows the standard "unsaved changes" confirmation on `beforeunload`, Navigation API, and intra-shell route changes.
 

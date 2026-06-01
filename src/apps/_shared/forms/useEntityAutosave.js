@@ -6,6 +6,16 @@ import { __ } from '@wordpress/i18n';
 import { autosaveTarget } from '../../simple-editor/autosave.mjs';
 
 /**
+ * The only fields the autosaves endpoint actually persists. Edits to any other
+ * field (slug, categories, tags, featured_media, author, comment_status, date,
+ * status, password, …) stay buffered in `editedRecord` until an explicit
+ * Update/Publish flush, so they must NOT be reported as "Auto-saved".
+ *
+ * @type {string[]}
+ */
+const AUTOSAVE_FIELDS = [ 'title', 'content', 'excerpt' ];
+
+/**
  * Known REST bases for built-in post types. Lets {@link useRestBase} return
  * synchronously on the first render without waiting for the post-type entity to
  * resolve.
@@ -100,6 +110,25 @@ export function useEntityAutosave( {
 	// the correct REST base is in place.
 	const restBase = useRestBase( postType ) ?? 'posts';
 
+	// The dirty (buffered) edit keys for this record. Used to decide whether a
+	// published-post autosave fully captured the pending changes: if any edited
+	// field is NOT one the autosaves endpoint persists, the "Auto-saved" signal
+	// would be misleading (the metadata change is still buffered until Update).
+	const editedKeys = useSelect(
+		( select ) =>
+			Object.keys(
+				select( coreStore ).getEntityRecordEdits(
+					'postType',
+					postType,
+					postId
+				) || {}
+			),
+		[ postType, postId ]
+	);
+	const hasPendingNonContentEdit = editedKeys.some(
+		( key ) => ! AUTOSAVE_FIELDS.includes( key )
+	);
+
 	const runSave = useCallback( async () => {
 		setSaveStatus( 'saving' );
 		try {
@@ -129,7 +158,14 @@ export function useEntityAutosave( {
 					excerpt: readRaw( editedRecord?.excerpt ),
 				},
 			} );
-			setSaveStatus( 'autosaved' );
+			// Only surface "Auto-saved" when the buffered edits were content
+			// fields the autosave actually persisted. If metadata (slug,
+			// categories, author, date, status, …) is still buffered, the live
+			// record wasn't updated for it — flashing "Auto-saved" would read as
+			// "saved" while that change is still pending its explicit Update. In
+			// that case drop straight back to idle (the toolbar then shows
+			// "Unsaved changes" via `hasEdits`).
+			setSaveStatus( hasPendingNonContentEdit ? 'idle' : 'autosaved' );
 			setSaveError( null );
 		} catch ( err ) {
 			setSaveStatus( 'error' );
@@ -137,7 +173,7 @@ export function useEntityAutosave( {
 				err?.message || __( 'Save failed.', 'wp-admin-shell' )
 			);
 		}
-	}, [ editedRecord, postId, restBase ] );
+	}, [ editedRecord, postId, restBase, hasPendingNonContentEdit ] );
 
 	const cancelPending = useCallback( () => {
 		if ( timerRef.current ) {

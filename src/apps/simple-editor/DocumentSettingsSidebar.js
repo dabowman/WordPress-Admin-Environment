@@ -192,8 +192,16 @@ function PublishPanel( { editedRecord, edit } ) {
 					value={ dateValue }
 					onChange={ ( e ) =>
 						edit( {
+							// Send the naive `YYYY-MM-DDTHH:mm` value through
+							// unchanged (append seconds). WP REST treats a
+							// TZ-less `date` string as SITE-local — matching
+							// the read path (`editedRecord.date.slice(0,16)`,
+							// also site-local). Routing through
+							// `new Date(...).toISOString()` would reinterpret
+							// the naive value in the BROWSER's TZ and shift the
+							// saved time by the offset on reload.
 							date: e.target.value
-								? new Date( e.target.value ).toISOString()
+								? `${ e.target.value }:00`
 								: null,
 						} )
 					}
@@ -433,10 +441,16 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
  * @return {JSX.Element|null} The panel, or null when the current user can't reassign.
  */
 function AuthorPanel( { editedRecord, edit } ) {
-	// `capabilities[]=edit_posts` is the WP 5.9+ replacement for the deprecated
-	// `who: 'authors'` arg — both narrow the list to users who can author posts.
+	// `who: 'authors'` narrows the list to users who can author posts and —
+	// unlike the `capabilities` param — has a relaxed REST permission branch
+	// (`WP_REST_Users_Controller::get_items_permissions_check()`) that returns
+	// true for anyone who can `edit_posts`. The `capabilities` param instead
+	// requires the admin-only `list_users` cap, so it 403s for Editors/Authors
+	// (who CAN reassign authors via `edit_others_posts`) and the panel would
+	// silently vanish. `who` is NOT deprecated (no `_deprecated_argument`) and
+	// matches the repo convention (`src/apps/media/index.js`).
 	const { records } = useEntityRecords( 'root', 'user', {
-		capabilities: [ 'edit_posts' ],
+		who: 'authors',
 		per_page: 100,
 		_fields: 'id,name',
 		context: 'view',
