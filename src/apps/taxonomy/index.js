@@ -9,7 +9,7 @@ import { store as noticesStore } from '@wordpress/notices';
 import { DataViews, DataForm } from '@wordpress/dataviews/wp';
 import { Badge, Button, Icon, Stack, Text } from '@wordpress/ui';
 import { Modal, Spinner } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
@@ -61,39 +61,54 @@ function stripTags( html ) {
  * Field id → render callback.
  *
  * @param {Object}      deps
- * @param {Function}    deps.onEditTerm   Open the edit modal for a raw term record.
- * @param {boolean}     deps.hierarchical Whether the taxonomy nests terms.
- * @param {Object}      deps.depthById    term id → depth (0-based) for indentation.
- * @param {number|null} deps.defaultId    Default-category term id, or null.
+ * @param {Function}    deps.onEditTerm Open the edit modal for a raw term record.
+ * @param {boolean}     deps.showDepth  Whether to indent rows by tree depth.
+ * @param {Object}      deps.depthById  term id → depth (0-based) for indentation.
+ * @param {number|null} deps.defaultId  Default-category term id, or null.
  * @return {Object} id → render callback.
  */
 function buildFieldRenderers( {
 	onEditTerm,
-	hierarchical,
+	showDepth,
 	depthById,
 	defaultId,
 } ) {
 	return {
 		name: ( { item } ) => {
-			const depth = hierarchical ? depthById[ item.id ] || 0 : 0;
+			// Depth indentation only reads true when the list is in tree order
+			// (name-ascending). Under any other sort — or when paged past the
+			// tree window — rows render flat so a child never appears indented
+			// without its parent visible above it (mirrors wp-admin).
+			const depth = showDepth ? depthById[ item.id ] || 0 : 0;
 			const isDefault = defaultId !== null && item.id === defaultId;
 			return (
 				<Stack
 					direction="row"
 					align="center"
 					gap="xs"
-					// Indent nested terms; aria-level (1-based) announces the
-					// tree depth to assistive tech. Flat taxonomies omit both.
 					style={
 						depth > 0
 							? { paddingInlineStart: `${ depth * 1.5 }em` }
 							: undefined
 					}
-					{ ...( hierarchical
-						? { role: 'treeitem', 'aria-level': depth + 1 }
-						: {} ) }
 				>
-					{ depth > 0 && <span aria-hidden="true">&#8212;</span> }
+					{ depth > 0 && (
+						<>
+							{ /* Convey depth to assistive tech: DataViews owns
+							     the table semantics, so a lone role="treeitem"
+							     here would be an orphaned (invalid) containment.
+							     A visually-hidden "Level N" announces nesting
+							     instead; the em-dash is the visual cue. */ }
+							<span className="screen-reader-text">
+								{ sprintf(
+									/* translators: %d: term nesting depth, 1-based. */
+									__( 'Level %d', 'wp-admin-shell' ),
+									depth + 1
+								) }
+							</span>
+							<span aria-hidden="true">&#8212;</span>
+						</>
+					) }
 					<Button
 						variant="minimal"
 						onClick={ () => onEditTerm( item.rawRecord ) }
@@ -212,28 +227,36 @@ export default function TaxonomyApp( { config = {} } ) {
 		} ) );
 	}, [ records ] );
 
-	// id → depth map for indentation + aria-level, derived from the full term
-	// set. Empty for flat taxonomies (renderer falls back to depth 0).
+	// Build the depth-first tree once, then derive both the depth map (for row
+	// indentation) and the indented parent-picker options from it. null for flat
+	// taxonomies / before allTerms resolves.
+	const termTree = useMemo(
+		() => ( hierarchical && allTerms ? buildTermTree( allTerms ) : null ),
+		[ hierarchical, allTerms ]
+	);
+
+	// id → depth map for indentation, derived from the full term set. Empty for
+	// flat taxonomies (renderer falls back to depth 0).
 	const depthById = useMemo( () => {
-		if ( ! hierarchical || ! allTerms ) {
+		if ( ! termTree ) {
 			return {};
 		}
 		const map = {};
-		buildTermTree( allTerms ).forEach( ( node ) => {
+		termTree.forEach( ( node ) => {
 			map[ node.id ] = node.depth;
 		} );
 		return map;
-	}, [ hierarchical, allTerms ] );
+	}, [ termTree ] );
 
 	// Indented parent-picker options ("None" + every term, depth-prefixed),
 	// matching wp-admin's `wp_dropdown_categories` rendering.
 	const parentElements = useMemo( () => {
-		if ( ! hierarchical || ! allTerms ) {
+		if ( ! termTree ) {
 			return null;
 		}
 		return [
 			{ value: 0, label: __( 'None', 'wp-admin-shell' ) },
-			...buildTermTree( allTerms ).map( ( node ) => ( {
+			...termTree.map( ( node ) => ( {
 				value: node.id,
 				label: indentLabel(
 					decodeEntities( node.name || '' ),
@@ -241,7 +264,17 @@ export default function TaxonomyApp( { config = {} } ) {
 				),
 			} ) ),
 		];
-	}, [ hierarchical, allTerms ] );
+	}, [ termTree ] );
+
+	// Depth indentation only makes sense when the list is in tree order:
+	// name-ascending sort AND the first (unpaged) page. Any other sort or a
+	// later page renders flat (mirrors wp-admin collapsing the tree on
+	// non-default sort) so an indented child never floats without its parent.
+	const showDepth =
+		hierarchical &&
+		view.sort?.field === 'name' &&
+		( view.sort?.direction || 'asc' ) === 'asc' &&
+		view.page === 1;
 
 	const fields = useMemo(
 		() =>
@@ -249,12 +282,12 @@ export default function TaxonomyApp( { config = {} } ) {
 				labels: FIELD_LABELS,
 				renderers: buildFieldRenderers( {
 					onEditTerm: setEditTerm,
-					hierarchical,
+					showDepth,
 					depthById,
 					defaultId: defaultCategoryId,
 				} ),
 			} ),
-		[ dataViewConfig, hierarchical, depthById, defaultCategoryId ]
+		[ dataViewConfig, showDepth, depthById, defaultCategoryId ]
 	);
 
 	const actions = useMemo( () => {
@@ -444,9 +477,12 @@ function TermEditModal( {
 } ) {
 	const isNew = ! term;
 	const [ data, setData ] = useState( {
-		name: term?.name || '',
+		// Decode so a term named `Foo &amp; Bar` shows `Foo & Bar` in the input
+		// (raw REST values are entity-encoded); re-saving would otherwise
+		// double-encode. Slug/parent are not entity-bearing.
+		name: decodeEntities( term?.name || '' ),
 		slug: term?.slug || '',
-		description: term?.description || '',
+		description: decodeEntities( term?.description || '' ),
 		parent: term?.parent || 0,
 	} );
 	const [ isSaving, setIsSaving ] = useState( false );

@@ -67,7 +67,7 @@
 		"icon": "tag"
 	},
 	"documentation": {
-		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description / parent fields), and bulk delete terms. Hierarchical taxonomies (e.g. category) render parent-indented rows with `aria-level` and offer an indented parent picker on add/edit; the site default category is badged and protected from deletion. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
+		"purpose": "DataViews-driven manager for any WordPress taxonomy. Defaults to `category`; rebind via the `taxonomy` config key for `post_tag` or any custom taxonomy. Authors can list (with search, sort, pagination), create, edit (in a modal with name / slug / description / parent fields), and bulk delete terms. Hierarchical taxonomies (e.g. category) render parent-indented rows (with a visually-hidden `Level N` for assistive tech, only under the default name-ascending tree order) and offer an indented parent picker on add/edit; the site default category is badged and protected from deletion. Replaces wp-admin's `edit-tags.php` for the configured taxonomy.",
 		"rebuilds": "taxonomies",
 		"data": {
 			"reads": [
@@ -174,8 +174,8 @@
 			},
 			{
 				"id": "hierarchical-tree",
-				"when": "taxonomy is hierarchical (taxonomyRecord.hierarchical) && allTerms resolved",
-				"renders": "Name column rows indented by client-computed depth with `role=treeitem` + `aria-level`; flat taxonomies render unindented rows with no tree ARIA."
+				"when": "taxonomy is hierarchical (taxonomyRecord.hierarchical) && allTerms resolved && view sorted by name asc on page 1",
+				"renders": "Name column rows indented by client-computed depth with a visually-hidden `Level N` (screen-reader-text); no `role=treeitem`/`aria-level` (orphaned inside the DataViews table). Flat taxonomies — or any non-default sort / later page — render unindented rows with no depth announcement."
 			},
 			{
 				"id": "default-badge",
@@ -255,7 +255,7 @@
 			},
 			{
 				"concern": "decode-name-entities",
-				"note": "Term `name` may contain HTML entities (`&amp;`, `&#039;`). Pass through `decodeEntities` before rendering so the table mirrors wp-admin's `wp_specialchars_decode` display."
+				"note": "Term `name`/`description` may contain HTML entities (`&amp;`, `&#039;`). Pass through `decodeEntities` before rendering — both in the list cell AND when seeding the edit modal from `rawRecord`, otherwise the input shows the encoded form and re-saving double-encodes. Mirrors wp-admin's `wp_specialchars_decode` display."
 			},
 			{
 				"concern": "hierarchical-tree-fetch-cap",
