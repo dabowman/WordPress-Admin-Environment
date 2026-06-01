@@ -217,6 +217,14 @@ class WP_Admin_Shell_Appearance_Menu {
 	 * Walk the menu tree dropping any node whose id is in `$drop`,
 	 * recursing into `items`.
 	 *
+	 * Collapse-empty-group guard: a drilldown node that STARTED with a
+	 * non-empty `items` list and ENDED with an empty one after recursion is
+	 * itself dropped — otherwise a custom shell whose only child of a group
+	 * is a theme-gated screen would render a clickable group that drills
+	 * into nothing. (Nodes that never had `items` — leaf screens, separators —
+	 * are untouched; a group authored with an empty `items` stays as-is,
+	 * since it didn't lose anything to the prune.)
+	 *
 	 * @param array $tree  (sub-)tree to walk.
 	 * @param array $drop  id → true map of screen ids to remove.
 	 * @param int   $depth current depth.
@@ -232,7 +240,12 @@ class WP_Admin_Shell_Appearance_Menu {
 				continue;
 			}
 			if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
+				$had_items     = ! empty( $item['items'] );
 				$item['items'] = self::prune_menu_tree( $item['items'], $drop, $depth + 1 );
+				// Drop a group that lost its last child to the prune.
+				if ( $had_items && empty( $item['items'] ) ) {
+					continue;
+				}
 			}
 			$out[ $id ] = $item;
 		}

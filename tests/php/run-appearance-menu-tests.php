@@ -332,6 +332,92 @@ WPAS_Appearance_Test_Runner::assert_true(
 );
 
 // -----------------------------------------------------------------------------
+// Empty-group collapse — a group whose only child is pruned is itself dropped
+// -----------------------------------------------------------------------------
+
+// Custom shell whose Appearance group's ONLY item is the block-theme-only
+// `site-editor`. On a classic theme that child is pruned → the group would be
+// left empty (a clickable drilldown into nothing) without the collapse guard.
+$only_gated = array(
+	'workspace' => array(),
+	'screens'   => array(
+		'site-editor' => array( 'app' => 'core:site-editor' ),
+		'themes'      => array( 'app' => 'core:themes' ),
+	),
+	'menu'      => array(
+		'appearance' => array(
+			'label' => 'Appearance',
+			'items' => array(
+				'site-editor' => array( 'position' => 10 ),
+			),
+		),
+		'tools'      => array(
+			'label' => 'Tools',
+			'items' => array(
+				'themes' => array( 'position' => 10 ),
+			),
+		),
+	),
+);
+$collapsed = WP_Admin_Shell_Appearance_Menu::apply( $only_gated, wpas_signal( false ) );
+WPAS_Appearance_Test_Runner::assert_false(
+	'collapse: emptied appearance group dropped after its only child pruned',
+	isset( $collapsed['menu']['appearance'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'collapse: sibling group with surviving child untouched',
+	isset( $collapsed['menu']['tools']['items']['themes'] )
+);
+
+// A group that KEEPS at least one child survives (collapse must not over-fire).
+$keeps_one = array(
+	'workspace' => array(),
+	'screens'   => array(
+		'site-editor' => array( 'app' => 'core:site-editor' ),
+		'themes'      => array( 'app' => 'core:themes' ),
+	),
+	'menu'      => array(
+		'appearance' => array(
+			'items' => array(
+				'site-editor' => array( 'position' => 10 ),
+				'themes'      => array( 'position' => 20 ),
+			),
+		),
+	),
+);
+$kept = WP_Admin_Shell_Appearance_Menu::apply( $keeps_one, wpas_signal( false ) );
+WPAS_Appearance_Test_Runner::assert_true(
+	'collapse: group keeps surviving themes child after gated child pruned',
+	isset( $kept['menu']['appearance']['items']['themes'] ) &&
+	! isset( $kept['menu']['appearance']['items']['site-editor'] )
+);
+
+// A group authored with an empty `items` (never had children) is NOT collapsed —
+// it didn't lose anything to the prune, so the guard leaves it alone.
+$preexisting_empty = array(
+	'workspace' => array(),
+	'screens'   => array(
+		'themes' => array( 'app' => 'core:themes' ),
+	),
+	'menu'      => array(
+		'placeholder' => array(
+			'label' => 'Placeholder',
+			'items' => array(),
+		),
+		'appearance'  => array(
+			'items' => array(
+				'themes' => array( 'position' => 10 ),
+			),
+		),
+	),
+);
+$pre_out = WP_Admin_Shell_Appearance_Menu::apply( $preexisting_empty, wpas_signal( true ) );
+WPAS_Appearance_Test_Runner::assert_true(
+	'collapse: pre-existing empty group is left as-is (lost nothing to prune)',
+	isset( $pre_out['menu']['placeholder'] )
+);
+
+// -----------------------------------------------------------------------------
 // End-to-end — fires on wp_admin_shell_data before bind_screens (priority 4)
 // -----------------------------------------------------------------------------
 

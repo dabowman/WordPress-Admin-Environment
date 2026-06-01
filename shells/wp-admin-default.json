@@ -1549,6 +1549,12 @@
 				},
 				"fonts": {
 					"position": 30
+				},
+				"customize": {
+					"position": 40
+				},
+				"widgets": {
+					"position": 50
 				}
 			}
 		},
