@@ -42,8 +42,8 @@
 					{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
 					{ "id": "thumbnail", "type": "media", "label": "Preview", "enableSorting": false, "enableHiding": false },
 					{ "id": "type", "type": "text", "label": "Type", "enableSorting": false, "elements": [ { "value": "image", "label": "Images" }, { "value": "video", "label": "Video" }, { "value": "audio", "label": "Audio" }, { "value": "text", "label": "Text" }, { "value": "application", "label": "Documents" } ], "filterBy": { "operators": [ "is" ] } },
-					{ "id": "author", "type": "integer", "label": "Author", "enableSorting": true, "filterBy": { "operators": [ "is" ] } },
-					{ "id": "date", "type": "datetime", "label": "Date" }
+					{ "id": "author", "type": "text", "label": "Author", "enableSorting": true, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "date", "type": "datetime", "label": "Date", "filterBy": { "operators": [ "before", "after" ] } }
 				],
 				"actions": [
 					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "edit" },
@@ -108,8 +108,10 @@
 						"order": "view.sort.direction",
 						"search": "view.search",
 						"media_type": "filter:type (single-select `is` — media_type is a single-value enum)",
-						"author": "filter:author | mine",
+						"author": "filter:author (single-select `is`) | mine toolbar toggle",
 						"parent": "filter:unattached (0)",
+						"before": "filter:date.before (datetime `before` operator)",
+						"after": "filter:date.after (datetime `after` operator)",
 						"_embed": "author (resolves the Author column display name)",
 						"context": "edit"
 					}
@@ -125,6 +127,17 @@
 						"per_page": 1,
 						"_fields": "id",
 						"context": "edit"
+					}
+				},
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"purpose": "Author options for the `author` filter. DataViews resolves the field's `getElements` lazily when the filter opens — one `resolveSelect(getEntityRecords)` over `root/user` (who=authors, per_page=100, `_fields=id,name`), mapped to `{ value: id, label: name }` and cached after the first open.",
+					"fields": [ "id", "name" ],
+					"query": {
+						"who": "authors",
+						"per_page": 100,
+						"_fields": "id,name"
 					}
 				},
 				{
@@ -202,12 +215,20 @@
 				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to `media_type` (a single-value REST enum: image / video / audio / text / application) → records refetch."
 			},
 			{
+				"trigger": "Change the Author filter (DataViews)",
+				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to REST `author` (scalar user id) → records refetch. Options resolve lazily via the field's `getElements` provider (fetches content authors through core-data, cached after first open). When an author filter is active it is the SINGLE author scope: the Mine static `author` arg is skipped, and the Mine toggle shows checked only when the filter's value equals the current user id."
+			},
+			{
+				"trigger": "Change the Date filter (DataViews)",
+				"effect": "`view.filters` updates → a supplemental `applyDateFilters` pass maps the `before`/`after` operators to the attachments controller's REST `before`/`after` ISO params (`buildQueryArgs` only speaks `is`/`isAny`) → records refetch. One-sided date bound (`before X` OR `after Y`, not a two-ended range — DataViews holds one filter per field)."
+			},
+			{
 				"trigger": "Type in the DataViews search box",
 				"effect": "`view.search` → REST `search` (matches title + filename via the attachments controller)."
 			},
 			{
 				"trigger": "Toggle Mine / Unattached toolbar filters",
-				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query."
+				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query. Mine and the author dropdown filter share the author axis: toggling Mine (ON or OFF) drops any active author dropdown filter, Mine's checked state is derived from the active author scope rather than a standalone boolean, and a `useEffect` keyed on the active-author-filter flag clears the underlying `showMine` whenever a dropdown author filter becomes active — so the two controls are fully symmetric (one author scope at a time, no contradiction, no latent `showMine` resurfacing own media when the dropdown filter is later cleared, no inert toggle)."
 			},
 			{
 				"trigger": "Click Upload",
@@ -245,6 +266,10 @@
 			{
 				"concern": "force-delete",
 				"note": "Media has no trash. `deleteEntityRecord` requires `{ force: true }` or the request 400s."
+			},
+			{
+				"concern": "author-filter-elements",
+				"note": "The `author` filter is `is`-only with options supplied by a `getElements` provider (fetches content authors via core-data, `who=authors`). The field `type` is `text` to match the rendered cell (the embedded author display name); the filter `value` is the numeric user id, which the `is` operator passes straight to REST `author`. The date filter wires `before`/`after` via `applyDateFilters` since `buildQueryArgs` only speaks `is`/`isAny` (mirrors the Posts lane)."
 			},
 			{
 				"concern": "multipart-via-api-fetch",

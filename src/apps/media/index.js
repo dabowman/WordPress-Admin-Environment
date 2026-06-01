@@ -1,14 +1,21 @@
 import './index.css';
 import '../_shared/app.css';
-import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
+import {
+	useState,
+	useMemo,
+	useCallback,
+	useRef,
+	useEffect,
+} from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Icon, Stack, Text } from '@wordpress/ui';
 import { Spinner, ToggleControl, Modal } from '@wordpress/components';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { upload } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
@@ -63,15 +70,94 @@ const VIEW_DEFAULTS = {
 };
 
 // DataViews `view` → REST query-args mapping (search / sort / pagination +
-// the media_type filter). Mine + Unattached are toolbar pseudo-filters merged
-// as static args below.
+// the media_type + author filters). Mine + Unattached are toolbar
+// pseudo-filters merged as static args below; the date `before`/`after`
+// operators are applied in a supplemental pass (the shared mapper only speaks
+// `is`/`isAny`).
 const QUERY_MAPPING = {
 	search: 'search',
 	sort: { defaultField: 'date', defaultDirection: 'desc' },
 	filters: {
 		type: { is: 'media_type' },
+		author: { is: 'author' },
 	},
 };
+
+/**
+ * Apply the DataViews date filter (`before` / `after` operators) to the REST
+ * args. `buildQueryArgs` only handles `is`/`isAny`, so the date range — which
+ * maps to the attachments controller's `before` / `after` ISO params — is wired
+ * here. Mirrors the Posts lane's `applyDateFilters` supplement.
+ * @param {Object} args    REST args produced by `buildQueryArgs`.
+ * @param {Array}  filters `view.filters`.
+ * @return {Object} `args` with `before`/`after` applied where present.
+ */
+function applyDateFilters( args, filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if ( filter.field !== 'date' || ! filter.value ) {
+			continue;
+		}
+		if ( filter.operator === 'before' ) {
+			args.before = filter.value;
+		} else if ( filter.operator === 'after' ) {
+			args.after = filter.value;
+		}
+	}
+	return args;
+}
+
+/**
+ * Find the active `author` DataViews view-filter (an `is`-operator entry with a
+ * defined value), if any. The author dropdown filter and the Mine toggle both
+ * scope by author; this lets the app keep them mutually consistent — one author
+ * scope at a time. Returns the filter's value (a user id) or `null` when no
+ * author filter is engaged.
+ *
+ * @param {Array} filters `view.filters`.
+ * @return {number|string|null} The active author filter value, or `null`.
+ */
+function activeAuthorFilterValue( filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if (
+			filter.field === 'author' &&
+			filter.value !== null &&
+			filter.value !== undefined &&
+			filter.value !== ''
+		) {
+			return filter.value;
+		}
+	}
+	return null;
+}
+
+// Cache for the author filter `getElements` provider. DataViews calls
+// `getElements()` each time the filter opens; caching the mapped
+// `{ value, label }` array avoids re-decoding on every open. `resolveSelect`
+// already memoizes the underlying core-data resolution.
+let authorElementsCache = null;
+
+/**
+ * Async DataViews `getElements` provider for the author filter. Fetches users
+ * able to author content via core-data (`resolveSelect`, never raw `fetch`) and
+ * maps them to `{ value: userId, label: name }`, cached after the first open.
+ * Mirrors how the Posts lane builds its taxonomy filter element providers.
+ * @return {Promise<Array>} `[ { value, label } ]`.
+ */
+async function getAuthorElements() {
+	if ( authorElementsCache ) {
+		return authorElementsCache;
+	}
+	const users = await resolveSelect( coreStore ).getEntityRecords(
+		'root',
+		'user',
+		{ who: 'authors', per_page: 100, _fields: 'id,name' }
+	);
+	authorElementsCache = ( users ?? [] ).map( ( user ) => ( {
+		value: user.id,
+		label: decodeEntities( user.name ),
+	} ) );
+	return authorElementsCache;
+}
 
 /**
  * Render the thumbnail media field: image thumbnail for `media_type === 'image'`,
@@ -129,18 +215,82 @@ export default function MediaApp( { config = {} } ) {
 	const [ editingId, setEditingId ] = useState( null );
 	const fileInputRef = useRef();
 
+	// The author dropdown filter and the Mine toggle are two controls for the
+	// same axis (author scope). Keep exactly one active: when an author
+	// view-filter is engaged it is the single source of author scope, so the
+	// Mine static arg is skipped (otherwise `buildQueryArgs` would overwrite it
+	// with the dropdown value, leaving Mine checked while another author's media
+	// showed — contradictory state).
+	const authorFilterValue = useMemo(
+		() => activeAuthorFilterValue( view.filters ),
+		[ view.filters ]
+	);
+	const authorFilterActive = authorFilterValue !== null;
+
+	// Mine reflects reality, not a standalone boolean: checked when the Mine
+	// static scope is the active author scope (toggle on, no dropdown filter
+	// overriding it) OR when the dropdown's author value happens to be the
+	// current user. Compare as strings so a string filter value ('5') matches a
+	// numeric current-user id (5).
+	const mineChecked = authorFilterActive
+		? String( authorFilterValue ) === String( currentUserId )
+		: showMine;
+
+	// Toggling Mine takes over the author axis. One author scope at a time, no
+	// contradiction:
+	// - ON  drops any active author dropdown filter so Mine is the single scope.
+	// - OFF clears the static scope AND any author dropdown filter — when Mine
+	//   reads checked solely because the dropdown points at the current user
+	//   (`mineChecked` derives from the filter), unchecking must drop that
+	//   filter too, otherwise the toggle would snap back checked (inert toggle).
+	const handleMineToggle = useCallback(
+		( next ) => {
+			if ( authorFilterActive ) {
+				setView( ( current ) => ( {
+					...current,
+					filters: ( current.filters ?? [] ).filter(
+						( filter ) => filter.field !== 'author'
+					),
+				} ) );
+			}
+			setShowMine( next );
+		},
+		[ authorFilterActive, setView ]
+	);
+
+	// The symmetric half of `handleMineToggle`: whenever an author dropdown
+	// filter becomes the active scope, actually clear the Mine static scope
+	// rather than only suppressing it in the derived `mineChecked`/`queryArgs`
+	// guards. Without this, `showMine` could stay latently `true` underneath an
+	// author filter, producing two bugs once the filter cleared: (1) clearing
+	// the dropdown would silently resurface the user's OWN media (Mine
+	// re-applies `author=currentUserId`) instead of returning to all media, and
+	// (2) selecting yourself in the dropdown made the Mine toggle inert (a
+	// `handleMineToggle(false)` no-op). Keyed on `authorFilterActive` so it only
+	// fires on the false→true transition — no render loop.
+	useEffect( () => {
+		if ( authorFilterActive ) {
+			setShowMine( false );
+		}
+	}, [ authorFilterActive ] );
+
 	const queryArgs = useMemo( () => {
 		// `_embed: 'author'` so each record carries `_embedded.author[0].name`
 		// for the Author column — `record.author` alone is a bare numeric id.
 		const staticArgs = { context: 'edit', _embed: 'author' };
-		if ( showMine && currentUserId ) {
+		// Skip the Mine static author arg when an explicit author filter is the
+		// active scope — the filter wins and is applied by buildQueryArgs.
+		if ( showMine && currentUserId && ! authorFilterActive ) {
 			staticArgs.author = currentUserId;
 		}
 		if ( showUnattached ) {
 			staticArgs.parent = 0;
 		}
-		return buildQueryArgs( view, QUERY_MAPPING, staticArgs );
-	}, [ view, showMine, showUnattached, currentUserId ] );
+		const args = buildQueryArgs( view, QUERY_MAPPING, staticArgs );
+		// The DataViews date filter maps to REST `before`/`after`, which
+		// `buildQueryArgs` doesn't express — apply it as a supplemental pass.
+		return applyDateFilters( args, view.filters );
+	}, [ view, showMine, showUnattached, currentUserId, authorFilterActive ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
 		'root',
@@ -273,6 +423,9 @@ export default function MediaApp( { config = {} } ) {
 				labels: FIELD_LABELS,
 				renderers: FIELD_RENDERERS,
 				elementCounts: { type: typeCounts },
+				// Author filter options resolve lazily — DataViews calls the
+				// provider when the filter opens (fetches authors via core-data).
+				getElements: { author: getAuthorElements },
 			} ),
 		[ dataViewConfig, typeCounts ]
 	);
@@ -387,8 +540,8 @@ export default function MediaApp( { config = {} } ) {
 						<ToggleControl
 							__nextHasNoMarginBottom
 							label={ __( 'Mine', 'wp-admin-shell' ) }
-							checked={ showMine }
-							onChange={ setShowMine }
+							checked={ mineChecked }
+							onChange={ handleMineToggle }
 						/>
 					) : null }
 					<ToggleControl
