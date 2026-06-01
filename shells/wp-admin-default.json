@@ -358,8 +358,6 @@
 							"type": "table",
 							"perPage": 25,
 							"fields": [
-								"username",
-								"email",
 								"roles",
 								"registered_date"
 							],
