@@ -15,10 +15,7 @@ const __dirname = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot = resolve( __dirname, '..', '..' );
 
 const { mergeSegmentCounts, isSegmentActive } = await import(
-	resolve(
-		projectRoot,
-		'src/apps/_shared/dataviews/segmentMerge.mjs'
-	)
+	resolve( projectRoot, 'src/apps/_shared/dataviews/segmentMerge.mjs' )
 );
 
 let pass = 0;
@@ -42,9 +39,17 @@ function ok( label, condition, detail = '' ) {
 // ---- mergeSegmentCounts ----------------------------------------------------
 
 const BASE_SEGMENTS = [
-	{ id: 'all',     label: 'All',     filter: { field: 'status', value: 'any' } },
-	{ id: 'publish', label: 'Published', filter: { field: 'status', value: 'publish' } },
-	{ id: 'draft',   label: 'Draft',   filter: { field: 'status', value: 'draft' } },
+	{ id: 'all', label: 'All', filter: { field: 'status', value: 'any' } },
+	{
+		id: 'publish',
+		label: 'Published',
+		filter: { field: 'status', value: 'publish' },
+	},
+	{
+		id: 'draft',
+		label: 'Draft',
+		filter: { field: 'status', value: 'draft' },
+	},
 ];
 
 ok(
@@ -77,10 +82,10 @@ ok(
 	mergeSegmentCounts( undefined, { publish: 5 } ).length === 0
 );
 
-const withCounts = mergeSegmentCounts(
-	BASE_SEGMENTS,
-	{ publish: 12, draft: 3 }
-);
+const withCounts = mergeSegmentCounts( BASE_SEGMENTS, {
+	publish: 12,
+	draft: 3,
+} );
 
 ok(
 	'mergeSegmentCounts: matched segment gets count property',
@@ -100,7 +105,13 @@ ok(
 ok(
 	'mergeSegmentCounts: zero is a real count (not omitted)',
 	mergeSegmentCounts(
-		[ { id: 'spam', label: 'Spam', filter: { field: 'status', value: 'spam' } } ],
+		[
+			{
+				id: 'spam',
+				label: 'Spam',
+				filter: { field: 'status', value: 'spam' },
+			},
+		],
 		{ spam: 0 }
 	)[ 0 ].count === 0
 );
@@ -114,7 +125,11 @@ ok(
 );
 
 // Original segment objects must not be mutated (pure function contract).
-const original = { id: 'publish', label: 'Published', filter: { field: 'status', value: 'publish' } };
+const original = {
+	id: 'publish',
+	label: 'Published',
+	filter: { field: 'status', value: 'publish' },
+};
 mergeSegmentCounts( [ original ], { publish: 5 } );
 ok(
 	'mergeSegmentCounts: does not mutate the original segment object',

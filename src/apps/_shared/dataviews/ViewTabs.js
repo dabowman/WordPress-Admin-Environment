@@ -1,4 +1,5 @@
 import { useMemo } from '@wordpress/element';
+import { __, sprintf } from '@wordpress/i18n';
 import { Button } from '@wordpress/ui';
 import { mergeSegmentCounts, isSegmentActive } from './segmentMerge.mjs';
 import './ViewTabs.css';
@@ -28,14 +29,20 @@ import './ViewTabs.css';
  * />
  * ```
  *
- * **Active-state rule (CLAUDE.md):** `[aria-current="true"]` is the sole
- * authority. No redundant `.is-active` class is emitted — CSS targets the
- * attribute, avoiding drift if a second truth source is introduced.
+ * **Model:** this is a **filter button group**, not a tabs widget. wp-admin's
+ * classic `subsubsub` row is a list of filters, not a tab strip — so each
+ * segment is a filter toggle `Button` carrying `aria-pressed`, with no
+ * `role="tablist"`/`role="tab"`/`role="tabpanel"` and no roving tabindex.
+ *
+ * **Active-state rule:** `aria-pressed` is the single active-state authority
+ * for this filter button group. No redundant `aria-current`, `aria-selected`,
+ * or `.is-active` class is emitted — CSS targets `[aria-pressed="true"]`,
+ * avoiding drift between truth sources.
  *
  * **WPDS:** uses `@wordpress/ui` `Button` with `variant="minimal"` for each
- * tab so it inherits WPDS token colours and respects the engine's
- * `ThemeProvider`. The active segment gets `tone="brand"` to communicate
- * selection through WPDS semantics in addition to `aria-current`.
+ * segment so it inherits WPDS token colours and respects the engine's
+ * `ThemeProvider`. The active segment gets `tone="brand"` for presentational
+ * emphasis — purely visual, alongside the authoritative `aria-pressed`.
  *
  * Counts resolve asynchronously. A segment renders `label` alone until its
  * count arrives — no "0" flash on load (mirrors `withElementCounts` semantics
@@ -67,28 +74,25 @@ export default function ViewTabs( {
 	}
 
 	return (
-		<div
-			className="wp-admin-shell-view-tabs"
-			role="tablist"
-			aria-label={
-				/* translators: accessible label for view filter tabs */ undefined
-			}
-		>
+		<div className="wp-admin-shell-view-tabs">
 			{ enriched.map( ( segment ) => {
 				const active = isSegmentActive( segment, currentValue );
 				const label =
 					segment.count !== undefined
-						? `${ segment.label } (${ segment.count })`
+						? sprintf(
+								/* translators: 1: segment label, 2: item count. */
+								__( '%1$s (%2$s)' ),
+								segment.label,
+								segment.count.toLocaleString()
+						  )
 						: segment.label;
 
 				return (
 					<Button
 						key={ segment.id }
-						role="tab"
 						variant="minimal"
 						tone={ active ? 'brand' : 'neutral' }
-						aria-current={ active ? 'true' : undefined }
-						aria-selected={ active }
+						aria-pressed={ active }
 						onClick={ () => onSelect?.( segment ) }
 						className="wp-admin-shell-view-tabs__tab"
 					>
