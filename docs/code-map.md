@@ -125,7 +125,6 @@ second consumer appears.
 | `core:settings-writing` | settings-writing | ✅ | `manage_options` | Standalone Writing panel; `DataForm` over `default_category` + `default_post_format`. Default shell mounts directly |
 | `core:settings-reading` | settings-reading | ✅ | `manage_options` | Standalone Reading panel; `DataForm` over front-page + feed options. Default shell mounts directly |
 | `core:settings-discussion` | settings-discussion | ✅ | `manage_options` | Standalone Discussion panel; `DataForm` over default comment + ping status. Default shell mounts directly |
-| `core:dashboard` | DashboardApp | ✅ | — | Site overview cards; recent posts/drafts/comments |
 | `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'`; activate/deactivate via REST. dataView consumer on `(root, plugin, variant)`. |
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'`. dataView consumer on `(root, theme, variant)`; grid default with screenshot tiles + Activate / Details. |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
@@ -134,9 +133,11 @@ second consumer appears.
 | `core:appearance` | AppearanceApp | ✅ | — | User-prefs UI driven by `customizable` |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
 | `core:navigation` … `core:user-menu` | system apps | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`. Each shell declares them explicitly in regions / workspace widgets. `core:command-palette` reads `commands[]` + synthesizes "Go to X" entries from `screens[id]` via `compileCommands.mjs`; palette names `core/admin-shell/palette-<encoded-id>` (first-write-wins dedup). |
-| `core:dashboard-host` | DashboardHostApp | ✅ | — | Widget-grid controller. Reads `screens[id].apps[]` with `slot: "grid"`; uses app-declared `grid` slot from `app.json#slots`. Size/position from `slotHints` + per-entry overrides. Compiler `dashboard-host/composeScreenWidgets.mjs`; `wp_admin_shell_register_dashboard_widget()` contributes a `slot: "grid"` screen-app entry. Bundled mount: `/dashboard/home` in `wp-admin-default`. |
-| `core:dashboard-widget-recent-posts` | … | ✅ | `edit_posts` | Example widget. Five most recent post drafts; click → `#/posts/{id}/edit`. |
-| `core:dashboard-widget-quick-draft` | … | ✅ | `edit_posts` | Example widget. Title + textarea + Save Draft → `saveEntityRecord`, invalidate recent-drafts, navigate. Empty body seeds an empty paragraph block to satisfy WP's empty-post rejection. |
+| `core:dashboard-host` | DashboardHostApp | ✅ | — | Workspace dashboard screen + widget-grid controller (replaced the deleted `core:dashboard` monolith, #133). Renders a greeting **header** (host chrome — time-of-day + acting user's display name) above a CSS Grid. Reads `screens[id].apps[]` with `slot: "grid"`; size/position from `slotHints` + per-entry overrides. Compiler `dashboard-host/composeScreenWidgets.mjs`; `wp_admin_shell_register_dashboard_widget()` contributes a `slot: "grid"` screen-app entry. Bundled mount: `/dashboard/home` in `wp-admin-default`. |
+| `core:dashboard-widget-at-a-glance` | DashboardWidgetAtAGlanceApp | ✅ | `read` | Default tile. Site-wide counts (posts / pages / pending comments / users) via `totalItems`. NOT author-scoped. |
+| `core:dashboard-widget-activity` | DashboardWidgetActivityApp | ✅ | `edit_posts` | Default tile. Recently published posts + comments awaiting moderation (site-wide); click post → `#/posts/{id}/edit`, `Moderate all` → `#/comments`. |
+| `core:dashboard-widget-recent-posts` | DashboardWidgetRecentPostsApp | ✅ | `edit_posts` | Default tile. Recent Drafts — **author-scoped** (`author: userId` + `enabled: !!userId`, fail-closed; #217). Five most recent drafts; click → `#/posts/{id}/edit`. |
+| `core:dashboard-widget-quick-draft` | DashboardWidgetQuickDraftApp | ✅ | `edit_posts` | Default tile. Title + textarea + Save Draft → `saveEntityRecord`, invalidate author-scoped recent-drafts query, navigate. Empty body seeds an empty paragraph block to satisfy WP's empty-post rejection. |
 | Desktop engine apps | `core:desktop-{compositor,dock-app,window-frame,iframe}` | ✅ | — | See `docs/desktop-engine-readiness.md`. |
 
 ### `core:simple-editor` notes
