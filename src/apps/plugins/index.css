@@ -1,0 +1,22 @@
+/*
+ * PluginsApp layout. A flex column: a fixed toolbar (heading + Add New /
+ * Upload actions) above a flexed list region that hosts the DataViews table.
+ * App-space, WPDS-flavored — the kernel stays DS-neutral.
+ */
+.wp-admin-shell-app-plugins {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-admin-shell-app-plugins__toolbar {
+	margin-bottom: var( --wpds-dimension-gap-lg );
+	flex-shrink: 0;
+}
+
+/* The list region carries `--fill` so the DataViews wrapper stretches to fill
+ * the remaining column height below the toolbar. */
+.wp-admin-shell-app-plugins__list {
+	flex: 1;
+	min-height: 0;
+}
