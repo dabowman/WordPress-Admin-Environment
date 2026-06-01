@@ -1,0 +1,65 @@
+/*
+ * Styles for the tiered "no-API fallback" affordance (`UnavailableViaApi`).
+ *
+ * App-space, WPDS-flavored — the kernel stays DS-neutral. Imported as a
+ * side-effect by `UnavailableViaApi.js`; webpack folds duplicate copies across
+ * lazy chunks. Colors are `var( --wpds-* )` tokens; any literal value is only
+ * ever a documented `var()` fallback for when the token is unset.
+ *
+ * The CLI command and agent prompt can be long (a full
+ * `wp option update '...' '...'`); wrap + cap them so they don't overflow the
+ * notice or push the Copy button off-screen.
+ */
+
+/*
+ * The tiered block is a SIBLING of the Notice.Root (not nested inside it —
+ * see UnavailableViaApi.js: the Notice is a role="status" live region, so the
+ * interactive tiers + their own aria-live spans live OUTSIDE it). Rendered as a
+ * <section class="…__tiers">. Add breathing room so it doesn't crowd the inline
+ * explanation notice above it.
+ */
+.wp-admin-shell-unavailable-via-api__tiers {
+	margin-top: var( --wpds-dimension-padding-md, 0.75rem );
+}
+
+.wp-admin-shell-unavailable-via-api__code,
+.wp-admin-shell-unavailable-via-api__agent-prompt {
+	/* Wrap long content rather than overflowing the notice. */
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+	/* Leave room for the adjacent Copy button in the flex row. */
+	max-width: 100%;
+	min-width: 0;
+}
+
+.wp-admin-shell-unavailable-via-api__code {
+	font-family: var( --wpds-font-family-mono, monospace );
+	font-size: var( --wpds-font-size-sm, 0.8125rem );
+	padding: var( --wpds-dimension-padding-xs, 0.25rem )
+		var( --wpds-dimension-padding-sm, 0.5rem );
+	border-radius: var( --wpds-border-radius-sm, 4px );
+	background: var(
+		--wpds-color-bg-component-neutral-weak,
+		rgba( 0, 0, 0, 0.06 )
+	);
+	color: var( --wpds-color-fg-content-neutral-strong, inherit );
+}
+
+/*
+ * Visually-hidden live region announcing copy success to assistive tech. The
+ * "Copied!" button-label flip is visual-only; this carries the message to
+ * screen readers without occupying layout.
+ */
+.wp-admin-shell-unavailable-via-api__status {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip: rect( 0 0 0 0 );
+	clip-path: inset( 50% );
+	white-space: nowrap;
+}
