@@ -389,7 +389,7 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 |---|---|---|
 | Administration Email | `email` (`admin_email`) | The `email` field *is* REST-writable, but writing it changes `admin_email` **instantly**, bypassing core's confirm-by-link flow (`new_admin_email` pending option + verification email). A typo locks the admin out of email-gated recovery with no undo. Tracked in `docs/parity/roadmap.md` group B-P2 (issue #160). |
 
-> **Fixed in #202 (issue #106):** `home`, `users_can_register`, `default_role`, and manual UTC-offset (`gmt_offset`) were previously silently no-op on save because those options lacked `show_in_rest`. The plugin now registers `show_in_rest` shims for all four via `register_setting()`, and a `rest_pre_update_setting` filter routes `UTC±X` timezone selections to `gmt_offset` while IANA city selections update `timezone_string` — matching classic wp-admin behaviour.
+> **Fixed in #202 (issue #106):** `home`, `users_can_register`, and `default_role` were previously not `show_in_rest` and were silently discarded on save. The plugin now registers `show_in_rest` shims for all three so they pass through `/wp/v2/settings` correctly. `gmt_offset` is handled separately via the `rest_pre_update_setting` filter: a `UTC±X` selection stores `gmt_offset` and clears `timezone_string`; an IANA city selection stores `timezone_string` and leaves `gmt_offset` alone — matching classic wp-admin behaviour.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
