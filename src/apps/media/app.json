@@ -41,7 +41,7 @@
 				"fields": [
 					{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
 					{ "id": "thumbnail", "type": "media", "label": "Preview", "enableSorting": false, "enableHiding": false },
-					{ "id": "type", "type": "text", "label": "Type", "enableSorting": false, "elements": [ { "value": "image", "label": "Images" }, { "value": "video", "label": "Video" }, { "value": "audio", "label": "Audio" }, { "value": "application", "label": "Documents" } ], "filterBy": { "operators": [ "isAny" ] } },
+					{ "id": "type", "type": "text", "label": "Type", "enableSorting": false, "elements": [ { "value": "image", "label": "Images" }, { "value": "video", "label": "Video" }, { "value": "audio", "label": "Audio" }, { "value": "text", "label": "Text" }, { "value": "application", "label": "Documents" } ], "filterBy": { "operators": [ "is" ] } },
 					{ "id": "author", "type": "integer", "label": "Author", "enableSorting": true, "filterBy": { "operators": [ "is" ] } },
 					{ "id": "date", "type": "datetime", "label": "Date" }
 				],
@@ -107,9 +107,10 @@
 						"orderby": "view.sort.field",
 						"order": "view.sort.direction",
 						"search": "view.search",
-						"media_type": "filter:type",
+						"media_type": "filter:type (single-select `is` — media_type is a single-value enum)",
 						"author": "filter:author | mine",
 						"parent": "filter:unattached (0)",
+						"_embed": "author (resolves the Author column display name)",
 						"context": "edit"
 					}
 				},
@@ -120,7 +121,7 @@
 					"purpose": "Per-type totals for the media-type filter (\"Images (12)\"). One lightweight request per type via `useEntityElementCounts`; totals come from the X-WP-Total header.",
 					"fields": [ "id" ],
 					"query": {
-						"media_type": "image|video|audio|application",
+						"media_type": "image|video|audio|text|application",
 						"per_page": 1,
 						"_fields": "id",
 						"context": "edit"
@@ -198,7 +199,7 @@
 		"interactions": [
 			{
 				"trigger": "Change the Type filter (DataViews)",
-				"effect": "`view.filters` updates → `buildQueryArgs` maps to `media_type` → records refetch."
+				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to `media_type` (a single-value REST enum: image / video / audio / text / application) → records refetch."
 			},
 			{
 				"trigger": "Type in the DataViews search box",

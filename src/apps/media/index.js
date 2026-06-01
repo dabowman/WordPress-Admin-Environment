@@ -22,7 +22,7 @@ import {
 } from '../_shared/dataviews/useEntityElementCounts';
 import MediaDetails from './MediaDetails';
 
-const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'application' ];
+const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'text', 'application' ];
 
 // Plain English type labels for the mapped `typeLabel` cell. Kept in sync with
 // the dataView `type` field elements; the count-augmented filter labels come
@@ -31,6 +31,7 @@ const FILTER_TYPE_LABELS = {
 	image: __( 'Image', 'wp-admin-shell' ),
 	video: __( 'Video', 'wp-admin-shell' ),
 	audio: __( 'Audio', 'wp-admin-shell' ),
+	text: __( 'Text', 'wp-admin-shell' ),
 	application: __( 'Document', 'wp-admin-shell' ),
 	file: __( 'File', 'wp-admin-shell' ),
 };
@@ -68,7 +69,7 @@ const QUERY_MAPPING = {
 	search: 'search',
 	sort: { defaultField: 'date', defaultDirection: 'desc' },
 	filters: {
-		type: { isAny: 'media_type', is: 'media_type' },
+		type: { is: 'media_type' },
 	},
 };
 
@@ -129,7 +130,9 @@ export default function MediaApp( { config = {} } ) {
 	const fileInputRef = useRef();
 
 	const queryArgs = useMemo( () => {
-		const staticArgs = { context: 'edit' };
+		// `_embed: 'author'` so each record carries `_embedded.author[0].name`
+		// for the Author column — `record.author` alone is a bare numeric id.
+		const staticArgs = { context: 'edit', _embed: 'author' };
 		if ( showMine && currentUserId ) {
 			staticArgs.author = currentUserId;
 		}
@@ -256,10 +259,11 @@ export default function MediaApp( { config = {} } ) {
 				'',
 			mimeType: record.mime_type,
 			altText: record.alt_text || '',
-			author: record.author,
+			// Prefer the embedded author display name; fall back to em dash
+			// while the embed resolves (or if the author can't be embedded).
+			author: record._embedded?.author?.[ 0 ]?.name || '—',
 			date: record.date,
 			source_url: record.source_url,
-			rawRecord: record,
 		} ) );
 	}, [ records ] );
 
@@ -377,12 +381,16 @@ export default function MediaApp( { config = {} } ) {
 				className="wp-admin-shell-app-media__toolbar"
 			>
 				<Stack direction="row" align="center" gap="lg">
-					<ToggleControl
-						__nextHasNoMarginBottom
-						label={ __( 'Mine', 'wp-admin-shell' ) }
-						checked={ showMine }
-						onChange={ setShowMine }
-					/>
+					{ /* Only offer the Mine toggle when the current user id is
+					     known — without it the filter would no-op. */ }
+					{ currentUserId ? (
+						<ToggleControl
+							__nextHasNoMarginBottom
+							label={ __( 'Mine', 'wp-admin-shell' ) }
+							checked={ showMine }
+							onChange={ setShowMine }
+						/>
+					) : null }
 					<ToggleControl
 						__nextHasNoMarginBottom
 						label={ __( 'Unattached', 'wp-admin-shell' ) }
