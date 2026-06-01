@@ -2,13 +2,14 @@ import './index.css';
 import '../_shared/app.css';
 import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Icon, Stack, Text } from '@wordpress/ui';
 import { Spinner, ToggleControl, Modal } from '@wordpress/components';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import { decodeEntities } from '@wordpress/html-entities';
 import { upload } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
@@ -63,15 +64,70 @@ const VIEW_DEFAULTS = {
 };
 
 // DataViews `view` → REST query-args mapping (search / sort / pagination +
-// the media_type filter). Mine + Unattached are toolbar pseudo-filters merged
-// as static args below.
+// the media_type + author filters). Mine + Unattached are toolbar
+// pseudo-filters merged as static args below; the date `before`/`after`
+// operators are applied in a supplemental pass (the shared mapper only speaks
+// `is`/`isAny`).
 const QUERY_MAPPING = {
 	search: 'search',
 	sort: { defaultField: 'date', defaultDirection: 'desc' },
 	filters: {
 		type: { is: 'media_type' },
+		author: { is: 'author' },
 	},
 };
+
+/**
+ * Apply the DataViews date filter (`before` / `after` operators) to the REST
+ * args. `buildQueryArgs` only handles `is`/`isAny`, so the date range — which
+ * maps to the attachments controller's `before` / `after` ISO params — is wired
+ * here. Mirrors the Posts lane's `applyDateFilters` supplement.
+ * @param {Object} args    REST args produced by `buildQueryArgs`.
+ * @param {Array}  filters `view.filters`.
+ * @return {Object} `args` with `before`/`after` applied where present.
+ */
+function applyDateFilters( args, filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if ( filter.field !== 'date' || ! filter.value ) {
+			continue;
+		}
+		if ( filter.operator === 'before' ) {
+			args.before = filter.value;
+		} else if ( filter.operator === 'after' ) {
+			args.after = filter.value;
+		}
+	}
+	return args;
+}
+
+// Cache for the author filter `getElements` provider. DataViews calls
+// `getElements()` each time the filter opens; caching the mapped
+// `{ value, label }` array avoids re-decoding on every open. `resolveSelect`
+// already memoizes the underlying core-data resolution.
+let authorElementsCache = null;
+
+/**
+ * Async DataViews `getElements` provider for the author filter. Fetches users
+ * able to author content via core-data (`resolveSelect`, never raw `fetch`) and
+ * maps them to `{ value: userId, label: name }`, cached after the first open.
+ * Mirrors how the Posts lane builds its taxonomy filter element providers.
+ * @return {Promise<Array>} `[ { value, label } ]`.
+ */
+async function getAuthorElements() {
+	if ( authorElementsCache ) {
+		return authorElementsCache;
+	}
+	const users = await resolveSelect( coreStore ).getEntityRecords(
+		'root',
+		'user',
+		{ who: 'authors', per_page: 100, _fields: 'id,name' }
+	);
+	authorElementsCache = ( users ?? [] ).map( ( user ) => ( {
+		value: user.id,
+		label: decodeEntities( user.name ),
+	} ) );
+	return authorElementsCache;
+}
 
 /**
  * Render the thumbnail media field: image thumbnail for `media_type === 'image'`,
@@ -139,7 +195,10 @@ export default function MediaApp( { config = {} } ) {
 		if ( showUnattached ) {
 			staticArgs.parent = 0;
 		}
-		return buildQueryArgs( view, QUERY_MAPPING, staticArgs );
+		const args = buildQueryArgs( view, QUERY_MAPPING, staticArgs );
+		// The DataViews date filter maps to REST `before`/`after`, which
+		// `buildQueryArgs` doesn't express — apply it as a supplemental pass.
+		return applyDateFilters( args, view.filters );
 	}, [ view, showMine, showUnattached, currentUserId ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
@@ -273,6 +332,9 @@ export default function MediaApp( { config = {} } ) {
 				labels: FIELD_LABELS,
 				renderers: FIELD_RENDERERS,
 				elementCounts: { type: typeCounts },
+				// Author filter options resolve lazily — DataViews calls the
+				// provider when the filter opens (fetches authors via core-data).
+				getElements: { author: getAuthorElements },
 			} ),
 		[ dataViewConfig, typeCounts ]
 	);
