@@ -1,6 +1,12 @@
 import './index.css';
 import '../_shared/app.css';
-import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
+import {
+	useState,
+	useMemo,
+	useCallback,
+	useRef,
+	useEffect,
+} from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -230,12 +236,16 @@ export default function MediaApp( { config = {} } ) {
 		? String( authorFilterValue ) === String( currentUserId )
 		: showMine;
 
-	// Toggling Mine takes over the author axis: turning it ON drops any active
-	// author dropdown filter (so Mine is the single scope); turning it OFF just
-	// clears the static scope. One author scope at a time, no contradiction.
+	// Toggling Mine takes over the author axis. One author scope at a time, no
+	// contradiction:
+	// - ON  drops any active author dropdown filter so Mine is the single scope.
+	// - OFF clears the static scope AND any author dropdown filter — when Mine
+	//   reads checked solely because the dropdown points at the current user
+	//   (`mineChecked` derives from the filter), unchecking must drop that
+	//   filter too, otherwise the toggle would snap back checked (inert toggle).
 	const handleMineToggle = useCallback(
 		( next ) => {
-			if ( next && authorFilterActive ) {
+			if ( authorFilterActive ) {
 				setView( ( current ) => ( {
 					...current,
 					filters: ( current.filters ?? [] ).filter(
@@ -247,6 +257,22 @@ export default function MediaApp( { config = {} } ) {
 		},
 		[ authorFilterActive, setView ]
 	);
+
+	// The symmetric half of `handleMineToggle`: whenever an author dropdown
+	// filter becomes the active scope, actually clear the Mine static scope
+	// rather than only suppressing it in the derived `mineChecked`/`queryArgs`
+	// guards. Without this, `showMine` could stay latently `true` underneath an
+	// author filter, producing two bugs once the filter cleared: (1) clearing
+	// the dropdown would silently resurface the user's OWN media (Mine
+	// re-applies `author=currentUserId`) instead of returning to all media, and
+	// (2) selecting yourself in the dropdown made the Mine toggle inert (a
+	// `handleMineToggle(false)` no-op). Keyed on `authorFilterActive` so it only
+	// fires on the false→true transition — no render loop.
+	useEffect( () => {
+		if ( authorFilterActive ) {
+			setShowMine( false );
+		}
+	}, [ authorFilterActive ] );
 
 	const queryArgs = useMemo( () => {
 		// `_embed: 'author'` so each record carries `_embedded.author[0].name`

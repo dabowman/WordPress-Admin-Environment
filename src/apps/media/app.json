@@ -228,7 +228,7 @@
 			},
 			{
 				"trigger": "Toggle Mine / Unattached toolbar filters",
-				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query. Mine and the author dropdown filter share the author axis: toggling Mine ON drops any active author filter so Mine owns the scope, and Mine's checked state is derived from the active author scope rather than a standalone boolean (one author scope at a time, no contradiction)."
+				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query. Mine and the author dropdown filter share the author axis: toggling Mine (ON or OFF) drops any active author dropdown filter, Mine's checked state is derived from the active author scope rather than a standalone boolean, and a `useEffect` keyed on the active-author-filter flag clears the underlying `showMine` whenever a dropdown author filter becomes active — so the two controls are fully symmetric (one author scope at a time, no contradiction, no latent `showMine` resurfacing own media when the dropdown filter is later cleared, no inert toggle)."
 			},
 			{
 				"trigger": "Click Upload",
