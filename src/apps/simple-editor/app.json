@@ -67,14 +67,14 @@
 					"purpose": "Resolved post-type entity (`getPostType`) for sidebar panel gating: `supports` (comments / excerpt / thumbnail), `taxonomies` (categories / post_tag), and `capabilities.edit_others_posts` for the Author cap check."
 				},
 				{
-					"source": "taxonomy/categories, taxonomy/tags",
+					"source": "taxonomy/category, taxonomy/post_tag",
 					"via": "core-data",
-					"purpose": "Category checklist + tag token-field options (`useEntityRecords`, view context)."
+					"purpose": "Category checklist + tag token-field options (`useEntityRecords`, view context). Keyed by the taxonomy SLUG (`category` / `post_tag`) — the core-data entity name — NOT the REST base (`categories` / `tags`), which registers no entity and leaves `records` null forever."
 				},
 				{
-					"source": "root/user?who=authors",
+					"source": "root/user?capabilities[]=edit_posts",
 					"via": "core-data",
-					"purpose": "Author select options (cap-gated panel)."
+					"purpose": "Author select options (cap-gated panel). Uses the WP 5.9+ `capabilities` query (replaces the deprecated `who=authors`)."
 				},
 				{
 					"source": "postType/attachment",

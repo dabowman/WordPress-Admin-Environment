@@ -24,10 +24,10 @@ The autosave target is status-gated to mirror core's autosaves controller (`auto
 
 | Panel | Field(s) | Control |
 |---|---|---|
-| Status & visibility / Publish-Schedule (`PublishPanel`, hand-rolled) | `status` (`private`) + `password`, `date` | visibility `SelectControl`, password input, `datetime-local` |
+| Status & visibility / Publish-Schedule (`PublishPanel`, hand-rolled) | `status` (`private`) + `password`, `date` | visibility `SelectControl`, password input, `datetime-local`. Selected visibility is held in local `useState` (seeded from `deriveVisibility`) so "Password protected" sticks — and the password input reveals — before a password exists; `deriveVisibility` alone would snap the select back to Public. |
 | URL | `slug` | text input |
-| Categories | `categories[]` | `CheckboxControl` checklist (taxonomy `categories`) |
-| Tags | `tags[]` | `FormTokenField` (taxonomy `tags`) |
+| Categories | `categories[]` | `CheckboxControl` checklist (taxonomy slug `category`) |
+| Tags | `tags[]` | `FormTokenField` (taxonomy slug `post_tag`) |
 | Excerpt | `excerpt.raw` | `TextareaControl` |
 | Featured image | `featured_media` | `MediaUpload` / `MediaUploadCheck` (core media modal) |
 | Author | `author` | `SelectControl`, cap-gated on `edit_others_posts` |
@@ -59,7 +59,7 @@ The Gutenberg primitives are tightly coupled — `BlockEditorProvider` expects a
 ## Known limitations
 
 - **Page Attributes / templates / custom meta / post-format / sticky** — deliberately **out of scope** (issue #119 scope fences), not a gap to be closed. The simple editor stays a writing surface; structural/design metadata belongs to the full `core:editor` (iframed) or to future pattern tooling.
-- **Tags create-on-the-fly is not supported.** The tag token field only assigns *existing* term ids — unknown tokens are dropped rather than creating a new tag via REST. Core's editor creates missing tags inline; matching that needs a `saveEntityRecord('taxonomy','tags',…)` per new token before assignment.
+- **Tags create-on-the-fly is not supported.** The tag token field only assigns *existing* term ids — unknown tokens are dropped rather than creating a new tag via REST. Core's editor creates missing tags inline; matching that needs a `saveEntityRecord('taxonomy','post_tag',…)` per new token before assignment. (Taxonomy entities are keyed by slug — `category` / `post_tag` — not the REST base.)
 - **`core:editor.sidebar` is a shared slot.** The native document-settings panels fill it via `<Fill>`; plugin fills (`{ postId, postType, status }` fillProps) render alongside. No plugin ships one today, but the slot is no longer empty.
 - **Hydration is one-shot.** Reloading the record from elsewhere in the app (e.g. an external panel mutating status) would not re-parse the block tree. Edge case but worth flagging.
 - **Block library registers all ~30 core blocks** even though `allowedBlockTypes` restricts the slash menu to nine. A future iteration may switch to per-block lazy registration via `registerCoreBlock` to avoid loading unused blocks.

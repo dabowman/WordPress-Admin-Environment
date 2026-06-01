@@ -58,12 +58,3 @@
 	max-height: 220px;
 	overflow: auto;
 }
-
-.wp-admin-shell-doc-settings__check {
-	display: flex;
-	align-items: center;
-	gap: var(--wpds-dimension-gap-sm);
-	font-size: var(--wpds-font-size-sm);
-	color: var(--wpds-color-fg-content-neutral);
-	cursor: pointer;
-}

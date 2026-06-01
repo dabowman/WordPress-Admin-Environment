@@ -1,5 +1,5 @@
 /* eslint-disable @wordpress/no-unsafe-wp-apis -- SelectControl/FormToggle/Modal have no @wordpress/ui 0.12 port. */
-import { useMemo, useCallback } from '@wordpress/element';
+import { useMemo, useCallback, useState, useEffect } from '@wordpress/element';
 import { useEntityRecords } from '@wordpress/core-data';
 import {
 	Fill,
@@ -90,8 +90,28 @@ function Panel( { title, initialOpen = true, summary, children } ) {
 function PublishPanel( { editedRecord, edit } ) {
 	const status = editedRecord?.status ?? 'draft';
 	const password = editedRecord?.password ?? '';
-	const visibility = deriveVisibility( status, password );
+	const derived = deriveVisibility( status, password );
 	const isPublished = status === 'publish' || status === 'private';
+
+	// Track the chosen visibility locally so "Password protected" persists
+	// before a password has been typed. `deriveVisibility` can only ever
+	// recompute to `'password'` once `password` is truthy, so without this the
+	// select would snap back to Public the moment it's selected (the password
+	// input is gated on `visibility === 'password'`, so the user could never
+	// enter one). Seed from the derived value and re-sync when the entity's
+	// own status/password change underneath us — but keep a sticky local
+	// `'password'` selection even while the password is still empty.
+	const [ visibility, setVisibility ] = useState( derived );
+	useEffect( () => {
+		// Adopt the derived value unless we're holding the empty-password
+		// "password" mode and the record still agrees we're not private/locked.
+		if (
+			derived !== visibility &&
+			! ( visibility === 'password' && derived === 'public' )
+		) {
+			setVisibility( derived );
+		}
+	}, [ derived, visibility ] );
 
 	// `date` arrives as an ISO-ish string; the <input type="datetime-local">
 	// wants `YYYY-MM-DDTHH:mm`. Trim to minute precision.
@@ -99,11 +119,14 @@ function PublishPanel( { editedRecord, edit } ) {
 
 	const onVisibilityChange = useCallback(
 		( next ) => {
+			setVisibility( next );
 			if ( next === 'private' ) {
 				edit( { status: 'private', password: '' } );
 			} else if ( next === 'password' ) {
 				// Demote a `private` post back to a public-ish status so the
 				// password actually gates it; keep `publish` when already live.
+				// The password field reveals immediately (gated on local
+				// `visibility`); the value persists via `edit()` as typed.
 				edit( {
 					status: status === 'private' ? 'publish' : status,
 				} );
@@ -211,18 +234,18 @@ function SlugPanel( { editedRecord, edit } ) {
 /**
  * Build a token field bound to a flat (non-hierarchical) taxonomy. Tokens are
  * term *names*; on change we resolve names → ids, creating missing terms is
- * left to core's REST `tags` behaviour (we only assign known ids here to keep
- * the panel simple — unknown tokens are dropped).
+ * left to core's REST `post_tag` behaviour (we only assign known ids here to
+ * keep the panel simple — unknown tokens are dropped).
  *
  * @param {Object}   root0
  * @param {string}   root0.label    Field label.
- * @param {string}   root0.restBase Taxonomy REST base (e.g. `tags`).
+ * @param {string}   root0.taxonomy Taxonomy slug — the `@wordpress/core-data` entity name (e.g. `post_tag`), NOT the REST base.
  * @param {number[]} root0.value    Selected term ids.
  * @param {Function} root0.onChange Receives the next id array.
  * @return {JSX.Element} The token field.
  */
-function TaxonomyTokenField( { label, restBase, value, onChange } ) {
-	const { records } = useEntityRecords( 'taxonomy', restBase, {
+function TaxonomyTokenField( { label, taxonomy, value, onChange } ) {
+	const { records } = useEntityRecords( 'taxonomy', taxonomy, {
 		per_page: 100,
 		_fields: 'id,name',
 		context: 'view',
@@ -276,13 +299,13 @@ function TaxonomyTokenField( { label, restBase, value, onChange } ) {
  * A hierarchical (categories) multi-select rendered as checkboxes.
  *
  * @param {Object}   root0
- * @param {string}   root0.restBase Taxonomy REST base (e.g. `categories`).
+ * @param {string}   root0.taxonomy Taxonomy slug — the `@wordpress/core-data` entity name (e.g. `category`), NOT the REST base.
  * @param {number[]} root0.value    Selected term ids.
  * @param {Function} root0.onChange Receives the next id array.
  * @return {JSX.Element} The checklist.
  */
-function CategoryChecklist( { restBase, value, onChange } ) {
-	const { records } = useEntityRecords( 'taxonomy', restBase, {
+function CategoryChecklist( { taxonomy, value, onChange } ) {
+	const { records } = useEntityRecords( 'taxonomy', taxonomy, {
 		per_page: 100,
 		orderby: 'name',
 		order: 'asc',
@@ -410,8 +433,10 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
  * @return {JSX.Element|null} The panel, or null when the current user can't reassign.
  */
 function AuthorPanel( { editedRecord, edit } ) {
+	// `capabilities[]=edit_posts` is the WP 5.9+ replacement for the deprecated
+	// `who: 'authors'` arg — both narrow the list to users who can author posts.
 	const { records } = useEntityRecords( 'root', 'user', {
-		who: 'authors',
+		capabilities: [ 'edit_posts' ],
 		per_page: 100,
 		_fields: 'id,name',
 		context: 'view',
@@ -577,7 +602,7 @@ export default function DocumentSettingsSidebar( {
 						initialOpen={ false }
 					>
 						<CategoryChecklist
-							restBase="categories"
+							taxonomy="category"
 							value={ editedRecord?.categories }
 							onChange={ setTermIds( 'categories' ) }
 						/>
@@ -591,7 +616,7 @@ export default function DocumentSettingsSidebar( {
 					>
 						<TaxonomyTokenField
 							label={ __( 'Add tags', 'wp-admin-shell' ) }
-							restBase="tags"
+							taxonomy="post_tag"
 							value={ editedRecord?.tags }
 							onChange={ setTermIds( 'tags' ) }
 						/>

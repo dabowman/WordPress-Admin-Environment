@@ -48,10 +48,6 @@
 	background: var(--wpds-color-bg-surface-neutral-strong);
 }
 
-.wp-admin-shell-app-simple-editor__sidebar:empty {
-	display: none;
-}
-
 .wp-admin-shell-app-simple-editor__body {
 	flex: 1;
 	overflow: auto;
