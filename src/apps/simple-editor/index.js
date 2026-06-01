@@ -6,7 +6,8 @@ import {
 	useCallback,
 	useRef,
 } from '@wordpress/element';
-import { useEntityRecord } from '@wordpress/core-data';
+import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
+import { useSelect } from '@wordpress/data';
 import { Button, Icon } from '@wordpress/ui';
 import { Spinner, Slot } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -82,6 +83,39 @@ function ensureBlocksRegistered() {
 }
 
 /**
+ * Known REST bases for built-in post types. Lets `useRestBase` return
+ * synchronously on the first render without waiting for the entity to load.
+ *
+ * @type {Record<string, string>}
+ */
+const BUILTIN_REST_BASES = { post: 'posts', page: 'pages' };
+
+/**
+ * Returns the REST base for a given post type, or `undefined` while the
+ * post-type entity is still resolving. Built-in types (`post` → `posts`,
+ * `page` → `pages`) resolve synchronously via `BUILTIN_REST_BASES` so they
+ * never return `undefined`.
+ *
+ * Shared by `SimpleEditorApp` (draft-creation gate) and `SimpleEditor`
+ * (autosaves endpoint). Promoted here because both components need it —
+ * per CLAUDE.md "promote on second consumer".
+ *
+ * @param {string} postType Post type slug.
+ * @return {string|undefined} REST base, or `undefined` while resolving.
+ */
+function useRestBase( postType ) {
+	const entityBase = useSelect(
+		( select ) => select( coreStore ).getPostType( postType )?.rest_base,
+		[ postType ]
+	);
+	// Entity base wins when available; fall back to the built-in lookup for
+	// the first-render tick before the entity request completes. CPTs that
+	// have no entry in BUILTIN_REST_BASES return `undefined` until the entity
+	// resolves — the draft-creation gate in `SimpleEditorApp` relies on this.
+	return entityBase ?? BUILTIN_REST_BASES[ postType ];
+}
+
+/**
  * Substack-style simplified block editor.
  *
  * Routes:
@@ -111,8 +145,12 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
-	const backHref = `#/${ segment }`;
+	// `undefined` while a CPT's entity is still resolving; built-in types
+	// resolve synchronously so they never produce `undefined` here.
+	const postTypeRestBase = useRestBase( postType );
+	const restBase = postTypeRestBase ?? 'posts';
+
+	const backHref = `#/${ restBase }`;
 
 	// MountedApp doesn't remount across same-route hash navs
 	// (`/posts/A/edit` → `/posts/B/edit` share one route pattern), so the
@@ -141,13 +179,22 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		if ( ! isNew ) {
 			return;
 		}
+		// Wait until the post-type entity resolves so we know the correct REST
+		// base. For built-in types (post/page) this is always immediately
+		// available via the fallback ternary, so there is no extra tick for the
+		// common case. For CPTs, firing before resolution would use the `posts`
+		// fallback and create a stray `post` draft before the correct route
+		// is known.
+		if ( postTypeRestBase === undefined ) {
+			return;
+		}
 
 		let cancelled = false;
 
 		async function createDraft() {
 			try {
 				const result = await apiFetch( {
-					path: `/wp/v2/${ postType === 'page' ? 'pages' : 'posts' }`,
+					path: `/wp/v2/${ restBase }`,
 					method: 'POST',
 					data: {
 						status: 'draft',
@@ -162,7 +209,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 					window.history.replaceState(
 						null,
 						'',
-						`#/${ segment }/${ result.id }/edit`
+						`#/${ restBase }/${ result.id }/edit`
 					);
 				}
 			} catch ( err ) {
@@ -183,7 +230,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ isNew, postType, segment ] );
+	}, [ isNew, postTypeRestBase, restBase ] );
 
 	if ( error ) {
 		return (
@@ -247,7 +294,10 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const [ saveError, setSaveError ] = useState( null );
 	const autoSaveTimerRef = useRef( null );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
+	// Resolves synchronously for built-in types; waits one tick for CPTs.
+	// By the time `hasEdits` is true and the autosave timer fires, the entity
+	// has resolved and the correct REST base is in place.
+	const restBase = useRestBase( postType ) ?? 'posts';
 
 	const runSave = useCallback( async () => {
 		setSaveStatus( 'saving' );
@@ -274,7 +324,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 			const readRaw = ( field ) =>
 				typeof field === 'string' ? field : field?.raw ?? '';
 			await apiFetch( {
-				path: `/wp/v2/${ segment }/${ postId }/autosaves`,
+				path: `/wp/v2/${ restBase }/${ postId }/autosaves`,
 				method: 'POST',
 				data: {
 					title: readRaw( editedRecord?.title ),
@@ -290,7 +340,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 				err?.message || __( 'Save failed.', 'wp-admin-shell' )
 			);
 		}
-	}, [ editedRecord, postId, segment ] );
+	}, [ editedRecord, postId, restBase ] );
 
 	useEffect( () => {
 		if ( ! hasEdits ) {
