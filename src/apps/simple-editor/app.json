@@ -35,7 +35,7 @@
 		"icon": "edit"
 	},
 	"documentation": {
-		"purpose": "Substack-style minimal block editor: a title input plus a constrained block tree (paragraph / heading / image / quote / list / list-item / code / separator / embed). Loads/saves through `core-data` `useEntityRecord('postType', postType, id)`. Auto-saves on a 2-second debounce after edits stop; Publish button flips between `Publish` and `Update` based on `record.status`. Composes Gutenberg's `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` directly so the editor renders inline (not iframed) and inherits the shell's DOM.",
+		"purpose": "Substack-style minimal block editor: a title input plus a constrained block tree (paragraph / heading / image / quote / list / list-item / code / separator / embed), with a native document-settings sidebar (Status & visibility, Publish/Schedule, URL/slug, Categories, Tags, Excerpt, Featured image, Author, Discussion). Loads/saves through `core-data` `useEntityRecord('postType', postType, id)`. Auto-saves on a 2-second debounce via the shared `useEntityAutosave` hook (`src/apps/_shared/forms/useEntityAutosave.js`); sidebar panels mutate the same entity through buffered `edit()` so they commit on the same debounce — no extra endpoint. Publish button flips between `Publish` / `Update` (and writes `future` for scheduled dates) based on `record.status`. Composes Gutenberg's `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` directly so the editor renders inline (not iframed) and inherits the shell's DOM. Deliberately content-creation only: NO Block tab / per-block inspector, NO Page Attributes / templates / custom meta / post-format / sticky.",
 		"rebuilds": "editor-block",
 		"data": {
 			"reads": [
@@ -48,8 +48,38 @@
 						"id",
 						"title.raw",
 						"content.raw",
-						"status"
+						"excerpt.raw",
+						"status",
+						"password",
+						"date",
+						"slug",
+						"author",
+						"featured_media",
+						"comment_status",
+						"ping_status",
+						"categories",
+						"tags"
 					]
+				},
+				{
+					"source": "postType/{config.postType} (entity)",
+					"via": "core-data",
+					"purpose": "Resolved post-type entity (`getPostType`) for sidebar panel gating: `supports` (comments / excerpt / thumbnail), `taxonomies` (categories / post_tag), and `capabilities.edit_others_posts` for the Author cap check."
+				},
+				{
+					"source": "taxonomy/category, taxonomy/post_tag",
+					"via": "core-data",
+					"purpose": "Category checklist + tag token-field options (`useEntityRecords`, view context). Keyed by the taxonomy SLUG (`category` / `post_tag`) — the core-data entity name — NOT the REST base (`categories` / `tags`), which registers no entity and leaves `records` null forever."
+				},
+				{
+					"source": "root/user?who=authors",
+					"via": "core-data",
+					"purpose": "Author select options (cap-gated panel). Uses `who=authors` (NOT `capabilities[]=edit_posts`): the `capabilities` REST param requires the admin-only `list_users` cap and 403s for Editors/Authors who can reassign authors, whereas `who=authors` has a relaxed `edit_posts` permission branch. `who` is not deprecated and matches `core:media`."
+				},
+				{
+					"source": "postType/attachment",
+					"via": "core-data",
+					"purpose": "Featured-image thumbnail preview for the current `featured_media` id."
 				}
 			],
 			"writes": [
@@ -57,7 +87,7 @@
 					"source": "postType/{config.postType}",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Auto-save (`save()` from useEntityRecord) every 2s of inactivity while `hasEdits` — but only for draft / auto-draft posts; Publish/Update button flushes immediately for any status."
+					"purpose": "Auto-save (`save()` from useEntityRecord, via shared `useEntityAutosave`) every 2s of inactivity while `hasEdits` — but only for draft / auto-draft posts; Publish/Update button flushes immediately for any status. Sidebar panels write `status`, `password`, `date`, `slug`, `author`, `featured_media`, `excerpt`, `comment_status`, `ping_status`, `categories`, `tags` through the same buffered `edit()` → same debounced commit."
 				},
 				{
 					"source": "/wp/v2/posts/{id}/autosaves | /wp/v2/pages/{id}/autosaves",
@@ -117,7 +147,7 @@
 			{
 				"id": "autosaved",
 				"when": "saveStatus === 'autosaved'",
-				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a pending/published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns."
+				"renders": "Toolbar shows `Auto-saved` — a per-user autosave revision was written for a pending/published/scheduled post; the live record still has pending edits (`hasEdits` stays true). Auto-fades to `idle` after 2s, then the `with-edits` indicator returns. Only shown when the buffered edits were content fields the autosave persists (`title`/`content`/`excerpt`); if any non-content metadata field is still buffered, the status is suppressed to `idle` so it never reads as 'saved' for a pending metadata change."
 			},
 			{
 				"id": "save-failed",
@@ -158,6 +188,14 @@
 			{
 				"trigger": "Click Back to list",
 				"effect": "Navigate to `#/posts` or `#/pages` based on postType. Dirty-state guard fires if there are unsaved edits."
+			},
+			{
+				"trigger": "Edit a document-settings panel (visibility / date / slug / categories / tags / excerpt / featured image / author / discussion)",
+				"effect": "`edit({ <field>: <value> })` on the same entity; the shared autosave debounce commits it. Featured image opens the core media modal; categories render a checklist; tags a token field; author a cap-gated select."
+			},
+			{
+				"trigger": "Plugin fills `core:editor.sidebar`",
+				"effect": "The plugin's panels render in the same sidebar `<aside>` after the native document-settings Fill — the native panels never monopolize the slot."
 			}
 		],
 		"a11y": {
@@ -202,6 +240,22 @@
 			{
 				"concern": "title-shape-fallback",
 				"note": "`editedRecord.title` may be a string (from inline edit) or an object (from REST). The titleValue reader handles both."
+			},
+			{
+				"concern": "document-tab-scope-fence",
+				"note": "The sidebar is content-creation metadata ONLY: Status & visibility, Publish/Schedule, URL/slug, Categories, Tags, Excerpt, Featured image, Author (cap-gated), Discussion. Deliberately NO Block tab / per-block inspector, NO Page Attributes (parent / menu_order / template), NO custom-fields/meta, NO post-format/sticky (issue #119 scope fences). A reimplementation must not reintroduce these — the simple editor stays a writing surface, not a design/structure surface."
+			},
+			{
+				"concern": "sidebar-is-a-fill-not-a-monopoly",
+				"note": "The native panels render via `<Fill name=\"core:editor.sidebar\">`, composing with the editor's `<Slot>` of the same name. Plugin fills render alongside (after) the native panels, so the #20 plugin-extension vision is preserved."
+			},
+			{
+				"concern": "author-cap-advisory",
+				"note": "The Author panel is gated on `userCan(postType.capabilities.edit_others_posts)` — advisory per spec §8 layer 4 (REST is the authority). `userCan` returns optimistically true for caps not in the pre-computed map; a server 403 on save surfaces inline."
+			},
+			{
+				"concern": "shared-autosave-hook",
+				"note": "Autosave logic lives in `src/apps/_shared/forms/useEntityAutosave.js` (extracted from this app). It owns the 2s debounce, the draft→parent / published→per-user-revision split (issue #101), the save-status state machine, and `useRestBase` (CPT rest_base derivation, issue #210). The status-routing primitive `autosaveTarget` stays in `autosave.mjs` (pure, unit-tested)."
 			}
 		],
 		"design-system-leakage": [
@@ -212,6 +266,18 @@
 			{
 				"import": "@wordpress/components#Spinner, Slot",
 				"purpose": "Loading indicator + plugin-extension slot — WPDS 0.12 has no Spinner or Slot port."
+			},
+			{
+				"import": "@wordpress/components#Fill, SelectControl, FormToggle, FormTokenField, TextareaControl, BaseControl, CheckboxControl",
+				"purpose": "Document-settings sidebar controls — Fill (slot fill), SelectControl (visibility / author / native optgroup support), FormToggle (discussion toggles), FormTokenField (tags), TextareaControl (excerpt), BaseControl + raw inputs (slug / password / datetime-local), CheckboxControl (categories). All documented WPDS 0.12 @wordpress/components fallbacks."
+			},
+			{
+				"import": "@wordpress/ui#Collapsible, Badge, Card-less panels",
+				"purpose": "Collapsible (panel disclosure), Badge (status summary), Stack/Text/Button reused for sidebar layout."
+			},
+			{
+				"import": "@wordpress/block-editor#MediaUpload, MediaUploadCheck",
+				"purpose": "Featured-image picker — opens the core media modal and binds the selection to `featured_media`."
 			},
 			{
 				"import": "@wordpress/block-editor#BlockEditorProvider, BlockList, BlockTools, WritingFlow, ObserveTyping, BlockEditorKeyboardShortcuts",
