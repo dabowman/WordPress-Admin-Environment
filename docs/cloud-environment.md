@@ -50,6 +50,35 @@ That's it. New sessions re-run the setup script automatically. Docker **images**
 are cached between sessions; **containers** start fresh, so `wp-env start` runs
 each session (fast once images are cached).
 
+### Docker Hub pull rate limit (credential-free)
+
+wp-env pulls four images from Docker Hub: `mariadb:lts`, `phpmyadmin`, and the
+`wordpress` / `wordpress:cli` bases for its WP + CLI service builds. Cloud
+sessions share an egress IP, so the **anonymous** pull limit can trip — it
+surfaces as a `403 Forbidden` mid-pull ("You have reached your unauthenticated
+pull rate limit").
+
+The setup script handles this **without any credentials**:
+
+- **Cache-aware** — it skips any image already present in `/var/lib/docker`
+  (which persists between sessions), so a warm session makes *zero* Docker Hub
+  requests. Even a cached re-pull would spend a manifest request against the
+  quota, so skipping matters.
+- **Cold-pull retry** — a first-time pull retries with backoff to ride out
+  transient throttling, then `wp-env start` retries a few times too.
+
+Four pulls is well under the anonymous ceiling, and they only happen once
+(thereafter the cache covers it). The only case the script can't paper over is a
+**fully exhausted shared-IP quota** — that resets with time (~6h); just retry
+`npx wp-env start` in-session later. No Docker Hub login, token, or secret is
+required or stored anywhere.
+
+> **`@wordpress/env` is a committed devDependency.** It is otherwise only an
+> *optional* peer dependency of `@wordpress/scripts`, so `npm ci` would skip it
+> and every `npx wp-env …` call would 404 against the npm registry (there is no
+> bare `wp-env` package). It is pinned in `package.json` so `npm ci` always
+> installs the `wp-env` CLI.
+
 ## What the setup script provisions
 
 | Step | Result |
@@ -106,6 +135,15 @@ Defaults match wp-env (`admin` / `password` on `:8888`). Override via
 
 ## Troubleshooting
 
+- **`wp-env start` fails with `403 Forbidden` / "unauthenticated pull rate
+  limit"** — Docker Hub throttled the shared egress IP. The setup script skips
+  cached images and retries cold pulls with backoff, so this only bites a cold
+  cache on an already-exhausted IP. Wait for the anonymous limit to reset (~6h),
+  then re-run `npx wp-env start`; once the four images are cached, later sessions
+  don't pull at all.
+- **`npx wp-env` errors with `404 Not Found … 'wp-env@*' is not in this
+  registry`** — `@wordpress/env` isn't installed. Run `npm ci` (it's a committed
+  devDependency); npx 404s because there is no bare `wp-env` npm package.
 - **`wp-env start` hangs or fails** — confirm `*.wordpress.org` is allowlisted
   and `docker info` succeeds. Re-run `npx wp-env start`.
 - **`wp-cli not reachable`** — the DB container needs a few seconds after start;
