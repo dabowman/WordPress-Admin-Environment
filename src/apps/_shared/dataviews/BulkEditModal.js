@@ -4,7 +4,6 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataForm } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
-import { Modal } from '@wordpress/components';
 import { _n, sprintf, __ } from '@wordpress/i18n';
 import { computeBulkPayload, NO_CHANGE } from './bulkEditPayload.mjs';
 
@@ -47,7 +46,7 @@ import { computeBulkPayload, NO_CHANGE } from './bulkEditPayload.mjs';
  * @param {Object}   config.form        `DataForm` layout config (`regular` / `panel` / `sections`).
  * @param {*}        [config.sentinel]  The per-field "no change" marker. Defaults to the shared `NO_CHANGE`. Must be a value the real field domain never produces.
  * @param {Function} [config.toRecord]  `(payload, item) => restBody` maps the changed-field payload to the per-item REST body. Defaults to identity. The `id` is always merged in afterwards, so `toRecord` need not (and should not) set it.
- * @param {Object}   [config.messages]  `{ title, applyLabel, saved, partial, error, empty }` copy. `saved`/`partial` may be `(n, failed) => string`.
+ * @param {Object}   [config.messages]  `{ applyLabel, saved, partial, error, empty }` copy. `saved`/`partial` may be `(n, failed) => string`. The modal *header* is NOT set here — DataViews' internal `ActionModal` already wraps this `RenderModal` in its own `<Modal>` and titles it from the action's `label` / `modalHeader`. Returning our own `<Modal>` (or passing a `title`) would double the overlay, header, and focus trap, so the consumer sets the action label instead (matching `createBulkConfirmModal`).
  * @param {Function} [config.onApplied] `({ items, succeeded, results, failed }) => void` after the batch settles — e.g. `invalidateResolution` for the list cache. Runs even when nothing changed (failed = 0).
  * @return {Function} A DataViews `RenderModal` component.
  */
@@ -64,7 +63,6 @@ export function createBulkEditModal( {
 	const mapToRecord =
 		typeof toRecord === 'function' ? toRecord : ( payload ) => payload;
 
-	const title = messages.title || __( 'Bulk edit', 'wp-admin-shell' );
 	const applyLabel = messages.applyLabel || __( 'Apply', 'wp-admin-shell' );
 
 	/**
@@ -217,55 +215,63 @@ export function createBulkEditModal( {
 
 				onApplied?.( { items: targets, succeeded, results, failed } );
 				onActionPerformed?.( succeeded );
-				closeModal();
+				// Close only on full success; mirrors `EntityFormModal`'s
+				// keep-open-on-failure intent. On a partial / total failure the
+				// failed rows stay selected and the staged field values survive,
+				// so the user can correct + retry without re-entering everything.
+				if ( failed === 0 ) {
+					closeModal();
+				}
 			} finally {
 				setIsBusy( false );
 			}
 		};
 
+		// Bare `<Stack>` — NO own `<Modal>`. DataViews' internal `ActionModal`
+		// already wraps this `RenderModal` in a `<Modal>` (titled from the
+		// action's `label` / `modalHeader`), so wrapping our own would double the
+		// overlay / header / focus trap. Mirrors `createBulkConfirmModal`.
 		return (
-			<Modal title={ title } onRequestClose={ closeModal }>
-				<Stack direction="column" gap="md">
-					<Text>
-						{ sprintf(
-							/* translators: %d: number of selected items. */
-							_n(
-								'Editing %d item.',
-								'Editing %d items.',
-								count,
-								'wp-admin-shell'
-							),
-							count
-						) }
-					</Text>
-					<DataForm
-						data={ data }
-						fields={ fields }
-						form={ form }
-						onChange={ ( edits ) =>
-							setData( ( prev ) => ( { ...prev, ...edits } ) )
-						}
-					/>
-					<Stack direction="row" justify="flex-end" gap="sm">
-						<Button
-							tone="neutral"
-							variant="minimal"
-							onClick={ closeModal }
-						>
-							{ __( 'Cancel', 'wp-admin-shell' ) }
-						</Button>
-						<Button
-							tone="brand"
-							variant="solid"
-							onClick={ onApply }
-							loading={ isBusy }
-							disabled={ ! hasChanges || isBusy }
-						>
-							{ applyLabel }
-						</Button>
-					</Stack>
+			<Stack direction="column" gap="md">
+				<Text>
+					{ sprintf(
+						/* translators: %d: number of selected items. */
+						_n(
+							'Editing %d item.',
+							'Editing %d items.',
+							count,
+							'wp-admin-shell'
+						),
+						count
+					) }
+				</Text>
+				<DataForm
+					data={ data }
+					fields={ fields }
+					form={ form }
+					onChange={ ( edits ) =>
+						setData( ( prev ) => ( { ...prev, ...edits } ) )
+					}
+				/>
+				<Stack direction="row" justify="flex-end" gap="sm">
+					<Button
+						tone="neutral"
+						variant="minimal"
+						onClick={ closeModal }
+					>
+						{ __( 'Cancel', 'wp-admin-shell' ) }
+					</Button>
+					<Button
+						tone="brand"
+						variant="solid"
+						onClick={ onApply }
+						loading={ isBusy }
+						disabled={ ! hasChanges || isBusy }
+					>
+						{ applyLabel }
+					</Button>
 				</Stack>
-			</Modal>
+			</Stack>
 		);
 	};
 }
