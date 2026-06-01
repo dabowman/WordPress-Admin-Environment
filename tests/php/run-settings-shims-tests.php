@@ -110,22 +110,32 @@ $res = $put_settings( array(
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'reading PUT → 200', $res->get_status(), 200 );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'posts_per_rss persisted', (int) get_option( 'posts_per_rss' ), 25 );
 WPAS_Settings_Shim_Test_Runner::assert_true( 'rss_use_excerpt persisted truthy', (bool) get_option( 'rss_use_excerpt' ) );
-// Pin the exact stored shape: WP's sanitize_option for boolean-type settings
-// stores '1' for true and '' (empty string) for false — not '0'. This diverges
+// Pin the exact stored shape: update_option passes the sanitized value to
+// $wpdb->update(), which stringifies PHP booleans — true becomes '1', false
+// becomes '' (empty string). Core has no sanitize_option case for
+// rss_use_excerpt; the REST schema sanitizes via rest_sanitize_boolean, which
+// returns a PHP bool, and that bool is what $wpdb stringifies. This diverges
 // from core's '1'/'0' pattern used by hand-rolled options. Feed templates call
 // get_option('rss_use_excerpt') and do a truthy check, so '1' and '' are
 // functionally equivalent to '1' and '0', but a regression (e.g. the shim
 // 'type' changing to 'string') would alter the stored representation without
 // breaking the truthy gate above. These assert_eq calls pin the actual shape
 // so any such drift is caught immediately rather than silently passing.
+// Flush the object cache before reading so get_option hits the DB, not the
+// in-request cache that still holds the un-stringified PHP bool.
+wp_cache_delete( 'rss_use_excerpt', 'options' );
+wp_cache_delete( 'alloptions', 'options' );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'rss_use_excerpt stored shape (true → "1")', get_option( 'rss_use_excerpt' ), '1' );
 
 $put_settings( array( 'rss_use_excerpt' => false ) );
 WPAS_Settings_Shim_Test_Runner::assert_true( 'rss_use_excerpt persisted falsy', ! get_option( 'rss_use_excerpt' ) );
-// Empty string, not '0' — sanitize_option runs wp_validate_boolean() which
-// casts to (bool), and update_option stores that as ''. Any change to the shim
-// that switches storage to '0' would still pass the truthy gate above but would
-// be caught here.
+// Empty string, not '0' — $wpdb stringifies PHP false as '' on the DB write
+// (core has no sanitize_option case for rss_use_excerpt; rest_sanitize_boolean
+// returns a PHP bool which $wpdb then stringifies). Any change to the shim
+// that switches storage to '0' would still pass the truthy gate above but
+// would be caught here.
+wp_cache_delete( 'rss_use_excerpt', 'options' );
+wp_cache_delete( 'alloptions', 'options' );
 WPAS_Settings_Shim_Test_Runner::assert_eq( 'rss_use_excerpt stored shape (false → "")', get_option( 'rss_use_excerpt' ), '' );
 
 // posts_per_rss minimum (>= 1) is enforced by the schema validator.
