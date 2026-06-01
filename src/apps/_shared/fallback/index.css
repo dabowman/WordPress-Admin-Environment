@@ -3,7 +3,8 @@
  *
  * App-space, WPDS-flavored — the kernel stays DS-neutral. Imported as a
  * side-effect by `UnavailableViaApi.js`; webpack folds duplicate copies across
- * lazy chunks. No hardcoded colors — `var( --wpds-* )` only.
+ * lazy chunks. Colors are `var( --wpds-* )` tokens; any literal value is only
+ * ever a documented `var()` fallback for when the token is unset.
  *
  * The CLI command and agent prompt can be long (a full
  * `wp option update '...' '...'`); wrap + cap them so they don't overflow the
@@ -11,9 +12,11 @@
  */
 
 /*
- * The tiered block is a SIBLING of Notice.Description (not nested inside it —
- * see UnavailableViaApi.js). Add breathing room so it doesn't crowd the inline
- * explanation string above it.
+ * The tiered block is a SIBLING of the Notice.Root (not nested inside it —
+ * see UnavailableViaApi.js: the Notice is a role="status" live region, so the
+ * interactive tiers + their own aria-live spans live OUTSIDE it). Rendered as a
+ * <section class="…__tiers">. Add breathing room so it doesn't crowd the inline
+ * explanation notice above it.
  */
 .wp-admin-shell-unavailable-via-api__tiers {
 	margin-top: var( --wpds-dimension-padding-md, 0.75rem );
@@ -36,8 +39,11 @@
 	padding: var( --wpds-dimension-padding-xs )
 		var( --wpds-dimension-padding-sm );
 	border-radius: var( --wpds-border-radius-sm );
-	background: var( --wpds-color-bg-component-neutral-weak );
-	color: var( --wpds-color-fg-content-neutral-strong );
+	background: var(
+		--wpds-color-bg-component-neutral-weak,
+		rgba( 0, 0, 0, 0.06 )
+	);
+	color: var( --wpds-color-fg-content-neutral-strong, inherit );
 }
 
 /*
