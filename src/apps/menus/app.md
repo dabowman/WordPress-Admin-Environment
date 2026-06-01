@@ -77,6 +77,16 @@ Success → snackbar, failure → dismissible banner, via `@wordpress/notices` �
 
 So on a block theme the native `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom shell that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `#/nav-menus` (the iframe screen). We link to the **workspace route** `#/nav-menus`, not the raw `/wp-admin/nav-menus.php`: the raw path is claimed by the native `menus` screen's `legacy_path`, so the capture-phase admin-link interceptor would map it back to `#/menus` (this same disabled panel on a block theme). Routing to `#/nav-menus` mounts the iframe screen deterministically — which is why that screen must stay agnostic to the prune.
 
+### `nav-menus` reachability (the menu entry point)
+
+The `#/nav-menus` fallback link is a **convenience**, not the sole way in. The bundled `wp-admin-default` shell pins the `nav-menus` screen as a real item in the **Appearance** menu group (`menu.appearance.items.nav-menus`, label "Menus (Classic)"). Because `nav-menus` is not in the prune `RULES`, that menu node survives on every theme. The resulting per-theme menu state:
+
+- **Classic theme (supports menus):** both the native **Menus** editor (`core:menus`, the simplified DataForm editor) AND **Menus (Classic)** (`iframe:nav-menus.php`, full-fidelity) appear — distinct labels, both functional, no dead links.
+- **Classic theme (no `current_theme_supports('menus')`):** the native **Menus** item is pruned by the `requires` gate; **Menus (Classic)** remains (wp-admin's `nav-menus.php` is reachable regardless of registered locations — you can build a menu without assigning it anywhere).
+- **Block theme:** the native **Menus** item is pruned (superseded by the Site Editor's Navigation block — correct wp-admin parity); **Menus (Classic)** survives as the reachable classic escape hatch, and the block-theme self-disable panel's `#/nav-menus` link now resolves to it.
+
+So the iframe screen is never reachable only by a hand-typed URL — it is always a real nav entry, and the block-theme panel link always resolves to a mounted screen.
+
 ## Rebuild guide
 
 A non-WPDS / non-React rebuild needs:

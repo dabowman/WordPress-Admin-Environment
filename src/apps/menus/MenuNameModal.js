@@ -14,8 +14,10 @@ import { decodeEntities } from '@wordpress/html-entities';
  * modal drives a `saveEntityRecord`-based CREATE-or-rename flow that has no
  * pre-existing record to edit in create mode. For a single text field the
  * hand-rolled control is simpler than bending `DataForm` to a create flow.
- * The structural idioms still mirror the taxonomy term modal: one local state
- * value, decode-on-seed to avoid double-encoding.
+ * The taxonomy term modal (a `DataForm` consumer per the conventions) is the
+ * reference for the OUTER shape only — modal chrome, decode-on-seed, one local
+ * state value — NOT the form mechanism; this create-or-rename flow deliberately
+ * hand-rolls the single text field instead of using `DataForm`.
  *
  * @param {Object}      root0
  * @param {Object|null} root0.menu    Menu record to rename, or null to create.

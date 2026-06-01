@@ -110,13 +110,26 @@ export function buildItemTree( items ) {
 /**
  * The ordered sibling list under a parent (sorted by `menu_order`, then id).
  *
+ * Effective-parent normalization mirrors `buildItemTree`: an item whose `parent`
+ * isn't present in the set is an orphan and is treated as top-level (parent 0),
+ * so the reorder math operates on the same sibling group the tree *displays* the
+ * orphan in (instead of `siblingsOf(items, <missing-id>)` = just itself, which
+ * would no-op the orphan's Up/Down/Indent even though it sits among the real
+ * top-level rows). Corrupt-menu edge only; harmless on well-formed menus.
+ *
  * @param {Array}  items  Raw menu-item records.
  * @param {number} parent Parent id (0 = top level).
  * @return {Array} Sibling records, ordered.
  */
 export function siblingsOf( items, parent ) {
-	return ( items || [] )
-		.filter( ( it ) => parentOf( it ) === parent )
+	const list = items || [];
+	const byId = new Set( list.map( ( it ) => it.id ) );
+	const effectiveParent = ( it ) => {
+		const p = parentOf( it );
+		return p !== 0 && ! byId.has( p ) ? 0 : p;
+	};
+	return list
+		.filter( ( it ) => effectiveParent( it ) === parent )
 		.sort( ( a, b ) => orderOf( a ) - orderOf( b ) || a.id - b.id );
 }
 

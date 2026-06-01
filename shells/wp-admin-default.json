@@ -1186,9 +1186,9 @@
 			"legacy_path": "nav-menus.php"
 		},
 		"nav-menus": {
-			"label": "Menus (classic)",
+			"label": "Menus (Classic)",
 			"icon": "navigation",
-			"description": "Full-fidelity classic Menus editor (iframe fallback).",
+			"description": "Full-fidelity classic Menus editor (iframe). Theme-agnostic escape hatch — reachable on block themes where the native Menus editor is pruned.",
 			"path": "/nav-menus",
 			"app": "iframe:nav-menus.php",
 			"permissions": {
@@ -1593,6 +1593,9 @@
 				},
 				"menus": {
 					"position": 60
+				},
+				"nav-menus": {
+					"position": 65
 				}
 			}
 		},

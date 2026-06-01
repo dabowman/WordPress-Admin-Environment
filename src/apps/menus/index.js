@@ -43,19 +43,50 @@ function readThemeSupport() {
 // claimed by the native `menus` screen's `legacy_path`, so the admin-link
 // interceptor would bounce it back to `#/menus` (this same disabled panel on a
 // block theme). The `#/nav-menus` route mounts the iframe deterministically.
+//
+// The `nav-menus` screen is ALSO pinned in the shell's Appearance menu group
+// (theme-agnostic, surviving the block-theme prune), so it is independently
+// reachable as a real nav entry — this panel link is a convenience, not the
+// sole entry point.
 const NAV_MENUS_FALLBACK = '#/nav-menus';
 
 // Short, translatable labels for the REST `nav_menu_item.type` enum
 // (`custom` / `post_type` / `post_type_archive` / `taxonomy`). Keyed by the raw
 // REST value so translation tooling sees the `__()` literals at module load;
-// `TYPE_LABELS[ item.type ] ?? item.type` falls back to the raw value for any
-// type a plugin registers that we don't know about.
+// the type label is the fallback when the finer-grained `object` value below is
+// absent or unknown.
 const TYPE_LABELS = {
 	custom: __( 'Link', 'wp-admin-shell' ),
 	post_type: __( 'Page', 'wp-admin-shell' ),
 	post_type_archive: __( 'Archive', 'wp-admin-shell' ),
 	taxonomy: __( 'Category', 'wp-admin-shell' ),
 };
+
+// Finer-grained labels keyed on the REST `nav_menu_item.object` value (the
+// specific post type / taxonomy the item targets), so a post reads "Post" not
+// "Page" and a tag reads "Tag" not "Category". Falls back to `TYPE_LABELS` for
+// any object a plugin registers that we don't know about, then to the raw
+// `item.type`. Translation tooling sees the `__()` literals at module load.
+const OBJECT_LABELS = {
+	post: __( 'Post', 'wp-admin-shell' ),
+	page: __( 'Page', 'wp-admin-shell' ),
+	category: __( 'Category', 'wp-admin-shell' ),
+	post_tag: __( 'Tag', 'wp-admin-shell' ),
+};
+
+/**
+ * Resolve a short, translatable badge label for a menu item, preferring the
+ * specific `object` (post/page/category/post_tag) over the coarser `type`.
+ *
+ * @param {Object} item Raw menu-item record.
+ * @return {string} The badge label.
+ */
+function typeBadgeLabel( item ) {
+	if ( item.object && OBJECT_LABELS[ item.object ] ) {
+		return OBJECT_LABELS[ item.object ];
+	}
+	return TYPE_LABELS[ item.type ] ?? item.type;
+}
 
 export default function MenusApp() {
 	const themeSupport = readThemeSupport();
@@ -752,7 +783,7 @@ function MenuItemRow( {
 					</Button>
 					{ item.type && (
 						<Badge intent="neutral">
-							{ TYPE_LABELS[ item.type ] ?? item.type }
+							{ typeBadgeLabel( item ) }
 						</Badge>
 					) }
 				</Stack>
@@ -767,6 +798,11 @@ function MenuItemRow( {
 						label={ __( 'Move down', 'wp-admin-shell' ) }
 						onClick={ onMoveDown }
 					/>
+					{ /* Outdent / Indent: the raw chevron glyphs are LTR-oriented
+					     and don't auto-flip under RTL the way the row's
+					     `marginInlineStart` indent does. The `aria-label`s stay
+					     correct regardless; a future RTL pass can swap the glyphs
+					     on `dir="rtl"`. */ }
 					<IconAction
 						icon="chevronLeft"
 						label={ __( 'Outdent', 'wp-admin-shell' ) }

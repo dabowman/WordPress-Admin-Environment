@@ -134,6 +134,27 @@ console.log( '\n— siblingsOf —' );
 	);
 }
 
+console.log( '\n— siblingsOf: orphan normalized to top level (matches tree) —' );
+{
+	// Item 5's parent (999) is off the set → buildItemTree displays it at depth
+	// 0. siblingsOf must agree: it belongs to the top-level group, not a
+	// singleton group keyed by the missing parent id.
+	const items = [
+		{ id: 1, parent: 0, menu_order: 1 },
+		{ id: 5, parent: 999, menu_order: 2 }, // orphan.
+	];
+	eq(
+		'orphan grouped with real top-level siblings',
+		siblingsOf( items, 0 ).map( ( s ) => s.id ),
+		[ 1, 5 ]
+	);
+	eq(
+		'no singleton group under the missing parent id',
+		siblingsOf( items, 999 ).map( ( s ) => s.id ),
+		[]
+	);
+}
+
 console.log( '\n— reorderSiblings emits only changed orders, contiguous —' );
 {
 	const ordered = [

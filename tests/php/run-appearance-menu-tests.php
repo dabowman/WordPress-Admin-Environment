@@ -10,7 +10,9 @@
  *     #120 (native classic Menus).
  *   - Block theme → keeps `site-editor`; drops `customize` / `widgets` /
  *     `menus` (screens + menu nodes at any depth). The `nav-menus` iframe
- *     escape hatch is theme-agnostic and survives on every theme.
+ *     escape hatch is theme-agnostic and survives on every theme — including
+ *     its Appearance-group menu node, so it stays a reachable nav entry (not a
+ *     hand-typed URL) when the native `menus` editor is pruned on block themes.
  *   - Classic theme → keeps `customize` / `widgets` / `menus`; drops
  *     `site-editor`. Custom Background / Header survive only when the
  *     theme `add_theme_support()`s them.
@@ -522,11 +524,16 @@ WPAS_Appearance_Test_Runner::assert_true(
 // when it's needed, so it survives on every theme (block, classic-supported,
 // classic-unsupported).
 $doc_with_navmenus = wpas_appearance_test_doc();
-$doc_with_navmenus['screens']['nav-menus'] = array(
-	'label' => 'Menus (classic)',
+$doc_with_navmenus['screens']['nav-menus']                         = array(
+	'label' => 'Menus (Classic)',
 	'path'  => '/nav-menus',
 	'app'   => 'iframe:nav-menus.php',
 );
+// The shell pins `nav-menus` in the Appearance menu group (a real entry point,
+// not a hand-typed URL). Mirror that placement so the prune is exercised against
+// a menu node, not just a `screens` entry.
+$doc_with_navmenus['menu']['appearance']['items']['nav-menus']     = array( 'position' => 65 );
+
 $navmenus_classic_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( false )
@@ -534,6 +541,10 @@ $navmenus_classic_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
 WPAS_Appearance_Test_Runner::assert_true(
 	'agnostic: nav-menus screen kept on classic theme without menu support',
 	isset( $navmenus_classic_unsupported['screens']['nav-menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus menu node kept on classic theme without menu support',
+	isset( $navmenus_classic_unsupported['menu']['appearance']['items']['nav-menus'] )
 );
 $navmenus_classic_supported = WP_Admin_Shell_Appearance_Menu::apply(
 	$doc_with_navmenus,
@@ -550,6 +561,17 @@ $navmenus_block = WP_Admin_Shell_Appearance_Menu::apply(
 WPAS_Appearance_Test_Runner::assert_true(
 	'agnostic: nav-menus screen kept on block theme (deterministic fallback target)',
 	isset( $navmenus_block['screens']['nav-menus'] )
+);
+// On a block theme the native `menus` node is pruned but `nav-menus` survives in
+// the menu tree — the escape hatch stays reachable as a real nav entry, not a
+// hand-typed URL.
+WPAS_Appearance_Test_Runner::assert_false(
+	'block: native menus menu node dropped (superseded by Site Editor)',
+	isset( $navmenus_block['menu']['appearance']['items']['menus'] )
+);
+WPAS_Appearance_Test_Runner::assert_true(
+	'agnostic: nav-menus menu node survives on block theme (reachable escape hatch)',
+	isset( $navmenus_block['menu']['appearance']['items']['nav-menus'] )
 );
 
 // -----------------------------------------------------------------------------
