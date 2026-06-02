@@ -358,8 +358,6 @@
 							"type": "table",
 							"perPage": 25,
 							"fields": [
-								"username",
-								"email",
 								"roles",
 								"registered_date"
 							],
@@ -370,6 +368,16 @@
 								"id": "edit",
 								"label": "Edit",
 								"isPrimary": true
+							},
+							{
+								"id": "view",
+								"label": "View posts"
+							},
+							{
+								"id": "change-role",
+								"label": "Change role to…",
+								"supportsBulk": true,
+								"icon": "people"
 							},
 							{
 								"id": "delete",
@@ -459,6 +467,28 @@
 						},
 						"actions": [
 							{
+								"id": "edit",
+								"label": "Edit",
+								"isPrimary": true,
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved",
+										"spam"
+									]
+								}
+							},
+							{
+								"id": "reply",
+								"label": "Reply",
+								"eligibleWhen": {
+									"status": [
+										"hold",
+										"approved"
+									]
+								}
+							},
+							{
 								"id": "approve",
 								"label": "Approve",
 								"supportsBulk": true,
@@ -492,6 +522,22 @@
 								}
 							},
 							{
+								"id": "unspam",
+								"label": "Not spam",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "spam"
+								}
+							},
+							{
+								"id": "untrash",
+								"label": "Restore",
+								"supportsBulk": true,
+								"eligibleWhen": {
+									"status": "trash"
+								}
+							},
+							{
 								"id": "trash",
 								"label": "Move to trash",
 								"supportsBulk": true,
@@ -502,6 +548,18 @@
 										"hold",
 										"approved",
 										"spam"
+									]
+								}
+							},
+							{
+								"id": "delete-permanently",
+								"label": "Delete permanently",
+								"supportsBulk": true,
+								"isDestructive": true,
+								"eligibleWhen": {
+									"status": [
+										"spam",
+										"trash"
 									]
 								}
 							}
@@ -816,6 +874,16 @@
 					"app": "core:dashboard-host"
 				},
 				{
+					"id": "at-a-glance",
+					"app": "core:dashboard-widget-at-a-glance",
+					"slot": "grid"
+				},
+				{
+					"id": "activity",
+					"app": "core:dashboard-widget-activity",
+					"slot": "grid"
+				},
+				{
 					"id": "recent-posts",
 					"app": "core:dashboard-widget-recent-posts",
 					"slot": "grid"
@@ -839,7 +907,8 @@
 			"path": "/posts",
 			"app": "core:posts",
 			"config": {
-				"postType": "post"
+				"postType": "post",
+				"author": "{author}"
 			},
 			"dataViewRef": "postType/post/_default",
 			"permissions": {
@@ -1039,15 +1108,15 @@
 			},
 			"legacy_path": "edit-comments.php"
 		},
-		"appearance": {
-			"label": "Appearance",
+		"appearance-preferences": {
+			"label": "Appearance Preferences",
 			"icon": "appearance",
-			"description": "Themes, customizer, widgets.",
-			"path": "/appearance",
-			"app": "core:appearance",
+			"description": "Per-user personalization: density, accent color, default route.",
+			"path": "/appearance-preferences",
+			"app": "core:appearance-preferences",
 			"permissions": {
 				"capabilities": [
-					"switch_themes"
+					"read"
 				]
 			}
 		},
@@ -1102,6 +1171,31 @@
 				]
 			},
 			"legacy_path": "widgets.php"
+		},
+		"menus": {
+			"label": "Menus",
+			"icon": "navigation",
+			"description": "Build and assign classic navigation menus (classic themes).",
+			"path": "/menus",
+			"app": "core:menus",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			},
+			"legacy_path": "nav-menus.php"
+		},
+		"nav-menus": {
+			"label": "Menus (Classic)",
+			"icon": "navigation",
+			"description": "Full-fidelity classic Menus editor (iframe). Theme-agnostic escape hatch — reachable on block themes where the native Menus editor is pruned.",
+			"path": "/nav-menus",
+			"app": "iframe:nav-menus.php",
+			"permissions": {
+				"capabilities": [
+					"edit_theme_options"
+				]
+			}
 		},
 		"fonts": {
 			"label": "Fonts",
@@ -1160,7 +1254,7 @@
 			"label": "Add New User",
 			"icon": "plus",
 			"path": "/users/new",
-			"app": "iframe:user-new.php",
+			"app": "core:user-new",
 			"permissions": {
 				"capabilities": [
 					"create_users"
@@ -1354,7 +1448,7 @@
 		"settings-media": {
 			"label": "Media",
 			"path": "/settings/media",
-			"app": "iframe:options-media.php",
+			"app": "core:settings-media",
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -1476,6 +1570,9 @@
 			"position": 65
 		},
 		"appearance": {
+			"label": "Appearance",
+			"icon": "appearance",
+			"description": "Themes, editor, fonts.",
 			"position": 70,
 			"items": {
 				"themes": {
@@ -1487,6 +1584,18 @@
 				},
 				"fonts": {
 					"position": 30
+				},
+				"customize": {
+					"position": 40
+				},
+				"widgets": {
+					"position": 50
+				},
+				"menus": {
+					"position": 60
+				},
+				"nav-menus": {
+					"position": 65
 				}
 			}
 		},
@@ -1579,6 +1688,9 @@
 				},
 				"settings-workspace": {
 					"position": 80
+				},
+				"appearance-preferences": {
+					"position": 90
 				}
 			}
 		},

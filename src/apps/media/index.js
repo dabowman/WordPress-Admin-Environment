@@ -1,65 +1,302 @@
 import './index.css';
 import '../_shared/app.css';
-import { useState, useMemo, useCallback, useRef } from '@wordpress/element';
+import {
+	useState,
+	useMemo,
+	useCallback,
+	useRef,
+	useEffect,
+} from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
-import { useDispatch, useSelect } from '@wordpress/data';
+import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import apiFetch from '@wordpress/api-fetch';
-import { Button, Icon, InputControl, Stack, Text } from '@wordpress/ui';
-import {
-	Button as DestructiveButton,
-	Spinner,
-	SelectControl,
-	Modal,
-	TextareaControl,
-} from '@wordpress/components';
+import { DataViews } from '@wordpress/dataviews/wp';
+import { Button, Icon, Stack, Text } from '@wordpress/ui';
+import { Spinner, ToggleControl, Modal } from '@wordpress/components';
 import { __, _n, sprintf } from '@wordpress/i18n';
-import { upload, trash, copy } from '@wordpress/icons';
-import { withElementCounts } from '../_shared/dataviews/buildFields.mjs';
+import { decodeEntities } from '@wordpress/html-entities';
+import { upload } from '@wordpress/icons';
+import { useDataView } from '../../runtime/dataView/useDataView';
+import { buildFields } from '../_shared/dataviews/buildFields.mjs';
+import { buildActions } from '../_shared/dataviews/buildActions';
+import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { buildQueryArgs } from '../_shared/dataviews/buildQueryArgs.mjs';
+import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 import {
 	useEntityElementCounts,
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
+import MediaDetails from './MediaDetails';
 
-const ALL_COUNT_QUERY = { per_page: 1, _fields: 'id', context: 'edit' };
+const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'text', 'application' ];
 
-const MEDIA_TYPE_OPTIONS = [
-	{ value: '', label: __( 'All', 'wp-admin-shell' ) },
-	{ value: 'image', label: __( 'Images', 'wp-admin-shell' ) },
-	{ value: 'video', label: __( 'Video', 'wp-admin-shell' ) },
-	{ value: 'audio', label: __( 'Audio', 'wp-admin-shell' ) },
-	{ value: 'application', label: __( 'Documents', 'wp-admin-shell' ) },
-];
+// Plain English type labels for the mapped `typeLabel` cell. Kept in sync with
+// the dataView `type` field elements; the count-augmented filter labels come
+// from buildFields, this is just the table-cell display.
+const FILTER_TYPE_LABELS = {
+	image: __( 'Image', 'wp-admin-shell' ),
+	video: __( 'Video', 'wp-admin-shell' ),
+	audio: __( 'Audio', 'wp-admin-shell' ),
+	text: __( 'Text', 'wp-admin-shell' ),
+	application: __( 'Document', 'wp-admin-shell' ),
+	file: __( 'File', 'wp-admin-shell' ),
+};
 
-const MEDIA_TYPE_VALUES = MEDIA_TYPE_OPTIONS.filter(
-	( option ) => option.value
-).map( ( option ) => option.value );
+// Locale tables for the ids this app authors — see buildFields/buildActions.
+const FIELD_LABELS = {
+	title: __( 'Title', 'wp-admin-shell' ),
+	thumbnail: __( 'Preview', 'wp-admin-shell' ),
+	type: __( 'Type', 'wp-admin-shell' ),
+	author: __( 'Author', 'wp-admin-shell' ),
+	date: __( 'Date', 'wp-admin-shell' ),
+};
 
-export default function MediaApp() {
-	const [ mediaType, setMediaType ] = useState( '' );
-	const [ page, setPage ] = useState( 1 );
-	const [ selectedItem, setSelectedItem ] = useState( null );
+const ACTION_LABELS = {
+	edit: __( 'Edit', 'wp-admin-shell' ),
+	'copy-url': __( 'Copy URL', 'wp-admin-shell' ),
+	delete: __( 'Delete Permanently', 'wp-admin-shell' ),
+};
+
+const VIEW_DEFAULTS = {
+	type: 'grid',
+	search: '',
+	filters: [],
+	page: 1,
+	perPage: 40,
+	sort: { field: 'date', direction: 'desc' },
+	fields: [],
+	layout: {},
+};
+
+// DataViews `view` → REST query-args mapping (search / sort / pagination +
+// the media_type + author filters). Mine + Unattached are toolbar
+// pseudo-filters merged as static args below; the date `before`/`after`
+// operators are applied in a supplemental pass (the shared mapper only speaks
+// `is`/`isAny`).
+const QUERY_MAPPING = {
+	search: 'search',
+	sort: { defaultField: 'date', defaultDirection: 'desc' },
+	filters: {
+		type: { is: 'media_type' },
+		author: { is: 'author' },
+	},
+};
+
+/**
+ * Apply the DataViews date filter (`before` / `after` operators) to the REST
+ * args. `buildQueryArgs` only handles `is`/`isAny`, so the date range — which
+ * maps to the attachments controller's `before` / `after` ISO params — is wired
+ * here. Mirrors the Posts lane's `applyDateFilters` supplement.
+ * @param {Object} args    REST args produced by `buildQueryArgs`.
+ * @param {Array}  filters `view.filters`.
+ * @return {Object} `args` with `before`/`after` applied where present.
+ */
+function applyDateFilters( args, filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if ( filter.field !== 'date' || ! filter.value ) {
+			continue;
+		}
+		if ( filter.operator === 'before' ) {
+			args.before = filter.value;
+		} else if ( filter.operator === 'after' ) {
+			args.after = filter.value;
+		}
+	}
+	return args;
+}
+
+/**
+ * Find the active `author` DataViews view-filter (an `is`-operator entry with a
+ * defined value), if any. The author dropdown filter and the Mine toggle both
+ * scope by author; this lets the app keep them mutually consistent — one author
+ * scope at a time. Returns the filter's value (a user id) or `null` when no
+ * author filter is engaged.
+ *
+ * @param {Array} filters `view.filters`.
+ * @return {number|string|null} The active author filter value, or `null`.
+ */
+function activeAuthorFilterValue( filters ) {
+	for ( const filter of Array.isArray( filters ) ? filters : [] ) {
+		if (
+			filter.field === 'author' &&
+			filter.value !== null &&
+			filter.value !== undefined &&
+			filter.value !== ''
+		) {
+			return filter.value;
+		}
+	}
+	return null;
+}
+
+// Cache for the author filter `getElements` provider. DataViews calls
+// `getElements()` each time the filter opens; caching the mapped
+// `{ value, label }` array avoids re-decoding on every open. `resolveSelect`
+// already memoizes the underlying core-data resolution.
+let authorElementsCache = null;
+
+/**
+ * Async DataViews `getElements` provider for the author filter. Fetches users
+ * able to author content via core-data (`resolveSelect`, never raw `fetch`) and
+ * maps them to `{ value: userId, label: name }`, cached after the first open.
+ * Mirrors how the Posts lane builds its taxonomy filter element providers.
+ * @return {Promise<Array>} `[ { value, label } ]`.
+ */
+async function getAuthorElements() {
+	if ( authorElementsCache ) {
+		return authorElementsCache;
+	}
+	const users = await resolveSelect( coreStore ).getEntityRecords(
+		'root',
+		'user',
+		{ who: 'authors', per_page: 100, _fields: 'id,name' }
+	);
+	authorElementsCache = ( users ?? [] ).map( ( user ) => ( {
+		value: user.id,
+		label: decodeEntities( user.name ),
+	} ) );
+	return authorElementsCache;
+}
+
+/**
+ * Render the thumbnail media field: image thumbnail for `media_type === 'image'`,
+ * else a labeled file-type tile (PDF / MP4 / …). Media's one renderer the other
+ * list apps don't need.
+ *
+ * @param {Object} root0
+ * @param {Object} root0.item Mapped attachment data item.
+ * @return {JSX.Element} The tile.
+ */
+function ThumbnailField( { item } ) {
+	if ( item.mediaType === 'image' && item.thumbnail ) {
+		return (
+			<img
+				className="wp-admin-shell-app-media__thumb"
+				src={ item.thumbnail }
+				alt={ item.altText || '' }
+				loading="lazy"
+			/>
+		);
+	}
+	return (
+		<div className="wp-admin-shell-app-media__file-icon">
+			<Text>
+				{ item.mimeType?.split( '/' ).pop()?.toUpperCase() || 'FILE' }
+			</Text>
+		</div>
+	);
+}
+
+const FIELD_RENDERERS = {
+	title: ( { item } ) => <Text>{ item.title }</Text>,
+	thumbnail: ( props ) => <ThumbnailField { ...props } />,
+	type: ( { item } ) => <Text>{ item.typeLabel }</Text>,
+	author: ( { item } ) => <Text>{ item.author }</Text>,
+};
+
+export default function MediaApp( { config = {} } ) {
+	const screenId = config.screenId || null;
+	const currentUserId = window.wpAdminShell?.userId;
+
+	const { config: dataViewConfig } = useDataView( screenId );
+
+	const { view, setView, selection, setSelection } = useEntityDataView( {
+		screenId,
+		dataViewConfig,
+		viewDefaults: VIEW_DEFAULTS,
+	} );
+
+	// Toolbar pseudo-filters (no DataViews filter UI for these): Mine restricts
+	// to the current user's uploads; Unattached restricts to `parent: 0`.
+	const [ showMine, setShowMine ] = useState( false );
+	const [ showUnattached, setShowUnattached ] = useState( false );
 	const [ isUploading, setIsUploading ] = useState( false );
+	const [ editingId, setEditingId ] = useState( null );
 	const fileInputRef = useRef();
 
-	const queryArgs = useMemo( () => {
-		const args = {
-			per_page: 40,
-			page,
-			context: 'edit',
-		};
-		if ( mediaType ) {
-			args.media_type = mediaType;
-		}
-		return args;
-	}, [ mediaType, page ] );
+	// The author dropdown filter and the Mine toggle are two controls for the
+	// same axis (author scope). Keep exactly one active: when an author
+	// view-filter is engaged it is the single source of author scope, so the
+	// Mine static arg is skipped (otherwise `buildQueryArgs` would overwrite it
+	// with the dropdown value, leaving Mine checked while another author's media
+	// showed — contradictory state).
+	const authorFilterValue = useMemo(
+		() => activeAuthorFilterValue( view.filters ),
+		[ view.filters ]
+	);
+	const authorFilterActive = authorFilterValue !== null;
 
-	const {
-		records,
-		isResolving,
-		totalItems: mainTotal,
-		totalPages,
-	} = useEntityRecords( 'root', 'media', queryArgs );
+	// Mine reflects reality, not a standalone boolean: checked when the Mine
+	// static scope is the active author scope (toggle on, no dropdown filter
+	// overriding it) OR when the dropdown's author value happens to be the
+	// current user. Compare as strings so a string filter value ('5') matches a
+	// numeric current-user id (5).
+	const mineChecked = authorFilterActive
+		? String( authorFilterValue ) === String( currentUserId )
+		: showMine;
+
+	// Toggling Mine takes over the author axis. One author scope at a time, no
+	// contradiction:
+	// - ON  drops any active author dropdown filter so Mine is the single scope.
+	// - OFF clears the static scope AND any author dropdown filter — when Mine
+	//   reads checked solely because the dropdown points at the current user
+	//   (`mineChecked` derives from the filter), unchecking must drop that
+	//   filter too, otherwise the toggle would snap back checked (inert toggle).
+	const handleMineToggle = useCallback(
+		( next ) => {
+			if ( authorFilterActive ) {
+				setView( ( current ) => ( {
+					...current,
+					filters: ( current.filters ?? [] ).filter(
+						( filter ) => filter.field !== 'author'
+					),
+				} ) );
+			}
+			setShowMine( next );
+		},
+		[ authorFilterActive, setView ]
+	);
+
+	// The symmetric half of `handleMineToggle`: whenever an author dropdown
+	// filter becomes the active scope, actually clear the Mine static scope
+	// rather than only suppressing it in the derived `mineChecked`/`queryArgs`
+	// guards. Without this, `showMine` could stay latently `true` underneath an
+	// author filter, producing two bugs once the filter cleared: (1) clearing
+	// the dropdown would silently resurface the user's OWN media (Mine
+	// re-applies `author=currentUserId`) instead of returning to all media, and
+	// (2) selecting yourself in the dropdown made the Mine toggle inert (a
+	// `handleMineToggle(false)` no-op). Keyed on `authorFilterActive` so it only
+	// fires on the false→true transition — no render loop.
+	useEffect( () => {
+		if ( authorFilterActive ) {
+			setShowMine( false );
+		}
+	}, [ authorFilterActive ] );
+
+	const queryArgs = useMemo( () => {
+		// `_embed: 'author'` so each record carries `_embedded.author[0].name`
+		// for the Author column — `record.author` alone is a bare numeric id.
+		const staticArgs = { context: 'edit', _embed: 'author' };
+		// Skip the Mine static author arg when an explicit author filter is the
+		// active scope — the filter wins and is applied by buildQueryArgs.
+		if ( showMine && currentUserId && ! authorFilterActive ) {
+			staticArgs.author = currentUserId;
+		}
+		if ( showUnattached ) {
+			staticArgs.parent = 0;
+		}
+		const args = buildQueryArgs( view, QUERY_MAPPING, staticArgs );
+		// The DataViews date filter maps to REST `before`/`after`, which
+		// `buildQueryArgs` doesn't express — apply it as a supplemental pass.
+		return applyDateFilters( args, view.filters );
+	}, [ view, showMine, showUnattached, currentUserId, authorFilterActive ] );
+
+	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
+		'root',
+		'media',
+		queryArgs
+	);
 
 	const typeCounts = useEntityElementCounts(
 		'root',
@@ -67,40 +304,26 @@ export default function MediaApp() {
 		'media_type',
 		MEDIA_TYPE_VALUES
 	);
-	// When unfiltered, the main list query already exposes the unfiltered
-	// `totalItems` — no need to fire a second `per_page=1` request. When a
-	// type filter is active, the main query's total is scoped to that type,
-	// so a dedicated lightweight request inside `useSelect` covers "All".
-	const filteredAllCount = useSelect(
-		( select ) => {
-			if ( ! mediaType ) {
-				return null;
-			}
-			const { getEntityRecords, getEntityRecordsTotalItems } =
-				select( coreStore );
-			getEntityRecords( 'root', 'media', ALL_COUNT_QUERY );
-			return getEntityRecordsTotalItems(
-				'root',
-				'media',
-				ALL_COUNT_QUERY
-			);
-		},
-		[ mediaType ]
-	);
-	const allCount = mediaType ? filteredAllCount : mainTotal;
-	const typeOptions = useMemo(
-		() =>
-			withElementCounts( MEDIA_TYPE_OPTIONS, {
-				...typeCounts,
-				'': allCount,
-			} ),
-		[ typeCounts, allCount ]
-	);
 
-	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
+	const { deleteEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
-	const { createSuccessNotice, createErrorNotice } =
+	const { createSuccessNotice, createErrorNotice, createNotice } =
 		useDispatch( noticesStore );
+
+	const refreshAfterMutation = useCallback( () => {
+		invalidateResolution( 'getEntityRecords', [
+			'root',
+			'media',
+			queryArgs,
+		] );
+		invalidateEntityElementCounts(
+			invalidateResolution,
+			'root',
+			'media',
+			'media_type',
+			MEDIA_TYPE_VALUES
+		);
+	}, [ invalidateResolution, queryArgs ] );
 
 	const handleUpload = useCallback(
 		async ( event ) => {
@@ -108,13 +331,12 @@ export default function MediaApp() {
 			if ( ! files?.length ) {
 				return;
 			}
-
 			setIsUploading( true );
 			try {
 				let uploaded = 0;
-				// Upload each file independently so a single failure
-				// (oversize / disallowed MIME / quota) surfaces its own error
-				// notice without aborting the rest of the batch.
+				// Upload each file independently so a single failure (oversize /
+				// disallowed MIME / quota) surfaces its own error notice without
+				// aborting the rest of the batch.
 				for ( const file of files ) {
 					const formData = new FormData();
 					formData.append( 'file', file );
@@ -155,24 +377,7 @@ export default function MediaApp() {
 						),
 						{ type: 'snackbar' }
 					);
-					invalidateResolution( 'getEntityRecords', [
-						'root',
-						'media',
-						queryArgs,
-					] );
-					// Uploads grow the per-type and unfiltered totals.
-					invalidateEntityElementCounts(
-						invalidateResolution,
-						'root',
-						'media',
-						'media_type',
-						MEDIA_TYPE_VALUES
-					);
-					invalidateResolution( 'getEntityRecords', [
-						'root',
-						'media',
-						ALL_COUNT_QUERY,
-					] );
+					refreshAfterMutation();
 				}
 			} finally {
 				setIsUploading( false );
@@ -181,84 +386,172 @@ export default function MediaApp() {
 				}
 			}
 		},
-		[
-			queryArgs,
-			invalidateResolution,
-			createErrorNotice,
-			createSuccessNotice,
-		]
+		[ refreshAfterMutation, createErrorNotice, createSuccessNotice ]
 	);
 
-	const handleDelete = useCallback(
-		async ( item ) => {
-			await deleteEntityRecord( 'root', 'media', item.id, {
-				force: true,
-			} );
-			invalidateResolution( 'getEntityRecords', [
-				'root',
-				'media',
-				queryArgs,
-			] );
-			// Deletes shrink the per-type and unfiltered totals.
-			invalidateEntityElementCounts(
-				invalidateResolution,
-				'root',
-				'media',
-				'media_type',
-				MEDIA_TYPE_VALUES
-			);
-			invalidateResolution( 'getEntityRecords', [
-				'root',
-				'media',
-				ALL_COUNT_QUERY,
-			] );
-			setSelectedItem( null );
-		},
-		[ deleteEntityRecord, invalidateResolution, queryArgs ]
+	const data = useMemo( () => {
+		if ( ! records ) {
+			return [];
+		}
+		return records.map( ( record ) => ( {
+			id: record.id,
+			title:
+				record.title?.raw ||
+				record.title?.rendered ||
+				__( '(no title)', 'wp-admin-shell' ),
+			thumbnail:
+				record.media_details?.sizes?.thumbnail?.source_url ||
+				record.source_url,
+			mediaType: record.media_type,
+			typeLabel:
+				FILTER_TYPE_LABELS[ record.media_type ] ||
+				record.media_type ||
+				'',
+			mimeType: record.mime_type,
+			altText: record.alt_text || '',
+			// Prefer the embedded author display name; fall back to em dash
+			// while the embed resolves (or if the author can't be embedded).
+			author: record._embedded?.author?.[ 0 ]?.name || '—',
+			date: record.date,
+			source_url: record.source_url,
+		} ) );
+	}, [ records ] );
+
+	const fields = useMemo(
+		() =>
+			buildFields( dataViewConfig.fields, {
+				labels: FIELD_LABELS,
+				renderers: FIELD_RENDERERS,
+				elementCounts: { type: typeCounts },
+				// Author filter options resolve lazily — DataViews calls the
+				// provider when the filter opens (fetches authors via core-data).
+				getElements: { author: getAuthorElements },
+			} ),
+		[ dataViewConfig, typeCounts ]
 	);
 
-	const handleCopyUrl = useCallback(
-		async ( url ) => {
-			try {
-				await navigator.clipboard.writeText( url );
-				createSuccessNotice(
-					__( 'URL copied to clipboard.', 'wp-admin-shell' ),
-					{ type: 'snackbar' }
-				);
-			} catch ( err ) {
-				createErrorNotice(
-					err?.message ||
-						__( 'Failed to copy URL.', 'wp-admin-shell' ),
-					{ isDismissible: true }
-				);
-			}
-		},
-		[ createSuccessNotice, createErrorNotice ]
+	const actions = useMemo( () => {
+		const deleteModal = createBulkConfirmModal( {
+			getMessage: ( items ) =>
+				items.length === 1
+					? __(
+							'Are you sure you want to permanently delete this attachment? This cannot be undone.',
+							'wp-admin-shell'
+					  )
+					: __(
+							'Are you sure you want to permanently delete these attachments? This cannot be undone.',
+							'wp-admin-shell'
+					  ),
+			confirmLabel: __( 'Delete Permanently', 'wp-admin-shell' ),
+			// Media has no trash — force: true skips it.
+			mutate: ( item ) =>
+				deleteEntityRecord( 'root', 'media', item.id, { force: true } ),
+			onSettled: ( { targets, failed } ) => {
+				refreshAfterMutation();
+				if ( failed > 0 ) {
+					createNotice(
+						'error',
+						sprintf(
+							/* translators: 1: failed item count, 2: total item count */
+							_n(
+								'%1$d of %2$d attachment failed to delete.',
+								'%1$d of %2$d attachments failed to delete.',
+								failed,
+								'wp-admin-shell'
+							),
+							failed,
+							targets.length
+						),
+						{ type: 'snackbar' }
+					);
+				} else {
+					createNotice(
+						'success',
+						sprintf(
+							/* translators: %d: permanently deleted attachment count */
+							_n(
+								'%d attachment permanently deleted.',
+								'%d attachments permanently deleted.',
+								targets.length,
+								'wp-admin-shell'
+							),
+							targets.length
+						),
+						{ type: 'snackbar' }
+					);
+				}
+			},
+		} );
+
+		return buildActions( dataViewConfig.actions, {
+			labels: ACTION_LABELS,
+			callbacks: {
+				edit: ( items ) => setEditingId( items[ 0 ].id ),
+				'copy-url': async ( items ) => {
+					try {
+						await navigator.clipboard.writeText(
+							items[ 0 ].source_url || ''
+						);
+						createSuccessNotice(
+							__( 'URL copied to clipboard.', 'wp-admin-shell' ),
+							{ type: 'snackbar' }
+						);
+					} catch ( err ) {
+						createErrorNotice(
+							err?.message ||
+								__( 'Failed to copy URL.', 'wp-admin-shell' ),
+							{ isDismissible: true }
+						);
+					}
+				},
+			},
+			modals: { delete: deleteModal },
+		} );
+	}, [
+		dataViewConfig,
+		deleteEntityRecord,
+		refreshAfterMutation,
+		createNotice,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
+
+	const paginationInfo = useMemo(
+		() => ( {
+			totalItems: totalItems || 0,
+			totalPages: totalPages || 0,
+		} ),
+		[ totalItems, totalPages ]
 	);
 
 	return (
-		<div className="wp-admin-shell-app-media wp-admin-shell-app--inset">
+		<div className="wp-admin-shell-app-media wp-admin-shell-app--fill">
 			<Stack
 				direction="row"
 				align="center"
 				justify="space-between"
+				gap="md"
 				className="wp-admin-shell-app-media__toolbar"
 			>
-				<Text variant="heading-lg" render={ <h2 /> }>
-					{ __( 'Media', 'wp-admin-shell' ) }
-				</Text>
-
-				<Stack direction="row" gap="md" align="center">
-					<SelectControl
-						value={ mediaType }
-						options={ typeOptions }
-						onChange={ ( val ) => {
-							setMediaType( val );
-							setPage( 1 );
-						} }
+				<Stack direction="row" align="center" gap="lg">
+					{ /* Only offer the Mine toggle when the current user id is
+					     known — without it the filter would no-op. */ }
+					{ currentUserId ? (
+						<ToggleControl
+							__nextHasNoMarginBottom
+							label={ __( 'Mine', 'wp-admin-shell' ) }
+							checked={ mineChecked }
+							onChange={ handleMineToggle }
+						/>
+					) : null }
+					<ToggleControl
 						__nextHasNoMarginBottom
-						size="compact"
+						label={ __( 'Unattached', 'wp-admin-shell' ) }
+						checked={ showUnattached }
+						onChange={ setShowUnattached }
 					/>
+				</Stack>
+				<Stack direction="row" gap="md" align="center">
 					<Button
 						tone="brand"
 						variant="solid"
@@ -280,270 +573,65 @@ export default function MediaApp() {
 				</Stack>
 			</Stack>
 
-			{ ( () => {
-				if ( isResolving && ! records?.length ) {
-					return (
-						<div className="wp-admin-shell-app-media__loading">
-							<Spinner />
-						</div>
-					);
-				}
-				if ( ! records?.length ) {
-					return (
-						<div className="wp-admin-shell-app-media__empty">
-							<Stack direction="column" align="center" gap="md">
-								<Text
-									variant="body-sm"
-									className="wp-admin-shell-app__muted"
-								>
-									{ __(
-										'No media items found.',
-										'wp-admin-shell'
-									) }
-								</Text>
-								<Button
-									tone="neutral"
-									variant="outline"
-									onClick={ () =>
-										fileInputRef.current?.click()
-									}
-								>
-									<Icon icon={ upload } size={ 16 } />
-									{ __(
-										'Upload your first file',
-										'wp-admin-shell'
-									) }
-								</Button>
-							</Stack>
-						</div>
-					);
-				}
-				return (
-					<>
-						<div className="wp-admin-shell-app-media__grid">
-							{ ( records || [] ).map( ( item ) => (
-								<button
-									key={ item.id }
-									className={ `wp-admin-shell-app-media__item${
-										selectedItem?.id === item.id
-											? ' is-selected'
-											: ''
-									}` }
-									onClick={ () => setSelectedItem( item ) }
-									type="button"
-								>
-									{ item.media_type === 'image' ? (
-										<img
-											src={
-												item.media_details?.sizes
-													?.thumbnail?.source_url ||
-												item.source_url
-											}
-											alt={ item.alt_text || '' }
-										/>
-									) : (
-										<div className="wp-admin-shell-app-media__file-icon">
-											<Text>
-												{ item.mime_type
-													?.split( '/' )
-													.pop()
-													?.toUpperCase() || 'FILE' }
-											</Text>
-										</div>
-									) }
-								</button>
-							) ) }
-						</div>
+			{ ! records ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={ dataViewConfig.defaultLayouts ?? {} }
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id.toString() }
+				/>
+			) }
 
-						{ totalPages > 1 && (
-							<Stack
-								className="wp-admin-shell-app-media__pagination"
-								direction="row"
-								align="center"
-								justify="center"
-								gap="md"
-							>
-								<Button
-									tone="neutral"
-									variant="outline"
-									disabled={ page <= 1 }
-									onClick={ () => setPage( page - 1 ) }
-									size="compact"
-								>
-									{ __( 'Previous', 'wp-admin-shell' ) }
-								</Button>
-								<Text>
-									{ page } / { totalPages }
-								</Text>
-								<Button
-									tone="neutral"
-									variant="outline"
-									disabled={ page >= totalPages }
-									onClick={ () => setPage( page + 1 ) }
-									size="compact"
-								>
-									{ __( 'Next', 'wp-admin-shell' ) }
-								</Button>
-							</Stack>
-						) }
-					</>
-				);
-			} )() }
-
-			{ selectedItem && (
-				<MediaDetailModal
-					key={ selectedItem.id }
-					item={ selectedItem }
-					onClose={ () => setSelectedItem( null ) }
-					onDelete={ handleDelete }
-					onCopyUrl={ handleCopyUrl }
-					onSave={ saveEntityRecord }
-					invalidateResolution={ invalidateResolution }
-					queryArgs={ queryArgs }
+			{ editingId !== null && (
+				<MediaDetailsModal
+					id={ editingId }
+					onClose={ () => setEditingId( null ) }
+					onMutated={ refreshAfterMutation }
 				/>
 			) }
 		</div>
 	);
 }
 
-function MediaDetailModal( {
-	item,
-	onClose,
-	onDelete,
-	onCopyUrl,
-	onSave,
-	invalidateResolution,
-	queryArgs,
-} ) {
-	const eventValue = ( e ) => e.target.value;
-	const [ title, setTitle ] = useState( item.title?.raw || '' );
-	const [ altText, setAltText ] = useState( item.alt_text || '' );
-	const [ caption, setCaption ] = useState( item.caption?.raw || '' );
-	const [ description, setDescription ] = useState(
-		item.description?.raw || ''
-	);
-	const [ isSaving, setIsSaving ] = useState( false );
-
-	const handleSave = async () => {
-		setIsSaving( true );
-		try {
-			await onSave( 'root', 'media', {
-				id: item.id,
-				title,
-				alt_text: altText,
-				caption,
-				description,
-			} );
-			invalidateResolution( 'getEntityRecords', [
-				'root',
-				'media',
-				queryArgs,
-			] );
-			onClose();
-		} finally {
-			setIsSaving( false );
-		}
-	};
-
+/**
+ * Host chrome for `MediaDetails`: today a simple modal frame. `MediaDetails`
+ * owns the entity binding + form + actions; this wrapper supplies only the
+ * overlay + an Escape / backdrop close. Keyed by the caller on `id` so the
+ * buffered entity record resets between attachments.
+ *
+ * Uses `@wordpress/components` Modal — WPDS 0.12 has no clean Dialog port for
+ * this composite (preview + DataForm + action row).
+ *
+ * @param {Object}   root0
+ * @param {number}   root0.id        Attachment id.
+ * @param {Function} root0.onClose   Close callback.
+ * @param {Function} root0.onMutated Post-save / delete invalidation callback.
+ * @return {JSX.Element} The modal.
+ */
+function MediaDetailsModal( { id, onClose, onMutated } ) {
 	return (
 		<Modal
 			title={ __( 'Media Details', 'wp-admin-shell' ) }
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<Stack direction="row" align="flex-start" gap="xl">
-				<div className="wp-admin-shell-app-media__preview">
-					{ item.media_type === 'image' ? (
-						<img
-							src={
-								item.media_details?.sizes?.medium?.source_url ||
-								item.source_url
-							}
-							alt={ item.alt_text || '' }
-						/>
-					) : (
-						<Text>{ item.mime_type }</Text>
-					) }
-				</div>
-
-				<Stack direction="column" gap="md" style={ { flex: 1 } }>
-					<InputControl
-						label={ __( 'Title', 'wp-admin-shell' ) }
-						value={ title }
-						onChange={ ( e ) => setTitle( eventValue( e ) ) }
-					/>
-					{ item.media_type === 'image' && (
-						<InputControl
-							label={ __( 'Alt Text', 'wp-admin-shell' ) }
-							value={ altText }
-							onChange={ ( e ) => setAltText( eventValue( e ) ) }
-						/>
-					) }
-					<TextareaControl
-						label={ __( 'Caption', 'wp-admin-shell' ) }
-						value={ caption }
-						onChange={ setCaption }
-						__nextHasNoMarginBottom
-					/>
-					<TextareaControl
-						label={ __( 'Description', 'wp-admin-shell' ) }
-						value={ description }
-						onChange={ setDescription }
-						__nextHasNoMarginBottom
-					/>
-					<Text
-						variant="body-sm"
-						className="wp-admin-shell-app__muted"
-					>
-						{ item.source_url }
-					</Text>
-				</Stack>
-			</Stack>
-
-			<Stack
-				direction="row"
-				justify="space-between"
-				style={ { marginTop: 'var(--wpds-dimension-padding-lg)' } }
-			>
-				<Stack direction="row" gap="sm">
-					<Button
-						tone="neutral"
-						variant="minimal"
-						onClick={ () => onCopyUrl( item.source_url ) }
-						size="compact"
-					>
-						<Icon icon={ copy } size={ 16 } />
-						{ __( 'Copy URL', 'wp-admin-shell' ) }
-					</Button>
-					<DestructiveButton
-						icon={ trash }
-						variant="tertiary"
-						isDestructive
-						onClick={ () => onDelete( item ) }
-						size="compact"
-					>
-						{ __( 'Delete', 'wp-admin-shell' ) }
-					</DestructiveButton>
-				</Stack>
-				<Stack direction="row" gap="sm">
-					<Button
-						tone="neutral"
-						variant="minimal"
-						onClick={ onClose }
-					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						loading={ isSaving }
-						disabled={ isSaving }
-					>
-						{ __( 'Save', 'wp-admin-shell' ) }
-					</Button>
-				</Stack>
-			</Stack>
+			<MediaDetails
+				key={ id }
+				id={ id }
+				onClose={ onClose }
+				onMutated={ onMutated }
+			/>
 		</Modal>
 	);
 }

@@ -33,11 +33,15 @@
 				"defaultLayouts": { "table": {}, "grid": {} },
 				"fields": [
 					{ "id": "name", "type": "text", "label": "Name", "enableGlobalSearch": true, "enableHiding": false },
+					{ "id": "username", "type": "text", "label": "Username", "enableGlobalSearch": true },
 					{ "id": "email", "type": "text", "label": "Email", "enableGlobalSearch": true },
-					{ "id": "roles", "type": "text", "label": "Roles", "filterBy": { "operators": [ "is", "isAny" ] } },
+					{ "id": "roles", "type": "text", "label": "Role", "filterBy": { "operators": [ "is", "isAny" ] } },
 					{ "id": "registered_date", "type": "datetime", "label": "Registered" }
 				],
 				"actions": [
+					{ "id": "edit", "label": "Edit", "isPrimary": true },
+					{ "id": "view", "label": "View posts" },
+					{ "id": "change-role", "label": "Change role to…", "supportsBulk": true, "icon": "people" },
 					{ "id": "delete", "label": "Delete", "isDestructive": true, "supportsBulk": true, "icon": "trash" }
 				]
 			},

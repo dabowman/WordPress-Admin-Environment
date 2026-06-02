@@ -109,6 +109,12 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-settings-discussion" */ '../../apps/settings-discussion'
 			),
 	},
+	'core:settings-media': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-settings-media" */ '../../apps/settings-media'
+			),
+	},
 	'core:settings-workspace': {
 		load: () =>
 			import(
@@ -124,6 +130,12 @@ const APP_LOADERS = {
 	'core:users': {
 		load: () =>
 			import( /* webpackChunkName: "app-users" */ '../../apps/users' ),
+	},
+	'core:user-new': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-user-new" */ '../../apps/user-new'
+			),
 	},
 	'core:comments': {
 		load: () =>
@@ -141,12 +153,6 @@ const APP_LOADERS = {
 		load: () =>
 			import(
 				/* webpackChunkName: "app-site-editor" */ '../../apps/site-editor'
-			),
-	},
-	'core:dashboard': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard" */ '../../apps/dashboard'
 			),
 	},
 	'core:plugins': {
@@ -175,6 +181,10 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-taxonomy" */ '../../apps/taxonomy'
 			),
 	},
+	'core:menus': {
+		load: () =>
+			import( /* webpackChunkName: "app-menus" */ '../../apps/menus' ),
+	},
 	'core:command-palette': {
 		load: () =>
 			import(
@@ -187,10 +197,10 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-preview-pane" */ '../../apps/preview-pane'
 			),
 	},
-	'core:appearance': {
+	'core:appearance-preferences': {
 		load: () =>
 			import(
-				/* webpackChunkName: "app-appearance" */ '../../apps/appearance'
+				/* webpackChunkName: "app-appearance-preferences" */ '../../apps/appearance-preferences'
 			),
 	},
 	'core:user-menu': {
@@ -231,6 +241,18 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-dashboard-host" */ '../../apps/dashboard-host'
 			),
 	},
+	'core:dashboard-widget-at-a-glance': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-at-a-glance" */ '../../apps/dashboard-widget-at-a-glance'
+			),
+	},
+	'core:dashboard-widget-activity': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-activity" */ '../../apps/dashboard-widget-activity'
+			),
+	},
 	'core:dashboard-widget-recent-posts': {
 		load: () =>
 			import(
@@ -241,6 +263,14 @@ const APP_LOADERS = {
 		load: () =>
 			import(
 				/* webpackChunkName: "app-dashboard-widget-quick-draft" */ '../../apps/dashboard-widget-quick-draft'
+			),
+	},
+	// #134 — captured-HTML tile for bridged classic dashboard widgets. One
+	// shared app the PHP harvest mounts once per surviving plugin widget.
+	'core:dashboard-widget-classic': {
+		load: () =>
+			import(
+				/* webpackChunkName: "app-dashboard-widget-classic" */ '../../apps/dashboard-widget-classic'
 			),
 	},
 };

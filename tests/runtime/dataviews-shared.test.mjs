@@ -30,6 +30,12 @@ const {
 } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/dataViewPrefs.mjs' )
 );
+const { buildSubmitPayload, firstItem } = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/entityFormPayload.mjs' )
+);
+const { computeBulkPayload, resolveBulkTargets, NO_CHANGE } = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/bulkEditPayload.mjs' )
+);
 
 let pass = 0;
 let fail = 0;
@@ -96,7 +102,10 @@ ok(
 );
 
 const labelled = buildFields(
-	[ { id: 'title', type: 'text' }, { id: 'ext', type: 'text' } ],
+	[
+		{ id: 'title', type: 'text' },
+		{ id: 'ext', type: 'text' },
+	],
 	{ labels: { title: 'Translated Title' } }
 );
 ok(
@@ -135,7 +144,9 @@ ok(
 );
 
 const fallbackEls = buildFields( [ { id: 'status', type: 'text' } ], {
-	elementFallbacks: { status: elementsFromLabels( { publish: 'Published' } ) },
+	elementFallbacks: {
+		status: elementsFromLabels( { publish: 'Published' } ),
+	},
 } )[ 0 ];
 ok(
 	'element fallback applied when spec omits elements',
@@ -146,10 +157,7 @@ ok(
 const noFallback = buildFields( [ { id: 'name', type: 'text' } ], {
 	elementFallbacks: { status: [ { value: 'a', label: 'A' } ] },
 } )[ 0 ];
-ok(
-	'fallback only applies to matching id',
-	noFallback.elements === undefined
-);
+ok( 'fallback only applies to matching id', noFallback.elements === undefined );
 
 const rendered = buildFields( [ { id: 'title', type: 'text' } ], {
 	renderers: { title: () => null },
@@ -161,6 +169,21 @@ ok(
 	buildFields( [
 		{ id: 'status', type: 'text', filterBy: { operators: [ 'isAny' ] } },
 	] )[ 0 ].filterBy.operators[ 0 ] === 'isAny'
+);
+
+const withGetElements = buildFields(
+	[ { id: 'categories', type: 'text', filterBy: { operators: [ 'is' ] } } ],
+	{ getElements: { categories: async () => [ { value: 1, label: 'News' } ] } }
+)[ 0 ];
+ok(
+	'getElements provider attached to matching id',
+	typeof withGetElements.getElements === 'function'
+);
+ok(
+	'getElements only applies to matching id',
+	buildFields( [ { id: 'name', type: 'text' } ], {
+		getElements: { categories: async () => [] },
+	} )[ 0 ].getElements === undefined
 );
 
 // --- withElementCounts ----------------------------------------------------
@@ -378,6 +401,151 @@ ok(
 	'a genuine edit diverges from the clean reconstruction',
 	JSON.stringify( pickDurableView( { ...seed, perPage: 999 } ) ) !==
 		JSON.stringify( reconstructedOnce )
+);
+
+// --- entityFormPayload (EntityFormModal commit helpers) ------------------
+ok(
+	'buildSubmitPayload runs data through toRecord',
+	buildSubmitPayload( {
+		mode: 'create',
+		data: { name: 'x' },
+		toRecord: ( d ) => ( { title: d.name } ),
+	} ).title === 'x'
+);
+ok(
+	'buildSubmitPayload defaults toRecord to identity',
+	buildSubmitPayload( { mode: 'create', data: { a: 1 } } ).a === 1
+);
+ok(
+	'buildSubmitPayload tolerates null data',
+	JSON.stringify( buildSubmitPayload( { mode: 'create', data: null } ) ) ===
+		'{}'
+);
+ok(
+	'buildSubmitPayload is create-only — no id stamping',
+	buildSubmitPayload( { data: { name: 'x' }, toRecord: ( d ) => d } ).id ===
+		undefined
+);
+ok(
+	'buildSubmitPayload threads the subject row into toRecord (inline-create: Reply parent/post)',
+	( () => {
+		const payload = buildSubmitPayload( {
+			data: { content: 'hi' },
+			item: { id: 7, post: 42 },
+			toRecord: ( d, item ) => ( {
+				content: d.content,
+				parent: item?.id,
+				post: item?.post,
+			} ),
+		} );
+		return payload.parent === 7 && payload.post === 42;
+	} )()
+);
+
+ok(
+	'firstItem returns items[0]',
+	firstItem( [ { id: 1 }, { id: 2 } ] ).id === 1
+);
+ok( 'firstItem null on empty array', firstItem( [] ) === null );
+ok( 'firstItem null on non-array', firstItem( undefined ) === null );
+
+// --- bulkEditPayload (BulkEditModal apply helper) -------------------------
+ok(
+	'computeBulkPayload keeps only changed fields',
+	JSON.stringify(
+		computeBulkPayload( {
+			status: NO_CHANGE,
+			author: 5,
+			role: NO_CHANGE,
+		} )
+	) === JSON.stringify( { author: 5 } )
+);
+ok(
+	'computeBulkPayload returns {} when nothing changed',
+	JSON.stringify(
+		computeBulkPayload( { status: NO_CHANGE, role: NO_CHANGE } )
+	) === '{}'
+);
+ok(
+	'computeBulkPayload drops undefined (unset) fields',
+	JSON.stringify( computeBulkPayload( { a: undefined, b: 2 } ) ) ===
+		JSON.stringify( { b: 2 } )
+);
+ok(
+	'computeBulkPayload forwards null (intentional clear)',
+	JSON.stringify( computeBulkPayload( { parent: null } ) ) ===
+		JSON.stringify( { parent: null } )
+);
+ok(
+	'computeBulkPayload keeps falsy-but-real values (0, "", false)',
+	JSON.stringify(
+		computeBulkPayload( { count: 0, note: '', sticky: false } )
+	) === JSON.stringify( { count: 0, note: '', sticky: false } )
+);
+ok(
+	'computeBulkPayload honors a custom sentinel',
+	JSON.stringify(
+		computeBulkPayload( { status: '__keep__', role: 'editor' }, '__keep__' )
+	) === JSON.stringify( { role: 'editor' } )
+);
+ok(
+	'computeBulkPayload does not mutate its input',
+	( () => {
+		const input = { status: NO_CHANGE, author: 5 };
+		computeBulkPayload( input );
+		return Object.keys( input ).length === 2 && input.status === NO_CHANGE;
+	} )()
+);
+ok(
+	'computeBulkPayload returns a NEW object',
+	( () => {
+		const input = { author: 5 };
+		return computeBulkPayload( input ) !== input;
+	} )()
+);
+ok(
+	'computeBulkPayload tolerates non-object input',
+	JSON.stringify( computeBulkPayload( null ) ) === '{}' &&
+		JSON.stringify( computeBulkPayload( undefined ) ) === '{}' &&
+		JSON.stringify( computeBulkPayload( 'x' ) ) === '{}'
+);
+ok(
+	'NO_CHANGE is a namespaced sentinel string',
+	typeof NO_CHANGE === 'string' && NO_CHANGE.length > 0
+);
+
+// --- resolveBulkTargets (BulkEditModal filterItems guard) -----------------
+const _items = [ { id: 1 }, { id: 2 }, { id: 3 } ];
+ok(
+	'resolveBulkTargets returns items unchanged with no filter (back-compat)',
+	resolveBulkTargets( _items ) === _items
+);
+ok(
+	'resolveBulkTargets applies filterItems',
+	JSON.stringify(
+		resolveBulkTargets( _items, ( items ) =>
+			items.filter( ( i ) => i.id !== 2 )
+		)
+	) === JSON.stringify( [ { id: 1 }, { id: 3 } ] )
+);
+ok(
+	'resolveBulkTargets can filter to empty (drives the no-targets short-circuit)',
+	resolveBulkTargets( [ { id: 1 } ], ( items ) =>
+		items.filter( ( i ) => i.id !== 1 )
+	).length === 0
+);
+ok(
+	'resolveBulkTargets coerces non-array items to []',
+	resolveBulkTargets( null ).length === 0 &&
+		resolveBulkTargets( undefined ).length === 0 &&
+		resolveBulkTargets( 'x' ).length === 0
+);
+ok(
+	'resolveBulkTargets passes the coerced array (not the raw value) to filterItems',
+	resolveBulkTargets( null, ( items ) => {
+		// Would throw if `items` were null rather than [].
+		return items.filter( () => true );
+	} ).length === 0
 );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );

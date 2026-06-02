@@ -21,8 +21,21 @@ const FORM = {
 	],
 };
 
-export default function ProfileApp() {
-	const userId = window.wpAdminShell?.userId;
+/**
+ * core:profile — single-user edit form.
+ *
+ * Edits the user named by `config.userId` (the route `config` interpolates
+ * `{id}` from `/users/{id}/edit`), falling back to the acting user
+ * (`window.wpAdminShell.userId`) when the screen supplies no `userId` (e.g. the
+ * self-service `/profile` screen). The users-app Edit action + username link
+ * route here with `config.userId` set, so editing user #5 mutates user #5 —
+ * NOT the acting admin.
+ *
+ * @param {Object} root0          Mount-supplied props.
+ * @param {Object} [root0.config] App config — `config.userId` names the user to edit.
+ */
+export default function ProfileApp( { config = {} } = {} ) {
+	const userId = Number( config?.userId ) || window.wpAdminShell?.userId;
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 

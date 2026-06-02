@@ -6,7 +6,7 @@ Prose accompanying `app.json#documentation` for the Site Editor adapter.
 
 SiteEditorApp is a one-line delegation to `IframeApp` pointing at `site-editor.php` — but it ships under its own namespaced id because the **id is the contract**. Shells write `core:site-editor` in admin.json today; when the native `@wordpress/edit-site` mount lands in a v2.x release, the implementation changes behind the same id and no admin.json migrates.
 
-The native mount is blocked on five known issues (top-of-file comment in `SiteEditorApp.js`). Two of them — preferences-store collision with `core:appearance` and command-palette double-registration — are shell-architecture concerns. Two — full-screen CSS and hash-router collision — are edit-site internals fighting the shell's chrome and routing. One — `@wordpress/edit-site` not being in the dep-extraction `BUNDLED_PACKAGES` list — is a webpack config concern. All five must be resolved before the native mount can land safely.
+The native mount is blocked on five known issues (top-of-file comment in `SiteEditorApp.js`). Two of them — preferences-store collision with `core:appearance-preferences` and command-palette double-registration — are shell-architecture concerns. Two — full-screen CSS and hash-router collision — are edit-site internals fighting the shell's chrome and routing. One — `@wordpress/edit-site` not being in the dep-extraction `BUNDLED_PACKAGES` list — is a webpack config concern. All five must be resolved before the native mount can land safely.
 
 Until then, the iframe is the path. Users get the WordPress Site Editor with admin chrome stripped via injected CSS; the experience is "site editor inside a different shell" rather than "site editor inside wp-admin."
 

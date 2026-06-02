@@ -1,0 +1,68 @@
+/*
+ * core:toolbar-actions — app-space styling for the arbitrary-icon escape
+ * hatch (#127/#128). Harvested admin-bar node titles are inline HTML
+ * (icon + text); keep them on one line and vertically centered inside
+ * the toolbar buttons. App-space (WPDS-flavored); the kernel stays
+ * DS-neutral.
+ */
+
+.wp-admin-shell-arbitrary-node-title {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpds-dimension-padding-xs, 4px );
+	white-space: nowrap;
+	line-height: 1;
+}
+
+/* Constrain any icon/img a harvested node title carries so a plugin's
+ * oversized markup can't blow out the toolbar row. */
+.wp-admin-shell-arbitrary-node-title img,
+.wp-admin-shell-arbitrary-node-title svg,
+.wp-admin-shell-arbitrary-node-title .ab-icon::before {
+	width: 20px;
+	height: 20px;
+	max-width: 20px;
+	max-height: 20px;
+	font-size: 20px;
+	vertical-align: middle;
+}
+
+/* The data-URI / image-URL menu icon (shared with the nav renderers). */
+.wp-admin-shell-arbitrary-icon {
+	display: inline-block;
+	vertical-align: middle;
+	object-fit: contain;
+}
+
+/*
+ * Plain styled anchor for harvested actions that render ARBITRARY content
+ * (a node-title HTML blob or an iconSource <img>). `@wordpress/ui`
+ * `IconButton` is an icon-prop-based component — it isn't a reliable host
+ * for arbitrary children — so these cases use a hand-styled anchor instead
+ * of routing arbitrary markup through `IconButton`'s children. Styled to
+ * sit in the toolbar row like the `IconButton`-backed actions.
+ */
+.wp-admin-shell-toolbar-action {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var( --wpds-dimension-padding-xs, 4px );
+	min-width: 32px;
+	height: 32px;
+	padding: 0 var( --wpds-dimension-padding-sm, 6px );
+	border: 0;
+	border-radius: var( --wpds-dimension-radius-md, 4px );
+	background: transparent;
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.wp-admin-shell-toolbar-action:hover,
+.wp-admin-shell-toolbar-action:focus-visible {
+	background: var(
+		--wpds-color-background-neutral-secondary-hover,
+		rgba( 0, 0, 0, 0.06 )
+	);
+}

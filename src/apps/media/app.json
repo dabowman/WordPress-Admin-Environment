@@ -3,14 +3,56 @@
 	"id": "core:media",
 	"version": 1,
 	"title": "Media",
-	"description": "Media library grid with upload and detail modal. Reads via `core-data` `media` entity.",
+	"description": "DataViews grid + table view of the media library, with an upload affordance above the mount and a host-agnostic MediaDetails metadata editor. Reads via `core-data` `'root','media'` entity.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
+	"capabilities": [
+		"upload_files"
+	],
 	"config-schema": {
 		"type": "object",
+		"properties": {
+			"variant": {
+				"type": "string",
+				"description": "Optional DataView variant id resolved to `settings.dataViews.root.media.<variant>`."
+			}
+		},
 		"additionalProperties": false
 	},
 	"script": "wp-admin-shell",
+	"dataView": {
+		"kind": "root",
+		"name": "media",
+		"variants": {
+			"_default": {
+				"defaultView": {
+					"type": "grid",
+					"search": "",
+					"filters": [],
+					"page": 1,
+					"perPage": 40,
+					"sort": { "field": "date", "direction": "desc" },
+					"fields": [ "type", "author", "date" ],
+					"titleField": "title",
+					"mediaField": "thumbnail",
+					"layout": {}
+				},
+				"defaultLayouts": { "grid": {}, "table": {} },
+				"fields": [
+					{ "id": "title", "type": "text", "label": "Title", "enableGlobalSearch": true, "enableHiding": false },
+					{ "id": "thumbnail", "type": "media", "label": "Preview", "enableSorting": false, "enableHiding": false },
+					{ "id": "type", "type": "text", "label": "Type", "enableSorting": false, "elements": [ { "value": "image", "label": "Images" }, { "value": "video", "label": "Video" }, { "value": "audio", "label": "Audio" }, { "value": "text", "label": "Text" }, { "value": "application", "label": "Documents" } ], "filterBy": { "operators": [ "is" ] } },
+					{ "id": "author", "type": "text", "label": "Author", "enableSorting": true, "filterBy": { "operators": [ "is" ] } },
+					{ "id": "date", "type": "datetime", "label": "Date", "filterBy": { "operators": [ "before", "after" ] } }
+				],
+				"actions": [
+					{ "id": "edit", "label": "Edit", "isPrimary": true, "icon": "edit" },
+					{ "id": "copy-url", "label": "Copy URL", "icon": "copy" },
+					{ "id": "delete", "label": "Delete Permanently", "isPrimary": true, "icon": "trash", "supportsBulk": true }
+				]
+			}
+		}
+	},
 	"window": {
 		"defaultSize": {
 			"w": 1024,
@@ -24,15 +66,27 @@
 		"icon": "media"
 	},
 	"documentation": {
-		"purpose": "Media library: paginated grid of attachments + upload + detail modal. Filter by media type (all / images / video / audio / documents). Images render their thumbnail; non-image attachments render a labeled file-type tile. Clicking an item opens a detail modal where authors can edit title / alt text (images only) / caption / description, copy URL, or delete (permanent — media has no trash).",
+		"purpose": "Media library DataViews host over the `root/media` entity. Default grid layout renders an image thumbnail (or a labeled file-type tile for non-image attachments) per attachment via the `thumbnail` media field; table layout offers sortable Title / Type / Author / Date columns. An upload control sits in a toolbar ABOVE the DataViews mount (multipart `apiFetch`, per-file try/catch). The Edit action opens the host-agnostic `MediaDetails` component (entity-bound `DataForm` over title / alt-text — images only / caption / description) inside a DataViews RenderModal. Copy URL writes the source URL to the clipboard. Delete (single + bulk) permanently removes the attachment (`force: true` — media has no trash).",
 		"rebuilds": "media",
 		"data": {
 			"reads": [
 				{
+					"source": "settings.dataViews.root.media.{variant|_default}",
+					"via": "kernel-config",
+					"purpose": "Resolved DataView doc — fields, default view, default layouts, actions. Read via `useDataView(screenId)`; baseline ships in `app.json#dataView` and is injected post-merge by `inject_app_baselines`.",
+					"fields": [
+						"fields",
+						"defaultView",
+						"defaultLayouts",
+						"actions",
+						"fieldsRef"
+					]
+				},
+				{
 					"source": "root/media",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Attachment grid.",
+					"purpose": "Attachment list (grid + table).",
 					"fields": [
 						"id",
 						"title.raw",
@@ -42,27 +96,65 @@
 						"source_url",
 						"media_type",
 						"mime_type",
-						"media_details.sizes"
+						"media_details.sizes",
+						"author",
+						"date",
+						"post"
 					],
 					"query": {
-						"per_page": 40,
-						"page": "state.page",
-						"context": "edit",
-						"media_type": "state.mediaType"
+						"per_page": "view.perPage",
+						"page": "view.page",
+						"orderby": "view.sort.field",
+						"order": "view.sort.direction",
+						"search": "view.search",
+						"media_type": "filter:type (single-select `is` — media_type is a single-value enum)",
+						"author": "filter:author (single-select `is`) | mine toolbar toggle",
+						"parent": "filter:unattached (0)",
+						"before": "filter:date.before (datetime `before` operator)",
+						"after": "filter:date.after (datetime `after` operator)",
+						"_embed": "author (resolves the Author column display name)",
+						"context": "edit"
 					}
 				},
 				{
 					"source": "root/media",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Per-type totals for the media-type filter (\"Images (12)\") plus an unfiltered total for \"All\". One lightweight request per type via `useEntityElementCounts`; totals come from the X-WP-Total header.",
+					"purpose": "Per-type totals for the media-type filter (\"Images (12)\"). One lightweight request per type via `useEntityElementCounts`; totals come from the X-WP-Total header.",
 					"fields": [ "id" ],
 					"query": {
-						"media_type": "image|video|audio|application",
+						"media_type": "image|video|audio|text|application",
 						"per_page": 1,
 						"_fields": "id",
 						"context": "edit"
 					}
+				},
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"purpose": "Author options for the `author` filter. DataViews resolves the field's `getElements` lazily when the filter opens — one `resolveSelect(getEntityRecords)` over `root/user` (who=authors, per_page=100, `_fields=id,name`), mapped to `{ value: id, label: name }` and cached after the first open.",
+					"fields": [ "id", "name" ],
+					"query": {
+						"who": "authors",
+						"per_page": 100,
+						"_fields": "id,name"
+					}
+				},
+				{
+					"source": "root/media/{id}",
+					"via": "core-data",
+					"context": "edit",
+					"purpose": "Single attachment buffered through `useEntityRecord` inside `MediaDetails` for metadata editing.",
+					"fields": [
+						"id",
+						"title.raw",
+						"alt_text",
+						"caption.raw",
+						"description.raw",
+						"source_url",
+						"media_type",
+						"mime_type"
+					]
 				}
 			],
 			"writes": [
@@ -70,7 +162,7 @@
 					"source": "/wp/v2/media",
 					"via": "api-fetch",
 					"operation": "upload",
-					"purpose": "Multipart upload: `FormData` with `file` field, POST to `/wp/v2/media`. One request per file.",
+					"purpose": "Multipart upload: `FormData` with `file` field, POST to `/wp/v2/media`. One request per file; per-file try/catch.",
 					"invalidates": [
 						"root/media"
 					]
@@ -79,7 +171,7 @@
 					"source": "root/media",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Edit attachment metadata (title / alt_text / caption / description) via `saveEntityRecord` partial.",
+					"purpose": "Edit attachment metadata (title / alt_text / caption / description) via the `MediaDetails` `DataForm` + buffered `useEntityRecord().save()`.",
 					"invalidates": [
 						"root/media"
 					]
@@ -88,7 +180,7 @@
 					"source": "root/media",
 					"via": "core-data",
 					"operation": "delete",
-					"purpose": "Permanently delete attachment (`force: true` — media has no trash).",
+					"purpose": "Permanently delete attachment(s) (`force: true` — media has no trash). Single + bulk via `createBulkConfirmModal`.",
 					"invalidates": [
 						"root/media"
 					]
@@ -98,114 +190,116 @@
 		"states": [
 			{
 				"id": "loading-initial",
-				"when": "isResolving && !records?.length",
-				"renders": "Centered Spinner covering the panel."
-			},
-			{
-				"id": "empty",
-				"when": "!isResolving && !records?.length",
-				"renders": "Empty-state copy + Upload your first file button."
+				"when": "records === null",
+				"renders": "Centered Spinner covering the panel (gate before the first response — DataViews mounts only once records arrive)."
 			},
 			{
 				"id": "ready",
-				"when": "records?.length > 0",
-				"renders": "Grid of thumbnail tiles + pagination footer (when totalPages > 1)."
+				"when": "records !== null",
+				"renders": "DataViews grid (thumbnail tiles) or table; DataViews owns its own empty + paging + per-filter loading states."
 			},
 			{
 				"id": "uploading",
 				"when": "isUploading === true",
-				"renders": "Upload button shows loading state + disabled; new items appear after invalidation."
+				"renders": "Upload button shows loading + disabled; new items appear after invalidation."
 			},
 			{
 				"id": "detail-open",
-				"when": "selectedItem !== null",
-				"renders": "Large modal with preview on left + form fields on right + action row (copy URL, delete, cancel, save)."
-			},
-			{
-				"id": "saving-detail",
-				"when": "isSaving === true (inside modal)",
-				"renders": "Save button shows loading state."
+				"when": "User clicked Edit on a row",
+				"renders": "DataViews RenderModal hosting `MediaDetails` — preview slot (left) + metadata DataForm (right) + Save / Copy URL / Delete actions."
 			}
 		],
 		"interactions": [
 			{
-				"trigger": "Change media-type select",
-				"effect": "Update `mediaType` state + reset `page` to 1 + queryArgs recompute."
+				"trigger": "Change the Type filter (DataViews)",
+				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to `media_type` (a single-value REST enum: image / video / audio / text / application) → records refetch."
+			},
+			{
+				"trigger": "Change the Author filter (DataViews)",
+				"effect": "`view.filters` updates → `buildQueryArgs` maps the single-select `is` operator to REST `author` (scalar user id) → records refetch. Options resolve lazily via the field's `getElements` provider (fetches content authors through core-data, cached after first open). When an author filter is active it is the SINGLE author scope: the Mine static `author` arg is skipped, and the Mine toggle shows checked only when the filter's value equals the current user id."
+			},
+			{
+				"trigger": "Change the Date filter (DataViews)",
+				"effect": "`view.filters` updates → a supplemental `applyDateFilters` pass maps the `before`/`after` operators to the attachments controller's REST `before`/`after` ISO params (`buildQueryArgs` only speaks `is`/`isAny`) → records refetch. One-sided date bound (`before X` OR `after Y`, not a two-ended range — DataViews holds one filter per field)."
+			},
+			{
+				"trigger": "Type in the DataViews search box",
+				"effect": "`view.search` → REST `search` (matches title + filename via the attachments controller)."
+			},
+			{
+				"trigger": "Toggle Mine / Unattached toolbar filters",
+				"effect": "Mine → `author={currentUserId}`; Unattached → `parent=0`; merged into the query. Mine and the author dropdown filter share the author axis: toggling Mine (ON or OFF) drops any active author dropdown filter, Mine's checked state is derived from the active author scope rather than a standalone boolean, and a `useEffect` keyed on the active-author-filter flag clears the underlying `showMine` whenever a dropdown author filter becomes active — so the two controls are fully symmetric (one author scope at a time, no contradiction, no latent `showMine` resurfacing own media when the dropdown filter is later cleared, no inert toggle)."
 			},
 			{
 				"trigger": "Click Upload",
-				"effect": "Open hidden `<input type=\"file\" multiple>`. On file pick, iterate + POST each via `apiFetch` with FormData; invalidate after all complete."
+				"effect": "Open hidden `<input type=\"file\" multiple>`. On file pick, iterate + POST each via `apiFetch` with FormData; invalidate after ≥1 succeeds."
 			},
 			{
-				"trigger": "Click an item tile",
-				"effect": "Set `selectedItem` + open detail modal."
+				"trigger": "Edit row action",
+				"effect": "Open the `MediaDetails` RenderModal for that attachment."
 			},
 			{
-				"trigger": "Edit fields in modal",
-				"effect": "Local component state mirrors entity fields; nothing persisted until Save."
+				"trigger": "Save in MediaDetails",
+				"effect": "Buffered `useEntityRecord().save()` commits title / alt_text / caption / description; invalidate the list resolution; close modal."
 			},
 			{
-				"trigger": "Click Save in modal",
-				"effect": "`saveEntityRecord('root', 'media', { id, title, alt_text, caption, description })`; invalidate + close modal."
-			},
-			{
-				"trigger": "Click Copy URL",
+				"trigger": "Copy URL action",
 				"effect": "`navigator.clipboard.writeText(item.source_url)`; success snackbar (or error notice on clipboard denial)."
 			},
 			{
-				"trigger": "Click Delete in modal",
-				"effect": "`deleteEntityRecord(..., { force: true })`; invalidate + close modal."
-			},
-			{
-				"trigger": "Click pagination Previous/Next",
-				"effect": "`setPage(page ± 1)`; queryArgs recompute; records refetch."
+				"trigger": "Delete / bulk Delete action",
+				"effect": "`createBulkConfirmModal` confirms, then `deleteEntityRecord('root','media', id, { force: true })` per target; invalidate list + counts; report partial failures."
 			}
 		],
 		"a11y": {
-			"focus-management": "Grid tiles are native `<button>` elements — keyboard accessible by default. Modal traps focus while open. Modal `key={item.id}` resets per-item state so reopening a different item starts clean."
+			"focus-management": "DataViews owns focus inside the grid / table + RenderModal. The RenderModal contract restores focus to the action trigger on close. `MediaDetails` is keyed `item.id` so per-item buffer resets between openings."
 		},
 		"constraints": [
+			{
+				"concern": "dataviews-import-path",
+				"note": "Import `DataViews` from `@wordpress/dataviews/wp` — never bare `@wordpress/dataviews`."
+			},
+			{
+				"concern": "media-field-completeness",
+				"note": "`defaultView.mediaField` (`thumbnail`) + `titleField` (`title`) + `sort` are declared COMPLETELY in this app.json so a shell that redeclares `root/media/_default` and omits them doesn't drop the baseline (the CLAUDE.md redeclaration trap)."
+			},
 			{
 				"concern": "force-delete",
 				"note": "Media has no trash. `deleteEntityRecord` requires `{ force: true }` or the request 400s."
 			},
 			{
+				"concern": "author-filter-elements",
+				"note": "The `author` filter is `is`-only with options supplied by a `getElements` provider (fetches content authors via core-data, `who=authors`). The field `type` is `text` to match the rendered cell (the embedded author display name); the filter `value` is the numeric user id, which the `is` operator passes straight to REST `author`. The date filter wires `before`/`after` via `applyDateFilters` since `buildQueryArgs` only speaks `is`/`isAny` (mirrors the Posts lane)."
+			},
+			{
 				"concern": "multipart-via-api-fetch",
-				"note": "Upload uses `apiFetch` with `FormData` body. `core-data`'s `saveEntityRecord` doesn't handle multipart well; the raw api-fetch path is more reliable."
+				"note": "Upload uses `apiFetch` with a `FormData` body — the documented exception to the core-data rule. `saveEntityRecord` doesn't handle multipart well."
 			},
 			{
-				"concern": "invalidate-after-mutate",
-				"note": "Every mutation (upload, save, delete) must `invalidateResolution('getEntityRecords', ['root', 'media', queryArgs])`. The mutation hooks do not bust the parent query."
-			},
-			{
-				"concern": "shadow-state-per-item",
-				"note": "Modal's local `useState` mirrors the entity fields. `key={item.id}` on the modal forces remount + state reset when the user opens a different item. Without the key, switching items mid-edit would carry over the previous form values."
-			},
-			{
-				"concern": "modal-fallback",
-				"note": "Legacy `Modal` + `TextareaControl` + `SelectControl` — WPDS 0.12 gaps."
-			},
-			{
-				"concern": "destructive-button-fallback",
-				"note": "Legacy `Button as DestructiveButton` with `isDestructive` — WPDS 0.12 has no `tone=\"critical\"`."
+				"concern": "host-agnostic-details",
+				"note": "Metadata editing lives in `MediaDetails.js`, decoupled from the DataViews RenderModal host. The #125 image editor lands in its preview slot; a future inspector / side-pane (#136) can host it unchanged."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
-				"purpose": "Toolbar + grid pagination + modal layout + form inputs."
+				"import": "@wordpress/dataviews/wp",
+				"purpose": "DataViews (grid + table, filtering / sorting / pagination / selection / per-row + bulk actions / RenderModal) + DataForm (MediaDetails metadata form)."
 			},
 			{
-				"import": "@wordpress/components#Button (as DestructiveButton), Spinner, SelectControl, Modal, TextareaControl",
-				"purpose": "Destructive delete + loading + filter select + detail modal + caption/description textareas — WPDS 0.12 gaps."
+				"import": "@wordpress/ui#Button, Icon, Stack, Text",
+				"purpose": "Upload toolbar + MediaDetails layout + action buttons."
 			},
 			{
-				"import": "@wordpress/icons#upload, trash, copy",
-				"purpose": "Action icons."
+				"import": "@wordpress/components#Button (as DestructiveButton), Spinner, ToggleControl",
+				"purpose": "Destructive delete + records-null spinner gate + Mine / Unattached toggles — WPDS 0.12 gaps."
+			},
+			{
+				"import": "@wordpress/icons#upload, trash, copy, edit",
+				"purpose": "Action + toolbar icons (registered in the core-default engine icon table)."
 			},
 			{
 				"import": "@wordpress/notices#store",
-				"purpose": "Success / error snackbars + banners for upload + delete flows. The canonical shell notices contract — a non-WPDS rebuild must mirror it."
+				"purpose": "Success / error snackbars + banners for upload / save / delete flows."
 			}
 		]
 	}

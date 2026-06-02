@@ -114,14 +114,18 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolv
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-bridge.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-appearance-menu.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-chrome-harvest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
+require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-dashboard-widget-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
 require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
@@ -572,6 +576,18 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		'engineModes'   => $active_engine_manifest
 			? WP_Admin_Shell_Modes::resolve_engine_modes( $active_engine_manifest )
 			: WP_Admin_Shell_Modes::synthesize_default_catalog(),
+		// #128 — admin-bar runtime harvest. Plugin admin-bar nodes the
+		// shell doesn't own first-class (site-hub / user-menu / +New are
+		// skipped), folded submenus → dropdowns. `core:toolbar-actions`
+		// reads this global. Empty array when no plugin registers a node.
+		'adminBar'      => WP_Admin_Shell_Chrome_Harvest::harvest_admin_bar(),
+		// #128 — buffered global `admin_notices` HTML (admin trust, same as
+		// classic). `core:notices-banner` renders it alongside its
+		// `@wordpress/notices` source. Empty string when none fire.
+		// Documented limitation: only GLOBAL notices that fire on the
+		// shell's own page load are captured (per-screen notices keyed on
+		// `$pagenow` don't fire) — see the harvest class docblock.
+		'adminNotices'  => WP_Admin_Shell_Chrome_Harvest::capture_admin_notices(),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-shell', '
@@ -1129,6 +1145,204 @@ add_action( 'init', function () {
 		'type'         => 'boolean',
 		'default'      => false,
 		'description'  => __( 'Whether syndication feeds show an excerpt rather than full text.', 'wp-admin-shell' ),
+	) );
+
+	// --- Media options (issue #117) -----------------------------------------
+	// Core never REST-registers the image-size / uploads options that
+	// options-media.php saves through the legacy form handler. Re-register them
+	// in the `media` group with `show_in_rest` so SettingsMediaApp can read +
+	// write them via /wp/v2/settings. No save side effects: these are plain
+	// option writes (update_option fires its own hooks). Image dimensions are
+	// non-negative integers (0 = "do not generate this size"); the crop and
+	// year/month-folder flags are booleans. The integer schema floor of 0
+	// rejects negative writes the same way the classic `min=0` number inputs do.
+	$wpas_media_size_options = array(
+		'thumbnail_size_w' => 150,
+		'thumbnail_size_h' => 150,
+		'medium_size_w'    => 300,
+		'medium_size_h'    => 300,
+		'large_size_w'     => 1024,
+		'large_size_h'     => 1024,
+	);
+	foreach ( $wpas_media_size_options as $wpas_media_opt => $wpas_media_default ) {
+		register_setting( 'media', $wpas_media_opt, array(
+			'show_in_rest' => array(
+				// Mirror the classic options-media.php `min=0` number inputs:
+				// a negative dimension is meaningless. The type-only schema
+				// would otherwise accept `-1`.
+				'schema' => array( 'minimum' => 0 ),
+			),
+			'type'         => 'integer',
+			'default'      => $wpas_media_default,
+			'description'  => __( 'Image size dimension (pixels).', 'wp-admin-shell' ),
+		) );
+	}
+
+	register_setting( 'media', 'thumbnail_crop', array(
+		'show_in_rest' => true,
+		'type'         => 'boolean',
+		'default'      => true,
+		'description'  => __( 'Whether thumbnails are cropped to exact dimensions.', 'wp-admin-shell' ),
+	) );
+
+	register_setting( 'media', 'uploads_use_yearmonth_folders', array(
+		'show_in_rest' => true,
+		'type'         => 'boolean',
+		'default'      => true,
+		'description'  => __( 'Whether uploads are organized into month- and year-based folders.', 'wp-admin-shell' ),
+	) );
+
+	// --- Discussion options (issue #118) ------------------------------------
+	// Core registers only `default_comment_status` / `default_ping_status` for
+	// REST; every other Discussion option is saved exclusively through the
+	// legacy options-discussion.php form handler. Re-register the full standard
+	// set with `show_in_rest` so SettingsDiscussionApp can read + write them via
+	// /wp/v2/settings in one PUT.
+	//
+	// Sanitize fidelity mirrors classic wp-admin: booleans round-trip as core's
+	// '1' / '' string shape ($wpdb stringifies the rest_sanitize_boolean PHP
+	// bool the same way core's hand-rolled '1'/'' writes do); enums use a string
+	// type + `enum` schema so out-of-range values 400; integers clamp to the
+	// classic mins (thread depth to [1, thread_comments_depth_max]); textareas
+	// stay strings, newline-normalized. The settings controller's manage_options
+	// floor gates every write — no per-option auth_callback needed.
+
+	// Booleans — comment rules, moderation flags, notifications, group toggles.
+	$wpas_discussion_bools = array(
+		'default_pingback_flag'        => true,
+		'require_name_email'           => true,
+		'comment_registration'         => false,
+		'close_comments_for_old_posts' => false,
+		'show_comments_cookies_opt_in' => true,
+		'thread_comments'              => true,
+		'page_comments'                => false,
+		'comments_notify'              => true,
+		'moderation_notify'            => true,
+		'comment_moderation'           => false,
+		'comment_previously_approved'  => true,
+		'show_avatars'                 => true,
+	);
+	foreach ( $wpas_discussion_bools as $wpas_disc_opt => $wpas_disc_default ) {
+		register_setting( 'discussion', $wpas_disc_opt, array(
+			'show_in_rest'      => true,
+			'type'              => 'boolean',
+			'default'           => $wpas_disc_default,
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		) );
+	}
+
+	// Integer clamps — mirror the classic number-input mins. The floor lives in
+	// the `sanitize_callback`, NOT a schema `minimum`: the settings REST
+	// controller validates each arg against its schema BEFORE the sanitize
+	// callback runs, so a schema `minimum` would 400 a sub-floor write before the
+	// clamp-up can fire. Dropping it lets the value reach the callback, making
+	// `max( floor, … )` the sole `[floor, max]` authority (mirroring classic
+	// wp-admin, which clamps rather than rejects). `type: 'integer'` still
+	// rejects non-integers at the schema layer.
+	register_setting( 'discussion', 'close_comments_days_old', array(
+		'show_in_rest'      => true,
+		'type'              => 'integer',
+		'default'           => 14,
+		'sanitize_callback' => static function ( $value ) {
+			return max( 0, (int) $value );
+		},
+	) );
+
+	register_setting( 'discussion', 'comments_per_page', array(
+		'show_in_rest'      => true,
+		'type'              => 'integer',
+		'default'           => 50,
+		'sanitize_callback' => static function ( $value ) {
+			return max( 1, (int) $value );
+		},
+	) );
+
+	register_setting( 'discussion', 'comment_max_links', array(
+		'show_in_rest'      => true,
+		'type'              => 'integer',
+		'default'           => 2,
+		'sanitize_callback' => static function ( $value ) {
+			return max( 0, (int) $value );
+		},
+	) );
+
+	// Thread depth clamps to [1, thread_comments_depth_max]. Core's default max
+	// is 10 (filterable via `thread_comments_depth_max`); honor the live filter
+	// server-side so a theme raising the max still validates. The shell's UI
+	// hardcodes 10 as a documented parity caveat (no read endpoint for the max).
+	// As above, the clamp is the sole authority — no schema `minimum` (it would
+	// 400 a sub-floor write before the sanitize clamp-up to 1 could run).
+	register_setting( 'discussion', 'thread_comments_depth', array(
+		'show_in_rest'      => true,
+		'type'              => 'integer',
+		'default'           => 5,
+		'sanitize_callback' => static function ( $value ) {
+			$max = (int) apply_filters( 'thread_comments_depth_max', 10 );
+			$max = max( 1, $max );
+			return min( $max, max( 1, (int) $value ) );
+		},
+	) );
+
+	// Enums — string type + `enum` schema so out-of-range values are rejected
+	// with a 400 by the schema validator.
+	$wpas_discussion_enums = array(
+		'avatar_rating'         => array(
+			'enum'    => array( 'G', 'PG', 'R', 'X' ),
+			'default' => 'G',
+		),
+		'avatar_default'        => array(
+			// Core's built-in set (filterable via `avatar_defaults`). The shell
+			// uses this fixed set as a documented parity caveat — themes adding
+			// defaults via the filter won't appear in the workspace picker.
+			'enum'    => array(
+				'mystery',
+				'blank',
+				'gravatar_default',
+				'identicon',
+				'wavatar',
+				'monsterid',
+				'retro',
+				'robohash',
+				'initials',
+				'color',
+			),
+			'default' => 'mystery',
+		),
+		'comment_order'         => array(
+			'enum'    => array( 'asc', 'desc' ),
+			'default' => 'asc',
+		),
+		'default_comments_page' => array(
+			'enum'    => array( 'newest', 'oldest' ),
+			'default' => 'newest',
+		),
+	);
+	foreach ( $wpas_discussion_enums as $wpas_disc_opt => $wpas_disc_meta ) {
+		register_setting( 'discussion', $wpas_disc_opt, array(
+			'show_in_rest' => array(
+				'schema' => array( 'enum' => $wpas_disc_meta['enum'] ),
+			),
+			'type'         => 'string',
+			'default'      => $wpas_disc_meta['default'],
+		) );
+	}
+
+	// Textareas — newline-separated keyword / IP lists. Normalize CRLF → LF so
+	// the stored value matches what classic wp-admin writes (it splits on \n).
+	$wpas_discussion_keys_sanitize = static function ( $value ) {
+		return str_replace( "\r\n", "\n", (string) $value );
+	};
+	register_setting( 'discussion', 'moderation_keys', array(
+		'show_in_rest'      => true,
+		'type'              => 'string',
+		'default'           => '',
+		'sanitize_callback' => $wpas_discussion_keys_sanitize,
+	) );
+	register_setting( 'discussion', 'disallowed_keys', array(
+		'show_in_rest'      => true,
+		'type'              => 'string',
+		'default'           => '',
+		'sanitize_callback' => $wpas_discussion_keys_sanitize,
 	) );
 } );
 

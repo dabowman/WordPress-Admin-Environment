@@ -50,17 +50,20 @@
 		"interactions": [
 			{ "trigger": "Choose Default Post Category", "effect": "`edit({ default_category: int })`." },
 			{ "trigger": "Choose Default Post Format", "effect": "`edit({ default_post_format: value })`." },
-			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." }
+			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." },
+			{ "trigger": "Copy a legacy-option CLI command / agent prompt or click the classic link", "effect": "No-API fallback affordance for the legacy Writing options — no shell-side write." }
 		],
 		"a11y": {
 			"focus-management": "Native DataForm focus order is sufficient."
 		},
 		"constraints": [
 			{ "concern": "null-guard-record", "note": "`EntityDataForm` renders a Spinner until `useEntityRecord('root','site')` resolves." },
-			{ "concern": "rest-coverage-gap", "note": "Post-via-email + remote-publishing fields are not exposed by `/wp/v2/settings`. The panel renders an in-form notice pointing at the legacy `options-writing.php` screen for those." }
+			{ "concern": "rest-coverage-gap", "note": "The legacy Writing options (Post-via-Email `mailserver_*` / `default_email_category`, Update Services `ping_sites`, Link Manager `default_link_category`, `use_balanceTags`) have no REST surface. The panel surfaces them through the shared No-API Fallback (`_shared/fallback/UnavailableViaApi`): classic-screen link to `options-writing.php`, `wp option update` command, agent prompt." },
+			{ "concern": "credential-out-of-rest", "note": "`mailserver_pass` (Post-via-Email password) is deliberately kept out of REST and out of the fallback — a credential is never pre-filled into a copy-paste affordance." }
 		],
 		"design-system-leakage": [
-			{ "import": "@wordpress/ui#Text", "purpose": "REST-gap notice text." },
+			{ "import": "@wordpress/ui#Text/#Stack", "purpose": "REST-gap notice + fallback layout." },
+			{ "import": "_shared/fallback/UnavailableViaApi", "purpose": "Tiered no-API fallback for the legacy options." },
 			{ "import": "@wordpress/dataviews DataForm (via _shared/forms/EntityDataForm)", "purpose": "Form rendering." }
 		]
 	}

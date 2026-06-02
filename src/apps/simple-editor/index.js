@@ -6,7 +6,8 @@ import {
 	useCallback,
 	useRef,
 } from '@wordpress/element';
-import { useEntityRecord } from '@wordpress/core-data';
+import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
+import { useSelect } from '@wordpress/data';
 import { Button, Icon } from '@wordpress/ui';
 import { Spinner, Slot } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
@@ -24,7 +25,12 @@ import {
 } from '@wordpress/block-editor';
 import { navigate } from '../../runtime/routing/router';
 import { useDirtyState } from '../../runtime/dirty-state/useDirtyState';
-import { autosaveTarget } from './autosave.mjs';
+import { userCan } from '../../runtime/capabilities/userCan';
+import {
+	useEntityAutosave,
+	useRestBase,
+} from '../_shared/forms/useEntityAutosave';
+import DocumentSettingsSidebar from './DocumentSettingsSidebar';
 
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;
@@ -88,8 +94,9 @@ function ensureBlocksRegistered() {
  *   #/{appId}/{postType}/{postId}  — edit existing post
  *   #/{appId}/{postType}/new       — create draft, then edit
  *
- * MVP scope: title + content only. Featured image, taxonomy, excerpt, etc.
- * are deferred to a future post settings panel.
+ * Scope: title + a constrained block tree + a native document-settings sidebar
+ * (status/visibility, schedule, slug, categories, tags, excerpt, featured image,
+ * author, discussion). Deliberately no Block tab / page attributes / meta.
  * @param {Object} root0
  * @param {*}      root0.config
  * @param {*}      root0.regionId
@@ -111,8 +118,12 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 	const [ isCreating, setIsCreating ] = useState( isNew );
 	const [ error, setError ] = useState( null );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
-	const backHref = `#/${ segment }`;
+	// `undefined` while a CPT's entity is still resolving; built-in types
+	// resolve synchronously so they never produce `undefined` here.
+	const postTypeRestBase = useRestBase( postType );
+	const restBase = postTypeRestBase ?? 'posts';
+
+	const backHref = `#/${ restBase }`;
 
 	// MountedApp doesn't remount across same-route hash navs
 	// (`/posts/A/edit` → `/posts/B/edit` share one route pattern), so the
@@ -141,13 +152,22 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		if ( ! isNew ) {
 			return;
 		}
+		// Wait until the post-type entity resolves so we know the correct REST
+		// base. For built-in types (post/page) this is always immediately
+		// available via the fallback ternary, so there is no extra tick for the
+		// common case. For CPTs, firing before resolution would use the `posts`
+		// fallback and create a stray `post` draft before the correct route
+		// is known.
+		if ( postTypeRestBase === undefined ) {
+			return;
+		}
 
 		let cancelled = false;
 
 		async function createDraft() {
 			try {
 				const result = await apiFetch( {
-					path: `/wp/v2/${ postType === 'page' ? 'pages' : 'posts' }`,
+					path: `/wp/v2/${ restBase }`,
 					method: 'POST',
 					data: {
 						status: 'draft',
@@ -162,7 +182,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 					window.history.replaceState(
 						null,
 						'',
-						`#/${ segment }/${ result.id }/edit`
+						`#/${ restBase }/${ result.id }/edit`
 					);
 				}
 			} catch ( err ) {
@@ -183,7 +203,7 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 		return () => {
 			cancelled = true;
 		};
-	}, [ isNew, postType, segment ] );
+	}, [ isNew, postTypeRestBase, restBase ] );
 
 	if ( error ) {
 		return (
@@ -243,83 +263,33 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 
 	useDirtyState( regionId, hasEdits, { blocksNavigation: true } );
 
-	const [ saveStatus, setSaveStatus ] = useState( 'idle' );
-	const [ saveError, setSaveError ] = useState( null );
-	const autoSaveTimerRef = useRef( null );
+	// Shared autosave-on-change: debounces a 2s save, routing draft/auto-draft
+	// to the live record and pending/published/private/scheduled to a per-user
+	// autosave revision (issue #101). Extracted to `_shared/forms` so the
+	// document-settings sidebar commits through the same path (issue #119).
+	const {
+		saveStatus,
+		saveError,
+		isBusy: isSaveBusy,
+		flush,
+	} = useEntityAutosave( {
+		postType,
+		postId,
+		editedRecord,
+		status: record?.status,
+		save,
+		hasEdits,
+	} );
 
-	const segment = postType === 'page' ? 'pages' : 'posts';
-
-	const runSave = useCallback( async () => {
-		setSaveStatus( 'saving' );
-		try {
-			await save();
-			setSaveStatus( 'saved' );
-			setSaveError( null );
-		} catch ( err ) {
-			setSaveStatus( 'error' );
-			setSaveError(
-				err?.message || __( 'Save failed.', 'wp-admin-shell' )
-			);
-		}
-	}, [ save ] );
-
-	// Published / private / scheduled posts: route the debounced autosave to
-	// the per-user autosaves endpoint instead of PUTting the live record, so an
-	// in-progress autosave can never clobber the public post (issue #101). The
-	// edits stay accumulated in `editedRecord` (hasEdits remains true) until the
-	// author explicitly flushes them live via the Update button.
-	const runAutosave = useCallback( async () => {
-		setSaveStatus( 'saving' );
-		try {
-			const readRaw = ( field ) =>
-				typeof field === 'string' ? field : field?.raw ?? '';
-			await apiFetch( {
-				path: `/wp/v2/${ segment }/${ postId }/autosaves`,
-				method: 'POST',
-				data: {
-					title: readRaw( editedRecord?.title ),
-					content: readRaw( editedRecord?.content ),
-					excerpt: readRaw( editedRecord?.excerpt ),
-				},
-			} );
-			setSaveStatus( 'autosaved' );
-			setSaveError( null );
-		} catch ( err ) {
-			setSaveStatus( 'error' );
-			setSaveError(
-				err?.message || __( 'Save failed.', 'wp-admin-shell' )
-			);
-		}
-	}, [ editedRecord, postId, segment ] );
-
-	useEffect( () => {
-		if ( ! hasEdits ) {
-			return;
-		}
-		autoSaveTimerRef.current = setTimeout( () => {
-			autoSaveTimerRef.current = null;
-			if ( autosaveTarget( record?.status ) === 'parent' ) {
-				runSave();
-			} else {
-				runAutosave();
-			}
-		}, 2000 );
-
-		return () => {
-			if ( autoSaveTimerRef.current ) {
-				clearTimeout( autoSaveTimerRef.current );
-				autoSaveTimerRef.current = null;
-			}
-		};
-	}, [ hasEdits, editedRecord, runSave, runAutosave, record?.status ] );
-
-	useEffect( () => {
-		if ( saveStatus !== 'saved' && saveStatus !== 'autosaved' ) {
-			return;
-		}
-		const handle = setTimeout( () => setSaveStatus( 'idle' ), 2000 );
-		return () => clearTimeout( handle );
-	}, [ saveStatus ] );
+	// Resolved post-type entity: drives the sidebar's per-type panel gating
+	// (taxonomies / supports) and the author-reassign capability check.
+	const postTypeObject = useSelect(
+		( select ) => select( coreStore ).getPostType( postType ),
+		[ postType ]
+	);
+	const canAssignAuthor = userCan(
+		postTypeObject?.capabilities?.edit_others_posts || 'edit_others_posts'
+	);
 
 	const [ blocks, setBlocks ] = useState( [] );
 	const [ hydrated, setHydrated ] = useState( false );
@@ -343,13 +313,22 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	);
 
 	const handlePublish = useCallback( async () => {
-		if ( autoSaveTimerRef.current ) {
-			clearTimeout( autoSaveTimerRef.current );
-			autoSaveTimerRef.current = null;
+		// A scheduled (future-dated) post should publish as `future`, not go
+		// live immediately; core flips `draft`/`pending` + future date →
+		// `future` server-side, but set it explicitly so the toolbar reflects
+		// intent. A private post stays private. Otherwise publish goes live now.
+		const futureDate =
+			editedRecord?.date && new Date( editedRecord.date ) > new Date();
+		let nextStatus = 'publish';
+		if ( record?.status === 'private' ) {
+			nextStatus = 'private';
+		} else if ( futureDate ) {
+			nextStatus = 'future';
 		}
-		edit( { status: 'publish' } );
-		await runSave();
-	}, [ edit, runSave ] );
+		edit( { status: nextStatus } );
+		// Cancel any pending debounce, then flush the buffered edits live.
+		await flush();
+	}, [ edit, flush, editedRecord?.date, record?.status ] );
 
 	const onTitleKeyDown = useCallback( ( e ) => {
 		if ( e.key === 'Enter' || ( e.key === 'Tab' && ! e.shiftKey ) ) {
@@ -407,14 +386,15 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 			? editedRecord.title
 			: editedRecord.title?.raw ?? record?.title?.raw ?? '';
 
-	const isPublished = record?.status === 'publish';
+	const isPublished =
+		record?.status === 'publish' || record?.status === 'private';
 
 	// `useEntityRecord`'s `isSaving` only flips for the parent `save()` PUT, so
 	// it stays false during a published-post autosave (which goes through
-	// `apiFetch` to `.../autosaves`). Fold in `saveStatus === 'saving'` — set by
-	// both save paths — so the Update button is disabled for the whole
-	// in-flight window regardless of which path runs.
-	const isBusy = isSaving || saveStatus === 'saving';
+	// `apiFetch` to `.../autosaves`). `useEntityAutosave`'s `isSaveBusy` mirrors
+	// `saveStatus === 'saving'` — set by both save paths — so the Update button
+	// is disabled for the whole in-flight window regardless of which path runs.
+	const isBusy = isSaving || isSaveBusy;
 
 	return (
 		<div className="wp-admin-shell-app-simple-editor">
@@ -446,45 +426,61 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 						: __( 'Publish', 'wp-admin-shell' ) }
 				</Button>
 			</div>
-			<div
-				className="wp-admin-shell-app-simple-editor__body"
-				ref={ bodyRef }
-			>
-				<div className="wp-admin-shell-app-simple-editor__column">
-					<input
-						type="text"
-						className="wp-admin-shell-app-simple-editor__title"
-						value={ titleValue }
-						onChange={ onTitleChange }
-						onKeyDown={ onTitleKeyDown }
-						placeholder={ __( 'Title', 'wp-admin-shell' ) }
-						aria-label={ __( 'Post title', 'wp-admin-shell' ) }
-					/>
-					<BlockEditorProvider
-						value={ blocks }
-						onInput={ onInput }
-						onChange={ onChange }
-						settings={ settings }
-					>
-						<BlockEditorKeyboardShortcuts.Register />
-						<BlockTools>
-							<WritingFlow>
-								<ObserveTyping>
-									<BlockList />
-								</ObserveTyping>
-							</WritingFlow>
-						</BlockTools>
-					</BlockEditorProvider>
+			<div className="wp-admin-shell-app-simple-editor__main">
+				<div
+					className="wp-admin-shell-app-simple-editor__body"
+					ref={ bodyRef }
+				>
+					<div className="wp-admin-shell-app-simple-editor__column">
+						<input
+							type="text"
+							className="wp-admin-shell-app-simple-editor__title"
+							value={ titleValue }
+							onChange={ onTitleChange }
+							onKeyDown={ onTitleKeyDown }
+							placeholder={ __( 'Title', 'wp-admin-shell' ) }
+							aria-label={ __( 'Post title', 'wp-admin-shell' ) }
+						/>
+						<BlockEditorProvider
+							value={ blocks }
+							onInput={ onInput }
+							onChange={ onChange }
+							settings={ settings }
+						>
+							<BlockEditorKeyboardShortcuts.Register />
+							<BlockTools>
+								<WritingFlow>
+									<ObserveTyping>
+										<BlockList />
+									</ObserveTyping>
+								</WritingFlow>
+							</BlockTools>
+						</BlockEditorProvider>
+					</div>
 				</div>
+				{ /* Native document-settings panels, rendered as a Fill into
+				     the shared editor sidebar Slot. Plugins fill the SAME slot;
+				     their panels render alongside (after) these. */ }
+				<DocumentSettingsSidebar
+					editedRecord={ editedRecord }
+					edit={ edit }
+					postTypeObject={ postTypeObject }
+					canAssignAuthor={ canAssignAuthor }
+				/>
+				<aside
+					className="wp-admin-shell-app-simple-editor__sidebar"
+					aria-label={ __( 'Document settings', 'wp-admin-shell' ) }
+				>
+					<Slot
+						name="core:editor.sidebar"
+						fillProps={ {
+							postId: record?.id,
+							postType,
+							status: record?.status,
+						} }
+					/>
+				</aside>
 			</div>
-			<Slot
-				name="core:editor.sidebar"
-				fillProps={ {
-					postId: record?.id,
-					postType,
-					status: record?.status,
-				} }
-			/>
 		</div>
 	);
 }

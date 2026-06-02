@@ -1,9 +1,9 @@
 {
 	"$schema": "../../../docs/schemas/admin-app.json",
-	"id": "core:appearance",
+	"id": "core:appearance-preferences",
 	"version": 1,
-	"title": "Appearance",
-	"description": "User-prefs UI driven by the `customizable` field. Per-user overrides persist via `/wp-admin-shell/v1/user-prefs`.",
+	"title": "Appearance Preferences",
+	"description": "Per-user appearance-preferences UI driven by the `customizable` field. Per-user overrides persist via `/wp-admin-shell/v1/user-prefs`. NOT the wp-admin Appearance hub (themes / editor / menus) — this is a personalization panel (density / accent / default-route).",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"config-schema": {

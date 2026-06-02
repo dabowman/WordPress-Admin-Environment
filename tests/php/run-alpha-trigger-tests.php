@@ -52,9 +52,17 @@ class WPAS_Alpha_Trigger_Runner {
 		);
 	}
 
-	/** Point the override loader at a fixture (or a missing path when ''). */
+	/**
+	 * Point the override loader at a fixture (or a missing path when '').
+	 * An absolute path (leading '/') is used verbatim — lets the bundled-shell
+	 * sweep aim the loader at shells/ outside the fixture dir.
+	 */
 	public static function use_override( $name ) {
-		self::$override_path = $name ? self::$fixture_dir . $name : '';
+		if ( $name && '/' === $name[0] ) {
+			self::$override_path = $name;
+		} else {
+			self::$override_path = $name ? self::$fixture_dir . $name : '';
+		}
 		WP_Admin_Shell_Origin_File::reset_memo();
 		WP_Admin_Shell_Resolver::reset_request_memo();
 		if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
@@ -113,6 +121,26 @@ $T::ok( 'structurally bad block (screens: string) → load null', WP_Admin_Shell
 // the same as a scalar block. (Empty `[]` is ambiguous with `{}` and allowed.)
 $T::use_override( 'list-shaped-screens.json' );
 $T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Shell_Origin_File::load() === null );
+
+// …but `commands` IS a list block (schema types it `array`, merged by id).
+// Symmetric counterpart to the screens reject above: a list-shaped commands
+// block must NOT trip the object-shape gate. Regression guard for the bug
+// where `commands` was grouped with the object-shaped blocks, which silently
+// rejected every valid shell dropped at wp-content/admin.json.
+$T::use_override( 'commands-list-block.json' );
+$doc = WP_Admin_Shell_Origin_File::load();
+$T::ok( 'list block (commands: [ … ]) accepted → load non-null', is_array( $doc ) && isset( $doc['commands'] ) );
+
+// Strongest guard: every bundled shell must pass the loader as-is. The shells
+// are exactly what users drop into wp-content/admin.json, so an over-tightened
+// is_valid_partial that rejects any of them strands the user in classic.
+foreach ( glob( $plugin_dir . 'shells/*.json' ) as $shell_path ) {
+	$T::use_override( $shell_path );
+	$T::ok(
+		'bundled shell ' . basename( $shell_path ) . ' passes the file loader',
+		WP_Admin_Shell_Origin_File::exists_and_valid()
+	);
+}
 
 $T::use_override( '' );
 $T::ok( 'absent file: load null', WP_Admin_Shell_Origin_File::load() === null );

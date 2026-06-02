@@ -3,7 +3,7 @@
 	"id": "core:settings-discussion",
 	"version": 1,
 	"title": "Settings — Discussion",
-	"description": "Standalone Discussion-settings panel: default comment + ping status over the REST settings surface.",
+	"description": "Standalone Discussion-settings panel: the full standard Discussion option set (comment rules, moderation, notifications, threading/paging, avatars) over the REST settings surface.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-shell",
 	"documentation": {
-		"purpose": "DataForm over the REST-exposed slice of WordPress's Discussion Settings: `default_comment_status` + `default_ping_status` — the canonical 'Default post settings' pair (mapped open/closed ↔ boolean). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `discussion` panel; shells mount it directly as a Discussion screen.",
+		"purpose": "DataForm over the full standard Discussion Settings option set: comment rules (`default_pingback_flag`, `default_ping_status`, `default_comment_status`, `require_name_email`, `comment_registration`, `close_comments_for_old_posts` + `close_comments_days_old`, `show_comments_cookies_opt_in`), threading (`thread_comments` + `thread_comments_depth`), pagination (`page_comments` + `comments_per_page` / `default_comments_page` / `comment_order`), notifications (`comments_notify`, `moderation_notify`), moderation (`comment_moderation`, `comment_previously_approved`, `comment_max_links`, `moderation_keys`, `disallowed_keys`), and avatars (`show_avatars` + `avatar_rating` / `avatar_default`). Core only REST-registers the two status fields; the plugin's `register_setting('discussion', …, { show_in_rest })` shims expose the rest so the whole panel saves in one PUT. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `discussion` panel; shells mount it directly as a Discussion screen.",
 		"rebuilds": "settings-discussion",
 		"data": {
 			"reads": [
@@ -23,8 +23,8 @@
 					"source": "root/site",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Default comment + ping status.",
-					"fields": [ "default_comment_status", "default_ping_status" ]
+					"purpose": "Full Discussion option set.",
+					"fields": [ "default_pingback_flag", "default_ping_status", "default_comment_status", "require_name_email", "comment_registration", "close_comments_for_old_posts", "close_comments_days_old", "show_comments_cookies_opt_in", "thread_comments", "thread_comments_depth", "page_comments", "comments_per_page", "default_comments_page", "comment_order", "comments_notify", "moderation_notify", "comment_moderation", "comment_previously_approved", "comment_max_links", "moderation_keys", "disallowed_keys", "show_avatars", "avatar_rating", "avatar_default" ]
 				}
 			],
 			"writes": [
@@ -45,6 +45,10 @@
 		"interactions": [
 			{ "trigger": "Toggle allow comments on new posts", "effect": "`edit({ default_comment_status: 'open'|'closed' })` (boolean ↔ string via getValue/setValue)." },
 			{ "trigger": "Toggle allow pingbacks/trackbacks", "effect": "`edit({ default_ping_status: 'open'|'closed' })`." },
+			{ "trigger": "Toggle a boolean comment/notification/moderation rule", "effect": "`edit({ <option>: bool })`." },
+			{ "trigger": "Toggle Automatically close comments / Enable threaded comments / Break into pages / Show Avatars", "effect": "`edit({ <parent>: bool })`; reveals/hides its nested fields via `isVisible`." },
+			{ "trigger": "Edit a numeric field (days old / depth / per-page / max links)", "effect": "`edit({ … })`; the value is clamped to the field's integer floor server-side by the `sanitize_callback` (clamp-only model — no schema `minimum`, since the REST controller validates the schema before sanitize, so a sub-floor write is clamped up rather than rejected)." },
+			{ "trigger": "Choose an enum (thread depth / pagination order / avatar rating / default avatar)", "effect": "`edit({ <option>: value })`; the server-side `enum` schema rejects out-of-range writes." },
 			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." }
 		],
 		"a11y": {
@@ -53,10 +57,11 @@
 		"constraints": [
 			{ "concern": "null-guard-record", "note": "`EntityDataForm` renders a Spinner until `useEntityRecord('root','site')` resolves." },
 			{ "concern": "open-closed-mapping", "note": "`default_comment_status` / `default_ping_status` round-trip as `open`/`closed` strings; the boolean control maps both ways via getValue/setValue." },
-			{ "concern": "rest-coverage-gap", "note": "Fine-grained discussion rules (moderation, blocklists, avatars) are not exposed by `/wp/v2/settings`. The panel renders an in-form notice pointing at the legacy `options-discussion.php` screen." }
+			{ "concern": "thread-depth-max", "note": "Thread depth select is hardcoded 2..10 (core's default `thread_comments_depth_max`); the live filter is honored server-side but not surfaced (no read endpoint for the filtered max)." },
+			{ "concern": "avatar-default-set", "note": "`avatar_default` lists core's built-in set only; styles added via the `avatar_defaults` filter are not surfaced." },
+			{ "concern": "wp-notes-notify-unrendered", "note": "`wp_notes_notify` is intentionally neither rendered nor registered server-side — it is not a core option in WP 6.9 (Jetpack/WordPress.com), so a `show_in_rest` registration would be a write-to-nowhere phantom surface and a checkbox a no-op." }
 		],
 		"design-system-leakage": [
-			{ "import": "@wordpress/ui#Text", "purpose": "REST-gap notice text." },
 			{ "import": "@wordpress/dataviews DataForm (via _shared/forms/EntityDataForm)", "purpose": "Form rendering." }
 		]
 	}

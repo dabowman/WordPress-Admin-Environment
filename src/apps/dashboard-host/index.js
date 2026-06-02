@@ -37,13 +37,33 @@
  */
 
 import { useMemo } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { useEntityRecord } from '@wordpress/core-data';
+import { __, sprintf } from '@wordpress/i18n';
 
 import { MountedApp } from '../../runtime/regions/mountApp';
 import { composeScreenWidgets } from './composeScreenWidgets.mjs';
 import { useKernel } from '../../runtime/kernel-context';
 
+import '../_shared/app.css';
 import './index.css';
+
+/**
+ * Time-of-day greeting. Folded up from the retired `core:dashboard`
+ * monolith — the greeting is host **chrome** (a header above the grid),
+ * not a tile (issue #133 design note).
+ *
+ * @return {string} Localized greeting.
+ */
+function greetingForNow() {
+	const hour = new Date().getHours();
+	if ( hour < 12 ) {
+		return __( 'Good morning', 'wp-admin-shell' );
+	}
+	if ( hour < 18 ) {
+		return __( 'Good afternoon', 'wp-admin-shell' );
+	}
+	return __( 'Good evening', 'wp-admin-shell' );
+}
 
 function tileStyle( widget ) {
 	const style = {};
@@ -77,6 +97,27 @@ function tileStyle( widget ) {
 export default function DashboardHostApp( { config = {} } = {} ) {
 	const { config: kernelConfig } = useKernel();
 
+	const userId = window.wpAdminShell?.userId;
+	// `window.wpAdminShell.userId` is always present in practice. When it's
+	// falsy, `enabled: false` skips resolution entirely (the established
+	// fail-closed idiom — see dashboard-widget-recent-posts/index.js:29,
+	// preview-pane, simple-editor). A bare `undefined` id would NOT skip:
+	// the resolver defaults the missing key to '' and the request collapses
+	// to the /wp/v2/users collection endpoint.
+	const { record: user } = useEntityRecord( 'root', 'user', userId, {
+		enabled: !! userId,
+	} );
+	const greeting = useMemo( greetingForNow, [] );
+	const displayName = user?.name || user?.first_name || '';
+	const heading = displayName
+		? sprintf(
+				/* translators: 1: greeting, 2: user display name */
+				__( '%1$s, %2$s', 'wp-admin-shell' ),
+				greeting,
+				displayName
+		  )
+		: greeting;
+
 	const screenId =
 		typeof config?.screenId === 'string' && config.screenId !== ''
 			? config.screenId
@@ -93,41 +134,61 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 		return composeScreenWidgets( { screen, manifests } );
 	}, [ screenId, kernelConfig?.screens ] );
 
-	if ( widgets.length === 0 ) {
-		return (
-			<div className="wp-admin-shell-dashboard-host-empty">
-				<p>
+	return (
+		<div className="wp-admin-shell-dashboard wp-admin-shell-app--inset">
+			<header className="wp-admin-shell-dashboard__greeting">
+				<h1 className="wp-admin-shell-dashboard__greeting-title">
+					{ heading }
+				</h1>
+				<p className="wp-admin-shell-dashboard__greeting-subtitle">
 					{ __(
-						'No dashboard widgets are registered.',
+						'Here is a snapshot of your site.',
 						'wp-admin-shell'
 					) }
 				</p>
-			</div>
-		);
-	}
+			</header>
 
-	return (
-		<div className="wp-admin-shell-dashboard-host">
-			{ widgets.map( ( widget ) => (
-				<div
-					key={ widget.id }
-					className="wp-admin-shell-dashboard-tile"
-					data-widget-id={ widget.id }
-					style={ tileStyle( widget ) }
-				>
-					<div className="wp-admin-shell-dashboard-tile__header">
-						<span className="wp-admin-shell-dashboard-tile__title">
-							{ widget.title }
-						</span>
-					</div>
-					<div className="wp-admin-shell-dashboard-tile__body">
-						<MountedApp
-							appRef={ widget.appId }
-							regionId={ `dashboard-widget/${ widget.id }` }
-						/>
-					</div>
+			{ widgets.length === 0 ? (
+				<div className="wp-admin-shell-dashboard-host-empty">
+					<p>
+						{ __(
+							'No dashboard widgets are registered.',
+							'wp-admin-shell'
+						) }
+					</p>
 				</div>
-			) ) }
+			) : (
+				<div className="wp-admin-shell-dashboard-host">
+					{ widgets.map( ( widget ) => (
+						<div
+							key={ widget.id }
+							className="wp-admin-shell-dashboard-tile"
+							data-widget-id={ widget.id }
+							style={ tileStyle( widget ) }
+						>
+							<div className="wp-admin-shell-dashboard-tile__header">
+								<span className="wp-admin-shell-dashboard-tile__title">
+									{ widget.title }
+								</span>
+							</div>
+							<div className="wp-admin-shell-dashboard-tile__body">
+								<MountedApp
+									appRef={
+										widget.config
+											? {
+													id: widget.appId,
+													source: widget.appId,
+													config: widget.config,
+											  }
+											: widget.appId
+									}
+									regionId={ `dashboard-widget/${ widget.id }` }
+								/>
+							</div>
+						</div>
+					) ) }
+				</div>
+			) }
 		</div>
 	);
 }
