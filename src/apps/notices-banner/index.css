@@ -28,7 +28,7 @@
 }
 
 .wp-admin-shell-notices-banner__harvested p {
-	margin: 0 0 var(--wpds-dimension-padding-xs, 4px);
+	margin: 0 0 var(--wpds-dimension-padding-xs);
 }
 
 .wp-admin-shell-notices-banner__harvested p:last-child {

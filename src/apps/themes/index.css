@@ -1,5 +1,5 @@
 .wp-admin-shell-app-themes__details-modal {
-	padding: var( --wpds-dimension-padding-lg, 16px );
+	padding: var( --wpds-dimension-padding-lg );
 }
 
 .wp-admin-shell-app-themes__details-modal img {

@@ -54,7 +54,7 @@
 			{ "concern": "self-vs-named-slot", "note": "`follow: '_self'` reads `route.primary` (the primary hash path). Other values read `route.params[follow]` — useful for shells with a named `detail` region carrying its own route param." },
 			{ "concern": "post-shape-only-today", "note": "Only `post-type` + numeric `post-id` routes resolve as entities. Other shapes fall back to JSON-of-config — useful as a debug surface, but a future iteration should support more entity types (taxonomy terms, users, etc.)." },
 			{ "concern": "url-as-coordination-not-bus", "note": "Spec §6.4 explicitly chose URL state over a shell-level selection bus. PreviewPaneApp is the reference consumer." },
-			{ "concern": "wpds-token-inline-styles", "note": "The JSON `<pre>` renderer hardcodes `padding: var(--wpds-dimension-padding-lg)` + `font-size: var(--wpds-font-size-sm)` as inline style. A non-WPDS rebuild must either bridge these tokens through its engine's `compileStyles` hook, or replace the inline style with classNames + DS-neutral fallback values. Per CLAUDE.md the var-reference pattern is preferred over literal hex, but the token paths are WPDS-specific." }
+			{ "concern": "wpds-token-inline-styles", "note": "The JSON `<pre>` renderer hardcodes `padding: var(--wpds-dimension-padding-lg)` + `font-size: var(--wpds-typography-font-size-sm)` as inline style. A non-WPDS rebuild must either bridge these tokens through its engine's `compileStyles` hook, or replace the inline style with classNames + DS-neutral fallback values. Per CLAUDE.md the var-reference pattern is preferred over literal hex, but the token paths are WPDS-specific." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/components#Spinner", "purpose": "Loading indicator." },

@@ -17,7 +17,7 @@
 .wp-admin-shell-app-users__name-link {
 	font-weight: 600;
 	text-decoration: none;
-	color: var( --wpds-color-content-default, inherit );
+	color: var( --wpds-color-fg-content-neutral );
 }
 
 .wp-admin-shell-app-users__name-link:hover,
@@ -26,7 +26,7 @@
 }
 
 .wp-admin-shell-app-users__email {
-	color: var( --wpds-color-content-secondary, inherit );
+	color: var( --wpds-color-fg-content-neutral-weak );
 	text-decoration: none;
 	font-size: 0.85em;
 }

@@ -1,7 +1,7 @@
 .wp-admin-shell-app-comments__excerpt {
 	max-height: 120px;
 	overflow: hidden;
-	font-size: var(--wpds-font-size-md);
+	font-size: var(--wpds-typography-font-size-md);
 	line-height: 1.5;
 }
 
@@ -11,17 +11,17 @@
 
 .wp-admin-shell-app-comments__avatar {
 	flex-shrink: 0;
-	border-radius: var(--wpds-border-radius-small, 2px);
+	border-radius: var(--wpds-border-radius-sm);
 }
 
 .wp-admin-shell-app-comments__author-email,
 .wp-admin-shell-app-comments__author-url {
-	font-size: var(--wpds-font-size-sm);
+	font-size: var(--wpds-typography-font-size-sm);
 	word-break: break-word;
 }
 
 .wp-admin-shell-app-comments__reply-context {
-	padding: var(--wpds-dimension-padding-md, 12px);
-	background: var(--wpds-color-gray-100, rgba(0, 0, 0, 0.04));
-	border-radius: var(--wpds-border-radius-small, 2px);
+	padding: var(--wpds-dimension-padding-md);
+	background: var(--wpds-color-bg-surface-neutral-weak);
+	border-radius: var(--wpds-border-radius-sm);
 }

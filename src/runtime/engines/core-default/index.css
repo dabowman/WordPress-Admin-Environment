@@ -24,10 +24,10 @@
 	height: 100vh;
 	width: 100vw;
 	overflow: hidden;
-	font-family: var(--wpds-font-family-body);
+	font-family: var(--wpds-typography-font-family-body);
 	background: var(
 		--wp-admin-shell--chrome--canvas--background,
-		var(--wpds-color-bg-surface-neutral)
+		var(--wpds-color-bg-surface-neutral-strong)
 	);
 	color: var(
 		--wp-admin-shell--chrome--canvas--foreground,
@@ -263,7 +263,7 @@
 /* Minimal — stricter than compact. Currently only toolbar consumes it. */
 .wp-admin-shell-layout
 	.wp-admin-shell-region--toolbar[data-mode-minimal="true"] {
-	padding-block: var(--wpds-dimension-padding-2xs) !important;
+	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
 /* Full-width — content / main region expands to claim the space normally

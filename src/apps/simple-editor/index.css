@@ -20,7 +20,7 @@
 }
 
 .wp-admin-shell-app-simple-editor__status {
-	font-size: var(--wpds-font-size-sm);
+	font-size: var(--wpds-typography-font-size-sm);
 	color: var(--wpds-color-fg-content-neutral-weak);
 	margin-left: auto;
 }
@@ -127,8 +127,8 @@
 }
 
 .wp-admin-shell-app-simple-editor__body .wp-block-code {
-	font-family: var(--wpds-font-family-mono);
-	font-size: var(--wpds-font-size-lg);
+	font-family: var(--wpds-typography-font-family-mono);
+	font-size: var(--wpds-typography-font-size-lg);
 	background: var(--wpds-color-bg-surface-neutral);
 	padding: var(--wpds-dimension-padding-lg);
 	border-radius: var(--wpds-border-radius-md);

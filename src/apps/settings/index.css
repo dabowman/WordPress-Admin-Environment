@@ -19,7 +19,7 @@
 
 .wp-admin-shell-app-settings__nav .components-item.is-selected {
 	background: var(--wpds-color-bg-interactive-neutral-weak-active);
-	font-weight: var(--wpds-font-weight-medium);
+	font-weight: var(--wpds-typography-font-weight-medium);
 }
 
 .wp-admin-shell-app-settings__panel {

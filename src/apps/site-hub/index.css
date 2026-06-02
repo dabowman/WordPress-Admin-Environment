@@ -81,8 +81,8 @@
 	flex-grow: 1;
 	min-width: 0;
 	padding: 0;
-	font-size: var(--wpds-font-size-lg);
-	font-weight: var(--wpds-font-weight-medium);
+	font-size: var(--wpds-typography-font-size-lg);
+	font-weight: var(--wpds-typography-font-weight-medium);
 	position: relative;
 	text-decoration: none;
 	/* @wordpress/ui Button is an inline-flex element centering its

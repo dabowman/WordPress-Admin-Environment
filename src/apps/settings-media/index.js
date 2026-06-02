@@ -108,7 +108,7 @@ export default function SettingsMediaApp() {
 			entity={ [ 'root', 'site' ] }
 			fields={ FIELDS }
 			form={ FORM }
-			heading={ __( 'Media', 'wp-admin-shell' ) }
+			title={ __( 'Media', 'wp-admin-shell' ) }
 			messages={ {
 				success: __( 'Settings saved.', 'wp-admin-shell' ),
 				error: __( 'Failed to save settings.', 'wp-admin-shell' ),

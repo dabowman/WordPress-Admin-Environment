@@ -18,6 +18,7 @@ import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 import { buildTermTree, flattenTreeOrder, indentLabel } from './termTree.mjs';
+import { Page } from '../_shared/Page';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-shell' ),
@@ -407,16 +408,9 @@ export default function TaxonomyApp( { config = {} } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-taxonomy">
-			<Stack
-				direction="row"
-				align="center"
-				justify="space-between"
-				className="wp-admin-shell-app-taxonomy__toolbar"
-			>
-				<Text variant="heading-md" render={ <h2 /> }>
-					{ heading }
-				</Text>
+		<Page
+			title={ heading }
+			actions={
 				<Button
 					tone="brand"
 					variant="solid"
@@ -426,8 +420,8 @@ export default function TaxonomyApp( { config = {} } ) {
 					<Icon icon={ plus } size={ 16 } />
 					{ __( 'Add new', 'wp-admin-shell' ) }
 				</Button>
-			</Stack>
-
+			}
+		>
 			{ ! records ? (
 				<div className="wp-admin-shell-app__center">
 					<Spinner />
@@ -481,7 +475,7 @@ export default function TaxonomyApp( { config = {} } ) {
 					}
 				/>
 			) }
-		</div>
+		</Page>
 	);
 }
 

@@ -9,12 +9,12 @@
 .wp-admin-shell-dashboard__greeting {
 	display: flex;
 	flex-direction: column;
-	gap: var(--wpds-dimension-padding-2xs);
+	gap: var(--wpds-dimension-padding-xs);
 }
 
 .wp-admin-shell-dashboard__greeting-title {
 	margin: 0;
-	font-size: var(--wpds-font-size-heading-xl, 1.75rem);
+	font-size: var(--wpds-typography-font-size-2xl);
 	font-weight: 600;
 	line-height: 1.2;
 }

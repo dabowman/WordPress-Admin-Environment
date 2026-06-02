@@ -14,7 +14,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	padding-inline: var( --wpds-dimension-gap-sm, 8px );
+	padding-inline: var( --wpds-dimension-gap-sm );
 }
 
 .wp-admin-shell-view-tabs__tab {
@@ -22,9 +22,8 @@
 	 * underline stays consistent even when the group wraps onto multiple rows
 	 * (a single container border-bottom would leave wrapped rows undrawn). */
 	border-radius: 0 !important;
-	border-bottom: 2px solid
-		var( --wpds-color-border-subtle, var( --wpds-color-gray-300, #e0e0e0 ) );
-	padding-block: var( --wpds-dimension-gap-sm, 8px );
+	border-bottom: 2px solid var( --wpds-color-stroke-surface-neutral-weak );
+	padding-block: var( --wpds-dimension-gap-sm );
 }
 
 /*
@@ -34,8 +33,5 @@
  * for active state — CSS does NOT target a redundant class.
  */
 .wp-admin-shell-view-tabs__tab[aria-pressed="true"] {
-	border-bottom-color: var(
-		--wpds-color-accent-primary,
-		var( --wp-admin-theme-color, #3858e9 )
-	);
+	border-bottom-color: var( --wpds-color-stroke-surface-brand-strong );
 }

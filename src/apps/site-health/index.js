@@ -1,10 +1,10 @@
-import '../_shared/app.css';
 import { useEffect, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { Badge, Button, Card, Icon, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 import { update } from '@wordpress/icons';
+import { Page } from '../_shared/Page';
 
 const ASYNC_TESTS = [
 	{
@@ -120,25 +120,17 @@ export default function SiteHealthApp() {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-site-health wp-admin-shell-app--inset">
-			<Stack
-				direction="row"
-				align="center"
-				justify="space-between"
-				className="wp-admin-shell-app-site-health__toolbar"
-			>
-				<Stack direction="column" gap="xs">
-					<Text variant="heading-md" render={ <h2 /> }>
-						{ __( 'Site Health', 'wp-admin-shell' ) }
-					</Text>
-					<Text variant="body-sm">
-						{ counts.good } { __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
-						{ counts.recommended }{ ' ' }
-						{ __( 'recommended', 'wp-admin-shell' ) } ·{ ' ' }
-						{ counts.critical }{ ' ' }
-						{ __( 'critical', 'wp-admin-shell' ) }
-					</Text>
-				</Stack>
+		<Page
+			title={ __( 'Site Health', 'wp-admin-shell' ) }
+			subTitle={
+				<>
+					{ counts.good } { __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
+					{ counts.recommended }{ ' ' }
+					{ __( 'recommended', 'wp-admin-shell' ) } ·{ ' ' }
+					{ counts.critical } { __( 'critical', 'wp-admin-shell' ) }
+				</>
+			}
+			actions={
 				<Button
 					tone="neutral"
 					variant="solid"
@@ -150,8 +142,9 @@ export default function SiteHealthApp() {
 					<Icon icon={ update } size={ 16 } />
 					{ __( 'Re-run tests', 'wp-admin-shell' ) }
 				</Button>
-			</Stack>
-
+			}
+			hasPadding
+		>
 			{ error && <Text>{ error }</Text> }
 
 			<Stack direction="column" gap="md">
@@ -192,6 +185,6 @@ export default function SiteHealthApp() {
 					);
 				} ) }
 			</Stack>
-		</div>
+		</Page>
 	);
 }

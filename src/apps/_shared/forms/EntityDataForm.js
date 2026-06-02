@@ -5,6 +5,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEntitySave } from './useEntitySave';
+import { Page } from '../Page';
 
 /**
  * Shared `useEntityRecord` + `DataForm` shell for single-record edit screens
@@ -16,15 +17,22 @@ import { useEntitySave } from './useEntitySave';
  * `DataForm`'s `onChange` hands back the same partial-object shape
  * `useEntityRecord`'s `edit` expects, so they wire together directly.
  *
+ * Pass `title` to render the form inside the shared <Page> chrome (a bordered
+ * header bar carrying the title, above the inset form + Save button) — the
+ * standard for a full-screen settings/profile form. Omit `title` (optionally
+ * passing the legacy inline `heading`) for embedded use (e.g. inside a modal),
+ * where the form renders as a plain inset block with no header bar.
+ *
  * @param {Object} root0
  * @param {Array}  root0.entity           Entity coords spread into `useEntityRecord` (e.g. `[ 'root', 'site' ]`).
  * @param {Array}  root0.fields           DataForm field definitions.
  * @param {Object} root0.form             DataForm `form` layout config.
- * @param {string} [root0.heading]        Optional `<h2>` heading.
- * @param {string} [root0.headingVariant] WPDS Text variant for the heading.
+ * @param {string} [root0.title]          Page header title. When set, wraps the form in <Page>.
+ * @param {string} [root0.heading]        Legacy inline `<h2>` heading (used only when `title` is absent).
+ * @param {string} [root0.headingVariant] WPDS Text variant for the legacy inline heading.
  * @param {string} [root0.saveLabel]      Save button label.
  * @param {Object} [root0.messages]       `{ success, error }` for the save notices.
- * @param {string} [root0.className]      Wrapper class.
+ * @param {string} [root0.className]      Class applied to the form body (e.g. a `max-width` constraint).
  * @param {Node}   [root0.children]       Extra content rendered between the form and the Save button.
  * @return {JSX.Element} The form shell.
  */
@@ -32,6 +40,7 @@ export function EntityDataForm( {
 	entity,
 	fields,
 	form,
+	title,
 	heading,
 	headingVariant = 'heading-xl',
 	saveLabel,
@@ -60,38 +69,45 @@ export function EntityDataForm( {
 		);
 	}
 
-	return (
-		<div
-			className={ `wp-admin-shell-app--inset${
-				className ? ` ${ className }` : ''
-			}` }
-		>
-			<Stack direction="column" gap="xl">
-				{ heading && (
-					<Text variant={ headingVariant } render={ <h2 /> }>
-						{ heading }
-					</Text>
-				) }
-				<DataForm
-					data={ editedRecord }
-					fields={ fields }
-					form={ form }
-					validity={ validity }
-					onChange={ edit }
-				/>
-				{ children }
-				<Stack direction="row" justify="flex-start">
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						disabled={ ! hasEdits || ! isValid || isSaving }
-						loading={ isSaving }
-					>
-						{ saveLabel || __( 'Save Changes', 'wp-admin-shell' ) }
-					</Button>
-				</Stack>
+	// Form body — the DataForm, any extra children, and the Save button.
+	// `className` rides here (not on the Page root) so a panel's `max-width`
+	// constrains the form, not the full-width header bar.
+	const body = (
+		<Stack direction="column" gap="xl" className={ className }>
+			{ ! title && heading && (
+				<Text variant={ headingVariant } render={ <h2 /> }>
+					{ heading }
+				</Text>
+			) }
+			<DataForm
+				data={ editedRecord }
+				fields={ fields }
+				form={ form }
+				validity={ validity }
+				onChange={ edit }
+			/>
+			{ children }
+			<Stack direction="row" justify="flex-start">
+				<Button
+					tone="brand"
+					variant="solid"
+					onClick={ handleSave }
+					disabled={ ! hasEdits || ! isValid || isSaving }
+					loading={ isSaving }
+				>
+					{ saveLabel || __( 'Save Changes', 'wp-admin-shell' ) }
+				</Button>
 			</Stack>
-		</div>
+		</Stack>
 	);
+
+	if ( title ) {
+		return (
+			<Page title={ title } hasPadding>
+				{ body }
+			</Page>
+		);
+	}
+
+	return <div className="wp-admin-shell-app--inset">{ body }</div>;
 }

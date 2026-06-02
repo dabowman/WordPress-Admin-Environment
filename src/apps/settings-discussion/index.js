@@ -345,7 +345,7 @@ export default function SettingsDiscussionApp() {
 			entity={ [ 'root', 'site' ] }
 			fields={ FIELDS }
 			form={ FORM }
-			heading={ __( 'Discussion', 'wp-admin-shell' ) }
+			title={ __( 'Discussion', 'wp-admin-shell' ) }
 			messages={ {
 				success: __( 'Settings saved.', 'wp-admin-shell' ),
 				error: __( 'Failed to save settings.', 'wp-admin-shell' ),

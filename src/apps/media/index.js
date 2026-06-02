@@ -28,6 +28,7 @@ import {
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
 import MediaDetails from './MediaDetails';
+import { Page } from '../_shared/Page';
 
 const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'text', 'application' ];
 
@@ -525,17 +526,11 @@ export default function MediaApp( { config = {} } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-media wp-admin-shell-app--fill">
-			<Stack
-				direction="row"
-				align="center"
-				justify="space-between"
-				gap="md"
-				className="wp-admin-shell-app-media__toolbar"
-			>
+		<Page
+			before={
 				<Stack direction="row" align="center" gap="lg">
-					{ /* Only offer the Mine toggle when the current user id is
-					     known — without it the filter would no-op. */ }
+					{ /* Only offer the Mine toggle when the current user id
+						     is known — without it the filter would no-op. */ }
 					{ currentUserId ? (
 						<ToggleControl
 							__nextHasNoMarginBottom
@@ -551,7 +546,9 @@ export default function MediaApp( { config = {} } ) {
 						onChange={ setShowUnattached }
 					/>
 				</Stack>
-				<Stack direction="row" gap="md" align="center">
+			}
+			actions={
+				<>
 					<Button
 						tone="brand"
 						variant="solid"
@@ -570,9 +567,9 @@ export default function MediaApp( { config = {} } ) {
 						onChange={ handleUpload }
 						style={ { display: 'none' } }
 					/>
-				</Stack>
-			</Stack>
-
+				</>
+			}
+		>
 			{ ! records ? (
 				<div className="wp-admin-shell-app__center">
 					<Spinner />
@@ -600,7 +597,7 @@ export default function MediaApp( { config = {} } ) {
 					onMutated={ refreshAfterMutation }
 				/>
 			) }
-		</div>
+		</Page>
 	);
 }
 

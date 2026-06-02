@@ -1753,11 +1753,27 @@
 	],
 	"styles": {
 		"theme": {
-			"density": "compact"
+			"density": "compact",
+			"color": {
+				"bg": "#ffffff",
+				"primary": "#3858e9"
+			}
+		},
+		"regions": {
+			"toolbar": {
+				"theme": {
+					"color": {
+						"bg": "#1E1E1E"
+					}
+				}
+			}
 		},
 		"chrome": {
 			"canvas": {
-				"background": "#fafafa"
+				"background": "#ffffff"
+			}, 
+			"content": {
+				"card-background": "var(--wpds-color-bg-surface-neutral-weak)"
 			}
 		}
 	}

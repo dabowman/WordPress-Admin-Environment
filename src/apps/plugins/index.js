@@ -1,5 +1,4 @@
 import '../_shared/app.css';
-import './index.css';
 import { Modal, Spinner } from '@wordpress/components';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
@@ -19,6 +18,7 @@ import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 import { createEntityFormModal } from '../_shared/dataviews/EntityFormModal';
 import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
+import { Page } from '../_shared/Page';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-shell' ),
@@ -390,17 +390,10 @@ export default function PluginsApp( { config = {} } = {} ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-plugins">
-			<Stack
-				direction="row"
-				align="center"
-				justify="space-between"
-				className="wp-admin-shell-app-plugins__toolbar"
-			>
-				<Text variant="heading-md" render={ <h2 /> }>
-					{ __( 'Plugins', 'wp-admin-shell' ) }
-				</Text>
-				<Stack direction="row" align="center" gap="sm">
+		<Page
+			title={ __( 'Plugins', 'wp-admin-shell' ) }
+			actions={
+				<>
 					<Button
 						tone="neutral"
 						variant="outline"
@@ -418,32 +411,30 @@ export default function PluginsApp( { config = {} } = {} ) {
 						<Icon icon={ plus } size={ 16 } />
 						{ __( 'Add New Plugin', 'wp-admin-shell' ) }
 					</Button>
-				</Stack>
-			</Stack>
-
-			<div className="wp-admin-shell-app-plugins__list wp-admin-shell-app--fill">
-				{ ! records ? (
-					<div className="wp-admin-shell-app__center">
-						<Spinner />
-					</div>
-				) : (
-					<DataViews
-						data={ paginatedData }
-						fields={ fields }
-						view={ view }
-						onChangeView={ setView }
-						actions={ actions }
-						paginationInfo={ paginationInfo }
-						isLoading={ isResolving }
-						defaultLayouts={
-							dataViewConfig.defaultLayouts ?? { table: {} }
-						}
-						selection={ selection }
-						onChangeSelection={ setSelection }
-						getItemId={ ( item ) => item.id }
-					/>
-				) }
-			</div>
+				</>
+			}
+		>
+			{ ! records ? (
+				<div className="wp-admin-shell-app__center">
+					<Spinner />
+				</div>
+			) : (
+				<DataViews
+					data={ paginatedData }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					isLoading={ isResolving }
+					defaultLayouts={
+						dataViewConfig.defaultLayouts ?? { table: {} }
+					}
+					selection={ selection }
+					onChangeSelection={ setSelection }
+					getItemId={ ( item ) => item.id }
+				/>
+			) }
 
 			{ isInstalling && (
 				<Modal
@@ -483,6 +474,6 @@ export default function PluginsApp( { config = {} } = {} ) {
 					/>
 				</Modal>
 			) }
-		</div>
+		</Page>
 	);
 }

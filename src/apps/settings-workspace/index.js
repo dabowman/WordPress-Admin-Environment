@@ -8,6 +8,7 @@ import { store as noticesStore } from '@wordpress/notices';
 import { Button, Notice, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { Page } from '../_shared/Page';
 
 /**
  * "Activate WP Admin Workspace" toggle. Mirrors the other DataForm settings
@@ -74,12 +75,12 @@ export default function SettingsWorkspaceApp() {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-settings-workspace wp-admin-shell-app--inset">
-			<Stack direction="column" gap="xl">
-				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'Workspace', 'wp-admin-shell' ) }
-				</Text>
-
+		<Page title={ __( 'Workspace', 'wp-admin-shell' ) } hasPadding>
+			<Stack
+				direction="column"
+				gap="xl"
+				className="wp-admin-shell-app-settings-workspace"
+			>
 				<DataForm
 					data={ editedRecord }
 					fields={ FIELDS }
@@ -126,6 +127,6 @@ export default function SettingsWorkspaceApp() {
 					</Button>
 				</Stack>
 			</Stack>
-		</div>
+		</Page>
 	);
 }

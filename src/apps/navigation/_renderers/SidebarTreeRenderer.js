@@ -200,6 +200,6 @@ function depthStyle( depth ) {
 		return undefined;
 	}
 	return {
-		paddingInlineStart: `calc(${ depth } * var(--wpds-space-16, 16px))`,
+		paddingInlineStart: `calc(${ depth } * var(--wpds-dimension-padding-lg))`,
 	};
 }

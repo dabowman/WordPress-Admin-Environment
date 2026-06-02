@@ -3,8 +3,9 @@
  *
  * App-space, WPDS-flavored — the kernel stays DS-neutral. Imported as a
  * side-effect by `UnavailableViaApi.js`; webpack folds duplicate copies across
- * lazy chunks. Colors are `var( --wpds-* )` tokens; any literal value is only
- * ever a documented `var()` fallback for when the token is unset.
+ * lazy chunks. Colors / dimensions are bare `var( --wpds-* )` tokens with no
+ * literal fallback — a fallback would only mask a broken token name or a
+ * non-functioning ThemeProvider, which we want to surface, not hide.
  *
  * The CLI command and agent prompt can be long (a full
  * `wp option update '...' '...'`); wrap + cap them so they don't overflow the
@@ -19,7 +20,7 @@
  * explanation notice above it.
  */
 .wp-admin-shell-unavailable-via-api__tiers {
-	margin-top: var( --wpds-dimension-padding-md, 0.75rem );
+	margin-top: var( --wpds-dimension-padding-md );
 }
 
 .wp-admin-shell-unavailable-via-api__code,
@@ -34,16 +35,13 @@
 }
 
 .wp-admin-shell-unavailable-via-api__code {
-	font-family: var( --wpds-font-family-mono, monospace );
-	font-size: var( --wpds-font-size-sm, 0.8125rem );
-	padding: var( --wpds-dimension-padding-xs, 0.25rem )
-		var( --wpds-dimension-padding-sm, 0.5rem );
-	border-radius: var( --wpds-border-radius-sm, 4px );
-	background: var(
-		--wpds-color-bg-component-neutral-weak,
-		rgba( 0, 0, 0, 0.06 )
-	);
-	color: var( --wpds-color-fg-content-neutral-strong, inherit );
+	font-family: var( --wpds-typography-font-family-mono );
+	font-size: var( --wpds-typography-font-size-sm );
+	padding: var( --wpds-dimension-padding-xs )
+		var( --wpds-dimension-padding-sm );
+	border-radius: var( --wpds-border-radius-sm );
+	background: var( --wpds-color-bg-surface-neutral-weak );
+	color: var( --wpds-color-fg-content-neutral );
 }
 
 /*

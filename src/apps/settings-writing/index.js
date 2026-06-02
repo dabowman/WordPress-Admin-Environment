@@ -114,7 +114,7 @@ export default function SettingsWritingApp() {
 			entity={ [ 'root', 'site' ] }
 			fields={ fields }
 			form={ FORM }
-			heading={ __( 'Writing', 'wp-admin-shell' ) }
+			title={ __( 'Writing', 'wp-admin-shell' ) }
 			messages={ {
 				success: __( 'Settings saved.', 'wp-admin-shell' ),
 				error: __( 'Failed to save settings.', 'wp-admin-shell' ),

@@ -20,7 +20,7 @@
 .wp-admin-shell-classic-widget__toolbar {
 	display: flex;
 	justify-content: flex-end;
-	padding-block-end: var( --wpds-dimension-padding-2xs, 4px );
+	padding-block-end: var( --wpds-dimension-padding-xs );
 }
 
 .wp-admin-shell-classic-widget__body {
@@ -34,7 +34,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: var( --wpds-dimension-padding-2xs, 4px );
+	gap: var( --wpds-dimension-padding-xs );
 	block-size: 100%;
 	min-block-size: 80px;
 	text-align: center;
@@ -46,7 +46,7 @@
  * images responsive so a widget logo doesn't overflow the tile.
  */
 .wp-admin-shell-classic-widget__html {
-	font-size: var( --wpds-font-size-body-sm, 0.8125rem );
+	font-size: var( --wpds-typography-font-size-sm );
 	line-height: 1.5;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .wp-admin-shell-classic-widget__html a {
-	color: var( --wpds-color-fg-content-brand, inherit );
+	color: var( --wpds-color-fg-interactive-brand );
 }
 
 .wp-admin-shell-classic-widget__iframe {

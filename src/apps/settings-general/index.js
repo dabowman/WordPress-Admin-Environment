@@ -13,6 +13,7 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { eventValue } from '../_shared/forms/eventValue.mjs';
+import { Page } from '../_shared/Page';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
 
 const CUSTOM_RADIO_VALUE = '__custom__';
@@ -106,12 +107,12 @@ export default function SettingsGeneralApp() {
 	];
 
 	return (
-		<div className="wp-admin-shell-app-settings-general wp-admin-shell-app--inset">
-			<Stack direction="column" gap="xl">
-				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'General Settings', 'wp-admin-shell' ) }
-				</Text>
-
+		<Page title={ __( 'General Settings', 'wp-admin-shell' ) } hasPadding>
+			<Stack
+				direction="column"
+				gap="xl"
+				className="wp-admin-shell-app-settings-general"
+			>
 				{ /* Site identity */ }
 				<InputControl
 					label={ __( 'Site Title', 'wp-admin-shell' ) }
@@ -385,6 +386,6 @@ export default function SettingsGeneralApp() {
 					</Button>
 				</Stack>
 			</Stack>
-		</div>
+		</Page>
 	);
 }

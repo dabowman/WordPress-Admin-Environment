@@ -129,13 +129,13 @@
 .wp-admin-shell-sidebar-navigation-screen__title.wp-admin-shell-sidebar-navigation-screen__title .wp-admin-shell-sidebar-navigation-screen__title {
 	flex-grow: 1;
 	overflow-wrap: break-word;
-	line-height: var(--wpds-font-line-height-xl);
+	line-height: var(--wpds-typography-line-height-xl);
 }
 
 .wp-admin-shell-sidebar-navigation-screen__description {
 	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
-	font-size: var(--wpds-font-size-md);
-	line-height: var(--wpds-font-line-height-sm);
+	font-size: var(--wpds-typography-font-size-md);
+	line-height: var(--wpds-typography-line-height-sm);
 }
 
 /* `!important` overrides the default border ItemGroup paints around its
@@ -188,7 +188,7 @@
 .wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] {
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
-	font-weight: var(--wpds-font-weight-medium);
+	font-weight: var(--wpds-typography-font-weight-medium);
 }
 
 /* Keep the focus ring drawn on top of the active background. */
@@ -239,7 +239,7 @@
 .wp-admin-shell-nav__item[aria-current="true"] {
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
-	font-weight: var(--wpds-font-weight-medium);
+	font-weight: var(--wpds-typography-font-weight-medium);
 }
 
 .is-collapsed .wp-admin-shell-nav__items {
@@ -264,7 +264,7 @@
 
 .wp-admin-shell-nav__group-label {
 	display: block;
-	font-size: var(--wpds-font-size-xs);
+	font-size: var(--wpds-typography-font-size-xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
@@ -281,7 +281,7 @@
 	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 	text-decoration: none;
 	border-radius: var(--wpds-border-radius-md);
-	font-size: var(--wpds-font-size-md);
+	font-size: var(--wpds-typography-font-size-md);
 	min-height: 40px;
 }
 

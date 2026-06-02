@@ -160,7 +160,7 @@ export default function SettingsReadingApp() {
 			entity={ [ 'root', 'site' ] }
 			fields={ fields }
 			form={ FORM }
-			heading={ __( 'Reading', 'wp-admin-shell' ) }
+			title={ __( 'Reading', 'wp-admin-shell' ) }
 			messages={ {
 				success: __( 'Settings saved.', 'wp-admin-shell' ),
 				error: __( 'Failed to save settings.', 'wp-admin-shell' ),

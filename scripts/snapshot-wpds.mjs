@@ -12,6 +12,14 @@
  * The output is a flat map of `--wpds-*` variable name → value, plus a
  * `meta` block with the @wordpress/theme version and a slot count for
  * the parity test (M3.8) to verify against.
+ *
+ * `@wordpress/theme` is declared an explicit devDependency pinned to match
+ * our bundled `@wordpress/ui` (0.12.x) so it HOISTS to the top-level
+ * `node_modules/@wordpress/theme` that this script reads. Without the pin,
+ * the transitive copy `@wordpress/dataviews → @wordpress/ui@0.10 → theme@0.10`
+ * hoists instead, snapshotting the pre-`typography`-namespace token names
+ * (`--wpds-font-size-*`) that production no longer emits — exactly the drift
+ * the audit caught. Keep this pin in lockstep with the `@wordpress/ui` range.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';

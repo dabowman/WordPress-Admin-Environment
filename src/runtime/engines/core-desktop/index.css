@@ -23,7 +23,7 @@
 		--wp-admin-shell--chrome--canvas--foreground,
 		var( --wpds-color-fg-content-neutral )
 	);
-	font-family: var( --wpds-font-family-sans, -apple-system, system-ui, sans-serif );
+	font-family: var( --wpds-typography-font-family-body );
 }
 
 .wp-admin-shell-desktop__wallpaper-slot {

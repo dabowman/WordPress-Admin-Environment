@@ -7,6 +7,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
+import { Page } from '../_shared/Page';
 
 const FORM = {
 	layout: { type: 'regular', labelPosition: 'top' },
@@ -140,12 +141,12 @@ export default function ProfileApp( { config = {} } = {} ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-profile wp-admin-shell-app--inset">
-			<Stack direction="column" gap="xl">
-				<Text variant="heading-lg" render={ <h2 /> }>
-					{ __( 'Profile', 'wp-admin-shell' ) }
-				</Text>
-
+		<Page title={ __( 'Profile', 'wp-admin-shell' ) } hasPadding>
+			<Stack
+				direction="column"
+				gap="xl"
+				className="wp-admin-shell-app-profile"
+			>
 				<DataForm
 					data={ editedRecord }
 					fields={ fields }
@@ -165,6 +166,6 @@ export default function ProfileApp( { config = {} } = {} ) {
 					</Button>
 				</Stack>
 			</Stack>
-		</div>
+		</Page>
 	);
 }

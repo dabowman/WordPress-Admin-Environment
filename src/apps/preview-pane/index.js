@@ -64,7 +64,7 @@ export default function PreviewPaneApp( { config = {} } ) {
 		<pre
 			style={ {
 				padding: 'var(--wpds-dimension-padding-lg)',
-				fontSize: 'var(--wpds-font-size-sm)',
+				fontSize: 'var(--wpds-typography-font-size-sm)',
 			} }
 		>
 			{ JSON.stringify(
@@ -99,7 +99,7 @@ function PreviewEntity( { kind, name, id } ) {
 		<pre
 			style={ {
 				padding: 'var(--wpds-dimension-padding-lg)',
-				fontSize: 'var(--wpds-font-size-sm)',
+				fontSize: 'var(--wpds-typography-font-size-sm)',
 			} }
 		>
 			{ JSON.stringify( record, null, 2 ) }
