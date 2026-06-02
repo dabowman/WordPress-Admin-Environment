@@ -6,6 +6,52 @@ All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+The **wave-2** integration (PR #243): the DataViews interaction-pattern library, the six entity-CRUD apps rebuilt on top of it, and nav / settings / editor / dashboard / appearance parity. Built as ~25 bot-reviewed sub-PRs squash-merged through the `wave-2` branch.
+
+### DataViews interaction-pattern library (shared)
+
+A shared substrate so every list/detail app builds against one set of components and two contracts (`docs/dataviews-interaction-patterns.md` / `docs/no-api-fallback-pattern.md` / `docs/runtime-harvest-pattern.md`) rather than a bespoke modal per app — all in `src/apps/_shared/`:
+
+- `EntityFormModal` (Modal Edit/Create), `BulkEditModal` (apply-N-fields-to-M-rows with a `— No change —` sentinel + self-exclusion `filterItems`), `buildQueryArgs` (declarative DataViews-view → REST query mapper), `ViewTabs` (pinned filter-segment strip with live counts via `useEntityElementCounts`), `UnavailableViaApi` (tiered classic-screen / `wp option update` / agent-prompt fallback for no-REST capabilities), and the shared `useEntityAutosave` hook.
+- DataViews already wraps a `RenderModal` action in its own `<Modal>`; `EntityFormModal`/`BulkEditModal` were corrected to the bare-`<Stack>` contract of `createBulkConfirmModal` (they were double-wrapping → doubled scrim/header/focus-trap).
+
+### Entity-CRUD app rebuilds
+
+The six list apps rebuilt against the shared library:
+
+- **Posts** (#107 / #111 / #132) — Bulk Edit, status/Mine/Sticky filter tabs, date/category/format filters, post-type-support gating (Sticky/format/categories hidden on Pages).
+- **Comments** (#113 / #112 / #114 / #111) — status verbs (unspam → approved, restore, delete-permanent), enriched author column (avatar / mailto / URL / IP), Reply + Quick/full Edit modals, status filter tabs.
+- **Users** (#110 / #112 / #122) — self-demote-guarded "Change role" bulk action, avatar/email/translated-role cell, native `core:user-new` **Add New User** app replacing `iframe:user-new.php` (CSPRNG-generated password); `core:profile` now honors `config.userId` so Edit targets the right user instead of the acting user; working "View posts" author scope.
+- **Taxonomy** (#115 / #116) — hierarchical parent picker + depth-first tree rendering (gated to the default name-asc first page when the whole tree fits on one page; flat otherwise), default-category delete protection.
+- **Media** (#109 / #132) — full DataViews grid+table rewrite + host-agnostic `MediaDetails` editor, bulk delete, upload toolbar, date/author/type filters; net-new `root/media/_default` dataView.
+- **Plugins** (#126) — install-by-slug header action + zip-upload `UnavailableViaApi` fallback.
+
+### Runtime-harvest: nav + chrome (#127 / #128 / #129)
+
+- **Classic-menu bridge** now carries the numeric `position`, nests core-parented plugin submenus under the real shell parent (Tools / Settings) instead of the generic `ingested` bucket, and harvests data-URI / image menu icons via an `iconSource` descriptor.
+- **Admin-bar + admin-notices harvest** — `WP_Admin_Shell_Chrome_Harvest` instantiates `WP_Admin_Bar` + buffers `admin_notices` at `wp_admin_shell_data_plugin` priority 6 (skip-core filter `wp_admin_shell_admin_bar_core_node_ids`; detaches the core notice hooks after capture so admin-header.php's later pass doesn't double-dispatch side effects), rendered by `core:toolbar-actions` / `core:notices-banner` (global-`admin_notices`-only limitation documented).
+- **Dynamic `+New`** enumerated from creatable post types via `getPostTypes` + `canUser('create')` (internal-type denylist: `wp_block` / `wp_navigation` / `wp_template` / …).
+- **Arbitrary-icon escape hatch** (`src/apps/_shared/icons/ArbitraryIcon.js`) renders harvested data-URI / image / trusted-HTML titles engine-side; the kernel icon registry (`src/runtime/config/iconMap.js`) stays name-based + DS-neutral.
+
+### Settings (#117 / #118)
+
+- Native **Media** settings panel + `register_setting( show_in_rest )` for the 8 image-size / uploads options.
+- Full **Discussion** shims (boolean `'1'`/`''` round-trip, enum schemas, integer clamps) — the schema `minimum` is dropped where a `sanitize_callback` clamps, since the REST controller validates-then-sanitizes and a schema floor would 400 a sub-floor write before the clamp runs.
+- Legacy **Writing** options (`mailserver_*`, `ping_sites`, `default_link_category`, `use_balanceTags`) surfaced via `UnavailableViaApi` instead of a dead-end notice (`mailserver_pass` deliberately kept out of REST).
+
+### Editor (#119)
+
+Native document-settings sidebar for `core:simple-editor`, rendered as a `<Fill>` into the `core:editor.sidebar` Slot (plugins can fill it too) — Status/Visibility, Publish/Schedule, Slug, Categories/Tags, Excerpt, Featured image, Author (cap-gated), Discussion; each mutating the post entity via buffered `edit()`. Extracted the shared `useEntityAutosave` hook (folding in the #210 CPT `rest_base` derivation). Taxonomy entities keyed by slug; password-visibility persisted in local state; site-local `date` round-trip; non-content metadata edits don't flash "Auto-saved".
+
+### Dashboard (#133 / #134)
+
+- **Folded the dashboard monolith into `core:dashboard-host`** with a bundled default tile set (At-a-Glance, Activity, author-scoped Recent Drafts, Quick Draft; greeting → host chrome). Count tiles use `view`-context queries under the `read` cap floor so read-only users see real counts; Recent Drafts is author-scoped fail-closed (`enabled: !! userId`).
+- **Classic dashboard-widget bridge** (#134) — `WP_Admin_Shell_Dashboard_Bridge` harvests un-ported plugin dashboard widgets (skip-core filter `wp_admin_shell_dashboard_core_widget_ids`) into host tiles, fed by a lazy `GET /wp-admin-shell/v1/dashboard-widget/{id}` controller that `ob_start`-captures the widget callback HTML, with a classic-dashboard iframe fallback. The harvest + REST paths force the `dashboard` screen context around `wp_dashboard_setup()` (and restore it) so `wp_add_dashboard_widget()` files boxes under `$wp_meta_boxes['dashboard']` instead of the shell/REST screen.
+
+### Native Menus editor (#120)
+
+Native Appearance → Menus editor (Option B — no drag-and-drop) over the `menus` / `menu-items` / `menu-locations` REST entities: create/edit menus, add custom-link / post / term items, explicit Up/Down/Indent/Outdent reorder + numeric order field, theme-location assignment. Block-theme-aware (consumes the `workspace.theme-support` signal — disables on block themes) with a reachable theme-agnostic "Menus (Classic)" iframe escape hatch. Reorder / delete / location handlers surface REST errors via `getLastEntitySaveError` / `getLastEntityDeleteError` (the core-data mutations resolve rather than throw on failure) instead of failing silently with a false success.
+
 ### Appearance lane (issue #121)
 
 - **Renamed `core:appearance` → `core:appearance-preferences`.** The app is the per-user personalization panel (density / accent / default-route), not the wp-admin Appearance hub. The rename frees the "Appearance" section name and fixes the app's orphaned screen wiring: it previously bound to the Appearance group menu node (which has `items` and therefore renders as a drilldown container, never navigating to its own href), so it was reachable only by typing `/appearance`. It now binds the `appearance-preferences` screen (path `/appearance-preferences`, cap `read`) surfaced under **Settings → Appearance Preferences**, and the `appearance` group node carries its own explicit label/icon. No back-compat (unshipped). Updated everywhere: `src/apps/appearance-preferences/` (dir + `app.json` id + `app.md`), `src/runtime/registry/builtins.js`, `src/runtime/shell-switching.js`, `includes/class-wp-admin-shell-prefs-rest.php`, `shells/wp-admin-default.json`, `src/apps/site-editor/*` (collision references), `docs/code-map.md`.
