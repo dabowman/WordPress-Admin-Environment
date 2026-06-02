@@ -1,0 +1,6 @@
+{
+	"styles": { "color": { "primary": "#111" } },
+	"commands": [
+		{ "id": "demo-command", "shortcut": "Mod+K", "invoke": "core:command-palette", "label": "Open Command Palette" }
+	]
+}
