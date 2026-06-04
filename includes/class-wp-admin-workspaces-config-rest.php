@@ -13,14 +13,18 @@
  *   - `capabilities` — the pre-computed cap map for that pruned config.
  *   - `adminRoutes`  — the classic→workspace legacy-route map.
  *   - `tokens`       — the resolved DTCG tree (or `{}`), config-gated.
+ *   - `engineModes`  — the flattened modes catalog, engine-variant.
  *
  * Workspace-INVARIANT fields (siteUrl, user, nonce, manifests, …) don't
  * change across a switch, so they stay as injected at page load and are
- * deliberately omitted here. `tokens` is the exception: its *values* are
- * site/theme/plugin/core-derived (invariant), but its *presence* is gated
- * per-config — an alias-free workspace ships `{}`, one whose `styles`
- * reference foreign token aliases ships the full DTCG tree — so it must be
- * re-sent on a switch using the same gate as the inline payload.
+ * deliberately omitted here. `tokens` and `engineModes` are the exceptions.
+ * `tokens`' *values* are site/theme/plugin/core-derived (invariant), but its
+ * *presence* is gated per-config — an alias-free workspace ships `{}`, one
+ * whose `styles` reference foreign token aliases ships the full DTCG tree.
+ * `engineModes` is derived from the active engine manifest, so a cross-engine
+ * switch resolves a different catalog. Both must be re-sent on a switch using
+ * the same derivation as the inline payload, or the kernel (which reads them
+ * off the unchanged global, not `config`) renders against the stale values.
  *
  * The cascade cache is invalidated server-side by the
  * `update_option_wp_admin_workspaces_active_workspace` hook before this is
@@ -77,6 +81,17 @@ class WP_Admin_Workspaces_Config_REST {
 			get_current_user_id()
 		);
 
+		// Resolve the NEW config's active engine manifest the same way the
+		// page-load payload does (wp-admin-workspaces.php) — off the unpruned
+		// `$config`, which is engine-invariant per user. Drives `engineModes`
+		// below; the modes catalog is derived from this manifest.
+		$active_engine_id       = is_array( $config )
+			? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+			: null;
+		$active_engine_manifest = $active_engine_id
+			? WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $active_engine_id )
+			: null;
+
 		// This GET has no varying query string (the nonce rides the
 		// X-WP-Nonce header), so two switches in one session hit the
 		// identical URL. Suppress browser/proxy caching so a B→A switch
@@ -96,6 +111,16 @@ class WP_Admin_Workspaces_Config_REST {
 				'tokens'       => wp_admin_workspaces_styles_reference_tokens( $config )
 					? WP_Admin_Workspaces_Tokens::resolve()
 					: (object) array(),
+				// Engine-variant, same class as `tokens`: the modes catalog is
+				// derived from the active engine manifest, so a cross-engine
+				// switch must re-send it or `useMode()` resolves the new
+				// workspace's screens against the stale catalog (wrong
+				// `data-mode-*`). Mirrors the page-load payload's derivation
+				// (active manifest → resolve_engine_modes, else the synthesized
+				// default catalog).
+				'engineModes'  => $active_engine_manifest
+					? WP_Admin_Workspaces_Modes::resolve_engine_modes( $active_engine_manifest )
+					: WP_Admin_Workspaces_Modes::synthesize_default_catalog(),
 			)
 		);
 	}

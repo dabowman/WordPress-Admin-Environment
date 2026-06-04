@@ -17,10 +17,16 @@ draft input) survives a switch.
 - **New REST endpoint** `GET /wp-admin-workspaces/v1/config`
   (`WP_Admin_Workspaces_Config_REST`) returns the workspace-variant slice the
   kernel swaps on a re-mount — the user-pruned resolved `config`, the
-  pre-computed `capabilities` map, and the classic→workspace `adminRoutes`
-  legacy map. Workspace-invariant fields (siteUrl, user, nonce, manifests,
-  tokens, …) stay as injected at page load. Logged-in gated; per-screen
-  capability gating rides the same prune the inline payload uses.
+  pre-computed `capabilities` map, the classic→workspace `adminRoutes`
+  legacy map, plus two config-gated exceptions: `tokens` (config-gated — an
+  alias-free workspace ships `{}`, one whose `styles` reference foreign token
+  aliases ships the full DTCG tree) and `engineModes` (engine-variant —
+  derived from the active engine manifest, so a cross-engine switch resolves a
+  different catalog). Both are read off the unchanged global, not `config`, so
+  they must be re-sent or the kernel renders against stale values. Truly
+  workspace-invariant fields (siteUrl, user, nonce, manifests, …) stay as
+  injected at page load. Logged-in gated; per-screen capability gating rides
+  the same prune the inline payload uses.
 - **`window.wpAdminWorkspaces.remountWorkspace(payload)`** (published by
   `src/index.js`) folds the REST payload into the global and re-renders. React
   reconciliation does the region/app tree diff — matching region ids keep

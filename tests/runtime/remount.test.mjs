@@ -99,6 +99,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 		capabilities: { 'manage_options': true },
 		adminRoutes: { '/old': {} },
 		tokens: {},
+		engineModes: { 'core:default': {} },
 		// Workspace-invariant fields that must be left untouched.
 		siteUrl: 'https://site.test',
 		nonce: 'abc123',
@@ -108,6 +109,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 		capabilities: { 'edit_posts': true },
 		adminRoutes: { '/new': {} },
 		tokens: { color: { brand: { 500: '#abc' } } },
+		engineModes: { focus: { 'hidden-regions': [ 'sidebar' ] } },
 	};
 	const returned = applyWorkspacePayload( target, payload );
 
@@ -116,6 +118,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 	ok( 'swaps capabilities', eq( target.capabilities, payload.capabilities ) );
 	ok( 'swaps adminRoutes', eq( target.adminRoutes, payload.adminRoutes ) );
 	ok( 'swaps tokens', eq( target.tokens, payload.tokens ) );
+	ok( 'swaps engineModes', eq( target.engineModes, payload.engineModes ) );
 	ok( 'leaves invariant siteUrl', target.siteUrl === 'https://site.test' );
 	ok( 'leaves invariant nonce', target.nonce === 'abc123' );
 }
@@ -128,13 +131,15 @@ ok(
 			capabilities: { keep: true },
 			adminRoutes: { keep: true },
 			tokens: { keep: true },
+			engineModes: { keep: true },
 		};
 		applyWorkspacePayload( target, { config: { a: 2 } } );
 		return (
 			eq( target.config, { a: 2 } ) &&
 			eq( target.capabilities, { keep: true } ) &&
 			eq( target.adminRoutes, { keep: true } ) &&
-			eq( target.tokens, { keep: true } )
+			eq( target.tokens, { keep: true } ) &&
+			eq( target.engineModes, { keep: true } )
 		);
 	} )()
 );
