@@ -171,8 +171,10 @@ class WP_Admin_Workspaces_Site_Health_REST {
 	 * Direct-test entries carry a `test` callback that is either a method name
 	 * on `WP_Site_Health` (`'get_test_' . $test`) or an arbitrary callable
 	 * (plugin-contributed). Mirror core's `WP_Site_Health::get_tests()`:
-	 * resolve the `get_test_{slug}` method first, then run the callback through
-	 * `perform_test()` so the `site_status_test_result` filter fires.
+	 * resolve the `get_test_{slug}` method first, then run the callback and apply
+	 * the `site_status_test_result` filter so plugin amendments still fire. We
+	 * replicate core's `perform_test()` body here because that method is private
+	 * and cannot be called from this scope.
 	 *
 	 * @param WP_Site_Health $site_health Site Health instance.
 	 * @param array          $test        Test descriptor.
@@ -202,13 +204,22 @@ class WP_Admin_Workspaces_Site_Health_REST {
 			return null;
 		}
 
-		// Route through perform_test() rather than calling the callback bare:
-		// it runs the test AND applies the `site_status_test_result` filter,
-		// the documented extension point plugins use to amend/override any
-		// test's status or label (alongside `site_status_tests`). Calling the
-		// callback directly would silently drop that filter, so workspace
-		// results would diverge from classic Site Health for the same site.
-		$result = $site_health->perform_test( $callback );
+		// Replicate WP_Site_Health::perform_test() WITHOUT calling it — that
+		// method is `private` in core, so invoking it from this scope is a fatal
+		// error. Core runs the callback, then applies the
+		// `site_status_test_result` filter (the documented extension point
+		// plugins use to amend/override any test's status or label, alongside
+		// `site_status_tests`). We do the same via a public `apply_filters` call,
+		// guarding the filter to valid array results just as core does, so
+		// workspace results stay in lockstep with classic Site Health.
+		$result = call_user_func( $callback );
+
+		if ( ! is_array( $result ) ) {
+			return null;
+		}
+
+		/** This filter is documented in wp-admin/includes/class-wp-site-health.php */
+		$result = apply_filters( 'site_status_test_result', $result );
 
 		if ( ! is_array( $result ) ) {
 			return null;
