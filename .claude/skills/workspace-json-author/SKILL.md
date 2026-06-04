@@ -1,11 +1,11 @@
 ---
-name: admin-json-author
-description: Author or edit WP Admin Shell admin.json workspace files. Use whenever a user wants to add, rename, hide, reorder, or reconfigure a screen in their WordPress admin; reorganize the menu; brand the admin; change theme colors / density / background; bind a keyboard shortcut; declare a dataView/column/filter; choose which engine renders the workspace; mount widgets (toolbar, sidebar-footer, status-bar); restrict screens by capability or role; preload REST paths; or ship a per-role / per-user workspace. Triggers on phrases like "add a screen", "hide the plugins menu", "rebrand wp-admin", "change the dashboard layout", "make Posts default", "mount a sidebar widget", "use the desktop engine", "add Mod+K", "filter Posts to drafts", "restrict Settings to editors". Covers the canonical admin.json shape — workspace / settings / screens / menu / commands / styles / preload — plus cascade semantics (deep merge by id, null tombstones, trust-tier rules) and the regions / routes escape hatches.
+name: workspace-json-author
+description: Author or edit WP Admin Workspaces workspace.json workspace files. Use whenever a user wants to add, rename, hide, reorder, or reconfigure a screen in their WordPress admin; reorganize the menu; brand the admin; change theme colors / density / background; bind a keyboard shortcut; declare a dataView/column/filter; choose which engine renders the workspace; mount widgets (toolbar, sidebar-footer, status-bar); restrict screens by capability or role; preload REST paths; or ship a per-role / per-user workspace. Triggers on phrases like "add a screen", "hide the plugins menu", "rebrand wp-admin", "change the dashboard layout", "make Posts default", "mount a sidebar widget", "use the desktop engine", "add Mod+K", "filter Posts to drafts", "restrict Settings to editors". Covers the canonical workspace.json shape — workspace / settings / screens / menu / commands / styles / preload — plus cascade semantics (deep merge by id, null tombstones, trust-tier rules) and the regions / routes escape hatches.
 ---
 
-# admin.json Authoring Skill
+# workspace.json Authoring Skill
 
-`admin.json` is the **install-decision file** for a WP Admin Shell workspace. It picks an engine, declares the workspace's screens and menu, names commands and shortcuts, brands the install, and tunes the theme. Anything intrinsic to a single app or engine belongs in `app.json` / `engine.json` — admin.json composes them.
+`workspace.json` is the **install-decision file** for a WP Admin Workspaces workspace. It picks an engine, declares the workspace's screens and menu, names commands and shortcuts, brands the install, and tunes the theme. Anything intrinsic to a single app or engine belongs in `app.json` / `engine.json` — workspace.json composes them.
 
 Always set `"version": 3`.
 
@@ -13,19 +13,19 @@ Always set `"version": 3`.
 
 | Doc | When |
 |---|---|
-| `docs/schemas/admin.json` | JSON Schema (draft 2020-12). The runtime + tooling validate against it. Read the inline `description` fields. |
-| `docs/public/admin-json-reference.md` | Author-facing reference. Per-field tables, examples for every top-level block. |
+| `docs/schemas/workspace.json` | JSON Schema (draft 2020-12). The runtime + tooling validate against it. Read the inline `description` fields. |
+| `docs/public/workspace-json-reference.md` | Author-facing reference. Per-field tables, examples for every top-level block. |
 | `docs/schema-sketch.md` | Design doc. Cascade semantics, OR-semantic permissions w/ trust tiers, mode catalog, slot vocabulary, classic wp-admin menu bridge, programmatic registration. |
 | `docs/dataview-config.md` | dataView 3-axis registry (`kind/name/variant`), `extends`, filter hooks, REST endpoints. |
 | `docs/wp-admin-workspaces-design-spec.md` | Master spec — runtime architecture, region vocabulary, URL routing, capability gating, theming model, extension points. Read §5 (regions) and §6 (routing) when using the escape hatches. |
-| `shells/single-pane-demo.json` | Compact example — start here. |
-| `shells/wp-admin-default.json` | Largest example — every wp-admin screen, iframe fallbacks, multi-app screens. |
+| `workspaces/single-pane-demo.json` | Compact example — start here. |
+| `workspaces/wp-admin-default.json` | Largest example — every wp-admin screen, iframe fallbacks, multi-app screens. |
 
 ## Top-level shape (cheat sheet)
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin.json",
+    "$schema": "https://schemas.wp.org/workspace.json",
     "version": 3,
     "$wpds": "6.9",
     "name": "my-workspace",
@@ -33,7 +33,9 @@ Always set `"version": 3`.
     "description": "...",
     "user-switchable": true,
 
-    "workspace": { /* engine + default-screen + branding + notices + widgets */ },
+    "engine": "core:default",  /* required — which engine renders */
+    "default-screen": "...",   /* initial screen id */
+    "frame":     { /* branding + notices + persistent widgets */ },
     "settings":  { /* dataViews + dataFields registries */ },
     "screens":   { /* id-keyed map of every screen */ },
     "menu":      { /* nested IA tree */ },
@@ -46,18 +48,18 @@ Always set `"version": 3`.
 }
 ```
 
-**Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All others optional. `additionalProperties: false` on every level — unknown keys fail validation.
+**Required fields:** `version`, `$wpds`, `name`, `engine`, `screens`. All others optional. `additionalProperties: false` on every level — unknown keys fail validation.
 
 ## Block-by-block authoring playbook
 
-### `workspace`
+### `engine` / `default-screen` / `frame`
 
-Install-level chrome: the engine that renders this workspace, the screen the workspace lands on, branding, notice slots, persistent widgets.
+Install-level intrinsics. `engine` (top-level, required) and `default-screen` (top-level) name the renderer and landing screen; `frame` holds the persistent furniture wired into the workspace — branding, notice hosts, persistent widgets. (`frame` is *what furniture exists*; `styles.chrome` is *how it's painted* — see `styles`.)
 
 ```json
-"workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
+"engine": "core:default",
+"default-screen": "dashboard-home",
+"frame": {
     "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp", "icon": "..." },
     "notices": {
         "banner":   { "app": "core:notices-banner" },
@@ -70,10 +72,10 @@ Install-level chrome: the engine that renders this workspace, the screen the wor
 }
 ```
 
-- **`engine`** — `core:default` (sidebar + topbar + content, WPDS) is the safe default. `core:single-pane` is mobile-first; `core:desktop` is windowed. Plugin engines use `plugin:{slug}/{name}`.
-- **`default-screen`** — screen id, NOT a path. Falls back to "first permitted screen with a path" when omitted or denied by capability gating.
-- **`branding.logo`** can be a relative path; emit alongside the admin.json or under `assets/`.
-- **`widgets.<slot>`** arrays merge by `id` across cascade origins — plugin authors append to `toolbar[]` at the `plugin` origin.
+- **`engine`** (top-level, required) — `core:default` (sidebar + topbar + content, WPDS) is the safe default. `core:single-pane` is mobile-first; `core:desktop` is windowed. Plugin engines use `plugin:{slug}/{name}`.
+- **`default-screen`** (top-level) — screen id, NOT a path. Falls back to "first permitted screen with a path" when omitted or denied by capability gating.
+- **`frame.branding.logo`** can be a relative path; emit alongside the workspace.json or under `assets/`.
+- **`frame.widgets.<slot>`** arrays merge by `id` across cascade origins — plugin authors append to `toolbar[]` at the `plugin` origin.
 - **Engine slots vary.** `core:default` exposes `toolbar` + `sidebar-footer`; `core:desktop` adds `status-bar` + `dock`. Check the engine's `engine.json#slots`.
 
 ### `settings`
@@ -126,7 +128,7 @@ Reusable definition registries. Two flavors:
 
 - **Variants resolve independently.** Use explicit `"extends": "_default"` to inherit from the base — no implicit merge. Cycle-safe, max depth 10.
 - **`fieldsRef`** points at a `dataFields` collection id. Inline `fields[]` shallow-merges per-id over the collection (ref wins on collision); inline-only ids append after.
-- **The `dataView` block in an app manifest** ships baseline variants for that `(kind, name)` — the resolver folds them into `settings.dataViews` at the `core` origin. Admin.json wins on collision.
+- **The `dataView` block in an app manifest** ships baseline variants for that `(kind, name)` — the resolver folds them into `settings.dataViews` at the `core` origin. workspace.json wins on collision.
 - **Per-screen overlay** — `screens[id].dataView` deep-merges on top of the resolved triple, with `null` tombstones for fields/actions at any depth.
 
 For full dataView semantics — variant chains, filter hooks, the `useDataView` React hook, REST endpoints — see `docs/dataview-config.md`.
@@ -260,7 +262,7 @@ Engine-agnostic IA tree. Each item is keyed by id. Items with `items` become con
 
 **Drilldown state lives in the URL** (`?screen=<id>`). NavigationApp writes via `navigateScreen(id|null)`; deep-links survive refresh.
 
-**Classic wp-admin menu bridge** auto-ingests every `add_menu_page()` / `add_submenu_page()` registration into `menu.ingested.items[]`. Yoast / ACF / WooCommerce appear in the menu without any admin.json edit. Authors override:
+**Classic wp-admin menu bridge** auto-ingests every `add_menu_page()` / `add_submenu_page()` registration into `menu.ingested.items[]`. Yoast / ACF / WooCommerce appear in the menu without any workspace.json edit. Authors override:
 
 - Rename in menu only: `menu.ingested.items.woocommerce.label: "Shop"`
 - Reparent: `menu.ingested.items.woocommerce: null` + `menu.content.items.woocommerce: { position: 70 }`
@@ -316,13 +318,13 @@ WPDS-shaped theme tree. Four customization paths in increasing escape-hatch orde
 
 **Density** — `default`, `compact`, `comfortable`. ThemeProvider derives the WPDS spacing scale from the seed.
 
-**Chrome slots** — shell-only surfaces WPDS doesn't cover. Sub-namespaces: `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`. Engines that consume custom chrome slugs declare them in their manifest.
+**Chrome slots** — workspace-only surfaces WPDS doesn't cover. Sub-namespaces: `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`. Engines that consume custom chrome slugs declare them in their manifest.
 
-`tokens.json` (DTCG) sits alongside admin.json. The PHP `WP_Admin_Workspaces_Tokens` resolver deep-merges site → theme → plugin → core token files; aliases resolve curly-brace references.
+`tokens.json` (DTCG) sits alongside workspace.json. The PHP `WP_Admin_Workspaces_Tokens` resolver deep-merges site → theme → plugin → core token files; aliases resolve curly-brace references.
 
 ### `preload`
 
-REST paths to hydrate server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs.
+REST paths to hydrate server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the workspace bundle runs.
 
 ```json
 "preload": [
@@ -335,7 +337,7 @@ REST paths to hydrate server-side and inject as `wp.apiFetch.createPreloadingMid
 - String → GET shorthand. `[ path, method ]` for OPTIONS preflight.
 - Methods restricted to GET / OPTIONS.
 - Across origins: additive concatenation. Dedupe by exact `path+method`.
-- Conditional preloads live in a `wp_admin_workspaces_data_{origin}` PHP filter callback, NOT in admin.json.
+- Conditional preloads live in a `wp_admin_workspaces_data_{origin}` PHP filter callback, NOT in workspace.json.
 - Per-screen `screens[id].preload` is additive with this workspace-level list.
 
 ### `regions` / `routes` (escape hatches)
@@ -385,7 +387,7 @@ Six origins merge in fixed order: **core → engine → plugin → site → role
 
 **Path collisions** between two distinct screen IDs claiming the same `path` fail the resolver. Override path on an existing screen by id is a normal cascade — not a collision.
 
-**`customizable` allowlist.** Consumer origins (role / user) can only write paths the workspace declares as customizable. The DENY_PATTERNS list (`WP_Admin_Workspaces_Customizable::DENY_PATTERNS`) makes `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` non-customizable even when allowed — these are security gates.
+**`customizable` allowlist.** Consumer origins (role / user) can only write paths the workspace declares as customizable. The DENY_PATTERNS list (`WP_Admin_Workspaces_Customizable::DENY_PATTERNS`) makes `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `engine` non-customizable even when allowed — these are security gates.
 
 ## Engine selection guide
 
@@ -394,9 +396,9 @@ Six origins merge in fixed order: **core → engine → plugin → site → role
 | `core:default` | Standard desktop admin. Sidebar + topbar + content. WPDS chrome. **Default for most workspaces.** | Mobile-first UI, windowed UX. |
 | `core:single-pane` | Mobile-first / kiosk / minimal. Drawer-based nav. WPDS chrome. | You need multi-pane simultaneously. |
 | `core:desktop` | Windowed UX (à la macOS / Windows). Compositor + dock + window frames. Requires dynamic-children + chromeless bridge. | Standard productivity admin (overkill). |
-| Custom (`plugin:{slug}/{name}`) | You're shipping a Material / Tailwind / brand-locked design system, or a tiling/MDI arrangement no core engine covers. | You can hit the goal by tweaking core engine `default-styles` from admin.json. |
+| Custom (`plugin:{slug}/{name}`) | You're shipping a Material / Tailwind / brand-locked design system, or a tiling/MDI arrangement no core engine covers. | You can hit the goal by tweaking core engine `default-styles` from workspace.json. |
 
-Switching engines is one field: `workspace.engine`. The rest of the workspace shape is engine-agnostic — the engine renders the same screens / menu / commands its own way.
+Switching engines is one field: `engine`. The rest of the workspace shape is engine-agnostic — the engine renders the same screens / menu / commands its own way.
 
 ## Common authoring tasks (with patches)
 
@@ -478,7 +480,7 @@ Switching engines is one field: `workspace.engine`. The rest of the workspace sh
 ### Set the landing screen
 
 ```json
-"workspace": { "default-screen": "dashboard-home" }
+"default-screen": "dashboard-home"
 ```
 
 ### Restrict Settings to editors + admins
@@ -499,7 +501,7 @@ Switching engines is one field: `workspace.engine`. The rest of the workspace sh
 ### Mount a sidebar-footer widget
 
 ```json
-"workspace": {
+"frame": {
     "widgets": {
         "sidebar-footer": [ { "id": "help", "app": "plugin:acme/help-link" } ]
     }
@@ -543,7 +545,7 @@ Switching engines is one field: `workspace.engine`. The rest of the workspace sh
 ### Brand the admin
 
 ```json
-"workspace": {
+"frame": {
     "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" }
 },
 "styles": {
@@ -555,7 +557,7 @@ Switching engines is one field: `workspace.engine`. The rest of the workspace sh
 ### Swap the engine to desktop
 
 ```json
-"workspace": { "engine": "core:desktop" }
+"engine": "core:desktop"
 ```
 
 (No further changes needed — screens / menu / commands stay the same. The engine renders them as windows + dock.)
@@ -563,14 +565,14 @@ Switching engines is one field: `workspace.engine`. The rest of the workspace sh
 ### Set Posts as the default landing and pre-load categories
 
 ```json
-"workspace": { "default-screen": "posts" },
+"default-screen": "posts",
 "preload":   [ "/wp/v2/categories?context=view", "/wp/v2/tags?context=view" ]
 ```
 
 ## Sanity checks before declaring "done"
 
 ```bash
-# Validate against the schema (runs on every shell in shells/)
+# Validate against the schema (runs on every workspace in workspaces/)
 npm run test:schema
 
 # Resolver author-shape invariants (screen has primary app, paths unique, default-screen resolves)
@@ -590,7 +592,7 @@ For non-trivial changes, also load the workspace in `wp-env` and walk the screen
 - **`additionalProperties: false`.** A typo in any key fails Ajv validation. If something silently doesn't render, schema-validate first.
 - **`default-screen` is a screen id**, not a path. Resolver falls back gracefully — but only if other screens have paths.
 - **`screens[id].mode: "focus"`** hides the sidebar; screens with `mode: "focus"` that the user lands on via URL still mount fine, but the menu drilldown state can look stale. Pair with `core:simple-editor` / `core:editor`.
-- **Iframe screens** drop into wp-admin-styled chrome. Use `mode: "takeover"` so the shell hides everything else.
+- **Iframe screens** drop into wp-admin-styled chrome. Use `mode: "takeover"` so the workspace hides everything else.
 - **`menu` item keys matching screen ids** bind implicitly. If you don't see a screen in the menu, check the item key spelling matches the screen id exactly.
 - **Empty `permissions: {}`** = admin-only (fail-closed). To open a screen to "any logged-in user", declare `permissions: { capabilities: [ "read" ] }`.
 - **`role` / `user` origin cannot grant** permissions — only shrink. Use site/plugin origins to widen.

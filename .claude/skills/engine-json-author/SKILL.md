@@ -1,11 +1,11 @@
 ---
 name: engine-json-author
-description: Author or edit WP Admin Shell engine.json manifests. Use whenever a user wants to build a new rendering engine (sidebar/toolbar/content; mobile drawer; windowed/MDI; tiling; Material Design; brand-locked), declare region templates, ship a chrome mode catalog (default/focus/takeover/modal/custom), expose engine-declared slots (detail/inspector/dashboard-grid/toolbar/sidebar-footer/status-bar), pick a menu renderer (sidebar-drilldown/sidebar-tree/dock/drawer/none/plugin), declare an engine-shipped default region tree, set engine-shipped default-styles (theme seeds + chrome palette), or wire an engine to a non-WPDS design system. Triggers on phrases like "ship a custom engine", "build a tiling engine", "add a focus-tight mode", "expose a new slot", "use a dock menu", "engine for Material Design", "register an engine via wp_admin_workspaces_register_engine", "engine manifest", "engine default-styles". Covers admin-engine.json schema, the three bundled engines (core:default, core:single-pane, core:desktop), the kernel/engine DS boundary, and the pluggable ThemeProvider seam.
+description: Author or edit WP Admin Workspaces engine.json manifests. Use whenever a user wants to build a new rendering engine (sidebar/toolbar/content; mobile drawer; windowed/MDI; tiling; Material Design; brand-locked), declare region templates, ship a chrome mode catalog (default/focus/takeover/modal/custom), expose engine-declared slots (detail/inspector/dashboard-grid/toolbar/sidebar-footer/status-bar), pick a menu renderer (sidebar-drilldown/sidebar-tree/dock/drawer/none/plugin), declare an engine-shipped default region tree, set engine-shipped default-styles (theme seeds + chrome palette), or wire an engine to a non-WPDS design system. Triggers on phrases like "ship a custom engine", "build a tiling engine", "add a focus-tight mode", "expose a new slot", "use a dock menu", "engine for Material Design", "register an engine via wp_admin_workspaces_register_engine", "engine manifest", "engine default-styles". Covers admin-engine.json schema, the three bundled engines (core:default, core:single-pane, core:desktop), the kernel/engine DS boundary, and the pluggable ThemeProvider seam.
 ---
 
 # engine.json Authoring Skill
 
-`engine.json` is the manifest for a WP Admin Shell **engine**: the spatial + chrome layer that reads a region tree and renders it to DOM. Engines pick a design system, ship region templates, declare chrome modes, expose slot vocabulary, decide how the workspace menu renders, and optionally ship the kernel's `ThemeProvider`.
+`engine.json` is the manifest for a WP Admin Workspaces **engine**: the spatial + chrome layer that reads a region tree and renders it to DOM. Engines pick a design system, ship region templates, declare chrome modes, expose slot vocabulary, decide how the workspace menu renders, and optionally ship the kernel's `ThemeProvider`.
 
 Three engines ship with the plugin: **`core:default`** (sidebar + topbar + content, WPDS), **`core:single-pane`** (mobile-first drawer, WPDS), **`core:desktop`** (windowed compositor + dock, WPDS). Plugins ship more via `wp_admin_workspaces_register_engine()` or the convention path `{plugin}/engines/{name}/engine.json`.
 
@@ -13,7 +13,7 @@ Three engines ship with the plugin: **`core:default`** (sidebar + topbar + conte
 
 | Doc | When |
 |---|---|
-| `docs/schemas/admin-engine.json` | JSON Schema. Inline `description` fields document every key. |
+| `docs/schemas/workspace-engine.json` | JSON Schema. Inline `description` fields document every key. |
 | `docs/public/engine-json-reference.md` | Author-facing reference. Per-field tables. |
 | `docs/core-default-engine.md` | Worked example: modes catalog, slots, region templates, default-styles for `core:default`. |
 | `docs/engines-and-design-systems.md` | Authoritative for the kernel/engine/app DS boundary and the three engine contracts (reuse-WPDS, token-bridge, engine-native apps). |
@@ -27,7 +27,7 @@ Three engines ship with the plugin: **`core:default`** (sidebar + topbar + conte
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin-engine.json",
+    "$schema": "https://schemas.wp.org/workspace-engine.json",
     "id": "plugin:acme/desktop",
     "version": 3,
     "title": "Acme Desktop",
@@ -77,7 +77,7 @@ ARIA roles this engine has specialized chrome for. A region whose `role` is in t
 "specializes-roles": [ "navigation", "banner", "main", "complementary", "dialog", "contentinfo" ]
 ```
 
-Empty list is valid (an engine that treats every region the same). Roles authors choose for regions in `admin.json` MUST be valid WAI-ARIA 1.2 roles. Avoid widget roles (`button`, `checkbox`).
+Empty list is valid (an engine that treats every region the same). Roles authors choose for regions in `workspace.json` MUST be valid WAI-ARIA 1.2 roles. Avoid widget roles (`button`, `checkbox`).
 
 ### `honored-platform`
 
@@ -90,7 +90,7 @@ Core platform service vocabulary:
 | `core:modal` | Focus trap + ARIA modal + backdrop scrim. |
 | `core:dismiss-on` | Wiring Escape / outside-click / navigation triggers. |
 | `core:autofocus-target` | Moving focus to the named selector on mount. |
-| `core:triggerable` | Allowing `admin.json#commands.invoke` to mount the region. |
+| `core:triggerable` | Allowing `workspace.json#commands.invoke` to mount the region. |
 | `core:persists-across-navigation` | Keeping the region mounted across URL changes. |
 | `core:dirty-state` | Querying the mounted app for unsaved changes. |
 | `core:block-navigation-on-dirty` | Showing a confirm dialog before unmount when dirty. Requires `core:dirty-state`. |
@@ -101,7 +101,7 @@ Plugin-contributed services use `plugin:{slug}/{name}`. The list grows additivel
 
 ### `templates`
 
-Region-template catalog. Authors instantiate a template from `admin.json` by referencing the template id in `region.template`. Each template has `role` (required), optional `platform`, `default-style`, nested `regions`.
+Region-template catalog. Authors instantiate a template from `workspace.json` by referencing the template id in `region.template`. Each template has `role` (required), optional `platform`, `default-style`, nested `regions`.
 
 ```json
 "templates": {
@@ -137,7 +137,7 @@ Region-template catalog. Authors instantiate a template from `admin.json` by ref
 | `role` | ARIA role the instantiated region carries. Required. Drives engine specialization. |
 | `platform` | Default service requests for regions instantiated from this template. Authors can override per-instance. |
 | `default-style` | CSS applied to the region's container element. Values may be literal CSS or `{styles.chrome.sidebar.background}` token aliases. |
-| `regions` | Nested child regions, addressable as `{parent}/{child}` in admin.json. Each child has the full template contract recursively. |
+| `regions` | Nested child regions, addressable as `{parent}/{child}` in workspace.json. Each child has the full template contract recursively. |
 
 **Two-arg `var()` chain.** Convention: `var(--wp-admin-workspaces--chrome--<surface>--<slot>, var(--wpds-<wpds-slot>))`. Chrome var wins when the author declares it; falls through to WPDS slot when chrome layer is empty. Lets authors override without touching DS-internal vars.
 
@@ -207,7 +207,7 @@ The chrome modes catalog. Each mode declares per-region states (`hidden`, `compa
 
 **Conventions:** `default`, `focus`, `takeover`, `modal` are the four core mode names. Engines may add more (`kiosk`, `focus-tight`, `presentation`). Plugins extend a specific engine's catalog via the `wp_admin_workspaces_engine_modes_{engineId}` PHP filter.
 
-**Per-region override from admin.json.** A screen with `regions.sidebar.hidden: false` overrides whatever the mode declared for that region. Engine merges screen overrides on top of mode region states.
+**Per-region override from workspace.json.** A screen with `regions.sidebar.hidden: false` overrides whatever the mode declared for that region. Engine merges screen overrides on top of mode region states.
 
 ### `slots`
 
@@ -226,7 +226,7 @@ Engine-declared mount points beyond the kernel-reserved `_self` and `palette`. E
 
 | `scope` | Where slot is usable |
 |---|---|
-| `workspace` | `workspace.widgets.<slot>[]` and `screens[id].slot` (workspace-scope URL slot). |
+| `workspace` | `frame.widgets.<slot>[]` and `screens[id].slot` (workspace-scope URL slot). |
 | `screen` | `screens[id].apps[i].slot` only (screen-internal). |
 | `both` | Either of the above. |
 
@@ -255,7 +255,7 @@ Conventional values: `wp-chrome` (sidebar + topbar + content), `tiling-dwindle` 
 
 ### `defaultRegions`
 
-Engine-shipped baseline region tree. The compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map.
+Engine-shipped baseline region tree. The compiler merges this with `frame.widgets[]` + per-screen overrides to produce the runtime regions map.
 
 ```json
 "defaultRegions": {
@@ -304,9 +304,9 @@ Region declaration shape (per master spec §5):
 
 ### `default-styles`
 
-Engine-supplied seed defaults for the shell's `styles` tree. The PHP resolver deep-merges this UNDER `admin.json#styles` (admin.json wins on every overlapping key). Lets the engine ship its characteristic visual identity without making every workspace repeat the rules.
+Engine-supplied seed defaults for the workspace's `styles` tree. The PHP resolver deep-merges this UNDER `workspace.json#styles` (workspace.json wins on every overlapping key). Lets the engine ship its characteristic visual identity without making every workspace repeat the rules.
 
-Limited to **theme + chrome + direct slot overrides**. Per-region (`regions`) and per-app (`applications`) are admin.json-only — engines don't supply install-decision metadata. `branding` is also admin.json-only.
+Limited to **theme + chrome + direct slot overrides**. Per-region (`regions`) and per-app (`applications`) are workspace.json-only — engines don't supply install-decision metadata. `branding` is also workspace.json-only.
 
 ```json
 "default-styles": {
@@ -342,7 +342,7 @@ Standard WordPress asset handles. Must be registered with WordPress (via `wp_reg
 ]
 ```
 
-`styles[]` covers extra bundles the engine wants enqueued when active — DS token files, component library CSS. Loaded only when this engine matches `admin.json#engine`. Each entry: `handle` (unique kebab-case) + `src` (URL or plugin-relative path) + optional `deps[]`.
+`styles[]` covers extra bundles the engine wants enqueued when active — DS token files, component library CSS. Loaded only when this engine matches `workspace.json#engine`. Each entry: `handle` (unique kebab-case) + `src` (URL or plugin-relative path) + optional `deps[]`.
 
 ## Engine + design system contracts
 
@@ -371,7 +371,7 @@ export const engine = {
 };
 ```
 
-Render-time errors trip the host's error boundary; host swaps to a neutral pass-through wrapper and logs a console error. Shell still paints. Theming won't apply until the provider is fixed.
+Render-time errors trip the host's error boundary; host swaps to a neutral pass-through wrapper and logs a console error. Workspace still paints. Theming won't apply until the provider is fixed.
 
 ### Engine-pluggable style compiler
 
@@ -393,9 +393,9 @@ Required for windowed engines. `core:desktop` ships a `WindowManager` TS class +
 
 ## Common authoring tasks
 
-### Tweak a bundled engine's default-styles via admin.json
+### Tweak a bundled engine's default-styles via workspace.json
 
-Most "the sidebar should be lighter" or "the brand color is blue" requests don't need a new engine — set `styles.theme.color.primary` and `styles.chrome.sidebar.*` in admin.json and you're done. Reach for engine.json only when the **layout** changes or you're shipping a different DS.
+Most "the sidebar should be lighter" or "the brand color is blue" requests don't need a new engine — set `styles.theme.color.primary` and `styles.chrome.sidebar.*` in workspace.json and you're done. Reach for engine.json only when the **layout** changes or you're shipping a different DS.
 
 ### Add a new mode
 
@@ -413,7 +413,7 @@ Most "the sidebar should be lighter" or "the brand color is blue" requests don't
 }
 ```
 
-Authors set `screens[id].mode: "kiosk"` in admin.json.
+Authors set `screens[id].mode: "kiosk"` in workspace.json.
 
 ### Add a new slot
 
@@ -511,7 +511,7 @@ node --test tests/runtime/kernel-no-ds-import.test.mjs
 npm run test:engines      # core:desktop TS suite
 ```
 
-For new engines, walk the manual smoke checklist in `docs/desktop-engine-readiness.md` (windowed) and load the engine against each bundled shell in `wp-env`.
+For new engines, walk the manual smoke checklist in `docs/desktop-engine-readiness.md` (windowed) and load the engine against each bundled workspace in `wp-env`.
 
 ## Common pitfalls
 
@@ -525,7 +525,7 @@ For new engines, walk the manual smoke checklist in `docs/desktop-engine-readine
 - **Don't add `--wpds-*` to kernel code.** If the change needs WPDS values, it goes in the engine module under `src/runtime/engines/<engine>/`.
 - **Don't claim a platform service you don't implement.** Apps will mount expecting the service and silently break.
 - **Templates `role: "main"` plus `platform.core:persists-across-navigation: true`** is usually wrong. The main content region rotates per route; only sidebars / topbars / status bars persist.
-- **`default-styles.regions` and `.applications`** are admin.json-only. Schema rejects them in engine `default-styles`. Engines ship visual identity, not install metadata.
+- **`default-styles.regions` and `.applications`** are workspace.json-only. Schema rejects them in engine `default-styles`. Engines ship visual identity, not install metadata.
 
 ## When you need more
 
