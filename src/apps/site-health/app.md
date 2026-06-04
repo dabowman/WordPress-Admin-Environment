@@ -33,7 +33,7 @@ The bulk of the new capability lives in `includes/class-wp-admin-workspaces-site
 
 `InfoTab`:
 
-1. Fetch `/site-health/info` on mount / run-token bump; centered Spinner while `sections === null`.
+1. Fetch `/site-health/info` on mount / run-token bump; centered Spinner while `sections === null`. After it resolves, also fetch core's async `/wp-site-health/v1/directory-sizes` and merge its results into the `wp-paths-sizes` section via `mergeDirectorySizes` (replacing the `"Loading…"` placeholder rows core seeds for the uploads/themes/plugins/WordPress/database/total sizes). The merge is resilient: if `directory-sizes` errors or is unavailable, the section renders with the placeholder rows intact rather than blocking the tab.
 2. Render each section as a `Collapsible` accordion of label/value rows; private fields display a "Private" badge (they're shown, just flagged).
 3. **Copy site info** builds a plain-text report from the sections via `formatInfoForClipboard`, which **skips any `private` field**, and writes it with `navigator.clipboard.writeText`. The clipboard API is guarded (insecure-context / rejection) with an error snackbar — the same no-clipboard fallback pattern as `MediaDetails`.
 
@@ -56,7 +56,6 @@ A non-WPDS rebuild needs Tabs, Collapsible/accordion, Card, Badge, Button, Spinn
 - **Per-test `actions` not rendered.** The remediation HTML (`res.actions`) is still dropped; users can't act on a finding from the workspace.
 - **Category badge collapsed into status.** The server-supplied `badge` (`{label,color}`, e.g. "Security"/"Performance") is ignored; the pill is derived from `status` only.
 - **`page-cache` async test.** Production-gated server-side; still not in the list. The dynamic registry would surface it where applicable once `has_rest` is set.
-- **Directory sizes.** The async `/wp-site-health/v1/directory-sizes` rows are not consumed in the Info tab.
 - **No stale-cache write-back.** The `health-check-site-status-result` transient (dashboard widget + menu badge) isn't written.
 - **HTTPS one-click migration** isn't implemented (no REST surface; classic-only action).
 - **`view_site_health_checks` cap floor.** Subscribers can't see the screen — matches wp-admin.

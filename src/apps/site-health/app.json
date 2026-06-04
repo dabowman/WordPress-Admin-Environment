@@ -27,7 +27,7 @@
 		"icon": "wordpress"
 	},
 	"documentation": {
-		"purpose": "A two-tab Site Health surface. The Status tab runs the synchronous DIRECT tests server-side (via the workspace `GET /wp-admin-workspaces/v1/site-health/tests` endpoint, which wraps `WP_Site_Health::get_tests()['direct']`) and the ASYNC tests in parallel against core's per-id `/wp-site-health/v1/tests/{id}` routes; the async test list is enumerated dynamically from the same workspace endpoint's `async` registry (honoring the `site_status_tests` filter, so plugin tests flow through) instead of being hardcoded. The Info tab renders an accordion over `WP_Debug_Data::debug_data()` (via `GET /wp-admin-workspaces/v1/site-health/info`) with a Copy button that OMITS fields flagged `private`. Each test card shows status (Good / Recommended / Critical) and a trusted HTML description; the count line spans direct + async. The authorization-header test is probed with an `Authorization: Basic` header (mirroring classic) so the server can observe whether it strips the header. `iframe:site-health.php` remains the full-fidelity fallback.",
+		"purpose": "A two-tab Site Health surface. The Status tab runs the synchronous DIRECT tests server-side (via the workspace `GET /wp-admin-workspaces/v1/site-health/tests` endpoint, which wraps `WP_Site_Health::get_tests()['direct']`) and the ASYNC tests in parallel against core's per-id `/wp-site-health/v1/tests/{id}` routes; the async test list is enumerated dynamically from the same workspace endpoint's `async` registry (honoring the `site_status_tests` filter, so plugin tests flow through) instead of being hardcoded. The Info tab renders an accordion over `WP_Debug_Data::debug_data()` (via `GET /wp-admin-workspaces/v1/site-health/info`) with a Copy button that OMITS fields flagged `private`. After loading the info payload it also fetches core's async `/wp-site-health/v1/directory-sizes` and merges the directory/database sizes into the `wp-paths-sizes` section, replacing the `'Loading…'` placeholders `debug_data()` seeds for those rows (the disk walk is too slow to run inline); resilient — on error the placeholder rows are left intact. Each test card shows status (Good / Recommended / Critical) and a trusted HTML description; the count line spans direct + async. The authorization-header test is probed with an `Authorization: Basic` header (mirroring classic) so the server can observe whether it strips the header. `iframe:site-health.php` remains the full-fidelity fallback.",
 		"rebuilds": "site-health",
 		"data": {
 			"reads": [
@@ -45,6 +45,11 @@
 					"source": "/wp-admin-workspaces/v1/site-health/info",
 					"via": "api-fetch",
 					"purpose": "Workspace endpoint: returns `WP_Debug_Data::debug_data()` as `sections[]` with each field's `private` flag preserved. Drives the Info tab accordion + the private-omitting copy payload."
+				},
+				{
+					"source": "/wp-site-health/v1/directory-sizes",
+					"via": "api-fetch",
+					"purpose": "Core async endpoint for the directory/database sizes that `debug_data()` seeds with a 'Loading…' placeholder (the disk walk is too slow to run inline). Fetched after the info payload and merged into the `wp-paths-sizes` section so those rows show real sizes instead of a stuck 'Loading…'. Resilient: on error the placeholder rows are left intact."
 				}
 			]
 		},
@@ -133,8 +138,8 @@
 				"note": "`navigator.clipboard.writeText` can be absent (insecure context) or reject; guarded with an explicit availability check + an error snackbar, mirroring MediaDetails."
 			},
 			{
-				"concern": "spinner-fallback",
-				"note": "Uses legacy `Spinner` from `@wordpress/components`."
+				"concern": "directory-sizes-async-merge",
+				"note": "`debug_data()` seeds the `wp-paths-sizes` directory/database-size rows with a 'Loading…' placeholder; the real values come from core's separate async `/wp-site-health/v1/directory-sizes` endpoint (the disk walk is too slow to run inline). The Info tab fetches it after the info payload and merges by field id via the pure `mergeDirectorySizes` helper. Resilient: if that endpoint errors or is unavailable, the placeholder rows are left intact rather than blocking the tab."
 			}
 		],
 		"design-system-leakage": [

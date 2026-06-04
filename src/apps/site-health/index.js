@@ -77,7 +77,10 @@ function TestCard( { label, status, description, isLoading } ) {
 				<Card.Content>
 					<div
 						// site-health returns trusted HTML authored by WordPress
-						// core.
+						// core or the plugin that registered the test (direct
+						// tests run after the `site_status_tests` filter). Same
+						// trust model as classic wp-admin, which also renders
+						// these descriptions as raw HTML.
 						// eslint-disable-next-line react/no-danger
 						dangerouslySetInnerHTML={ {
 							__html: description,
@@ -128,9 +131,14 @@ function StatusTab( { runToken } ) {
 				setAsyncTests( tests );
 			}
 		} catch {
-			// Endpoint unavailable (e.g. older build) — keep the fallback list
-			// and skip the direct section.
+			// Endpoint unavailable (e.g. older build) — fall back to the
+			// static list and skip the direct section. Reset `asyncTests`
+			// too: a prior successful run may have populated it with a
+			// dynamic registry (incl. plugin tests not in the fallback), and
+			// `tests` below only runs the fallback set — leaving stale cards
+			// with no matching result (perpetual spinner) without this reset.
 			setDirectResults( [] );
+			setAsyncTests( FALLBACK_ASYNC_TESTS );
 		}
 
 		// 2. Run the async tests in parallel against core's REST routes.
@@ -266,6 +274,58 @@ function StatusTab( { runToken } ) {
 }
 
 /**
+ * Merge core's async `/wp-site-health/v1/directory-sizes` results into the
+ * `wp-paths-sizes` section's fields.
+ *
+ * `WP_Debug_Data::debug_data()` seeds the directory/database-size rows
+ * (`uploads_size` / `themes_size` / `plugins_size` / `wordpress_size` /
+ * `database_size` / `total_size`) with a literal "Loading…" placeholder and
+ * defers the (slow) disk walk to the separate `directory-sizes` endpoint —
+ * exactly as classic `site-health.js` does. Without this merge those rows show
+ * "Loading…" forever. The endpoint returns a map keyed by field id, each
+ * `{ size, debug, raw }`; we replace the placeholder `value`/`debug` in place.
+ *
+ * Pure (no I/O) so the merge logic is unit-testable; returns a new sections
+ * array, leaving the input untouched.
+ *
+ * @param {Array}  sections Normalized debug-data sections.
+ * @param {Object} sizes    `directory-sizes` response (field-id keyed map).
+ * @return {Array} Sections with the size rows filled in.
+ */
+function mergeDirectorySizes( sections, sizes ) {
+	if ( ! sizes || typeof sizes !== 'object' ) {
+		return sections;
+	}
+	return sections.map( ( section ) => {
+		if ( section.id !== 'wp-paths-sizes' ) {
+			return section;
+		}
+		return {
+			...section,
+			fields: section.fields.map( ( field ) => {
+				const incoming = sizes[ field.id ];
+				if ( ! incoming || typeof incoming !== 'object' ) {
+					return field;
+				}
+				return {
+					...field,
+					// Core sends `size` (formatted) for display + `debug` for
+					// the copy payload. Fall back to whatever's present.
+					value:
+						incoming.size !== undefined
+							? incoming.size
+							: field.value,
+					debug:
+						incoming.debug !== undefined
+							? incoming.debug
+							: field.debug,
+				};
+			} ),
+		};
+	} );
+}
+
+/**
  * Build the plain-text clipboard payload from the debug-data sections,
  * OMITTING any field flagged `private` (mirrors core's clipboard format,
  * which excludes private values).
@@ -380,13 +440,36 @@ function InfoTab( { runToken } ) {
 		setSections( null );
 		setError( null );
 		apiFetch( { path: '/wp-admin-workspaces/v1/site-health/info' } )
-			.then( ( payload ) => {
+			.then( async ( payload ) => {
 				if ( cancelled ) {
 					return;
 				}
-				setSections(
-					Array.isArray( payload?.sections ) ? payload.sections : []
-				);
+				const baseSections = Array.isArray( payload?.sections )
+					? payload.sections
+					: [];
+
+				// The `wp-paths-sizes` directory/database-size rows ship as a
+				// "Loading…" placeholder from `debug_data()`; core fills them
+				// from a SEPARATE async endpoint (the disk walk is too slow to
+				// run inline). Fetch + merge it so those rows aren't stuck on
+				// "Loading…". Resilient: if the endpoint errors or is missing,
+				// fall through with the placeholder rows intact.
+				let merged = baseSections;
+				try {
+					const sizes = await apiFetch( {
+						path: '/wp-site-health/v1/directory-sizes',
+					} );
+					if ( cancelled ) {
+						return;
+					}
+					merged = mergeDirectorySizes( baseSections, sizes );
+				} catch {
+					// Leave the placeholder rows; not fatal to the Info tab.
+				}
+
+				if ( ! cancelled ) {
+					setSections( merged );
+				}
 			} )
 			.catch( ( err ) => {
 				if ( ! cancelled ) {

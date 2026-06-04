@@ -255,6 +255,19 @@ class WP_Admin_Workspaces_Site_Health_REST {
 				}
 
 				$value = $field['value'] ?? '';
+				$debug = array_key_exists( 'debug', $field ) ? $field['debug'] : null;
+
+				// Format booleans explicitly. `is_scalar( true )` is true, so a
+				// bare `(string)` cast would flatten `false` to '' and `true` to
+				// '1', losing meaning in the accordion + copied report. Core
+				// special-cases these to 'true'/'false'; mirror that. The `debug`
+				// value (used by the clipboard format) has the same exposure.
+				if ( is_bool( $value ) ) {
+					$value = $value ? 'true' : 'false';
+				}
+				if ( is_bool( $debug ) ) {
+					$debug = $debug ? 'true' : 'false';
+				}
 
 				// Some fields carry a `debug` value distinct from the display
 				// value (e.g. raw bytes vs. a formatted size). Keep both; the
@@ -263,7 +276,7 @@ class WP_Admin_Workspaces_Site_Health_REST {
 					'id'      => (string) $field_id,
 					'label'   => isset( $field['label'] ) ? (string) $field['label'] : (string) $field_id,
 					'value'   => is_scalar( $value ) ? (string) $value : $value,
-					'debug'   => array_key_exists( 'debug', $field ) ? $field['debug'] : null,
+					'debug'   => $debug,
 					'private' => ! empty( $field['private'] ),
 				);
 			}
