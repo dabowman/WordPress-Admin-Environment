@@ -4,7 +4,7 @@ import { Spinner } from '@wordpress/components';
 
 import { navigate } from '../../runtime/routing/router';
 import { installIframeBridge } from '../../runtime/platform/iframeBridge.mjs';
-import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
+import { getChromeHideCss } from '../_shared/iframe/chromeHide.mjs';
 
 /**
  * Renders a wp-admin page inside an iframe with the default chrome
@@ -27,12 +27,19 @@ import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
  *
  * Source: `config.url` (the v2-canonical placement). Absolute URLs
  * pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`.
+ *
+ * `config.hideEditorChrome` (default false) opts into stripping the block
+ * editor's own hub / sidebar / header — only preview / embed surfaces should
+ * set it. The full takeover Editor screen leaves it off so the site editor
+ * keeps its native browse→edit flow and the user's `core/preferences` view
+ * (see #253).
  * @param {Object} root0
  * @param {*}      root0.app
  * @param {*}      root0.config
  */
 export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';
+	const hideEditorChrome = !! config.hideEditorChrome;
 	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 
@@ -146,7 +153,7 @@ export default function IframeApp( { app, config = {} } ) {
 			// revealing the iframe, so the user never sees the full
 			// wp-admin chrome flash through.
 			const style = iframeDoc.createElement( 'style' );
-			style.textContent = CHROME_HIDE_CSS;
+			style.textContent = getChromeHideCss( { hideEditorChrome } );
 			iframeDoc.head.appendChild( style );
 			setIsReady( true );
 
@@ -168,7 +175,7 @@ export default function IframeApp( { app, config = {} } ) {
 			// Same as cross-origin path — reveal anyway.
 			setIsReady( true );
 		}
-	}, [] );
+	}, [ hideEditorChrome ] );
 
 	if ( ! rawUrl ) {
 		return null;
