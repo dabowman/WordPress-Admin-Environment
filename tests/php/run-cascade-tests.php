@@ -347,11 +347,11 @@ $T::assert_true( 'doc: pages locked entirely',
 echo "\n— Origin loaders + full pipeline —\n";
 
 // The loader passes docs through as-is + falls back to `empty_doc()` for
-// missing/malformed JSON. The empty doc is v3-shape: it carries
-// `workspace.engine` and a single screen so the kernel can synthesize a
-// valid (empty) workspace.
+// missing/malformed JSON. The empty doc is v3-shape: a top-level `engine`
+// and a single screen so the kernel can synthesize a valid (empty)
+// workspace.
 $empty = WP_Admin_Workspaces_Origin_Core::empty_doc();
-$T::assert_eq( 'core origin: empty_doc carries workspace.engine',
+$T::assert_eq( 'core origin: empty_doc carries top-level engine',
 	$empty['engine'] ?? null,
 	'core:default'
 );
@@ -395,7 +395,7 @@ $T::assert_true( 'resolver: origin tags stripped',
 
 echo "\n— Programmatic workspace registration —\n";
 
-require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-workspaces.php';
+require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-registry.php';
 
 WP_Admin_Workspaces_Registry::reset();
 $slug = WP_Admin_Workspaces_Registry::register( 'computed-workspace', array(
