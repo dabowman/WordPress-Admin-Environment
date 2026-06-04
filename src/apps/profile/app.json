@@ -138,12 +138,8 @@
 				"note": "WPDS `InputControl` onChange takes a DOM event (`e.target.value`), not the raw value. The same applies wherever WPDS form fields are used."
 			},
 			{
-				"concern": "textarea-fallback",
-				"note": "Uses legacy `TextareaControl` from `@wordpress/components` — WPDS 0.12 has no port."
-			},
-			{
-				"concern": "select-fallback",
-				"note": "Uses legacy `SelectControl` from `@wordpress/components` for the display name (WPDS 0.12 SelectControl has no `__nextHasNoMarginBottom` parity)."
+				"concern": "dataform-edit-controls",
+				"note": "The display-name select (`Edit: 'select'`) and the bio textarea (`Edit: { control: 'textarea', rows: 5 }`) are rendered by `DataForm` from their field definitions — they are DataViews-internal controls, NOT direct `@wordpress/components` imports. The app's only direct `@wordpress/components` leakage is `Spinner`."
 			}
 		],
 		"design-system-leakage": [
@@ -152,8 +148,8 @@
 				"purpose": "Form layout + text + URL + email inputs + save button."
 			},
 			{
-				"import": "@wordpress/components#TextareaControl, SelectControl, Spinner",
-				"purpose": "Bio textarea + display-name select + loading spinner — WPDS 0.12 gaps."
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading spinner — no `@wordpress/ui` 0.12 port. The display-name select and bio textarea are `DataForm` `Edit` controls (DataViews-internal), not direct DS imports."
 			}
 		]
 	}
