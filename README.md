@@ -43,7 +43,7 @@ Three artifact types, three responsibilities:
 - WordPress 6.7+
 - PHP 7.4+ (8.1+ supported)
 - Node.js 20+ (to build from source)
-- **Gutenberg plugin** — hard runtime dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist core does not include but Gutenberg overrides. Without Gutenberg the shell renders empty. The plugin header declares `Requires Plugins: gutenberg`.
+- **WordPress 7.0+ _or_ the Gutenberg plugin** — runtime private-API dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist the loaded `wp-private-apis` script must include. WordPress 7.0 ships that allowlist (and `@wordpress/theme`) in core; on WordPress 6.7–6.9 only the Gutenberg plugin's `wp-private-apis` override supplies it. With neither present the workspace stands down to classic wp-admin. (The version gate lives in `wp_admin_shell_dependencies_met()`.)
 
 ## Installation
 

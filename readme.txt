@@ -2,10 +2,9 @@
 Contributors: dabowman
 Tags: admin, dashboard, react, dataviews, admin-ui
 Requires at least: 6.7
-Tested up to: 6.9
+Tested up to: 7.0
 Requires PHP: 7.4
 Stable tag: 0.1.0
-Requires Plugins: gutenberg
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -40,13 +39,19 @@ different people.
 **Pluggable engines** — `core:default` (sidebar + content), `core:single-pane`
 (mobile-first drawer), and `core:desktop` (windowed) ship bundled.
 
-== Important: Gutenberg required ==
+== Important: WordPress 7.0 or the Gutenberg plugin ==
 
-The Gutenberg plugin is a **hard runtime dependency** (declared via
-`Requires Plugins: gutenberg`). `@wordpress/ui` overlay components opt into private
-APIs against an allowlist WordPress core does not include but Gutenberg overrides.
-Without Gutenberg active, the workspace stands down and classic wp-admin is served
-instead. Activate Gutenberg first.
+The shell has a **runtime private-API dependency**: `@wordpress/ui` overlay
+components opt into private APIs against an allowlist that the loaded
+`wp-private-apis` script must include.
+
+* **WordPress 7.0+** ships that allowlist (and `@wordpress/theme`) in core — no
+  extra plugin needed.
+* **WordPress 6.7–6.9** do not; on those versions the **Gutenberg plugin** supplies
+  the allowlist via its `wp-private-apis` override. Activate Gutenberg first.
+
+When neither is present the workspace stands down and classic wp-admin is served
+instead.
 
 == Installation ==
 

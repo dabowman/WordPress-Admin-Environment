@@ -6,6 +6,24 @@ All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Gutenberg dependency version-gated (WordPress 7.0)
+
+The hard Gutenberg requirement is now conditional on the WordPress version. The dependency was never about Gutenberg features — it was about the `wp-private-apis` allowlist: `@wordpress/ui` overlay components transitively opt into private APIs via `__dangerousOptInToUnstableAPIsOnlyForCoreModules`, and WordPress 6.7–6.9 core's allowlist excludes `@wordpress/theme` / `@wordpress/ui` / `@wordpress/dataviews`, so only the Gutenberg plugin's override unlocked them.
+
+Verified against the WordPress 7.0 release source: core now bundles `@wordpress/theme` (`wp-includes/assets/script-loader-packages.php`) **and** ships a `wp-private-apis` allowlist (`wp-includes/js/dist/private-apis.js` → `CORE_MODULES_USING_PRIVATE_APIS`) that includes `@wordpress/theme`, `@wordpress/ui`, and `@wordpress/dataviews`. The opt-in consent string is byte-identical to the one the shell hardcodes, so the existing `WpdsThemeProvider` unlock works against core 7.0 with no change.
+
+- `wp_admin_shell_dependencies_met()` now returns true on WordPress ≥ 7.0 (new `wp_admin_shell_core_supplies_private_apis()` helper) before falling back to the `GUTENBERG_VERSION` / `is_plugin_active()` checks. Flows through to both consumers — the `admin_notices` warning and the `WP_Admin_Shell_Hijack` stand-down.
+- Removed the static `Requires Plugins: gutenberg` plugin header (and the `readme.txt` equivalent). The header is a hard activation gate on WP 6.7+ with no way to express "only when WordPress < 7.0", so keeping it would block activation on a 7.0-without-Gutenberg site and defeat the gate. The runtime guard already covers every version gracefully (notice + classic stand-down when unmet).
+- Admin-notice copy + README / readme.txt / CLAUDE.md updated to "WordPress 7.0+ **or** the Gutenberg plugin".
+- Scope note: core 7.0 does **not** externalize `wp-ui` / `wp-admin-ui` / `wp-dataviews` as script handles, so this plugin keeps bundling `@wordpress/ui` and `@wordpress/dataviews` (unchanged).
+- **Validated on a live WP 7.0 install with the Gutenberg plugin deactivated** — the shell and `@wordpress/ui` overlays render correctly, confirming the bundled `@wordpress/ui@0.12` private-API opt-in succeeds against core 7.0's own `wp.privateApis` (no version-skew `Cannot unlock`). Automated CI can't render JS; the gate's PHP version logic is covered by `tests/php/run-alpha-routing-tests.php`, and the `wp-env` CI job exercises the resolved doc on a Gutenberg-free 7.0 container.
+
+### Plugins screen: fix 404 on activate/deactivate/delete of folder-based plugins
+
+`src/apps/plugins/index.js` built the REST path with `encodeURIComponent( item.plugin )`, turning a folder-based plugin id like `gutenberg/gutenberg` into `gutenberg%2Fgutenberg`. The `wp/v2/plugins` route matches a **literal** slash (`[^.\/]+(?:\/[^.\/]+)?`), so the encoded `%2F` 404s (rejected by the route and by web servers with `AllowEncodedSlashes Off`). Single-file plugins have no slash and worked, masking the bug. New `restPluginId()` helper encodes per path segment, preserving the literal slash; applied to both the status (POST) and delete (DELETE) call sites. Surfaced while deactivating Gutenberg to validate the 7.0 gate.
+
+---
+
 The **wave-2** integration (PR #243): the DataViews interaction-pattern library, the six entity-CRUD apps rebuilt on top of it, and nav / settings / editor / dashboard / appearance parity. Built as ~25 bot-reviewed sub-PRs squash-merged through the `wave-2` branch.
 
 ### DataViews interaction-pattern library (shared)
