@@ -17,6 +17,11 @@ import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 import { createEntityFormModal } from '../_shared/dataviews/EntityFormModal';
+import ViewTabs from '../_shared/dataviews/ViewTabs';
+import {
+	buildPluginStatusSegments,
+	activePluginSegment,
+} from '../_shared/dataviews/pluginSegments.mjs';
 import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 import { Page } from '../_shared/Page';
 
@@ -24,6 +29,15 @@ const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-workspaces' ),
 	inactive: __( 'Inactive', 'wp-admin-workspaces' ),
 	'network-active': __( 'Network active', 'wp-admin-workspaces' ),
+};
+
+// Segment labels for the status-tab strip. "All" is the unfiltered base; the
+// per-status labels reuse STATUS_LABELS so a cascade rename stays consistent.
+const SEGMENT_LABELS = {
+	all: __( 'All', 'wp-admin-workspaces' ),
+	active: STATUS_LABELS.active,
+	inactive: STATUS_LABELS.inactive,
+	'network-active': STATUS_LABELS[ 'network-active' ],
 };
 
 const FIELD_LABELS = {
@@ -247,6 +261,39 @@ export default function PluginsApp( { config = {} } = {} ) {
 		return counts;
 	}, [ records ] );
 
+	// Status-tab strip — All | Active | Inactive | (Network active). Counts ride
+	// the already-computed `statusCounts`; "Network active" only appears when the
+	// tally carries it (multisite). The segment's `status` filter is pushed onto
+	// the controlled view, where the `data` memo above applies it client-side.
+	const segments = useMemo(
+		() =>
+			buildPluginStatusSegments( {
+				counts: statusCounts,
+				labels: SEGMENT_LABELS,
+			} ),
+		[ statusCounts ]
+	);
+	const currentSegment = activePluginSegment( view, segments );
+	const onSelectSegment = useCallback(
+		( segment ) => {
+			setView( ( prev ) => {
+				const filters = ( prev.filters ?? [] ).filter(
+					( f ) => f.field !== 'status'
+				);
+				if ( segment.filter ) {
+					filters.push( {
+						field: segment.filter.field,
+						operator: 'is',
+						value: segment.filter.value,
+					} );
+				}
+				// Reset to page 1 — the new filter set has its own pagination.
+				return { ...prev, filters, page: 1 };
+			} );
+		},
+		[ setView ]
+	);
+
 	const fields = useMemo(
 		() =>
 			buildFields( dataViewConfig.fields, {
@@ -438,21 +485,29 @@ export default function PluginsApp( { config = {} } = {} ) {
 					<Spinner />
 				</div>
 			) : (
-				<DataViews
-					data={ paginatedData }
-					fields={ fields }
-					view={ view }
-					onChangeView={ setView }
-					actions={ actions }
-					paginationInfo={ paginationInfo }
-					isLoading={ isResolving }
-					defaultLayouts={
-						dataViewConfig.defaultLayouts ?? { table: {} }
-					}
-					selection={ selection }
-					onChangeSelection={ setSelection }
-					getItemId={ ( item ) => item.id }
-				/>
+				<>
+					<ViewTabs
+						segments={ segments }
+						currentValue={ currentSegment }
+						onSelect={ onSelectSegment }
+						counts={ statusCounts }
+					/>
+					<DataViews
+						data={ paginatedData }
+						fields={ fields }
+						view={ view }
+						onChangeView={ setView }
+						actions={ actions }
+						paginationInfo={ paginationInfo }
+						isLoading={ isResolving }
+						defaultLayouts={
+							dataViewConfig.defaultLayouts ?? { table: {} }
+						}
+						selection={ selection }
+						onChangeSelection={ setSelection }
+						getItemId={ ( item ) => item.id }
+					/>
+				</>
 			) }
 
 			{ isInstalling && (
