@@ -181,9 +181,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 		<SidebarNavigationItem
 			uid={ `nav-${ item.id || index }` }
 			icon={
-				depth === 0 && item.icon
-					? resolveIcon( item.icon )
-					: undefined
+				depth === 0 && item.icon ? resolveIcon( item.icon ) : undefined
 			}
 			iconSource={ depth === 0 ? item.iconSource : undefined }
 			isActive={ isActive }
