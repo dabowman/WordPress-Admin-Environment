@@ -3,7 +3,7 @@
 	"id": "core:site-health",
 	"version": 1,
 	"title": "Site Health",
-	"description": "Runs WordPress's `/wp-site-health/v1/tests/{id}` async checks and reports results.",
+	"description": "Runs WordPress's direct + async Site Health checks and exposes the Info / debug-data report.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"capabilities": [
@@ -27,14 +27,24 @@
 		"icon": "wordpress"
 	},
 	"documentation": {
-		"purpose": "Runs WordPress's async site-health checks (`/wp-site-health/v1/tests/{id}`) in parallel on mount and on user re-run. Surfaces a per-test card with status (Good / Recommended / Critical) and a HTML description; the toolbar summarizes counts per category and offers a re-run button. Five tests today: WordPress.org communication, background updates, loopback requests, HTTPS status, authorization header. The authorization-header test is probed with an `Authorization: Basic` header (mirroring classic) so the server can observe whether it strips the header.",
+		"purpose": "A two-tab Site Health surface. The Status tab runs the synchronous DIRECT tests server-side (via the workspace `GET /wp-admin-workspaces/v1/site-health/tests` endpoint, which wraps `WP_Site_Health::get_tests()['direct']`) and the ASYNC tests in parallel against core's per-id `/wp-site-health/v1/tests/{id}` routes; the async test list is enumerated dynamically from the same workspace endpoint's `async` registry (honoring the `site_status_tests` filter, so plugin tests flow through) instead of being hardcoded. The Info tab renders an accordion over `WP_Debug_Data::debug_data()` (via `GET /wp-admin-workspaces/v1/site-health/info`) with a Copy button that OMITS fields flagged `private`. Each test card shows status (Good / Recommended / Critical) and a trusted HTML description; the count line spans direct + async. The authorization-header test is probed with an `Authorization: Basic` header (mirroring classic) so the server can observe whether it strips the header. `iframe:site-health.php` remains the full-fidelity fallback.",
 		"rebuilds": "site-health",
 		"data": {
 			"reads": [
 				{
+					"source": "/wp-admin-workspaces/v1/site-health/tests",
+					"via": "api-fetch",
+					"purpose": "Workspace endpoint: returns `direct` (synchronously-run direct-test results) + `async` (the async-test registry: id / label / has_rest) so the app can run direct tests and enumerate async tests without a hardcoded list."
+				},
+				{
 					"source": "/wp-site-health/v1/tests/{id}",
 					"via": "api-fetch",
-					"purpose": "One request per test id; runs `Promise.all` over all five. Each returns `{ status, label, description }`."
+					"purpose": "One request per async test id (from the dynamic registry); runs `Promise.all`. Each returns `{ status, label, description }`."
+				},
+				{
+					"source": "/wp-admin-workspaces/v1/site-health/info",
+					"via": "api-fetch",
+					"purpose": "Workspace endpoint: returns `WP_Debug_Data::debug_data()` as `sections[]` with each field's `private` flag preserved. Drives the Info tab accordion + the private-omitting copy payload."
 				}
 			]
 		},
@@ -60,6 +70,16 @@
 				"renders": "Error text below the toolbar (plus per-test error captured in results)."
 			},
 			{
+				"id": "info-loading",
+				"when": "Info tab selected && sections === null",
+				"renders": "Centered Spinner while `/site-health/info` resolves."
+			},
+			{
+				"id": "info-loaded",
+				"when": "Info tab selected && sections is an array",
+				"renders": "Copy button + an accordion of debug-data sections (Collapsible); each field row shows label + value, private fields carry a 'Private' badge."
+			},
+			{
 				"id": "per-test-error",
 				"when": "A test request rejected",
 				"renders": "That test's card shows status=recommended with an \"A test is unavailable\" label and a friendly description naming the test — matching classic's soft \"unavailable\" notice rather than a critical failure that would skew the score."
@@ -67,12 +87,20 @@
 		],
 		"interactions": [
 			{
-				"trigger": "Mount",
-				"effect": "`runTests()` fires automatically."
+				"trigger": "Mount (Status tab)",
+				"effect": "`runTests()` fires automatically — fetches direct results + async registry, then runs async tests in parallel."
 			},
 			{
-				"trigger": "Click Re-run tests",
-				"effect": "Reset results + run all tests in parallel."
+				"trigger": "Select the Info tab",
+				"effect": "Fetches `/site-health/info` and renders the debug-data accordion."
+			},
+			{
+				"trigger": "Click Re-run tests / Refresh",
+				"effect": "Bumps a run token; the active tab re-runs (Status) or re-fetches (Info)."
+			},
+			{
+				"trigger": "Click Copy site info (Info tab)",
+				"effect": "Writes a plain-text report to the clipboard via `navigator.clipboard.writeText`, OMITTING private fields; success/error snackbar. Falls back to an error snackbar when the clipboard API is unavailable."
 			}
 		],
 		"a11y": {
@@ -93,22 +121,34 @@
 				"note": "Uses legacy `Spinner` from `@wordpress/components`."
 			},
 			{
-				"concern": "static-test-list",
-				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the workspace doesn't yet honor this."
+				"concern": "dynamic-test-registry",
+				"note": "The async-test list is enumerated from the workspace `/site-health/tests` endpoint's `async` registry, which is built from `WP_Site_Health::get_tests()` (post `site_status_tests` filter), so plugin-contributed tests appear. A static `FALLBACK_ASYNC_TESTS` list is used only if that endpoint is unreachable."
+			},
+			{
+				"concern": "private-field-omission",
+				"note": "The Info-tab copy payload skips any field flagged `private` (matching core's clipboard format). Private fields are still DISPLAYED in the accordion with a 'Private' badge — only the copy export omits them."
+			},
+			{
+				"concern": "no-clipboard-fallback",
+				"note": "`navigator.clipboard.writeText` can be absent (insecure context) or reject; guarded with an explicit availability check + an error snackbar, mirroring MediaDetails."
+			},
+			{
+				"concern": "spinner-fallback",
+				"note": "Uses legacy `Spinner` from `@wordpress/components`."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Badge, Button, Card, Stack, Text",
-				"purpose": "Status pills + cards + heading + re-run button."
+				"import": "@wordpress/ui#Badge, Button, Card, Collapsible, Icon, Stack, Tabs, Text",
+				"purpose": "Status pills + cards + Status/Info tabs + Info accordion (Collapsible) + headings + re-run/copy buttons."
 			},
 			{
 				"import": "@wordpress/components#Spinner",
-				"purpose": "Per-test loading indicator."
+				"purpose": "Per-test + Info-load loading indicator."
 			},
 			{
-				"import": "@wordpress/icons#update",
-				"purpose": "Re-run button icon."
+				"import": "@wordpress/icons#update, chevronDown",
+				"purpose": "Re-run button icon + Info accordion disclosure chevron."
 			}
 		]
 	}
