@@ -4,7 +4,7 @@
  *
  * The admin-bar node tree (`WP_Admin_Bar`) and `admin_notices` output are
  * PHP runtime structures with no clean REST representation — core + plugins
- * populate them at request time. The shell harvests them server-side and
+ * populate them at request time. The workspace harvests them server-side and
  * exposes them to the chrome apps (`core:toolbar-actions`,
  * `core:notices-banner`) so un-ported third-party plugins still surface in
  * the workspace. This is the runtime-harvest pattern (skip-core-first,
@@ -15,7 +15,7 @@
  *
  *   1. **Admin-bar → toolbar.** `harvest_admin_bar()` instantiates a
  *      `WP_Admin_Bar`, runs `do_action( 'admin_bar_menu', $bar )`, and reads
- *      `$bar->get_nodes()`. It SKIPS the core nodes the shell already owns
+ *      `$bar->get_nodes()`. It SKIPS the core nodes the workspace already owns
  *      first-class (`site-hub` renders the site name + visit-site, the
  *      `user-menu` renders the my-account cluster, and `core:toolbar-actions`
  *      builds `+new` natively via #129). The remaining PLUGIN nodes are
@@ -27,12 +27,12 @@
  *
  *   2. **admin_notices → banner.** `capture_admin_notices()` buffers
  *      (`ob_start`) the output of `do_action( 'admin_notices' )` +
- *      `do_action( 'all_admin_notices' )` on the shell's own render pass and
+ *      `do_action( 'all_admin_notices' )` on the workspace's own render pass and
  *      returns the captured HTML for `core:notices-banner` to render
  *      alongside its `@wordpress/notices` source.
  *
- *      **Documented limitation.** The shell is a SPA, but `admin_notices` is
- *      a *per-page-render* hook. Only notices that fire on the shell's own
+ *      **Documented limitation.** The workspace is a SPA, but `admin_notices` is
+ *      a *per-page-render* hook. Only notices that fire on the workspace's own
  *      page load (global ones, not gated on `$pagenow` / the current screen)
  *      are captured; per-screen notices keyed on a classic screen do NOT
  *      fire and are not surfaced. **Global-only is the accepted interim** —
@@ -41,12 +41,12 @@
  *      **Double-dispatch guard.** `capture_admin_notices()` is invoked from
  *      `wp_admin_workspaces_enqueue_assets()` (hooked on `admin_enqueue_scripts`,
  *      fired near the TOP of `wp-admin/admin-header.php`). The hijack then
- *      renders the shell through that same `admin-header.php`, which fires
+ *      renders the workspace through that same `admin-header.php`, which fires
  *      `do_action( 'admin_notices' )` + `do_action( 'all_admin_notices' )`
  *      AGAIN near the bottom. Without intervention every notice callback
  *      would run twice — double side effects (counters, dismiss-and-set,
  *      follow-up enqueues) plus the same markup rendered both natively (into
- *      `#wpbody-content`, beside the shell mount) AND in the harvested
+ *      `#wpbody-content`, beside the workspace mount) AND in the harvested
  *      banner. So once a capture pass runs, the harvest DETACHES the core
  *      notice hooks (`remove_all_actions`) — the later native pass becomes a
  *      no-op, and the captured HTML is the single source rendered by
@@ -56,10 +56,10 @@
  *
  * **Trust.** Harvested HTML (notice markup, admin-bar node titles) is
  * admin-context — the same author-trust boundary at which classic wp-admin
- * renders it. The shell only renders it inside the already-admin-gated
+ * renders it. The workspace only renders it inside the already-admin-gated
  * workspace. Awareness note: the threat *surface* isn't byte-identical to
  * classic. An event-handler attribute injected into a node title (e.g.
- * `<img onerror=…>`) executes in the shell SPA's document context — which
+ * `<img onerror=…>`) executes in the workspace SPA's document context — which
  * carries `wp.data`, REST nonces, and the kernel runtime on `window` — not
  * just the classic admin-bar render. It remains the same author-trust call
  * (a plugin that can inject here can already act as admin), so this is an
@@ -73,7 +73,7 @@ defined( 'ABSPATH' ) || exit;
 class WP_Admin_Workspaces_Chrome_Harvest {
 
 	/**
-	 * Core admin-bar node ids the shell already renders first-class, so
+	 * Core admin-bar node ids the workspace already renders first-class, so
 	 * the harvest skips them (and their descendants) to avoid
 	 * double-rendering. Extensible via the
 	 * `wp_admin_workspaces_admin_bar_core_node_ids` filter.
@@ -84,10 +84,10 @@ class WP_Admin_Workspaces_Chrome_Harvest {
 	 *     cluster → `user-menu`.
 	 *   - `new-content` + descendants: the `+New` cluster → built natively
 	 *     by `core:toolbar-actions` (#129).
-	 *   - `menu-toggle`, `search`: mobile chrome the shell doesn't mirror.
+	 *   - `menu-toggle`, `search`: mobile chrome the workspace doesn't mirror.
 	 *   - `customize`, `edit`, `view`: context links tied to a classic
-	 *     screen that don't apply to the SPA shell root.
-	 *   - `updates`, `comments`: surfaced by the shell's own nav/badges.
+	 *     screen that don't apply to the SPA workspace root.
+	 *   - `updates`, `comments`: surfaced by the workspace's own nav/badges.
 	 *
 	 * @var string[]
 	 */
@@ -164,7 +164,7 @@ class WP_Admin_Workspaces_Chrome_Harvest {
 	}
 
 	/**
-	 * Is this admin-bar node id one the shell already renders first-class?
+	 * Is this admin-bar node id one the workspace already renders first-class?
 	 *
 	 * @param string $id Node id.
 	 * @return bool
@@ -350,7 +350,7 @@ class WP_Admin_Workspaces_Chrome_Harvest {
 
 	/**
 	 * Buffer the output of the `admin_notices` + `all_admin_notices`
-	 * actions and return the captured HTML. Run on the shell's own render
+	 * actions and return the captured HTML. Run on the workspace's own render
 	 * pass (the workspace page load); only global notices that fire there
 	 * are captured — see the class docblock's documented limitation.
 	 *
@@ -368,7 +368,7 @@ class WP_Admin_Workspaces_Chrome_Harvest {
 		ob_start();
 		/**
 		 * Core / plugin global admin notices. Per-screen notices keyed on
-		 * `$pagenow` / the current screen do not fire here (the shell page
+		 * `$pagenow` / the current screen do not fire here (the workspace page
 		 * isn't their screen) and aren't captured — global-only interim.
 		 */
 		do_action( 'admin_notices' );
@@ -377,7 +377,7 @@ class WP_Admin_Workspaces_Chrome_Harvest {
 		$html = is_string( $html ) ? trim( $html ) : '';
 
 		// Prevent the double-dispatch: `admin-header.php` (which the hijack
-		// renders the shell through) fires these same two actions again near
+		// renders the workspace through) fires these same two actions again near
 		// the bottom of its output. Detach every callback now so that later
 		// native pass is a no-op — no double side effects, and the captured
 		// HTML is the single source `core:notices-banner` renders. See the

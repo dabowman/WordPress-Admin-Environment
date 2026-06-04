@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-media.php`, `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** Not implemented in v1. `core:settings-media` source slot reserved; falls back to `iframe:options-media.php` if shell config requests it.
+**Current workspace coverage:** Not implemented in v1. `core:settings-media` source slot reserved; falls back to `iframe:options-media.php` if workspace config requests it.
 
 This spec describes the **semantic surface** of the Media Settings screen.
 
@@ -142,7 +142,7 @@ The image-default fields (`image_default_*`) appear in `allowed_options['media']
 ## 7. Actions
 
 ### Primary action
-- **Save Changes** — All fields here are non-REST in core 6.9. Save via shell custom endpoint or sequential `update_option` calls (under `manage_options` capability).
+- **Save Changes** — All fields here are non-REST in core 6.9. Save via workspace custom endpoint or sequential `update_option` calls (under `manage_options` capability).
 
 ### No bulk / per-row / inline actions.
 
@@ -174,7 +174,7 @@ N/A.
 
 ### Embeds (filter-extended)
 - Empty by default. Plugins inject via `add_settings_field('media', …, 'embeds')`.
-- The shell may render an empty placeholder or hide the section when no extensions are registered.
+- The workspace may render an empty placeholder or hide the section when no extensions are registered.
 
 ### Store uploads in this folder (conditional)
 - Type: text (LTR forced)
@@ -198,14 +198,14 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- All-non-REST save: prefer one POST to a shell custom endpoint that batches the `update_option` calls.
+- All-non-REST save: prefer one POST to a workspace custom endpoint that batches the `update_option` calls.
 - Validation: server authoritative.
 
 ---
 
 ## 10. Routing & URL state
 
-Original URL: `/wp-admin/options-media.php`. Shell hash: `#/settings/media`. No query state.
+Original URL: `/wp-admin/options-media.php`. Workspace hash: `#/settings/media`. No query state.
 
 ---
 
@@ -260,7 +260,7 @@ Original URL: `/wp-admin/options-media.php`. Shell hash: `#/settings/media`. No 
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:settings-media` reserved; not yet implemented.
 
 ### Gaps vs. this spec
@@ -295,4 +295,4 @@ Original URL: `/wp-admin/options-media.php`. Shell hash: `#/settings/media`. No 
 - Settings registration: image-size fields registered in admin, not in `register_initial_settings`. See `wp-admin/includes/admin.php` and `wp-admin/options.php` for the allowed list.
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php` (verify exposure at runtime)
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: not yet implemented; reserved as `core:settings-media` source slot.
+- Current workspace impl: not yet implemented; reserved as `core:settings-media` source slot.

@@ -2,7 +2,7 @@
  * resolveRegion — merge a region declaration with its engine template
  * (V2.M2 task 3 + task 4 recursion).
  *
- * When admin.json declares `"sidebar": { "template": "core:sidebar", ... }`,
+ * When workspace.json declares `"sidebar": { "template": "core:sidebar", ... }`,
  * the kernel looks up the template in the engine manifest and produces a
  * resolved declaration that carries the template's defaults plus any
  * per-region overrides. Children declared under `regions: { ... }` are

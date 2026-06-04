@@ -281,7 +281,7 @@
 			},
 			{
 				"import": "@wordpress/notices#store",
-				"purpose": "Success / error notices for create / update / delete flows. The canonical shell notices contract — a non-WPDS rebuild must mirror it."
+				"purpose": "Success / error notices for create / update / delete flows. The canonical workspace notices contract — a non-WPDS rebuild must mirror it."
 			},
 			{
 				"import": "@wordpress/icons#plus",

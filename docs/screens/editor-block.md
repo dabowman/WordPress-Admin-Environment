@@ -3,7 +3,7 @@
 **Status:** Tier 2 — full spec, split into four files.
 **Source PHP:** `wp-admin/post.php` (router) + `wp-admin/post-new.php` (new entry) + `wp-admin/edit-form-blocks.php` (renderer)
 **JS package surface:** `@wordpress/edit-post`, `@wordpress/editor`, `@wordpress/block-editor`, `@wordpress/blocks`, `@wordpress/core-data`, `@wordpress/commands`, `@wordpress/preferences`, `@wordpress/notices`
-**Current shell coverage:** `core:editor` → `src/apps/editor/index.js` (iframe escape hatch into `wp-admin/post.php`); `core:simple-editor` → `src/apps/simple-editor/index.js` (native, restricted block set, no inspector). **Native full block editor not yet shell-mounted.**
+**Current workspace coverage:** `core:editor` → `src/apps/editor/index.js` (iframe escape hatch into `wp-admin/post.php`); `core:simple-editor` → `src/apps/simple-editor/index.js` (native, restricted block set, no inspector). **Native full block editor not yet workspace-mounted.**
 
 This is the largest screen in WordPress. The spec is split into four files. Read them in order:
 
@@ -20,7 +20,7 @@ This document describes the **semantic surface** of the block editor so an agent
 
 | Field | Value |
 |---|---|
-| Slug | `editor` (when split into shell apps: `core:editor`) |
+| Slug | `editor` (when split into workspace apps: `core:editor`) |
 | Display name | "Edit Post" / "Edit Page" / `{post_type.labels.edit_item}` / "Add New {label}" |
 | Original URL (edit) | `/wp-admin/post.php?post={id}&action=edit` |
 | Original URL (new) | `/wp-admin/post-new.php?post_type={type}` |
@@ -65,11 +65,11 @@ Jobs to be done:
 | View revisions panel | `edit_post` AND post-type supports `revisions` | revisions panel gate |
 | Upload media | `upload_files` | media modal gate |
 
-**Permission-denied state:** unauthorized users see core's `wp_die()` 403 page. The shell should mirror with a 403 view inside the editor region, preserving the surrounding shell chrome.
+**Permission-denied state:** unauthorized users see core's `wp_die()` 403 page. The workspace should mirror with a 403 view inside the editor region, preserving the surrounding workspace chrome.
 
-**Trash state:** if `post.status === 'trash'`, core blocks the editor with HTTP 409 ("You cannot edit this item because it is in the Trash. Please restore it and try again."). The shell should treat trash posts as not editable; offer a Restore action that issues `PUT { status: 'draft' }`.
+**Trash state:** if `post.status === 'trash'`, core blocks the editor with HTTP 409 ("You cannot edit this item because it is in the Trash. Please restore it and try again."). The workspace should treat trash posts as not editable; offer a Restore action that issues `PUT { status: 'draft' }`.
 
-**Multisite:** same caps apply per site. No special multisite shell behavior at this screen.
+**Multisite:** same caps apply per site. No special multisite workspace behavior at this screen.
 
 ---
 
@@ -307,7 +307,7 @@ Grouped by section:
 - Top toolbar — anchors block toolbars to the header bar instead of floating
 - Distraction free — hides UI chrome while typing
 - Spotlight mode — dims non-active blocks
-- Fullscreen mode — hides shell chrome
+- Fullscreen mode — hides workspace chrome
 
 **Editor**
 - Visual editor (default)
@@ -401,7 +401,7 @@ Validation:
 - `?meta-box-loader=true&meta-box-loader-nonce=…` — meta-box AJAX iframe loader (back-compat)
 - `?action=preview` (on `post.php`) — preview-link redirect
 
-### Recommended shell URL state
+### Recommended workspace URL state
 ```
 #/editor?type=post&id=123
 #/editor?type=post&new=1                  ← creates auto-draft on mount
@@ -420,7 +420,7 @@ Browser back must offer to discard unsaved changes (matches before-unload prompt
 ### Outbound (this screen → other apps)
 | Trigger | Destination | Carry |
 |---|---|---|
-| Click "← Back" / shell back button | List screen for this post type | Restore previous filter state |
+| Click "← Back" / workspace back button | List screen for this post type | Restore previous filter state |
 | Click "View" (post-publish) | External tab → `link` | — |
 | Click "Manage all reusable blocks" / "Manage patterns" | `posts` filtered to `wp_block` post type, or site-editor patterns | — |
 | Featured image picker → "Manage Media" | `media` app | — |
@@ -556,8 +556,8 @@ The block editor extension surface is **JavaScript-side**, not PHP-side. Any reb
 |---|---|---|
 | `use_block_editor_for_post_type` | Force classic editor on certain post types | Honor — gate native vs iframe-fallback per post type |
 | `use_block_editor_for_post` | Per-post override | Honor |
-| `replace_editor` | Plugin replaces editor entirely | Drop — incompatible with shell, document |
-| `block_editor_settings_all` | Modify editor settings array | Replace with shell-level setting injection |
+| `replace_editor` | Plugin replaces editor entirely | Drop — incompatible with workspace, document |
+| `block_editor_settings_all` | Modify editor settings array | Replace with workspace-level setting injection |
 | `allowed_block_types_all` | Restrict block set | Honor — pass through |
 | `block_categories_all` | Add/modify block categories | Honor |
 | `enqueue_block_editor_assets` | Enqueue scripts/styles | **Critical** — third-party editor extensions register their slot fills here |
@@ -574,14 +574,14 @@ The block editor extension surface is **JavaScript-side**, not PHP-side. Any reb
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
 | App | What works | Cap |
 |---|---|---|
 | `core:editor` | Iframes `wp-admin/post.php?post={id}&action=edit`; `EditorApp.js` injects CSS to hide wp-admin chrome (`#adminmenu`, `#wpadminbar`, `#wpfooter`) | `edit_post` |
 | `core:simple-editor` | Native `BlockEditorProvider` with **9 allowed blocks** (paragraph, heading, image, quote, list, list-item, code, separator, embed). Title input + body. Debounced 2s autosave. Publish/Update button. **No inspector. No list view. No patterns. No featured image. No taxonomy. No revisions. No code editor.** | `edit_post` |
 
-### Known deviations (current shell)
+### Known deviations (current workspace)
 
 These are behaviors that work but diverge from core — distinct from the unbuilt gaps below.
 
@@ -609,7 +609,7 @@ This is the v2 milestone. Each row is one or more rebuild tickets.
 | Undo / Redo | High | `EditorHistoryUndo`, `EditorHistoryRedo` |
 | Code editor mode | Medium | `CodeEditor` from `@wordpress/editor` |
 | Distraction-free mode | Medium | Preference + chrome hide CSS class |
-| Fullscreen mode | Low | Toggle on shell root `is-fullscreen-mode` |
+| Fullscreen mode | Low | Toggle on workspace root `is-fullscreen-mode` |
 | Spotlight mode | Low | Preference; dim non-active blocks via class on canvas |
 | Zoom-out mode | Medium | 6.5+; canvas scale transform + breadcrumbs |
 | Find/Replace overlay | Medium | 6.5+; `EditorFindReplace` |
@@ -638,7 +638,7 @@ This is the v2 milestone. Each row is one or more rebuild tickets.
 | Plugin slot host: `PluginSidebar` | High | |
 | Plugin slot host: `PluginMoreMenuItem` | High | |
 | Plugin slot host: `PluginPrePublishPanel` / `PluginPostPublishPanel` | Medium | |
-| Plugin slot host: `BlockControls` / `InspectorControls` | High | These work automatically when the canvas is a real `@wordpress/block-editor` BlockEditorProvider — only broken if shell renders blocks itself |
+| Plugin slot host: `BlockControls` / `InspectorControls` | High | These work automatically when the canvas is a real `@wordpress/block-editor` BlockEditorProvider — only broken if workspace renders blocks itself |
 | Meta-boxes (back-compat) iframe loader | Medium | Rendered server-side via `meta-box-loader=true`; mount in inspector or below canvas |
 | REST preload (block editor preload paths) | High | Without preload, cold-start fetch waterfall kills perf — see [`editor-block-data.md`](./editor-block-data.md) |
 | Server-registered block schemas bootstrap | High | `wp.blocks.unstable__bootstrapServerSideBlockDefinitions(...)` — required for dynamic blocks |
@@ -650,7 +650,7 @@ This is the v2 milestone. Each row is one or more rebuild tickets.
 | Block-error recovery UI | Medium | When server-stored markup doesn't validate against client block-type, offer "Attempt block recovery" / "Convert to HTML" |
 
 ### Acceptable interim
-For shells that do not need the full block editor, the existing `core:editor` iframe escape hatch is the supported v1 fallback. `core:simple-editor` is the supported native option for restricted-content authoring (newsletter posts, link-in-bio, etc.).
+For workspaces that do not need the full block editor, the existing `core:editor` iframe escape hatch is the supported v1 fallback. `core:simple-editor` is the supported native option for restricted-content authoring (newsletter posts, link-in-bio, etc.).
 
 ---
 
@@ -658,7 +658,7 @@ For shells that do not need the full block editor, the existing `core:editor` if
 
 - **Nested editor instances** (editor inside editor) — defer to site-editor decomposition.
 - **Multi-user real-time co-editing** — WP core does not have it; Notes (6.9+) is async.
-- **Mobile editor** — separate React Native codebase; not addressed by web shell.
+- **Mobile editor** — separate React Native codebase; not addressed by web workspace.
 - **Old TinyMCE classic editor inside the block editor** — see [`editor-classic.md`](./editor-classic.md) for the classic editor; the `core/freeform` block embeds TinyMCE for classic-block back-compat but the wrapping editor remains the block editor.
 - **Block development / `block.json` authoring tools** — handled by Gutenberg's site editor / wp-scripts; not part of this screen.
 - **Post Lock heartbeat polling refactor to REST** — core gap. Track upstream.
@@ -680,8 +680,8 @@ For shells that do not need the full block editor, the existing `core:editor` if
 - URL details: `wp-includes/rest-api/endpoints/class-wp-rest-url-details-controller.php`
 - Navigation fallback: `wp-includes/rest-api/endpoints/class-wp-rest-navigation-fallback-controller.php`
 - Editor JS package: Gutenberg `packages/edit-post/src/editor.js`, `packages/editor/src/components/`
-- Current iframe shell impl: `src/apps/editor/index.js`
-- Current native shell impl: `src/apps/simple-editor/index.js`
+- Current iframe workspace impl: `src/apps/editor/index.js`
+- Current native workspace impl: `src/apps/simple-editor/index.js`
 - WordPress 6.9 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-9/`
 - WordPress 6.8 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-8/`
 - WordPress 6.7 dev notes: `https://make.wordpress.org/core/tag/dev-notes+6-7/`

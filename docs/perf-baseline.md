@@ -18,23 +18,23 @@ Repeat 3 times, record the median.
 
 ## Readings
 
-> _Populate before tagging. Each row is a `<shell> @ <commit-sha>`._
+> _Populate before tagging. Each row is a `<workspace> @ <commit-sha>`._
 
-| Shell | Commit | Cold mount (ms) | Notes |
+| Workspace | Commit | Cold mount (ms) | Notes |
 |---|---|---:|---|
 | wp-admin-default  | _pending_ | _pending_ | _pending_ |
 | developer-admin   | _pending_ | _pending_ | _pending_ |
 | content-author    | _pending_ | _pending_ | _pending_ |
 | client-portal     | _pending_ | _pending_ | _pending_ |
 
-Pass if all four shells fall under **500 ms**. Annotate any miss with the network/CPU breakdown so we know which budget got blown.
+Pass if all four workspaces fall under **500 ms**. Annotate any miss with the network/CPU breakdown so we know which budget got blown.
 
 ## What's in the path
 
 - Network: `index.js` (boot bundle), `index.css`, `dataviews.css`. Post-C5 the per-app code is no longer in the boot bundle — each app loads on-demand from its own chunk (`build/app-<id>.js`) the first time its region mounts.
 - Parse + execute: kernel registers built-ins, the resolved config arrives via inline `<script>`, token CSS injects.
 - React: engine + region tree + the routed app render.
-- First app's data: PostsApp (developer-admin) fires `useEntityRecords` query; iframed apps mount the iframe (defer first paint of iframed content from the cold-mount measurement — measure to shell-card paint, not to iframed-content paint).
+- First app's data: PostsApp (developer-admin) fires `useEntityRecords` query; iframed apps mount the iframe (defer first paint of iframed content from the cold-mount measurement — measure to workspace-card paint, not to iframed-content paint).
 
 ## Bundle size — Track D (C5) lazy app loading
 
@@ -48,7 +48,7 @@ Captured 2026-05-14 with `npm run build` (production). Pre-D = `main` at `e86ed3
 | Vendors chunk `245.js` (lazy) | — | 1,832,141 B (1.75 MiB) | new — loaded on first app mount that needs it |
 | Lazy per-app chunks `app-*.js` | — | 25 chunks, 973 B – 17,213 B | new — one per non-system app |
 
-Cold-mount for a shell that mounts only chrome apps (navigation, site-hub, toolbar-actions, notices-banner, notices-snackbar) downloads only the 250 KiB entrypoint plus whichever app chunk the default route mounts and the vendors chunk that app pulls in. A shell whose default route mounts a non-DataViews app (e.g. `wp-admin-default` → iframe to wp-admin/index.php) can stay below 260 KiB until the user navigates to a DataViews-backed surface.
+Cold-mount for a workspace that mounts only chrome apps (navigation, site-hub, toolbar-actions, notices-banner, notices-snackbar) downloads only the 250 KiB entrypoint plus whichever app chunk the default route mounts and the vendors chunk that app pulls in. A workspace whose default route mounts a non-DataViews app (e.g. `wp-admin-default` → iframe to wp-admin/index.php) can stay below 260 KiB until the user navigates to a DataViews-backed surface.
 
 The 1.75 MiB vendors chunk is the dominant cost for the first DataViews-backed mount. Splitting that further (per-app vendor chunks, or aggressive tree-shaking of `@wordpress/dataviews` re-exports) is a Track E candidate, not in C5 scope.
 
@@ -64,7 +64,7 @@ The Posts / Comments / Users / Media apps fire one extra `per_page=1&_fields=id`
 | Media    | 4 (+1 when a type filter is active) | `media_type` — image, video, audio, application (`All` reuses the main list's `totalItems` when unfiltered) |
 | Plugins  | 0 | counts derived client-side from the one-shot unpaginated fetch |
 
-These are part of the cold-mount path for any shell that lands on one of those screens. wp-admin gets every status count from a single aggregate query (`wp_count_posts` / `wp_count_comments`); the REST API has no per-status aggregate equivalent today, so the fan-out is inherent to the "global counts" design rather than a defect. The cost is bounded (smallest possible payload per request, X-WP-Total off the header) and counts are global so they don't re-fire on every keystroke. Counts are re-fetched after mutations via `invalidateEntityElementCounts`.
+These are part of the cold-mount path for any workspace that lands on one of those screens. wp-admin gets every status count from a single aggregate query (`wp_count_posts` / `wp_count_comments`); the REST API has no per-status aggregate equivalent today, so the fan-out is inherent to the "global counts" design rather than a defect. The cost is bounded (smallest possible payload per request, X-WP-Total off the header) and counts are global so they don't re-fire on every keystroke. Counts are re-fetched after mutations via `invalidateEntityElementCounts`.
 
 If a future REST aggregate endpoint lands (or a `block_editor_rest_api_preload_paths`-style preload for these queries), the fan-out collapses to one round trip.
 

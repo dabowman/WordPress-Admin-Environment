@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/export-personal-data.php` + `wp-admin/erase-personal-data.php` + `wp-admin/includes/privacy-tools.php` + `wp-admin/includes/class-wp-privacy-data-export-requests-list-table.php` + `wp-admin/includes/class-wp-privacy-data-removal-requests-list-table.php` + `wp-admin/includes/class-wp-privacy-requests-table.php`
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the originals via `iframe:export-personal-data.php` and `iframe:erase-personal-data.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the originals via `iframe:export-personal-data.php` and `iframe:erase-personal-data.php`.
 
 This spec covers two parallel sub-screens that share an almost identical UI surface and underlying data model. They differ only in action verb (export vs. erase), success email content, and bulk-action labels. One combined spec; per-sub-screen differences called out where relevant.
 
@@ -20,7 +20,7 @@ This spec covers two parallel sub-screens that share an almost identical UI surf
 | Parent app | `tools` group |
 | Sub-screens | None |
 
-The two screens are distinct admin URLs but render through identical infrastructure (a shared abstract `WP_Privacy_Requests_Table` class with two concrete subclasses). For shell purposes, this could be a single app with a "type" config, or two registered apps that share a renderer.
+The two screens are distinct admin URLs but render through identical infrastructure (a shared abstract `WP_Privacy_Requests_Table` class with two concrete subclasses). For workspace purposes, this could be a single app with a "type" config, or two registered apps that share a renderer.
 
 A user can land on either by typing an email/username, deciding which action to request, then submitting. Each request creates a `user_request` post with status `request-pending` until the user confirms via emailed link.
 
@@ -59,11 +59,11 @@ Jobs to be done:
 
 Default caps (`export_others_personal_data`, `erase_others_personal_data`) granted to administrators in non-multisite. In multisite, only network admins by default; per-site admins do not have them.
 
-**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to {export|erase} personal data on this site.' )`. Shell renders 403 view.
+**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to {export|erase} personal data on this site.' )`. Workspace renders 403 view.
 
 **Multisite:** `manage_privacy_options` is granted to super-admins only. Per-site admins cannot process privacy requests in core multisite. This is a known compliance limitation.
 
-Tied to: **Settings → Privacy** (`options-privacy.php`) — sets the privacy policy page. Cross-link in shell config so privacy admins can move between the three screens.
+Tied to: **Settings → Privacy** (`options-privacy.php`) — sets the privacy policy page. Cross-link in workspace config so privacy admins can move between the three screens.
 
 ---
 
@@ -79,7 +79,7 @@ Tied to: **Settings → Privacy** (`options-privacy.php`) — sets the privacy p
 | `show_in_rest` | (not set — defaults false) |
 | Visibility via REST | **None.** Cannot be queried via `/wp/v2/user_request` |
 
-This is the central gap: **all CRUD on privacy requests must go through admin-ajax or custom shell endpoints.**
+This is the central gap: **all CRUD on privacy requests must go through admin-ajax or custom workspace endpoints.**
 
 ### Per-request fields (stored on `user_request` post)
 
@@ -119,7 +119,7 @@ Read via custom SQL in `WP_Privacy_Requests_Table::get_request_counts()` — dir
 - Export ZIP generation is async via WP Cron (`wp_privacy_generate_personal_data_export_file`).
 - Erasure is async via WP Cron (`wp_privacy_personal_data_erasers` callbacks).
 
-Rebuild requires custom shell endpoints (`/wp-admin-workspaces/v1/privacy-requests/*`) wrapping the existing PHP functions. None of this is in core REST today.
+Rebuild requires custom workspace endpoints (`/wp-admin-workspaces/v1/privacy-requests/*`) wrapping the existing PHP functions. None of this is in core REST today.
 
 ### Email content (server-only)
 
@@ -128,7 +128,7 @@ Filters available:
 - `wp_privacy_personal_data_email_content` / `_subject` / `_headers` (the export-ready email).
 - `delete_site_email_content` is unrelated (Tools / Delete Site).
 
-These run entirely server-side. Shell does not display email contents.
+These run entirely server-side. Workspace does not display email contents.
 
 ---
 
@@ -268,7 +268,7 @@ Single text input filters by email substring. Maps to `WP_Query` `s` against `po
 
 - Default: 20 per page (`add_screen_option('per_page', ['default' => 20])`).
 - User-customizable via Screen Options (`export_personal_data_requests_per_page` / `remove_personal_data_requests_per_page` user meta).
-- Shell rebuild: ignore Screen Options for v1; default 20.
+- Workspace rebuild: ignore Screen Options for v1; default 20.
 
 ---
 
@@ -308,11 +308,11 @@ Original wp-admin URL params:
 - `?s={query}` — search
 - (Per-screen path: `export-personal-data.php` vs. `erase-personal-data.php`)
 
-Recommended shell URLs:
+Recommended workspace URLs:
 - `#/personal-data/export?status=pending&page=2&search=alice`
 - `#/personal-data/erase?status=confirmed`
 
-(Or as separate apps: `#/personal-data-export` / `#/personal-data-erase` — depends on shell config decision.)
+(Or as separate apps: `#/personal-data-export` / `#/personal-data-erase` — depends on workspace config decision.)
 
 URL state must round-trip filter/sort/search/page on refresh and back/forward.
 
@@ -388,7 +388,7 @@ All wp-admin notices use `add_settings_error()` + `settings_errors()` rendering.
 
 ### Note on multisite-only `manage_privacy_options` cap
 
-In multisite, only super-admins can access these screens. Per-site admins see a 403. This must be communicated clearly in the shell — either hide the menu items entirely (preferred) or render a "managed at network level" empty state.
+In multisite, only super-admins can access these screens. Per-site admins see a 403. This must be communicated clearly in the workspace — either hide the menu items entirely (preferred) or render a "managed at network level" empty state.
 
 ---
 
@@ -403,18 +403,18 @@ In multisite, only super-admins can access these screens. Per-site admins see a 
 | `wp_privacy_personal_data_email_content` / `_subject` / `_headers` | Customize export email | Preserve |
 | `user_request_action_email_*` | Customize confirmation email | Preserve |
 | `wp_privacy_export_expiration` | Override ZIP expiration | Preserve |
-| `bulk_actions-{screen-id}` | Add bulk actions | Replace with shell `actions` registry, `supportsBulk: true` |
-| `manage_{screen-id}_columns` | Add table columns | Replace with shell `fields` extensibility |
+| `bulk_actions-{screen-id}` | Add bulk actions | Replace with workspace `actions` registry, `supportsBulk: true` |
+| `manage_{screen-id}_columns` | Add table columns | Replace with workspace `fields` extensibility |
 
-Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all hook into `wp_privacy_personal_data_exporters` to include their data. Preserving the PHP-layer hook is essential — the shell rebuild's "Force download personal data" action must run server-side `wp_privacy_personal_data_export_file()` which fans out to all registered exporters.
+Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all hook into `wp_privacy_personal_data_exporters` to include their data. Preserving the PHP-layer hook is essential — the workspace rebuild's "Force download personal data" action must run server-side `wp_privacy_personal_data_export_file()` which fans out to all registered exporters.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:export-personal-data.php` and `iframe:erase-personal-data.php` work in `developer-admin` shell.
+- **What works:** `iframe:export-personal-data.php` and `iframe:erase-personal-data.php` work in `developer-admin` workspace.
 
 ### Gaps vs. this spec
 
@@ -432,7 +432,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all ho
 | Status filter URL state | Medium | |
 | Bulk action progress UI | Medium | Same shape as posts bulk |
 | Async export-ZIP polling | Medium | Heuristic on `_wp_user_request_completed_timestamp` meta |
-| Email confirmation deep-link handling | High | The user-facing confirmation URL (`wp-login.php?action=privacy_key_request&...`) is logged-out; shell must not block it |
+| Email confirmation deep-link handling | High | The user-facing confirmation URL (`wp-login.php?action=privacy_key_request&...`) is logged-out; workspace must not block it |
 | Multisite: hide menu items for non-super-admins | High | Cap-aware navigation prune |
 | Failed-request retry UX | Low | |
 | Per-status badge | Low | |
@@ -441,7 +441,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all ho
 ### Acceptable interim
 `iframe:export-personal-data.php` / `iframe:erase-personal-data.php` are the v1 implementation. These screens are infrastructure; iframing is acceptable indefinitely.
 
-The user-facing **email confirmation page** (`wp-login.php?action=privacy_key_request`) is **not** part of these screens — it is a logged-out flow. Shell should pass through to PHP unmodified.
+The user-facing **email confirmation page** (`wp-login.php?action=privacy_key_request`) is **not** part of these screens — it is a logged-out flow. Workspace should pass through to PHP unmodified.
 
 ---
 
@@ -453,7 +453,7 @@ The user-facing **email confirmation page** (`wp-login.php?action=privacy_key_re
 - **Auto-deletion of inactive accounts** — not in core.
 - **Data retention policy automation** — not in core.
 - **Cookie consent banner / cookie policy** — not in core.
-- **Logged-out email confirmation page** (`wp-login.php?action=privacy_key_request`) — handled by core; shell doesn't intercept.
+- **Logged-out email confirmation page** (`wp-login.php?action=privacy_key_request`) — handled by core; workspace doesn't intercept.
 - **WP_Cron status / monitoring** for the export/erasure cron jobs — separate concern; cross-link to Site Health "Scheduled events" test.
 - **"Send to user" email customization UI** — server-side filters only, no admin UI.
 

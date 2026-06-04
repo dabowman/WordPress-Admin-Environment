@@ -4,13 +4,13 @@
  *
  * Plugins call `wp_admin_workspaces_register_admin_route( $path, $args )` to
  * declare URL routes at runtime. The registry contributes them to the
- * cascade through the synthetic `plugin` origin so admin.json can still
+ * cascade through the synthetic `plugin` origin so workspace.json can still
  * override per-path.
  *
  * Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […],
  * 'gc_time' => … ] )` — `app` names the app to mount, `config` carries
  * route configuration, `static_data` is folded into `config` for forward
- * compatibility, and `gc_time` is accepted but ignored (no shell
+ * compatibility, and `gc_time` is accepted but ignored (no workspace
  * equivalent — emits a one-time `WP_DEBUG` notice).
  *
  * @package WP_Admin_Workspaces
@@ -163,7 +163,7 @@ class WP_Admin_Workspaces_Admin_Routes {
 	 * specificity, `match_legacy_hash` / `matchLegacyRoute` break the tie by
 	 * map iteration order (first wins on equal score).
 	 *
-	 * @param array $config Resolved admin.json doc.
+	 * @param array $config Resolved workspace.json doc.
 	 * @return array<string, array{legacy_path:string,legacy_query?:array,legacy_params?:array}>
 	 */
 	public static function legacy_map( $config ) {
@@ -214,9 +214,9 @@ class WP_Admin_Workspaces_Admin_Routes {
 
 	/**
 	 * Cascade contribution — registered routes enter through the
-	 * `plugin` origin. admin.json declarations win on per-path collision.
+	 * `plugin` origin. workspace.json declarations win on per-path collision.
 	 *
-	 * @param array $doc Plugin-origin admin.json doc.
+	 * @param array $doc Plugin-origin workspace.json doc.
 	 * @return array
 	 */
 	public static function contribute( $doc ) {
@@ -244,7 +244,7 @@ class WP_Admin_Workspaces_Admin_Routes {
 		self::$warned_gc_time[ $path ] = true;
 		$message = sprintf(
 			/* translators: %s: route path */
-			__( 'Admin route %s declared "gc_time". The shell does not implement TanStack Router cache GC; the value is accepted and ignored.', 'wp-admin-workspaces' ),
+			__( 'Admin route %s declared "gc_time". The workspace does not implement TanStack Router cache GC; the value is accepted and ignored.', 'wp-admin-workspaces' ),
 			$path
 		);
 		trigger_error( esc_html( $message ), E_USER_NOTICE );

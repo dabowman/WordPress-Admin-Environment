@@ -2,7 +2,7 @@
 /**
  * resolveRegion + shouldRenderRegion integration.
  *
- * Loads a real bundled shell admin.json + the matching engine manifest,
+ * Loads a real bundled workspace workspace.json + the matching engine manifest,
  * runs every region through `resolveRegion` and then the `shouldRenderRegion`
  * capability gate using a synthetic cap-map. Asserts which top-level
  * regions survive for the admin role (every region present) vs a
@@ -57,12 +57,12 @@ const engineManifest = JSON.parse(
 
 // Synthetic v2-shape region tree exercising the resolveRegion + gate
 // pipeline against real templates from core:default. Previously read
-// from `shells/wp-admin-default.json` — that v2 shell was retired in
-// Phase 3d.1 when every bundled shell moved to the v3 workspace/screens
+// from `workspaces/wp-admin-default.json` — that v2 workspace was retired in
+// Phase 3d.1 when every bundled workspace moved to the v3 workspace/screens
 // shape (the v3 default no longer carries a top-level `regions` block;
 // regions get synthesized from the active engine's `defaultRegions`).
 // The test still wants a v2-shape input to keep `resolveRegion`
-// honest, so we inline the previous shell's minimal region set here.
+// honest, so we inline the previous workspace's minimal region set here.
 const baseRegions = {
 	sidebar: {
 		template: 'core:sidebar',

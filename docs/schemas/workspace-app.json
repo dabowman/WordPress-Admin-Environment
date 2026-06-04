@@ -1,8 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/workspace-app.json",
-	"title": "WP Admin Shell — App Manifest (v3)",
-	"description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when admin.json passes values, the slots it exposes for in-screen sub-mounts, the size/position hints it prefers when slotted into a grid-style container, and a baseline DataView family the app ships for the entity it renders. Manifests deliberately do not declare layout, geometry, keystroke bindings, menu placement, or which install they belong to — those are install decisions and live in admin.json. The `dashboardWidget` placement is expressed via screen-level `apps[]` entries paired with `slotHints` here; the `dataView` block declares a `variants: { <id>: ... }` family. See WP Admin Shell Design Spec §4.1 and `docs/schema-sketch.md`.",
+	"title": "WP Admin Workspaces — App Manifest (v3)",
+	"description": "Declares what an admin workspace app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when workspace.json passes values, the slots it exposes for in-screen sub-mounts, the size/position hints it prefers when slotted into a grid-style container, and a baseline DataView family the app ships for the entity it renders. Manifests deliberately do not declare layout, geometry, keystroke bindings, menu placement, or which install they belong to — those are install decisions and live in workspace.json. The `dashboardWidget` placement is expressed via screen-level `apps[]` entries paired with `slotHints` here; the `dataView` block declares a `variants: { <id>: ... }` family. See WP Admin Workspaces Design Spec §4.1 and `docs/schema-sketch.md`.",
 
 	"type": "object",
 	"required": [ "id", "version", "title", "role", "script" ],
@@ -18,13 +18,13 @@
 		"id": {
 			"type": "string",
 			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
-			"description": "Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Shell plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case. Examples: `core:command-palette`, `core:posts`, `plugin:woocommerce/orders`. The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have admin.json route to their version."
+			"description": "Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Workspaces plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case. Examples: `core:command-palette`, `core:posts`, `plugin:woocommerce/orders`. The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have workspace.json route to their version."
 		},
 
 		"version": {
 			"type": "integer",
 			"minimum": 1,
-			"description": "Manifest schema version this document conforms to. v3 is the current shape, paired with the v3 admin.json (workspace) schema. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored. Manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path."
+			"description": "Manifest schema version this document conforms to. v3 is the current shape, paired with the v3 workspace.json (workspace) schema. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored. Manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path."
 		},
 
 		"title": {
@@ -35,7 +35,7 @@
 
 		"description": {
 			"type": "string",
-			"description": "Optional human-readable description of what the app does. Used in admin.json authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph."
+			"description": "Optional human-readable description of what the app does. Used in workspace.json authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph."
 		},
 
 		"designSystem": {
@@ -58,12 +58,12 @@
 			"type": "array",
 			"items": { "$ref": "#/$defs/wpCapability" },
 			"uniqueItems": true,
-			"description": "WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — admin.json cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`). The v3 workspace `screens[id].permissions` block is an OR-set layered on top of this AND-floor — `permissions` can broaden how a user reaches the screen, but the app's floor here is untouchable. Examples: `[\"edit_posts\"]`, `[\"manage_options\", \"upload_files\"]`."
+			"description": "WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — workspace.json cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`). The v3 workspace `screens[id].permissions` block is an OR-set layered on top of this AND-floor — `permissions` can broaden how a user reaches the screen, but the app's floor here is untouchable. Examples: `[\"edit_posts\"]`, `[\"manage_options\", \"upload_files\"]`."
 		},
 
 		"config-schema": {
 			"type": "object",
-			"description": "JSON Schema document describing the shape of the `config` object that admin.json passes to this app at mount time (via a screen's `config` field, a `screens[id].apps[i].config` entry, or a `workspace.widgets.<slot>[i].config` entry). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error. The schema is itself a JSON Schema document; recursive validation against the JSON Schema meta-schema is not enforced by the runtime but is recommended via author tooling.",
+			"description": "JSON Schema document describing the shape of the `config` object that workspace.json passes to this app at mount time (via a screen's `config` field, a `screens[id].apps[i].config` entry, or a `workspace.widgets.<slot>[i].config` entry). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error. The schema is itself a JSON Schema document; recursive validation against the JSON Schema meta-schema is not enforced by the runtime but is recommended via author tooling.",
 			"examples": [
 				{
 					"type": "object",
@@ -124,12 +124,12 @@
 
 		"slotHints": {
 			"$ref": "#/$defs/slotHints",
-			"description": "Size and position defaults the app prefers when it is mounted into a grid-style slot exposed by another app or engine. Consumed by slot hosts (e.g., the dashboard-host's `grid` slot, a tiling engine's tiling pane) when laying out children — the host honors the hints unless its own admin.json placement overrides them. Apps that never mount inside a sizable slot omit this block. Generic across slot types: a host that doesn't understand grid sizing simply ignores the block. New in v3 — replaces the v2 `dashboardWidget` block, which fused these hints with widget-specific metadata. Widget identity (title, hidden-state) now lives on the `screens[id].apps[i]` entry that places the widget; this block carries only the intrinsic defaults the app ships."
+			"description": "Size and position defaults the app prefers when it is mounted into a grid-style slot exposed by another app or engine. Consumed by slot hosts (e.g., the dashboard-host's `grid` slot, a tiling engine's tiling pane) when laying out children — the host honors the hints unless its own workspace.json placement overrides them. Apps that never mount inside a sizable slot omit this block. Generic across slot types: a host that doesn't understand grid sizing simply ignores the block. New in v3 — replaces the v2 `dashboardWidget` block, which fused these hints with widget-specific metadata. Widget identity (title, hidden-state) now lives on the `screens[id].apps[i]` entry that places the widget; this block carries only the intrinsic defaults the app ships."
 		},
 
 		"dataView": {
 			"$ref": "#/$defs/appDataView",
-			"description": "Optional primary DataView family the app ships as its baseline. Names the entity `(kind, name)` this app primarily renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). The runtime injects manifest-declared variants as baselines into `settings.dataViews[kind][name][<variant>]` at the `core` origin; admin.json / site / role / user wins per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. The consuming app reads the resolved value via `useDataView`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Plugin engines shipping non-WPDS grids MAY ignore the block. See `docs/schema-sketch.md` § Settings and spec §13 #7."
+			"description": "Optional primary DataView family the app ships as its baseline. Names the entity `(kind, name)` this app primarily renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). The runtime injects manifest-declared variants as baselines into `settings.dataViews[kind][name][<variant>]` at the `core` origin; workspace.json / site / role / user wins per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. The consuming app reads the resolved value via `useDataView`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Plugin engines shipping non-WPDS grids MAY ignore the block. See `docs/schema-sketch.md` § Settings and spec §13 #7."
 		},
 
 		"documentation": {
@@ -166,7 +166,7 @@
 		"ariaRole": {
 			"type": "string",
 			"pattern": "^[a-z][a-z]+$",
-			"description": "A WAI-ARIA 1.2 role name. Lowercase, alphabetic. The runtime does not enforce a closed list — any valid ARIA role is accepted — but engines specialize for a subset (typically the landmark roles plus `dialog`). Common values for shell apps: `main` (primary content), `dialog` (modal/non-modal dialogs), `navigation` (nav menus), `complementary` (side panels and inspectors), `banner` (top-of-page header), `contentinfo` (footer/status info), `search` (search interfaces), `region` (generic landmark). Avoid widget roles (`button`, `checkbox`, etc.) — those describe controls, not regions or apps. See https://www.w3.org/TR/wai-aria-1.2/#role_definitions."
+			"description": "A WAI-ARIA 1.2 role name. Lowercase, alphabetic. The runtime does not enforce a closed list — any valid ARIA role is accepted — but engines specialize for a subset (typically the landmark roles plus `dialog`). Common values for workspace apps: `main` (primary content), `dialog` (modal/non-modal dialogs), `navigation` (nav menus), `complementary` (side panels and inspectors), `banner` (top-of-page header), `contentinfo` (footer/status info), `search` (search interfaces), `region` (generic landmark). Avoid widget roles (`button`, `checkbox`, etc.) — those describe controls, not regions or apps. See https://www.w3.org/TR/wai-aria-1.2/#role_definitions."
 		},
 
 		"wpCapability": {
@@ -199,7 +199,7 @@
 						],
 						"description": "A trigger that dismisses (unmounts) this app's region. `Escape` = pressing Escape key; `backdrop-click` = clicking outside the region while a modal backdrop is shown; `outside-click` = clicking outside the region without a backdrop (e.g., for non-modal popovers); `navigation` = any URL navigation event."
 					},
-					"description": "Triggers that cause the engine to unmount this app's region. Browser analog: HTML `<dialog>` Escape-to-close behavior, popover dismissal. Use for ephemeral apps (modals, palettes, drawers). Apps mounted in persistent regions typically omit this field — they live for the life of the shell. Multiple triggers are honored simultaneously."
+					"description": "Triggers that cause the engine to unmount this app's region. Browser analog: HTML `<dialog>` Escape-to-close behavior, popover dismissal. Use for ephemeral apps (modals, palettes, drawers). Apps mounted in persistent regions typically omit this field — they live for the life of the workspace. Multiple triggers are honored simultaneously."
 				},
 
 				"core:autofocus-target": {
@@ -211,7 +211,7 @@
 				"core:triggerable": {
 					"type": "boolean",
 					"default": false,
-					"description": "When true, this app can be invoked by a binding declared in admin.json's `commands` block (e.g., `Mod+K` opens the command palette). Browser analog: HTML `commandfor` / `command` attributes. The app declares only that it accepts being invoked; the actual keystroke or invocation source is decided at install time in admin.json's v3 `commands` array. Apps that should never be invoked by user shortcut (e.g., always-mounted persistent system apps) omit this field. Note: setting this to `true` does not register a binding — admin.json must explicitly bind a keystroke to the app's id via a `commands[]` entry."
+					"description": "When true, this app can be invoked by a binding declared in workspace.json's `commands` block (e.g., `Mod+K` opens the command palette). Browser analog: HTML `commandfor` / `command` attributes. The app declares only that it accepts being invoked; the actual keystroke or invocation source is decided at install time in workspace.json's v3 `commands` array. Apps that should never be invoked by user shortcut (e.g., always-mounted persistent system apps) omit this field. Note: setting this to `true` does not register a binding — workspace.json must explicitly bind a keystroke to the app's id via a `commands[]` entry."
 				},
 
 				"core:persists-across-navigation": {
@@ -378,7 +378,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "name" ],
-			"description": "An app-shipped DataView family baseline. Names the entity `(kind, name)` the app renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration document. The runtime injects each variant as a baseline into `settings.dataViews[kind][name][<variant>]` at the `core` origin so admin.json / site / role / user origins can override per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. See `docs/schema-sketch.md` § Settings.",
+			"description": "An app-shipped DataView family baseline. Names the entity `(kind, name)` the app renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration document. The runtime injects each variant as a baseline into `settings.dataViews[kind][name][<variant>]` at the `core` origin so workspace.json / site / role / user origins can override per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. See `docs/schema-sketch.md` § Settings.",
 			"properties": {
 				"kind": {
 					"type": "string",
@@ -408,7 +408,7 @@
 							"$ref": "#/$defs/appDataViewVariant"
 						}
 					},
-					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; admin.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge — CIAB independent-resolution rule). `_default` itself MUST NOT declare `extends` (schema-enforced)."
+					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; workspace.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge — CIAB independent-resolution rule). `_default` itself MUST NOT declare `extends` (schema-enforced)."
 				}
 			}
 		},
@@ -416,7 +416,7 @@
 		"appDataViewVariant": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "Per-variant entry inside an app manifest's `dataView.variants`. Complete `@wordpress/dataviews` configuration document — same shape as a `settings.dataViews[kind][name][variant]` registry entry in admin.json. Declared here independently because each manifest validates against one schema; the per-variant shape is small enough that redeclaration costs less than a cross-schema $ref.",
+			"description": "Per-variant entry inside an app manifest's `dataView.variants`. Complete `@wordpress/dataviews` configuration document — same shape as a `settings.dataViews[kind][name][variant]` registry entry in workspace.json. Declared here independently because each manifest validates against one schema; the per-variant shape is small enough that redeclaration costs less than a cross-schema $ref.",
 			"properties": {
 				"extends": {
 					"type": "string",
@@ -468,12 +468,12 @@
 				"purpose": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Extended one-paragraph plain-English description of what the app does, who it serves, and how it fits into the shell. Longer-form than the manifest `description` field (which is a one-line summary used in plugin install screens). Translatable."
+					"description": "Extended one-paragraph plain-English description of what the app does, who it serves, and how it fits into the workspace. Longer-form than the manifest `description` field (which is a one-line summary used in plugin install screens). Translatable."
 				},
 				"rebuilds": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reference to a tier-2 screen specification under `docs/screens/` that this app rebuilds, expressed as the screen slug (e.g. `dashboard-home`, `posts`, `users`). Omitted for apps with no wp-admin screen equivalent (shell-only apps like `core:navigation`, `core:site-hub`)."
+					"description": "Reference to a tier-2 screen specification under `docs/screens/` that this app rebuilds, expressed as the screen slug (e.g. `dashboard-home`, `posts`, `users`). Omitted for apps with no wp-admin screen equivalent (workspace-only apps like `core:navigation`, `core:site-hub`)."
 				},
 				"data": {
 					"type": "object",
@@ -577,7 +577,7 @@
 						},
 						"keyboard": {
 							"type": "array",
-							"description": "App-owned keyboard shortcuts. Shell-level bindings (the `commands` block in admin.json) are out of scope.",
+							"description": "App-owned keyboard shortcuts. Workspace-level bindings (the `commands` block in workspace.json) are out of scope.",
 							"items": {
 								"type": "object",
 								"additionalProperties": false,
@@ -660,7 +660,7 @@
 				},
 				"via": {
 					"enum": [ "core-data", "api-fetch", "window-global", "external", "commands", "kernel-config" ],
-					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call (includes apps that read a sync cache populated by an `api-fetch` REST call, e.g. the `userCan` helper); `window-global` = read from `window.wpAdminWorkspaces.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry; `kernel-config` = props passed by the runtime from the resolved admin.json tree or kernel context (e.g. `config.styles.branding`, `config.routes`, `config.left/right`, `config.screens[id]`)."
+					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call (includes apps that read a sync cache populated by an `api-fetch` REST call, e.g. the `userCan` helper); `window-global` = read from `window.wpAdminWorkspaces.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry; `kernel-config` = props passed by the runtime from the resolved workspace.json tree or kernel context (e.g. `config.styles.branding`, `config.routes`, `config.left/right`, `config.screens[id]`)."
 				},
 				"context": {
 					"enum": [ "view", "edit", "embed" ],

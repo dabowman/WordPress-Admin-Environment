@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/update-core.php` + `wp-admin/includes/update-core.php` + `wp-admin/includes/update.php` + `wp-admin/includes/class-core-upgrader.php`
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the original via `iframe:update-core.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:update-core.php`.
 
 This spec describes the **semantic surface** of the WordPress Updates screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -19,7 +19,7 @@ This spec describes the **semantic surface** of the WordPress Updates screen so 
 | Parent app | `dashboard` group |
 | Sub-screens | None (sections render inline). Long-running update flow takes over the screen with progress output. |
 
-Multisite forces all updates to network admin: `if ( is_multisite() && ! is_network_admin() ) { wp_redirect( network_admin_url( 'update-core.php' ) ); }`. Shell rebuild should mirror — on multisite, only network-admin-equivalent users land here.
+Multisite forces all updates to network admin: `if ( is_multisite() && ! is_network_admin() ) { wp_redirect( network_admin_url( 'update-core.php' ) ); }`. Workspace rebuild should mirror — on multisite, only network-admin-equivalent users land here.
 
 ---
 
@@ -57,7 +57,7 @@ Jobs to be done:
 
 **Disabled overrides:** auto-updates UI is hidden when `WP_AUTO_UPDATE_CORE` constant is set, when `AUTOMATIC_UPDATER_DISABLED` is true, when the `automatic_updater_disabled` filter returns true, when `wp_is_file_mod_allowed( 'automatic_updater' )` is false, or when the install is under VCS (Git/SVN).
 
-**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to update this site.' )`. Shell renders 403 view.
+**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to update this site.' )`. Workspace renders 403 view.
 
 **Multisite:** screen lives in network admin only. `do_core_upgrade` runs across all sites in the network in one pass. Per-site users without network admin redirect or 403.
 
@@ -119,7 +119,7 @@ REST gap: none of the auto-update toggles are exposed via REST. Rebuild requires
 - **Bulk update execution** → no REST (per-item upgrade exists but is undocumented)
 - **`wp_get_update_data()`** (counts shown in toolbar bubble) → no REST
 
-These are tracked at WP Trac across multiple tickets; until resolved, the shell rebuild calls a custom REST endpoint (`/wp-admin-workspaces/v1/updates/*`) that wraps the PHP functions, or accepts the iframe fallback.
+These are tracked at WP Trac across multiple tickets; until resolved, the workspace rebuild calls a custom REST endpoint (`/wp-admin-workspaces/v1/updates/*`) that wraps the PHP functions, or accepts the iframe fallback.
 
 ---
 
@@ -303,7 +303,7 @@ Original wp-admin URL params:
 - `?core-major-auto-updates-saved={enabled|disabled}` (success indicator after save)
 - `?https_updated=1` (cross-screen redirect from Site Health)
 
-Recommended shell URL: `#/updates`. No deep-link state needed within the screen. The mid-update progress screen is transient — shell rebuild should mount it as an inline region rather than a separate route to keep back-button semantics sane.
+Recommended workspace URL: `#/updates`. No deep-link state needed within the screen. The mid-update progress screen is transient — workspace rebuild should mount it as an inline region rather than a separate route to keep back-button semantics sane.
 
 ---
 
@@ -384,18 +384,18 @@ No widget-specific shortcuts. Accept browser defaults.
 | `auto_update_{plugin|theme|core|translation}` filters | Override per-type auto-update decisions | **Preserve** at the PHP layer — they apply regardless of UI |
 | `allow_minor_auto_core_updates` / `allow_major_auto_core_updates` / `allow_dev_auto_core_updates` | Force on/off | Same — PHP-layer, surfaces in UI as locked toggles |
 | `automatic_updater_disabled` | Force disable | Same |
-| `after_core_auto_updates_settings` | Render after toggle | Replace with shell slot `core:updates.auto-update-settings.after` |
+| `after_core_auto_updates_settings` | Render after toggle | Replace with workspace slot `core:updates.auto-update-settings.after` |
 | `wp_plugin_update_row` / `wp_theme_update_row` | Custom row markup | Drop — replace with row template |
 
-Plugin compatibility note: managed-WordPress hosts (WP Engine, Pantheon, Pressable) often disable updates via `WP_AUTO_UPDATE_CORE: false` and `DISALLOW_FILE_MODS: true`. The shell must detect both and render an appropriate "Updates managed by your host" empty state.
+Plugin compatibility note: managed-WordPress hosts (WP Engine, Pantheon, Pressable) often disable updates via `WP_AUTO_UPDATE_CORE: false` and `DISALLOW_FILE_MODS: true`. The workspace must detect both and render an appropriate "Updates managed by your host" empty state.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
-- **Source:** none. Bundled `developer-admin.json` uses `iframe:update-core.php` as escape hatch.
+- **Source:** none. Bundled `developer-workspace.json` uses `iframe:update-core.php` as escape hatch.
 - **What works:** original PHP screen renders inside iframe with chrome hidden.
 
 ### Gaps vs. this spec
@@ -407,7 +407,7 @@ Plugin compatibility note: managed-WordPress hosts (WP Engine, Pantheon, Pressab
 | Plugin updates table | High | `GET /wp/v2/plugins` exists; bulk-upgrade endpoint must be added |
 | Theme updates table | High | `GET /wp/v2/themes` exists; bulk-upgrade missing |
 | Translation updates section | Medium | No REST; needs custom shim or iframe escape |
-| Per-plugin auto-update toggle | High | REST gap — needs shell-level endpoint or settings field |
+| Per-plugin auto-update toggle | High | REST gap — needs workspace-level endpoint or settings field |
 | Per-theme auto-update toggle | High | Same |
 | Major core auto-update toggle | Medium | REST gap |
 | FS credentials modal | High | Required on most shared hosts; reuse `request-filesystem-credentials-form` semantics |
@@ -420,7 +420,7 @@ Plugin compatibility note: managed-WordPress hosts (WP Engine, Pantheon, Pressab
 
 ### Acceptable interim
 
-`iframe:update-core.php` is the escape hatch. Mark configs `updatesImpl: 'iframe-fallback'` so they're tracked. Most shells should ship without an Updates app; site administrators run updates via WP-CLI in production.
+`iframe:update-core.php` is the escape hatch. Mark configs `updatesImpl: 'iframe-fallback'` so they're tracked. Most workspaces should ship without an Updates app; site administrators run updates via WP-CLI in production.
 
 ---
 

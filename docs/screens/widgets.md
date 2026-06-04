@@ -2,13 +2,13 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/widgets.php` → `wp-admin/widgets-form-blocks.php` (block-based, default since WP 5.8) or `wp-admin/widgets-form.php` (classic, when block widgets disabled)
-**Current shell coverage:** None. Reachable today only via `iframe:widgets.php`.
+**Current workspace coverage:** None. Reachable today only via `iframe:widgets.php`.
 
 This spec describes the **semantic surface** of the block-based Widgets screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
 **Scope:** the **block-based Widgets editor** introduced in WP 5.8 — the only path being rebuilt. The classic widgets form is deprecated for new development. Block themes typically don't use widgets at all (widget areas are template parts in the Site Editor); this screen is most relevant to classic themes that registered legacy `sidebar` widget areas.
 
-**Block-theme deemphasis:** if `wp_use_widgets_block_editor()` returns `true` and the active theme registers no sidebars, the screen renders an empty state. The shell should detect this and surface the screen only when sidebars are registered.
+**Block-theme deemphasis:** if `wp_use_widgets_block_editor()` returns `true` and the active theme registers no sidebars, the screen renders an empty state. The workspace should detect this and surface the screen only when sidebars are registered.
 
 ---
 
@@ -230,7 +230,7 @@ Driven by each block's `block.json`. Common shapes:
 - Text inputs, color pickers, number inputs, dropdowns.
 
 ### Legacy widget form
-Rendered server-side via `POST /wp/v2/widget-types/{id}/render` and saved via `POST /wp/v2/widget-types/{id}/encode`. The shell embeds the rendered HTML inside the Legacy Widget block.
+Rendered server-side via `POST /wp/v2/widget-types/{id}/render` and saved via `POST /wp/v2/widget-types/{id}/encode`. The workspace embeds the rendered HTML inside the Legacy Widget block.
 
 ### Sidebar-level "settings"
 N/A — sidebars themselves have no editable settings on this screen (name/description come from `register_sidebar()`).
@@ -256,7 +256,7 @@ Order matters — sidebar PUT must follow widget POSTs so referenced IDs exist.
 
 Original wp-admin URL: `/wp-admin/widgets.php` (no params; SPA owns state).
 
-Shell hash routing:
+Workspace hash routing:
 ```
 #/widgets                               # default landing (all sidebars)
 #/widgets/{sidebar-id}                  # focus / scroll to sidebar
@@ -329,8 +329,8 @@ Undo: per-edit Undo (Cmd+Z) within the block editor stack. Undo across save boun
 | `register_block_type()` for widget-area-allowed blocks | Block widgets | Preserve. |
 | `widget_block_edit_render` filter | Customize legacy widget render | Preserve. |
 | `widget_types_to_hide_from_legacy_widget_block` | Hide legacy widgets in block UI | Preserve. |
-| `enqueue_block_editor_assets` | Add scripts | Replace with shell `core:widgets.assets` slot. |
-| `sidebar_admin_setup` action | Pre-render hook | Drop — shell owns chrome. |
+| `enqueue_block_editor_assets` | Add scripts | Replace with workspace `core:widgets.assets` slot. |
+| `sidebar_admin_setup` action | Pre-render hook | Drop — workspace owns chrome. |
 | `widgets_admin_page` action | Render extras | Replace with `core:widgets.before` slot. |
 
 Plugin compatibility note: legacy widget classes continue to work via the Legacy Widget block. Plugins that customized the classic admin form may need migration to block-based equivalents.
@@ -339,7 +339,7 @@ Plugin compatibility note: legacy widget classes continue to work via the Legacy
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none registered.
 - **Workaround:** `iframe:widgets.php`. Works; block widgets editor inside iframe.
 
@@ -354,12 +354,12 @@ Plugin compatibility note: legacy widget classes continue to work via the Legacy
 | Legacy widget block embed | Medium | Forms rendered via REST encode/render endpoints |
 | List view | Low | Inherits from block editor |
 | Theme-without-widgets gating | Medium | Hide menu entry; display gracefully |
-| Block Directory disable | Low | Server already disables; shell needs to mirror |
+| Block Directory disable | Low | Server already disables; workspace needs to mirror |
 | Keyboard shortcuts | Medium | Standard block editor set |
 | ARIA polish | Medium | Sidebar landmarks |
 
 ### Acceptable interim
-For v1 of any new shell config, `iframe:widgets.php` is acceptable as an escape hatch. Most shells will not surface this — block themes don't use widgets, classic themes are explicitly out of scope for v1 polish.
+For v1 of any new workspace config, `iframe:widgets.php` is acceptable as an escape hatch. Most workspaces will not surface this — block themes don't use widgets, classic themes are explicitly out of scope for v1 polish.
 
 ---
 

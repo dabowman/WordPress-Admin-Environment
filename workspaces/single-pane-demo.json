@@ -4,7 +4,7 @@
 	"$wpds": "6.9",
 	"name": "single-pane-demo",
 	"title": "Single Pane Demo",
-	"description": "Demo shell exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
+	"description": "Demo workspace exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
 	"engine": "core:single-pane",
 	"default-screen": "posts",
 	"frame": {

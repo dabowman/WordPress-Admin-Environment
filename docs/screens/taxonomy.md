@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/edit-tags.php` (list + add) + `wp-admin/term.php` (edit single) + `wp-admin/edit-tag-form.php` (form partial) + `WP_Terms_List_Table` (`wp-admin/includes/class-wp-terms-list-table.php`)
-**Current shell coverage:** `core:taxonomy` → `src/apps/taxonomy/index.js` (native; DataViews table + `@wordpress/dataviews` `DataForm` modal over the `taxonomy` entity, parameterized by `config.taxonomy` — defaults to `category`; registered in `src/runtime/registry/builtins.js`). See `src/apps/taxonomy/app.md`.
+**Current workspace coverage:** `core:taxonomy` → `src/apps/taxonomy/index.js` (native; DataViews table + `@wordpress/dataviews` `DataForm` modal over the `taxonomy` entity, parameterized by `config.taxonomy` — defaults to `category`; registered in `src/runtime/registry/builtins.js`). See `src/apps/taxonomy/app.md`.
 
 This spec describes the **semantic surface** of the Taxonomy management screen — list, add, edit, and delete terms — for any taxonomy registered with `show_in_rest: true` (Categories, Tags, custom taxonomies). It does not prescribe component names, CSS, or specific React APIs.
 
@@ -22,7 +22,7 @@ The screen is one app with two modes: split-pane list+add (default) and edit-sin
 | Parent app | None — top-level app instance per taxonomy |
 | Sub-screens | Edit Term (single); inline Quick Edit on list rows |
 
-The same screen serves any taxonomy with `show_ui: true` (admin visible) and `show_in_rest: true` (REST exposed). Both flags are required for shell coverage. The `link_category` taxonomy (admin-only legacy from Links Manager) is excluded.
+The same screen serves any taxonomy with `show_ui: true` (admin visible) and `show_in_rest: true` (REST exposed). Both flags are required for workspace coverage. The `link_category` taxonomy (admin-only legacy from Links Manager) is excluded.
 
 For taxonomies attached to multiple post types, the URL carries `?post_type={pt}` to scope the breadcrumb; the term list itself is unscoped (terms are global per taxonomy, not per post type).
 
@@ -59,7 +59,7 @@ Capabilities are taxonomy-specific, set in `register_taxonomy(..., 'capabilities
 
 For custom taxonomies, replace `manage_categories` with `$taxonomy->cap->manage_terms` etc. Always read `WP_Taxonomy::cap` rather than hardcoding.
 
-**Permission-denied state:** if user lacks `manage_terms`, the menu entry is hidden. URL-direct access shows "Sorry, you are not allowed to manage terms in this taxonomy." Shell mirrors with empty state.
+**Permission-denied state:** if user lacks `manage_terms`, the menu entry is hidden. URL-direct access shows "Sorry, you are not allowed to manage terms in this taxonomy." Workspace mirrors with empty state.
 
 **Per-row caps:** the list checks `delete_term` per row; rows the user can't delete render without checkbox. `edit_term` gates the row Edit action.
 
@@ -106,7 +106,7 @@ For custom taxonomies, replace `manage_categories` with `$taxonomy->cap->manage_
 
 ### Hierarchical display
 
-Core renders hierarchical taxonomies (Categories) as an **indented tree** in the list, using PHP-side recursion. The REST list returns flat results; the shell must build the tree client-side:
+Core renders hierarchical taxonomies (Categories) as an **indented tree** in the list, using PHP-side recursion. The REST list returns flat results; the workspace must build the tree client-side:
 
 1. Fetch all top-level (`parent: 0`) terms.
 2. For each term with a non-zero `count` of children, fetch children lazily (or up-front for small trees).
@@ -185,7 +185,7 @@ Core renders a one-paragraph hint below the list:
 - Categories: "Deleting a category does not delete the posts in that category. Posts assigned only to deleted categories are reassigned to the default category."
 - Tags: "Tags can be selectively converted to categories using the [tag-to-category converter]." (importer link; v1 omits)
 
-The shell preserves the Categories hint as a static info panel; tag converter link is omitted.
+The workspace preserves the Categories hint as a static info panel; tag converter link is omitted.
 
 ---
 
@@ -251,7 +251,7 @@ Selection model: checkbox per row + select-all-on-page.
 | Hide empty | `hide_empty: true` | bool | optional toggle |
 | Search | `search` | match | matches name + slug + description |
 
-Core has no first-class filter UI on this screen beyond search. The shell can add hide-empty as a toggle and a "show children of" breadcrumb when `?parent=` is in URL.
+Core has no first-class filter UI on this screen beyond search. The workspace can add hide-empty as a toggle and a "show children of" breadcrumb when `?parent=` is in URL.
 
 ### Sort
 Default: `name asc` (non-hierarchical) or hierarchical-tree (hierarchical, when no `orderby` param). Sortable columns: `name`, `slug`, `description`, `count`. Switching sort on a hierarchical taxonomy collapses the tree to flat sorted view (matches core behavior).
@@ -325,7 +325,7 @@ Quick Edit does not include parent or description (matches core list-table inlin
 - `term.php?taxonomy={tax}&tag_ID={id}` — edit (since 4.5)
 - Legacy: `edit-tags.php?action=edit&taxonomy={tax}&tag_ID={id}` (302s to `term.php`)
 
-### Recommended shell URL state
+### Recommended workspace URL state
 
 ```
 #/taxonomy-{tax}                                    — list + add pane
@@ -334,7 +334,7 @@ Quick Edit does not include parent or description (matches core list-table inlin
 #/taxonomy-{tax}?parent={id}                        — children of term (hierarchical)
 ```
 
-The slug `taxonomy-{tax}` accommodates multiple instances per shell (one per taxonomy registered to a post type the shell exposes).
+The slug `taxonomy-{tax}` accommodates multiple instances per workspace (one per taxonomy registered to a post type the workspace exposes).
 
 Browser back/forward must restore filters + edit-form state for the open form. Refresh restores list filters; in-progress add-form input may be lost (acceptable).
 
@@ -416,17 +416,17 @@ No undo for term delete (terms are not soft-deleted in core; a re-create require
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `manage_edit-{taxonomy}_columns` | Add list columns | Replace with shell `fields` extensibility |
+| `manage_edit-{taxonomy}_columns` | Add list columns | Replace with workspace `fields` extensibility |
 | `manage_{taxonomy}_custom_column` | Render custom column | Replace with field-render registry |
-| `{taxonomy}_row_actions` | Per-row actions | Replace with shell `actions` registry (`core:taxonomy.row-actions` slot) |
-| `quick_edit_custom_box` | Quick Edit custom fields | Replace with shell field-level extensibility |
+| `{taxonomy}_row_actions` | Per-row actions | Replace with workspace `actions` registry (`core:taxonomy.row-actions` slot) |
+| `quick_edit_custom_box` | Quick Edit custom fields | Replace with workspace field-level extensibility |
 | `{taxonomy}_pre_add_form`, `{taxonomy}_add_form_fields`, `{taxonomy}_add_form` | Add-form lifecycle | Replace with `core:taxonomy.add-form` slot fills |
 | `{taxonomy}_pre_edit_form`, `{taxonomy}_edit_form_fields`, `{taxonomy}_edit_form` | Edit-form lifecycle | Replace with `core:taxonomy.edit-form` slot fills |
-| `taxonomy_parent_dropdown_args` | Parent select args | Replace with shell parent-picker config |
-| `bulk_actions-edit-{taxonomy}` | Bulk actions | Replace with shell bulk-action registry |
+| `taxonomy_parent_dropdown_args` | Parent select args | Replace with workspace parent-picker config |
+| `bulk_actions-edit-{taxonomy}` | Bulk actions | Replace with workspace bulk-action registry |
 | `after-{taxonomy}-table` | Below-list content (hint area) | Replace with `core:taxonomy.below-list` slot |
 | `{taxonomy}_term_new_form_tag`, `{taxonomy}_term_edit_form_tag` | Form attribute injection | Drop — server-side only |
-| `editable_slug` | Filter slug pre-display | Replace with shell field-render config |
+| `editable_slug` | Filter slug pre-display | Replace with workspace field-render config |
 
 Plugin compatibility: third-party taxonomy plugins (custom term meta UIs, hierarchy enhancers) need migration to slot fills.
 
@@ -434,7 +434,7 @@ Plugin compatibility: third-party taxonomy plugins (custom term meta UIs, hierar
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
 - **Source:** `core:taxonomy` → `src/apps/taxonomy/index.js`, registered in `src/runtime/registry/builtins.js`. Parameterized by `config.taxonomy` (defaults to `category`); mount the app once per taxonomy to surface tags / custom taxonomies.
 - **What works:** native DataViews table with a `@wordpress/dataviews` `DataForm` create/edit modal (name / slug / description), search, sort, and bulk delete via `createBulkConfirmModal`. See `src/apps/taxonomy/app.md`.
@@ -469,7 +469,7 @@ Plugin compatibility: third-party taxonomy plugins (custom term meta UIs, hierar
 
 ### Acceptable interim
 
-For v1 of any new shell config, `iframe:edit-tags.php?taxonomy={tax}` is the explicit fallback. The developer-admin shell already uses this. Mark configs with iframe taxonomy panels for replacement when `core:taxonomy` lands.
+For v1 of any new workspace config, `iframe:edit-tags.php?taxonomy={tax}` is the explicit fallback. The developer-admin workspace already uses this. Mark configs with iframe taxonomy panels for replacement when `core:taxonomy` lands.
 
 ---
 
@@ -490,8 +490,8 @@ For v1 of any new shell config, `iframe:edit-tags.php?taxonomy={tax}` is the exp
 ## 17. Reference
 
 - Original PHP: `wp-admin/edit-tags.php` (list + add; also handles legacy `?action=edit` redirect to `term.php`), `wp-admin/term.php` (edit single, since 4.5)
-- **Form partial:** `wp-admin/edit-tag-form.php` is the form rendered inside `wp-admin/term.php`, **not standalone** — it requires `$tag`, `$tax`, `$taxonomy`, and `$message` to be in scope, included via `require ABSPATH . 'wp-admin/edit-tag-form.php'`. The shell's Edit Term screen replaces both files in one component.
-- The Add form is **inline** within `edit-tags.php` (lines 438–608), not in `edit-tag-form.php`. The shell's Add panel reproduces it without a partial split.
+- **Form partial:** `wp-admin/edit-tag-form.php` is the form rendered inside `wp-admin/term.php`, **not standalone** — it requires `$tag`, `$tax`, `$taxonomy`, and `$message` to be in scope, included via `require ABSPATH . 'wp-admin/edit-tag-form.php'`. The workspace's Edit Term screen replaces both files in one component.
+- The Add form is **inline** within `edit-tags.php` (lines 438–608), not in `edit-tag-form.php`. The workspace's Add panel reproduces it without a partial split.
 - Edit-tag messages: `wp-admin/includes/edit-tag-messages.php` provides the `$message` strings used by both the Add flow's redirect and the Edit screen
 - Legacy redirect: `wp-admin/edit-tags.php?action=edit` 302s to `term.php` (as of WP 4.5)
 - List table: `wp-admin/includes/class-wp-terms-list-table.php`
@@ -499,5 +499,5 @@ For v1 of any new shell config, `iframe:edit-tags.php?taxonomy={tax}` is the exp
 - REST schemas: `https://developer.wordpress.org/rest-api/reference/categories/`, `/tags/`, and per-taxonomy at `/wp-json/wp/v2/{rest_base}`
 - `WP_Taxonomy::cap` definitions: `wp-includes/class-wp-taxonomy.php`
 - `wp_dropdown_categories()` — parent select renderer used by core's add/edit forms
-- Current shell impl: **not yet registered.** Planned `core:taxonomy` source, parameterized by taxonomy slug
-- Shell config example: `shells/developer-admin.json` currently has `iframe:edit-tags.php?taxonomy=category` as the placeholder
+- Current workspace impl: **not yet registered.** Planned `core:taxonomy` source, parameterized by taxonomy slug
+- Workspace config example: `workspaces/developer-workspace.json` currently has `iframe:edit-tags.php?taxonomy=category` as the placeholder

@@ -12,7 +12,7 @@ The non-trash status changes use a **partial saveEntityRecord** pattern: instead
 
 Four pieces of state drive the app:
 
-1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.root.comment.<variant|_default>` or the `wp_admin_workspaces_data_view_config_root_comment[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `FIELD_RENDERERS` and the `callbacks` table inside `buildActions()` map ids to behavior.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via workspace.json `settings.dataViews.root.comment.<variant|_default>` or the `wp_admin_workspaces_data_view_config_root_comment[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec only carries data; `FIELD_RENDERERS` and the `callbacks` table inside `buildActions()` map ids to behavior.
 2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. A view-state resync `useEffect` keyed on `variant` (or `screenId`) reseeds when the triple flips on the same hook instance — the `useState` initializer runs once and would otherwise carry the previous variant's perPage/sort/filters into a flipped triple.
 3. **`queryArgs`** — derived from `view` via `useMemo`. Maps DataViews concepts (filter operators, sort direction, sort field) to REST query arguments. The comments REST endpoint expects `date_gmt` as the orderby alias for the `date` column, so the mapper translates that one field explicitly.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('root', 'comment', queryArgs)`. Reading `totalItems` + `totalPages` keeps DataViews' pagination footer accurate without a separate count call.
@@ -51,7 +51,7 @@ The four bundled actions ship declarative `eligibleWhen` maps in `app.json#dataV
 
 ### Translation recipe
 
-DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and admin.json `settings.dataViews` overrides reach DataViews with raw strings in whatever locale the spec was authored in. CommentsApp recovers translation by keeping two id→`__()` tables in `index.js`:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and workspace.json `settings.dataViews` overrides reach DataViews with raw strings in whatever locale the spec was authored in. CommentsApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
 ```js
 const FIELD_LABELS = {

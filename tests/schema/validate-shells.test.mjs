@@ -3,17 +3,17 @@
  * Schema validation harness — Ajv 2020-12.
  *
  * Validates against the single schema generation:
- *   - docs/schemas/workspace.json         (admin.json workspace)
+ *   - docs/schemas/workspace.json         (workspace.json workspace)
  *   - docs/schemas/workspace-app.json     (app manifest)
  *   - docs/schemas/workspace-engine.json  (engine manifest)
  *   - docs/schemas/tokens.json        (DTCG primitives)
  *
  * For each manifest schema, runs:
- *   - Bundled-artifact sweep (shells / app manifests / engine manifests)
+ *   - Bundled-artifact sweep (workspaces / app manifests / engine manifests)
  *   - Positive fixtures (must validate clean)
  *   - Negative fixtures (must fail validation)
  *
- * Run: `node tests/schema/validate-shells.test.mjs` (also `npm run test:schema`).
+ * Run: `node tests/schema/validate-workspaces.test.mjs` (also `npm run test:schema`).
  */
 
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -103,9 +103,9 @@ function isV3ShellShape( doc ) {
 	return doc?.version === 3 || Boolean( doc?.workspace );
 }
 
-// ── admin.json / admin-app.json / admin-engine.json ─────────────────
+// ── workspace.json / admin-app.json / admin-engine.json ─────────────────
 //
-// One generation. Every bundled shell validates under admin.json; every
+// One generation. Every bundled workspace validates under workspace.json; every
 // app/engine manifest under its manifest schema; fixtures under
 // `fixtures/<key>/{positive,negative}` exercise edge cases.
 
@@ -120,11 +120,11 @@ for ( const { key, schemaFile } of manifestSchemas ) {
 	const validate = compileSchema( schemaFile );
 
 	if ( key === 'admin' ) {
-		console.log( '\n  Bundled shells:' );
+		console.log( '\n  Bundled workspaces:' );
 		for ( const file of listJson( SHELLS_DIR ) ) {
 			const doc   = readJson( join( SHELLS_DIR, file ) );
 			const valid = validate( doc );
-			ok( `shells/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
+			ok( `workspaces/${ file }`, valid, valid ? '' : formatErrors( validate.errors ) );
 		}
 	}
 

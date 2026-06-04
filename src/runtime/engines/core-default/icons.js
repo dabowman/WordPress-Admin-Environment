@@ -1,7 +1,7 @@
 /**
  * `core:default` engine icon table.
  *
- * Names match the strings authors reference from admin.json (`app.icon`,
+ * Names match the strings authors reference from workspace.json (`app.icon`,
  * nav items, command-palette commands, etc.). The engine registers this
  * table with the kernel icon registry at module-load time via
  * `registerIcons()`; apps look up icons through `resolveIcon()` without

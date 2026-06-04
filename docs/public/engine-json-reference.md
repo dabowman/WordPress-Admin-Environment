@@ -1,8 +1,8 @@
 # engine.json Reference
 
-`engine.json` is the manifest that describes a WP Admin Shell engine: the spatial + chrome layer of the shell that reads a region tree assembled by the runtime and renders it to DOM. The manifest declares which ARIA roles the engine specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm.
+`engine.json` is the manifest that describes a WP Admin Workspaces engine: the spatial + chrome layer of the workspace that reads a region tree assembled by the runtime and renders it to DOM. The manifest declares which ARIA roles the engine specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm.
 
-The default engine `core:default` ships with the shell plugin alongside `core:single-pane` and `core:desktop`. Alternative engines (plugin-contributed) implement the same contract differently and may ship their own design system, chrome conventions, and arrangement algorithm.
+The default engine `core:default` ships with the workspace plugin alongside `core:single-pane` and `core:desktop`. Alternative engines (plugin-contributed) implement the same contract differently and may ship their own design system, chrome conventions, and arrangement algorithm.
 
 Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_workspaces_register_engine()`.
 
@@ -63,7 +63,7 @@ The schema is also available in-repo at [`docs/schemas/workspace-engine.json`](.
 
 ## id
 
-Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Shell plugin, `plugin:{slug}/{name}` for plugin-contributed engines.
+Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Workspaces plugin, `plugin:{slug}/{name}` for plugin-contributed engines.
 
 Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids.
 
@@ -81,7 +81,7 @@ Engine manifest schema version (currently `3`). Bump only on breaking changes to
 
 ## title
 
-Human-readable name of the engine. Shown in shell-switcher UI, plugin install screens, and developer tooling. Translatable.
+Human-readable name of the engine. Shown in workspace-switcher UI, plugin install screens, and developer tooling. Translatable.
 
 | Property | Description                       | Type   | Default |
 |----------|-----------------------------------|--------|---------|
@@ -89,7 +89,7 @@ Human-readable name of the engine. Shown in shell-switcher UI, plugin install sc
 
 ## description
 
-Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable.
+Optional human-readable description of what the engine does and what workspace experiences it suits. One sentence to a short paragraph. Translatable.
 
 | Property    | Description                            | Type   | Default |
 |-------------|----------------------------------------|--------|---------|
@@ -130,7 +130,7 @@ The v1 core platform service vocabulary:
 | core:modal                           | Render with focus trap + ARIA modal + backdrop scrim.                                                            |
 | core:dismiss-on                      | Wire `Escape` / outside-click / navigation triggers to unmount the region.                                      |
 | core:autofocus-target                | Move focus to the named element on mount.                                                                       |
-| core:triggerable                     | Allow `admin.json#bindings` to invoke regions running this app.                                                 |
+| core:triggerable                     | Allow `workspace.json#bindings` to invoke regions running this app.                                                 |
 | core:persists-across-navigation      | Keep the region mounted across URL changes to other regions.                                                    |
 | core:dirty-state                     | Query the mounted app for unsaved-changes state.                                                                 |
 | core:block-navigation-on-dirty       | Show a confirm dialog before unmounting while the app reports dirty.                                            |
@@ -145,7 +145,7 @@ Plugin-contributed services use the `plugin:{slug}/{name}` namespace.
 
 ## templates
 
-Region-template catalog. Authors instantiate these templates from `admin.json` by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure.
+Region-template catalog. Authors instantiate these templates from `workspace.json` by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure.
 
 Template ids match `^(core:[a-z][a-z0-9-]*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$` — same namespace pattern as apps and engines. The catalog must contain at least one template (`minProperties: 1`) — an engine with no templates would be unusable. `additionalProperties: false` on both the catalog and each template body.
 
@@ -176,7 +176,7 @@ Template ids match `^(core:[a-z][a-z0-9-]*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]
 | role            | The ARIA role the resulting region carries when instantiated. Drives engine specialization. Required.                                                                          | string  | —       |
 | platform        | Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating.                                       | object  | —       |
 | default-style   | Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`).                     | object  | —       |
-| regions         | Nested child regions, addressable as `{parent}/{child}` in `admin.json`. Each child has the full template contract.                                                            | object  | —       |
+| regions         | Nested child regions, addressable as `{parent}/{child}` in `workspace.json`. Each child has the full template contract.                                                            | object  | —       |
 
 ### Region template platform requests
 
@@ -187,12 +187,12 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 | core:modal                        | Render with focus trapped, ARIA modal applied, backdrop scrim when supported.                                          | boolean | `false` |
 | core:dismiss-on                   | Array of `Escape`, `backdrop-click`, `outside-click`, `navigation`.                                                    | array   | —       |
 | core:autofocus-target             | CSS selector for the element that should receive focus on mount.                                                       | string  | —       |
-| core:triggerable                  | Region may be invoked by an `admin.json#bindings` keystroke.                                                          | boolean | `false` |
+| core:triggerable                  | Region may be invoked by an `workspace.json#bindings` keystroke.                                                          | boolean | `false` |
 | core:persists-across-navigation   | Region survives URL-driven changes to other regions.                                                                   | boolean | `false` |
 | core:dirty-state                  | Mounted app may report unsaved-changes state.                                                                          | boolean | `false` |
 | core:block-navigation-on-dirty    | Show confirmation before unmount when dirty. Requires `core:dirty-state`.                                              | boolean | `false` |
 | core:dynamic-children             | Mounted app may add / remove child regions at runtime via `useDynamicChildren(regionId)`.                              | boolean | `false` |
-| core:trigger                      | Declarative trigger hint (`{ shortcut: "Mod+K" }`). The actual binding lives in `admin.json#bindings`.                | object  | —       |
+| core:trigger                      | Declarative trigger hint (`{ shortcut: "Mod+K" }`). The actual binding lives in `workspace.json#bindings`.                | object  | —       |
 
 ## modes
 
@@ -276,7 +276,7 @@ Conventional values: `wp-chrome` (sidebar + topbar + content), `tiling-dwindle` 
 
 ## defaultRegions
 
-Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in admin.json — see [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary).
+Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in workspace.json — see [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary).
 
 ```json
 {
@@ -323,7 +323,7 @@ Optional WordPress style handle for this engine's primary CSS. Engines may rely 
 
 ## styles
 
-Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `admin.json#engine`. The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else.
+Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `workspace.json#engine`. The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else.
 
 ```json
 {
@@ -346,9 +346,9 @@ Optional list of additional CSS bundles the engine wants enqueued whenever it's 
 
 ## default-styles
 
-Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved `admin.json#styles` (`admin.json` wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules.
+Optional engine-supplied seed defaults for the workspace's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved `workspace.json#styles` (`workspace.json` wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual workspaces stop having to repeat the same theme rules.
 
-Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`). Per-region (`regions`) and per-app (`applications`) scopes are `admin.json`-only — engines don't supply install-decision metadata. `branding` is also `admin.json`-only.
+Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`). Per-region (`regions`) and per-app (`applications`) scopes are `workspace.json`-only — engines don't supply install-decision metadata. `branding` is also `workspace.json`-only.
 
 ```json
 {

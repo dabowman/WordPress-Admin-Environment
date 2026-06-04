@@ -149,7 +149,7 @@ N/A — internal data subsystem. Visible surfaces are documented in [`editor-blo
 | State | Trigger | Effect |
 |---|---|---|
 | Cold start with preload | First load of editor URL | All preload paths inlined as JSON; `core-data` resolves selectors synchronously; no fetch waterfall |
-| Cold start without preload | Shell-mounted editor that didn't run `block_editor_rest_api_preload()` | Each `useEntityRecord`/`useSelect` triggers a fetch; ~15–25 sequential requests; visible waterfall |
+| Cold start without preload | Workspace-mounted editor that didn't run `block_editor_rest_api_preload()` | Each `useEntityRecord`/`useSelect` triggers a fetch; ~15–25 sequential requests; visible waterfall |
 | Save in progress | `editor.savePost()` dispatched | `core-data` `isSavingEntityRecord` returns true; UI displays "Saving…" |
 | Save error | REST returned non-2xx | `core-data` `getLastEntitySaveError` populated; UI displays error; entity remains in `edits` state |
 | Autosave in progress | `editor.savePost({ isAutosave: true })` | Sub-state — does not block manual save |
@@ -277,15 +277,15 @@ N/A — data subsystem. UI accessibility documented in companion files.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
-- The shell does **not** preload block-editor REST paths. The native `core:simple-editor` doesn't need most of them (no patterns, no global styles, no inserter beyond 9 blocks).
+### Current workspace coverage
+- The workspace does **not** preload block-editor REST paths. The native `core:simple-editor` doesn't need most of them (no patterns, no global styles, no inserter beyond 9 blocks).
 - The iframed `core:editor` inherits core's preload by virtue of loading `wp-admin/post.php`.
 
 ### Gaps (rebuild list)
 
 | Gap | Priority | Notes |
 |---|---|---|
-| Preload all 22+ paths from `edit-form-blocks.php` | High | Without preload, native editor has cold-start fetch waterfall. Implement equivalent server-side preload when shell mounts the native editor app — or accept perf cost |
+| Preload all 22+ paths from `edit-form-blocks.php` | High | Without preload, native editor has cold-start fetch waterfall. Implement equivalent server-side preload when workspace mounts the native editor app — or accept perf cost |
 | Block-editor settings injection | High | Compose `editorSettings` from `get_block_editor_settings()` filter chain |
 | Server-registered block schemas bootstrap | High | `wp.blocks.unstable__bootstrapServerSideBlockDefinitions(...)` call |
 | Server-registered block bindings sources (6.5+) | Medium | Iterate and call `registerBlockBindingsSource()` |
@@ -301,12 +301,12 @@ N/A — data subsystem. UI accessibility documented in companion files.
 | Trash via REST DELETE (no force) | Done | `core-data` `deleteEntityRecord` |
 | Restore from revision via REST | Gap | Currently admin-post action; implement custom `wp-admin-workspaces/v1/posts/{id}/restore-revision` endpoint |
 | URL details endpoint usage (link picker) | Medium | Not strictly needed — fallback fetches from client |
-| Navigation fallback endpoint | Low | Only relevant when shell hosts a Navigation block in shell-managed content |
-| Batch endpoint for multi-entity saves | Medium | `core-data` does this automatically when multiple dirty entities are saved together; only relevant if shell explicitly bypasses batch |
+| Navigation fallback endpoint | Low | Only relevant when workspace hosts a Navigation block in workspace-managed content |
+| Batch endpoint for multi-entity saves | Medium | `core-data` does this automatically when multiple dirty entities are saved together; only relevant if workspace explicitly bypasses batch |
 | Meta-box AJAX iframe loader endpoint preserved | Medium | `wp-admin/post.php?meta-box-loader=true&meta-box-loader-nonce=…` — server-rendered HTML chunk for back-compat meta boxes; non-REST |
 
 ### Capacity check
-The full preload set adds ~80–250 KB of inlined JSON to the editor page response. This is a one-time cost and a net perf win vs. cold-start fetches — but the shell's existing pages do not currently allocate budget for it. M5's bundle/perf budget needs revisiting if/when the native block editor lands.
+The full preload set adds ~80–250 KB of inlined JSON to the editor page response. This is a one-time cost and a net perf win vs. cold-start fetches — but the workspace's existing pages do not currently allocate budget for it. M5's bundle/perf budget needs revisiting if/when the native block editor lands.
 
 ---
 

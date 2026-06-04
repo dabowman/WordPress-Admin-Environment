@@ -21,7 +21,7 @@
  *   3. **App manifest baselines**: each app's `dataView` block (including
  *      every `variants.<id>`) is injected into
  *      `settings.dataViews[kind][name][<variant>]` at the `core` origin.
- *      admin.json / site / role / user wins per-triple.
+ *      workspace.json / site / role / user wins per-triple.
  *
  * Field collections live at `settings.dataFields[<collection-id>]` (the
  * v3 home of the v2 `fieldCollections` block — same shape, renamed and
@@ -200,7 +200,7 @@ class WP_Admin_Workspaces_Data_View_Config {
 	 * Author-declared inline overlays are preserved alongside the
 	 * `_resolved` snapshot.
 	 *
-	 * @param array $resolved Resolved admin.json doc.
+	 * @param array $resolved Resolved workspace.json doc.
 	 * @return array
 	 */
 	public static function stamp_screen_data_views( $resolved ) {
@@ -621,7 +621,7 @@ class WP_Admin_Workspaces_Data_View_Config {
 	 *
 	 * Spec §13 #7: each app's `dataView` block fills the triples it
 	 * binds to only when nothing in the cascade declared them.
-	 * Declared triples are authoritative — admin.json / site / role /
+	 * Declared triples are authoritative — workspace.json / site / role /
 	 * user wins outright, no deep-merge. To extend a manifest baseline,
 	 * hook `wp_admin_workspaces_data_view_config_{$kind}_{$name}[_{$variant}]`.
 	 *
@@ -696,7 +696,7 @@ class WP_Admin_Workspaces_Data_View_Config {
 				if ( $variant_id === '' ) {
 					continue;
 				}
-				// admin.json wins per-triple — only inject when nothing
+				// workspace.json wins per-triple — only inject when nothing
 				// at this exact (kind, name, variant) was declared.
 				if ( isset( $doc['settings']['dataViews'][ $kind ][ $name ][ $variant_id ] ) ) {
 					continue;
@@ -806,7 +806,7 @@ class WP_Admin_Workspaces_Data_View_Config {
 	}
 }
 
-// Post-merge so admin.json (and downstream origins) are authoritative.
+// Post-merge so workspace.json (and downstream origins) are authoritative.
 // Priority 6 — sequenced AFTER `WP_Admin_Workspaces_Menu_Items::bind_screens` at
 // priority 5 so screens contributed by the menu-item shim are visible when
 // dataView baselines attach.

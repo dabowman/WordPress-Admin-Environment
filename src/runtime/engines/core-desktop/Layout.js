@@ -17,7 +17,7 @@
  *   wallpaper (role: presentation) — decorative gradient/canvas/widgets.
  *   workspace (role: main, core:dynamic-children) — compositor renders
  *      windows here as runtime-mutated child regions.
- *   dock (role: navigation) — desktop-dock-app reads admin.json nav and
+ *   dock (role: navigation) — desktop-dock-app reads workspace.json nav and
  *      dispatches `openWindow` to the compositor.
  *
  * WindowManagerProvider wraps the entire engine tree so the dock app

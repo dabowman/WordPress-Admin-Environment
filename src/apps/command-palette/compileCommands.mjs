@@ -27,7 +27,7 @@
  *     `/posts/new` suppresses the screen entry pointing at the same
  *     path. Path is the canonical identity.
  *   - **dedup by emitted `name`** — all palette names use the unified
- *     `core/admin-shell/palette-<id>` prefix. The id encodes the
+ *     `core/admin-workspace/palette-<id>` prefix. The id encodes the
  *     source (command id vs screen id), so the prefix collision check
  *     catches duplicate ids across sources too (a screen whose id
  *     matches a command id wins for the command — first-write wins).
@@ -68,7 +68,7 @@ export function compileCommands( { commands, screens, goToLabel } ) {
 			if ( ! hasInvoke && ! hasNavigate ) {
 				continue;
 			}
-			const name = `core/admin-shell/palette-${ encodeURIComponent(
+			const name = `core/admin-workspace/palette-${ encodeURIComponent(
 				entry.id
 			) }`;
 			if ( seenNames.has( name ) ) {
@@ -121,7 +121,7 @@ export function compileCommands( { commands, screens, goToLabel } ) {
 			if ( seenPaths.has( path ) ) {
 				continue;
 			}
-			const name = `core/admin-shell/palette-${ encodeURIComponent(
+			const name = `core/admin-workspace/palette-${ encodeURIComponent(
 				screenId
 			) }`;
 			if ( seenNames.has( name ) ) {

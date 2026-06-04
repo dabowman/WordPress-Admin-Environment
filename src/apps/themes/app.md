@@ -12,7 +12,7 @@ Activation runs through an out-of-band custom endpoint (`POST /wp-admin-workspac
 
 Four pieces of state drive the app:
 
-1. **`dataView`** — pulled via `useDataView(screenId)`. Carries the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Sites and plugins override via admin.json `settings.dataViews.root.theme.<variant|_default>` or the `wp_admin_workspaces_data_view_config_root_theme[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec carries data only; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Carries the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Sites and plugins override via workspace.json `settings.dataViews.root.theme.<variant|_default>` or the `wp_admin_workspaces_data_view_config_root_theme[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec carries data only; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
 2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Owned by the app; DataViews calls `onChangeView(next)` on every user-driven change.
 3. **`themes`** — the raw entity records from `useEntityRecords('root', 'theme', { context: 'edit', status: 'active,inactive' })`.
 4. **`data`** — a `useMemo` projection of `themes` into the flat row shape DataViews wants (`{ id, name, screenshot, status, description, version, author, theme_uri, rawRecord }`). `id` is the stylesheet (themes are keyed by slug, not numeric id).
@@ -40,7 +40,7 @@ The renderer tables (`buildFieldRenderers`, `buildActions`, action callbacks key
 
 ### Translation recipe
 
-DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and admin.json overrides reach DataViews with raw strings in whatever locale the spec was authored in. ThemesApp recovers translation by keeping two id→`__()` tables in `index.js`:
+DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — `app.json#dataView` and workspace.json overrides reach DataViews with raw strings in whatever locale the spec was authored in. ThemesApp recovers translation by keeping two id→`__()` tables in `index.js`:
 
 ```js
 const FIELD_LABELS = {
@@ -75,7 +75,7 @@ For a non-WPDS / non-DataViews rebuild:
 
 - **List/grid component** with media-aware grid cards + sortable table fallback. MUI's `DataGrid` works for the table half; the grid half is a flex/grid layout + media field renderer.
 - **REST/core-data adapter** that exposes `root/theme` records with `{ context: 'edit', status: 'active,inactive' }`.
-- **Custom theme-switch endpoint.** The shell ships `WP_Admin_Workspaces_Themes_REST` (`POST /wp-admin-workspaces/v1/activate-theme`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`). Rebuilds need their own equivalent server-side hook — WordPress core REST exposes no theme-switch operation (upstream parity #143).
+- **Custom theme-switch endpoint.** The workspace ships `WP_Admin_Workspaces_Themes_REST` (`POST /wp-admin-workspaces/v1/activate-theme`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`). Rebuilds need their own equivalent server-side hook — WordPress core REST exposes no theme-switch operation (upstream parity #143).
 - **Action modal** that DataViews-style accepts `{ items, closeModal, onActionPerformed }`. Any modal primitive works; the contract is open-on-invoke, await close.
 
 Two patterns to preserve:
@@ -89,7 +89,7 @@ Two patterns to preserve:
 - No theme preview (live preview via Customizer or block-theme preview).
 - Screenshots are loaded directly from the theme record; no resizing or `srcset`.
 - Description truncation is hard 140 chars in the grid card. Full description lives in the details modal.
-- Activation runs entirely through the shell REST endpoint (`WP_Admin_Workspaces_Themes_REST`); apiFetch sends the REST nonce automatically. On failure the app surfaces an error snackbar instead of navigating away, so the user keeps their place in the shell.
+- Activation runs entirely through the workspace REST endpoint (`WP_Admin_Workspaces_Themes_REST`); apiFetch sends the REST nonce automatically. On failure the app surfaces an error snackbar instead of navigating away, so the user keeps their place in the workspace.
 - DataViews' built-in client-side pagination is used (the full theme list returns in one request); the `paginationInfo` is hard-coded to `totalPages: 1` because themes-per-install rarely exceeds the page size.
 
 Parity gaps versus `docs/screens/themes.md` not surfaced in the v2 app:

@@ -7,7 +7,7 @@
 - `wp-admin/network/plugin-editor.php` (delegates to `wp-admin/plugin-editor.php`)
 - `wp-admin/includes/class-wp-plugins-list-table.php` (same class, network-aware)
 
-**Current shell coverage:** None.
+**Current workspace coverage:** None.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_network_plugins`.
 
@@ -60,7 +60,7 @@ Jobs to be done:
 
 **Network-only plugins:** plugins with `Network: true` in their header (or that declare `Site Wide Only: true` legacy variant) can ONLY be activated network-wide. Their per-site activate links are suppressed.
 
-**Permission-denied state:** `wp_die()` 403. Shell renders no-access state.
+**Permission-denied state:** `wp_die()` 403. Workspace renders no-access state.
 
 ---
 
@@ -285,7 +285,7 @@ Original wp-admin URL params (list):
 - `?action={activate|deactivate|update-selected|delete-selected|enable-auto-update|disable-auto-update}&plugin={plugin}` (single-site equivalent)
 - Network-context handlers post to `network/plugins.php?action=...`
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-plugins?status=inactive&s=akismet
 #/network-plugins/install
@@ -365,7 +365,7 @@ Destructive actions: confirmation interstitial; no undo (the data on disk is gon
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None. Single-site `core:plugins` is also not yet built.
 
 ### Gaps vs. this spec

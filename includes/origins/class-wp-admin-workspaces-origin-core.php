@@ -4,7 +4,7 @@
  *
  * Provides the bundled defaults baseline for the cascade resolver. The
  * loader is just `file_get_contents` + `json_decode` plus the empty
- * fallback returned when the shell file is missing or malformed.
+ * fallback returned when the workspace file is missing or malformed.
  *
  * @package WP_Admin_Workspaces
  */
@@ -16,17 +16,17 @@ class WP_Admin_Workspaces_Origin_Core {
 	const ENGINE_ID = 'core:default';
 
 	/**
-	 * Slug of the shipped default baseline. This is the admin.json that
+	 * Slug of the shipped default baseline. This is the workspace.json that
 	 * fills the cascade `core` slot when a `wp-content/workspace.json`
 	 * override file is present — the file then layers over it as a
-	 * partial delta (theme.json model). The file still lives in `shells/`
+	 * partial delta (theme.json model). The file still lives in `workspaces/`
 	 * for back-compat (the option-driven selector + the shape-test sweep
 	 * still reference it there); only its cascade ROLE changed.
 	 */
 	const BASELINE_SLUG = 'wp-admin-default';
 
 	/**
-	 * Load the shipped default baseline (`shells/wp-admin-default.json`).
+	 * Load the shipped default baseline (`workspaces/wp-admin-default.json`).
 	 * Falls back to {@see empty_doc()} when the file is missing/malformed.
 	 *
 	 * @return array
@@ -49,7 +49,7 @@ class WP_Admin_Workspaces_Origin_Core {
 	}
 
 	/**
-	 * Minimal v3 admin.json doc returned when the shell file is missing
+	 * Minimal v3 workspace.json doc returned when the workspace file is missing
 	 * or malformed. Carries just what the kernel needs to render a
 	 * non-empty fallback: an engine, a default screen, and one screen at
 	 * `/`. The kernel synthesizes the region tree + routes from these.

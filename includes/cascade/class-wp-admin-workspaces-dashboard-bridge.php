@@ -5,10 +5,10 @@
  * The classic wp-admin dashboard is a runtime structure with no clean REST
  * representation: core + plugins register meta-boxes into
  * `$GLOBALS['wp_meta_boxes']['dashboard']` at request time (via
- * `wp_add_dashboard_widget()` / `add_meta_box()`). The shell HARVESTS those
+ * `wp_add_dashboard_widget()` / `add_meta_box()`). The workspace HARVESTS those
  * meta-boxes server-side and folds the un-ported PLUGIN widgets into the
  * dashboard-host grid as tiles, so a third-party dashboard widget surfaces in
- * the workspace without anyone writing shell config.
+ * the workspace without anyone writing workspace config.
  *
  * This is the dashboard sibling of the #128 admin-bar / notices chrome
  * harvest — the runtime-harvest pattern (skip-core-first, ingest-rest, expose
@@ -23,7 +23,7 @@
  *      request and only when the dashboard API is loadable).
  *   2. Walks `$wp_meta_boxes['dashboard']` across every context
  *      (`normal` / `side` / `column3` / `column4`) and priority bucket.
- *   3. SKIPS the core widgets the shell already ships as native tiles after
+ *   3. SKIPS the core widgets the workspace already ships as native tiles after
  *      #133 (`dashboard_right_now`, `dashboard_activity`,
  *      `dashboard_quick_press`, the recent-drafts box, `dashboard_primary` /
  *      `dashboard_php_nag`). Extensible via the
@@ -45,7 +45,7 @@
  * space (the tile). The kernel never learns about the bridge.
  *
  * **Trust.** Captured widget HTML is admin-context — the same author-trust
- * boundary at which classic wp-admin renders it. The shell only renders it
+ * boundary at which classic wp-admin renders it. The workspace only renders it
  * inside the already-admin-gated workspace. Identical exposure to the #128
  * notices buffer (see that class' awareness note).
  *
@@ -79,7 +79,7 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 	private static $CONTEXTS = array( 'normal', 'side', 'column3', 'column4' );
 
 	/**
-	 * Core dashboard widget ids the shell ships as NATIVE tiles after #133,
+	 * Core dashboard widget ids the workspace ships as NATIVE tiles after #133,
 	 * so the bridge skips them to avoid double-rendering. Extensible via the
 	 * `wp_admin_workspaces_dashboard_core_widget_ids` filter.
 	 *
@@ -90,11 +90,11 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 	 *   - `dashboard_recent_drafts` → folded into the quick-draft tile; also
 	 *     registered standalone on some installs.
 	 *   - `dashboard_primary` / `dashboard_secondary` → WordPress events/news
-	 *     feed; shell omits.
-	 *   - `dashboard_php_nag`       → PHP-version nag; surfaced via the shell's
+	 *     feed; workspace omits.
+	 *   - `dashboard_php_nag`       → PHP-version nag; surfaced via the workspace's
 	 *     own notices / site-health surfaces.
 	 *   - `dashboard_browser_nag`   → legacy browser nag; not mirrored.
-	 *   - `welcome_panel`           → dashboard welcome panel; shell greeting
+	 *   - `welcome_panel`           → dashboard welcome panel; workspace greeting
 	 *     replaces it.
 	 *
 	 * @var string[]
@@ -147,7 +147,7 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 	}
 
 	/**
-	 * Is this dashboard widget id one the shell already renders first-class?
+	 * Is this dashboard widget id one the workspace already renders first-class?
 	 *
 	 * @param string $id Meta-box id.
 	 * @return bool
@@ -167,14 +167,14 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 	 *
 	 * **Screen context.** `wp_add_dashboard_widget()` → `add_meta_box()` files
 	 * each widget under `$wp_meta_boxes[ get_current_screen()->id ]`. In every
-	 * context this bridge runs the current screen is NOT `dashboard`: the shell
+	 * context this bridge runs the current screen is NOT `dashboard`: the workspace
 	 * render sets `wp-admin-workspaces` (see `WP_Admin_Workspaces_Hijack`), and a REST
 	 * request has no admin screen at all (`get_current_screen()` is null, so
 	 * `add_meta_box()` hits its `! isset( $screen->id )` guard and registers
 	 * nothing). Either way `$wp_meta_boxes['dashboard']` stays empty and the
 	 * harvest finds nothing. So we FORCE the dashboard screen around the
 	 * `wp_dashboard_setup()` call, then RESTORE the prior screen so the
-	 * surrounding shell-render / REST context isn't corrupted.
+	 * surrounding workspace-render / REST context isn't corrupted.
 	 *
 	 * Idempotent — guarded by `$setup_done`. `wp_dashboard_setup()` itself
 	 * is safe to call twice (it re-registers into the same buckets), but the
@@ -222,7 +222,7 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 		try {
 			wp_dashboard_setup();
 		} finally {
-			// Restore the prior screen so the shell render / REST request that
+			// Restore the prior screen so the workspace render / REST request that
 			// called us isn't left pointing at `dashboard`. A null prior screen
 			// (REST) is restored by passing the WP_Screen-less sentinel; passing
 			// the prior screen object is the documented round-trip.
@@ -244,7 +244,7 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
 
 	/**
 	 * Walk `$wp_meta_boxes['dashboard']` and return the surviving PLUGIN
-	 * widgets as bridge records, skipping the core widgets the shell ships
+	 * widgets as bridge records, skipping the core widgets the workspace ships
 	 * native.
 	 *
 	 * Record shape (one per surviving widget):
@@ -404,7 +404,7 @@ class WP_Admin_Workspaces_Dashboard_Bridge {
  * dashboard widget into `screens[dashboard-widgets].apps[]`.
  *
  * Priority 6 (after the dashboard-widgets registry at priority 5 + the menu
- * bridge / dataView baselines) so author-registered tiles + admin.json
+ * bridge / dataView baselines) so author-registered tiles + workspace.json
  * declarations win an entry-id collision via the cascade's id-keyed array
  * merge — the bridge only appends ids no one else already claimed.
  */

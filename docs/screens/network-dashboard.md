@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/network/index.php` + `wp_network_dashboard_right_now()` in `wp-admin/includes/dashboard.php`
-**Current shell coverage:** None — Network Admin is not yet exposed by the shell.
+**Current workspace coverage:** None — Network Admin is not yet exposed by the workspace.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_network`.
 
@@ -50,9 +50,9 @@ Jobs to be done:
 | See Updates submenu | `update_core` OR `update_plugins` OR `update_themes` OR `update_languages` | `wp-admin/network/menu.php` lines 20–28 |
 | See Upgrade Network submenu | `upgrade_network` | `wp-admin/network/menu.php` line 51 |
 
-**Permission-denied state:** core does `wp_die(__('Sorry, you are not allowed to access this page.'), 403)` if `manage_network` is missing. Shell should render a "no access" empty state and not blank.
+**Permission-denied state:** core does `wp_die(__('Sorry, you are not allowed to access this page.'), 403)` if `manage_network` is missing. Workspace should render a "no access" empty state and not blank.
 
-**Multisite gating:** the entire network admin namespace requires `is_multisite()`. The shell should not register network-admin sources unless multisite is detected at config-load time.
+**Multisite gating:** the entire network admin namespace requires `is_multisite()`. The workspace should not register network-admin sources unless multisite is detected at config-load time.
 
 ---
 
@@ -96,7 +96,7 @@ Pulls and caches RSS feeds for the upcoming events feed and the WordPress.org ne
 | PHP nag | `wp_check_php_version()` is admin-only | GAP |
 | News feed | Direct fetch of feed XML (no REST proxy) | N/A — fetched client-side or proxied |
 
-The shell needs a network-scoped data endpoint or a privileged option-read fallback to render the "Right Now" widget faithfully. Document as a known gap.
+The workspace needs a network-scoped data endpoint or a privileged option-read fallback to render the "Right Now" widget faithfully. Document as a known gap.
 
 ---
 
@@ -124,7 +124,7 @@ The shell needs a network-scoped data endpoint or a privileged option-read fallb
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Drag-to-reorder column layout is a single-site dashboard feature (`postboxes.js`). Re-implementation in the shell is optional; v1 may render a fixed two-column responsive layout.
+Drag-to-reorder column layout is a single-site dashboard feature (`postboxes.js`). Re-implementation in the workspace is optional; v1 may render a fixed two-column responsive layout.
 
 ---
 
@@ -194,7 +194,7 @@ Original wp-admin URL: `/wp-admin/network/index.php` — no query params on the 
 - `/wp-admin/network/sites.php?s={query}`
 - `/wp-admin/network/users.php?s={query}`
 
-Recommended shell hash: `#/network-dashboard` (no query state on the dashboard itself).
+Recommended workspace hash: `#/network-dashboard` (no query state on the dashboard itself).
 
 ---
 
@@ -235,7 +235,7 @@ The dashboard has no destructive actions, so no snackbar/undo patterns.
 | Key | Action |
 |---|---|
 | `Tab` | Move focus across widget actions and search inputs |
-| `/` | Focus a quick-find search if the shell wraps the page (shell-level; core doesn't bind this on network dashboard) |
+| `/` | Focus a quick-find search if the workspace wraps the page (workspace-level; core doesn't bind this on network dashboard) |
 | `Enter` (in search input) | Submit the form |
 
 ### ARIA & focus
@@ -255,30 +255,30 @@ The dashboard has no destructive actions, so no snackbar/undo patterns.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `wp_network_dashboard_setup` (action) | Add/remove network dashboard widgets | Replace with shell-level `network-dashboard.widgets` slot |
-| `wpmuadminresult` (action, inside Right Now) | Inject content above the search forms | Drop — no clean shell equivalent; rare |
+| `wp_network_dashboard_setup` (action) | Add/remove network dashboard widgets | Replace with workspace-level `network-dashboard.widgets` slot |
+| `wpmuadminresult` (action, inside Right Now) | Inject content above the search forms | Drop — no clean workspace equivalent; rare |
 | `mu_rightnow_end` (action) | Append to Right Now widget | Replace with `network-dashboard.right-now.after` slot |
 | `mu_activity_box_end` (action) | Same position as above (legacy alias) | Drop — duplicate of `mu_rightnow_end` |
-| `dashboard_primary_link` / `dashboard_primary_feed` / `dashboard_primary_title` (filters) | Override the news feed source | Replace with shell-level news widget config |
+| `dashboard_primary_link` / `dashboard_primary_feed` / `dashboard_primary_title` (filters) | Override the news feed source | Replace with workspace-level news widget config |
 
-Plugin compatibility: third-party network dashboard widgets registered via `wp_add_dashboard_widget()` inside the `wp_network_dashboard_setup` action will not render in the shell unless the shell explicitly bridges to that hook. Document.
+Plugin compatibility: third-party network dashboard widgets registered via `wp_add_dashboard_widget()` inside the `wp_network_dashboard_setup` action will not render in the workspace unless the workspace explicitly bridges to that hook. Document.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None. Network admin is not yet exposed.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Multisite detection at config load | High | Shell must skip `network-*` source registration when `is_multisite()` is false |
+| Multisite detection at config load | High | Workspace must skip `network-*` source registration when `is_multisite()` is false |
 | `network-dashboard` source | High | Top-level app for network admin landing |
-| Site count / user count data | High | No REST endpoint; need shell-side option-read endpoint or `_get_blog_count` / `_get_user_count` proxy |
+| Site count / user count data | High | No REST endpoint; need workspace-side option-read endpoint or `_get_blog_count` / `_get_user_count` proxy |
 | News feed widget | Medium | Reuses single-site `dashboard-home` widget — share implementation |
 | Browser/PHP nag widgets | Low | Optional — can be deferred |
-| Two-column responsive grid | Medium | Shell can render simpler layout; drag-reorder out of scope for v1 |
+| Two-column responsive grid | Medium | Workspace can render simpler layout; drag-reorder out of scope for v1 |
 
 ### Acceptable interim
 `iframe:network/index.php` with chrome hidden is acceptable as a v1 escape hatch.

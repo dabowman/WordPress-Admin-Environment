@@ -7,7 +7,7 @@
 - `wp-admin/network/user-edit.php` (delegates to `wp-admin/user-edit.php`)
 - `wp-admin/includes/class-wp-ms-users-list-table.php`
 
-**Current shell coverage:** None — `core:users` exists for single-site only.
+**Current workspace coverage:** None — `core:users` exists for single-site only.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_network_users`.
 
@@ -27,7 +27,7 @@ This spec describes the **semantic surface** of the network-level users screen, 
 | Parent app | None — top-level network app |
 | Sub-screens | List (default), Add User, Edit User, Delete-with-reassign confirmation |
 
-The shell's existing `core:users` (DataViews + bulk delete with reassign) is single-site-scoped (`/wp/v2/users` against the current blog). The network-users screen pierces per-blog scoping by querying with `blog_id => 0`.
+The workspace's existing `core:users` (DataViews + bulk delete with reassign) is single-site-scoped (`/wp/v2/users` against the current blog). The network-users screen pierces per-blog scoping by querying with `blog_id => 0`.
 
 ---
 
@@ -60,7 +60,7 @@ Jobs to be done:
 
 **Super-admin protection:** spamming a super admin is rejected with `wp_die()`: "Warning! User cannot be modified. The user {login} is a network administrator."
 
-**Permission-denied state:** core `wp_die()` 403. Shell renders no-access empty state.
+**Permission-denied state:** core `wp_die()` 403. Workspace renders no-access empty state.
 
 ---
 
@@ -86,7 +86,7 @@ Jobs to be done:
 | `blogs` | derived from `get_blogs_of_user($id, true)` | array of `WP_Site` | per-row column rendering one row per site with role badge |
 | `spam` | `meta.spam` (1 = spam) | bool | bulk-action target |
 
-Note: `roles[]` on `/wp/v2/users` returns the **current request blog**'s roles for that user. To list per-site roles in the `blogs` column, the shell needs to iterate `get_blogs_of_user()` and call `get_userdata($user_id)` switched into each site — there is no REST surface for this.
+Note: `roles[]` on `/wp/v2/users` returns the **current request blog**'s roles for that user. To list per-site roles in the `blogs` column, the workspace needs to iterate `get_blogs_of_user()` and call `get_userdata($user_id)` switched into each site — there is no REST surface for this.
 
 ### Status filter facets
 Source: hard-coded — only "All" and "Super Admin" tabs. Counts: `get_user_count()` (network total) and `count(get_super_admins())`.
@@ -136,7 +136,7 @@ Action: `users.php?action=dodelete`, nonce `ms-users-delete`.
 |---|---|---|
 | List network-wide users | `GET /wp/v2/users?context=edit` | **Partial** — works, but `blog_id=0` semantics aren't expressible. Single-blog scoping leaks. |
 | Get a user | `GET /wp/v2/users/{id}?context=edit` | Works. |
-| Create user | `POST /wp/v2/users` (cap: `create_users`) | **Partial** — creates network user, but doesn't run `wpmu_validate_user_signup()` (banlist / blocked-domains / illegal-names checks). Shell needs to either run validation client-side or call a custom endpoint. |
+| Create user | `POST /wp/v2/users` (cap: `create_users`) | **Partial** — creates network user, but doesn't run `wpmu_validate_user_signup()` (banlist / blocked-domains / illegal-names checks). Workspace needs to either run validation client-side or call a custom endpoint. |
 | Update user | `PUT /wp/v2/users/{id}` | Works for basic fields. Does **not** expose Super Admin toggle. |
 | Toggle Super Admin | None | **GAP** — `grant_super_admin()` / `revoke_super_admin()` are PHP-only. Need custom endpoint. |
 | Mark spam | None | **GAP** — `wp_update_user()` with `spam=1` works in PHP, but the REST `update_item_permissions_check` does not whitelist the `spam` meta. |
@@ -314,7 +314,7 @@ Original wp-admin URL params:
 - Edit: `/user-edit.php?user_id={n}`
 - Delete confirm: `/users.php?action=deleteuser&id={n}` or POST to `/users.php?action=allusers` with `action=delete`
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-users?role=super&s=alice&page=2
 #/network-users/add
@@ -387,19 +387,19 @@ No undo for delete (content is reassigned or destroyed; not reversible).
 | `network_user_new_created_user` (action) | After user created | Event bus |
 | `propagate_network_user_spam_to_blogs` (filter) | Cascade spam → blogs | Document; opt-in toggle |
 | `users_list_table_query_args` (filter) | Modify `WP_User_Query` args | Replace with `dataSource.queryArgs` |
-| `handle_network_bulk_actions-{screen}` | Custom bulk actions | Replace with shell action registry |
+| `handle_network_bulk_actions-{screen}` | Custom bulk actions | Replace with workspace action registry |
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - Single-site `core:users` exists. Network-scoped users is **not** covered.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Network-scoped user list (`blog_id=0`) | High | REST `/wp/v2/users` doesn't expose this; need custom endpoint or shell-side multi-blog assembly |
+| Network-scoped user list (`blog_id=0`) | High | REST `/wp/v2/users` doesn't expose this; need custom endpoint or workspace-side multi-blog assembly |
 | Super Admin column / facet | High | Read-only column trivial; mutation needs custom endpoint |
 | Super Admin toggle on profile | High | `grant_super_admin` / `revoke_super_admin` not REST |
 | Spam toggle | Medium | Custom endpoint or extend `/wp/v2/users` |
@@ -434,4 +434,4 @@ No undo for delete (content is reassigned or destroyed; not reversible).
 - PHP API: `wpmu_create_user`, `wpmu_validate_user_signup`, `wpmu_delete_user`, `grant_super_admin`, `revoke_super_admin`, `is_super_admin`, `get_super_admins`, `add_user_to_blog`, `remove_user_from_blog`, `get_blogs_of_user`
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-users-controller.php` (single-site scoping)
 - Single-site profile screen (related): `wp-admin/profile.php` / `wp-admin/user-edit.php`
-- Single-site users spec (related): consult shell's existing `core:users` source
+- Single-site users spec (related): consult workspace's existing `core:users` source

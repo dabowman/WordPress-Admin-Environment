@@ -7,7 +7,7 @@ import {
 
 /**
  * Runtime kernel context — exposes the active registry, the resolved
- * shell config, the active engine source, and the dynamic-children store
+ * workspace config, the active engine source, and the dynamic-children store
  * to every region and app source.
  *
  * Regions need the registry to look up app sources by id when they mount
@@ -22,7 +22,7 @@ import {
  *
  * @typedef {Object} KernelContextValue
  * @property {Object} registry               - The source registry instance.
- * @property {Object} config                 - The resolved (post-cascade in M2) shell config.
+ * @property {Object} config                 - The resolved (post-cascade in M2) workspace config.
  * @property {Object} [engineSource]         - The active engine source from the registry.
  * @property {Object} [dynamicChildrenStore] - createDynamicChildrenStore() instance.
  */

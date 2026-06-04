@@ -11,10 +11,10 @@ import { useKernel } from '../../runtime/kernel-context';
  * region's URL slot.
  *
  * Spec §6.4 + V2.M4 task 2: regions coordinate via URL state, not via
- * a shell-level selection bus. PreviewPaneApp reads the routes block
+ * a workspace-level selection bus. PreviewPaneApp reads the routes block
  * + the URL slot value at `config.follow` (default `_self`) and maps
  * the matched route's `config` to a `core-data` entity, then renders
- * a JSON preview. Designed for shells whose `detail` region (or any
+ * a JSON preview. Designed for workspaces whose `detail` region (or any
  * routable region) holds an editor-style app and whose `preview`
  * region wants to mirror what the editor is editing.
  *

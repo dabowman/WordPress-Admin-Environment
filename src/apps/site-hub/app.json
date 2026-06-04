@@ -33,7 +33,7 @@
 				{
 					"source": "config.styles.branding",
 					"via": "kernel-config",
-					"purpose": "Branded site icon — branding object read from the resolved admin.json tree via `useKernel()` and passed to SiteIcon helper. Takes precedence over the REST `site_icon_url`."
+					"purpose": "Branded site icon — branding object read from the resolved workspace.json tree via `useKernel()` and passed to SiteIcon helper. Takes precedence over the REST `site_icon_url`."
 				},
 				{
 					"source": "window.wpAdminWorkspaces.siteName",
@@ -65,7 +65,7 @@
 		"a11y": {
 			"focus-management": "All three controls (icon, title, palette toggle) are native focusable elements.",
 			"keyboard": [
-				{ "keys": "Mod+K", "action": "Surfaced as the keyboard shortcut hint on the palette button (`displayShortcut.primary('k')`). The actual binding is shell-level — declared in admin.json's `bindings` block + wired through `useCommandLoader`." }
+				{ "keys": "Mod+K", "action": "Surfaced as the keyboard shortcut hint on the palette button (`displayShortcut.primary('k')`). The actual binding is workspace-level — declared in workspace.json's `bindings` block + wired through `useCommandLoader`." }
 			],
 			"screen-reader": "Site icon button has `aria-label=\"Go to the Dashboard\"`. Title button includes a visually-hidden `(opens in a new tab)` hint inside the link. Palette button has `aria-label=\"Open command palette\"` + `ariaKeyShortcut=\"Meta+K\"`."
 		},

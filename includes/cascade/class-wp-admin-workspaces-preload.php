@@ -8,7 +8,7 @@
  * Spec §13 #9. Schema: `docs/schemas/admin-v2.json#preload` +
  * `#/$defs/preloadEntry`.
  *
- * Cascade semantics differ from the rest of admin.json: the resolved
+ * Cascade semantics differ from the rest of workspace.json: the resolved
  * preload list is the *concatenation* of every origin's `preload[]`,
  * not a replacement. Site/role/user authors append their own paths;
  * the plugin/site/role/user precedence ladder doesn't apply here
@@ -16,7 +16,7 @@
  * inert cache primers — extra entries cost a server round-trip but
  * never change behavior). Duplicates by exact `path+method` are
  * dropped before serialization so a site author repeating a path the
- * plugin shell already declared doesn't double-fetch.
+ * plugin workspace already declared doesn't double-fetch.
  *
  * Per-origin contribution rides the existing
  * `wp_admin_workspaces_data_{origin}` filters — no new filter added.
@@ -173,7 +173,7 @@ class WP_Admin_Workspaces_Preload {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					/* translators: 1: preload path, 2: error message */
 					$msg = sprintf(
-						__( 'WP Admin Shell preload skipped %1$s: %2$s', 'wp-admin-workspaces' ),
+						__( 'WP Admin Workspaces preload skipped %1$s: %2$s', 'wp-admin-workspaces' ),
 						$path,
 						$e->getMessage()
 					);

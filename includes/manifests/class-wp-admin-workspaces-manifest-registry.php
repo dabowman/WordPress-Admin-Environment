@@ -6,8 +6,8 @@
  * for the current request. Plugins populate the registry by either:
  *
  *   1. Convention-path discovery — placing `apps/<name>/app.json` or
- *      `engines/<name>/engine.json` under their plugin root. The shell
- *      auto-scans on `init` (priority 8, before main shell init).
+ *      `engines/<name>/engine.json` under their plugin root. The workspace
+ *      auto-scans on `init` (priority 8, before main workspace init).
  *
  *   2. Programmatic registration — calling
  *      `wp_admin_workspaces_register_app( $manifest_or_path )` or
@@ -118,8 +118,8 @@ class WP_Admin_Workspaces_Manifest_Registry {
 	 * manifest's `templates[]` map (`role`, `platform`, `default-style`,
 	 * optional nested `regions`).
 	 *
-	 * Template ids are namespaced: `core:*` is reserved for shell-shipped
-	 * templates, plugins use `plugin:{slug}/{name}`. The shell does not
+	 * Template ids are namespaced: `core:*` is reserved for workspace-shipped
+	 * templates, plugins use `plugin:{slug}/{name}`. The workspace does not
 	 * enforce that constraint here — the engine's renderer is what
 	 * resolves a template id, so id conflicts surface as "template not
 	 * found" rather than registration errors. Authors should namespace

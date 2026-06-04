@@ -3,7 +3,7 @@
 	"id": "core:iframe-fallback",
 	"version": 1,
 	"title": "Iframe fallback",
-	"description": "Wraps any wp-admin URL inside the shell. Chrome hidden via injected CSS.",
+	"description": "Wraps any wp-admin URL inside the workspace. Chrome hidden via injected CSS.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"config-schema": {
@@ -29,7 +29,7 @@
 		"icon": "external"
 	},
 	"documentation": {
-		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The shell's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
+		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The workspace's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
 		"data": {
 			"reads": [
 				{
@@ -63,7 +63,7 @@
 			}
 		],
 		"a11y": {
-			"focus-management": "Iframe owns its own focus tree; the shell does not trap."
+			"focus-management": "Iframe owns its own focus tree; the workspace does not trap."
 		},
 		"constraints": [
 			{

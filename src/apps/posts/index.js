@@ -31,7 +31,7 @@ import ViewTabs from '../_shared/dataviews/ViewTabs';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
- * Routes are bundled in shells that surface PostsApp + the native
+ * Routes are bundled in workspaces that surface PostsApp + the native
  * editor (e.g. single-pane-demo). The `post` / `page` post types get their own pluralized
  * paths (`/posts/{id}/edit`, `/pages/{id}/edit`) — site-editor post
  * types (`wp_template`, `wp_block`, `wp_navigation`) need their own

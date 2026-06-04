@@ -118,7 +118,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 
 			if ( type === 'wp-admin-workspaces-admin-link' ) {
 				// Open the admin link as a new iframe window inside the
-				// shell so the user stays in the desktop metaphor.
+				// workspace so the user stays in the desktop metaphor.
 				const url = typeof data.url === 'string' ? data.url : '';
 				if ( ! url ) {
 					return;
@@ -139,7 +139,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 			if ( type === 'wp-admin-workspaces-external-link' ) {
 				// External destinations leave the iframe sandbox — hand
 				// to the browser. Future: spawn a generic-iframe window
-				// so the user stays in-shell. For MVP, native new tab.
+				// so the user stays in-workspace. For MVP, native new tab.
 				const url = typeof data.url === 'string' ? data.url : '';
 				if ( url ) {
 					window.open( url, '_blank', 'noopener,noreferrer' );

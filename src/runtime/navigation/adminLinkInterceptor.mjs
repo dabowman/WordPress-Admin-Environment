@@ -181,7 +181,7 @@ export function classifyAdminLink( {
 	if ( ! resolvedHref ) {
 		return { action: 'pass' };
 	}
-	// In-shell hash navigation — the router owns it.
+	// In-workspace hash navigation — the router owns it.
 	if ( typeof rawHref === 'string' && rawHref.trim().startsWith( '#' ) ) {
 		return { action: 'pass' };
 	}

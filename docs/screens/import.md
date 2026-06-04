@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/import.php` + `wp-admin/includes/import.php` + `wp-admin/includes/class-wp-importer.php`
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the original via `iframe:import.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:import.php`.
 
 This spec describes the **semantic surface** of the WordPress Import screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -21,7 +21,7 @@ This spec describes the **semantic surface** of the WordPress Import screen so a
 
 The screen itself is a directory of importers. Each row is either an installed importer (link runs it) or an "available" importer that the user can install on demand (link installs the plugin from `wordpress.org/plugins`).
 
-The actual import workflow lives inside each importer plugin's own UI. Most installed importers (e.g. WordPress Importer) are non-block, non-React, and wp-admin-styled. The shell's relationship to importer plugin UIs is: "iframe with chrome hidden" indefinitely.
+The actual import workflow lives inside each importer plugin's own UI. Most installed importers (e.g. WordPress Importer) are non-block, non-React, and wp-admin-styled. The workspace's relationship to importer plugin UIs is: "iframe with chrome hidden" indefinitely.
 
 ---
 
@@ -50,7 +50,7 @@ Jobs to be done:
 
 **Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to import content into this site.' )` for the screen itself. Per-importer, the plugin handles its own gates.
 
-**Multisite:** `is_main_site()` check — installation of importer plugins is restricted to the network's main site. Sub-sites see "This importer is not installed. Please install importers from the main site." Shell rebuild must surface the same constraint.
+**Multisite:** `is_main_site()` check — installation of importer plugins is restricted to the network's main site. Sub-sites see "This importer is not installed. Please install importers from the main site." Workspace rebuild must surface the same constraint.
 
 ---
 
@@ -84,7 +84,7 @@ Two sources merged client-side:
    ]
    ```
 
-`import.php` merges both: any popular importer not already installed gets added with an `install` key. Shell rebuilds replicate this merge.
+`import.php` merges both: any popular importer not already installed gets added with an `install` key. Workspace rebuilds replicate this merge.
 
 ### Built-in importers
 
@@ -116,7 +116,7 @@ Each importer plugin defines its own data:
 - Blogger Importer: OAuth flow with Google.
 - RSS Importer: RSS feed URL or file upload.
 
-These run in their own pages at `admin.php?import={id}`. Shell embeds via iframe with chrome hidden.
+These run in their own pages at `admin.php?import={id}`. Workspace embeds via iframe with chrome hidden.
 
 ---
 
@@ -150,7 +150,7 @@ The table has **no** column headers visually, but semantically:
 - Column 1: importer title + action link.
 - Column 2: description.
 
-Plugin install actions surface a thickbox modal during installation with progress streaming. Shell rebuild can replace the modal with a side drawer or inline status row.
+Plugin install actions surface a thickbox modal during installation with progress streaming. Workspace rebuild can replace the modal with a side drawer or inline status row.
 
 ---
 
@@ -162,7 +162,7 @@ Plugin install actions surface a thickbox modal during installation with progres
 | Default | Loaded | Importer table |
 | Empty | No importers (rare — only if API + filesystem both fail) | "No importers are available." |
 | Invalid importer query | `?invalid={id}` matches a popular slug → redirect to canonical id | Error notice + table |
-| API error | `api.wordpress.org` unreachable | Falls back to installed importers only; shell shows muted notice |
+| API error | `api.wordpress.org` unreachable | Falls back to installed importers only; workspace shows muted notice |
 | Installing plugin | User clicked "Install Now" | Inline status: "Installing…" → "Activating…" → "Run Importer" link |
 | Activate failed | Plugin install ok but activation failed | Error message in row + "Try again" |
 | FS credentials needed | Filesystem unwritable | Modal asks for FTP credentials before install |
@@ -222,7 +222,7 @@ do_action( 'admin_action_' . $action );
 ```
 where `$action = 'import_{importer_id}'` (importer plugins hook here).
 
-Recommended shell URLs:
+Recommended workspace URLs:
 - `#/import` — directory.
 - `#/import/{importer_id}` — runs importer (proxies to `admin.php?import={id}` via iframe in v1).
 
@@ -294,27 +294,27 @@ The screen itself does not surface success of the import — that's the importer
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `register_importer( $id, $name, $description, $callback )` | Add an importer (plugin API) | **Preserve** — this is how every importer plugin works. Shell registry should consult `get_importers()` at boot. |
-| `import_filters` (action, fires at end of `import.php`) | Add custom UI panels | Replace with shell slot `core:import.footer` |
-| `wp_get_popular_importers` (function, no filter) | API-driven importer list | Replace with shell-level config option to override the upstream API URL or supplement the list |
-| Per-importer plugins use their own actions/filters | — | Out of scope for shell |
+| `register_importer( $id, $name, $description, $callback )` | Add an importer (plugin API) | **Preserve** — this is how every importer plugin works. Workspace registry should consult `get_importers()` at boot. |
+| `import_filters` (action, fires at end of `import.php`) | Add custom UI panels | Replace with workspace slot `core:import.footer` |
+| `wp_get_popular_importers` (function, no filter) | API-driven importer list | Replace with workspace-level config option to override the upstream API URL or supplement the list |
+| Per-importer plugins use their own actions/filters | — | Out of scope for workspace |
 
-Plugin compatibility note: most importer plugins are old (WordPress Importer is the canonical one and is maintained by core). They emit raw HTML and use jQuery. The shell rebuild's iframe approach preserves them with zero compat work.
+Plugin compatibility note: most importer plugins are old (WordPress Importer is the canonical one and is maintained by core). They emit raw HTML and use jQuery. The workspace rebuild's iframe approach preserves them with zero compat work.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:import.php` works in `developer-admin` shell.
+- **What works:** `iframe:import.php` works in `developer-admin` workspace.
 
 ### Gaps vs. this spec
 
 | Gap | Priority | Notes |
 |---|---|---|
 | Register `core:import` AppSource | Low | The directory is simple to render natively, but importer flows themselves stay iframed |
-| Native rendering of importer table | Medium | Pure read; no REST yet — needs shell shim or new endpoint |
+| Native rendering of importer table | Medium | Pure read; no REST yet — needs workspace shim or new endpoint |
 | Plugin install flow (modern dialog instead of thickbox) | Medium | Reuse with Updates screen |
 | Importer flow embedding | Low | Iframe acceptable indefinitely; importer plugins rarely change |
 | `?invalid={id}` redirect handling | Low | Cosmetic |

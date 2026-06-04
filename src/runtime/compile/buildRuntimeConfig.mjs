@@ -5,7 +5,7 @@ import { compileCommands } from './compileCommands.mjs';
 
 /**
  * Build the runtime config the kernel consumes from the resolved v3
- * admin.json doc + the active engine manifest.
+ * workspace.json doc + the active engine manifest.
  *
  * The cascade resolver hands the kernel the author-shape v3 doc
  * (`workspace` / `screens` / `menu` / `settings` / `commands`). The kernel
@@ -23,7 +23,7 @@ import { compileCommands } from './compileCommands.mjs';
  * runtime consumers (`<Region>`, `<BindingsConsumer>`, `RouterProvider`)
  * read the derived surfaces exactly as before.
  *
- * @param {Object} config         Resolved v3 admin.json doc.
+ * @param {Object} config         Resolved v3 workspace.json doc.
  * @param {Object} engineManifest Active engine manifest (carries
  *                                `defaultRegions`).
  * @return {Object} Runtime config.

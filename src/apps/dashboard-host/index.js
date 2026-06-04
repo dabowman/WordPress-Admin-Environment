@@ -8,7 +8,7 @@
  * source-cap floor apply uniformly.
  *
  * v3 vs v2:
- *   - **v2** read manifest `dashboardWidget` blocks + admin.json
+ *   - **v2** read manifest `dashboardWidget` blocks + workspace.json
  *     `dashboardWidgets` overrides. Both have been retired — the
  *     placement model is now uniform with the rest of the workspace
  *     (screen-app entries with a `slot` field).
@@ -18,7 +18,7 @@
  *
  * The v3 compiler injects `config.screenId` into the route config
  * before mount, so the host knows which screen it's hosting. v2
- * shells reach this host through the compiler's
+ * workspaces reach this host through the compiler's
  * `synthesize_v2_screens_from_routes` back-compat path.
  *
  * Why direct render instead of `useDynamicChildren`: the host is

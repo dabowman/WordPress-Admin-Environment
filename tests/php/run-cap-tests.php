@@ -68,7 +68,7 @@ $T = 'WPAS_Cap_Test_Runner';
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
-// Force the shell to wp-admin-default for predictable cap surface.
+// Force the workspace to wp-admin-default for predictable cap surface.
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 $expectations = array(

@@ -27,7 +27,7 @@
 				{
 					"source": "window.wpAdminWorkspaces.adminNotices",
 					"via": "window-global",
-					"purpose": "Admin-notices harvest (#128): global `admin_notices` HTML buffered server-side by WP_Admin_Workspaces_Chrome_Harvest. Rendered unchanged (admin trust) inside one neutral Notice.Root, locally dismissible. Global-only — per-screen `$pagenow`-keyed notices don't fire on the shell page."
+					"purpose": "Admin-notices harvest (#128): global `admin_notices` HTML buffered server-side by WP_Admin_Workspaces_Chrome_Harvest. Rendered unchanged (admin trust) inside one neutral Notice.Root, locally dismissible. Global-only — per-screen `$pagenow`-keyed notices don't fire on the workspace page."
 				}
 			],
 			"writes": [
@@ -54,7 +54,7 @@
 		"constraints": [
 			{ "concern": "context-filter", "note": "Only `type: 'default'` notices land here. `type: 'snackbar'` notices go to `core:notices-snackbar` (separate app, different region)." },
 			{ "concern": "intent-mapping", "note": "WordPress's notice `status` field maps to WPDS Notice `intent`: `error` → `error`, `warning` → `warning`, `success` → `success`, `info` → `info`. Unknown statuses fall back to `info`." },
-			{ "concern": "admin-notices-global-only", "note": "`admin_notices` is a per-page-render hook; only GLOBAL notices firing on the shell's own page load are captured (#128). Per-screen notices keyed on `$pagenow`/the current classic screen don't fire and aren't surfaced. Global-only is the accepted interim — proper fix is a notices REST surface (upstream #155)." },
+			{ "concern": "admin-notices-global-only", "note": "`admin_notices` is a per-page-render hook; only GLOBAL notices firing on the workspace's own page load are captured (#128). Per-screen notices keyed on `$pagenow`/the current classic screen don't fire and aren't surfaced. Global-only is the accepted interim — proper fix is a notices REST surface (upstream #155)." },
 			{ "concern": "admin-notices-trust", "note": "Harvested `admin_notices` HTML is admin-context (same trust as classic wp-admin), rendered unchanged via `dangerouslySetInnerHTML` inside the already-admin-gated workspace. See docs/runtime-harvest-pattern.md → Trust." }
 		],
 		"design-system-leakage": [

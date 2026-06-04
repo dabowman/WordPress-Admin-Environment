@@ -7,7 +7,7 @@
  *   role   — wp_admin_workspaces_role_config[<role>]
  *   site   — wp_admin_workspaces_site_config option
  *   plugin — wp-content/workspace.json override (partial delta) when present;
- *            otherwise the back-compat selected shell (full, replaces the
+ *            otherwise the back-compat selected workspace (full, replaces the
  *            baseline)
  *   engine — synthetic: the active engine's default-styles
  *   core   — the wp-admin-default baseline when an override file is
@@ -133,7 +133,7 @@ class WP_Admin_Workspaces_Resolver {
 		}
 
 		/**
-		 * Filter the fully cascade-merged admin.json doc.
+		 * Filter the fully cascade-merged workspace.json doc.
 		 *
 		 * Fires after every origin has merged. Callbacks receive the
 		 * author-shape v3 doc — `workspace` / `screens` / `menu` /
@@ -178,7 +178,7 @@ class WP_Admin_Workspaces_Resolver {
 	 * surface) and inlines plugin/site/role/user as private methods on
 	 * the resolver. Functionally equivalent to the planned split; if a
 	 * future origin grows complex enough to need its own class
-	 * (programmatic plugin shells, network site config), extract then.
+	 * (programmatic plugin workspaces, network site config), extract then.
 	 */
 	public static function load_origins( $context = array() ) {
 		$plugin_dir = trailingslashit( WP_ADMIN_WORKSPACES_PATH );
@@ -188,7 +188,7 @@ class WP_Admin_Workspaces_Resolver {
 		// `wp-admin-default` baseline: the baseline fills the `core` slot,
 		// the file fills `plugin`, and the field-aware merge folds the
 		// file's keys over the baseline. The file wins over the legacy
-		// active-shell option. A one-key `{ "styles": … }` file retints
+		// active-workspace option. A one-key `{ "styles": … }` file retints
 		// the chrome while every baseline screen / menu / command survives.
 		$file_doc = class_exists( 'WP_Admin_Workspaces_Origin_File' )
 			? WP_Admin_Workspaces_Origin_File::load()
@@ -201,10 +201,10 @@ class WP_Admin_Workspaces_Resolver {
 				?? $plugin_doc['engine']
 				?? ( is_array( $core_doc ) ? ( $core_doc['workspace']['engine'] ?? $core_doc['engine'] ?? null ) : null );
 		} else {
-			// Back-compat path — a selected full shell occupies the
+			// Back-compat path — a selected full workspace occupies the
 			// `plugin` slot and REPLACES the baseline (unchanged from
 			// pre-0.1.0 behavior). Programmatic registrations win over
-			// file-based shells of the same slug (spec §13 #6).
+			// file-based workspaces of the same slug (spec §13 #6).
 			$workspace_slug = $context['workspace'] ?? self::active_workspace_slug();
 
 			if ( class_exists( 'WP_Admin_Workspaces_Registry' ) && WP_Admin_Workspaces_Registry::has( $workspace_slug ) ) {
@@ -214,16 +214,16 @@ class WP_Admin_Workspaces_Resolver {
 				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $workspace_path );
 			}
 
-			// A full selected shell declaring an engine (v2 root `engine`
-			// or v1 `settings.shell.layoutEngine`) replaces the baseline —
+			// A full selected workspace declaring an engine (v2 root `engine`
+			// or v1 `settings.workspace.layoutEngine`) replaces the baseline —
 			// merging the v1-shaped empty_doc under it would inject
 			// conflicting keys. Otherwise the empty_doc guards against a
-			// missing shell.
+			// missing workspace.
 			$has_plugin_engine =
 				( is_array( $plugin_doc ) && (
 					isset( $plugin_doc['engine'] ) ||
 					isset( $plugin_doc['workspace']['engine'] ) ||
-					isset( $plugin_doc['settings']['shell']['layoutEngine'] )
+					isset( $plugin_doc['settings']['workspace']['layoutEngine'] )
 				) );
 			$core_doc         = $has_plugin_engine ? array() : WP_Admin_Workspaces_Origin_Core::empty_doc();
 			$effective_engine = is_array( $plugin_doc )
@@ -245,7 +245,7 @@ class WP_Admin_Workspaces_Resolver {
 	 * Engine origin — synthetic doc carrying the active engine's
 	 * `default-styles` manifest block. Sits between `core` (baseline) and
 	 * `plugin` (override) in the cascade so the engine's visual identity
-	 * ships with the engine but admin.json wins on every overlapping key.
+	 * ships with the engine but workspace.json wins on every overlapping key.
 	 *
 	 * The effective engine id is resolved by the caller — for an override
 	 * file that omits `workspace.engine`, it falls back to the baseline's
@@ -253,7 +253,7 @@ class WP_Admin_Workspaces_Resolver {
 	 * styles.
 	 *
 	 * Returns an empty array when:
-	 *   - No engine id is resolved (legacy v0 shells default to
+	 *   - No engine id is resolved (legacy v0 workspaces default to
 	 *     `core:default` at the JS layer; PHP doesn't infer here).
 	 *   - The engine manifest registry is unavailable (e.g. tests calling
 	 *     `resolve_with` directly with hand-rolled origin arrays).
@@ -308,12 +308,12 @@ class WP_Admin_Workspaces_Resolver {
 	}
 
 	/**
-	 * Active shell slug — site default with role/user override.
+	 * Active workspace slug — site default with role/user override.
 	 */
 	public static function active_workspace_slug() {
 		$slug = get_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
-		// Role override (per-role shell selection).
+		// Role override (per-role workspace selection).
 		$role_config = get_option( 'wp_admin_workspaces_role_config', array() );
 		$user        = wp_get_current_user();
 		if ( $user && ! empty( $user->roles ) && is_array( $role_config ) ) {
@@ -325,7 +325,7 @@ class WP_Admin_Workspaces_Resolver {
 			}
 		}
 
-		// User override — only if active shell allows it.
+		// User override — only if active workspace allows it.
 		$user_id = get_current_user_id();
 		if ( $user_id ) {
 			$prefs = get_user_meta( $user_id, 'wp_admin_workspaces_user_prefs', true );

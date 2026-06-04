@@ -35,7 +35,7 @@
 		"icon": "edit"
 	},
 	"documentation": {
-		"purpose": "Substack-style minimal block editor: a title input plus a constrained block tree (paragraph / heading / image / quote / list / list-item / code / separator / embed), with a native document-settings sidebar (Status & visibility, Publish/Schedule, URL/slug, Categories, Tags, Excerpt, Featured image, Author, Discussion). Loads/saves through `core-data` `useEntityRecord('postType', postType, id)`. Auto-saves on a 2-second debounce via the shared `useEntityAutosave` hook (`src/apps/_shared/forms/useEntityAutosave.js`); sidebar panels mutate the same entity through buffered `edit()` so they commit on the same debounce — no extra endpoint. Publish button flips between `Publish` / `Update` (and writes `future` for scheduled dates) based on `record.status`. Composes Gutenberg's `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` directly so the editor renders inline (not iframed) and inherits the shell's DOM. Deliberately content-creation only: NO Block tab / per-block inspector, NO Page Attributes / templates / custom meta / post-format / sticky.",
+		"purpose": "Substack-style minimal block editor: a title input plus a constrained block tree (paragraph / heading / image / quote / list / list-item / code / separator / embed), with a native document-settings sidebar (Status & visibility, Publish/Schedule, URL/slug, Categories, Tags, Excerpt, Featured image, Author, Discussion). Loads/saves through `core-data` `useEntityRecord('postType', postType, id)`. Auto-saves on a 2-second debounce via the shared `useEntityAutosave` hook (`src/apps/_shared/forms/useEntityAutosave.js`); sidebar panels mutate the same entity through buffered `edit()` so they commit on the same debounce — no extra endpoint. Publish button flips between `Publish` / `Update` (and writes `future` for scheduled dates) based on `record.status`. Composes Gutenberg's `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` directly so the editor renders inline (not iframed) and inherits the workspace's DOM. Deliberately content-creation only: NO Block tab / per-block inspector, NO Page Attributes / templates / custom meta / post-format / sticky.",
 		"rebuilds": "editor-block",
 		"data": {
 			"reads": [
@@ -223,7 +223,7 @@
 			},
 			{
 				"concern": "block-styles-enqueued-php-side",
-				"note": "PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the shell page so block chrome and default block styles render. A reimplementation must arrange the equivalent style loading."
+				"note": "PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the workspace page so block chrome and default block styles render. A reimplementation must arrange the equivalent style loading."
 			},
 			{
 				"concern": "hydrate-once",
@@ -231,7 +231,7 @@
 			},
 			{
 				"concern": "dirty-state-wired",
-				"note": "`useDirtyState(regionId, hasEdits, { blocksNavigation: true })` reports unsaved state to the kernel; NavigationGuard shows beforeunload + intra-shell confirm dialogs."
+				"note": "`useDirtyState(regionId, hasEdits, { blocksNavigation: true })` reports unsaved state to the kernel; NavigationGuard shows beforeunload + intra-workspace confirm dialogs."
 			},
 			{
 				"concern": "auto-save-cancelable",
@@ -281,7 +281,7 @@
 			},
 			{
 				"import": "@wordpress/block-editor#BlockEditorProvider, BlockList, BlockTools, WritingFlow, ObserveTyping, BlockEditorKeyboardShortcuts",
-				"purpose": "The Gutenberg block-editor primitives. Inline-mounted (not iframed) so block styles inherit from the shell DOM."
+				"purpose": "The Gutenberg block-editor primitives. Inline-mounted (not iframed) so block styles inherit from the workspace DOM."
 			},
 			{
 				"import": "@wordpress/block-library#registerCoreBlocks",

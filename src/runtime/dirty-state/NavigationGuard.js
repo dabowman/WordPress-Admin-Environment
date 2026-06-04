@@ -13,7 +13,7 @@ const CONFIRM_MESSAGE = __(
  * platform service.
  *
  * Browser analog: `window.addEventListener( 'beforeunload', ... )`. The
- * standard browser dialog covers full-page exits; in-shell URL changes
+ * standard browser dialog covers full-page exits; in-workspace URL changes
  * use the Navigation API where available (cancellable `navigate` event)
  * and fall back to a hashchange-revert path on engines that lack it
  * (Safari at the time of writing). Apps report dirty status through

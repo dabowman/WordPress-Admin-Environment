@@ -205,7 +205,7 @@
 }
 
 /* External-link indicator — muted "opens in a new tab" affordance on
-   menu items pointing off-shell (e.g. bridged plugin Support/Docs links). */
+   menu items pointing off-workspace (e.g. bridged plugin Support/Docs links). */
 .wp-admin-workspaces-sidebar-navigation-item__external-indicator {
 	flex-shrink: 0;
 	opacity: 0.6;
@@ -224,7 +224,7 @@
 /* Nav item buttons (collapsed mode).
  * Default + hover colors come from the chrome → WPDS bridge scoped to
  * .wp-admin-workspaces-nav. The active/selected state has no clean WPDS slot
- * (current-route is shell semantics, not interactive emphasis) so it
+ * (current-route is workspace semantics, not interactive emphasis) so it
  * keeps the chrome accent token directly. */
 .wp-admin-workspaces-nav__item {
 	width: 100%;

@@ -1,9 +1,9 @@
 <?php
 /**
- * Uninstall cleanup for WP Admin Shell.
+ * Uninstall cleanup for WP Admin Workspaces.
  *
  * Runs when the plugin is deleted (not merely deactivated). Removes every
- * option, user-meta key, and transient the shell writes so an uninstall — or
+ * option, user-meta key, and transient the workspace writes so an uninstall — or
  * a clean reset between test runs — leaves no orphaned rows behind.
  *
  * Does NOT touch the site author's `wp-content/workspace.json` override file:
@@ -16,12 +16,12 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 /**
- * Remove all shell-owned data from the current site's tables.
+ * Remove all workspace-owned data from the current site's tables.
  */
 function wp_admin_workspaces_uninstall_cleanup() {
 	global $wpdb;
 
-	// Options. The shell namespaces every option under `wp_admin_workspaces_`, so a
+	// Options. The workspace namespaces every option under `wp_admin_workspaces_`, so a
 	// LIKE sweep catches the known set plus any future additions; the explicit
 	// list documents what exists today.
 	$known_options = array(

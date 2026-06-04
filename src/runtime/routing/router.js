@@ -11,11 +11,11 @@ import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
 /**
  * URL-driven router (V2.M3 task 2 + 3 + 4 + 7).
  *
- * Spec §6: the URL is the full source of truth for shell state. The
+ * Spec §6: the URL is the full source of truth for workspace state. The
  * router observes URL changes via `hashchange` (and the Navigation API
  * `navigate` event where supported) and decomposes the URL into a
  * primary path + named query parameters. Each routable region resolves
- * its `routing.route-key` slot value against the admin.json `routes`
+ * its `routing.route-key` slot value against the workspace.json `routes`
  * block and mounts the matching app.
  *
  * Public surface:
@@ -23,7 +23,7 @@ import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
  *   - useRoute()                  — { primary, params, hash, appId, segments }.
  *                                   New v2 fields (primary, params) plus
  *                                   legacy v1 fields (appId, segments) so
- *                                   v1 shells continue to work during the
+ *                                   v1 workspaces continue to work during the
  *                                   transition.
  *   - useRouteForRegion(region, routesBlock)
  *                                 — resolves a region's route-key slot
@@ -194,8 +194,8 @@ export function navigateRoute( route ) {
 
 /**
  * Decompose a URL hash into both the v2 shape (primary + params) and
- * the legacy v1 shape (appId + segments). v1 shells consume appId +
- * segments; v2 shells consume primary + params via useRouteForRegion.
+ * the legacy v1 shape (appId + segments). v1 workspaces consume appId +
+ * segments; v2 workspaces consume primary + params via useRouteForRegion.
  * @param {*} hash
  */
 function decompose( hash ) {

@@ -4,14 +4,14 @@
  *
  * DTCG (W3C 2025.10) primitives layer for the design system. Loads
  * tokens from four origins in priority order, deep-merges, and ships
- * the merged tree to the runtime alongside the resolved admin.json:
+ * the merged tree to the runtime alongside the resolved workspace.json:
  *
  *   1. Site origin    — `wp_admin_workspaces_site_tokens` option (highest)
  *   2. Theme origin   — `<stylesheet>/tokens.json`
  *   3. Plugin origin  — `wp_admin_workspaces_plugin_tokens` filter (extension point)
  *   4. Core baseline  — `core.tokens.json` shipped with this plugin (lowest)
  *
- * Merge semantics match the admin.json cascade (`WP_Admin_Workspaces_Merge`):
+ * Merge semantics match the workspace.json cascade (`WP_Admin_Workspaces_Merge`):
  * scalar replace, object deep-merge. The DTCG `$value` / `$type`
  * structure fits naturally — group `$type` declarations cascade into
  * descendants client-side via the JS resolver
@@ -112,7 +112,7 @@ class WP_Admin_Workspaces_Tokens {
 
 	/**
 	 * Deep merge: associative arrays merge recursively; sequential
-	 * arrays + scalars replace. Mirrors the admin.json cascade's plain
+	 * arrays + scalars replace. Mirrors the workspace.json cascade's plain
 	 * merge (no tombstones — tokens are additive, not restrict-only).
 	 */
 	private static function deep_merge( $base, $override ) {

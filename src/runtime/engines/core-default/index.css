@@ -2,7 +2,7 @@
  *
  * Author-overridable region styling (background, color, border, padding,
  * margin, border-radius, box-shadow, decoration) lives in engine.json
- * template `default-style` blocks so admin.json regions can override
+ * template `default-style` blocks so workspace.json regions can override
  * via `regions[id].style`. CSS here is reserved for:
  *   - engine root layout shape (.wp-admin-workspaces-layout)
  *   - engine-internal helper containers (.wp-admin-workspaces-areas)
@@ -13,7 +13,7 @@
  *     apps stay full-bleed.
  *
  * Don't add visual properties here. If a property would be overridden
- * by a template default-style or by an admin.json region.style, it
+ * by a template default-style or by an workspace.json region.style, it
  * belongs in the template.
  */
 
@@ -105,13 +105,13 @@
 /* @wordpress/ui ships its component CSS inside `@layer wp-ui-components`
    (wp-ui-utilities < wp-ui-components < wp-ui-compositions < wp-ui-overrides).
    Per the cascade-layer spec unlayered rules win over any layered rule, so
-   a wide range of unlayered admin / theme / shell CSS can override
+   a wide range of unlayered admin / theme / workspace CSS can override
    @wordpress/ui's defaults — including the Stack's `display: flex`. When
    that happens, Stack falls back to `display: block` and its children
    stack vertically regardless of the inline `flex-direction: row` style.
 
    Force the Stack default unlayered for any Stack rendered inside the
-   shell. Targets the hashed CSS-module class @wordpress/ui assigns
+   workspace. Targets the hashed CSS-module class @wordpress/ui assigns
    to the Stack root. Hash matches the regex pattern `[hash]__stack`
    so a class*= selector tracks the convention without binding to a
    specific build hash. */
@@ -161,7 +161,7 @@
  * padding so the host's own grid container reaches the region edges.
  * Touches engine-owned chrome (`region__app`), so it belongs engine-side.
  * Scoped on `data-region-id$="dashboard-grid"` so the rule fires for any
- * shell-chosen id ending in `dashboard-grid`. Tile chrome lives with the
+ * workspace-chosen id ending in `dashboard-grid`. Tile chrome lives with the
  * host app — `src/apps/dashboard-host/index.css`. */
 .wp-admin-workspaces-region[data-region-id$="dashboard-grid"]
 	.wp-admin-workspaces-region__app {

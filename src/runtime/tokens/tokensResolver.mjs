@@ -3,13 +3,13 @@
  *
  * Spec §9.1: `tokens.json` ships an author-defined DTCG (W3C 2025.10)
  * primitives layer. WordPress dictates only the *names* of the consumer
- * slots (admin.json `styles`, theme.json `settings`); authors map their
+ * slots (workspace.json `styles`, theme.json `settings`); authors map their
  * tokens into those slots via DTCG curly-brace aliasing.
  *
  * This module is purely about the tokens.json layer: walk a DTCG tree,
  * resolve `{path.to.token}` aliases, coerce DTCG-typed values into the
- * CSS strings the admin.json `styles` slots expect. Discovery + cascade
- * merge happen PHP-side (mirrors `admin.json` cascade) — this module
+ * CSS strings the workspace.json `styles` slots expect. Discovery + cascade
+ * merge happen PHP-side (mirrors `workspace.json` cascade) — this module
  * receives the already-merged tokens tree.
  *
  * Public API:
@@ -112,7 +112,7 @@ function resolveOne( flat, raw, seen, depth ) {
 /**
  * Look up an alias path against a resolved flat map. Returns the
  * literal CSS string, or the raw alias if no match. Used by
- * compileStyles when an admin.json `styles` slot aliases a tokens.json
+ * compileStyles when an workspace.json `styles` slot aliases a tokens.json
  * path.
  */
 export function resolveAlias( flat, aliasPath ) {

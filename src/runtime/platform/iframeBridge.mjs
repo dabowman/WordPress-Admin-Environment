@@ -16,7 +16,7 @@
  *   - `admin-link` that maps to a workspace route (via the admin-route
  *     registry's legacy mappings) → hash-navigate the workspace.
  *   - `admin-link` with no workspace equivalent → navigate the iframe
- *     itself to the URL (stay embedded in the shell).
+ *     itself to the URL (stay embedded in the workspace).
  *   - `external-link` → open in a new tab.
  *
  * Security: messages are accepted only from the bound iframe's window
@@ -46,7 +46,7 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 	// Unsaved-changes signal from the embedded editor. The iframe-side
 	// chromeless bridge subscribes to `core/editor`'s
 	// `isEditedPostDirty()` and posts this on every transition; the
-	// parent maps it onto the shell's dirty-state service so a sidebar
+	// parent maps it onto the workspace's dirty-state service so a sidebar
 	// click is guarded the same way a native app's `useDirtyState` is.
 	// No URL — only the boolean matters; the origin/source pins in
 	// `installIframeBridge` still gate who may send it.

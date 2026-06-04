@@ -4,7 +4,7 @@
  *
  * Validates the cross-document constraints JSON Schema cannot reach.
  * The schema validates each artifact in isolation; this class checks
- * that references between admin.json, app manifests, and engine
+ * that references between workspace.json, app manifests, and engine
  * manifests resolve to registered artifacts.
  *
  * Per `docs/archive/schema-exercise-findings.md`, runtime-only checks:
@@ -18,7 +18,7 @@
  *
  * V2.M1 ships the primitives. V2.M2 (region-vocabulary rebuild) wires
  * them into the composition pipeline that produces a mountable region
- * tree from a v2 admin.json.
+ * tree from a v2 workspace.json.
  *
  * @package WP_Admin_Workspaces
  */
@@ -79,7 +79,7 @@ class WP_Admin_Workspaces_Manifest_Resolver {
 	 *   3. For nested children: the template-child's `role` (if the
 	 *      parent uses a template that ships a same-named child).
 	 *
-	 * @param array       $region          Region declaration from admin.json.
+	 * @param array       $region          Region declaration from workspace.json.
 	 * @param string      $engine_id       Active engine id.
 	 * @param array|null  $parent_template The template definition of the
 	 *                                     parent region, when this region

@@ -33,7 +33,7 @@
  * needing webpack or React.
  *
  * Renamed conceptually from v2's `composeWidgets(manifests, overrides)`
- * which read the manifest's `dashboardWidget` block + admin.json's
+ * which read the manifest's `dashboardWidget` block + workspace.json's
  * top-level `dashboardWidgets` block. v3 dissolves both into the
  * screen-app placement model — manifest `slotHints` + per-screen
  * `apps[]` entries.
@@ -69,7 +69,7 @@ function pickPosition( raw ) {
 
 /**
  * Clamp `defaultSize` so it never falls below `minSize`. Authors can
- * lower the default in admin.json without losing the manifest's floor.
+ * lower the default in workspace.json without losing the manifest's floor.
  *
  * @param {{w:number,h:number}} size
  * @param {{w:number,h:number}} min
@@ -136,7 +136,7 @@ export function composeScreenWidgets( { screen, manifests } ) {
 
 		const position = pickPosition( entry.position ?? hints.position );
 
-		// Title resolution chain — entry override (admin.json author
+		// Title resolution chain — entry override (workspace.json author
 		// intent) > entry config.title (e.g. the classic-widget bridge's
 		// harvested meta-box title) > manifest title (intrinsic). The
 		// entry-id fallback is the very last resort and lives on the React

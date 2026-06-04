@@ -5,11 +5,11 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php`
  *
  * Coverage:
- *   - Engine default-styles applied when admin.json doesn't overlap.
- *   - admin.json wins on overlapping keys.
+ *   - Engine default-styles applied when workspace.json doesn't overlap.
+ *   - workspace.json wins on overlapping keys.
  *   - Switching engine swaps defaults.
  *   - Engine without default-styles is a no-op.
- *   - Engine without `engine` declaration in admin.json contributes nothing.
+ *   - Engine without `engine` declaration in workspace.json contributes nothing.
  *   - The synthetic `engine` origin sits between `core` and `plugin` in
  *     ORIGINS_ORDER + TRUSTED_ORIGINS.
  */
@@ -106,7 +106,7 @@ $T::assert_true(
 	in_array( 'engine', WP_Admin_Workspaces_Resolver::TRUSTED_ORIGINS, true )
 );
 
-// ─── 1. Engine defaults apply when admin.json omits styles ─────
+// ─── 1. Engine defaults apply when workspace.json omits styles ─────
 
 $plugin_doc = array(
 	'engine'  => $test_engine_id,
@@ -159,7 +159,7 @@ $T::assert_eq(
 	$resolved['styles']['chrome']['sidebar']['background'] ?? null
 );
 
-// ─── 2. admin.json wins on overlapping keys ────────────────────
+// ─── 2. workspace.json wins on overlapping keys ────────────────────
 
 $plugin_doc_overlap = array(
 	'engine'  => $test_engine_id,
@@ -188,7 +188,7 @@ $resolved2 = WP_Admin_Workspaces_Resolver::resolve_with( array(
 ) );
 
 $T::assert_eq(
-	'admin.json wins for theme.color.bg',
+	'workspace.json wins for theme.color.bg',
 	'#ffffff',
 	$resolved2['styles']['theme']['color']['bg'] ?? null
 );
@@ -220,7 +220,7 @@ $resolved3 = WP_Admin_Workspaces_Resolver::resolve_with( array(
 ) );
 
 $T::assert_eq(
-	'engine without default-styles preserves admin.json untouched',
+	'engine without default-styles preserves workspace.json untouched',
 	'#222',
 	$resolved3['styles']['theme']['color']['bg'] ?? null
 );

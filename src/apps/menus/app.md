@@ -28,7 +28,7 @@ WordPress core-data registers the nav-menu entities under `kind: 'root'`:
 - `root` / `menuItem` → `/wp/v2/menu-items` (`rawAttributes: ['title']`)
 - `root` / `menuLocation` → `/wp/v2/menu-locations` (`key: 'name'`)
 
-All three carry `baseURLParams: { context: 'edit' }` as the entity default; the app passes `context: 'edit'` explicitly per the shell convention. Menus are private-by-default since WP 6.8, so `edit` context is required.
+All three carry `baseURLParams: { context: 'edit' }` as the entity default; the app passes `context: 'edit'` explicitly per the workspace convention. Menus are private-by-default since WP 6.8, so `edit` context is required.
 
 ### Item tree + reorder (`menuItemTree.mjs`)
 
@@ -71,17 +71,17 @@ Each location checkbox toggles the location name in the **active menu's** `locat
 
 ### Notices
 
-Success → snackbar, failure → dismissible banner, via `@wordpress/notices` — the canonical shell notices contract.
+Success → snackbar, failure → dismissible banner, via `@wordpress/notices` — the canonical workspace notices contract.
 
 ## Block-theme fallback (shared signal with #121)
 
 `WP_Admin_Workspaces_Appearance_Menu` (PHP, `wp_admin_workspaces_data` priority 4) stamps `workspace.theme-support` with `{ block-theme, theme-supports }` and **also** prunes the native `menus` screen on block themes (and gates it on `current_theme_supports('menus')` for classic themes via the `requires` rule). The `nav-menus` iframe screen is deliberately **theme-agnostic** — it is NOT in the prune rules, so it survives on every theme as the deterministic full-fidelity classic editor.
 
-So on a block theme the native `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom shell that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `#/nav-menus` (the iframe screen). We link to the **workspace route** `#/nav-menus`, not the raw `/wp-admin/nav-menus.php`: the raw path is claimed by the native `menus` screen's `legacy_path`, so the capture-phase admin-link interceptor would map it back to `#/menus` (this same disabled panel on a block theme). Routing to `#/nav-menus` mounts the iframe screen deterministically — which is why that screen must stay agnostic to the prune.
+So on a block theme the native `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom workspace that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `#/nav-menus` (the iframe screen). We link to the **workspace route** `#/nav-menus`, not the raw `/wp-admin/nav-menus.php`: the raw path is claimed by the native `menus` screen's `legacy_path`, so the capture-phase admin-link interceptor would map it back to `#/menus` (this same disabled panel on a block theme). Routing to `#/nav-menus` mounts the iframe screen deterministically — which is why that screen must stay agnostic to the prune.
 
 ### `nav-menus` reachability (the menu entry point)
 
-The `#/nav-menus` fallback link is a **convenience**, not the sole way in. The bundled `wp-admin-default` shell pins the `nav-menus` screen as a real item in the **Appearance** menu group (`menu.appearance.items.nav-menus`, label "Menus (Classic)"). Because `nav-menus` is not in the prune `RULES`, that menu node survives on every theme. The resulting per-theme menu state:
+The `#/nav-menus` fallback link is a **convenience**, not the sole way in. The bundled `wp-admin-default` workspace pins the `nav-menus` screen as a real item in the **Appearance** menu group (`menu.appearance.items.nav-menus`, label "Menus (Classic)"). Because `nav-menus` is not in the prune `RULES`, that menu node survives on every theme. The resulting per-theme menu state:
 
 - **Classic theme (supports menus):** both the native **Menus** editor (`core:menus`, the simplified DataForm editor) AND **Menus (Classic)** (`iframe:nav-menus.php`, full-fidelity) appear — distinct labels, both functional, no dead links.
 - **Classic theme (no `current_theme_supports('menus')`):** the native **Menus** item is pruned by the `requires` gate; **Menus (Classic)** remains (wp-admin's `nav-menus.php` is reachable regardless of registered locations — you can build a menu without assigning it anywhere).

@@ -18,13 +18,13 @@
  * `dangerouslySetInnerHTML`. Same author-trust boundary as the #128 notices
  * buffer / `TrustedNodeTitle`. The endpoint only ever returns HTML for a
  * widget the dashboard registered for this request (the bridge skip-list +
- * existence check gate it), and the shell only renders it inside the
+ * existence check gate it), and the workspace only renders it inside the
  * already-admin-gated workspace.
  *
  * **JS-loss limitation + iframe fallback.** Classic widgets frequently rely on
  * enqueued JS / AJAX / inline `<script>` that won't execute when their HTML is
  * injected into the SPA via `dangerouslySetInnerHTML` (React doesn't run
- * injected scripts; the widget's enqueued handles aren't loaded on the shell
+ * injected scripts; the widget's enqueued handles aren't loaded on the workspace
  * page). Such widgets degrade to static HTML. The tile offers a per-tile
  * **iframe fallback** — an "Open classic dashboard" toggle that swaps the
  * captured HTML for an iframe of classic `index.php`. NOTE: classic wp-admin

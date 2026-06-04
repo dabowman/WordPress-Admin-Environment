@@ -48,7 +48,7 @@ export function listEngines() {
  * Resolve a region's role through template inheritance — JS mirror of
  * `WP_Admin_Workspaces_Manifest_Resolver::resolve_role()`.
  *
- * @param {Object} region           Region declaration from admin.json.
+ * @param {Object} region           Region declaration from workspace.json.
  * @param {string} engineId         Active engine id.
  * @param {Object} [parentTemplate] Parent region's template definition,
  *                                  when this is a nested child region.

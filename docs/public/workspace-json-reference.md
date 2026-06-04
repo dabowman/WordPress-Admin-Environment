@@ -1,10 +1,10 @@
-# admin.json Reference
+# workspace.json Reference
 
-`admin.json` is the install-decision file that describes a single WP Admin Shell workspace: which engine renders it, the screens the workspace exposes, the menu hierarchy that surfaces those screens, the keyboard commands and palette entries, persistent chrome widgets, REST preloads, and the styles that brand the install. Anything intrinsic to apps or engines belongs in their respective manifests (`app.json`, `engine.json`) — `admin.json` is the layer that combines them into a shipped admin experience.
+`workspace.json` is the install-decision file that describes a single WP Admin Workspaces workspace: which engine renders it, the screens the workspace exposes, the menu hierarchy that surfaces those screens, the keyboard commands and palette entries, persistent chrome widgets, REST preloads, and the styles that brand the install. Anything intrinsic to apps or engines belongs in their respective manifests (`app.json`, `engine.json`) — `workspace.json` is the layer that combines them into a shipped admin experience.
 
-Multiple `admin.json` files can coexist on a site (one per workspace). The active workspace is selected per-site, per-role, or per-user through the cascade.
+Multiple `workspace.json` files can coexist on a site (one per workspace). The active workspace is selected per-site, per-role, or per-user through the cascade.
 
-This reference covers the admin.json workspace schema (`admin.json`).
+This reference covers the workspace.json workspace schema (`workspace.json`).
 
 ## In this article
 
@@ -29,7 +29,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 
 ## JSON Schema
 
-`admin.json` documents validate against a published JSON Schema. Reference it from the top of every file so IDEs can offer completion and inline error reporting:
+`workspace.json` documents validate against a published JSON Schema. Reference it from the top of every file so IDEs can offer completion and inline error reporting:
 
 ```json
 {
@@ -51,7 +51,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/workspace.json`](../schemas/admin.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace.json`](../schemas/workspace.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -73,17 +73,17 @@ For the full design rationale around each block, see [`docs/schema-sketch.md`](.
 
 ## version
 
-Schema version this document targets. Must be `3` for v3 shells. The runtime accepts v2 shells through the v3.0 release cycle and synthesizes screens-from-routes via the v3 compiler's back-compat path. v0 (MVP flat shape) is still normalized internally.
+Schema version this document targets. Must be `3` for v3 workspaces. The runtime accepts v2 workspaces through the v3.0 release cycle and synthesizes screens-from-routes via the v3 compiler's back-compat path. v0 (MVP flat shape) is still normalized internally.
 
 | Property | Description                                              | Type    | Default |
 |----------|----------------------------------------------------------|---------|---------|
-| version  | Schema version. Must be `3` for v3 shells.               | integer | —       |
+| version  | Schema version. Must be `3` for v3 workspaces.               | integer | —       |
 
 ## $wpds
 
 Pinned WPDS slot-matrix version, expressed as a WordPress release version (`6.9`, `7.0`, `7.1.2`). The resolver loads `wpds-defaults-{$wpds}.json` as the implicit `core` baseline so missing author values cannot break the runtime, and validates the `styles` tree against the WPDS slot list at this version. Bumping `$wpds` adopts new slots that may have appeared in later WordPress releases.
 
-This field is required because the WPDS surface is the shell's contract with apps and engines; an unpinned `styles` tree cannot be validated.
+This field is required because the WPDS surface is the workspace's contract with apps and engines; an unpinned `styles` tree cannot be validated.
 
 | Property | Description                                       | Type   | Default |
 |----------|---------------------------------------------------|--------|---------|
@@ -91,7 +91,7 @@ This field is required because the WPDS surface is the shell's contract with app
 
 ## name
 
-Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-shell activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails.
+Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails.
 
 Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
 
@@ -202,7 +202,7 @@ The 3-axis registry shape is `kind → name → variant`.
 
 ## screens
 
-The map of every screen the workspace exposes. Each entry is keyed by a kebab-case screen id, unique within this `admin.json`. A screen declares what mounts (single-app shorthand `app` + `config`, or multi-app `apps[]`), where it mounts (`path` for URL routing, `slot` for non-`_self` URL slots), how it presents (`mode`), who can see it (`permissions`), and what data it surfaces (`dataViewRef` + optional `dataView` overlay).
+The map of every screen the workspace exposes. Each entry is keyed by a kebab-case screen id, unique within this `workspace.json`. A screen declares what mounts (single-app shorthand `app` + `config`, or multi-app `apps[]`), where it mounts (`path` for URL routing, `slot` for non-`_self` URL slots), how it presents (`mode`), who can see it (`permissions`), and what data it surfaces (`dataViewRef` + optional `dataView` overlay).
 
 ```json
 {
@@ -359,7 +359,7 @@ The v2 → v3 rename: `bindings[]` → `commands[]`. Each entry gains an explici
 
 ## styles
 
-WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers.
+WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and workspace-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers.
 
 Slot values may be DTCG token aliases (`"{color.brand.500}"`), literal CSS values (`"#3858e9"`, `"16px"`), or inline DTCG objects. WPDS slot validation runs against the pinned `$wpds` matrix at the runtime resolver — the schema is intentionally loose here because the slot list grows with WordPress versions.
 
@@ -389,7 +389,7 @@ Escape hatch for slot values that seeds can't express. Layered over ThemeProvide
 
 ### styles.chrome
 
-Shell-only chrome extension slots — surfaces WPDS does not yet describe. Sub-namespaces include `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`. Authors may add custom slugs; engines that read custom slugs declare them in their manifest so the runtime validates at activation time.
+Workspace-only chrome extension slots — surfaces WPDS does not yet describe. Sub-namespaces include `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`. Authors may add custom slugs; engines that read custom slugs declare them in their manifest so the runtime validates at activation time.
 
 | Property         | Description                                                                                              | Type   | Default |
 |------------------|----------------------------------------------------------------------------------------------------------|--------|---------|
@@ -397,7 +397,7 @@ Shell-only chrome extension slots — surfaces WPDS does not yet describe. Sub-n
 | chrome.toolbar   | Toolbar surface palette.                                                                                 | object | —       |
 | chrome.siteHub   | Site-hub surface palette.                                                                                | object | —       |
 | chrome.content   | Content surface palette.                                                                                 | object | —       |
-| chrome.canvas    | Shell-wide background / foreground.                                                                       | object | —       |
+| chrome.canvas    | Workspace-wide background / foreground.                                                                       | object | —       |
 
 ### styles.regions
 
@@ -409,7 +409,7 @@ Per-app style overrides, keyed by app id. Same shape as the top-level `styles` t
 
 ## preload
 
-REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs. Each entry is either a string path (defaults to `GET`) or a `[ path, method ]` tuple. Methods are restricted to `GET` and `OPTIONS`.
+REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the workspace bundle runs. Each entry is either a string path (defaults to `GET`) or a `[ path, method ]` tuple. Methods are restricted to `GET` and `OPTIONS`.
 
 Across origins the resolved value is the concatenation of every origin's `preload[]` — there are no override semantics, only additive union. Duplicates by exact `path + method` are deduped before serialization. Conditional preloads belong in a `wp_admin_workspaces_data_{origin}` filter callback. Per-screen preloads live in `screens[id].preload`.
 
@@ -432,7 +432,7 @@ Across origins the resolved value is the concatenation of every origin's `preloa
 
 ## `regions` / `routes` (escape hatches)
 
-The kernel synthesizes the runtime regions map + routes table from `screens[]` + the active engine's `defaultRegions` (`src/runtime/compile/`). Authors who need a region or route the `screens` shape can't express write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against the synthesis.
+The kernel synthesizes the runtime regions map + routes table from `screens[]` + the active engine's `defaultRegions` (`src/runtime/compile/`). Authors who need a region or route the `screens` shape can't express write top-level `regions` / `routes` blocks — workspace.json's escape-hatch declarations win on per-region-id / per-pattern collision against the synthesis.
 
 See [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-workspaces-design-spec.md#62-routes-block) for route patterns. Avoid these blocks when the `screens` surface can express the same thing.
 
@@ -467,4 +467,4 @@ Two limits always apply regardless of the declaration:
 }
 ```
 
-See [§4.4.2 of the design sketch](../schema-sketch.md) for the full trust-tier rationale and `#/$defs/customizable` in [`docs/schemas/workspace.json`](../schemas/admin.json) for the schema definition.
+See [§4.4.2 of the design sketch](../schema-sketch.md) for the full trust-tier rationale and `#/$defs/customizable` in [`docs/schemas/workspace.json`](../schemas/workspace.json) for the schema definition.

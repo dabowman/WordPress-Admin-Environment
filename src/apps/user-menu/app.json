@@ -3,7 +3,7 @@
 	"id": "core:user-menu",
 	"version": 1,
 	"title": "User menu",
-	"description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a shell switcher. Reads `window.wpAdminWorkspaces.user`.",
+	"description": "Current-user affordance: avatar + dropdown with Profile / Log out and (when allowed) a workspace switcher. Reads `window.wpAdminWorkspaces.user`.",
 	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"platform": {
@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminWorkspaces.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminWorkspaces.workspaces` (for the switcher submenu). Shell switcher only renders when more than one `user-switchable` shell is available; calls `window.wpAdminWorkspaces.switchWorkspace(slug)` which posts the new active shell + reloads.",
+		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch workspace submenu, Log out). All data sourced from `window.wpAdminWorkspaces.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminWorkspaces.workspaces` (for the switcher submenu). Workspace switcher only renders when more than one `user-switchable` workspace is available; calls `window.wpAdminWorkspaces.switchWorkspace(slug)` which posts the new active workspace + reloads.",
 		"data": {
 			"reads": [
 				{
@@ -26,18 +26,18 @@
 				{
 					"source": "window.wpAdminWorkspaces.workspaces",
 					"via": "window-global",
-					"purpose": "Available shells (with `user-switchable` flag) for the switcher submenu."
+					"purpose": "Available workspaces (with `user-switchable` flag) for the switcher submenu."
 				}
 			]
 		},
 		"states": [
-			{ "id": "ready-no-switcher", "when": "shells.length <= 1 || no user-switchable", "renders": "Avatar trigger + dropdown with Profile + Log out." },
-			{ "id": "ready-with-switcher", "when": "More than one user-switchable shell", "renders": "Same dropdown plus `Switch to {title}` entries between Profile and Log out." }
+			{ "id": "ready-no-switcher", "when": "workspaces.length <= 1 || no user-switchable", "renders": "Avatar trigger + dropdown with Profile + Log out." },
+			{ "id": "ready-with-switcher", "when": "More than one user-switchable workspace", "renders": "Same dropdown plus `Switch to {title}` entries between Profile and Log out." }
 		],
 		"interactions": [
 			{ "trigger": "Click avatar", "effect": "Open dropdown." },
 			{ "trigger": "Click Profile", "effect": "`window.location.hash = profileUrl` (or `#/profile`)." },
-			{ "trigger": "Click Switch to {title}", "effect": "Call `window.wpAdminWorkspaces.switchWorkspace(slug)` — PHP saves new active shell + page reloads." },
+			{ "trigger": "Click Switch to {title}", "effect": "Call `window.wpAdminWorkspaces.switchWorkspace(slug)` — PHP saves new active workspace + page reloads." },
 			{ "trigger": "Click Log out", "effect": "`window.location.href = logoutUrl`." }
 		],
 		"a11y": {
@@ -46,9 +46,9 @@
 		},
 		"constraints": [
 			{ "concern": "window-global-only", "note": "Doesn't fetch user data via core-data — `wpAdminWorkspaces.user` is injected PHP-side at every page load. Cheaper than a REST round trip; safe because user identity is fixed for the session." },
-			{ "concern": "shell-switch-reloads", "note": "Switching shells does a full page reload (PHP-side option write + reload). No SPA-style live switch; the alternative would require unmounting + remounting the entire shell, which has tricky edge cases (modal state, in-flight saves)." },
+			{ "concern": "workspace-switch-reloads", "note": "Switching workspaces does a full page reload (PHP-side option write + reload). No SPA-style live switch; the alternative would require unmounting + remounting the entire workspace, which has tricky edge cases (modal state, in-flight saves)." },
 			{ "concern": "dropdown-fallback", "note": "Uses legacy `DropdownMenu` from `@wordpress/components`. WPDS 0.12 has no direct port; `Tabs.*` + `Popover.*` could compose one but `DropdownMenu` is more semantic." },
-			{ "concern": "default-profile-hash", "note": "`profileUrl` defaults to `#/profile` if missing. Shells that omit a `#/profile` route from their map will render the link, but clicking it 404s." },
+			{ "concern": "default-profile-hash", "note": "`profileUrl` defaults to `#/profile` if missing. Workspaces that omit a `#/profile` route from their map will render the link, but clicking it 404s." },
 			{ "concern": "manifest-role-is-documentation", "note": "The `role: \"region\"` field in this manifest is NOT applied to the rendered DOM. Region wrappers in the kernel read the engine template's `role` and emit `<div role={template.role}>` themselves. The app manifest role is documentation — it advertises the landmark role this app expects its region to carry. Mismatch between manifest role and rendered role indicates the app is mounted in the wrong kind of region." }
 		],
 		"design-system-leakage": [

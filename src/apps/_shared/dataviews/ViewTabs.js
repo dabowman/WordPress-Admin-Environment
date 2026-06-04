@@ -6,7 +6,7 @@ import './ViewTabs.css';
 
 /**
  * `ViewTabs` — the classic `All | Mine | Pending | …` pinned segment strip
- * with live counts. Shell-side substitute for upstream #163.
+ * with live counts. Workspace-side substitute for upstream #163.
  *
  * This is a **presentational component** only. It owns no data-fetching; the
  * caller drives counts via `useEntityElementCounts` (or any other source) and

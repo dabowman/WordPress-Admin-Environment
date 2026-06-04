@@ -1,10 +1,10 @@
 # DataViews Interaction Patterns
 
-How the shell re-expresses classic wp-admin's **inline list-table flows** (Quick Edit, inline Reply, Bulk Edit, row pickers, status links) as a small set of **shared, reusable patterns** that every DataViews-backed app builds against — instead of each app rolling its own.
+How the workspace re-expresses classic wp-admin's **inline list-table flows** (Quick Edit, inline Reply, Bulk Edit, row pickers, status links) as a small set of **shared, reusable patterns** that every DataViews-backed app builds against — instead of each app rolling its own.
 
 > **Read this before building or reviewing any `area:dataviews` app.** The goal is one set of components and two contracts, not twelve bespoke modals. Tracking + the net-new shared work: see the umbrella issue referenced at the bottom.
 
-WordPress DataViews has **no in-list editing or row-expansion primitive** — `Field.Edit`-in-cell (#162) and the expandable detail-row API (#169) are both `blocked:upstream`. So the inline affordances classic wp-admin renders *in the row* are, in the shell, **substituted** by modals / screens. When the upstream primitives land we swap the **host**, not the logic — which is exactly what the two contracts below buy us.
+WordPress DataViews has **no in-list editing or row-expansion primitive** — `Field.Edit`-in-cell (#162) and the expandable detail-row API (#169) are both `blocked:upstream`. So the inline affordances classic wp-admin renders *in the row* are, in the workspace, **substituted** by modals / screens. When the upstream primitives land we swap the **host**, not the logic — which is exactly what the two contracts below buy us.
 
 ---
 
@@ -192,7 +192,7 @@ const actions = buildActions( specs, { modals: { edit: editComment, reply: reply
 - **Validation gating.** Both edit and create run `useFormValidity( data, fields, form )` and disable the commit button while `! isValid` (plus `! hasEdits` on edit) — same as `EntityDataForm`.
 - **Explicit-save modal only** (contract #2). Autosaving hosts share the same `fields` / `form` but commit elsewhere — do not route them through this factory.
 
-**Cascade caution:** any app shipping a new dataView family (e.g. `root/media/_default`) must declare its `defaultView` (incl. `mediaField` / `titleField`) **completely** — a shell that redeclares the triple wins outright and a partial copy silently drops baseline keys (`CLAUDE.md` → "A shell that redeclares a `settings.dataViews` triple wins OUTRIGHT").
+**Cascade caution:** any app shipping a new dataView family (e.g. `root/media/_default`) must declare its `defaultView` (incl. `mediaField` / `titleField`) **completely** — a workspace that redeclares the triple wins outright and a partial copy silently drops baseline keys (`CLAUDE.md` → "A workspace that redeclares a `settings.dataViews` triple wins OUTRIGHT").
 
 ---
 
@@ -200,7 +200,7 @@ const actions = buildActions( specs, { modals: { edit: editComment, reply: reply
 
 When these land in `@wordpress/dataviews`, swap the **host**, keep the unit:
 
-| Upstream issue | Shell substitute today |
+| Upstream issue | Workspace substitute today |
 |---|---|
 | #162 editable-cell / inline-edit | Modal Edit + Bulk Edit |
 | #169 expandable detail-row | Detail / inspect modal |

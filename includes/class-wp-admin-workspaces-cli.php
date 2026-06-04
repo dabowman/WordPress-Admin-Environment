@@ -1,11 +1,11 @@
 <?php
 /**
- * `wp admin-shell …` WP-CLI commands (plan §M5.9).
+ * `wp admin-workspace …` WP-CLI commands (plan §M5.9).
  *
  * Subcommands:
- *   list                          Print registered shells with their origins.
+ *   list                          Print registered workspaces with their origins.
  *   activate <slug>               Set wp_admin_workspaces_active_workspace.
- *   register <name> <path>        Register a programmatic shell from JSON on disk.
+ *   register <name> <path>        Register a programmatic workspace from JSON on disk.
  *
  * @package WP_Admin_Workspaces
  */
@@ -19,27 +19,27 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 class WP_Admin_Workspaces_CLI {
 
 	/**
-	 * List registered shells with their origins.
+	 * List registered workspaces with their origins.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-shell list
+	 *     wp admin-workspace list
 	 *
 	 * @when after_wp_load
 	 */
 	public function list( $args, $assoc_args ) {
-		$shells = wp_admin_workspaces_get_available_workspaces();
+		$workspaces = wp_admin_workspaces_get_available_workspaces();
 
 		$active = get_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 		$rows = array();
-		foreach ( $shells as $shell ) {
+		foreach ( $workspaces as $workspace ) {
 			$rows[] = array(
-				'slug'            => $shell['slug'],
-				'title'           => $shell['title'],
-				'origin'          => 'plugin', // shells/ files; cascade lets site/role/user override on read
-				'user-switchable' => ! empty( $shell['user-switchable'] ) ? 'yes' : 'no',
-				'active'          => $shell['slug'] === $active ? 'yes' : '',
+				'slug'            => $workspace['slug'],
+				'title'           => $workspace['title'],
+				'origin'          => 'plugin', // workspaces/ files; cascade lets site/role/user override on read
+				'user-switchable' => ! empty( $workspace['user-switchable'] ) ? 'yes' : 'no',
+				'active'          => $workspace['slug'] === $active ? 'yes' : '',
 			);
 		}
 
@@ -47,16 +47,16 @@ class WP_Admin_Workspaces_CLI {
 	}
 
 	/**
-	 * Set the active shell.
+	 * Set the active workspace.
 	 *
 	 * ## OPTIONS
 	 *
 	 * <slug>
-	 * : Shell slug (filename without .json).
+	 * : Workspace slug (filename without .json).
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-shell activate single-pane-demo
+	 *     wp admin-workspace activate single-pane-demo
 	 *
 	 * @when after_wp_load
 	 */
@@ -66,33 +66,33 @@ class WP_Admin_Workspaces_CLI {
 
 		$path = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . $slug . '.json';
 		if ( ! file_exists( $path ) ) {
-			WP_CLI::error( "Shell not found: $slug (looked in shells/$slug.json)" );
+			WP_CLI::error( "Workspace not found: $slug (looked in workspaces/$slug.json)" );
 		}
 
 		update_option( 'wp_admin_workspaces_active_workspace', $slug );
-		WP_CLI::success( "Active shell set to: $slug" );
+		WP_CLI::success( "Active workspace set to: $slug" );
 	}
 
 	/**
-	 * Register a programmatic shell from a JSON file on disk.
+	 * Register a programmatic workspace from a JSON file on disk.
 	 *
-	 * Copies the file into shells/<name>.json. Existing files are not
+	 * Copies the file into workspaces/<name>.json. Existing files are not
 	 * overwritten unless --force is set.
 	 *
 	 * ## OPTIONS
 	 *
 	 * <name>
-	 * : Shell slug to register as.
+	 * : Workspace slug to register as.
 	 *
 	 * <path>
 	 * : Source JSON file path.
 	 *
 	 * [--force]
-	 * : Overwrite shells/<name>.json if it exists.
+	 * : Overwrite workspaces/<name>.json if it exists.
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-shell register acme /tmp/acme.json
+	 *     wp admin-workspace register acme /tmp/acme.json
 	 *
 	 * @when after_wp_load
 	 */
@@ -120,12 +120,12 @@ class WP_Admin_Workspaces_CLI {
 
 		$dest = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . $name . '.json';
 		if ( file_exists( $dest ) && empty( $assoc_args['force'] ) ) {
-			WP_CLI::error( "Shell already exists: $name (use --force to overwrite)" );
+			WP_CLI::error( "Workspace already exists: $name (use --force to overwrite)" );
 		}
 
 		file_put_contents( $dest, $json );
-		WP_CLI::success( "Registered shell: $name → shells/$name.json" );
+		WP_CLI::success( "Registered workspace: $name → workspaces/$name.json" );
 	}
 }
 
-WP_CLI::add_command( 'admin-shell', 'WP_Admin_Workspaces_CLI' );
+WP_CLI::add_command( 'admin-workspace', 'WP_Admin_Workspaces_CLI' );

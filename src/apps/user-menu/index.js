@@ -9,11 +9,11 @@ import { moreVertical } from '@wordpress/icons';
  *
  * Reads `window.wpAdminWorkspaces.user` for displayName / avatarUrl /
  * profileUrl / logoutUrl. Renders an avatar trigger that opens a
- * dropdown with Profile + Log out + (when more than one shell is
- * available + the active shell is `user-switchable`) a Switch shell
+ * dropdown with Profile + Log out + (when more than one workspace is
+ * available + the active workspace is `user-switchable`) a Switch workspace
  * submenu.
  *
- * Engines mount this in the toolbar end-region (or wherever the shell
+ * Engines mount this in the toolbar end-region (or wherever the workspace
  * authors place it). Spec §15 names it as a v1 built-in.
  */
 export default function UserMenuApp() {
@@ -23,12 +23,12 @@ export default function UserMenuApp() {
 	const profileUrl = user.profileUrl || '#/profile';
 	const logoutUrl = user.logoutUrl || '';
 
-	const shells = window.wpAdminWorkspaces?.shells || [];
-	const switchableWorkspaces = shells.filter(
+	const workspaces = window.wpAdminWorkspaces?.workspaces || [];
+	const switchableWorkspaces = workspaces.filter(
 		( s ) => s[ 'user-switchable' ]
 	);
 	// Hide the switcher when a wp-content/workspace.json override is active — it
-	// wins over the active-shell option, so switching would be a no-op.
+	// wins over the active-workspace option, so switching would be a no-op.
 	const showWorkspaceSwitcher =
 		switchableWorkspaces.length > 1 &&
 		! window.wpAdminWorkspaces?.fileActive;

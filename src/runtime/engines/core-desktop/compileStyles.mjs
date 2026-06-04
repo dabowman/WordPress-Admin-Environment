@@ -1,7 +1,7 @@
 /**
  * `core:desktop` engine style compiler.
  *
- * Walks the resolved `admin.json.styles` tree and emits CSS variables
+ * Walks the resolved `workspace.json.styles` tree and emits CSS variables
  * scoped to the engine's ThemeProvider wrapper. The kernel's
  * `ThemeProviderHost` calls this hook and wraps the output in a
  * `[data-theme-scope-id="..."]` selector — that attribute is the
@@ -13,7 +13,7 @@
  *      <surface>--<slot>` (kebab-cased). The engine's `index.css`
  *      consumes those slot names directly with hardcoded fallbacks, so
  *      authors can override any desktop chrome surface (canvas, dock,
- *      wallpaper, window-frame, snap-ghost) via admin.json without
+ *      wallpaper, window-frame, snap-ghost) via workspace.json without
  *      writing CSS.
  *
  *   2. `styles.theme.color.bg` seed → canvas background fallback. A

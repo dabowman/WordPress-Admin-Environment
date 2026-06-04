@@ -1,8 +1,8 @@
-# Copyright (C) WP Admin Shell Contributors
+# Copyright (C) WP Admin Workspaces Contributors
 # This file is distributed under the GPL-2.0-or-later license.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Admin Shell 0.1.0\n"
+"Project-Id-Version: WP Admin Workspaces 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/dabowman/WordPress-Admin-Environment/issues\n"
 "POT-Creation-Date: 2026-05-28 19:36+0000\n"
 "MIME-Version: 1.0\n"
@@ -16,7 +16,7 @@ msgid "Admin route \"static_data\" must be an array when provided."
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-admin-routes.php:247
-msgid "Admin route %s declared \"gc_time\". The shell does not implement TanStack Router cache GC; the value is accepted and ignored."
+msgid "Admin route %s declared \"gc_time\". The workspace does not implement TanStack Router cache GC; the value is accepted and ignored."
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-admin-routes.php:59
@@ -56,7 +56,7 @@ msgid "Dashboard widget id %s must be namespaced (core:* or plugin:slug/name)."
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:183
-msgid "Data field collection %1$s declared fieldsModule \"%2$s\". The shell does not resolve fieldsModule in this release; the value is reserved for future native script-modules support."
+msgid "Data field collection %1$s declared fieldsModule \"%2$s\". The workspace does not resolve fieldsModule in this release; the value is reserved for future native script-modules support."
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:55
@@ -136,7 +136,7 @@ msgid "Consumer-origin (role/user) __tombstone marker for entry \"%s\" ignored �
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-preload.php:176
-msgid "WP Admin Shell preload skipped %1$s: %2$s"
+msgid "WP Admin Workspaces preload skipped %1$s: %2$s"
 msgstr ""
 
 #: includes/origins/class-wp-admin-workspaces-origin-file.php:235
@@ -180,7 +180,7 @@ msgid "Appearance"
 msgstr ""
 
 #: src/apps/appearance/index.js:158
-msgid "The active shell does not expose any user-customizable appearance settings."
+msgid "The active workspace does not expose any user-customizable appearance settings."
 msgstr ""
 
 #: src/apps/appearance/index.js:167
@@ -212,11 +212,11 @@ msgid "Default route"
 msgstr ""
 
 #: src/apps/appearance/index.js:222
-msgid "Where the shell lands when you open it (e.g. /posts, /media)."
+msgid "Where the workspace lands when you open it (e.g. /posts, /media)."
 msgstr ""
 
 #: src/apps/appearance/index.js:240
-msgid "Reset to shell defaults"
+msgid "Reset to workspace defaults"
 msgstr ""
 
 #: src/apps/command-palette/compileCommands.mjs:36 src/apps/command-palette/index.js:53
@@ -874,7 +874,7 @@ msgid "Workspace"
 msgstr ""
 
 #: src/apps/settings-workspace/index.js:91
-msgid "To re-enable from classic wp-admin, visit Settings → WP Admin Shell."
+msgid "To re-enable from classic wp-admin, visit Settings → WP Admin Workspaces."
 msgstr ""
 
 #: src/apps/settings-writing/index.js:10
@@ -1216,7 +1216,7 @@ msgid "Unknown layout engine:"
 msgstr ""
 
 #: src/runtime/kernel.js:42
-msgid "Shell configuration not found."
+msgid "Workspace configuration not found."
 msgstr ""
 
 #: src/runtime/regions/mountApp.js:101
@@ -1252,7 +1252,7 @@ msgid "Manual offsets"
 msgstr ""
 
 #: wp-admin-workspaces.php:348 wp-admin-workspaces.php:349 wp-admin-workspaces.php:374
-msgid "WP Admin Shell"
+msgid "WP Admin Workspaces"
 msgstr ""
 
 #: wp-admin-workspaces.php:386
@@ -1260,9 +1260,9 @@ msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requ
 msgstr ""
 
 #: wp-admin-workspaces.php:51
-msgid "WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated."
+msgid "WP Admin Workspaces requires the Gutenberg plugin to be active. The workspace uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated."
 msgstr ""
 
 #: wp-admin-workspaces.php:659
-msgid "Unknown shell: \"%s\". The previous active shell was kept."
+msgid "Unknown workspace: \"%s\". The previous active workspace was kept."
 msgstr ""

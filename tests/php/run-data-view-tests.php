@@ -15,7 +15,7 @@
  *   - Base filter fires exactly once per resolve; variant filter only when variant !== '_default'.
  *   - `inject_app_baselines()` writes `_default` + variants from manifest into `settings.dataViews`.
  *   - `inject_app_baselines()` preserves variant key (regression fix).
- *   - `inject_app_baselines()` does NOT overwrite admin.json-declared entries.
+ *   - `inject_app_baselines()` does NOT overwrite workspace.json-declared entries.
  *   - `dataViewRef` parsing — valid resolves; invalid returns empty.
  *   - `dataViewRef` precedence over `dataViewKind/Name/Variant`.
  *   - Inference fallback — manifest `dataView.kind`/`name` + screen.config overrides.
@@ -29,7 +29,7 @@
  *     `settings.dataFields` via `wp_admin_workspaces_data_plugin` filter.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
- * resolver directly with `$config` to avoid depending on disk shells.
+ * resolver directly with `$config` to avoid depending on disk workspaces.
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
@@ -849,7 +849,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	'_default'
 );
 
-// admin.json-declared entries win — `_default` already declared survives untouched.
+// workspace.json-declared entries win — `_default` already declared survives untouched.
 $prepopulated = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array(
 	'settings' => array(
 		'dataViews' => array(
@@ -864,7 +864,7 @@ $prepopulated = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( arra
 	),
 ) );
 WPAS_Data_View_Test_Runner::assert_eq(
-	'admin.json _default wins over manifest baseline',
+	'workspace.json _default wins over manifest baseline',
 	$prepopulated['settings']['dataViews']['postType']['recipe']['_default']['defaultView']['perPage'],
 	999
 );

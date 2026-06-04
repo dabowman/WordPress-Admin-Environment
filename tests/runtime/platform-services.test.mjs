@@ -4,7 +4,7 @@
  *
  * Covers `src/runtime/regions/platformServices.mjs` — the dispatch
  * vocabulary the Region renderer + engine bucketing read. v2
- * declarations expose services via `region.platform`; v1 shells bridge
+ * declarations expose services via `region.platform`; v1 workspaces bridge
  * via legacy `region.source` + `region.config`. Both shapes return the
  * same service shape so callers (engine layout, GenericRegion) stay
  * single-path.

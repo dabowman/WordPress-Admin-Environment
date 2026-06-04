@@ -2,11 +2,11 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/users.php`, `wp-admin/user-new.php`, `wp-admin/user-edit.php`, `wp-admin/profile.php`, `wp-admin/authorize-application.php`, `WP_Users_List_Table` (`wp-admin/includes/class-wp-users-list-table.php`)
-**Current shell coverage:** `core:users` → DataViews list (M4), `core:profile` → `src/apps/profile/index.js` (partial — see "Gaps").
+**Current workspace coverage:** `core:users` → DataViews list (M4), `core:profile` → `src/apps/profile/index.js` (partial — see "Gaps").
 
 This spec describes the **semantic surface** of the user-management screens so an agent can rebuild them in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs. Single-site context — multisite-specific behavior is called out where relevant; network-admin-only variants are out of scope.
 
-The five screens are documented as one app cluster (`core:users`) because they share an entity (`users`), capabilities, and REST surface. The plausible shell mapping is:
+The five screens are documented as one app cluster (`core:users`) because they share an entity (`users`), capabilities, and REST surface. The plausible workspace mapping is:
 - `core:users` → list (default route)
 - `core:user-new` → add user (existing-user invite + new-user create flows)
 - `core:user-edit` → edit any user (admin-only)
@@ -73,7 +73,7 @@ Jobs to be done:
 | Authorize application | `read` + `wp_is_application_passwords_available_for_user` | `authorize-application.php` |
 
 **Permission-denied states:**
-- Lacking `list_users`: `wp_die` with "Sorry, you are not allowed to list users." Shell mirrors via 403 view.
+- Lacking `list_users`: `wp_die` with "Sorry, you are not allowed to list users." Workspace mirrors via 403 view.
 - Lacking `edit_user` for specified id: `wp_die` "Sorry, you are not allowed to edit this user."
 - Application passwords unsupported (no HTTPS, `wp_is_application_passwords_available()` false): the section is hidden and authorization page errors out with 501.
 - Self-cannot-delete: in single-site, the row's Delete action is hidden when `user_id === current_user_id`. In multisite, Remove is hidden similarly.
@@ -140,7 +140,7 @@ The role filter row shows: `All (N) | Administrator (N) | Editor (N) | Author (N
 - REST exposure: **gap.** `count_users()` is not exposed via REST. Workarounds:
   - 6+ requests to `/wp/v2/users?roles={role}&per_page=1` reading `X-WP-Total`. Fine for small role sets.
   - Custom `/wp-admin-workspaces/v1/user-counts` proxy.
-- Large-network fallback: `wp_is_large_user_count()` returns true when total > 10000; core then suppresses counts entirely. Mirror this in shell.
+- Large-network fallback: `wp_is_large_user_count()` returns true when total > 10000; core then suppresses counts entirely. Mirror this in workspace.
 
 ### Fields used by the edit / profile form
 
@@ -168,11 +168,11 @@ In addition to the list fields:
 | Account Management | Sessions | (read) computed | int | count of `WP_Session_Tokens` |
 | Account Management | Application Passwords | `/wp/v2/users/{id}/application-passwords` | nested resource | separate controller |
 
-**Personal Options gap:** the Visual Editor / Syntax Highlighting / Admin Color / Keyboard Shortcuts / Toolbar fields are stored as user meta but not registered in the default REST users schema. Shell needs either:
+**Personal Options gap:** the Visual Editor / Syntax Highlighting / Admin Color / Keyboard Shortcuts / Toolbar fields are stored as user meta but not registered in the default REST users schema. Workspace needs either:
 - Custom REST user meta registration that exposes them through `meta`, or
 - A custom `/wp-admin-workspaces/v1/user-prefs/{id}` endpoint.
 
-The existing M5 user prefs endpoint (`/wp-admin-workspaces/v1/user-prefs`) handles shell-specific prefs only (density, accent, default route). Core wp-admin prefs are a separate concern.
+The existing M5 user prefs endpoint (`/wp-admin-workspaces/v1/user-prefs`) handles workspace-specific prefs only (density, accent, default route). Core wp-admin prefs are a separate concern.
 
 ### Application Passwords data model
 
@@ -425,7 +425,7 @@ On approve: a new application password is created via `WP_Application_Passwords:
 | Delete | `delete_user` (single-site, not self) | Mutation | Two-step: confirmation page asks how to handle the user's content (delete all / reassign to another user). `DELETE /wp/v2/users/{id}` requires `force=true` and accepts `reassign={target_id}`. |
 | Remove | `remove_user` (multisite) | Mutation | Removes site membership but preserves user on the network. |
 | View | none | External | Author archive `link`; new tab. |
-| Send password reset | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — core uses `users.php?action=resetpassword`, which calls `retrieve_password()`. Shell needs `POST /wp-admin-workspaces/v1/users/{id}/password-reset` proxy. |
+| Send password reset | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — core uses `users.php?action=resetpassword`, which calls `retrieve_password()`. Workspace needs `POST /wp-admin-workspaces/v1/users/{id}/password-reset` proxy. |
 | View posts | none | Navigation | `core:posts?author={id}` |
 
 ### Users list — bulk
@@ -495,11 +495,11 @@ REST orderby supports more: `id`, `name`, `slug`, `email`, `url`, `registered_da
 Default: `username asc` (core).
 
 ### Search
-Single full-text input. Submits via form GET (`?s={query}`). Debounce 300ms in modern shell. Resets to page 1.
+Single full-text input. Submits via form GET (`?s={query}`). Debounce 300ms in modern workspace. Resets to page 1.
 
 ### Pagination
 - Default page size: 20 (user-configurable via screen options up to a sane limit; core stores `users_per_page` user meta)
-- URL state: `?paged={n}`. Modern shell uses `?page={n}` to match REST naming.
+- URL state: `?paged={n}`. Modern workspace uses `?page={n}` to match REST naming.
 
 ---
 
@@ -596,7 +596,7 @@ Original wp-admin URLs:
 - `/wp-admin/profile.php?dismiss={id}_new_email&_wpnonce={nonce}` — cancel pending email change
 - `/wp-admin/authorize-application.php?app_name={name}&app_id={uuid}&success_url={url}&reject_url={url}`
 
-Recommended shell hash routing:
+Recommended workspace hash routing:
 ```
 #/users?role=editor&search=jane&page=2
 #/user-new
@@ -625,14 +625,14 @@ Browser back/forward must restore filter state. Refresh must restore. Sharing th
 | Send password reset (success) | back to list | `?update=resetpassword` analog |
 | Authorize Application "Cancel" | `reject_url` (external) | new tab or replace |
 | Authorize Application "Approve" | `success_url` (external) | with credentials |
-| Header avatar in toolbar (shell-level) | `core:profile` | none |
+| Header avatar in toolbar (workspace-level) | `core:profile` | none |
 
 ### Inbound
 
 - From `core:posts` filter "by author {Name}" → `core:users` filtered by id, or back to `core:user-edit`.
 - From `core:comments` row → `core:user-edit`.
 - From email "set new password" link → password reset screen (out of scope; auth flow).
-- From OAuth-style external redirect to `authorize-application.php` → only inbound from outside the shell.
+- From OAuth-style external redirect to `authorize-application.php` → only inbound from outside the workspace.
 
 ---
 
@@ -692,15 +692,15 @@ Browser back/forward must restore filter state. Refresh must restore. Sharing th
 
 ## 14. Extension points (core hooks)
 
-Decide for each whether to preserve, replace with shell-level extensibility, or drop.
+Decide for each whether to preserve, replace with workspace-level extensibility, or drop.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `users_list_table_query_args` | Modify user query | Replace with shell list-query filter |
-| `manage_users_columns` / `manage_users_custom_column` | Add columns | Replace with shell field registry |
-| `bulk_actions-users` | Bulk actions | Replace with shell `actions` registry |
+| `users_list_table_query_args` | Modify user query | Replace with workspace list-query filter |
+| `manage_users_columns` / `manage_users_custom_column` | Add columns | Replace with workspace field registry |
+| `bulk_actions-users` | Bulk actions | Replace with workspace `actions` registry |
 | `user_row_actions` | Per-row actions | Replace with `core:users.row-actions` slot (already wired in M4) |
-| `restrict_manage_users` | Filter dropdowns above table | Replace with shell filter API |
+| `restrict_manage_users` | Filter dropdowns above table | Replace with workspace filter API |
 | `manage_users_extra_tablenav` | Extra table-nav UI | Replace with slot |
 | `personal_options` | Append to Personal Options table | Replace with `core:profile.personal-options` slot |
 | `profile_personal_options` | Self-edit only | Same |
@@ -714,7 +714,7 @@ Decide for each whether to preserve, replace with shell-level extensibility, or 
 | `wp_create_application_password_form` | Inside create-app-password form | Replace with `core:application-passwords.form` slot |
 | `additional_capabilities_display` | Toggle Additional Capabilities visibility | Preserve |
 | `enable_edit_any_user_configuration` | Multisite per-site cap gate | Preserve as a server-side check |
-| `admin_color_scheme_picker` | Render color scheme radios | Replace with shell appearance picker (fed by registered schemes) |
+| `admin_color_scheme_picker` | Render color scheme radios | Replace with workspace appearance picker (fed by registered schemes) |
 | `user_profile_picture_description` | Filter Gravatar caption | Drop or preserve |
 | `show_password_fields` | Toggle password fields | Preserve |
 | `wp_is_password_reset_allowed_for_user` | Disable reset for specific users | Preserve |
@@ -725,7 +725,7 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source `core:users`** → DataViews list (M4): list, search, role filter (single/multi), pagination, sort, bulk delete with reassign-content step, edit/view/trash actions.
 - **Source `core:profile`** → `src/apps/profile/index.js`: name, email, biographical info, contact info via `useEntityRecord('root', 'user', userId)`. Optimistic edits.
 - **No source for `core:user-new`, `core:user-edit`, `core:authorize-application`.**
@@ -747,7 +747,7 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
 | Application Passwords create | High | One-time password reveal UX is critical. |
 | Application Passwords list | High | Last-used + last-IP display. |
 | Application Passwords revoke | High | Per-row + revoke-all. |
-| `core:authorize-application` screen | High | Implement as a top-level shell route (no menu entry) reachable from external redirect. Validates request, exchanges for app password, redirects to `success_url`. |
+| `core:authorize-application` screen | High | Implement as a top-level workspace route (no menu entry) reachable from external redirect. Validates request, exchanges for app password, redirects to `success_url`. |
 | Custom contact methods (`wp_get_user_contact_methods`) | Low | Plugin extension; preserve via custom REST user meta. |
 | Multisite Super Admin badge + grant/revoke | Low | Network admin context only. |
 | Multisite Skip Confirmation Email checkbox | Low | Multisite Super Admin only. |
@@ -803,7 +803,7 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
   - `https://developer.wordpress.org/rest-api/reference/application-passwords/`
 - Capability map: `wp-includes/class-wp-roles.php`, `wp-admin/includes/capabilities.php` (`map_meta_cap` cases for `delete_user`, `edit_user`, `promote_user`, `remove_user`, `list_app_passwords`, `read_app_password`, `edit_app_password`, `delete_app_password`)
 - Authorize Application validators: `wp-includes/user.php::wp_is_authorize_application_password_request_valid`
-- Current shell impls:
+- Current workspace impls:
   - `src/apps/profile/index.js`
   - `core:users` registration in `src/runtime/registry/builtins.js`
 - Cross-link: `docs/screens/posts.md` (analogous list pattern), `docs/screens/plugins.md` (analogous list-with-detail pattern), `docs/screens/personal-data.md` (privacy export/erase — pending)

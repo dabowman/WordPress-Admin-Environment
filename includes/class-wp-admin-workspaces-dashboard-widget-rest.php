@@ -20,7 +20,7 @@
  * **Permission floor.** `current_user_can( 'read' )` (the classic dashboard's
  * own view floor) AND the requested id must be a non-core widget the bridge
  * actually surfaces — `WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget()`
- * rejects the shell-native ids, and an id absent from the harvested set 404s.
+ * rejects the workspace-native ids, and an id absent from the harvested set 404s.
  * This is the real gate: a caller can only render a widget the dashboard
  * already registered for this request, never an arbitrary callback. Logged-out
  * → 401; unknown / core / removed id → 404; logged-in-but-`!read` → 403.
@@ -104,7 +104,7 @@ class WP_Admin_Workspaces_Dashboard_Widget_REST {
 	public static function get_widget_html( $request ) {
 		$id = (string) $request->get_param( 'id' );
 
-		// A core widget id is shipped native by the shell — never render the
+		// A core widget id is shipped native by the workspace — never render the
 		// classic version. Treat as not-found so the tile (which only ever
 		// asks for harvested plugin ids) gets a clean 404 if mis-wired.
 		if ( $id === '' || WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( $id ) ) {

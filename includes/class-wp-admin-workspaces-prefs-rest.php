@@ -4,7 +4,7 @@
  *
  * Backs `core:appearance-preferences`. Returns the full `wp_admin_workspaces_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
- * `customizable` paths the active shell exposes; writes are partial
+ * `customizable` paths the active workspace exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save
  * independently without clobbering siblings.
  *

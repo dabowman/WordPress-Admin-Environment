@@ -6,7 +6,7 @@ This app **replaces the retired `core:dashboard` monolith** (issue #133 — "fol
 
 ## Default tile set
 
-The bundled `wp-admin-default` shell mounts these four tiles on `dashboard-home`:
+The bundled `wp-admin-default` workspace mounts these four tiles on `dashboard-home`:
 
 - **`core:dashboard-widget-at-a-glance`** — site-wide counts (posts / pages / pending comments / users). Aggregate, NOT author-scoped.
 - **`core:dashboard-widget-activity`** — recently published posts + comments awaiting moderation. Site-wide.
@@ -50,7 +50,7 @@ The host reads three inputs:
 
 ## v3 vs v2
 
-- **v2** read manifest `dashboardWidget` blocks + admin.json's top-level `dashboardWidgets` overrides. Both have been retired in v3; placement now follows the uniform screen-app model.
+- **v2** read manifest `dashboardWidget` blocks + workspace.json's top-level `dashboardWidgets` overrides. Both have been retired in v3; placement now follows the uniform screen-app model.
 - **v3** dissolves the C4 widget API into `screens[id].apps[]` with `slot: "grid"`. Apps still ship intrinsic defaults — through the new `slotHints` block on app manifests — but install-layer placement lives on the screen-app entry.
 - The v3 compiler ships a back-compat path (`translate_v2_dashboard_widgets`) that folds v2-shape `dashboardWidgets` into the `dashboard-widgets` screen's `apps[]` when both are present. Authors get one cycle to migrate; `_doing_it_wrong` fires under `WP_DEBUG`.
 
@@ -90,7 +90,7 @@ A rebuild needs:
 - A read of each entry's referenced manifest's `slotHints` block — same shape as `admin-app-v3.json#/$defs/slotHints`.
 - A merge equivalent to `composeScreenWidgets({ screen, manifests })` — per-entry `size`/`position` override `slotHints` per-property; `defaultSize` clamped to `minSize`.
 - A grid container with `display: grid` + auto-fill columns at the design-system's card-grid breakpoint.
-- A way to mount the widget app inside each tile — for the shell, this is `<MountedApp>` which threads cap gating + theming. Rebuilds need an equivalent.
+- A way to mount the widget app inside each tile — for the workspace, this is `<MountedApp>` which threads cap gating + theming. Rebuilds need an equivalent.
 
 ## Known limitations
 

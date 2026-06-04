@@ -1,6 +1,6 @@
 # Engines and design systems
 
-How the WP Admin Shell separates design-system concerns across the
+How the WP Admin Workspaces separates design-system concerns across the
 kernel, engines, and apps — and what plugin authors can swap.
 
 Surfaced 2026-05-12 while planning the desktop engine port. Codified
@@ -9,7 +9,7 @@ chrome consumer.
 
 ## Layers
 
-The shell renders in three logical layers:
+The workspace renders in three logical layers:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -132,7 +132,7 @@ sibling and gets the full WPDS surface for free.
   `EngineSource.ThemeProvider`, reused by `core:single-pane` via
   sibling import). Relocated out of the kernel in PR-#49 Stage 4 so
   the kernel never imports a DS-specific provider — engines opt into
-  shell theming by shipping a `ThemeProvider`; absence falls back to
+  workspace theming by shipping a `ThemeProvider`; absence falls back to
   a neutral pass-through wrapper inside `ThemeProviderHost`.
 - **Desktop engine compiler** —
   `src/runtime/engines/core-desktop/compileStyles.mjs` (smaller
@@ -145,10 +145,10 @@ sibling and gets the full WPDS surface for free.
 ## When NOT to use the engine API
 
 - For an app that needs different chrome inside an existing engine
-  → ship an app, not an engine. Engines are about the shell shape;
+  → ship an app, not an engine. Engines are about the workspace shape;
   apps are about the surface inside.
 - For a brand re-skin of `core:default` → use `styles.chrome.*` in
-  admin.json. Slot overrides flow through the engine's compileStyles
+  workspace.json. Slot overrides flow through the engine's compileStyles
   without code.
 - For a one-off layout tweak → declare a new region template inside
   the existing engine's `engine.json` rather than forking the engine.
@@ -159,7 +159,7 @@ sibling and gets the full WPDS surface for free.
 `ThemeProvider`. Absent provider → neutral pass-through wrapper
 (`NeutralProvider`), no DS injected. The host wraps the inner provider
 in a render-error boundary; a throwing third-party provider swaps to
-the neutral wrapper + console error so the shell still paints. The host
+the neutral wrapper + console error so the workspace still paints. The host
 emits `<div data-theme-scope-id={id}>` around children with a sibling
 `<style data-theme-scope-detail={id}>` carrying engine-compiled scoped
 CSS. Verified by `tests/runtime/kernel-no-ds-import.test.mjs`.
@@ -208,7 +208,7 @@ Two engine-side paths (never kernel):
   engines ship none of these.
 
 Kernel `src/index.css` is ~10 lines: body positioning + a11y fallback
-only. `chrome.canvas.*` is the author entry point for shell-wide
+only. `chrome.canvas.*` is the author entry point for workspace-wide
 bg/fg; `chrome.{sidebar,toolbar,site-hub,content}.*` cover per-surface
 chrome. `core:main`/`core:detail` also expose
 `chrome.content.card-{background,radius,shadow,margin}` /
@@ -222,10 +222,10 @@ through.
 tree and skips serializing the whole DTCG `tokens` table to the page
 (emits `{}` via `(object) array()`) when it references zero *foreign*
 aliases — `{path}` not starting `styles.`. Within-doc aliases
-(`{styles.path}`) resolve from admin.json directly and don't need the
-table; the default shell ships seeds + slot overrides only, so the DTCG
+(`{styles.path}`) resolve from workspace.json directly and don't need the
+table; the default workspace ships seeds + slot overrides only, so the DTCG
 layer is dead weight on the wire. **Contract:** DTCG aliases are valid
-ONLY under `admin.json#styles`. App manifests, engine `default-style`
+ONLY under `workspace.json#styles`. App manifests, engine `default-style`
 blocks, and other surfaces MUST NOT carry `{tokens.*}` references — the
 detector doesn't scan them, so a stray alias outside `styles` silently
 emits a `var(--token-…)` fallback at runtime.
@@ -242,7 +242,7 @@ override them:
    `var(--wp-admin-workspaces--chrome--<surface>--<slot>, var(--wpds-*))`. The
    outer var is a curated, by-name author knob (`background`, `color`,
    `border`, padding, key dimensions like sidebar width). Set it via
-   admin.json `styles.chrome.<surface>.<slot>` — the chrome bridge
+   workspace.json `styles.chrome.<surface>.<slot>` — the chrome bridge
    (`compileStyles.mjs`) maps name → var. The inner `--wpds-*` is what it
    resolves to when the slot is unset.
 2. **Bare WPDS token** — `var(--wpds-border-radius-lg)`,
@@ -261,7 +261,7 @@ override them:
 - **Full property override** (`regions[id].style.<prop>`) — works for
   **every** property in all three tiers, because `default-style` and
   `regions[id].style` both land as inline style on the same region wrapper
-  and admin.json wins the merge. Replaces the whole declared value rather
+  and workspace.json wins the merge. Replaces the whole declared value rather
   than retuning a token.
 
 A third, indirect lever: changing the WPDS theme/density (`styles.theme` /
@@ -336,7 +336,7 @@ wrapper `Region.js` renders around every mounted app — adds **no
 padding**. Content sits flush to the region card edge by default. This
 is deliberate: the mount is engine-internal and **non-addressable** (no
 template hook, no `regions[id].style` path), so a padding baked there
-can't be removed per-app from admin.json. A blanket default forced
+can't be removed per-app from workspace.json. A blanket default forced
 full-bleed apps (DataViews tables, iframes) to opt *out*, which is why
 the kernel had grown a hardcoded `is-fullscreen` app-ID list — a DS
 coupling smell, now removed.
@@ -354,7 +354,7 @@ The model instead:
   It pads via `var(--wp-admin-workspaces--chrome--content--inset,
   var(--wpds-dimension-padding-2xl))` and sets `box-sizing: border-box`
   (so `height: 100%` roots don't overflow).
-- **Authors retune it** via `styles.chrome.content.inset` in admin.json
+- **Authors retune it** via `styles.chrome.content.inset` in workspace.json
   — the chrome bridge maps it to `--wp-admin-workspaces--chrome--content--inset`
   exactly like the other `chrome.*` slots.
 - **Composers own their panels' inset, once.** The `core:settings` host
@@ -397,7 +397,7 @@ theme resets) that stomp `@wordpress/ui` defaults.
   regardless of inline `flex-direction: row`. `core:default/index.css`
   ships a defensive unlayered `.wp-admin-workspaces [class*="__stack"]
   { display: flex }`. Don't remove without verifying the cascade layer
-  applies in every shell DOM context (esp. inside `<button>`).
+  applies in every workspace DOM context (esp. inside `<button>`).
 - Pass explicit `align="center"` to `<Stack direction="row">` with icon
   + text — default `align-items: stretch` mis-sizes SVGs in flex.
 - **`href` on `@wordpress/ui` Button / IconButton requires
@@ -449,11 +449,11 @@ Region/app theming uses a *nested* `@wordpress/theme.ThemeProvider`
 properties (`--wpds-*` + `--wp-components-*`) on a `display:contents`
 element — it never sets `color`, and its tokens don't reach
 `document.body` portals. So a nested region (e.g. light content over a
-dark-root shell) had two leaks, both fixed by wrapping NON-root provider
+dark-root workspace) had two leaks, both fixed by wrapping NON-root provider
 children in `RegionThemedSubtree`:
 
 1. **Inherited foreground leak.** The engine paints `color` at the
-   layout root (shell-*root* ramp) and `color` inherits. A nested region
+   layout root (workspace-*root* ramp) and `color` inherits. A nested region
    that doesn't re-set `color` leaks the root foreground into its text.
    Components setting their own color from a token (`@wordpress/ui`
    Text/InputControl) looked right; ones relying on inherited `color`

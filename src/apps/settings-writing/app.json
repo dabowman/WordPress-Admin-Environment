@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "DataForm over the REST-exposed slice of WordPress's Writing Settings: `default_category` (select of categories) + `default_post_format` (select of the ten core post formats). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `writing` panel; shells mount it directly as a Writing screen.",
+		"purpose": "DataForm over the REST-exposed slice of WordPress's Writing Settings: `default_category` (select of categories) + `default_post_format` (select of the ten core post formats). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `writing` panel; workspaces mount it directly as a Writing screen.",
 		"rebuilds": "settings-writing",
 		"data": {
 			"reads": [
@@ -51,7 +51,7 @@
 			{ "trigger": "Choose Default Post Category", "effect": "`edit({ default_category: int })`." },
 			{ "trigger": "Choose Default Post Format", "effect": "`edit({ default_post_format: value })`." },
 			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar / error notice via `useEntitySave`." },
-			{ "trigger": "Copy a legacy-option CLI command / agent prompt or click the classic link", "effect": "No-API fallback affordance for the legacy Writing options — no shell-side write." }
+			{ "trigger": "Copy a legacy-option CLI command / agent prompt or click the classic link", "effect": "No-API fallback affordance for the legacy Writing options — no workspace-side write." }
 		],
 		"a11y": {
 			"focus-management": "Native DataForm focus order is sufficient."

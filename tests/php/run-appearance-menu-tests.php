@@ -185,7 +185,7 @@ WPAS_Appearance_Test_Runner::assert_false(
 	$classic_doc['theme-support']['block-theme']
 );
 
-// Signal is stamped even when the shell declares no screens.
+// Signal is stamped even when the workspace declares no screens.
 $bare = WP_Admin_Workspaces_Appearance_Menu::apply(
 	array( 'workspace' => array() ),
 	wpas_signal( true )
@@ -346,7 +346,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 // Empty-group collapse — a group whose only child is pruned is itself dropped
 // -----------------------------------------------------------------------------
 
-// Custom shell whose Appearance group's ONLY item is the block-theme-only
+// Custom workspace whose Appearance group's ONLY item is the block-theme-only
 // `site-editor`. On a classic theme that child is pruned → the group would be
 // left empty (a clickable drilldown into nothing) without the collapse guard.
 $only_gated = array(
@@ -529,7 +529,7 @@ $doc_with_navmenus['screens']['nav-menus']                         = array(
 	'path'  => '/nav-menus',
 	'app'   => 'iframe:nav-menus.php',
 );
-// The shell pins `nav-menus` in the Appearance menu group (a real entry point,
+// The workspace pins `nav-menus` in the Appearance menu group (a real entry point,
 // not a hand-typed URL). Mirror that placement so the prune is exercised against
 // a menu node, not just a `screens` entry.
 $doc_with_navmenus['menu']['appearance']['items']['nav-menus']     = array( 'position' => 65 );

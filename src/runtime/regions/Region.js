@@ -53,7 +53,7 @@ export function Region( { region } ) {
 
 /**
  * Wraps a region in a nested `<ScopedThemeProvider>` when the resolved
- * admin.json declares `styles.regions[regionId]` (theme seeds OR direct
+ * workspace.json declares `styles.regions[regionId]` (theme seeds OR direct
  * slot overrides). Zero-cost when the region has no styles authored —
  * just renders children.
  * @param {Object} root0
@@ -133,7 +133,7 @@ function childId( parentId, key ) {
  * regions wrap with backdrop + focus trap. Children + app + contains[]
  * render inside the resolved container.
  *
- * V2.M7 will retire the legacy switch above; once bundled shells
+ * V2.M7 will retire the legacy switch above; once bundled workspaces
  * migrate to v2, every region flows through this path.
  * @param {Object} root0
  * @param {*}      root0.region
@@ -233,7 +233,7 @@ function ModalRegion( { region, services, matched, regionState, modeId } ) {
 	// modal regions render their dialog chrome immediately — the
 	// classic "show this dialog now" pattern. The bundled command
 	// palette region is triggerable: starting closed avoids the
-	// always-visible backdrop. When admin.json's `bindings` block
+	// always-visible backdrop. When workspace.json's `bindings` block
 	// declares a keystroke for this app, BindingsConsumer dispatches
 	// to the open handler we register below via triggerStore.
 	const [ isOpen, setOpen ] = useState( ! services.isTriggerable );

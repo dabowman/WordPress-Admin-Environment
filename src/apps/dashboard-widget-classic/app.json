@@ -28,7 +28,7 @@
 		"position": "auto"
 	},
 	"documentation": {
-		"purpose": "Render half of the classic dashboard-widget bridge (#134). One shared tile app the PHP harvest mounts once per surviving plugin dashboard widget, with per-tile config.widgetId. Fetches that widget's captured HTML lazily so a slow widget doesn't block the grid. Surfaces un-ported third-party dashboard widgets in the workspace without anyone writing shell config — the dashboard sibling of the #128 admin-bar / notices chrome harvest.",
+		"purpose": "Render half of the classic dashboard-widget bridge (#134). One shared tile app the PHP harvest mounts once per surviving plugin dashboard widget, with per-tile config.widgetId. Fetches that widget's captured HTML lazily so a slow widget doesn't block the grid. Surfaces un-ported third-party dashboard widgets in the workspace without anyone writing workspace config — the dashboard sibling of the #128 admin-bar / notices chrome harvest.",
 		"data": {
 			"reads": [
 				{
@@ -79,11 +79,11 @@
 		"constraints": [
 			{
 				"concern": "js-loss-in-captured-html",
-				"note": "Captured HTML is injected via dangerouslySetInnerHTML; React does not execute injected <script> tags, and the widget's enqueued JS / AJAX handles are not loaded on the shell page. Widgets that depend on JS (live feeds, interactive charts) degrade to static HTML. The per-tile iframe fallback ('Open classic dashboard') is the fidelity path — it loads classic index.php (the ENTIRE classic dashboard, since wp-admin has no single-widget URL) where the widget's own JS runs. Same escape-hatch tier as the #128 notices iframe fallback."
+				"note": "Captured HTML is injected via dangerouslySetInnerHTML; React does not execute injected <script> tags, and the widget's enqueued JS / AJAX handles are not loaded on the workspace page. Widgets that depend on JS (live feeds, interactive charts) degrade to static HTML. The per-tile iframe fallback ('Open classic dashboard') is the fidelity path — it loads classic index.php (the ENTIRE classic dashboard, since wp-admin has no single-widget URL) where the widget's own JS runs. Same escape-hatch tier as the #128 notices iframe fallback."
 			},
 			{
 				"concern": "admin-trust-html",
-				"note": "The captured HTML is admin-context — identical to what classic wp-admin echoes for the same widget — rendered unchanged via dangerouslySetInnerHTML inside the already-admin-gated workspace. Same author-trust boundary as TrustedNodeTitle / the notices buffer (#128). The endpoint only returns HTML for a widget the dashboard registered this request and which is NOT a shell-native core widget."
+				"note": "The captured HTML is admin-context — identical to what classic wp-admin echoes for the same widget — rendered unchanged via dangerouslySetInnerHTML inside the already-admin-gated workspace. Same author-trust boundary as TrustedNodeTitle / the notices buffer (#128). The endpoint only returns HTML for a widget the dashboard registered this request and which is NOT a workspace-native core widget."
 			}
 		],
 		"design-system-leakage": [

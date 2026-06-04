@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/themes.php` (installed grid) + `wp-admin/theme-install.php` (browse/install) + `wp-admin/includes/class-wp-theme-install-list-table.php`
-**Current shell coverage:** `core:themes` → `src/apps/themes/index.js` (native; DataViews grid + table over the `root/theme` entity, registered in `src/runtime/registry/builtins.js`). See `src/apps/themes/app.md`. Add-new (.org browse) / ZIP upload remain iframe-only.
+**Current workspace coverage:** `core:themes` → `src/apps/themes/index.js` (native; DataViews grid + table over the `root/theme` entity, registered in `src/runtime/registry/builtins.js`). See `src/apps/themes/app.md`. Add-new (.org browse) / ZIP upload remain iframe-only.
 
 This spec describes the **semantic surface** of the Themes screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -55,7 +55,7 @@ Jobs to be done:
 
 **Permission-denied state:** if user lacks both `switch_themes` and `edit_theme_options`, core renders `wp_die()`. Mirror this — render a "no access" empty state, not blank.
 
-**Multisite:** theme installation is gated to network admin (`theme-install.php` lines 19–22 redirect to `network_admin_url('theme-install.php')`). The shell should detect `is_multisite() && ! is_network_admin()` and either redirect to the network screen or show an inline notice with a deep link. Per-site enabling/disabling via `WPMU_PLUGIN_DIR` rules is out of scope for v1 (see Out of scope).
+**Multisite:** theme installation is gated to network admin (`theme-install.php` lines 19–22 redirect to `network_admin_url('theme-install.php')`). The workspace should detect `is_multisite() && ! is_network_admin()` and either redirect to the network screen or show an inline notice with a deep link. Per-site enabling/disabling via `WPMU_PLUGIN_DIR` rules is out of scope for v1 (see Out of scope).
 
 ---
 
@@ -110,10 +110,10 @@ The .org browse mode does **not** use `/wp/v2/themes`. It calls the **WordPress.
 | `compatible_php` | client-side or .org API | gates Activate/Install button |
 
 ### Non-REST data (gaps)
-- **`POST /wp/v2/themes`** — does not exist. Activation, install, delete, upload all go through admin-ajax. The shell should propose `POST /wp/v2/themes/{stylesheet}/activate`, `POST /wp/v2/themes` (install from .org slug), `POST /wp/v2/themes/upload` (multipart), `DELETE /wp/v2/themes/{stylesheet}` as the v2 surface.
+- **`POST /wp/v2/themes`** — does not exist. Activation, install, delete, upload all go through admin-ajax. The workspace should propose `POST /wp/v2/themes/{stylesheet}/activate`, `POST /wp/v2/themes` (install from .org slug), `POST /wp/v2/themes/upload` (multipart), `DELETE /wp/v2/themes/{stylesheet}` as the v2 surface.
 - **Auto-updates list** — stored in site option `auto_update_themes` (`get_site_option('auto_update_themes')`). Read via `GET /wp/v2/settings` if added to the auto-updates registration; today only the toggle endpoint exists at `wp_ajax_toggle_auto_updates`.
 - **Theme update notices** — `wp_get_update_data()` populates the in-page banner. REST has no per-theme update endpoint; use `GET /wp/v2/themes` extended with an `update_available` field as a gap proposal.
-- **WordPress.org Themes API** — public, unauthenticated, but cross-origin. The shell will need a server-side proxy at `/wp-admin-workspaces/v1/themes-directory` that wraps `themes_api()`. Document as a v1 gap.
+- **WordPress.org Themes API** — public, unauthenticated, but cross-origin. The workspace will need a server-side proxy at `/wp-admin-workspaces/v1/themes-directory` that wraps `themes_api()`. Document as a v1 gap.
 
 ---
 
@@ -214,7 +214,7 @@ Shared between modes. Slideshow of screenshots (single screenshot for most theme
 | Action | Cap | Type | Notes |
 |---|---|---|---|
 | Theme Details | none | Modal | Opens detail modal; no destructive effect |
-| Activate | `switch_themes` | Mutation | Activates this theme. Confirmation NOT required by core, but the shell SHOULD prompt because the result is sitewide. |
+| Activate | `switch_themes` | Mutation | Activates this theme. Confirmation NOT required by core, but the workspace SHOULD prompt because the result is sitewide. |
 | Live Preview | `edit_theme_options` + `customize` | Navigation | Classic themes: Customizer with `theme={stylesheet}`. Block themes: Site Editor preview mode. |
 | Customize | `edit_theme_options` + `customize` | Navigation | Active theme only. Same destinations as Live Preview. |
 | Delete | `delete_themes` | Mutation | Inactive themes only. Double-confirm. Cannot delete the active theme or its parent (if active is a child). |
@@ -229,7 +229,7 @@ Shared between modes. Slideshow of screenshots (single screenshot for most theme
 | Install + Activate | `install_themes` + `switch_themes` | Mutation | Two-step combined; only after install succeeds |
 
 ### Bulk actions
-N/A — core does not have bulk actions on the themes screen. Shell may add bulk delete and bulk auto-update toggle as a follow-up.
+N/A — core does not have bulk actions on the themes screen. Workspace may add bulk delete and bulk auto-update toggle as a follow-up.
 
 ### Optimistic vs. blocking
 - **Activate** — blocking. Sitewide consequences; require server confirmation before reflecting in UI.
@@ -288,12 +288,12 @@ Save semantics: blocking. Show progress phases (uploading → unzipping → inst
 ### Activation confirmation
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| Confirm checkbox | bool | optional | "I understand this will change my live site" — shell-added; not in core |
+| Confirm checkbox | bool | optional | "I understand this will change my live site" — workspace-added; not in core |
 
 ### Delete confirmation
 | Field | Type | Required | Notes |
 |---|---|---|---|
-| Confirm | text match | yes | Type theme name to confirm; shell-added safety; not in core |
+| Confirm | text match | yes | Type theme name to confirm; workspace-added safety; not in core |
 
 ---
 
@@ -310,7 +310,7 @@ Original wp-admin URL params:
 - `theme-install.php?browse={tag}` — feature filter
 - `theme-install.php?theme={slug}` — direct deep-link to detail modal
 
-The shell uses hash-based routing under `#/themes`. Recommended URL state:
+The workspace uses hash-based routing under `#/themes`. Recommended URL state:
 ```
 #/themes                                  # installed grid
 #/themes?search=portfolio                 # filtered installed
@@ -395,22 +395,22 @@ Undo for delete: not supported — filesystem mutation. Surface a "View deleted 
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `themes_api` / `themes_api_args` | Modify .org API requests | **Drop** — server-side only; shell proxy controls this. |
-| `theme_action_links` / `theme_action_links_{stylesheet}` | Per-theme action links | Replace with shell `actions` slot keyed by `core:themes.theme-actions`. |
-| `wp_prepare_themes_for_js` | Munge data sent to JS | Replace with shell field-level `render` registry. |
-| `install_themes_tabs` | Add/remove sort tabs | Replace with shell-level filter API. |
-| `install_themes_table_api_args_{tab}` | Modify .org request per tab | Drop — replaced by shell proxy + tab definitions. |
+| `themes_api` / `themes_api_args` | Modify .org API requests | **Drop** — server-side only; workspace proxy controls this. |
+| `theme_action_links` / `theme_action_links_{stylesheet}` | Per-theme action links | Replace with workspace `actions` slot keyed by `core:themes.theme-actions`. |
+| `wp_prepare_themes_for_js` | Munge data sent to JS | Replace with workspace field-level `render` registry. |
+| `install_themes_tabs` | Add/remove sort tabs | Replace with workspace-level filter API. |
+| `install_themes_table_api_args_{tab}` | Modify .org request per tab | Drop — replaced by workspace proxy + tab definitions. |
 | `current_screen` listeners adding scripts | Add UI | Replace with `core:themes.before` / `.after` slots. |
 
-Plugin compatibility note: third-party plugins relying on the original hooks won't work in the shell. Document this prominently. Provide a migration shim only if/when ecosystem demand justifies it.
+Plugin compatibility note: third-party plugins relying on the original hooks won't work in the workspace. Document this prominently. Provide a migration shim only if/when ecosystem demand justifies it.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:themes` → `src/apps/themes/index.js`, registered in `src/runtime/registry/builtins.js`.
-- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via the custom `POST /wp-admin-workspaces/v1/activate-theme` endpoint (cap-gated on `switch_themes`); on failure it surfaces an error snackbar and keeps the user in the shell. See `src/apps/themes/app.md`.
+- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via the custom `POST /wp-admin-workspaces/v1/activate-theme` endpoint (cap-gated on `switch_themes`); on failure it surfaces an error snackbar and keeps the user in the workspace. See `src/apps/themes/app.md`.
 - **What's still iframe-only:** Add-new (.org browse) and ZIP upload (`iframe:theme-install.php`).
 - **Note:** the Gaps table below predates the native app (it still lists "Register `core:themes`" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
@@ -440,7 +440,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 | ARIA polish | High | `aria-current` for active, live regions for install progress |
 
 ### Acceptable interim
-For v1 of any new shell config, `iframe:themes.php` is acceptable as an escape hatch. Mark such configs explicitly so they're tracked for replacement.
+For v1 of any new workspace config, `iframe:themes.php` is acceptable as an escape hatch. Mark such configs explicitly so they're tracked for replacement.
 
 ---
 

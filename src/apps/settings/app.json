@@ -38,7 +38,7 @@
 		"icon": "settings"
 	},
 	"documentation": {
-		"purpose": "Composable host that mounts a vertical nav (left) + one selected settings panel (right). Bundles seven built-in panels reflecting WordPress's settings screens: general (native), writing (native, partial REST coverage), reading (native, partial), discussion (native, partial), permalinks (iframed — no REST), media (iframed — partial REST), privacy (iframed — no REST). Shells narrow the panel set via `config.panels[]`. Unknown sub-routes fall back to the first available panel rather than 404-ing. Each sub-panel rebuilds one wp-admin screen (`docs/screens/settings-general.md`, `settings-writing.md`, `settings-reading.md`, `settings-discussion.md`, `settings-permalinks.md`, `settings-media.md`, `settings-privacy.md`); this host has no single-screen equivalent.",
+		"purpose": "Composable host that mounts a vertical nav (left) + one selected settings panel (right). Bundles seven built-in panels reflecting WordPress's settings screens: general (native), writing (native, partial REST coverage), reading (native, partial), discussion (native, partial), permalinks (iframed — no REST), media (iframed — partial REST), privacy (iframed — no REST). Workspaces narrow the panel set via `config.panels[]`. Unknown sub-routes fall back to the first available panel rather than 404-ing. Each sub-panel rebuilds one wp-admin screen (`docs/screens/settings-general.md`, `settings-writing.md`, `settings-reading.md`, `settings-discussion.md`, `settings-permalinks.md`, `settings-media.md`, `settings-privacy.md`); this host has no single-screen equivalent.",
 		"data": {
 			"reads": [
 				{

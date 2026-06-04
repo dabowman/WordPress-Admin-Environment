@@ -15,7 +15,7 @@ Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm` — that 
 
 Mounted two ways:
 
-- **Directly** as the `settings-writing` screen in a shell (`app: "core:settings-writing"`).
+- **Directly** as the `settings-writing` screen in a workspace (`app: "core:settings-writing"`).
 - **Composed** inside `core:settings` for the `writing` panel — that host imports this app's default export.
 
 ## Rebuild guide (non-WPDS / non-React port)

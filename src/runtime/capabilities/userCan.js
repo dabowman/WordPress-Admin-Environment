@@ -9,7 +9,7 @@ import apiFetch from '@wordpress/api-fetch';
  *
  * Returns `true` for caps not in the map — the runtime renders
  * optimistically; the REST API is the authority. This matches spec §8
- * layer 4: shell UI checks are advisory; core-data's 403 responses
+ * layer 4: workspace UI checks are advisory; core-data's 403 responses
  * surface as inline errors in the consuming app.
  *
  * For caps the runtime can't pre-compute (plugin-driven, dynamic, etc.),

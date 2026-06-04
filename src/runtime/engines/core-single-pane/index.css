@@ -2,14 +2,14 @@
  *
  * Region-level styling (background/color/padding/border for the main /
  * detail / dialog regions) lives in engine.json template `default-style`
- * blocks so admin.json regions can override via `regions[id].style`.
+ * blocks so workspace.json regions can override via `regions[id].style`.
  *
  * The `__appbar`, `__body`, `__nav-drawer`, `__nav-pane`, `__nav-toggle`,
  * and `__nav-backdrop` classes are engine wrappers (NOT regions). They
  * render around regions for the appbar / hamburger drawer chrome, so
  * their visual styling stays here — there is no template hook for them.
  * The hamburger row, drawer pane, and backdrop pull their colors from
- * the chrome → WPDS bridge so admin.json `styles.chrome.toolbar.*`
+ * the chrome → WPDS bridge so workspace.json `styles.chrome.toolbar.*`
  * / `styles.chrome.sidebar.*` overrides still flow through.
  */
 

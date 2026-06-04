@@ -37,10 +37,10 @@ import IframeApp from '../iframe-fallback';
  *                  shims — issue #117)
  *   privacy     — iframed (privacy page not REST-exposed)
  *
- * Shells narrow the panel set via `config.panels[]` (allowlist by id).
+ * Workspaces narrow the panel set via `config.panels[]` (allowlist by id).
  * Plugin-registered panels are not currently supported — the slot/fill
  * extension was retired in V2.M4 in favor of programmatic engine /
- * shell registration; v2.x may re-introduce a panel registry once the
+ * workspace registration; v2.x may re-introduce a panel registry once the
  * surface stabilizes.
  */
 

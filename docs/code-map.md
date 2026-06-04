@@ -1,6 +1,6 @@
 # Code map
 
-File-by-file reference for the WP Admin Shell tree. `CLAUDE.md` carries
+File-by-file reference for the WP Admin Workspaces tree. `CLAUDE.md` carries
 the skeletal top-level layout + the rules; this doc is the annotated
 detail. Keep both in sync when files move.
 
@@ -10,8 +10,8 @@ detail. Keep both in sync when files move.
 wp-admin-workspaces/
 ├── wp-admin-workspaces.php       # Plugin entry point (admin page, assets, settings, config loading)
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
-├── shells/                  # Bundled admin.json configurations (workspace/screens/menu shape)
-│   ├── wp-admin-default.json     # DEFAULT install shell — wp-admin mirror w/ capability-gated screens + iframe-fallback screens
+├── workspaces/                  # Bundled workspace.json configurations (workspace/screens/menu shape)
+│   ├── wp-admin-default.json     # DEFAULT install workspace — wp-admin mirror w/ capability-gated screens + iframe-fallback screens
 │   ├── single-pane-demo.json     # Demo: core:single-pane engine
 │   └── desktop-demo.json         # Demo: core:desktop engine
 ├── assets/
@@ -22,7 +22,7 @@ wp-admin-workspaces/
 │   ├── class-wp-admin-workspaces-prefs-rest.php       # /wp-admin-workspaces/v1/user-prefs
 │   ├── class-wp-admin-workspaces-data-view-rest.php   # /wp-admin-workspaces/v1/data-view + /data-view/variants
 │   ├── class-wp-admin-workspaces-data-field-collections-rest.php # /wp-admin-workspaces/v1/field-collections (reads settings.dataFields)
-│   ├── class-wp-admin-workspaces-cli.php              # `wp admin-shell …` commands
+│   ├── class-wp-admin-workspaces-cli.php              # `wp admin-workspace …` commands
 │   ├── cascade/                                  # Cascade resolver
 │   │   ├── class-wp-admin-workspaces-resolver.php     # Multi-origin merge + load_origins; null-tombstone aware
 │   │   ├── class-wp-admin-workspaces-merge.php        # merge_authoritative + plain merge w/ tombstones
@@ -74,8 +74,8 @@ wp-admin-workspaces/
 │   │   ├── modes/                  # engine modes (default/focus/takeover/modal + plugin-contributed)
 │   │   │   ├── resolveMode.mjs     # Pure ESM: resolveMode(modesCatalog, modeName) → { regions: {…} } w/ extends chain (depth 10, cycle-safe). Mirror of WP_Admin_Workspaces_Modes::resolve.
 │   │   │   └── useMode.js          # React hook: useMode(screenId) → { mode, regions }. Reads resolved engine modes from kernel context + active screen.mode.
-│   │   └── shell-switching.js      # window.wpAdminWorkspaces.switchShell(slug) plumbing
-│   └── apps/                # All shell-bundled apps (registered via builtins.js)
+│   │   └── workspace-switching.js      # window.wpAdminWorkspaces.switchShell(slug) plumbing
+│   └── apps/                # All workspace-bundled apps (registered via builtins.js)
 │       └── <id>/                           # one dir per app id; everything for the app lives here
 │           ├── index.js                    #   React component (default export); imports './index.css' side-effect
 │           ├── app.json                    #   manifest — includes `documentation` block (machine-readable rebuild contract)
@@ -86,7 +86,7 @@ wp-admin-workspaces/
 │   ├── php/                 # wp eval-file fixture suites
 │   ├── parity/              # node: WPDS slot-drift detector
 │   ├── runtime/             # node: pure-ESM runtime modules (resolveRegion / validateRegion / …)
-│   ├── schema/              # node: Ajv sweeps over shells + manifests
+│   ├── schema/              # node: Ajv sweeps over workspaces + manifests
 │   └── engines/             # TS engine tests; run via `node --experimental-strip-types`
 ├── scripts/snapshot-wpds.mjs   # Regenerate the engine's wpds-defaults/<wpds>.json snapshot
 ├── build/                   # webpack output (gitignored)
@@ -122,9 +122,9 @@ second consumer appears.
 | `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord. dataView consumer on `(root, comment, variant)`. |
 | `core:settings` | SettingsApp | partial | `manage_options` | Composable host; imports the standalone native panels (general/writing/reading/discussion) + iframes permalinks/media/privacy |
 | `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone General panel (hand-rolled — optgroup selects + date/time radios don't fit DataForm) |
-| `core:settings-writing` | settings-writing | ✅ | `manage_options` | Standalone Writing panel; `DataForm` over `default_category` + `default_post_format`. Default shell mounts directly |
-| `core:settings-reading` | settings-reading | ✅ | `manage_options` | Standalone Reading panel; `DataForm` over front-page + feed options. Default shell mounts directly |
-| `core:settings-discussion` | settings-discussion | ✅ | `manage_options` | Standalone Discussion panel; `DataForm` over default comment + ping status. Default shell mounts directly |
+| `core:settings-writing` | settings-writing | ✅ | `manage_options` | Standalone Writing panel; `DataForm` over `default_category` + `default_post_format`. Default workspace mounts directly |
+| `core:settings-reading` | settings-reading | ✅ | `manage_options` | Standalone Reading panel; `DataForm` over front-page + feed options. Default workspace mounts directly |
+| `core:settings-discussion` | settings-discussion | ✅ | `manage_options` | Standalone Discussion panel; `DataForm` over default comment + ping status. Default workspace mounts directly |
 | `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'`; activate/deactivate via REST. dataView consumer on `(root, plugin, variant)`. |
 | `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'`. dataView consumer on `(root, theme, variant)`; grid default with screenshot tiles + Activate / Details. |
 | `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
@@ -132,7 +132,7 @@ second consumer appears.
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount not yet implemented; five blockers documented in `SiteEditorApp.js`. |
 | `core:appearance-preferences` | AppearancePreferencesApp | ✅ | — | Per-user appearance-preferences UI driven by `customizable` (density / accent / default-route). NOT the wp-admin Appearance hub. |
 | `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
-| `core:navigation` … `core:user-menu` | system apps | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`. Each shell declares them explicitly in regions / workspace widgets. `core:command-palette` reads `commands[]` + synthesizes "Go to X" entries from `screens[id]` via `compileCommands.mjs`; palette names `core/admin-shell/palette-<encoded-id>` (first-write-wins dedup). |
+| `core:navigation` … `core:user-menu` | system apps | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`. Each workspace declares them explicitly in regions / workspace widgets. `core:command-palette` reads `commands[]` + synthesizes "Go to X" entries from `screens[id]` via `compileCommands.mjs`; palette names `core/admin-workspace/palette-<encoded-id>` (first-write-wins dedup). |
 | `core:dashboard-host` | DashboardHostApp | ✅ | — | Workspace dashboard screen + widget-grid controller (replaced the deleted `core:dashboard` monolith, #133). Renders a greeting **header** (host chrome — time-of-day + acting user's display name) above a CSS Grid. Reads `screens[id].apps[]` with `slot: "grid"`; size/position from `slotHints` + per-entry overrides. Compiler `dashboard-host/composeScreenWidgets.mjs`; `wp_admin_workspaces_register_dashboard_widget()` contributes a `slot: "grid"` screen-app entry. Bundled mount: `/dashboard/home` in `wp-admin-default`. |
 | `core:dashboard-widget-at-a-glance` | DashboardWidgetAtAGlanceApp | ✅ | `read` | Default tile. Site-wide counts (posts / pages / pending comments / users) via `totalItems`. NOT author-scoped. |
 | `core:dashboard-widget-activity` | DashboardWidgetActivityApp | ✅ | `edit_posts` | Default tile. Recently published posts + comments awaiting moderation (site-wide); click post → `#/posts/{id}/edit`, `Moderate all` → `#/comments`. |
@@ -144,11 +144,11 @@ second consumer appears.
 
 - Substack-style minimal editor — title + content only. Featured image, taxonomy, excerpt, scheduling deferred to a future post settings panel.
 - Allowed blocks (9): `core/paragraph`, `core/heading`, `core/image`, `core/quote`, `core/list`, `core/list-item`, `core/code`, `core/separator`, `core/embed`.
-- Composes `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` (inline, not iframed — keeps editor styles in the shell DOM).
+- Composes `BlockEditorProvider` + `BlockTools` + `WritingFlow` + `ObserveTyping` + `BlockList` (inline, not iframed — keeps editor styles in the workspace DOM).
 - Block registration via `registerCoreBlocks()` gated by a module-level idempotent guard (`getBlockTypes().length === 0`).
 - Settings: `allowedBlockTypes`, `bodyPlaceholder`, `__experimentalBlockPatterns: []`, `__experimentalBlockPatternCategories: []`, `__experimentalReusableBlocks: []`, `__experimentalFeatures.layout.contentSize: '680px'`.
 - Auto-save: 2s debounce on `hasEdits`; cancellable timer ref so Publish flushes immediately. Status: `Unsaved changes` / `Saving…` / `Saved` (auto-fades) / `Save failed`.
 - Publish button label flips `Publish` / `Update` based on `record.status`.
 - New-post flow seeds an empty paragraph block into `content` because WP rejects fully-empty posts (`Content, title, and excerpt are empty`). EditorApp has the same latent bug — fix when touched.
-- PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the shell page so block chrome + default block styles render.
+- PHP enqueues `wp-block-editor`, `wp-block-library`, `wp-format-library` styles on the workspace page so block chrome + default block styles render.
 - Title is a native `<input>` outside the block tree; Tab/Enter focuses the first contenteditable in the body.

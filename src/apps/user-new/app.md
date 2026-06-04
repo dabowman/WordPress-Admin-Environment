@@ -20,7 +20,7 @@ Fields are a flat `DataForm` field array; `useFormValidity(data, fields, form)` 
 
 ### Role options
 
-The role `<select>` options come from the resolved `root/user` dataView spec, read via `useDataView({ kind: 'root', name: 'user' })` — the `roles` field's `elements` (translated, admin.json-controlled). When the spec ships no elements (a lean override), the app falls back to the standard WordPress roles (`subscriber` … `administrator`). The default selection is `subscriber` when present (WordPress' default new-user role), else the **lowest-privilege** standard role the set carries — never the last/most-privileged element. Because `useState`'s lazy initializer freezes the seed from the first-paint `defaultRole`, a `useEffect` re-seeds `data.roles` if `defaultRole` changes after a late (REST-fallback) `useDataView` resolve — guarded by a `roleDirtied` ref so an explicit admin pick is preserved.
+The role `<select>` options come from the resolved `root/user` dataView spec, read via `useDataView({ kind: 'root', name: 'user' })` — the `roles` field's `elements` (translated, workspace.json-controlled). When the spec ships no elements (a lean override), the app falls back to the standard WordPress roles (`subscriber` … `administrator`). The default selection is `subscriber` when present (WordPress' default new-user role), else the **lowest-privilege** standard role the set carries — never the last/most-privileged element. Because `useState`'s lazy initializer freezes the seed from the first-paint `defaultRole`, a `useEffect` re-seeds `data.roles` if `defaultRole` changes after a late (REST-fallback) `useDataView` resolve — guarded by a `roleDirtied` ref so an explicit admin pick is preserved.
 
 ### Submit
 
@@ -37,7 +37,7 @@ This mirrors the `CreateBody` half of the shared `createEntityFormModal`, but as
 A non-WPDS / non-React port needs:
 
 - A create form with the eight fields above; only `username` / `email` / `password` are required.
-- The role list — ideally from the same `root/user` dataView `elements` so the surfaced set stays admin.json-driven, else the standard roles.
+- The role list — ideally from the same `root/user` dataView `elements` so the surfaced set stays workspace.json-driven, else the standard roles.
 - A `POST /wp/v2/users` with `{ username, email, first_name, last_name, url, password, roles: [role] }`. Wrap the role in an array.
 - The resolve-`undefined`-on-error gotcha: check the returned record (or the equivalent error selector / response status) before declaring success.
 - Navigation to the new user's edit surface on success.
@@ -46,7 +46,7 @@ A non-WPDS / non-React port needs:
 
 - **Welcome-email toggle is a disabled, off no-op.** The "Send the new user an email about their account" checkbox is rendered **read-only and off**, with helper text noting the welcome email isn't sent on create yet — rather than an interactive default-on control that does nothing. `send_user_notification` is **not** in the REST create schema (`POST /wp/v2/users` calls `wp_insert_user()`, which does not send the notification); it is stripped from the payload and ignored server-side, so the standard welcome / set-password email is not sent. Closing this needs an upstream `send_user_notification` arg on the create endpoint (`docs/parity/users.md` blocker #5).
 - **Generated password is the user's only credential — generated with a CSPRNG.** Because no welcome / set-password email is sent on the REST create path (above), the generated default IS the stored password whenever the admin leaves the field unchanged. It is generated with `window.crypto.getRandomValues` (not `Math.random()`); the admin can still override it before submitting.
-- **No dedicated Edit User app.** On success the app navigates to `#/users/{id}/edit`, which the `wp-admin-default` shell binds to `core:profile` with `config.userId: "{id}"`. `core:profile` honors `config.userId` (editing the new user, not the acting admin), so the post-create redirect lands on the right account — but it surfaces only the self-service profile fields, so a purpose-built Edit User app is still a parity gap (shared with the `core:users` Edit action).
+- **No dedicated Edit User app.** On success the app navigates to `#/users/{id}/edit`, which the `wp-admin-default` workspace binds to `core:profile` with `config.userId: "{id}"`. `core:profile` honors `config.userId` (editing the new user, not the acting admin), so the post-create redirect lands on the right account — but it surfaces only the self-service profile fields, so a purpose-built Edit User app is still a parity gap (shared with the `core:users` Edit action).
 - **No locale field.** wp-admin's create form offers a user-locale select; the REST create path accepts `locale` but the form does not surface it yet.
 - **No weak-password confirmation.** wp-admin requires a "Confirm use of weak password" checkbox for short passwords; this form has no client-side strength meter and relies on the server's password handling. The generated default is 16 chars from a CSPRNG (`window.crypto.getRandomValues`).
 - **Single-site only.** No multisite Add-Existing-User / invite branch (internal PHP, no REST).

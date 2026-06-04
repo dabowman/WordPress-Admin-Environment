@@ -5,7 +5,7 @@ import { __ } from '@wordpress/i18n';
 
 /**
  * Site icon — resolves the icon in priority order:
- *   1. Author-declared `branding.logo` from the admin.json styles cascade.
+ *   1. Author-declared `branding.logo` from the workspace.json styles cascade.
  *   2. The site's REST `site_icon_url` (from `root/__unstableBase`) — the
  *      Site Icon a user sets in Settings → General, matching the Site
  *      Editor's SiteIcon behavior.

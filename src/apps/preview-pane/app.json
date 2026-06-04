@@ -18,13 +18,13 @@
 	},
 	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "Spec §6.4 + V2.M4: regions coordinate via URL state, not a shell-level selection bus. PreviewPaneApp reads the routes block + URL slot at `config.follow` (default `_self`), maps the matched route's `config` to a `core-data` entity (`post-type` + `post-id`), and renders the entity as JSON. Designed for shells whose `detail` region (or any routable region) holds an editor-style app and whose `preview` region wants to mirror what the editor is editing.",
+		"purpose": "Spec §6.4 + V2.M4: regions coordinate via URL state, not a workspace-level selection bus. PreviewPaneApp reads the routes block + URL slot at `config.follow` (default `_self`), maps the matched route's `config` to a `core-data` entity (`post-type` + `post-id`), and renders the entity as JSON. Designed for workspaces whose `detail` region (or any routable region) holds an editor-style app and whose `preview` region wants to mirror what the editor is editing.",
 		"data": {
 			"reads": [
 				{
 					"source": "config.routes (kernel)",
 					"via": "kernel-config",
-					"purpose": "Routes block — read from the resolved admin.json region via `useKernel()` and matched against the URL slot value."
+					"purpose": "Routes block — read from the resolved workspace.json region via `useKernel()` and matched against the URL slot value."
 				},
 				{
 					"source": "postType/{post-type}/{post-id}",
@@ -51,9 +51,9 @@
 			"focus-management": "Preview pane is read-only; focus stays in the primary region."
 		},
 		"constraints": [
-			{ "concern": "self-vs-named-slot", "note": "`follow: '_self'` reads `route.primary` (the primary hash path). Other values read `route.params[follow]` — useful for shells with a named `detail` region carrying its own route param." },
+			{ "concern": "self-vs-named-slot", "note": "`follow: '_self'` reads `route.primary` (the primary hash path). Other values read `route.params[follow]` — useful for workspaces with a named `detail` region carrying its own route param." },
 			{ "concern": "post-shape-only-today", "note": "Only `post-type` + numeric `post-id` routes resolve as entities. Other shapes fall back to JSON-of-config — useful as a debug surface, but a future iteration should support more entity types (taxonomy terms, users, etc.)." },
-			{ "concern": "url-as-coordination-not-bus", "note": "Spec §6.4 explicitly chose URL state over a shell-level selection bus. PreviewPaneApp is the reference consumer." },
+			{ "concern": "url-as-coordination-not-bus", "note": "Spec §6.4 explicitly chose URL state over a workspace-level selection bus. PreviewPaneApp is the reference consumer." },
 			{ "concern": "wpds-token-inline-styles", "note": "The JSON `<pre>` renderer hardcodes `padding: var(--wpds-dimension-padding-lg)` + `font-size: var(--wpds-typography-font-size-sm)` as inline style. A non-WPDS rebuild must either bridge these tokens through its engine's `compileStyles` hook, or replace the inline style with classNames + DS-neutral fallback values. Per CLAUDE.md the var-reference pattern is preferred over literal hex, but the token paths are WPDS-specific." }
 		],
 		"design-system-leakage": [

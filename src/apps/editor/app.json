@@ -38,7 +38,7 @@
 		"icon": "edit"
 	},
 	"documentation": {
-		"purpose": "Iframe-backed adapter for WordPress's full block editor. Routes `#/editor/{postType}/{id}` to `wp-admin/post.php?post={id}&action=edit` (screen config maps the route capture into `config.id`) and routes `#/editor/{postType}/new` through an auto-draft creation flow (POST `/wp/v2/{postType}s`) before redirecting to the editor URL. Injects CSS into the iframe document to hide wp-admin chrome so the embedded editor reads as a native shell view. The native `@wordpress/edit-post` mount is deferred to a v2.x cut; the iframe is the contracted MVP path.",
+		"purpose": "Iframe-backed adapter for WordPress's full block editor. Routes `#/editor/{postType}/{id}` to `wp-admin/post.php?post={id}&action=edit` (screen config maps the route capture into `config.id`) and routes `#/editor/{postType}/new` through an auto-draft creation flow (POST `/wp/v2/{postType}s`) before redirecting to the editor URL. Injects CSS into the iframe document to hide wp-admin chrome so the embedded editor reads as a native workspace view. The native `@wordpress/edit-post` mount is deferred to a v2.x cut; the iframe is the contracted MVP path.",
 		"rebuilds": "editor-block",
 		"data": {
 			"reads": [
@@ -102,7 +102,7 @@
 			},
 			{
 				"trigger": "Iframe `load` event",
-				"effect": "If the loaded document is the wp-login form (session expired) keep the loading mask up and call `wp.heartbeat.connectNow()` so the shell-level wp-auth-check modal appears; otherwise set `iframeLoading=false` and inject the chrome-hide CSS. Cross-origin iframes silently skip inspection + injection."
+				"effect": "If the loaded document is the wp-login form (session expired) keep the loading mask up and call `wp.heartbeat.connectNow()` so the workspace-level wp-auth-check modal appears; otherwise set `iframeLoading=false` and inject the chrome-hide CSS. Cross-origin iframes silently skip inspection + injection."
 			},
 			{
 				"trigger": "In-iframe link click (chromeless bridge `wp-admin-workspaces-admin-link` / `-external-link`)",
@@ -110,7 +110,7 @@
 			},
 			{
 				"trigger": "`core/editor` dirty transition (chromeless bridge `wp-admin-workspaces-dirty-state`)",
-				"effect": "Update local `isDirty`; `useDirtyState(regionId, isDirty, { blocksNavigation: true })` reports it to the shell so NavigationGuard intercepts a sidebar click while there are unsaved edits."
+				"effect": "Update local `isDirty`; `useDirtyState(regionId, isDirty, { blocksNavigation: true })` reports it to the workspace so NavigationGuard intercepts a sidebar click while there are unsaved edits."
 			},
 			{
 				"trigger": "Heartbeat `wp-auth-check` flips false→true (re-authenticated)",
@@ -122,7 +122,7 @@
 			}
 		],
 		"a11y": {
-			"focus-management": "Iframe owns its own focus tree (WordPress block editor handles this). Toolbar Back button is focusable; the shell does not trap focus."
+			"focus-management": "Iframe owns its own focus tree (WordPress block editor handles this). Toolbar Back button is focusable; the workspace does not trap focus."
 		},
 		"constraints": [
 			{

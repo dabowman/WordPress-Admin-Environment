@@ -3,17 +3,17 @@
  * Classic wp-admin menu bridge (3c.3).
  *
  * Walks `$GLOBALS['menu']` + `$GLOBALS['submenu']` after `admin_menu` has
- * fired and synthesizes v3 admin.json entries for third-party plugin
- * registrations the shell does NOT already mirror natively. Core
+ * fired and synthesizes v3 workspace.json entries for third-party plugin
+ * registrations the workspace does NOT already mirror natively. Core
  * wp-admin slugs (`index.php`, `edit.php`, `upload.php`, settings pages,
- * etc.) are skipped — the shell ships first-class screens for those.
+ * etc.) are skipped — the workspace ships first-class screens for those.
  *
  * For each ingested top-level menu entry the bridge synthesizes TWO
- * additions to the resolved admin.json doc:
+ * additions to the resolved workspace.json doc:
  *
  *   1. `screens[<id>]` — a v3 screen pointing at the iframe-fallback
  *      app with `config.url` set to the original wp-admin slug so the
- *      page renders inside the shell chrome.
+ *      page renders inside the workspace chrome.
  *   2. `menu.ingested.items[<id>]` — placement under a single
  *      "Plugins" container at the menu root.
  *
@@ -40,7 +40,7 @@
  * every default wp-admin top-level entry plus the well-known submenu
  * scripts. Plugins / sites can extend the skip list via the
  * `wp_admin_workspaces_classic_menu_core_slugs` filter when they
- * additionally ship a custom CPT that the shell mirrors natively.
+ * additionally ship a custom CPT that the workspace mirrors natively.
  *
  * **Menu icon harvesting (#127).** `map_icon()` resolves a
  * `dashicons-*` class to a kernel-registry icon *name*; for the icon
@@ -52,11 +52,11 @@
  * `<span>` (engine-side; the kernel stays name-based + DS-neutral).
  *
  * **Core-parented submenu nesting (#127).** A plugin submenu parented
- * to a *core* wp-admin slug the shell mirrors natively (`tools.php` →
+ * to a *core* wp-admin slug the workspace mirrors natively (`tools.php` →
  * Tools, `options-general.php` → Settings) is nested under the REAL
- * shell parent screen's menu entry instead of the generic `ingested`
+ * workspace parent screen's menu entry instead of the generic `ingested`
  * container. The map lives in `$CORE_PARENT_MENU` (core parent slug →
- * shell menu id). Core parents the shell does NOT mirror natively fall
+ * workspace menu id). Core parents the workspace does NOT mirror natively fall
  * back to the shared `ingested` container as before.
  *
  * **Menu position (#127).** The numeric `position` wp-admin assigns a
@@ -78,7 +78,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	/**
 	 * Default container under which all ingested items + screens land
 	 * in the v3 `menu` tree. The container's label defaults to
-	 * "Plugins" — admin.json can override with
+	 * "Plugins" — workspace.json can override with
 	 * `menu.ingested.label: "Custom Label"` at any cascade origin
 	 * (site/role/user) and the bridge preserves it (the bridge only
 	 * writes to `menu.ingested.items`).
@@ -87,8 +87,8 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 
 	/**
 	 * Slug → v3 path map for the well-known core wp-admin entries.
-	 * Used only when an admin.json shell omits the corresponding
-	 * shell-native screen — the slug short-circuits to `is_core_slug`
+	 * Used only when an workspace.json workspace omits the corresponding
+	 * workspace-native screen — the slug short-circuits to `is_core_slug`
 	 * by default so this table is defensive rather than load-bearing.
 	 *
 	 * @var array<string, string>
@@ -108,14 +108,14 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	);
 
 	/**
-	 * Core wp-admin parent slug → shell menu id (#127). When a plugin
+	 * Core wp-admin parent slug → workspace menu id (#127). When a plugin
 	 * adds a submenu under one of these core parents (e.g. an "Export"
 	 * tool under `tools.php`, or a settings page under
 	 * `options-general.php`), the bridge nests the ingested child under
-	 * the REAL shell parent's menu entry instead of the generic
+	 * the REAL workspace parent's menu entry instead of the generic
 	 * `ingested` container — matching where classic wp-admin would slot
-	 * it. The id values are the bundled shell's top-level menu ids; an
-	 * admin.json that renames/relocates the parent simply won't match
+	 * it. The id values are the bundled workspace's top-level menu ids; an
+	 * workspace.json that renames/relocates the parent simply won't match
 	 * and the child falls back to the `ingested` container (safe).
 	 *
 	 * @var array<string, string>
@@ -126,7 +126,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	);
 
 	/**
-	 * Static list of core wp-admin slugs the shell already mirrors
+	 * Static list of core wp-admin slugs the workspace already mirrors
 	 * natively. The bridge skips these in both directions: as menu
 	 * parents (skipped from ingestion outright) and as submenu
 	 * children (skipped to avoid double-bridging).
@@ -137,7 +137,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 * children are still reachable through the bridge.
 	 *
 	 * Expand via the `wp_admin_workspaces_classic_menu_core_slugs` filter
-	 * when a plugin shell mirrors additional CPT/screens natively.
+	 * when a plugin workspace mirrors additional CPT/screens natively.
 	 *
 	 * @var string[]
 	 */
@@ -174,7 +174,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 		'edit-tags.php?taxonomy=post_tag',
 		'media-new.php',
 		'user-new.php',
-		// The shell's own classic Settings page (`add_options_page` →
+		// The workspace's own classic Settings page (`add_options_page` →
 		// `options-general.php?page=wp-admin-workspaces-workspace`). It's a non-core
 		// child of a core parent, so without this skip the bridge would
 		// synthesize an `ingested-*` entry linking back into classic.
@@ -216,7 +216,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 *                             // synthesized container item using
 	 *                             // the parent slug's label.
 	 *     parent_slug:    string, // (parent_is_core records only) original
-	 *                             // core parent slug → real shell menu id.
+	 *                             // core parent slug → real workspace menu id.
 	 *   }
 	 *
 	 * @return array<int, array>
@@ -418,7 +418,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	}
 
 	/**
-	 * Is this slug a known wp-admin core entry that the shell already
+	 * Is this slug a known wp-admin core entry that the workspace already
 	 * mirrors natively? Filterable via
 	 * `wp_admin_workspaces_classic_menu_core_slugs`.
 	 *
@@ -434,7 +434,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 			return true;
 		}
 		// edit.php?post_type=<core CPT> — `post`, `page`, `attachment`
-		// — is shell-native via the posts app even when the explicit
+		// — is workspace-native via the posts app even when the explicit
 		// query-stringed slug isn't pre-registered.
 		if ( strpos( $slug, 'edit.php?post_type=' ) === 0 ) {
 			$cpt = substr( $slug, strlen( 'edit.php?post_type=' ) );
@@ -597,14 +597,14 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	/**
 	 * Cascade contribution. Walks `scan()` and merges synthesized
 	 * `screens[<id>]` + `menu.ingested.items[<id>]` entries into the
-	 * plugin-origin admin.json doc. Idempotent: any entry id already
+	 * plugin-origin workspace.json doc. Idempotent: any entry id already
 	 * present in `screens` or `menu.ingested.items` is left untouched
 	 * so:
 	 *
-	 *   - admin.json declarations at any origin keep authority.
+	 *   - workspace.json declarations at any origin keep authority.
 	 *   - The filter firing twice in one request doesn't duplicate.
 	 *
-	 * @param array $doc Plugin-origin admin.json doc.
+	 * @param array $doc Plugin-origin workspace.json doc.
 	 * @return array
 	 */
 	public static function contribute( $doc ) {
@@ -628,12 +628,12 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 
 			if ( $record['parent_is_core'] ) {
 				// Submenu parented to a CORE wp-admin slug. When that core
-				// parent maps to a REAL shell menu the shell mirrors
+				// parent maps to a REAL workspace menu the workspace mirrors
 				// natively (`tools.php` → Tools, `options-general.php` →
 				// Settings — #127), nest the ingested children directly
-				// under that shell parent's existing menu node instead of
+				// under that workspace parent's existing menu node instead of
 				// the generic `ingested` container, matching where classic
-				// wp-admin slots them. A core parent the shell doesn't
+				// wp-admin slots them. A core parent the workspace doesn't
 				// mirror falls back to the shared `ingested` container.
 				$parent_slug   = isset( $record['parent_slug'] ) ? $record['parent_slug'] : '';
 				$workspace_menu_id = ( $parent_slug !== '' && isset( self::$CORE_PARENT_MENU[ $parent_slug ] ) )
@@ -641,8 +641,8 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 					: null;
 
 				if ( $workspace_menu_id !== null ) {
-					// Nest children straight under the shell parent's menu
-					// node (e.g. `menu.tools.items[...]`). The shell parent
+					// Nest children straight under the workspace parent's menu
+					// node (e.g. `menu.tools.items[...]`). The workspace parent
 					// node already exists in the baseline menu tree; if it
 					// somehow doesn't, create a bare node so the children
 					// still surface (label/icon come from the matching
@@ -701,7 +701,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 			}
 
 			// Genuine third-party TOP-LEVEL menu (e.g. Gutenberg). Surface
-			// it as a top-level menu entry — a sibling of the shell's own
+			// it as a top-level menu entry — a sibling of the workspace's own
 			// screens — NOT nested under the `ingested` container. The menu
 			// item is left bare; `bind_screens` (priority 5, post-merge)
 			// folds the screen's label/icon/href from the matching id.
@@ -753,10 +753,10 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 
 	/**
 	 * Ensure the shared `ingested` container exists. Preserves an
-	 * admin.json-declared container (custom label / hidden flag), only
+	 * workspace.json-declared container (custom label / hidden flag), only
 	 * force-filling its `items` array.
 	 *
-	 * @param array $doc Plugin-origin admin.json doc (by reference).
+	 * @param array $doc Plugin-origin workspace.json doc (by reference).
 	 */
 	private static function ensure_container( &$doc ) {
 		if ( ! isset( $doc['menu'][ self::DEFAULT_CONTAINER ] ) || ! is_array( $doc['menu'][ self::DEFAULT_CONTAINER ] ) ) {
@@ -818,7 +818,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 
 	/**
 	 * Build the namespaced `iframe:<slug>` app id for an ingested
-	 * screen. The shell's iframe-fallback app handler picks up the
+	 * screen. The workspace's iframe-fallback app handler picks up the
 	 * slug at mount time and renders `<adminUrl>/<slug>` inside an
 	 * iframe with chrome hidden.
 	 *

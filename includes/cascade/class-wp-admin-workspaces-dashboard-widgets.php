@@ -7,7 +7,7 @@
  * contributes a screen-app entry under the target screen
  * (`dashboard-widgets` by default) instead of writing into the v2
  * top-level `dashboardWidgets` block. The cascade pipeline then
- * merges these entries with any admin.json `screens[id].apps[]`
+ * merges these entries with any workspace.json `screens[id].apps[]`
  * declarations via the normal id-keyed array merge.
  *
  * Schema:
@@ -249,7 +249,7 @@ class WP_Admin_Workspaces_Dashboard_Widgets {
 		// by `register()` when the standalone-flavor `script` arg is
 		// present) and is resolved by `composeScreenWidgets` via the
 		// manifest registry. Programmatic-only callers can override
-		// the title at the manifest layer or via admin.json.
+		// the title at the manifest layer or via workspace.json.
 
 		return $entry;
 	}
@@ -316,7 +316,7 @@ class WP_Admin_Workspaces_Dashboard_Widgets {
  *                     - `defaultSize`  (array)  `{ w, h }` cells — fed as `size` on the screen-app entry.
  *                     - `minSize`      (array)  `{ w, h }` cells — forwarded into synthetic manifest's `slotHints.minSize` (standalone only).
  *                     - `position`     (string|array) `'auto'` or `{ row, col }`.
- *                     - `hidden`       (bool)   Tombstone the entry — removes a matching admin.json entry from the merged screen.
+ *                     - `hidden`       (bool)   Tombstone the entry — removes a matching workspace.json entry from the merged screen.
  *                     - `screen`       (string) Target screen id (default: `dashboard-widgets`).
  *                     - `script`       (string) Triggers standalone flavor: synthesize an app manifest.
  *                     - `role`         (string) For standalone flavor — ARIA role (default `region`).
@@ -331,11 +331,11 @@ function wp_admin_workspaces_register_dashboard_widget( $id, $args = array() ) {
 /**
  * Cascade contribution — registered entries enter the resolver through
  * the `plugin` origin so site/role/user origins can extend or replace
- * via admin.json's `screens[<target>].apps[]` array. Priority 5 (same
+ * via workspace.json's `screens[<target>].apps[]` array. Priority 5 (same
  * as field-collections) so plugin authors using
  * `add_filter('wp_admin_workspaces_data_plugin', …)` directly win.
  *
- * Per-entry-id collision rule: an admin.json declaration with the same
+ * Per-entry-id collision rule: an workspace.json declaration with the same
  * entry id wins via the cascade's standard id-keyed array merge — the
  * higher origin's entry deep-merges over the lower one.
  *
@@ -369,7 +369,7 @@ add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
 		}
 
 		// Idempotency guard — if the resolver pipeline runs twice in one
-		// request (cache miss after shell switch, test harness, etc.), a
+		// request (cache miss after workspace switch, test harness, etc.), a
 		// bare `apps[] []=` would duplicate the entry. Check for an
 		// existing entry with the same id and skip when present.
 		// Admin.json-authored entries also win against this contribution
@@ -398,7 +398,7 @@ add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
 
 /**
  * Flush queued synthetic-manifest registrations into the manifest
- * registry at the same priority the shell's main file uses for
+ * registry at the same priority the workspace's main file uses for
  * convention-path manifest discovery (`init` priority 7). Plugin
  * authors hooking earlier than this fire safely because `register()`
  * only stashes the manifest — the registry call happens here.

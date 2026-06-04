@@ -85,7 +85,7 @@ jobs:
             `.claude/skills/` directory are relevant to the files changed in this
             PR — e.g. `wordpress-rest-api`, `wordpress-dataviews`,
             `wordpress-core-data`, `wordpress-design-system`,
-            `wordpress-plugin-development`, and the `admin-shell-author` /
+            `wordpress-plugin-development`, and the `admin-workspace-author` /
             `app-json-author` / `engine-json-author` / `admin-json-author`
             authoring skills — so the review applies WordPress core, REST,
             DataViews/DataForm, and this project's conventions (see CLAUDE.md

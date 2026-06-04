@@ -21,7 +21,7 @@ const PERSIST_DEBOUNCE_MS = 600;
  *
  * 1. **Seed** — `view` state initialized from `viewDefaults` spread under the
  *    resolved `dataViewConfig.defaultView`, so iterating `view.filters` /
- *    `view.fields` is safe when admin.json omits empty-list keys.
+ *    `view.fields` is safe when workspace.json omits empty-list keys.
  * 2. **Resync** — re-seed when the screen flips on the same hook instance
  *    (e.g. /posts → /posts/drafts both mount PostsApp). The `useState`
  *    initializer runs once, so without this a sibling screen inherits the

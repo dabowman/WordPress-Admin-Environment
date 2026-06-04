@@ -21,7 +21,7 @@ module.exports = {
 				// to a bogus `wp-theme/design-tokens.css` script handle; copying the
 				// file out + enqueuing it as its own stylesheet handle bypasses the
 				// externalization and guarantees the baseline lands at `:root` before
-				// any shell / engine / app CSS rule references the tokens.
+				// any workspace / engine / app CSS rule references the tokens.
 				{
 					from: path.resolve(
 						__dirname,

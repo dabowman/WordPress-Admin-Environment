@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/index.php` (boots `wp-admin/_index.php`) + `wp-admin/includes/dashboard.php`
-**Current shell coverage:** `core:dashboard` → `src/apps/dashboard/index.js` (native; registered in `src/runtime/registry/builtins.js`). See `src/apps/dashboard/app.md` for the app contract.
+**Current workspace coverage:** `core:dashboard` → `src/apps/dashboard/index.js` (native; registered in `src/runtime/registry/builtins.js`). See `src/apps/dashboard/app.md` for the app contract.
 
 This spec describes the **semantic surface** of the WordPress Dashboard "Home" screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -61,7 +61,7 @@ Jobs to be done:
 
 ## 4. Data model
 
-The dashboard does not have a single REST endpoint. Each widget reads from a different data source. The shell rebuild composes them.
+The dashboard does not have a single REST endpoint. Each widget reads from a different data source. The workspace rebuild composes them.
 
 ### Widgets and their data
 
@@ -85,9 +85,9 @@ The dashboard does not have a single REST endpoint. Each widget reads from a dif
 
 - **`wp_count_posts()`** (used by At a Glance) has no REST equivalent. Current best practice: read `X-WP-Total` from per-status `?per_page=1` requests.
 - **`wp_count_comments()`** has no REST equivalent. Same pattern: per-status requests reading total header.
-- **`wp_check_browser_version()` / `wp_check_php_version()`** are PHP-only; results are not exposed via REST. The shell either reimplements browser detection client-side or surfaces a custom REST endpoint.
+- **`wp_check_browser_version()` / `wp_check_php_version()`** are PHP-only; results are not exposed via REST. The workspace either reimplements browser detection client-side or surfaces a custom REST endpoint.
 - **Community Events** API is `api.wordpress.org` direct; not WordPress core REST. Geo IP is server-resolved.
-- **`dashboard_glance_items` filter** lets plugins inject extra `<li>` rows into At a Glance. Shell ignores in v1.
+- **`dashboard_glance_items` filter** lets plugins inject extra `<li>` rows into At a Glance. Workspace ignores in v1.
 
 ### Per-user state
 
@@ -256,7 +256,7 @@ Original wp-admin URLs:
 
 The dashboard has **no internal routing** — there are no tabs, no pagination, no filter state to encode. Refresh always lands on the same view.
 
-Recommended shell URL: `#/dashboard-home` (or whatever the registered app id is). No query params.
+Recommended workspace URL: `#/dashboard-home` (or whatever the registered app id is). No query params.
 
 Inbound deep links from notifications (e.g. "your post was published" snackbar with "View dashboard" link) are common; they don't carry state.
 
@@ -317,7 +317,7 @@ Inbound deep links from notifications (e.g. "your post was published" snackbar w
 | `Esc` in inline reply form | Close form, return focus to "Reply" button |
 | `Cmd/Ctrl+Enter` in Quick Draft | Submit |
 
-No drag-keyboard for reorder in core (mouse only) — flag for accessible reorder UI in shell rebuild (e.g. up/down menu options on each widget).
+No drag-keyboard for reorder in core (mouse only) — flag for accessible reorder UI in workspace rebuild (e.g. up/down menu options on each widget).
 
 ### ARIA & focus
 
@@ -343,23 +343,23 @@ No drag-keyboard for reorder in core (mouse only) — flag for accessible reorde
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `wp_dashboard_setup` | Register/unregister widgets | **Replace** with shell-level `dashboardWidgets` extensibility API on `core:dashboard` config |
-| `wp_add_dashboard_widget` (function) | Direct widget registration | Replaced by shell registry |
+| `wp_dashboard_setup` | Register/unregister widgets | **Replace** with workspace-level `dashboardWidgets` extensibility API on `core:dashboard` config |
+| `wp_add_dashboard_widget` (function) | Direct widget registration | Replaced by workspace registry |
 | `dashboard_glance_items` | Add `<li>` items to At a Glance | Replace with structured `glanceItems` field config |
-| `welcome_panel` (action) | Render welcome panel content | Replace with shell `welcomePanel` slot |
+| `welcome_panel` (action) | Render welcome panel content | Replace with workspace `welcomePanel` slot |
 | `dashboard_recent_drafts_query_args` | Filter recent drafts query | Replace with config |
 | `dashboard_recent_posts_query_args` | Filter recent posts query | Replace with config |
 | `comment_row_actions` | Per-comment row actions | Reuse `core:comments.row-actions` slot from comments spec |
 | `rightnow_end` / `activity_box_end` | Append HTML to widgets | Drop — too HTML-coupled |
 | `dashboard_browser_nag_class` / `dashboard_php_nag_class` | Filter nag widget CSS classes | Drop — internal styling |
 
-Plugin compatibility note: the dashboard ecosystem is large (Yoast SEO, Jetpack, WooCommerce, Akismet all add widgets). The shell's v1 implementation should support the most-common case via a `dashboardWidgets[]` array with `id`, `title`, `render` (component or `iframe:` fallback), `cap`, `defaultColumn`, `defaultPriority`. Plugins can register through the slot API.
+Plugin compatibility note: the dashboard ecosystem is large (Yoast SEO, Jetpack, WooCommerce, Akismet all add widgets). The workspace's v1 implementation should support the most-common case via a `dashboardWidgets[]` array with `id`, `title`, `render` (component or `iframe:` fallback), `cap`, `defaultColumn`, `defaultPriority`. Plugins can register through the slot API.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
 - **Source:** `core:dashboard` → `src/apps/dashboard/index.js`, registered in `src/runtime/registry/builtins.js`.
 - **What works:** native landing screen — time-of-day greeting plus At-a-Glance-style counts (published posts/pages, pending comments, users) via the `per_page=1` + `X-WP-Total` trick, a recent-drafts card, and a pending-comments card. See `src/apps/dashboard/app.md` for the contract.
@@ -386,13 +386,13 @@ Plugin compatibility note: the dashboard ecosystem is large (Yoast SEO, Jetpack,
 
 ### Acceptable interim
 
-For shells that need a dashboard before native support lands, `iframe:index.php` works with chrome hidden (per `IframeApp` pattern). Mark such configs `dashboardImpl: 'iframe-fallback'` so they're tracked for replacement.
+For workspaces that need a dashboard before native support lands, `iframe:index.php` works with chrome hidden (per `IframeApp` pattern). Mark such configs `dashboardImpl: 'iframe-fallback'` so they're tracked for replacement.
 
 ---
 
 ## 16. Out of scope
 
-- **Network Admin Dashboard** ("Right Now" with site/user counts and search forms) — separate `network-dashboard` spec when shell adds multisite support.
+- **Network Admin Dashboard** ("Right Now" with site/user counts and search forms) — separate `network-dashboard` spec when workspace adds multisite support.
 - **User Admin Dashboard** (`/wp-admin/user/`) — niche; out of scope until needed.
 - **Press This bookmarklet** — deprecated, removed from core.
 - **Browser/PHP nag dismissal persistence per-user** — minor behavior; v1 always re-shows.

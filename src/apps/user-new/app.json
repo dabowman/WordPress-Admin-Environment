@@ -27,7 +27,7 @@
 		"icon": "plus"
 	},
 	"documentation": {
-		"purpose": "Native single-site \"Add New User\" screen. Replaces the legacy `iframe:user-new.php` mount on the `core:users-new` screen. Renders a `DataForm` create flow (username, email, first/last name, website, password, role, send-notification toggle) and POSTs to `/wp/v2/users` via `saveEntityRecord('root','user', payload)`, navigating to the new user's edit screen on success. Role options come from the resolved `root/user` dataView `roles` elements (admin.json-controlled, translated) with the standard WordPress roles as a fallback. Rebuilds the single-site half of wp-admin's `user-new.php` createuser form.",
+		"purpose": "Native single-site \"Add New User\" screen. Replaces the legacy `iframe:user-new.php` mount on the `core:users-new` screen. Renders a `DataForm` create flow (username, email, first/last name, website, password, role, send-notification toggle) and POSTs to `/wp/v2/users` via `saveEntityRecord('root','user', payload)`, navigating to the new user's edit screen on success. Role options come from the resolved `root/user` dataView `roles` elements (workspace.json-controlled, translated) with the standard WordPress roles as a fallback. Rebuilds the single-site half of wp-admin's `user-new.php` createuser form.",
 		"rebuilds": "user-new",
 		"data": {
 			"reads": [
@@ -103,7 +103,7 @@
 			},
 			{
 				"concern": "no-edit-user-app",
-				"note": "On success the app navigates to `#/users/{id}/edit`, which the wp-admin-default shell binds to `core:profile` with `config.userId` — there is no dedicated Edit User app yet (parity gap)."
+				"note": "On success the app navigates to `#/users/{id}/edit`, which the wp-admin-default workspace binds to `core:profile` with `config.userId` — there is no dedicated Edit User app yet (parity gap)."
 			}
 		],
 		"design-system-leakage": [

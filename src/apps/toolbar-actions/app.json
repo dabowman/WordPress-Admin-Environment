@@ -29,7 +29,7 @@
 				{
 					"source": "config.left + config.right",
 					"via": "kernel-config",
-					"purpose": "Authored action descriptors — declared inline in admin.json and passed as React props by mountApp. Each is `{ href|command, icon|iconSource, label, external? }`."
+					"purpose": "Authored action descriptors — declared inline in workspace.json and passed as React props by mountApp. Each is `{ href|command, icon|iconSource, label, external? }`."
 				},
 				{
 					"source": "core/postTypes",
@@ -40,7 +40,7 @@
 				{
 					"source": "window.wpAdminWorkspaces.adminBar",
 					"via": "window-global",
-					"purpose": "Admin-bar harvest (#128): plugin admin-bar nodes harvested server-side by WP_Admin_Workspaces_Chrome_Harvest (core nodes the shell owns are skipped). Top-level nodes render as buttons; nodes with children render as dropdowns. Titles are arbitrary admin HTML."
+					"purpose": "Admin-bar harvest (#128): plugin admin-bar nodes harvested server-side by WP_Admin_Workspaces_Chrome_Harvest (core nodes the workspace owns are skipped). Top-level nodes render as buttons; nodes with children render as dropdowns. Titles are arbitrary admin HTML."
 				}
 			]
 		},
@@ -63,8 +63,8 @@
 			{ "concern": "iconbutton-anchor-render", "note": "Render-prop swap is required: `<IconButton render={<a href target rel/>}/>`. The plain `href` prop is dropped by Base UI Button." },
 			{ "concern": "no-onclick-actions", "note": "Authored actions resolve to URLs. There's no `onClick`-only callback action — keep dispatching to `core:command-palette` or a separate app. Harvested admin-bar onclick-handler nodes degrade to links / disabled items (handler strings are dropped server-side)." },
 			{ "concern": "arbitrary-icon-escape-hatch", "note": "An action's `iconSource` (or a harvested node title) bypasses the name-based `resolveIcon` registry: it renders through the engine/app-space `ArbitraryIcon` / `TrustedNodeTitle` pass-through (`<img src>` / trusted HTML). The kernel icon registry stays name-based + DS-neutral (#127/#128). See docs/runtime-harvest-pattern.md." },
-			{ "concern": "new-content-route-coupling", "note": "+New builds `#/{rest_base}/new`. A CPT whose shell list-screen path differs from its `rest_base` produces a mismatched link — keep them in sync." },
-			{ "concern": "admin-bar-global-trust", "note": "`window.wpAdminWorkspaces.adminBar` node titles are admin-context HTML (same trust as classic wp-admin), rendered unchanged via `dangerouslySetInnerHTML`. The shell only renders them inside the already-admin-gated workspace." },
+			{ "concern": "new-content-route-coupling", "note": "+New builds `#/{rest_base}/new`. A CPT whose workspace list-screen path differs from its `rest_base` produces a mismatched link — keep them in sync." },
+			{ "concern": "admin-bar-global-trust", "note": "`window.wpAdminWorkspaces.adminBar` node titles are admin-context HTML (same trust as classic wp-admin), rendered unchanged via `dangerouslySetInnerHTML`. The workspace only renders them inside the already-admin-gated workspace." },
 			{ "concern": "chrome-anchor-color-override", "note": "WP-admin's unlayered `a { color: var(--wp-admin-theme-color) }` wins against `@wordpress/ui` IconButton's layered color. The bundled `core:default` engine ships `.wp-admin-workspaces-region--toolbar a { color: var(--wpds-color-fg-interactive-neutral) }` (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for its toolbar scheme." },
 			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-workspaces-region--toolbar svg { fill: currentColor }`. A non-WPDS engine MUST do the same." }
 		],

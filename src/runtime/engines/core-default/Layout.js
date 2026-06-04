@@ -2,7 +2,7 @@
  * core:default — flagship engine.
  *
  * Arranges regions into the dark-chrome / elevated-card visual pattern the
- * MVP shipped (see `src/shell/ShellLayout.js`):
+ * MVP shipped (see `src/workspace/ShellLayout.js`):
  *
  *   ┌─────────────────────────────────────────────┐
  *   │ toolbar (persistent, top)                   │

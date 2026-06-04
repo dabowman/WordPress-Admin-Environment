@@ -1,4 +1,4 @@
-=== WP Admin Shell ===
+=== WP Admin Workspaces ===
 Contributors: dabowman
 Tags: admin, dashboard, react, dataviews, admin-ui
 Requires at least: 6.7
@@ -8,17 +8,17 @@ Stable tag: 0.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Replace wp-admin with a configurable, React-based admin environment driven by admin.json configuration files.
+Replace wp-admin with a configurable, React-based admin workspace driven by workspace.json configuration files.
 
 == Description ==
 
-WP Admin Shell replaces the WordPress admin with a configurable, React-based admin
-environment. The shell reads its layout, navigation, branding, and styling from
-`admin.json` configuration files and renders a complete admin UI on top of
+WP Admin Workspaces replaces the WordPress admin with a configurable, React-based admin
+environment. The workspace reads its layout, navigation, branding, and styling from
+`workspace.json` configuration files and renders a complete admin UI on top of
 WordPress's existing REST API and design system.
 
 WordPress has one admin interface — every user sees the same dashboard, menus, and
-screens, and plugins add more. WP Admin Shell makes the admin **configurable**: a
+screens, and plugins add more. WP Admin Workspaces makes the admin **configurable**: a
 JSON file declares which screens are available, how navigation is structured, what
 branding to show, and which keyboard shortcuts do what. Swap the JSON file, swap the
 admin experience. Same WordPress, same data, same plugins — a different admin for
@@ -58,9 +58,9 @@ instead.
 1. Activate the **Gutenberg** plugin.
 2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
-3. Activate **WP Admin Shell**.
-4. To turn the workspace on, drop a valid `admin.json` at `wp-content/workspace.json`
-   (copy a starter from the plugin's `shells/` directory and edit it). With no file
+3. Activate **WP Admin Workspaces**.
+4. To turn the workspace on, drop a valid `workspace.json` at `wp-content/workspace.json`
+   (copy a starter from the plugin's `workspaces/` directory and edit it). With no file
    present, wp-admin stays classic and untouched.
 
 Press `Cmd/Ctrl+K` for the command palette. The workspace admin bar shows a
@@ -78,7 +78,7 @@ as your content and is left in place on uninstall.
 = How do I get back to classic wp-admin? =
 
 Click the "Classic wp-admin" button in the workspace admin bar (a session-scoped,
-nonce-protected toggle), or disable the workspace under Settings → WP Admin Shell.
+nonce-protected toggle), or disable the workspace under Settings → WP Admin Workspaces.
 
 = What happens if I deactivate Gutenberg? =
 

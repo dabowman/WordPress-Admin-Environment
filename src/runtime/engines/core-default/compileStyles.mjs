@@ -1,5 +1,5 @@
 /**
- * `core:default` engine style compiler — `admin.json.styles` → CSS-variable
+ * `core:default` engine style compiler — `workspace.json.styles` → CSS-variable
  * buckets in the kernel's `EngineStyleCompiler` shape.
  *
  * Walks the resolved styles tree and emits one entry per leaf. Top-level
@@ -23,7 +23,7 @@
  *   }
  *
  * Aliases:
- *   - `"{styles.path.to.slot}"` resolves within admin.json (within-doc).
+ *   - `"{styles.path.to.slot}"` resolves within workspace.json (within-doc).
  *   - `"{tokens.path}"` resolves against the merged DTCG tokens flat map.
  *   - Unresolved aliases emit a CSS `var(--token-...)` fallback so a
  *     downstream override (later cascade origin, runtime theme switch)
@@ -68,7 +68,7 @@ const CHROME_WPDS_BINDINGS = {
 			// `background` is intentionally NOT bound. `--wpds-color-bg-
 			// surface-neutral` is the surface ramp `core:main` / `core:detail`
 			// cards consume as their final fallback — binding canvas.background
-			// to it would darken cards under the shell scope. The canvas
+			// to it would darken cards under the workspace scope. The canvas
 			// itself paints via the chrome slot directly (engine `index.css`
 			// reads `--wp-admin-workspaces--chrome--canvas--background`); the WPDS
 			// bridge only needs to retheme @wordpress/ui foreground content

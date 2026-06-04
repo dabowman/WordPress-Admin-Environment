@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-writing.php` (form), `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-writing` → `src/apps/settings-writing/index.js` (M4 — REST-native, partial; Post via Email and Update Services unimplemented per current scope)
+**Current workspace coverage:** `core:settings-writing` → `src/apps/settings-writing/index.js` (M4 — REST-native, partial; Post via Email and Update Services unimplemented per current scope)
 
 This spec describes the **semantic surface** of the Writing Settings screen so an agent can rebuild it in any UI library or framework.
 
@@ -81,7 +81,7 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 
 ### Aggregate data
 - Categories: `GET /wp/v2/categories?per_page=100&hide_empty=false&context=edit` — populates Default Post Category dropdown (hierarchical).
-- Post formats: derived from `get_post_format_strings()` minus `standard`. Values: `aside`, `gallery`, `link`, `image`, `quote`, `status`, `video`, `audio`, `chat`. **Theme support gated** — only show formats the active theme supports (`get_theme_support('post-formats')`). Not exposed via REST cleanly; a custom shell endpoint or theme support inspection is needed.
+- Post formats: derived from `get_post_format_strings()` minus `standard`. Values: `aside`, `gallery`, `link`, `image`, `quote`, `status`, `video`, `audio`, `chat`. **Theme support gated** — only show formats the active theme supports (`get_theme_support('post-formats')`). Not exposed via REST cleanly; a custom workspace endpoint or theme support inspection is needed.
 - Link categories: `GET /wp/v2/link_categories` — only when Link Manager exists; safely skip otherwise.
 
 ---
@@ -222,7 +222,7 @@ N/A — settings panel.
 
 Original wp-admin URL: `/wp-admin/options-writing.php`. No query state. `?settings-updated=true` flag for legacy form post redirect.
 
-Shell hash route: `#/settings/writing`.
+Workspace hash route: `#/settings/writing`.
 
 ---
 
@@ -283,22 +283,22 @@ Shell hash route: `#/settings/writing`.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:settings-writing` → `src/apps/settings-writing/index.js`
 - **What works:** Default Post Category and Default Post Format via REST. Saves through `core/notices`.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Post via email section | Low | Legacy; recommend hiding via `enable_post_by_email_configuration` filter in shell deployments. Non-REST. |
+| Post via email section | Low | Legacy; recommend hiding via `enable_post_by_email_configuration` filter in workspace deployments. Non-REST. |
 | Update Services section | Low | Legacy; non-REST; gated by `blog_public`. |
 | Default Link Category | Low | Only relevant if Link Manager plugin used. |
 | `use_smilies`, `use_balanceTags` | Low | Only on ancient installs (`initial_db_version < 32453`). Skip. |
 | Theme-supported post formats filter | Medium | Currently shows all formats; should restrict to active theme's supported formats. |
-| Plugin-added Settings API fields | Low | `do_settings_fields` extensibility broken in shell. |
+| Plugin-added Settings API fields | Low | `do_settings_fields` extensibility broken in workspace. |
 
 ### Acceptable interim
-`iframe:options-writing.php` covers parity for any shell needing full surface.
+`iframe:options-writing.php` covers parity for any workspace needing full surface.
 
 ---
 
@@ -317,5 +317,5 @@ Shell hash route: `#/settings/writing`.
 - Settings registration: `wp-includes/option.php` lines 2857–2898
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-writing/index.js`
+- Current workspace impl: `src/apps/settings-writing/index.js`
 - Settings host: `src/apps/settings/index.js`

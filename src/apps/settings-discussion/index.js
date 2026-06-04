@@ -3,7 +3,7 @@ import { __ } from '@wordpress/i18n';
 import { EntityDataForm } from '../_shared/forms/EntityDataForm';
 
 // Core's default `thread_comments_depth_max` (filterable server-side via the
-// `thread_comments_depth_max` filter). The shell hardcodes 10 as a documented
+// `thread_comments_depth_max` filter). The workspace hardcodes 10 as a documented
 // parity caveat — there is no read endpoint for the live filtered max, and the
 // server-side `thread_comments_depth` sanitize_callback honors the real filter
 // regardless, so a theme raising the max still validates (the picker just

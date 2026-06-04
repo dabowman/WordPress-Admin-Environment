@@ -1,9 +1,9 @@
 <?php
 /**
- * Programmatic shell registry (spec §13 #6).
+ * Programmatic workspace registry (spec §13 #6).
  *
  * Plugins call `wp_admin_workspaces_register_workspace( $slug, $admin_json )`
- * to contribute a complete shell at runtime — useful for shells whose
+ * to contribute a complete workspace at runtime — useful for workspaces whose
  * shape is computed (per role, per site, per feature flag) rather than
  * stored on disk.
  *
@@ -12,13 +12,13 @@
  *
  *   1. The plugin origin loader (`WP_Admin_Workspaces_Resolver::load_origins`)
  *      checks the programmatic registry for the active slug *before*
- *      reading `shells/{slug}.json` from disk. Programmatic
- *      registrations override file-based shells of the same slug.
+ *      reading `workspaces/{slug}.json` from disk. Programmatic
+ *      registrations override file-based workspaces of the same slug.
  *   2. `wp_admin_workspaces_get_available_workspaces()` merges programmatic
  *      registrations into the dropdown so authors can switch to them
  *      from the Settings page.
  *
- * Programmatic shells participate in the same cascade as file shells:
+ * Programmatic workspaces participate in the same cascade as file workspaces:
  * site / role / user origins still merge on top, restrict-only and
  * `customizable` enforcement still apply.
  *
@@ -29,14 +29,14 @@ defined( 'ABSPATH' ) || exit;
 
 class WP_Admin_Workspaces_Registry {
 
-	/** @var array<string, array> slug => admin.json doc */
+	/** @var array<string, array> slug => workspace.json doc */
 	private static $registered = array();
 
 	/**
-	 * Register a complete shell programmatically.
+	 * Register a complete workspace programmatically.
 	 *
 	 * @param string $slug      Unique slug. Sanitized via `sanitize_file_name`.
-	 * @param array  $admin_json Full admin.json document.
+	 * @param array  $admin_json Full workspace.json document.
 	 *
 	 * @return string|WP_Error Slug on success, WP_Error otherwise.
 	 */
@@ -51,7 +51,7 @@ class WP_Admin_Workspaces_Registry {
 		if ( ! is_array( $admin_json ) ) {
 			return new WP_Error(
 				'wp_admin_workspaces_invalid_shell_doc',
-				"register_workspace: admin.json doc for '$slug' must be an array"
+				"register_workspace: workspace.json doc for '$slug' must be an array"
 			);
 		}
 

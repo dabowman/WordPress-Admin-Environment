@@ -4,7 +4,7 @@ Captured-HTML tile for an **un-ported classic dashboard widget**, bridged into t
 
 ## Overview
 
-The classic wp-admin dashboard is a runtime structure (`$wp_meta_boxes['dashboard']`) that core + plugins populate at request time via `wp_add_dashboard_widget()`. There is no clean REST surface to enumerate or render those widgets. The bridge **harvests** the meta-boxes server-side, skips the core widgets the shell ships native after #133, and synthesizes a `screens[dashboard-widgets].apps[]` tile for each surviving **plugin** widget — each tile mounts THIS app with per-tile `config.widgetId` + `config.title`.
+The classic wp-admin dashboard is a runtime structure (`$wp_meta_boxes['dashboard']`) that core + plugins populate at request time via `wp_add_dashboard_widget()`. There is no clean REST surface to enumerate or render those widgets. The bridge **harvests** the meta-boxes server-side, skips the core widgets the workspace ships native after #133, and synthesizes a `screens[dashboard-widgets].apps[]` tile for each surviving **plugin** widget — each tile mounts THIS app with per-tile `config.widgetId` + `config.title`.
 
 This is the dashboard sibling of the #128 admin-bar / notices chrome harvest — the same runtime-harvest pattern (skip-core-first, ingest-rest, expose a skip-list filter). See `docs/runtime-harvest-pattern.md`.
 
@@ -17,7 +17,7 @@ This is the dashboard sibling of the #128 admin-bar / notices chrome harvest —
 
 ## Permission gate
 
-`GET /wp-admin-workspaces/v1/dashboard-widget/{id}` floors on logged-in + `current_user_can('read')` (the classic dashboard's own view cap). The substantive gate is the per-widget check: the id must NOT be a shell-native core widget (`WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget()`) AND must be a widget the dashboard actually registered this request — an unknown / core / removed id 404s. A caller can only render a widget the dashboard already registered, never an arbitrary callback.
+`GET /wp-admin-workspaces/v1/dashboard-widget/{id}` floors on logged-in + `current_user_can('read')` (the classic dashboard's own view cap). The substantive gate is the per-widget check: the id must NOT be a workspace-native core widget (`WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget()`) AND must be a widget the dashboard actually registered this request — an unknown / core / removed id 404s. A caller can only render a widget the dashboard already registered, never an arbitrary callback.
 
 ## Rebuild guide
 
@@ -29,6 +29,6 @@ This is the dashboard sibling of the #128 admin-bar / notices chrome harvest —
 
 ## Known limitations
 
-- **JS loss.** Captured HTML is injected via `dangerouslySetInnerHTML`; React does NOT execute injected `<script>` tags, and the widget's enqueued JS / AJAX handles aren't loaded on the shell page. Widgets that depend on JS (live feeds, interactive charts, AJAX forms) degrade to **static HTML**. The per-tile **iframe fallback** is the fidelity path — it loads classic `index.php` where the widget's JS runs natively. This is the accepted interim, the same escape-hatch tier as the #128 notices iframe fallback.
+- **JS loss.** Captured HTML is injected via `dangerouslySetInnerHTML`; React does NOT execute injected `<script>` tags, and the widget's enqueued JS / AJAX handles aren't loaded on the workspace page. Widgets that depend on JS (live feeds, interactive charts, AJAX forms) degrade to **static HTML**. The per-tile **iframe fallback** is the fidelity path — it loads classic `index.php` where the widget's JS runs natively. This is the accepted interim, the same escape-hatch tier as the #128 notices iframe fallback.
 - The iframe fallback shows the **whole** classic dashboard (chromeless), not just the one widget — there is no per-widget classic URL in wp-admin.
 - Per-screen / per-widget styling from the plugin's enqueued admin CSS is not loaded; the captured markup inherits the tile's WPDS surroundings (links + images constrained; no attempt to restyle classic markup).

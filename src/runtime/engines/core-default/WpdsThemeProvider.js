@@ -30,7 +30,7 @@ const ALLOWLIST_PROXY_MODULE = '@wordpress/edit-site';
 // WPDS-specific density vocabulary. Unknown values fall back to
 // 'default' silently — keeps the WPDS provider's contract clean even
 // when an upstream cascade produces a non-WPDS density value (e.g.
-// shell-switching from a Material engine that authored 'dense').
+// workspace-switching from a Material engine that authored 'dense').
 const WPDS_DENSITIES = [ 'default', 'compact', 'comfortable' ];
 
 const RealThemeProvider = ( () => {
@@ -56,7 +56,7 @@ const RealThemeProvider = ( () => {
 		// eslint-disable-next-line no-console
 		console.warn(
 			'wp-admin-workspaces: @wordpress/theme.ThemeProvider unavailable. ' +
-				'Shell will render empty. Ensure the Gutenberg plugin is active. ' +
+				'Workspace will render empty. Ensure the Gutenberg plugin is active. ' +
 				( e?.message || e )
 		);
 		return null;
@@ -100,7 +100,7 @@ function pickCursor( styles ) {
  *
  * 1. **Inherited foreground.** The real provider emits only custom properties
  *    on a `display:contents` element — it never sets the `color` property. The
- *    engine paints `color` at the layout root (canvas foreground = the shell
+ *    engine paints `color` at the layout root (canvas foreground = the workspace
  *    *root* ramp), and `color` inherits. A nested light region that doesn't
  *    re-set `color` therefore leaks the root's dark-theme foreground
  *    (`#f0f0f0`) into its text. Components that set their own color from a

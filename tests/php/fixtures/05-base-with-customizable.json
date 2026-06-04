@@ -1,9 +1,9 @@
 {
-	"name": "test-shell",
-	"title": "Test Shell",
+	"name": "test-workspace",
+	"title": "Test Workspace",
 	"version": 1,
 	"settings": {
-		"shell": { "layoutEngine": "core:default" },
+		"workspace": { "layoutEngine": "core:default" },
 		"applications": [
 			{
 				"id": "posts",

@@ -251,7 +251,7 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	}
 
 	// Spec §8 layer 3 — source-declared capability floor. Even if the
-	// shell config omits `capability`, the source's required caps still
+	// workspace config omits `capability`, the source's required caps still
 	// apply.
 	const sourceCaps = Array.isArray( sourceDef.capabilities )
 		? sourceDef.capabilities

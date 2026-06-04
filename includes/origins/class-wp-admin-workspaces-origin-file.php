@@ -3,7 +3,7 @@
  * File origin loader — `wp-content/workspace.json` override.
  *
  * The canonical workspace override. When a site author drops a valid
- * `admin.json` at `WP_CONTENT_DIR`, it loads into the cascade `plugin`
+ * `workspace.json` at `WP_CONTENT_DIR`, it loads into the cascade `plugin`
  * slot as a PARTIAL delta layered on the `wp-admin-default` baseline
  * (which occupies the `core` slot). This mirrors the theme.json model:
  * core ships a full default, the site overrides only the keys it cares
@@ -61,7 +61,7 @@ class WP_Admin_Workspaces_Origin_File {
 		/**
 		 * Filter the absolute path of the workspace override file.
 		 *
-		 * @param string $default `WP_CONTENT_DIR/admin.json`.
+		 * @param string $default `WP_CONTENT_DIR/workspace.json`.
 		 */
 		return (string) apply_filters( 'wp_admin_workspaces_workspace_json_path', $default );
 	}

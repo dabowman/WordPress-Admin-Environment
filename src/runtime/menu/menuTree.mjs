@@ -113,7 +113,7 @@ export function pruneMenu( items, passes = () => true ) {
 }
 
 /**
- * Extract the primary path from an in-shell hash href (`#/posts/foo` →
+ * Extract the primary path from an in-workspace hash href (`#/posts/foo` →
  * `/posts/foo`). External / non-hash hrefs return null so they never
  * match the active state.
  *

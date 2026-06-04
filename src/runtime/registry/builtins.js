@@ -1,5 +1,5 @@
 /**
- * Manifest-driven registration of every shell-bundled app and engine.
+ * Manifest-driven registration of every workspace-bundled app and engine.
  *
  * V2.M4 task 6: imperative `register({ ... configSchema ... })` calls
  * are gone. The single source of truth is each app's `app.json` /
@@ -21,14 +21,14 @@
  *     `import()` into its own chunk (`build/app-<id>.js`). The
  *     registry caches the resolved component on first mount.
  *
- * Adding a new shell-bundled app: create `src/apps/{name}/` with
+ * Adding a new workspace-bundled app: create `src/apps/{name}/` with
  * `index.js`, `app.json`, and (optionally) `index.css`. Add an entry
  * to `APP_LOADERS` below — eager when the app is always mounted in
- * every shell, lazy (the default) otherwise. The dynamic import's
+ * every workspace, lazy (the default) otherwise. The dynamic import's
  * `webpackChunkName` magic comment controls the emitted chunk name.
  */
 
-// Always-eager chrome apps. Bundled into the boot chunk so the shell
+// Always-eager chrome apps. Bundled into the boot chunk so the workspace
 // paints chrome immediately without a Suspense flash. Keep this list
 // tight — every entry here defeats code-splitting for that module.
 import NavigationApp from '../../apps/navigation';

@@ -1,13 +1,13 @@
 /**
  * core:desktop-dock-app — dock host (P2.T3).
  *
- * Thin shell around the dock-rail registry — looks up the active
+ * Thin workspace around the dock-rail registry — looks up the active
  * renderer by name (defaults to `'default'`) and renders it with the
  * shared prop bundle. The bundled `default` renderer paints two
  * groups: launcher tiles + live-window tiles.
  *
  * Plugin authors register alternate renderers via
- * `registerDockRailRenderer( name, Component )` and point a shell's
+ * `registerDockRailRenderer( name, Component )` and point a workspace's
  * `regions.dock.config.renderer` at the registered name. The renderer
  * owns the visual treatment entirely — the host just hands it
  * `{ items, stack, routes, manager }`.
@@ -219,7 +219,7 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 	);
 }
 
-// Register the bundled default at module-load so a shell using
+// Register the bundled default at module-load so a workspace using
 // `regions.dock.config.renderer = 'default'` (or omitting the field)
 // resolves the right component.
 registerDockRailRenderer( 'default', DefaultDockRailRenderer );

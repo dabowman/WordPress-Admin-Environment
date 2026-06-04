@@ -1,8 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/workspace.json",
-	"title": "WP Admin Shell — admin.json (v3)",
-	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
+	"title": "WP Admin Workspaces — workspace.json (v3)",
+	"description": "Declares a WP Admin Workspaces workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
 
 	"type": "object",
 	"required": [ "version", "$wpds", "name", "engine", "screens" ],
@@ -18,20 +18,20 @@
 		"version": {
 			"type": "integer",
 			"const": 3,
-			"description": "admin.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/schema-sketch.md`."
+			"description": "workspace.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/schema-sketch.md`."
 		},
 
 		"$wpds": {
 			"type": "string",
 			"pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$",
-			"description": "Pinned WPDS slot matrix version, expressed as a WordPress release version (`6.9`, `7.0`, `7.1.2`). The resolver loads `wpds-defaults-{$wpds}.json` as the implicit `core` baseline so missing author values cannot break the runtime, and validates the `styles` tree against the WPDS slot list at this version. Bumping `$wpds` adopts new slots that may have appeared in later WordPress releases. CI parity tests guard against drift between this pin and the underlying WordPress version. Required because the WPDS surface is the shell's contract with apps and engines; an unpinned `styles` tree cannot be validated."
+			"description": "Pinned WPDS slot matrix version, expressed as a WordPress release version (`6.9`, `7.0`, `7.1.2`). The resolver loads `wpds-defaults-{$wpds}.json` as the implicit `core` baseline so missing author values cannot break the runtime, and validates the `styles` tree against the WPDS slot list at this version. Bumping `$wpds` adopts new slots that may have appeared in later WordPress releases. CI parity tests guard against drift between this pin and the underlying WordPress version. Required because the WPDS surface is the workspace's contract with apps and engines; an unpinned `styles` tree cannot be validated."
 		},
 
 		"name": {
 			"type": "string",
 			"minLength": 1,
 			"pattern": "^[a-z][a-z0-9-]*$",
-			"description": "Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-shell activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails. Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`."
+			"description": "Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails. Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`."
 		},
 
 		"title": {
@@ -195,7 +195,7 @@
 
 		"styles": {
 			"$ref": "#/$defs/styles",
-			"description": "WPDS-shaped style tree, unchanged from v2 — theme-developer surface intact. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
+			"description": "WPDS-shaped style tree, unchanged from v2 — theme-developer surface intact. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and workspace-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
 		},
 
 		"preload": {
@@ -244,7 +244,7 @@
 		"namespacedId": {
 			"type": "string",
 			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*|iframe:[A-Za-z0-9_./?=&\\-]+)$",
-			"description": "A namespaced identifier referencing an app, engine, region template, or iframe escape-hatch target. Format: `core:{name}` (shell-shipped), `plugin:{slug}/{name}` (plugin-contributed), or `iframe:{url}` (wp-admin fallback — e.g. `iframe:options-permalink.php`). The iframe form is accepted on screen `app` fields per the wp-admin-default fixture; engine and template references reject it."
+			"description": "A namespaced identifier referencing an app, engine, region template, or iframe escape-hatch target. Format: `core:{name}` (workspace-shipped), `plugin:{slug}/{name}` (plugin-contributed), or `iframe:{url}` (wp-admin fallback — e.g. `iframe:options-permalink.php`). The iframe form is accepted on screen `app` fields per the wp-admin-default fixture; engine and template references reject it."
 		},
 
 		"iconSource": {
@@ -812,7 +812,7 @@
 				"fieldsModule": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the shell runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
+					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the workspace runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
 				}
 			}
 		},
@@ -820,7 +820,7 @@
 		"styles": {
 			"type": "object",
 			"additionalProperties": true,
-			"description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (shell-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
+			"description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (workspace-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
 			"properties": {
 				"customizable": {
 					"$ref": "#/$defs/customizable",
@@ -877,7 +877,7 @@
 				"chrome": {
 					"type": "object",
 					"additionalProperties": true,
-					"description": "Shell-only chrome extension slots — surfaces WPDS does not yet describe. Sub-namespaces include `sidebar`, `toolbar`, `siteHub`, `content`. Authors may add custom slugs; layout engines reading custom slugs declare them in their manifest's `requiredTokens` so the runtime validates at activation time."
+					"description": "Workspace-only chrome extension slots — surfaces WPDS does not yet describe. Sub-namespaces include `sidebar`, `toolbar`, `siteHub`, `content`. Authors may add custom slugs; layout engines reading custom slugs declare them in their manifest's `requiredTokens` so the runtime validates at activation time."
 				},
 				"regions": {
 					"type": "object",
@@ -895,7 +895,7 @@
 		"region": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "A region in the shell's region tree — escape hatch for compositions the `screens` block can't synthesize. Same vocabulary as v2: holds either a fixed app or accepts routed apps; never both. Can be instantiated from an engine-shipped template, declared from scratch, or appear as a nested child whose parent supplies template context. The schema does not enforce that every region has a resolvable `role` — that check is runtime-only, because the role may be inherited from the parent's template or from a template-shipped child of matching name, neither of which JSON Schema can reach across documents to validate.",
+			"description": "A region in the workspace's region tree — escape hatch for compositions the `screens` block can't synthesize. Same vocabulary as v2: holds either a fixed app or accepts routed apps; never both. Can be instantiated from an engine-shipped template, declared from scratch, or appear as a nested child whose parent supplies template context. The schema does not enforce that every region has a resolvable `role` — that check is runtime-only, because the role may be inherited from the parent's template or from a template-shipped child of matching name, neither of which JSON Schema can reach across documents to validate.",
 			"properties": {
 				"template": {
 					"$ref": "#/$defs/namespacedId",
@@ -921,7 +921,7 @@
 							"type": "string",
 							"minLength": 1,
 							"pattern": "^(_self|[a-z][a-z0-9-]*)$",
-							"description": "Names the URL slot whose value this region resolves to a route. `_self` reads the URL's primary path (typically only one region per shell uses `_self`). For any other value, the `mode` field selects the resolution strategy — `query` (default) reads the same-named URL query parameter; `mirror` synthesizes `@<route-key><primary>` from the URL primary path. See spec §5.4 and §6.4."
+							"description": "Names the URL slot whose value this region resolves to a route. `_self` reads the URL's primary path (typically only one region per workspace uses `_self`). For any other value, the `mode` field selects the resolution strategy — `query` (default) reads the same-named URL query parameter; `mirror` synthesizes `@<route-key><primary>` from the URL primary path. See spec §5.4 and §6.4."
 						},
 						"mode": {
 							"enum": [ "query", "mirror" ],
@@ -950,7 +950,7 @@
 				},
 				"app": {
 					"$ref": "#/$defs/namespacedId",
-					"description": "App id to mount in this region for the life of the shell. Mutually exclusive with `routing.route-key`."
+					"description": "App id to mount in this region for the life of the workspace. Mutually exclusive with `routing.route-key`."
 				},
 				"config": {
 					"type": "object",

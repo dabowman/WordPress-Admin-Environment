@@ -26,7 +26,7 @@ require_once __DIR__ . '/chromeless-bridge.php';
  *
  * Two signals, either suffices:
  *
- *   1. Explicit `?wp_admin_workspaces_chromeless=1` query var the shell adds
+ *   1. Explicit `?wp_admin_workspaces_chromeless=1` query var the workspace adds
  *      when opening iframe windows.
  *   2. `Sec-Fetch-Site: same-origin` + `Sec-Fetch-Dest: iframe` —
  *      same-origin iframe load. Catches admin navigations that drop

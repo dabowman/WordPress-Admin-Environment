@@ -20,7 +20,7 @@
  *       * iframe app id format,
  *       * permission capabilities propagated,
  *       * idempotency guard (filter twice — no duplicates),
- *       * pre-declared admin.json screen wins (bridge skips),
+ *       * pre-declared workspace.json screen wins (bridge skips),
  *       * container .label preserved across origins (bridge only writes items),
  *       * empty $GLOBALS['menu'] → no crash, no contribution,
  *       * default container created when absent.
@@ -373,13 +373,13 @@ $T::assert_true(
 	! isset( $doc['menu']['ingested'] )
 );
 
-// --- contribute(): cascade collision with admin.json screen -------------
+// --- contribute(): cascade collision with workspace.json screen -------------
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
 	array( 'My Plugin', 'manage_options', 'my-plugin-page', 'My Plugin', '', '', 'dashicons-admin-tools' ),
 );
-// admin.json origin pre-declared a screen with the same id (e.g. site
+// workspace.json origin pre-declared a screen with the same id (e.g. site
 // origin overrode the auto-bridge with a customized screen). The
 // bridge's idempotency guard must skip ingestion.
 $pre_existing = array(
@@ -393,28 +393,28 @@ $pre_existing = array(
 );
 $doc = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute( $pre_existing );
 $T::assert_eq(
-	'contribute: admin.json-declared screen survives — bridge skips',
+	'contribute: workspace.json-declared screen survives — bridge skips',
 	$doc['screens']['ingested-my-plugin-page']['label'],
 	'Customized'
 );
 $T::assert_eq(
-	'contribute: admin.json-declared screen path preserved',
+	'contribute: workspace.json-declared screen path preserved',
 	$doc['screens']['ingested-my-plugin-page']['path'],
 	'/custom-path'
 );
 $T::assert_eq(
-	'contribute: admin.json-declared screen app preserved',
+	'contribute: workspace.json-declared screen app preserved',
 	$doc['screens']['ingested-my-plugin-page']['app'],
 	'core:posts'
 );
 
 // --- contribute(): custom container label preserved across origins ------
 // The shared `ingested` container only collects submenus parented to a
-// CORE wp-admin slug the shell does NOT mirror natively (orphans). Use
+// CORE wp-admin slug the workspace does NOT mirror natively (orphans). Use
 // `import.php` — a core slug NOT in $CORE_PARENT_MENU — so the fallback
 // `ingested` container branch + ensure_container()'s preserve path are
 // exercised. (tools.php / options-general.php now nest under their real
-// shell parent — see the #127 "core nest" block below.)
+// workspace parent — see the #127 "core nest" block below.)
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
@@ -509,7 +509,7 @@ $T::assert_true(
 // import.php is a core slug NOT in $CORE_PARENT_MENU, so its orphan plugin
 // children get a synthesized container inside the generic `ingested`
 // bucket. (Mapped core parents — tools.php / options-general.php — nest
-// directly under their real shell parent; see the #127 "core nest" block.)
+// directly under their real workspace parent; see the #127 "core nest" block.)
 
 wpas_cmb_reset_globals();
 $GLOBALS['menu'] = array(
@@ -790,7 +790,7 @@ $T::assert_eq(
 	array( 'type' => 'url', 'value' => 'data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=' )
 );
 
-// --- #127: core-parented submenu nests under the REAL shell parent ------
+// --- #127: core-parented submenu nests under the REAL workspace parent ------
 // A plugin submenu under tools.php nests under `menu.tools.items`, NOT the
 // generic `ingested` container. options-general.php → `menu.settings.items`.
 
@@ -810,11 +810,11 @@ $GLOBALS['submenu'] = array(
 );
 $nest_doc = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute( array() );
 $T::assert_true(
-	'core nest: tools.php child nests under menu.tools.items (real shell parent)',
+	'core nest: tools.php child nests under menu.tools.items (real workspace parent)',
 	isset( $nest_doc['menu']['tools']['items']['ingested-acme-export'] )
 );
 $T::assert_true(
-	'core nest: options-general.php child nests under menu.settings.items (real shell parent)',
+	'core nest: options-general.php child nests under menu.settings.items (real workspace parent)',
 	isset( $nest_doc['menu']['settings']['items']['ingested-acme-settings'] )
 );
 $T::assert_true(

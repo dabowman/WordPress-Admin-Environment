@@ -5,8 +5,8 @@
  *
  * Guards the two non-negotiable guardrails from `docs/no-api-fallback-pattern.md`:
  *   1. Output uses `wp option update`, never raw SQL.
- *   2. Shell single-quote escaping is correct so the command can be pasted
- *      verbatim into any POSIX shell without syntax errors.
+ *   2. Workspace single-quote escaping is correct so the command can be pasted
+ *      verbatim into any POSIX workspace without syntax errors.
  *
  * Run: `node tests/runtime/unavailable-via-api.test.mjs`
  * (chained from `npm run test:runtime`)
@@ -63,7 +63,7 @@ ok(
 
 console.log( '\n— buildOptionCliCommand: single-quote escaping —\n' );
 
-// A value containing a single quote must not break the shell string.
+// A value containing a single quote must not break the workspace string.
 const withQuote = buildOptionCliCommand( 'blogname', "O'Reilly" );
 ok(
 	'does not contain an unescaped bare single quote inside the value',
@@ -73,16 +73,16 @@ ok(
 	withQuote
 );
 ok(
-	'escaped value produces correct shell-safe string',
+	'escaped value produces correct workspace-safe string',
 	withQuote === "wp option update 'blogname' 'O'\"'\"'Reilly'",
 	withQuote
 );
 
 // The NAME operand must be escaped identically to the value — a name with an
-// embedded single quote must not break the shell string either.
+// embedded single quote must not break the workspace string either.
 const nameWithQuote = buildOptionCliCommand( "foo'bar", 'baz' );
 ok(
-	'escaped name produces correct shell-safe string',
+	'escaped name produces correct workspace-safe string',
 	nameWithQuote === "wp option update 'foo'\"'\"'bar' 'baz'",
 	nameWithQuote
 );
@@ -121,7 +121,7 @@ ok(
 // The dangerous fragment must survive only inside the single-quoted value arg.
 // Split off the fixed `wp option update '<name>' ` prefix and assert the
 // remaining value arg both opens with a single quote AND contains DROP TABLE —
-// i.e. the fragment is quoted, never a bare unquoted shell token. (Greedily
+// i.e. the fragment is quoted, never a bare unquoted workspace token. (Greedily
 // stripping the quoted span — the old approach — could never fail here.)
 const valueArg = sqlIsh.slice( "wp option update 'blogname' ".length );
 ok(

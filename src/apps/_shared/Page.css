@@ -1,5 +1,5 @@
 /*
- * Shared <Page> layout — shell-local port of @wordpress/admin-ui `Page`.
+ * Shared <Page> layout — workspace-local port of @wordpress/admin-ui `Page`.
  * Flex column: a fixed header (title row + optional subtitle, bottom divider)
  * above a content area. Content is a full-bleed flex column by default (so a
  * DataViews table fills the region); `.has-padding` insets + scrolls it for

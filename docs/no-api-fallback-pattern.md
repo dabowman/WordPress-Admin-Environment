@@ -1,6 +1,6 @@
 # No-API Fallback Pattern
 
-When a wp-admin capability has **no REST surface**, the shell must not dead-end or silently drop the control. It offers a **consistent, tiered fallback** so the user — or their agent — can still complete the action. This is the companion to the `iframe:` escape hatch: a deliberate feature, not a compromise.
+When a wp-admin capability has **no REST surface**, the workspace must not dead-end or silently drop the control. It offers a **consistent, tiered fallback** so the user — or their agent — can still complete the action. This is the companion to the `iframe:` escape hatch: a deliberate feature, not a compromise.
 
 > Use this anywhere the workspace can't write something through `/wp/v2/*` or `/wp-admin-workspaces/v1/*`. A large share of the parity backlog is `[upstream]`/no-REST (session destroy, admin password reset, confirmation flows, page-attribute templates, legacy options); they should all be handled **identically** via this pattern.
 
@@ -23,7 +23,7 @@ Don't make a user drop to the CLI to toggle a common setting; don't build a frag
 
 Every option lives in `wp_options`; most no-REST actions have a CLI / PHP path. Reachability tiers, by how many users can use them:
 
-1. **Classic screen (universal).** The legacy wp-admin screen, reached through the shell's existing `legacy_path` / classic-mode routing. Needs **no** agent or CLI — works for every admin. Always the base tier.
+1. **Classic screen (universal).** The legacy wp-admin screen, reached through the workspace's existing `legacy_path` / classic-mode routing. Needs **no** agent or CLI — works for every admin. Always the base tier.
 2. **WP-CLI (scriptable).** `wp option update <name> '<value>'` — calls `update_option()` under the hood, so it runs `sanitize_option`, fires `update_option_{$name}` hooks, and handles autoload + object cache. Works for **any** option regardless of `show_in_rest`. (This product's dev/wp-env contexts ship WP-CLI.)
 3. **Agent (agentic).** A ready-to-paste instruction the user hands to their coding agent (the context this product targets), e.g. *"Set the WordPress option `comment_moderation` to `1` using `wp option update`."*
 
@@ -72,4 +72,4 @@ Renders: a short "this isn't writable through the workspace API" explanation →
 
 ## Boundary
 
-App-space shared, DS-specific. The kernel never learns about this. The classic link uses the existing `legacy_path` / admin-link-interceptor path; the CLI/agent tiers are static, copy-only affordances with no privileged execution from the shell itself.
+App-space shared, DS-specific. The kernel never learns about this. The classic link uses the existing `legacy_path` / admin-link-interceptor path; the CLI/agent tiers are static, copy-only affordances with no privileged execution from the workspace itself.

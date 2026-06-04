@@ -10,8 +10,8 @@
  *
  * The cache key is a hash over signals that uniquely identify each
  * origin's content:
- *   - core:   bundled JSON file mtimes (shells dir)
- *   - plugin: active shell slug + that file's mtime
+ *   - core:   bundled JSON file mtimes (workspaces dir)
+ *   - plugin: active workspace slug + that file's mtime
  *   - site:   `wp_admin_workspaces_site_config` option contents
  *   - role:   current user's role(s) + `wp_admin_workspaces_role_config` option
  *   - user:   current user's id + `wp_admin_workspaces_user_prefs` user meta
@@ -59,7 +59,7 @@ class WP_Admin_Workspaces_Cache {
 	 * Delete every transient this cache layer owns. The hash-based key
 	 * scheme normally lets stale transients age out via TTL when their
 	 * inputs change, but tests + admin-side cache-flush actions need an
-	 * explicit purge so cache-shape changes (e.g. v1 → v2 admin.json
+	 * explicit purge so cache-shape changes (e.g. v1 → v2 workspace.json
 	 * shape transitions) take effect immediately on the next read.
 	 */
 	public static function flush_transients() {

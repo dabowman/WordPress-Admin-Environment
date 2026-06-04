@@ -36,7 +36,7 @@
  * still register. NOTE: that loose-script path can race the kernel's
  * synchronous first mount — see the kernel-import-surface gap tracked in
  * `docs/feedback.md`. Renderers that register via a direct ESM import
- * (the bundled engines + any engine the shell webpack builds) are
+ * (the bundled engines + any engine the workspace webpack builds) are
  * race-free because they execute before the kernel module runs.
  *
  * Tests construct an isolated registry via `createMenuRendererRegistry()`

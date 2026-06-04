@@ -12,7 +12,7 @@ import { navigate } from '../routing/router';
 export { buildCommandsArray };
 
 /**
- * Reads the resolved admin.json `commands` block and registers each
+ * Reads the resolved workspace.json `commands` block and registers each
  * shortcut against the document. When a binding fires:
  *   - `invoke` commands look up the app id in the trigger store and
  *     call its open handler.

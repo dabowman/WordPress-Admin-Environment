@@ -2,7 +2,7 @@
 /**
  * /wp-admin-workspaces/v1/activate-theme — switch the active theme.
  *
- * Shell-side workaround: WordPress core ships no writable themes REST
+ * Workspace-side workaround: WordPress core ships no writable themes REST
  * endpoint (upstream parity ticket #143), so `core:themes` has no
  * canonical `/wp/v2/themes` mutation to call. This endpoint is a thin
  * transport over `switch_theme()`, gated on `switch_themes`.

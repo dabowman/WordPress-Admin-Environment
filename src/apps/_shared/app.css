@@ -22,7 +22,7 @@
  * card edge. The engine mount is flush by default (DataViews + iframe apps
  * stay full-bleed); form / native screens add this class to their root to
  * opt in. The value flows through the chrome bridge, so an author can retune
- * it via `styles.chrome.content.inset` in admin.json; the WPDS dimension is
+ * it via `styles.chrome.content.inset` in workspace.json; the WPDS dimension is
  * the fallback when unset.
  */
 .wp-admin-workspaces-app--inset {

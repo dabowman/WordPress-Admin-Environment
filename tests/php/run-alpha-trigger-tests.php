@@ -15,7 +15,7 @@
  *     baseline), and a trusted-origin null tombstone removes a baseline
  *     screen.
  *   - wp_admin_workspaces_is_active() truth table (file / option / none).
- *   - the admin.json mtime contributes to the resolver cache key.
+ *   - the workspace.json mtime contributes to the resolver cache key.
  *
  * Class-scoped state because `wp eval-file` wraps the file in `eval()`,
  * which breaks `global $foo` lookups across helper functions.
@@ -27,7 +27,7 @@ class WPAS_Alpha_Trigger_Runner {
 	public static $pass = 0;
 	public static $fail = 0;
 	public static $fixture_dir;
-	/** @var string Path the admin.json filter returns; '' → a missing path. */
+	/** @var string Path the workspace.json filter returns; '' → a missing path. */
 	public static $override_path = '';
 
 	public static function ok( $label, $condition, $detail = '' ) {
@@ -54,8 +54,8 @@ class WPAS_Alpha_Trigger_Runner {
 
 	/**
 	 * Point the override loader at a fixture (or a missing path when '').
-	 * An absolute path (leading '/') is used verbatim — lets the bundled-shell
-	 * sweep aim the loader at shells/ outside the fixture dir.
+	 * An absolute path (leading '/') is used verbatim — lets the bundled-workspace
+	 * sweep aim the loader at workspaces/ outside the fixture dir.
 	 */
 	public static function use_override( $name ) {
 		if ( $name && '/' === $name[0] ) {
@@ -126,18 +126,18 @@ $T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Workspace
 // Symmetric counterpart to the screens reject above: a list-shaped commands
 // block must NOT trip the object-shape gate. Regression guard for the bug
 // where `commands` was grouped with the object-shaped blocks, which silently
-// rejected every valid shell dropped at wp-content/workspace.json.
+// rejected every valid workspace dropped at wp-content/workspace.json.
 $T::use_override( 'commands-list-block.json' );
 $doc = WP_Admin_Workspaces_Origin_File::load();
 $T::ok( 'list block (commands: [ … ]) accepted → load non-null', is_array( $doc ) && isset( $doc['commands'] ) );
 
-// Strongest guard: every bundled shell must pass the loader as-is. The shells
+// Strongest guard: every bundled workspace must pass the loader as-is. The workspaces
 // are exactly what users drop into wp-content/workspace.json, so an over-tightened
 // is_valid_partial that rejects any of them strands the user in classic.
-foreach ( glob( $plugin_dir . 'shells/*.json' ) as $workspace_path ) {
+foreach ( glob( $plugin_dir . 'workspaces/*.json' ) as $workspace_path ) {
 	$T::use_override( $workspace_path );
 	$T::ok(
-		'bundled shell ' . basename( $workspace_path ) . ' passes the file loader',
+		'bundled workspace ' . basename( $workspace_path ) . ' passes the file loader',
 		WP_Admin_Workspaces_Origin_File::exists_and_valid()
 	);
 }
@@ -235,7 +235,7 @@ if ( $had_shell && is_string( $saved_shell ) ) {
 	delete_option( 'wp_admin_workspaces_active_workspace' );
 }
 
-// ── admin.json mtime contributes to the cache key ───────────────────
+// ── workspace.json mtime contributes to the cache key ───────────────────
 
 echo "\n— cache key signal —\n";
 
@@ -243,7 +243,7 @@ $T::use_override( '' );
 $key_absent = WP_Admin_Workspaces_Cache::key_for( array() );
 $T::use_override( 'override-styles-only.json' );
 $key_present = WP_Admin_Workspaces_Cache::key_for( array() );
-$T::ok( 'admin.json presence changes the resolver cache key', $key_absent !== $key_present );
+$T::ok( 'workspace.json presence changes the resolver cache key', $key_absent !== $key_present );
 
 $T::use_override( '' );
 

@@ -67,12 +67,12 @@ Names the strategy the engine uses to render the resolved `menu` block. Required
 |-------|----------|-------|
 | `sidebar-drilldown` | Items render in a sidebar nav; `parent` produces a slide-in sub-screen with a back link. Honors `config.collapsed` (icon rail). | `core:navigation` (bundled) |
 | `sidebar-tree`      | Items render in a sidebar nav as an expandable in-place tree; branches seed open when they contain the active route. | `core:navigation` (bundled) |
-| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a shell that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
+| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a workspace that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
 | `drawer`            | Items render in a collapsible-accordion drawer; `parent` produces a section. | `core:single-pane` — registered from the engine module (`DrawerRenderer.js`) so it travels with the engine on extraction. |
 | `none`              | The engine ignores `menu` entirely; `core:navigation` renders nothing. Authors must use `regions` / `routes` escape hatches. | — |
 | absent              | No field → `core:navigation` falls back to `sidebar-drilldown` (back-compat for engines predating the field). | — |
 
-**Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the shell enqueues it on the admin-shell page:
+**Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the workspace enqueues it on the admin-workspace page:
 
 ```php
 // PHP — declare the renderer + the script that registers its component.
@@ -222,7 +222,7 @@ function resolveMode( screenId, engineManifest, screens ) {
 
 `engine.json#modes` is engine-shipped. Site authors override via `screens[id].mode` (mode selection) + `screens[id].regions` (per-field override on top of the mode).
 
-If a site author wants to override the mode itself (e.g. redefine what `focus` means across all screens), they edit their own engine.json fork — or the engine accepts admin.json-side `engine-modes` overrides at the install layer. Open design question: is per-install mode redefinition load-bearing, or is screen-level override enough? Lean: screen-level is enough for v3; revisit if real authoring need surfaces.
+If a site author wants to override the mode itself (e.g. redefine what `focus` means across all screens), they edit their own engine.json fork — or the engine accepts workspace.json-side `engine-modes` overrides at the install layer. Open design question: is per-install mode redefinition load-bearing, or is screen-level override enough? Lean: screen-level is enough for v3; revisit if real authoring need surfaces.
 
 ## Resolved decisions
 

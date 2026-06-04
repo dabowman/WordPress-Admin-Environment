@@ -2,8 +2,8 @@
  * Trigger store for triggerable apps (spec §5.3 `platform.triggerable`).
  *
  * A region whose mounted app has `platform.triggerable: true` is
- * closed-by-default and waits for an external invocation. The shell's
- * `bindings` block in admin.json maps keystrokes to app ids; when a
+ * closed-by-default and waits for an external invocation. The workspace's
+ * `bindings` block in workspace.json maps keystrokes to app ids; when a
  * binding fires, the bindings consumer calls `trigger(appId)` to open
  * the matching region.
  *

@@ -117,7 +117,7 @@ $merged = WP_Admin_Workspaces_Merge::merge(
 );
 $T::assert_eq( 'plain arrays: replace', $merged['tags'], array( 'c' ) );
 
-// 4a. Null tombstones (v3 spec §10) — theme.json convention adopted for admin.json.
+// 4a. Null tombstones (v3 spec §10) — theme.json convention adopted for workspace.json.
 // Tombstones are gated to trust-tier origins (core/engine/plugin/site).
 // `merge_with_tombstones()` is the site-origin additive-with-tombstone path;
 // `merge_authoritative()` covers core/engine/plugin. Untrusted `merge()`
@@ -349,7 +349,7 @@ echo "\n— Origin loaders + full pipeline —\n";
 // The loader passes docs through as-is + falls back to `empty_doc()` for
 // missing/malformed JSON. The empty doc is v3-shape: it carries
 // `workspace.engine` and a single screen so the kernel can synthesize a
-// valid (empty) shell.
+// valid (empty) workspace.
 $empty = WP_Admin_Workspaces_Origin_Core::empty_doc();
 $T::assert_eq( 'core origin: empty_doc carries workspace.engine',
 	$empty['engine'] ?? null,
@@ -359,7 +359,7 @@ $T::assert_true( 'core origin: empty_doc carries a home screen',
 	isset( $empty['screens']['home'] ),
 	'screens: ' . json_encode( array_keys( $empty['screens'] ?? array() ) )
 );
-$T::assert_true( 'core origin: missing shell path falls back to empty_doc',
+$T::assert_true( 'core origin: missing workspace path falls back to empty_doc',
 	is_array( WP_Admin_Workspaces_Origin_Core::load( '/path/does/not/exist.json' ) )
 );
 
@@ -391,14 +391,14 @@ $T::assert_true( 'resolver: origin tags stripped',
 	json_encode( array_keys( $resolved ) )
 );
 
-// ── Programmatic shell registration (spec §13 #6) ──────────────────
+// ── Programmatic workspace registration (spec §13 #6) ──────────────────
 
-echo "\n— Programmatic shell registration —\n";
+echo "\n— Programmatic workspace registration —\n";
 
-require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-shells.php';
+require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-workspaces.php';
 
 WP_Admin_Workspaces_Registry::reset();
-$slug = WP_Admin_Workspaces_Registry::register( 'computed-shell', array(
+$slug = WP_Admin_Workspaces_Registry::register( 'computed-workspace', array(
 	'version' => 1,
 	'engine'  => 'core:default',
 	'title'   => 'Computed',
@@ -406,9 +406,9 @@ $slug = WP_Admin_Workspaces_Registry::register( 'computed-shell', array(
 		'content' => array( 'role' => 'main' ),
 	),
 ) );
-$T::assert_eq( 'register_workspace returns slug', $slug, 'computed-shell' );
-$T::assert_true( 'has() finds registered slug', WP_Admin_Workspaces_Registry::has( 'computed-shell' ) );
-$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Workspaces_Registry::all()['computed-shell'] ) );
+$T::assert_eq( 'register_workspace returns slug', $slug, 'computed-workspace' );
+$T::assert_true( 'has() finds registered slug', WP_Admin_Workspaces_Registry::has( 'computed-workspace' ) );
+$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Workspaces_Registry::all()['computed-workspace'] ) );
 
 $bad = WP_Admin_Workspaces_Registry::register( '', array() );
 $T::assert_true( 'empty slug → WP_Error', is_wp_error( $bad ) );
@@ -443,7 +443,7 @@ WP_Admin_Workspaces_Resolver::reset_request_memo();
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 $resolved = WP_Admin_Workspaces_Resolver::resolve();
 $T::assert_eq(
-	'resolver: programmatic shell wins over file-based same slug',
+	'resolver: programmatic workspace wins over file-based same slug',
 	$resolved['title'] ?? null,
 	'Programmatic Override'
 );
@@ -458,12 +458,12 @@ delete_option( 'wp_admin_workspaces_active_workspace' );
 
 echo "\n— user-switchable kebab form —\n";
 
-// A bundled shell that ships `"user-switchable": true` in kebab form.
+// A bundled workspace that ships `"user-switchable": true` in kebab form.
 // Pre-fix: production code read `userSwitchable` and silently treated
-// every shell as non-switchable (always-false). Post-fix: kebab wins.
+// every workspace as non-switchable (always-false). Post-fix: kebab wins.
 // `WP_Admin_Workspaces_Config::get_user_switchable()` exercises the same
-// reader path used by JS-side `window.wpAdminWorkspaces.shells` enumeration.
-$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'shells/desktop-demo.json';
+// reader path used by JS-side `window.wpAdminWorkspaces.workspaces` enumeration.
+$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'workspaces/desktop-demo.json';
 if ( file_exists( $desktop_demo_path ) ) {
 	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
 	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-config.php';

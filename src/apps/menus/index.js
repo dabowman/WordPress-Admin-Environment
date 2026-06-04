@@ -38,13 +38,13 @@ function readThemeSupport() {
 }
 
 // In-workspace route to the full-fidelity classic Menus iframe screen
-// (`screens['nav-menus']` → `iframe:nav-menus.php` in the shell). We link to
+// (`screens['nav-menus']` → `iframe:nav-menus.php` in the workspace). We link to
 // the workspace route, NOT the raw `/wp-admin/nav-menus.php`: the latter is
 // claimed by the native `menus` screen's `legacy_path`, so the admin-link
 // interceptor would bounce it back to `#/menus` (this same disabled panel on a
 // block theme). The `#/nav-menus` route mounts the iframe deterministically.
 //
-// The `nav-menus` screen is ALSO pinned in the shell's Appearance menu group
+// The `nav-menus` screen is ALSO pinned in the workspace's Appearance menu group
 // (theme-agnostic, surviving the block-theme prune), so it is independently
 // reachable as a real nav entry — this panel link is a convenience, not the
 // sole entry point.
@@ -93,7 +93,7 @@ export default function MenusApp() {
 	const isBlockTheme = !! themeSupport?.[ 'block-theme' ];
 
 	// All menus (containers) — the selector. context:'edit' is the entity
-	// default but we pass it explicitly per the shell convention.
+	// default but we pass it explicitly per the workspace convention.
 	const { records: menus, isResolving: menusLoading } = useEntityRecords(
 		'root',
 		'menu',

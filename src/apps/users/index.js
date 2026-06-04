@@ -54,7 +54,7 @@ const VIEW_DEFAULTS = {
 
 /**
  * Workspace route for the Edit User screen (`user-edit` in wp-admin-default).
- * The list has no dedicated Edit User app yet — the shell binds `/users/{id}/edit`
+ * The list has no dedicated Edit User app yet — the workspace binds `/users/{id}/edit`
  * to `core:profile` with `config.userId: "{id}"`, and `core:profile` now edits
  * the user named by `config.userId` (not the acting user) — so "Edit" + the
  * username cell both edit the *target* user. See app.md "Known limitations".
@@ -218,7 +218,7 @@ export default function UsersApp( { config = {} } = {} ) {
 		queryArgs
 	);
 
-	// Role elements come from the resolved spec (shell-authored `roles`
+	// Role elements come from the resolved spec (workspace-authored `roles`
 	// elements). One source of truth for: the filter dropdown counts, the
 	// "Change role to…" select, and the translated cell display names.
 	const roleElements = useMemo( () => {

@@ -7,7 +7,7 @@
  * Responsibilities:
  *   1. Pick the inner ThemeProvider — engine's `ThemeProvider` field if
  *      declared, otherwise a neutral pass-through wrapper. Engines opt
- *      into shell theming by shipping a `ThemeProvider`; absence leaves
+ *      into workspace theming by shipping a `ThemeProvider`; absence leaves
  *      children rendered un-themed inside a bare scoped wrapper.
  *   2. Mount it with seed/density/cursor inputs. Wrap children in a
  *      `<div data-theme-scope-id={id}>` so scoped detail CSS has
@@ -20,7 +20,7 @@
  *      their `ThemeProvider` owns all token plumbing directly.
  *   4. Catch render errors from the engine-supplied provider via an
  *      error boundary; on failure fall back to the same neutral
- *      pass-through wrapper with a console warning. Shell stays usable
+ *      pass-through wrapper with a console warning. Workspace stays usable
  *      when an extension engine ships a broken ThemeProvider — but it
  *      paints without any DS-specific styling until the engine fixes
  *      its provider.
@@ -74,7 +74,7 @@ export function ThemeProviderHost( props ) {
  *
  * Subtree styles share the top-level `styles` shape (color / border /
  * dimension / etc., plus `theme`), minus the `regions` / `applications` /
- * `chrome` blocks which only make sense at shell scope.
+ * `chrome` blocks which only make sense at workspace scope.
  * @param {Object} root0
  * @param {*}      root0.styles
  * @param {*}      root0.children
@@ -197,8 +197,8 @@ function NeutralProvider( { detailStyleNode, children } ) {
  * Engine-supplied providers ship outside the kernel's review process
  * (extensions can register their own engines via
  * `wp_admin_workspaces_register_engine`); a thrown render here would crash
- * the entire shell. Catch + log + fall back to the neutral wrapper so
- * the shell still paints — though without engine-specific DS theming
+ * the entire workspace. Catch + log + fall back to the neutral wrapper so
+ * the workspace still paints — though without engine-specific DS theming
  * until the engine ships a working provider.
  */
 class ThemeProviderErrorBoundary extends Component {

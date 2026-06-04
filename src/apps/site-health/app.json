@@ -94,7 +94,7 @@
 			},
 			{
 				"concern": "static-test-list",
-				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the shell doesn't yet honor this."
+				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the workspace doesn't yet honor this."
 			}
 		],
 		"design-system-leakage": [

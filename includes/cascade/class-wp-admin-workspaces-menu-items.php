@@ -72,7 +72,7 @@ class WP_Admin_Workspaces_Menu_Items {
 	 *                                      = registration order.
 	 *     @type string|null   $parent      Parent menu-item id (anywhere in the tree).
 	 *                                      Null = root.
-	 *     @type string|null   $href        External / in-shell link target. Token
+	 *     @type string|null   $href        External / in-workspace link target. Token
 	 *                                      interpolation (`{site_url}`) handled at the
 	 *                                      renderer.
 	 *     @type bool|null     $external    With `href`, opens in a new tab. Default
@@ -182,7 +182,7 @@ class WP_Admin_Workspaces_Menu_Items {
 	 * under a named `parent`). Items whose `parent` doesn't exist land
 	 * at root with a `WP_DEBUG` notice.
 	 *
-	 * @param array $doc Plugin-origin admin.json doc.
+	 * @param array $doc Plugin-origin workspace.json doc.
 	 * @return array
 	 */
 	public static function contribute( $doc ) {
@@ -390,7 +390,7 @@ class WP_Admin_Workspaces_Menu_Items {
 	 * fully-resolved cascade (including site/role/user permissions
 	 * tightening).
 	 *
-	 * @param array $doc Fully-resolved admin.json doc.
+	 * @param array $doc Fully-resolved workspace.json doc.
 	 * @return array
 	 */
 	public static function bind_screens( $doc ) {

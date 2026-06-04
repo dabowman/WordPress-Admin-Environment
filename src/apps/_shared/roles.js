@@ -3,7 +3,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Standard WordPress role display names, used as a translated fallback when the
  * resolved dataView spec does not ship `roles` elements (e.g. a leaner override
- * that drops them). Shell-authored elements win when present.
+ * that drops them). Workspace-authored elements win when present.
  *
  * Shared by the users list (`core:users`) and the Add New User screen
  * (`core:user-new`) — promoted here once a second consumer appeared (CLAUDE.md
@@ -32,8 +32,8 @@ export const DEFAULT_ROLES = [
 ];
 
 /**
- * Map a role slug to its translated display name. Prefers the shell-authored
- * `roles` field `elements` (so admin.json controls the surfaced set + labels),
+ * Map a role slug to its translated display name. Prefers the workspace-authored
+ * `roles` field `elements` (so workspace.json controls the surfaced set + labels),
  * falling back to the standard-role table, then the raw slug.
  *
  * @param {string} slug           Role slug.

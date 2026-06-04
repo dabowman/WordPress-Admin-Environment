@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-privacy.php` (Settings tab, custom handler), `wp-admin/privacy-policy-guide.php` (Policy Guide tab)
-**Current shell coverage:** Not implemented in v1. Falls back to `iframe:options-privacy.php` when configured.
+**Current workspace coverage:** Not implemented in v1. Falls back to `iframe:options-privacy.php` when configured.
 
 This spec describes the **semantic surface** of the Privacy Settings screen, which combines two tabs in a single navigation surface: Settings (page picker) and Policy Guide (suggested text). It is the only Settings screen that uses a different capability (`manage_privacy_options`) and the only one that creates a Page as a side effect.
 
@@ -173,7 +173,7 @@ N/A.
 ### Tab navigation
 - Type: secondary tab nav (`<nav>` with `role="tablist"`-like semantics in the original)
 - Options: "Settings" (default), "Policy Guide"
-- Original behavior: the whole page reloads with `?tab=policyguide` query param. Shell rebuild may render both tabs in a single SPA without reload.
+- Original behavior: the whole page reloads with `?tab=policyguide` query param. Workspace rebuild may render both tabs in a single SPA without reload.
 
 ### Create a new Privacy Policy page
 - Type: form with single Submit button
@@ -194,7 +194,7 @@ N/A.
 
 ### Save semantics
 - Two distinct forms, each posting to `options-privacy.php` with its own nonce.
-- For shell rebuild: implement a custom REST endpoint (`/wp-admin-workspaces/v1/settings/privacy`) wrapping both actions, with `manage_privacy_options` capability check.
+- For workspace rebuild: implement a custom REST endpoint (`/wp-admin-workspaces/v1/settings/privacy`) wrapping both actions, with `manage_privacy_options` capability check.
 
 ---
 
@@ -204,7 +204,7 @@ Original URLs:
 - `/wp-admin/options-privacy.php` — Settings tab
 - `/wp-admin/options-privacy.php?tab=policyguide` — Policy Guide tab
 
-Shell hash: `#/settings/privacy` (Settings tab) and `#/settings/privacy/guide` (Policy Guide tab) recommended.
+Workspace hash: `#/settings/privacy` (Settings tab) and `#/settings/privacy/guide` (Policy Guide tab) recommended.
 
 Browser back/forward should switch tabs without losing accordion state if practical.
 
@@ -273,7 +273,7 @@ Browser back/forward should switch tabs without losing accordion state if practi
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - Not implemented; reserved as `core:settings-privacy` source slot.
 
 ### Gaps vs. this spec
@@ -288,7 +288,7 @@ Browser back/forward should switch tabs without losing accordion state if practi
 | Plugin-contributed policy sections | Medium | Iterate `WP_Privacy_Policy_Content::privacy_policy_guide()` |
 | Copy Suggested Text button | Low | Clipboard API |
 | `manage_privacy_options` capability respected (vs `manage_options`) | Medium | Distinct from other Settings panels |
-| "Update your menus!" Customizer link | Low | Optional; Customizer is being phased out in shells |
+| "Update your menus!" Customizer link | Low | Optional; Customizer is being phased out in workspaces |
 
 ### Acceptable interim
 `iframe:options-privacy.php` covers full parity. Privacy Guide accordion is content-heavy and tightly coupled to plugin `add_privacy_policy_content` calls — iframe is reasonable for v1.
@@ -313,5 +313,5 @@ Browser back/forward should switch tabs without losing accordion state if practi
 - Settings registration: not in `register_initial_settings`. `wp_page_for_privacy_policy` is a plain option.
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php` (does NOT cover privacy)
 - Documentation: `https://wordpress.org/documentation/article/settings-privacy-screen/`
-- Current shell impl: not yet implemented.
+- Current workspace impl: not yet implemented.
 - Related: `docs/screens/personal-data.md` for the request handling spec

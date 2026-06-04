@@ -2,11 +2,11 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/plugins.php`, `wp-admin/plugin-install.php`, `wp-admin/plugin-editor.php`, `WP_Plugins_List_Table` (`wp-admin/includes/class-wp-plugins-list-table.php`), `WP_Plugin_Install_List_Table` (`wp-admin/includes/class-wp-plugin-install-list-table.php`)
-**Current shell coverage:** `core:plugins` → `src/apps/plugins/index.js` (native installed-plugins list with activate / deactivate / delete, cap-gated on `activate_plugins`; registered in `src/runtime/registry/builtins.js`). See `src/apps/plugins/app.md`. The add / file-editor screens remain iframe-only.
+**Current workspace coverage:** `core:plugins` → `src/apps/plugins/index.js` (native installed-plugins list with activate / deactivate / delete, cap-gated on `activate_plugins`; registered in `src/runtime/registry/builtins.js`). See `src/apps/plugins/app.md`. The add / file-editor screens remain iframe-only.
 
 This spec describes the **semantic surface** of the three plugin-management screens so an agent can rebuild them in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs. Single-site context only — network-admin variants of these screens live in a separate `network-admin/plugins.md` spec.
 
-The three screens are documented as one app (`core:plugins`) because they share an entity (`plugins`), capabilities, and REST surface. A reasonable shell mapping is:
+The three screens are documented as one app (`core:plugins`) because they share an entity (`plugins`), capabilities, and REST surface. A reasonable workspace mapping is:
 - `core:plugins` → installed list (default route)
 - `core:plugins-install` → add / browse directory / upload
 - `core:plugin-editor` → file editor
@@ -58,7 +58,7 @@ Jobs to be done:
 | Network-activate / network-deactivate | `manage_network_plugins` | network admin only |
 
 **Permission-denied states:**
-- Lacking `activate_plugins`: core renders `wp_die('Sorry, you are not allowed to manage plugins for this site.')`. Shell should mirror with a 403 view inside the content region, not blank.
+- Lacking `activate_plugins`: core renders `wp_die('Sorry, you are not allowed to manage plugins for this site.')`. Workspace should mirror with a 403 view inside the content region, not blank.
 - Lacking `install_plugins`: same pattern on Add Plugin.
 - Lacking `edit_plugins`: same pattern on Plugin File Editor.
 - `DISALLOW_FILE_EDIT` constant defined in `wp-config.php`: file editor is fully disabled regardless of caps. `edit_plugins` is filtered to `false` by `map_meta_cap`.
@@ -67,7 +67,7 @@ Jobs to be done:
 **Multisite:**
 - Single-site users with `activate_plugins` see only the Installed list, scoped to plugins they may activate on their site. Network-active plugins appear in the Active filter as read-only (cannot deactivate at site level — controlled by `is_plugin_active_for_network()`).
 - Network-only plugins (header `Network: true`) are filtered out unless the user has `manage_network_plugins`.
-- Add Plugin and Plugin File Editor in single-site context redirect to network admin in multisite (`plugin-install.php` line 22, `plugin-editor.php` line 12). Surface as "this action requires network admin" in shell.
+- Add Plugin and Plugin File Editor in single-site context redirect to network admin in multisite (`plugin-install.php` line 22, `plugin-editor.php` line 12). Surface as "this action requires network admin" in workspace.
 
 ---
 
@@ -109,13 +109,13 @@ Fields **not in REST but shown by the list table** (gaps):
 - `status` — comma-separated list of `active`, `inactive`, `network-active` (REST). Maps to status filter tabs.
 - `search` — full-text across plugin name + description (REST: implemented client-side in `WP_REST_Plugins_Controller::does_plugin_match_request`, matches plugin file, name, description, plugin URI, author, author URI, textdomain).
 - `context` — `view` (default) hides `description.raw`; `edit` exposes both raw and rendered.
-- Pagination: REST does not paginate the plugins list — it returns all matched plugins in a single response (the list is small by nature; admin renders 999/page). Shell can render the full set or paginate client-side.
+- Pagination: REST does not paginate the plugins list — it returns all matched plugins in a single response (the list is small by nature; admin renders 999/page). Workspace can render the full set or paginate client-side.
 
 ### Aggregate data — status counts
 The status filter row shows: `All (N) | Active (N) | Inactive (N) | Recently Active (N) | Update Available (N) | Auto-updates Enabled (N) | Auto-updates Disabled (N) | Must-Use (N) | Drop-ins (N)`.
 
 - Source: `WP_Plugins_List_Table::prepare_items()` builds these locally via `get_plugins()`, `get_mu_plugins()`, `get_dropins()`, plus the `update_plugins` transient and `recently_activated` option.
-- REST exposure: none. Shell can compute Active/Inactive/Network-active from the full plugins list response by counting `status`. Update Available, Recently Active, Must-Use, Drop-ins, Auto-update Enabled/Disabled have no REST equivalent.
+- REST exposure: none. Workspace can compute Active/Inactive/Network-active from the full plugins list response by counting `status`. Update Available, Recently Active, Must-Use, Drop-ins, Auto-update Enabled/Disabled have no REST equivalent.
 
 ### Data model: Add Plugin (browse directory)
 
@@ -139,7 +139,7 @@ Distinct entity. Source is the WordPress.org Plugin Directory API (`api.wordpres
 | `short_description` | wp.org | card description |
 | `sections` | wp.org | object with `description`, `installation`, `faq`, `changelog`, `screenshots`, `reviews` (HTML) — used by More Details modal |
 
-REST exposure: **gap.** `WP_REST_Plugins_Controller::create_item` consumes the wp.org API server-side via `plugins_api()` and only returns the installed plugin record. The browse / search / details data has **no REST endpoint**. Shell options: (a) call `plugins_api()` through a custom `/wp-admin-workspaces/v1/plugins-directory` proxy endpoint, or (b) call `https://api.wordpress.org/plugins/info/1.2/` directly from the browser (CORS allows it).
+REST exposure: **gap.** `WP_REST_Plugins_Controller::create_item` consumes the wp.org API server-side via `plugins_api()` and only returns the installed plugin record. The browse / search / details data has **no REST endpoint**. Workspace options: (a) call `plugins_api()` through a custom `/wp-admin-workspaces/v1/plugins-directory` proxy endpoint, or (b) call `https://api.wordpress.org/plugins/info/1.2/` directly from the browser (CORS allows it).
 
 ### Data model: Plugin File Editor
 
@@ -315,14 +315,14 @@ If `DISALLOW_FILE_EDIT` is defined: render an empty state ("File editing is disa
 |---|---|---|---|
 | Activate | `activate_plugin` (plugin-scoped) | Mutation | `PUT /wp/v2/plugins/{plugin}` `{ status: 'active' }`. Hidden when already active. Disabled when unmet deps or PHP/WP incompatible. |
 | Deactivate | `deactivate_plugin` (plugin-scoped) | Mutation | `PUT /wp/v2/plugins/{plugin}` `{ status: 'inactive' }`. Hidden when inactive. Disabled when active dependents present. |
-| Settings | derived from plugin's submenu page | Navigation | Plugins register a Settings page; the link is `plugin_action_links` filter output. **Gap in REST** — the link is computed in PHP. Shell options: parse plugin's registered submenus from a custom REST endpoint, or omit and let users find the settings page via Settings menu. |
+| Settings | derived from plugin's submenu page | Navigation | Plugins register a Settings page; the link is `plugin_action_links` filter output. **Gap in REST** — the link is computed in PHP. Workspace options: parse plugin's registered submenus from a custom REST endpoint, or omit and let users find the settings page via Settings menu. |
 | Activate / Settings (combined) | varies | varies | The first `plugin_action_links` entry typically replaces "Activate" with "Settings" once active. |
 | Edit | `edit_plugins` | Navigation | Opens Plugin File Editor at this plugin. Hidden when `DISALLOW_FILE_EDIT`. |
 | Delete | `delete_plugins` | Mutation | Two-step: confirmation page lists plugins + warns about data deletion via `is_uninstallable_plugin()`. `DELETE /wp/v2/plugins/{plugin}`. Plugin must be inactive; REST returns 400 otherwise. |
 | View details | `install_plugins` (modal) | Modal | Opens Add Plugin More Details modal for this plugin (via wp.org `plugins_api`). Only when the plugin is in the wp.org directory. |
 | Resume | `resume_plugin` | Mutation | Visible only when paused. **Gap in REST** — no endpoint; handled by `plugins.php?action=resume`. |
 | Visit plugin site | none | External | `plugin_uri` link, new tab. |
-| Enable / Disable auto-updates | `update_plugins` + `wp_is_auto_update_enabled_for_type('plugin')` | Mutation | Toggle in right column. Backed by `auto_update_plugins` site option. **Gap in REST** — no endpoint; core uses admin-ajax (`toggle-auto-updates` action via `wp.updates` JS). Shell needs a custom `POST /wp-admin-workspaces/v1/plugin-auto-updates` endpoint or replicate the option write via `/wp/v2/settings` (the option is not registered for REST by default). |
+| Enable / Disable auto-updates | `update_plugins` + `wp_is_auto_update_enabled_for_type('plugin')` | Mutation | Toggle in right column. Backed by `auto_update_plugins` site option. **Gap in REST** — no endpoint; core uses admin-ajax (`toggle-auto-updates` action via `wp.updates` JS). Workspace needs a custom `POST /wp-admin-workspaces/v1/plugin-auto-updates` endpoint or replicate the option write via `/wp/v2/settings` (the option is not registered for REST by default). |
 
 ### Bulk actions (installed list)
 
@@ -332,7 +332,7 @@ Selection model: checkbox per row + "select all on page". Must-use and Drop-ins 
 |---|---|---|---|
 | Activate | `activate_plugins` | not "active" | Iterate selected, skip already-active and network-only on multisite. Parallel `PUT` w/ `{status: 'active'}`. |
 | Deactivate | `deactivate_plugins` | not "inactive" / "recent" | Skip already-inactive. Parallel `PUT` w/ `{status: 'inactive'}`. |
-| Update | `update_plugins` | any | Core delegates to `update.php?action=update-selected` rendered inside an iframe (admin-ajax progress). **Gap in REST** — no plugin update endpoint. Core uses `wp_ajax_update_plugin` (admin-ajax). Shell options: custom REST proxy, or iframe `update.php` for v1. |
+| Update | `update_plugins` | any | Core delegates to `update.php?action=update-selected` rendered inside an iframe (admin-ajax progress). **Gap in REST** — no plugin update endpoint. Core uses `wp_ajax_update_plugin` (admin-ajax). Workspace options: custom REST proxy, or iframe `update.php` for v1. |
 | Delete | `delete_plugins` | not "active" | Confirmation page (lists names + uninstallable warning), then parallel `DELETE`. Active plugins are filtered out before delete. |
 | Enable Auto-updates | `update_plugins` | not "auto-update-enabled" | Same gap as toggle. |
 | Disable Auto-updates | `update_plugins` | not "auto-update-disabled" | Same gap as toggle. |
@@ -345,7 +345,7 @@ Selection model: checkbox per row + "select all on page". Must-use and Drop-ins 
 | Install Now | `install_plugins` | `POST /wp/v2/plugins` `{ slug, status: 'inactive' }`. Returns 201 with full plugin record. |
 | Install + Activate | `install_plugins` + `activate_plugins` | `POST /wp/v2/plugins` `{ slug, status: 'active' }` (or `network-active`). |
 | More Details | `install_plugins` | Open modal w/ `plugins_api({slug, sections: true})` data. |
-| Upload | `upload_plugins` | **Gap in REST** — REST `POST /wp/v2/plugins` only accepts wp.org slug, not file upload. Core uses `update.php?action=upload-plugin` multipart form. Shell options: custom `/wp-admin-workspaces/v1/plugin-upload` endpoint that wraps `Plugin_Upgrader::install` against an uploaded `.zip`. |
+| Upload | `upload_plugins` | **Gap in REST** — REST `POST /wp/v2/plugins` only accepts wp.org slug, not file upload. Core uses `update.php?action=upload-plugin` multipart form. Workspace options: custom `/wp-admin-workspaces/v1/plugin-upload` endpoint that wraps `Plugin_Upgrader::install` against an uploaded `.zip`. |
 | Favorite a wp.org user's plugins | `install_plugins` | persisted in `wporg_favorites` user meta |
 
 ### Plugin File Editor actions
@@ -446,7 +446,7 @@ Original wp-admin URLs:
 - `/wp-admin/plugin-install.php?tab=plugin-information&plugin={slug}` — More Details modal as an iframe URL
 - `/wp-admin/plugin-editor.php?plugin={file}&file={path}` — file editor
 
-Recommended shell hash routing:
+Recommended workspace hash routing:
 ```
 #/plugins?status=active&search=cache
 #/plugins-install?tab=search&s=cache&type=term
@@ -499,7 +499,7 @@ Browser back/forward must restore filter state. Refresh must restore. Sharing th
 | File save success | Banner: "File edited successfully." |
 | File save fatal | Banner: "Plugin auto-deactivated due to fatal error." + error detail |
 
-Core uses page-load banners (no toast / snackbar pattern). Modern shell can switch to snackbars for transient confirmations and reserve banners for persistent issues (fatal-deactivated plugin).
+Core uses page-load banners (no toast / snackbar pattern). Modern workspace can switch to snackbars for transient confirmations and reserve banners for persistent issues (fatal-deactivated plugin).
 
 ---
 
@@ -531,37 +531,37 @@ Core uses page-load banners (no toast / snackbar pattern). Modern shell can swit
 
 ## 14. Extension points (core hooks)
 
-Core exposes these. Decide for each whether to preserve via shell-level extensibility, replace, or drop.
+Core exposes these. Decide for each whether to preserve via workspace-level extensibility, replace, or drop.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `all_plugins` | Filter the full plugin list | Replace with shell field-level filter on REST response |
-| `plugins_list` | Filter the per-status partition | Replace with shell-level filter API |
-| `plugin_action_links` / `plugin_action_links_{plugin}` | Per-row action links (Settings / Activate / etc.) | **Critical** — most plugins inject Settings link here. Shell needs a `core:plugins.row-actions` slot or proxy core's filter via REST. |
-| `plugin_row_meta` | Below-name meta line (View details, Visit plugin site) | Replace with shell `core:plugins.row-meta` slot |
+| `all_plugins` | Filter the full plugin list | Replace with workspace field-level filter on REST response |
+| `plugins_list` | Filter the per-status partition | Replace with workspace-level filter API |
+| `plugin_action_links` / `plugin_action_links_{plugin}` | Per-row action links (Settings / Activate / etc.) | **Critical** — most plugins inject Settings link here. Workspace needs a `core:plugins.row-actions` slot or proxy core's filter via REST. |
+| `plugin_row_meta` | Below-name meta line (View details, Visit plugin site) | Replace with workspace `core:plugins.row-meta` slot |
 | `network_admin_plugin_action_links` / `_{plugin}` | Network admin per-row | Network spec |
-| `bulk_actions-plugins` | Add bulk actions | Replace with shell `actions` registry, `supportsBulk: true` |
-| `views_plugins` | Add status filter tabs | Replace with shell-level filter tab API |
-| `manage_plugins_columns` / `manage_plugins_custom_column` | Add columns | Replace with shell field registry |
+| `bulk_actions-plugins` | Add bulk actions | Replace with workspace `actions` registry, `supportsBulk: true` |
+| `views_plugins` | Add status filter tabs | Replace with workspace-level filter tab API |
+| `manage_plugins_columns` / `manage_plugins_custom_column` | Add columns | Replace with workspace field registry |
 | `pre_current_active_plugins` | Render content above active plugins block | Drop — not used by mainstream plugins |
-| `plugin_install_action_links` | Add Plugin card actions | Replace with shell `core:plugins-install.card-actions` slot |
-| `install_plugins_tabs` | Tab list on Add Plugin | Replace with shell tab registry |
-| `install_plugins_table_api_args_{tab}` | Modify wp.org query per tab | Replace with shell hook on directory query |
-| `plugins_api_args` / `plugins_api_result` | Modify wp.org responses | Preserve if shell uses server-side proxy |
+| `plugin_install_action_links` | Add Plugin card actions | Replace with workspace `core:plugins-install.card-actions` slot |
+| `install_plugins_tabs` | Tab list on Add Plugin | Replace with workspace tab registry |
+| `install_plugins_table_api_args_{tab}` | Modify wp.org query per tab | Replace with workspace hook on directory query |
+| `plugins_api_args` / `plugins_api_result` | Modify wp.org responses | Preserve if workspace uses server-side proxy |
 | `wp_create_application_password_form` | (no plugin counterpart on plugins) | n/a |
 
 **Plugin compatibility note:** the most-used hook is `plugin_action_links_{plugin}`. Plugins ship a Settings link by hooking it. Without a shim or slot, the user's main path to a plugin's settings is lost. Options:
 1. Build a server-side proxy that runs the filter and returns the resulting links per plugin via a custom REST field.
-2. Document migration: plugins must register a `core:plugins.row-actions` slot item to appear in the shell.
+2. Document migration: plugins must register a `core:plugins.row-actions` slot item to appear in the workspace.
 3. Both.
 
-Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for new shell-aware plugins.
+Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for new workspace-aware plugins.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:plugins` → `src/apps/plugins/index.js`, registered in `src/runtime/registry/builtins.js`.
 - **What works:** native installed-plugins list — `useEntityRecords('root','plugin')` read with client-side search + status filter, plus activate / deactivate (`POST /wp/v2/plugins/{plugin}` with `{ status }`) / delete (`DELETE`) actions (cap-gated on `activate_plugins`) via `apiFetch` with manual cache invalidation. See `src/apps/plugins/app.md`.
 - **What's still iframe-only:** `plugin-install.php` (add / browse / upload) and `plugin-editor.php`.
@@ -573,7 +573,7 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 |---|---|---|
 | `core:plugins` native list app | High | Build on `WP_REST_Plugins_Controller`. |
 | Status filter tabs with counts | High | Compute Active / Inactive / Network-active client-side; flag the rest as not supported in v1. |
-| Plugin row actions (`plugin_action_links` filter result) | High | Server-side proxy in shell REST — without this, Settings links disappear. |
+| Plugin row actions (`plugin_action_links` filter result) | High | Server-side proxy in workspace REST — without this, Settings links disappear. |
 | Auto-update toggle | Medium | Custom REST endpoint to write `auto_update_plugins` site option. |
 | Plugin update available indicator | Medium | Custom REST endpoint that returns `update_plugins` transient summary. |
 | Bulk update | Medium | Custom REST proxy wrapping `Plugin_Upgrader::bulk_upgrade`. Or iframe `update.php?action=update-selected`. |
@@ -586,11 +586,11 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 | More Details modal | Medium | wp.org `plugins_api({sections: true})`. |
 | Compatibility check (PHP / WP version) | Medium | Computed client-side from `requires` / `requires_php` versus `window.wpAdminWorkspaces.serverVersions`. |
 | `core:plugin-editor` | Low | Recommend **drop**. Cap-gated by default; dangerous; deprecation candidate. Acceptable interim: `iframe:plugin-editor.php`. |
-| `core:plugins.row-actions` slot for plugin compat | High | Required so shell-aware plugins can inject row actions. |
+| `core:plugins.row-actions` slot for plugin compat | High | Required so workspace-aware plugins can inject row actions. |
 | Network-admin variants | n/a | Separate spec (`network-admin/plugins.md`). |
 
 ### Acceptable interim
-For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor.php` are acceptable escape hatches. The developer-admin shell already uses these. Track them for native replacement.
+For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor.php` are acceptable escape hatches. The developer-admin workspace already uses these. Track them for native replacement.
 
 ---
 
@@ -629,5 +629,5 @@ For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor
 - REST schema reference: `https://developer.wordpress.org/rest-api/reference/plugins/`
 - Auto-updates: `wp-admin/includes/update.php` + `auto_update_plugins` site option
 - Capability map: `wp-admin/includes/capabilities.php` (`map_meta_cap` cases for `activate_plugin`, `deactivate_plugin`, `delete_plugin`, `edit_plugin`, `update_plugin`, `resume_plugin`)
-- Current shell impl: none (iframe fallback in `shells/developer-admin.json`)
+- Current workspace impl: none (iframe fallback in `workspaces/developer-workspace.json`)
 - Cross-link: `docs/screens/users.md` (analogous list-with-modal-actions pattern)

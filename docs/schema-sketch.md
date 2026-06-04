@@ -1,10 +1,10 @@
-# admin.json — Schema Design Doc
+# workspace.json — Schema Design Doc
 
-> Authoritative for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
+> Authoritative for the workspace.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
 >
-> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/admin.json`](../schemas/admin.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
+> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/workspace.json`](../schemas/workspace.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
 
-v3 reshapes admin.json around user-task surfaces instead of runtime-pipeline surfaces.
+v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline surfaces.
 
 ## Design principles
 
@@ -16,7 +16,7 @@ v3 reshapes admin.json around user-task surfaces instead of runtime-pipeline sur
 
 4. **Deep-merge cascade across every block.** Restrict-only semantics preserved at the resolver level. Cascade origins compose per-field within each entry, not by entry replacement.
 
-5. **Anchor to existing WordPress entities.** The `menu` block ingests classic `add_menu_page()` / `add_submenu_page()` registrations at the `plugin` origin automatically, so a WooCommerce or ACF install picks up working menu entries in WP Admin Shell without authoring admin.json. Site authors override at site origin.
+5. **Anchor to existing WordPress entities.** The `menu` block ingests classic `add_menu_page()` / `add_submenu_page()` registrations at the `plugin` origin automatically, so a WooCommerce or ACF install picks up working menu entries in WP Admin Workspaces without authoring workspace.json. Site authors override at site origin.
 
 6. **Engine-agnostic IA.** The `menu` block is an information-architecture tree. The active engine renders it into its native arrangement: sidebar drilldown for `core:default`, dock for `core:desktop`, drawer for `core:single-pane`.
 
@@ -552,7 +552,7 @@ Notes:
 
 To honor "anchor to existing WordPress entities" — the bridge ingests classic `add_menu_page()` / `add_submenu_page()` registrations into both the `screens` block AND the `menu` tree at a synthesized cascade origin. Logic:
 
-1. On admin.json resolution, the PHP resolver walks `$GLOBALS['menu']` + `$GLOBALS['submenu']`.
+1. On workspace.json resolution, the PHP resolver walks `$GLOBALS['menu']` + `$GLOBALS['submenu']`.
 2. For each registered menu, synthesize entries:
    - **A `screens` entry** describing what the surface is:
      - `id`: kebab-case of menu slug (e.g. `woocommerce` → `woocommerce`; `edit.php?post_type=product` → `edit-php-post-type-product`).
@@ -565,9 +565,9 @@ To honor "anchor to existing WordPress entities" — the bridge ingests classic 
      - Placed under the `menu.ingested.items` container (a default top-level item synthesized by the bridge).
      - `position`: from registration `$position`.
      - `add_submenu_page()` registrations nest inside their parent's `items`.
-3. The synthesized origin sits BETWEEN `core` and `plugin` in the cascade — admin.json plugin/site/role/user origins still override per-field on either the screen OR its menu item independently.
+3. The synthesized origin sits BETWEEN `core` and `plugin` in the cascade — workspace.json plugin/site/role/user origins still override per-field on either the screen OR its menu item independently.
 
-**Concrete benefit:** drop a plugin that registers menus the classic way (which is every plugin shipping today), and the workspace picks them up. No admin.json edits required. Site authors who want polish can:
+**Concrete benefit:** drop a plugin that registers menus the classic way (which is every plugin shipping today), and the workspace picks them up. No workspace.json edits required. Site authors who want polish can:
 
 - Rename in menu without touching screen: `menu.ingested.items.woocommerce.label: "Shop"`.
 - Reparent: `menu.ingested.items.woocommerce: null` + `menu.content.items.woocommerce: { position: 70 }`.
@@ -765,7 +765,7 @@ A screen mounting `core:dashboard-host` gains the `grid` slot for use by other a
 
 ### `slot` and `mode` are orthogonal
 
-`slot` answers "where does this screen / app mount?" `mode` answers "how does the screen render shell chrome?" They are independent:
+`slot` answers "where does this screen / app mount?" `mode` answers "how does the screen render workspace chrome?" They are independent:
 
 ```json
 "command-palette": {
@@ -827,10 +827,10 @@ The `workspace.widgets.<slot>` map declares apps that mount persistently across 
 Plugins ship workspaces programmatically via:
 
 ```php
-wp_admin_workspaces_register_workspace( 'my-shell', array(
+wp_admin_workspaces_register_workspace( 'my-workspace', array(
     'version'   => 3,
     '$wpds'     => '6.9',
-    'name'      => 'my-shell',
+    'name'      => 'my-workspace',
     'workspace' => array( ... ),
     'screens'   => array( ... ),
     'menu'      => array( ... ),
@@ -841,7 +841,7 @@ Behavior:
 
 - Accepts v3-shape arrays only. No v1/v2 normalization. Plugin authors migrating from v2 use a one-time migration helper.
 - Returns `true` on success or `WP_Error` on schema validation failure.
-- Late-registered workspaces appear in the shell-switcher and slot into the `plugin` cascade origin.
+- Late-registered workspaces appear in the workspace-switcher and slot into the `plugin` cascade origin.
 - Plugin-registered workspaces are still subject to site/role/user origin overrides via the cascade.
 - Convention-based file discovery at `{plugin}/workspaces/{slug}.json` runs alongside programmatic registration. Programmatic registration wins on slug collision.
 
@@ -891,7 +891,7 @@ Lower-priority items deferred. The items below are the design-level questions:
 | Intent | v1/v2 places touched | v3 places touched |
 |--------|----------------------|-------------------|
 | Add screen for custom post type | `routes` + `regions.sidebar.nav.config.items[]` + `viewConfigs.postType.product` + `fieldCollections` (opt) | `screens.<id>` + entry in `menu` tree + (opt) `settings.dataViews.postType.product._default` |
-| Add column to existing screen | `viewConfigs.postType.post.fields[]` (filter or admin.json) | `settings.dataViews.postType.post.<variant>.fields[]` (global per-variant) OR `screens.posts.dataView.fields[]` (per-screen) |
+| Add column to existing screen | `viewConfigs.postType.post.fields[]` (filter or workspace.json) | `settings.dataViews.postType.post.<variant>.fields[]` (global per-variant) OR `screens.posts.dataView.fields[]` (per-screen) |
 | Reorganize / rename sidebar | nested array surgery in `regions.sidebar.nav.config.items[]` | edit nested `menu` tree by id (cascade-friendly at every depth) |
 | Restrict a screen by capability/role | one of four places | `screens.<id>.permissions` (single block, OR-semantic) |
 | Replace built-in screen | route override + nav item override | `screens.<id>.app` (single field) — menu item survives, still bound by id |
@@ -902,6 +902,6 @@ Lower-priority items deferred. The items below are the design-level questions:
 | Add a toolbar widget | not supported in v1/v2 | `workspace.widgets.toolbar[]` entry |
 | Multi-pane composition | regions + routes + per-region styling | `screens[id].apps[]` with `slot` on each entry |
 | Hide editor chrome (focus mode) | not first-class — case-by-case CSS / region surgery | `screens.post-edit.mode: "focus"` |
-| Per-role workspace | separate admin.json files + role option | unchanged |
+| Per-role workspace | separate workspace.json files + role option | unchanged |
 
 The expensive intents (screen, column, menu, restrict, replace, focus, widgets) all collapse to one entry edit. That's the win.

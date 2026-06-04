@@ -35,10 +35,10 @@ import { injectChromeHide } from '../_shared/iframe/chromeHide.mjs';
  *   - **In-iframe navigation.** `installIframeBridge` routes in-iframe
  *     link clicks (post-publish "View Post", the post-trash redirect to
  *     `edit.php`, "Manage Patterns") into the workspace or back into the
- *     iframe instead of letting them escape or break the shell.
+ *     iframe instead of letting them escape or break the workspace.
  *   - **Session-expiry recovery.** If the session dies mid-edit the
  *     iframe would silently swap to the login form; we detect it, keep
- *     the frame masked, force a heartbeat poll so the shell-level
+ *     the frame masked, force a heartbeat poll so the workspace-level
  *     `wp-auth-check` modal appears, and reload the frame on re-auth.
  * @param {Object} root0
  * @param {Object} root0.config
@@ -68,8 +68,8 @@ export default function EditorApp( { config = {}, regionId } ) {
 	const [ isDirty, setIsDirty ] = useState( false );
 	const iframeRef = useRef( null );
 
-	// Report the embedded editor's unsaved state to the shell so
-	// NavigationGuard intercepts intra-shell navigation (a sidebar click)
+	// Report the embedded editor's unsaved state to the workspace so
+	// NavigationGuard intercepts intra-workspace navigation (a sidebar click)
 	// the way the iframe's own `beforeunload` guards a full-page exit.
 	useDirtyState( regionId, isDirty, { blocksNavigation: true } );
 
@@ -130,10 +130,10 @@ export default function EditorApp( { config = {}, regionId } ) {
 					setPostId( result.id );
 					setIsCreating( false );
 					// Update the URL without triggering a re-render loop.
-					// Write the shell's canonical edit route
+					// Write the workspace's canonical edit route
 					// (`/posts/{id}/edit` | `/pages/{id}/edit`) so a refresh
 					// after creation lands on a real route — `#/editor/...`
-					// matches nothing in the bundled shells. Mirrors
+					// matches nothing in the bundled workspaces. Mirrors
 					// SimpleEditorApp's createDraft.
 					window.history.replaceState(
 						null,
@@ -171,10 +171,11 @@ export default function EditorApp( { config = {}, regionId } ) {
 	// `wp-admin-workspaces-dirty-state`. Origin- + source-pinned to the
 	// editor iframe.
 	useEffect( () => {
-		const shell =
+		const workspace =
 			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
-		const bridgeAdminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
-		const routes = ( shell && shell.adminRoutes ) || {};
+		const bridgeAdminUrl =
+			( workspace && workspace.adminUrl ) || '/wp-admin/';
+		const routes = ( workspace && workspace.adminRoutes ) || {};
 		return installIframeBridge( {
 			adminUrl: bridgeAdminUrl,
 			routes,
@@ -198,7 +199,7 @@ export default function EditorApp( { config = {}, regionId } ) {
 		} );
 	}, [] );
 
-	// Re-auth recovery. The shell-level wp-auth-check modal polls
+	// Re-auth recovery. The workspace-level wp-auth-check modal polls
 	// heartbeat; when the user finishes re-authenticating
 	// (`wp-auth-check` flips false→true) reload the iframe so it
 	// re-fetches the real editor now that the session is restored.
@@ -244,7 +245,7 @@ export default function EditorApp( { config = {}, regionId } ) {
 		// Session-expiry detection: WordPress serves wp-login.php inside
 		// the iframe when the session is gone. Keep the loading mask up so
 		// the stripped login form never shows, and force a heartbeat poll
-		// so the shell-level wp-auth-check modal pops at once instead of
+		// so the workspace-level wp-auth-check modal pops at once instead of
 		// after the next ~15s scheduled tick. The heartbeat-tick listener
 		// above reloads the frame once the user re-authenticates.
 		if ( iframeDoc ) {

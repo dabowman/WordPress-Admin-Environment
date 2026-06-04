@@ -18,7 +18,7 @@
 const MOD_TOKENS = new Set( [ 'Mod', 'Shift', 'Alt', 'Ctrl', 'Meta' ] );
 
 /**
- * Detect the platform's primary modifier. The shell runs in browsers,
+ * Detect the platform's primary modifier. The workspace runs in browsers,
  * so window.navigator.platform is the right signal. Tests can override
  * by passing a second argument.
  */

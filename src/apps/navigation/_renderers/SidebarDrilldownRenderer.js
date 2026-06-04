@@ -345,7 +345,7 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 }
 
 /**
- * Leaf item renderer — separator, external link, or in-shell link.
+ * Leaf item renderer — separator, external link, or in-workspace link.
  *
  * @param {Object} item           Menu item.
  * @param {number} index          Sibling index.

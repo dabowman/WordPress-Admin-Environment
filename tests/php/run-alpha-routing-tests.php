@@ -247,7 +247,7 @@ $T::ok( 'post.php?action=edit with no post id → null', $match_legacy->invoke( 
 $_GET = array();
 
 // Baseline screens populate the legacy map.
-$baseline = json_decode( file_get_contents( $plugin_dir . 'shells/wp-admin-default.json' ), true );
+$baseline = json_decode( file_get_contents( $plugin_dir . 'workspaces/wp-admin-default.json' ), true );
 $lm       = WP_Admin_Workspaces_Admin_Routes::legacy_map( $baseline );
 $T::ok( 'baseline maps /posts → edit.php', ( $lm['/posts']['legacy_path'] ?? '' ) === 'edit.php' );
 $T::ok( 'baseline constrains /posts to post_type=post (CPTs fall through)', ( $lm['/posts']['legacy_query']['post_type'] ?? '' ) === 'post' );

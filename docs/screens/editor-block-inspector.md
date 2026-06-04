@@ -292,7 +292,7 @@ All inputs follow the **edit-on-blur or debounced** pattern: changes mutate `cor
 
 ## 10. Routing & URL state
 
-The shell may persist inspector tab in hash:
+The workspace may persist inspector tab in hash:
 
 ```
 #/editor?type=post&id=123&panel=document
@@ -300,7 +300,7 @@ The shell may persist inspector tab in hash:
 #/editor?type=post&id=123&panel=plugin:yoast-seo
 ```
 
-Closed inspector preserved in user preference (`core/preferences` key `isComplementaryAreaVisible`). The shell may shadow this in `userCustomizable` via the `core:appearance` prefs surface.
+Closed inspector preserved in user preference (`core/preferences` key `isComplementaryAreaVisible`). The workspace may shadow this in `userCustomizable` via the `core:appearance` prefs surface.
 
 ---
 
@@ -360,7 +360,7 @@ Inspector is the **primary plugin extension surface** of the editor. A rebuild t
 | `InspectorAdvancedControls` | Block tab Advanced section | Bottom of Block tab |
 | `BlockSettingsMenuControls` | Block toolbar More menu | Per-block more menu |
 
-These slots are implemented via `@wordpress/components` `Slot/Fill`. A non-React rebuild must provide a compatible slot/fill registry that React-based plugins can target — practically, this means the rebuild must include `@wordpress/components`/`@wordpress/element` even if the host shell is in a different framework.
+These slots are implemented via `@wordpress/components` `Slot/Fill`. A non-React rebuild must provide a compatible slot/fill registry that React-based plugins can target — practically, this means the rebuild must include `@wordpress/components`/`@wordpress/element` even if the host workspace is in a different framework.
 
 ### Filters worth honoring
 - `editor.PostFeaturedImage.imageSize` — filter the image size used for the panel preview.
@@ -372,7 +372,7 @@ These slots are implemented via `@wordpress/components` `Slot/Fill`. A non-React
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - The native `core:simple-editor` ships **no inspector at all** — it has only title + restricted block list.
 - The iframe `core:editor` inherits the full inspector via the iframe.
 
@@ -380,7 +380,7 @@ These slots are implemented via `@wordpress/components` `Slot/Fill`. A non-React
 
 | Gap | Priority | Notes |
 |---|---|---|
-| Settings sidebar shell + tabs + close button | High | `ComplementaryArea` from `@wordpress/interface` |
+| Settings sidebar workspace + tabs + close button | High | `ComplementaryArea` from `@wordpress/interface` |
 | Document tab — Status & Visibility panel | High | `PostVisibility` + `PostSwitchToDraftButton` + `PostTrash` |
 | Document tab — Schedule | High | `PostSchedule` |
 | Document tab — URL / Permalink / Slug editor | High | `PostURL` + `PostSlug` |
@@ -413,8 +413,8 @@ These slots are implemented via `@wordpress/components` `Slot/Fill`. A non-React
 ## 16. Out of scope
 
 - **Real-time collaborative cursors** — not in core.
-- **Plugin auto-discovery** — plugins register slot-fills at script load. Shell merely hosts the slots.
-- **Inspector inside iframe canvas** — inspector renders in shell DOM, canvas is iframed (default block editor pattern). Shell rebuild should keep this split so `wp.privateApis` consents continue to work.
+- **Plugin auto-discovery** — plugins register slot-fills at script load. Workspace merely hosts the slots.
+- **Inspector inside iframe canvas** — inspector renders in workspace DOM, canvas is iframed (default block editor pattern). Workspace rebuild should keep this split so `wp.privateApis` consents continue to work.
 
 ---
 

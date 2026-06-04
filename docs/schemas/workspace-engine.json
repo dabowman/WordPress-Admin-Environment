@@ -1,8 +1,8 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/workspace-engine.json",
-	"title": "WP Admin Shell — Engine Manifest (v3)",
-	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm. Engines are the spatial + chrome layer of the shell — they read a region tree (and in v3, a resolved screens + menu tree) assembled by the runtime and render it to DOM. The flagship engine `core:default` ships with the shell plugin; alternative engines (`core:single-pane`, `core:desktop`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. v3 adds three new top-level blocks — `menu-renderer`, `slots`, `modes` — on top of the v2 surface (templates, default-arrangement, honored-platform, default-styles). See WP Admin Shell Design Spec §4.2 and docs/core-default-engine.md.",
+	"title": "WP Admin Workspaces — Engine Manifest (v3)",
+	"description": "Declares what an admin workspace engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm. Engines are the spatial + chrome layer of the workspace — they read a region tree (and in v3, a resolved screens + menu tree) assembled by the runtime and render it to DOM. The flagship engine `core:default` ships with the workspace plugin; alternative engines (`core:single-pane`, `core:desktop`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. v3 adds three new top-level blocks — `menu-renderer`, `slots`, `modes` — on top of the v2 surface (templates, default-arrangement, honored-platform, default-styles). See WP Admin Workspaces Design Spec §4.2 and docs/core-default-engine.md.",
 
 	"type": "object",
 	"required": [
@@ -28,7 +28,7 @@
 		"id": {
 			"type": "string",
 			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
-			"description": "Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Shell plugin, `plugin:{slug}/{name}` for plugin-contributed engines. Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids."
+			"description": "Globally unique engine identifier. Same format as app ids: `core:{name}` for engines shipped with the WP Admin Workspaces plugin, `plugin:{slug}/{name}` for plugin-contributed engines. Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro/dwindle`. The runtime registry rejects duplicate ids."
 		},
 
 		"version": {
@@ -40,12 +40,12 @@
 		"title": {
 			"type": "string",
 			"minLength": 1,
-			"description": "Human-readable name of the engine. Shown in shell-switcher UI, plugin install screens, and developer tooling. Translatable."
+			"description": "Human-readable name of the engine. Shown in workspace-switcher UI, plugin install screens, and developer tooling. Translatable."
 		},
 
 		"description": {
 			"type": "string",
-			"description": "Optional human-readable description of what the engine does and what shell experiences it suits. One sentence to a short paragraph. Translatable."
+			"description": "Optional human-readable description of what the engine does and what workspace experiences it suits. One sentence to a short paragraph. Translatable."
 		},
 
 		"designSystem": {
@@ -106,7 +106,7 @@
 				}
 			},
 			"additionalProperties": false,
-			"description": "Region template catalog. Authors instantiate these templates from admin.json by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure. Template ids follow the same namespace pattern as apps and engines. The catalog must contain at least one template — an engine with no templates would be unusable. Templates are the engine's primary author-facing contribution; an engine can ship many."
+			"description": "Region template catalog. Authors instantiate these templates from workspace.json by referencing the template id in a region's `template` field. Each template encapsulates a region's role, platform service requests, default styling, and (optionally) a child region structure. Template ids follow the same namespace pattern as apps and engines. The catalog must contain at least one template — an engine with no templates would be unusable. Templates are the engine's primary author-facing contribution; an engine can ship many."
 		},
 
 		"default-arrangement": {
@@ -153,12 +153,12 @@
 					}
 				}
 			},
-			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `admin.json#workspace.engine` (v3) / `admin.json#engine` (v2). The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
+			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `workspace.json#workspace.engine` (v3) / `workspace.json#engine` (v2). The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
 		},
 
 		"default-styles": {
 			"$ref": "#/$defs/defaultStyles",
-			"description": "Optional engine-supplied seed defaults for the shell's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved admin.json `styles` (admin.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual shells stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are admin.json-only. `branding` is also admin.json-only — engines don't supply install-decision metadata."
+			"description": "Optional engine-supplied seed defaults for the workspace's `styles` tree. When the runtime mounts this engine, the resolver deep-merges this object UNDER the resolved workspace.json `styles` (workspace.json wins on every overlapping key). Engines use this to ship their characteristic visual identity (dark-chrome palette, brand-locked accent, density preset) so individual workspaces stop having to repeat the same theme rules. Limited to the `theme`, `chrome`, and direct slot overrides (`color`, `border`, `dimension`, `elevation`, `font`); per-region (`regions`) and per-app (`applications`) scopes are workspace.json-only. `branding` is also workspace.json-only — engines don't supply install-decision metadata."
 		},
 
 		"defaultRegions": {
@@ -167,7 +167,7 @@
 				"^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/regionInstance" }
 			},
 			"additionalProperties": false,
-			"description": "Region tree the engine assembles when a workspace doesn't author its own `regions` block (the v3 common case). Each key is a region id; each value is a region instance — same shape an admin.json `regions[id]` entry takes (may declare `template`, `role`, `app`, `routing`, `style`, nested `regions`, etc.). The v3 compiler walks this block when synthesizing the resolved region tree from a v3 workspace: when the workspace omits `regions`, the engine's `defaultRegions` becomes the region tree directly; when the workspace declares `regions` explicitly (the v2 escape hatch), the workspace tree wins per-field on top of the engine defaults. The primary region (where routed screens mount) should declare `routing.route-key: \"_self\"`; modal slots (palette, etc.) declare their respective route-keys. Optional — engines that mount everything through `_self` may omit this block and let the workspace declare `regions` directly."
+			"description": "Region tree the engine assembles when a workspace doesn't author its own `regions` block (the v3 common case). Each key is a region id; each value is a region instance — same shape an workspace.json `regions[id]` entry takes (may declare `template`, `role`, `app`, `routing`, `style`, nested `regions`, etc.). The v3 compiler walks this block when synthesizing the resolved region tree from a v3 workspace: when the workspace omits `regions`, the engine's `defaultRegions` becomes the region tree directly; when the workspace declares `regions` explicitly (the v2 escape hatch), the workspace tree wins per-field on top of the engine defaults. The primary region (where routed screens mount) should declare `routing.route-key: \"_self\"`; modal slots (palette, etc.) declare their respective route-keys. Optional — engines that mount everything through `_self` may omit this block and let the workspace declare `regions` directly."
 		}
 	},
 
@@ -181,7 +181,7 @@
 		"platformServiceName": {
 			"type": "string",
 			"pattern": "^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$",
-			"description": "A platform service name. Same namespace convention as app, region-template, and engine ids: `core:{name}` for services blessed by the WP Admin Shell core spec (the v3 set is `core:modal`, `core:dismiss-on`, `core:autofocus-target`, `core:triggerable`, `core:persists-across-navigation`, `core:dirty-state`, `core:block-navigation-on-dirty`, `core:trigger`, `core:dynamic-children`), and `plugin:{slug}/{name}` for plugin-contributed services. The schema does not enumerate names — the vocabulary grows as engines and plugins ship. Apps declare requested services; engines declare honored ones. Apps requesting unhonored services still mount; the unhonored request is a no-op with a dev-mode warning. Namespacing eliminates collision between independently-developed plugin services (e.g. one plugin's `swipe-to-dismiss` versus another's). `core:dynamic-children` (added 2026-05-12) lets a region template host runtime-mutated child regions added/removed by its mounted app — kernel renders them through the same nested-region recursion as static `regions`, so all per-region kernel services (routing, dirty-state, trigger, capability gating, ARIA) apply uniformly. Windowed and MDI engines (e.g. `core:desktop`) rely on it. See spec §5.5."
+			"description": "A platform service name. Same namespace convention as app, region-template, and engine ids: `core:{name}` for services blessed by the WP Admin Workspaces core spec (the v3 set is `core:modal`, `core:dismiss-on`, `core:autofocus-target`, `core:triggerable`, `core:persists-across-navigation`, `core:dirty-state`, `core:block-navigation-on-dirty`, `core:trigger`, `core:dynamic-children`), and `plugin:{slug}/{name}` for plugin-contributed services. The schema does not enumerate names — the vocabulary grows as engines and plugins ship. Apps declare requested services; engines declare honored ones. Apps requesting unhonored services still mount; the unhonored request is a no-op with a dev-mode warning. Namespacing eliminates collision between independently-developed plugin services (e.g. one plugin's `swipe-to-dismiss` versus another's). `core:dynamic-children` (added 2026-05-12) lets a region template host runtime-mutated child regions added/removed by its mounted app — kernel renders them through the same nested-region recursion as static `regions`, so all per-region kernel services (routing, dirty-state, trigger, capability gating, ARIA) apply uniformly. Windowed and MDI engines (e.g. `core:desktop`) rely on it. See spec §5.5."
 		},
 
 		"menuRenderer": {
@@ -269,7 +269,7 @@
 		"tokenAlias": {
 			"type": "string",
 			"pattern": "^\\{[a-zA-Z][a-zA-Z0-9._-]*\\}$",
-			"description": "A token alias reference — a curly-brace-wrapped path resolved by the runtime against the merged tokens.json (paths starting with a token category like `color.`, `spacing.`, etc.) or against the merged admin.json `styles` tree (paths starting with `styles.`). See spec §4.0.2 and §9 for resolution rules."
+			"description": "A token alias reference — a curly-brace-wrapped path resolved by the runtime against the merged tokens.json (paths starting with a token category like `color.`, `spacing.`, etc.) or against the merged workspace.json `styles` tree (paths starting with `styles.`). See spec §4.0.2 and §9 for resolution rules."
 		},
 
 		"cssLayoutValue": {
@@ -281,7 +281,7 @@
 			"type": "object",
 			"required": [ "role" ],
 			"additionalProperties": false,
-			"description": "A region template declares a reusable region shape that admin.json can instantiate. Templates supply defaults; the instantiating region overrides what it cares about. Templates may declare nested child regions — those become independently addressable as `{parent}/{child}` in admin.json.",
+			"description": "A region template declares a reusable region shape that workspace.json can instantiate. Templates supply defaults; the instantiating region overrides what it cares about. Templates may declare nested child regions — those become independently addressable as `{parent}/{child}` in workspace.json.",
 			"properties": {
 				"role": {
 					"$ref": "#/$defs/ariaRole",
@@ -296,7 +296,7 @@
 				"default-style": {
 					"type": "object",
 					"additionalProperties": true,
-					"description": "Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`). The resolver expands aliases against the merged token tree at compile time. admin.json overrides via the region's `style` field; the merge is shallow (top-level CSS property overrides win). Schema is loose because the engine's CSS allowlist is ultimately what's enforced; declaring `display: grid` here is technically permitted in the engine's own templates because the engine controls layout context, but the same is not true for admin.json regions (see the admin.json schema's `layout` allowlist).",
+					"description": "Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`). The resolver expands aliases against the merged token tree at compile time. workspace.json overrides via the region's `style` field; the merge is shallow (top-level CSS property overrides win). Schema is loose because the engine's CSS allowlist is ultimately what's enforced; declaring `display: grid` here is technically permitted in the engine's own templates because the engine controls layout context, but the same is not true for workspace.json regions (see the workspace.json schema's `layout` allowlist).",
 					"examples": [
 						{
 							"inline-size": "240px",
@@ -315,7 +315,7 @@
 						}
 					},
 					"additionalProperties": false,
-					"description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When admin.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. admin.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
+					"description": "Nested child regions. Each child has the full template contract — its own role, platform, default-style, and further nested regions. When workspace.json instantiates the parent template, the children are produced as well, addressable as `{parent}/{child}`. workspace.json may override child properties or add additional siblings via the parent region's own `regions` field. Use for region templates that combine multiple visual zones (toolbars with start/center/end, windows with title-bar/content/status-bar, panels with header/body/footer)."
 				}
 			}
 		},
@@ -323,17 +323,17 @@
 		"defaultStyles": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "Engine-supplied seed defaults for the shell `styles` tree. Same shape as the admin.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER admin.json so individual shells override anything they care to customize.",
+			"description": "Engine-supplied seed defaults for the workspace `styles` tree. Same shape as the workspace.json `styles` block, restricted to fields that make sense at engine scope (no `regions` / `applications` / `branding`). Resolver deep-merges this UNDER workspace.json so individual workspaces override anything they care to customize.",
 			"properties": {
 				"theme": {
 					"type": "object",
 					"additionalProperties": true,
-					"description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after admin.json overrides apply."
+					"description": "ThemeProvider seed inputs. Keys typically present: `color.primary`, `color.bg`, `cursor.control`, `density`. Forwarded directly to the engine's ThemeProvider after workspace.json overrides apply."
 				},
 				"chrome": {
 					"type": "object",
 					"additionalProperties": true,
-					"description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as admin.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
+					"description": "Chrome surface palette (sidebar / toolbar / site-hub bindings). Same nested shape as workspace.json `styles.chrome`. The chrome → WPDS bridge picks these up as `--wpds-*` overrides scoped to each surface."
 				},
 				"color": {
 					"type": "object",
@@ -366,7 +366,7 @@
 		"regionInstance": {
 			"type": "object",
 			"additionalProperties": true,
-			"description": "A region instance shape — matches what admin.json `regions[id]` accepts. Loose by design so the engine's `defaultRegions` can declare the same vocabulary an authored workspace would. Recognized fields (all optional): `template` (region template id to instantiate from the engine's `templates` catalog), `role` (ARIA role when not using a template), `app` (mounted app id), `config` (mounted-app config), `routing` (e.g. `{ route-key: \"_self\" }` to participate in URL routing), `platform` (region-level platform service requests), `style` (per-region style overrides), `regions` (nested child region instances), plus engine-specific keys the renderer interprets at mount time. Validation of the structural invariants (e.g. `app` xor `routing.route-key`, capability fast-path) happens at runtime, not in the schema.",
+			"description": "A region instance shape — matches what workspace.json `regions[id]` accepts. Loose by design so the engine's `defaultRegions` can declare the same vocabulary an authored workspace would. Recognized fields (all optional): `template` (region template id to instantiate from the engine's `templates` catalog), `role` (ARIA role when not using a template), `app` (mounted app id), `config` (mounted-app config), `routing` (e.g. `{ route-key: \"_self\" }` to participate in URL routing), `platform` (region-level platform service requests), `style` (per-region style overrides), `regions` (nested child region instances), plus engine-specific keys the renderer interprets at mount time. Validation of the structural invariants (e.g. `app` xor `routing.route-key`, capability fast-path) happens at runtime, not in the schema.",
 			"properties": {
 				"template": { "type": "string", "minLength": 1 },
 				"role":     { "$ref": "#/$defs/ariaRole" },
@@ -379,7 +379,7 @@
 						"route-key": { "type": "string", "minLength": 1 },
 						"mode": {
 							"enum": [ "query", "mirror" ],
-							"description": "Slot resolution mode. `query` (default) reads the URL query parameter of the same name. `mirror` synthesizes `@<route-key><primary>` for multi-app peer slots (3c.4). See admin.json#$defs/regionInstance.routing.mode for the full contract."
+							"description": "Slot resolution mode. `query` (default) reads the URL query parameter of the same name. `mirror` synthesizes `@<route-key><primary>` for multi-app peer slots (3c.4). See workspace.json#$defs/regionInstance.routing.mode for the full contract."
 						}
 					}
 				},
@@ -428,7 +428,7 @@
 					"properties": {
 						"shortcut": { "type": "string", "minLength": 1 }
 					},
-					"description": "Declarative trigger placeholder — a hint that this region is intended to be invoked by a keystroke. The actual binding is decided in admin.json's `commands` block (v3) / `bindings` block (v2); this field is documentary and may be used by tooling to suggest default bindings."
+					"description": "Declarative trigger placeholder — a hint that this region is intended to be invoked by a keystroke. The actual binding is decided in workspace.json's `commands` block (v3) / `bindings` block (v2); this field is documentary and may be used by tooling to suggest default bindings."
 				}
 			}
 		}

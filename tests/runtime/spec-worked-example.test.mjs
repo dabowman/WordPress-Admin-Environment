@@ -3,7 +3,7 @@
  * Verify the worked example in spec §9.1 actually runs.
  *
  * Spec §9.1 shows one tokens.json brand color fanning into both
- * admin.json `styles` (WPDS surface, our domain) and theme.json
+ * workspace.json `styles` (WPDS surface, our domain) and theme.json
  * `settings` (frontend palette — WordPress core's theme.json resolver
  * owns that side; not exercised here).
  *
@@ -39,7 +39,7 @@ function ok( label, condition, detail = '' ) {
 	}
 }
 
-console.log( '\n— spec §9.1 worked example: tokens.json → admin.json styles —' );
+console.log( '\n— spec §9.1 worked example: tokens.json → workspace.json styles —' );
 {
 	// Verbatim from spec §9.1 (DTCG, author-owned shape).
 	const tokens = {
@@ -74,8 +74,8 @@ console.log( '\n— spec §9.1 worked example: tokens.json → admin.json styles
 
 console.log( '\n— spec §9.1: theme.json side resolves at the tokens layer —' );
 {
-	// theme.json's resolver lives in WordPress core, not the shell.
-	// What we *can* verify here is that the shell's tokens layer
+	// theme.json's resolver lives in WordPress core, not the workspace.
+	// What we *can* verify here is that the workspace's tokens layer
 	// produces the same literal `theme.json` would receive when it
 	// resolves `{color.brand.500}` against the merged tokens tree.
 	const tokens = {

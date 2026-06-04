@@ -22,7 +22,7 @@ import { STANDARD_ROLE_LABELS, DEFAULT_ROLES } from '../_shared/roles';
  * see `onSubmit` + app.md), so whenever the admin leaves this field at its
  * default the generated value becomes the account's only stored credential. That
  * makes a non-predictable source mandatory — `window.crypto.getRandomValues`,
- * available in every browser the shell targets, replaces `Math.random()` (not a
+ * available in every browser the workspace targets, replaces `Math.random()` (not a
  * CSPRNG). The admin can still override the value before submitting.
  *
  * @return {string} A 16-char password.
@@ -46,7 +46,7 @@ function generatePassword() {
  * On success it navigates to the new user's edit screen.
  *
  * Role options come from the resolved `root/user` dataView spec `roles`
- * elements when available (so admin.json controls the surfaced set + translated
+ * elements when available (so workspace.json controls the surfaced set + translated
  * labels), falling back to the standard WordPress roles.
  *
  * Known gap: the welcome-email toggle (`send_user_notification`) is NOT in the

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-general.php` (form), `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-general` → `src/apps/settings-general/index.js` (M4 — REST-native, partial; admin-email confirmation flow is the main gap)
+**Current workspace coverage:** `core:settings-general` → `src/apps/settings-general/index.js` (M4 — REST-native, partial; admin-email confirmation flow is the main gap)
 
 This spec describes the **semantic surface** of the General Settings screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -46,7 +46,7 @@ Jobs to be done:
 | Edit `siteurl`/`home` | `manage_options` AND `! defined('WP_SITEURL')` / `! defined('WP_HOME')` | options.php disables when constants set |
 | Confirm new admin email | URL hash sent to new address | options.php lines 58–73 |
 
-**Permission-denied state:** `current_user_can( 'manage_options' )` fails → core uses `wp_die()` with translated string. Shell should render a 403 inline.
+**Permission-denied state:** `current_user_can( 'manage_options' )` fails → core uses `wp_die()` with translated string. Workspace should render a 403 inline.
 
 **Multisite:** WP/Site URL fields are hidden entirely. Admin email is managed separately at the Network level (single-site `admin_email` is still the contact for that site, but URL changes happen via Network admin). Membership / Default Role checkboxes are also hidden — those are network-level decisions.
 
@@ -88,9 +88,9 @@ Verified against `register_initial_settings()` in `wp-includes/option.php` (line
 > **Fixed in #202 (issue #106):** `home`, `users_can_register`, and `default_role` were previously not `show_in_rest` and were silently discarded on save. The plugin now registers `show_in_rest` shims for all three so they pass through `/wp/v2/settings` correctly. `gmt_offset` is handled separately via the `rest_pre_update_setting` filter described above.
 
 ### Aggregate data
-- Available timezones: `wp_timezone_choice()` (PHP) → list of cities + UTC offsets. No REST endpoint; either render statically (DateTimeZone::listIdentifiers) or expose via shell custom endpoint.
+- Available timezones: `wp_timezone_choice()` (PHP) → list of cities + UTC offsets. No REST endpoint; either render statically (DateTimeZone::listIdentifiers) or expose via workspace custom endpoint.
 - Available languages: `wp_get_available_translations()` + `get_available_languages()`. No REST endpoint.
-- Editable roles: derivable from `GET /wp/v2/users/?context=edit` schema or shell custom endpoint.
+- Editable roles: derivable from `GET /wp/v2/users/?context=edit` schema or workspace custom endpoint.
 - Date/time format previews: pure client-side formatting using current locale.
 
 ### Admin email confirmation flow
@@ -102,7 +102,7 @@ Original flow (PHP):
 
 REST `email` field bypasses this entirely — `POST /wp/v2/settings { email: 'new@x' }` sets `admin_email` instantly with no confirmation.
 
-**Recommendation:** the shell should mirror the legacy flow by writing to `new_admin_email` (non-REST option) and triggering the confirmation email. Requires custom endpoint or AJAX to `wp-admin/options.php?action=update&option_page=general`.
+**Recommendation:** the workspace should mirror the legacy flow by writing to `new_admin_email` (non-REST option) and triggering the confirmation email. Requires custom endpoint or AJAX to `wp-admin/options.php?action=update&option_page=general`.
 
 ---
 
@@ -241,7 +241,7 @@ This is the dominant section for a settings spec.
 - REST: `language` (writable)
 - Options: union of installed languages + downloadable translations (filtered by `install_languages` cap and `wp_can_install_language_pack()`)
 - Default: `en_US`
-- Side effect on save: if language is downloadable but not installed, core triggers download. Shell must replicate this or surface the limitation.
+- Side effect on save: if language is downloadable but not installed, core triggers download. Workspace must replicate this or surface the limitation.
 
 ### Timezone
 - Type: grouped select (continent → city, then UTC offsets)
@@ -297,7 +297,7 @@ Optional query strings:
 - `?adminhash={hash}` — confirm pending admin email change (handled by `options.php`, redirects to options-general)
 - `?dismiss=new_admin_email` — cancel pending email change (handled by options.php)
 
-Shell hash route: `#/settings/general` (or whatever the shell config assigns).
+Workspace hash route: `#/settings/general` (or whatever the workspace config assigns).
 
 URL state is minimal — settings screens have no filter/sort/page state. Deep-link to a specific field via fragment (`#site-title`) is a nice-to-have.
 
@@ -364,8 +364,8 @@ URL state is minimal — settings screens have no filter/sort/page state. Deep-l
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `whitelist_options` / `allowed_options` | Add option keys to the `general` save group | Replace with shell-level "additional fields" on the panel registration. |
-| `default_role_dropdown_excluded_roles` | Filter roles in default-role select | Honor when reading roles from REST schema; allow shell-level filter override. |
+| `whitelist_options` / `allowed_options` | Add option keys to the `general` save group | Replace with workspace-level "additional fields" on the panel registration. |
+| `default_role_dropdown_excluded_roles` | Filter roles in default-role select | Honor when reading roles from REST schema; allow workspace-level filter override. |
 | `date_formats` | Add date-format choices | Replace with panel-level prop; load via REST is unnecessary since these are static. |
 | `time_formats` | Add time-format choices | Same. |
 | `pre_option_{option}` / `option_{option}` | Hijack per-option read | Drop — REST handles. |
@@ -378,12 +378,12 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:settings-general` → `src/apps/settings-general/index.js`
 - **What works:** Title, Tagline, Timezone (city/`timezone_string` only), Date Format, Time Format, Week Starts On, Language read-only display. Saves via `useEntityRecord('root','site')`. Uses WPDS (`@wordpress/ui` `InputControl`, `Stack`) + `@wordpress/components` (`SelectControl` for optgroup support).
 - **Notices:** wired to `core/notices` since M4.
 
-#### Known deviations (current shell)
+#### Known deviations (current workspace)
 
 | Control | Option | Deviation |
 |---|---|---|
@@ -406,7 +406,7 @@ Plugin-added fields via `add_settings_field()` with section `general` are the mo
 | Settings save error per-field surfacing | Medium | Currently all-or-nothing. |
 
 ### Acceptable interim
-For shells that need full parity, `iframe:options-general.php` is the escape hatch. Not currently used because M4 native is preferred.
+For workspaces that need full parity, `iframe:options-general.php` is the escape hatch. Not currently used because M4 native is preferred.
 
 ---
 
@@ -427,6 +427,6 @@ For shells that need full parity, `iframe:options-general.php` is the escape hat
 - Settings registration: `wp-includes/option.php::register_initial_settings()` lines 2742–2855
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-general/index.js`
+- Current workspace impl: `src/apps/settings-general/index.js`
 - Settings host: `src/apps/settings/index.js`
 - Doc reference: `docs/admin-json-api-validation.md` for API coverage analysis

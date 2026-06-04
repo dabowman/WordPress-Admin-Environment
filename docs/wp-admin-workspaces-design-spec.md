@@ -1,13 +1,13 @@
 # WordPress Admin Shell — Design Spec
 
-> Authoritative source for the WP Admin Shell runtime architecture.
-> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
+> Authoritative source for the WP Admin Workspaces runtime architecture.
+> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the workspace.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/workspace.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
 >
-> **Version vocabulary note.** This spec uses "v1" / "MVP" to name *product milestones* (MVP → v1 "comprehensive shell", §17 roadmap). That is a different axis from the repo's *architecture* versioning ("v3 shape" in `CLAUDE.md`), which tracks the admin.json schema reshape. The current architecture is **v3** (`workspace` / `settings` / `screens` / `menu` / `commands` + three artifacts), described in the header below; the runtime contracts in this spec are current and survive v2 → v3 unchanged. Read "v1" here as a milestone label, not the current schema shape.
+> **Version vocabulary note.** This spec uses "v1" / "MVP" to name *product milestones* (MVP → v1 "comprehensive shell", §17 roadmap). That is a different axis from the repo's *architecture* versioning ("v3 shape" in `CLAUDE.md`), which tracks the workspace.json schema reshape. The current architecture is **v3** (`workspace` / `settings` / `screens` / `menu` / `commands` + three artifacts), described in the header below; the runtime contracts in this spec are current and survive v2 → v3 unchanged. Read "v1" here as a milestone label, not the current schema shape.
 
-The shell is built on three artifact types (app manifest, engine manifest, `admin.json`). Regions are described by a three-layer vocabulary (`role` / `layout` / `platform`) and compose by recursive nesting — there are no slots in the region tree and no selection event bus; app coordination is data-layer only. Navigation is URL-driven: every navigable surface is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes.
+The shell is built on three artifact types (app manifest, engine manifest, `workspace.json`). Regions are described by a three-layer vocabulary (`role` / `layout` / `platform`) and compose by recursive nesting — there are no slots in the region tree and no selection event bus; app coordination is data-layer only. Navigation is URL-driven: every navigable surface is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes.
 
-admin.json is shaped around user-task surfaces — `workspace` / `settings` / `screens` / `menu` / `commands`. The runtime kernel reads this shape directly: it derives the region tree + routes from the active engine's `defaultRegions` and the resolved `screens` / `workspace` blocks at mount time (`src/runtime/compile/`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`. The DataView primitive is a 3-axis registry (`kind` / `name` / `variant`) — see §13 #7 and [`docs/dataview-config.md`](./dataview-config.md).
+workspace.json is shaped around user-task surfaces — `workspace` / `settings` / `screens` / `menu` / `commands`. The runtime kernel reads this shape directly: it derives the region tree + routes from the active engine's `defaultRegions` and the resolved `screens` / `workspace` blocks at mount time (`src/runtime/compile/`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`. The DataView primitive is a 3-axis registry (`kind` / `name` / `variant`) — see §13 #7 and [`docs/dataview-config.md`](./dataview-config.md).
 
 ---
 
@@ -19,7 +19,7 @@ admin.json is shaped around user-task surfaces — `workspace` / `settings` / `s
 4. [The three artifacts](#4-the-three-artifacts)
    1. [App manifest (`app.json`)](#41-app-manifest-appjson)
    2. [Engine manifest (`engine.json`)](#42-engine-manifest-enginejson)
-   3. [`admin.json`](#43-adminjson)
+   3. [`workspace.json`](#43-adminjson)
 5. [Region vocabulary](#5-region-vocabulary)
    1. [`role` — ARIA semantics](#51-role--aria-semantics)
    2. [`layout` — CSS layout properties](#52-layout--css-layout-properties)
@@ -52,9 +52,9 @@ admin.json is shaped around user-task surfaces — `workspace` / `settings` / `s
 
 ## 1. Vision
 
-WP Admin Shell is a configurable admin environment for WordPress. The traditional `wp-admin` is a single fixed UI shaped over twenty years to serve all audiences and now serves one user well: the technical site administrator. WP Admin Shell separates the **admin interface** from the **WordPress system**, then lets a small set of declarative documents — an `admin.json` per install plus app and engine manifests shipped with their respective code — describe an admin experience tailored to a specific role, brand, or workflow.
+WP Admin Workspaces is a configurable admin workspace for WordPress. The traditional `wp-admin` is a single fixed UI shaped over twenty years to serve all audiences and now serves one user well: the technical site administrator. WP Admin Workspaces separates the **admin interface** from the **WordPress system**, then lets a small set of declarative documents — an `workspace.json` per install plus app and engine manifests shipped with their respective code — describe an admin experience tailored to a specific role, brand, or workflow.
 
-A site can ship multiple `admin.json` files. The same WordPress install can present a focused, customizable user experience based on user role or user preference — without forking core, without custom plugins per surface, and without sacrificing the REST API contract that powers everything. It also provides a stable framework for further customization: anyone wanting to write a custom shell to provide a very different admin experience can do so cleanly. React-based admin screens become substantially more portable and configurable through a minimal, configurable shared framework.
+A site can ship multiple `workspace.json` files. The same WordPress install can present a focused, customizable user experience based on user role or user preference — without forking core, without custom plugins per surface, and without sacrificing the REST API contract that powers everything. It also provides a stable framework for further customization: anyone wanting to write a custom shell to provide a very different admin experience can do so cleanly. React-based admin screens become substantially more portable and configurable through a minimal, configurable shared framework.
 
 The MVP proved this is technically and ergonomically viable. This document describes the comprehensive design v1 implements.
 
@@ -66,7 +66,7 @@ The design rests on eight principles. When a decision is unclear, they are the t
 
 1. **Declarative over imperative.** Configuration files describe *what* exists, not *how* to render it. The runtime interprets the declaration. Lesson from `theme.json`, KDE Global Themes, VS Code `package.json` contributions.
 
-2. **Three artifacts, three responsibilities.** App manifests declare what an app *is*. Engine manifests declare what an engine *provides*. `admin.json` declares install-specific *decisions*. No artifact reaches into another's responsibility. The site author writing `admin.json` should never need to know an app's internal mechanics; the app author writing a manifest should never need to know which install will use it.
+2. **Three artifacts, three responsibilities.** App manifests declare what an app *is*. Engine manifests declare what an engine *provides*. `workspace.json` declares install-specific *decisions*. No artifact reaches into another's responsibility. The site author writing `workspace.json` should never need to know an app's internal mechanics; the app author writing a manifest should never need to know which install will use it.
 
 3. **Apps are intrinsically responsive; engines own geometry.** Apps render correctly at any reasonable container size their engine allocates. They never declare layout for their container. The browser/website analogy is exact: the engine is the browser, the app is the website. Browsers don't ask websites how big to be.
 
@@ -90,12 +90,12 @@ Three layers, mirroring the structure of every shell environment surveyed (GNOME
 |---|---|---|
 | **System** | Capabilities exposed to the shell | REST API + `@wordpress/core-data` entities |
 | **Shell** | Runtime kernel: artifact loader, router, registries, capability gate, cascade merger, ThemeProvider seam, region renderer, bindings, dirty-state | React runtime (this plugin) — design-system-neutral |
-| **Configuration** | Declarative description of the shell | App manifests + engine manifests + `admin.json` |
+| **Configuration** | Declarative description of the shell | App manifests + engine manifests + `workspace.json` |
 
 The shell layer is composed of three runtime primitives:
 
 - **Apps** — addressable mountable units. Declared by app manifests shipped with their code. Render whatever they want internally, including any React component composition (slot/fill, hooks, etc.) the app's author chooses. Apps declare which **design system** they emit components from (`designSystem: "@wordpress/ui"`, `"mui"`, etc.).
-- **Regions** — typed containers, each holding one app. Declared in `admin.json` either by referencing an engine-shipped template or from scratch. Regions can declare child regions; nesting is the multi-app composition mechanism.
+- **Regions** — typed containers, each holding one app. Declared in `workspace.json` either by referencing an engine-shipped template or from scratch. Regions can declare child regions; nesting is the multi-app composition mechanism.
 - **Engines** — pluggable components that arrange regions into DOM AND own the visual identity. Default `core:default`. Each engine ships region templates, a default arrangement algorithm, a `ThemeProvider`, an icon table, a style compiler, and any CSS bundles its design system depends on. Swappable for floating-window, single-pane, Material Design, or custom (§4.2).
 
 The runtime kernel does not know what a sidebar is, what `@wordpress/ui` is, or which CSS tokens are in play; it knows how to ask the active engine to render a region tree, mount the engine's ThemeProvider around it, and ask each region to render its assigned app. Anything that presupposes a specific design system — token namespaces, component libraries, icon sets, chrome class names, scoped style compilation — lives inside an engine, never the kernel.
@@ -107,7 +107,7 @@ The runtime kernel does not know what a sidebar is, what `@wordpress/ui` is, or 
 │   ┌────────────────────────────────────────────────────────────┐ │
 │   │   Configuration artifacts (merged)                          │ │
 │   │                                                             │ │
-│   │   App manifests       Engine manifests       admin.json     │ │
+│   │   App manifests       Engine manifests       workspace.json     │ │
 │   │   (intrinsic)         (templates, services)  (install      )│ │
 │   └────────────────────────────────┬───────────────────────────┘ │
 │                                    │                              │
@@ -159,7 +159,7 @@ The configuration layer is three artifacts with cleanly partitioned responsibili
 
 ### 4.1 App manifest (`app.json`)
 
-The app manifest declares **what an app is**. It is shipped with the app's code, alongside the script and style assets the app needs. It does not describe where the app is installed, who can use it on a given site, or what it looks like in someone else's shell. Those are install decisions and live in `admin.json`.
+The app manifest declares **what an app is**. It is shipped with the app's code, alongside the script and style assets the app needs. It does not describe where the app is installed, who can use it on a given site, or what it looks like in someone else's shell. Those are install decisions and live in `workspace.json`.
 
 ```jsonc
 {
@@ -180,7 +180,7 @@ The app manifest declares **what an app is**. It is shipped with the app's code,
 
   "capabilities": [],
 
-  "config-schema": { /* JSON Schema for the config object admin.json passes */ },
+  "config-schema": { /* JSON Schema for the config object workspace.json passes */ },
 
   "extension-points": {
     "PluginCommandPaletteItem": "@wordpress/commands"
@@ -200,16 +200,16 @@ Manifest fields:
 | `title`, `description` | Human-readable. |
 | `role` | The app's primary ARIA role when mounted. Drives engine specialization (§5.1). Required. |
 | `platform` | Platform service requests. See §5.3. The app declares what platform-level services it needs the engine to provide. |
-| `capabilities` | Required WordPress capabilities to mount the app. Floor for any consumer; `admin.json` cannot lower this. |
-| `config-schema` | JSON Schema for the config object `admin.json` passes when mounting. Validated at load time. |
+| `capabilities` | Required WordPress capabilities to mount the app. Floor for any consumer; `workspace.json` cannot lower this. |
+| `config-schema` | JSON Schema for the config object `workspace.json` passes when mounting. Validated at load time. |
 | `extension-points` | Optional, documentary. Lists slot/fill, filter hooks, and other React/JS surfaces the app exposes to plugin extensions. Not load-bearing for the shell; useful for IDE tooling and ecosystem health. |
 | `script`, `style` | WordPress script/style handles the app needs enqueued. Same pattern as `block.json`. |
 
 **The manifest does not declare layout.** No width, no height, no positioning, no preferred geometry. The app is a black box that renders correctly at any size its container provides. This is non-negotiable: an app that demands geometry breaks composition across engines.
 
-**The manifest does not enumerate keystrokes.** Bindings are declared in `admin.json` because they are install-level and user-customizable. The app may declare `triggerable: true` to indicate it can be invoked by a binding; *which* binding is decided at the install.
+**The manifest does not enumerate keystrokes.** Bindings are declared in `workspace.json` because they are install-level and user-customizable. The app may declare `triggerable: true` to indicate it can be invoked by a binding; *which* binding is decided at the install.
 
-**Schema hosting.** `https://schemas.wp.org/workspace-app.json` is the canonical URL. Until the schema is hosted, it lives at `docs/schemas/workspace-app.json` in the plugin repo and is referenced via `$schema` for IDE validation. Same applies to the engine and admin.json schemas (§4.2, §4.3).
+**Schema hosting.** `https://schemas.wp.org/workspace-app.json` is the canonical URL. Until the schema is hosted, it lives at `docs/schemas/workspace-app.json` in the plugin repo and is referenced via `$schema` for IDE validation. Same applies to the engine and workspace.json schemas (§4.2, §4.3).
 
 **Forward compatibility.** A manifest declaring a higher `version` than the runtime understands triggers a warning and a best-effort load: known fields are honored, unknown fields are preserved on the manifest object but ignored by the runtime. This matches `theme.json`'s policy.
 
@@ -321,16 +321,16 @@ Manifest fields:
 | `designSystem` | Free-form string naming the design system this engine ships (`@wordpress/ui`, `mui`, `chakra`, `custom`, etc.). Apps declare the same field; the kernel dev-warns at mount time when a mounted app's `designSystem` differs from the active engine's. Optional — engines omitting it skip the mismatch check. |
 | `specializes-roles` | ARIA roles for which this engine has chrome treatments and recognized layouts. Roles outside this list fall through to the engine's default arrangement algorithm (`default-arrangement`). |
 | `honored-platform` | Platform service names this engine implements (namespaced strings — `core:modal`, `plugin:slug/swipe-to-dismiss`, etc.). Apps/regions requesting platform services outside this list still mount; the unhonored requests are no-ops with a dev-mode warning. |
-| `templates` | Region template catalog. Each entry declares a reusable region shape (`role`, `platform`, `default-style`, optional nested `regions`). Authors instantiate templates from `admin.json`. |
+| `templates` | Region template catalog. Each entry declares a reusable region shape (`role`, `platform`, `default-style`, optional nested `regions`). Authors instantiate templates from `workspace.json`. |
 | `default-arrangement` | Identifier for the engine's spatial arrangement algorithm. The algorithm itself is implementation in the engine's script — this field is a marker for documentation and tooling. |
 | `script` | The engine's primary JS module handle. |
 | `style` | The engine's primary CSS handle (its own layout / structural styles). |
 | `styles` | Optional array of additional `{handle, src, deps?}` objects — design-system token bundles, component-library CSS, anything the engine needs enqueued only when it's active. The kernel skips this loop for any engine that isn't the active one, so a Material-Design engine plugin alongside `core:default` only loads its own bundles when activated. |
-| `default-styles` | Optional engine-supplied seed defaults for the `styles` tree. The resolver deep-merges this UNDER admin.json `styles` so individual shells override anything they want. Use for the engine's characteristic visual identity (dark chrome, accent palette, density preset). |
+| `default-styles` | Optional engine-supplied seed defaults for the `styles` tree. The resolver deep-merges this UNDER workspace.json `styles` so individual shells override anything they want. Use for the engine's characteristic visual identity (dark chrome, accent palette, density preset). |
 
 **`templates` is the engine's primary contribution to authors.** A template ships with sensible defaults for everything an author might want — role, platform behaviors, geometry, child regions, even default apps for those child regions. The author instantiates templates and overrides only what they care about. Templates are reusable; an engine can ship many.
 
-**Region templates can declare child regions** under a nested `regions` field. Children are independently addressable as `{parent}/{child}` paths in `admin.json`. Each child has the full region contract — its own role, platform, layout, app, even further nested regions. See §5.5.
+**Region templates can declare child regions** under a nested `regions` field. Children are independently addressable as `{parent}/{child}` paths in `workspace.json`. Each child has the full region contract — its own role, platform, layout, app, even further nested regions. See §5.5.
 
 **`default-style` references tokens** through curly-brace alias syntax (`{styles.chrome.sidebar.background}`). The resolver expands these against the merged styles tree at compile time. Templates are not tied to specific values; they are tied to slot names that the install fills.
 
@@ -355,16 +355,16 @@ registerIcons( iconTable, { fallback: fallbackIcon } );
 |---|---|
 | `Component` | React component the kernel mounts as the engine. Receives `{config, regions}`. Renders regions through the generic `<Region>` primitive. |
 | `ThemeProvider` | Optional. React component the kernel mounts around the engine's render tree (`<ThemeProviderHost>`). Engines use this to plug in a complete DS — MUI's `ThemeProvider`, Tailwind's class-application wrapper, WPDS's `WpdsThemeProvider`, etc. Omit when the engine doesn't need provider-driven theming. |
-| `compileStyles` | Optional. Pure function `(styles, tokens) → {top, scoped, subtrees}`. Maps the resolved admin.json `styles` block to three buckets of CSS-variable assignments the kernel host serializes into a sibling `<style>` block scoped to the provider wrapper. Engines omitting this hook get zero scoped overrides — their ThemeProvider must own all token plumbing directly. |
+| `compileStyles` | Optional. Pure function `(styles, tokens) → {top, scoped, subtrees}`. Maps the resolved workspace.json `styles` block to three buckets of CSS-variable assignments the kernel host serializes into a sibling `<style>` block scoped to the provider wrapper. Engines omitting this hook get zero scoped overrides — their ThemeProvider must own all token plumbing directly. |
 | `iconTable` | Optional. Map of icon-name strings to React icon components. The engine calls `registerIcons(iconTable, {fallback})` at module load; apps look up via `resolveIcon(name)` regardless of which engine populated the table. |
 
 Engines register the same way as apps: convention path (`{plugin}/engines/{name}/engine.json`) or programmatic. Most plugins will not ship engines; engines are infrastructure-level contributions. **A plugin shipping a non-WPDS engine ships everything it needs alongside — Theme­Provider, icon table, style compiler, CSS bundles, region templates, and apps that emit components from the same DS.** The bundled `core:*` apps are WPDS-bound; a Material-Design engine plugin will ship its own `plugin:material/posts`, `plugin:material/editor`, etc. The kernel boundary holds without modification.
 
-### 4.3 `admin.json`
+### 4.3 `workspace.json`
 
-`admin.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
+`workspace.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
 
-> **Authoring shape.** Authors write admin.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/workspace.json`](./schemas/admin.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
+> **Authoring shape.** Authors write workspace.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/workspace.json`](./schemas/workspace.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
 
 ```jsonc
 {
@@ -444,7 +444,7 @@ Top-level fields:
 
 | Field | Purpose |
 |---|---|
-| `version` | admin.json schema version. v1 is the current shape. |
+| `version` | workspace.json schema version. v1 is the current shape. |
 | `$wpds` | Pinned WPDS slot matrix version (§9). Governs slot validation and default loading. |
 | `name`, `title` | Identifier and human-readable label for this shell. |
 | `engine` | The engine to use for this shell. References an engine `id`. |
@@ -457,11 +457,11 @@ Top-level fields:
 Notably absent compared to the prior draft:
 
 - **No top-level `apps` array.** Apps referenced in `regions` and `routes` are auto-collected; the registry validates each is installed. Explicit listing was redundant.
-- **No `settings` / `styles` partition at top level.** The partition was inherited from `theme.json`; in the artifact-separated architecture, settings-equivalent material lives in app and engine manifests, leaving `admin.json` mostly install decisions plus `styles`.
+- **No `settings` / `styles` partition at top level.** The partition was inherited from `theme.json`; in the artifact-separated architecture, settings-equivalent material lives in app and engine manifests, leaving `workspace.json` mostly install decisions plus `styles`.
 - **No selection event bus configuration.** Removed entirely (see §16).
 - **No "kind" enum on regions.** Replaced by `role` + `platform` + `layout` + `routing` (§5).
 
-`admin.json` discovery and registration use the same paths and origin cascade as the prior draft. Convention path: a plugin places `admin.json` at its root. Multi-shell path: `{plugin}/shells/*.json`. Programmatic: `wp_admin_workspaces_register( $name, $config )`. The five-origin cascade (`core` < `plugin` < `site` < `role` < `user`) is unchanged from the prior draft (§10).
+`workspace.json` discovery and registration use the same paths and origin cascade as the prior draft. Convention path: a plugin places `workspace.json` at its root. Multi-shell path: `{plugin}/shells/*.json`. Programmatic: `wp_admin_workspaces_register( $name, $config )`. The five-origin cascade (`core` < `plugin` < `site` < `role` < `user`) is unchanged from the prior draft (§10).
 
 ---
 
@@ -469,7 +469,7 @@ Notably absent compared to the prior draft:
 
 A region is declared by combining four optional concerns: role, layout, platform, routing. Each maps to a vocabulary with precedent: ARIA roles, CSS layout properties, browser/OS-analog platform services, and URL semantics. The shell adds a small remainder of fields (persistence, position) that have no clean external precedent.
 
-**Where region declarations live.** The runtime kernel mounts a `regions` map keyed by region id. It synthesizes that map (`src/runtime/compile/synthesizeRegions.mjs`) from the active engine's `defaultRegions` (engine-shipped region tree) + per-screen `screens[id].regions` overrides (mode + per-region tweaks). Authors who need a region the `screens` shape can't express write a top-level `regions` block — admin.json's `regions` wins on per-region-id collision. The runtime contract on each region (role / layout / platform / routing / app / config / nested children) is unchanged.
+**Where region declarations live.** The runtime kernel mounts a `regions` map keyed by region id. It synthesizes that map (`src/runtime/compile/synthesizeRegions.mjs`) from the active engine's `defaultRegions` (engine-shipped region tree) + per-screen `screens[id].regions` overrides (mode + per-region tweaks). Authors who need a region the `screens` shape can't express write a top-level `regions` block — workspace.json's `regions` wins on per-region-id collision. The runtime contract on each region (role / layout / platform / routing / app / config / nested children) is unchanged.
 
 A region declaration has this shape:
 
@@ -594,7 +594,7 @@ Multiple regions may be routable. `route-key: "_self"` is conventionally used by
 
 ### 5.5 Nested regions
 
-A region can declare child regions via the `regions` field. Children are independently addressable in `admin.json` as `{parent-id}/{child-id}` paths. Each child has the full region contract — role, platform, layout, app, even further nesting.
+A region can declare child regions via the `regions` field. Children are independently addressable in `workspace.json` as `{parent-id}/{child-id}` paths. Each child has the full region contract — role, platform, layout, app, even further nesting.
 
 ```jsonc
 "topbar": {
@@ -643,7 +643,7 @@ The router observes URL changes via the `hashchange` event (and the Navigation A
 
 The runtime kernel mounts a flat `routes` block — URL patterns → app + config tuples. There is no `target` or destination-region field — the *URL slot* the route is matched against (primary path, named query parameter, or synthesized `@<slot>/<primary>`) determines which region mounts the app, via each region's `route-key` declaration (§5.4).
 
-Authors write `screens` (id-keyed map); the kernel synthesizes the runtime `routes` table from `screens[id].path` + `screens[id].apps[]` (`src/runtime/compile/synthesizeRoutes.mjs`). Multi-app screens emit `@<slot>/<path>` slot-namespaced routes for every non-primary `apps[]` entry with a `slot`. Authors who need direct route declaration (escape hatch) write a top-level `routes` block — admin.json's `routes` wins on per-pattern collision.
+Authors write `screens` (id-keyed map); the kernel synthesizes the runtime `routes` table from `screens[id].path` + `screens[id].apps[]` (`src/runtime/compile/synthesizeRoutes.mjs`). Multi-app screens emit `@<slot>/<path>` slot-namespaced routes for every non-primary `apps[]` entry with a `slot`. Authors who need direct route declaration (escape hatch) write a top-level `routes` block — workspace.json's `routes` wins on per-pattern collision.
 
 ```jsonc
 // Runtime-internal (synthesized from screens)
@@ -700,7 +700,7 @@ Route patterns capture parameters; route configs reference them via curly-brace 
 
 `{id}` in the config value resolves against the route match params. Substitution is lexical — only string values containing `{paramname}` are substituted, and the value is replaced as-is (no type coercion; `post-id: "{id}"` becomes `post-id: "42"`, and the app's `config-schema` does any expected coercion).
 
-**Disambiguation from token aliases.** `tokens.json` (§9) and `admin.json.styles` use the same curly-brace syntax for token references. Route config interpolation runs in a different resolver pass:
+**Disambiguation from token aliases.** `tokens.json` (§9) and `workspace.json.styles` use the same curly-brace syntax for token references. Route config interpolation runs in a different resolver pass:
 
 - Route config substitution: only inside `routes.{pattern}.config` and inside `regions[*].config`, only against URL params (and only for `routes`-driven mounts).
 - Token alias resolution: only inside `styles` and inside engine `default-style`, only against the merged tokens tree.
@@ -730,7 +730,7 @@ Region state is independently navigable. Adding `?detail=/posts/42` to the URL m
 
 The architecture has two composition mechanisms operating at two distinct layers:
 
-**Region composition** (shell-level). How apps coexist visually in a shell. Mechanism: nested regions in `admin.json`, instantiated from engine-shipped templates. Each region holds one app. Composition is independent and addressable: each region is mounted/unmounted, capability-gated, styled, and replaced separately.
+**Region composition** (shell-level). How apps coexist visually in a shell. Mechanism: nested regions in `workspace.json`, instantiated from engine-shipped templates. Each region holds one app. Composition is independent and addressable: each region is mounted/unmounted, capability-gated, styled, and replaced separately.
 
 **Component composition** (app-internal). How an app's UI is constructed internally. Mechanism: React. Apps use whatever React patterns their author chooses — slot/fill, render props, context, hooks. The shell does not govern this layer.
 
@@ -738,18 +738,18 @@ The two are **not the same**. They share the metaphor of "filling a container wi
 
 **When to use which:**
 
-- **Use region composition** when the things being composed are independently swappable, addressable from `admin.json`, and have independent lifecycles. Toolbar's start/center/end are independently swappable apps → child regions.
+- **Use region composition** when the things being composed are independently swappable, addressable from `workspace.json`, and have independent lifecycles. Toolbar's start/center/end are independently swappable apps → child regions.
 - **Use component composition** when the things compose into one logical app whose internals are implementation detail. The block editor's inspector-vs-canvas split is React composition, not shell composition.
 
 The test: if a site author would plausibly swap one piece without the other, it's region composition. If swapping breaks the meaning of the whole, it's component composition.
 
-Sub-corollary: **plugin extensions to apps go through the app's existing extension API, not through the shell.** A plugin extending the block editor's inspector sidebar registers via `@wordpress/plugins` against the editor's slot tree; nothing in `admin.json` changes. The shell sees one app and is unaware.
+Sub-corollary: **plugin extensions to apps go through the app's existing extension API, not through the shell.** A plugin extending the block editor's inspector sidebar registers via `@wordpress/plugins` against the editor's slot tree; nothing in `workspace.json` changes. The shell sees one app and is unaware.
 
 ---
 
 ## 8. Bindings and keyboard shortcuts
 
-Keyboard shortcuts in the shell are install-level decisions and live in `admin.json`'s `bindings` block:
+Keyboard shortcuts in the shell are install-level decisions and live in `workspace.json`'s `bindings` block:
 
 ```jsonc
 "bindings": [
@@ -772,20 +772,20 @@ Each binding maps a keystroke to an app invocation. The invoked app must have `p
 
 ## 9. Tokens and styling
 
-Token architecture is unchanged in fundamentals from the prior draft (§4.0–§4.3 of the 2026-04-29 spec). Three documents (`tokens.json`, `admin.json`, `theme.json`), three tiers (primitives → common → component), WPDS-native style emission, compat bridge for legacy consumers. **The change in this draft: `tokens.json` ships in v1, not v2.** The DTCG loader, alias resolver, and core baseline are all v1 deliverables.
+Token architecture is unchanged in fundamentals from the prior draft (§4.0–§4.3 of the 2026-04-29 spec). Three documents (`tokens.json`, `workspace.json`, `theme.json`), three tiers (primitives → common → component), WPDS-native style emission, compat bridge for legacy consumers. **The change in this draft: `tokens.json` ships in v1, not v2.** The DTCG loader, alias resolver, and core baseline are all v1 deliverables.
 
 Refer to the prior draft sections §4.0–§4.3 for full detail. The summary below captures the model.
 
 ### 9.1 Three-document design system
 
-Authors bring any DTCG-conformant primitive token system in `tokens.json`. WordPress dictates only the *names* of the consumer slots in `admin.json.styles` (the WPDS token matrix at the pinned `$wpds` version, plus chrome extension slots) and `theme.json.settings` (the existing theme.json schema). Authors map their tokens into those slots via DTCG curly-brace aliasing:
+Authors bring any DTCG-conformant primitive token system in `tokens.json`. WordPress dictates only the *names* of the consumer slots in `workspace.json.styles` (the WPDS token matrix at the pinned `$wpds` version, plus chrome extension slots) and `theme.json.settings` (the existing theme.json schema). Authors map their tokens into those slots via DTCG curly-brace aliasing:
 
 ```jsonc
 // tokens.json (DTCG, author-owned shape)
 { "color": { "$type": "color",
              "brand": { "500": { "$value": "#3858e9" } } } }
 
-// admin.json.styles (WPDS-shaped consumer slots)
+// workspace.json.styles (WPDS-shaped consumer slots)
 "styles": {
   "color": { "bg": { "interactive": { "brand": { "strong": "{color.brand.500}" } } } }
 }
@@ -798,11 +798,11 @@ Authors bring any DTCG-conformant primitive token system in `tokens.json`. WordP
 
 One brand token in tokens.json fans out to three destinations: WPDS surface (admin), legacy admin/components (compat bridge), frontend (`--wp--preset--*`). Re-branding edits one token.
 
-`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge via the same cascade as `admin.json` (§10).
+`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge via the same cascade as `workspace.json` (§10).
 
 ### 9.2 WPDS-native styles
 
-`admin.json.styles` is shaped 1:1 to the WPDS token matrix (`color`, `dimension`, `border`, `elevation`, `font`, `density`) plus a chrome extension namespace for shell-only slots (`sidebar`, `toolbar`, `siteHub`, `content`, etc. — surfaces WPDS does not yet describe).
+`workspace.json.styles` is shaped 1:1 to the WPDS token matrix (`color`, `dimension`, `border`, `elevation`, `font`, `density`) plus a chrome extension namespace for shell-only slots (`sidebar`, `toolbar`, `siteHub`, `content`, etc. — surfaces WPDS does not yet describe).
 
 Output is three CSS variable families emitted at `:root`:
 
@@ -812,7 +812,7 @@ Output is three CSS variable families emitted at `:root`:
 
 **Why `:root`, not `#wp-admin-workspaces`.** Portal-mounted UI (the `@wordpress/commands` palette, modals, tooltips, dropdowns) renders outside the `#wp-admin-workspaces` DOM tree, into portals attached at the document root. Emitting at `:root` means those portals inherit shell theming. Per-region and per-app overrides keep narrower selectors (`[data-region-id]` / `[data-app-id]`) and still win for descendants because of selector specificity.
 
-Top-level `$wpds` field on `admin.json` pins the WPDS slot matrix to a WordPress version. CI parity test against `wp-includes/css/dist/theme/style.css` flags drift on each WordPress release.
+Top-level `$wpds` field on `workspace.json` pins the WPDS slot matrix to a WordPress version. CI parity test against `wp-includes/css/dist/theme/style.css` flags drift on each WordPress release.
 
 Per-region and per-app style overrides live under `styles.regions[*]` and `styles.applications[*]`. Apps and regions can override any WPDS or chrome slot; overrides scope to the region/app via `[data-region-id]` / `[data-app-id]` selectors.
 
@@ -821,7 +821,7 @@ Per-region and per-app style overrides live under `styles.regions[*]` and `style
 Engines ship `default-style` blocks in their region templates (§4.2). These are CSS values, possibly with token references (`{styles.chrome.sidebar.background}`), that produce the engine's default appearance. The resolver merges:
 
 1. Engine template's `default-style` (lowest priority)
-2. `admin.json` region's `style` override
+2. `workspace.json` region's `style` override
 3. User-origin overrides via cascade
 
 Final emission is region-scoped CSS at mount time.
@@ -835,7 +835,7 @@ Five origins, deepest-wins, unchanged from prior draft:
 | Origin | Source | Mutable by |
 |---|---|---|
 | `core` | Built-in defaults | Plugin updates |
-| `plugin` | Plugin/theme `admin.json` | Authors at install time |
+| `plugin` | Plugin/theme `workspace.json` | Authors at install time |
 | `site` | `wp_admin_workspaces_site_config` option | Site admins via Settings |
 | `role` | `wp_admin_workspaces_role_config` option | Site admins per-role |
 | `user` | `wp_admin_workspaces_user_prefs` user meta | Each user |
@@ -856,7 +856,7 @@ Four-layer gating, unchanged from prior draft (§8 there):
 
 1. **Region visibility (fast-path).** Region with `capability` field; user lacks → entire subtree skipped.
 2. **App visibility.** App's `capability` requirement; routes to inaccessible apps render 403.
-3. **Manifest-declared capabilities.** App manifest's `capabilities[]` is the floor; admin.json cannot lower.
+3. **Manifest-declared capabilities.** App manifest's `capabilities[]` is the floor; workspace.json cannot lower.
 4. **REST API enforcement.** Authoritative; UI checks are advisory.
 
 Navigation drilldowns with all-gated children disappear recursively (logic in `core:navigation` app, not runtime kernel).
@@ -871,16 +871,16 @@ Capability resolution uses `core-data`'s `canUser()` for entity-level checks; cu
 
 ### 12.1 Mount and config delivery
 
-PHP renders an empty mount point at the admin root (`/wp-admin/`) when the workspace hijack fires — see §19. Merged manifests + admin.json delivered via `wp_add_inline_script` + `wp_json_encode` on `window.wpAdminWorkspaces.config`. Default wp-admin chrome hidden via plugin CSS. Authentication: existing cookie session; REST nonces via `wpApiSettings.nonce`.
+PHP renders an empty mount point at the admin root (`/wp-admin/`) when the workspace hijack fires — see §19. Merged manifests + workspace.json delivered via `wp_add_inline_script` + `wp_json_encode` on `window.wpAdminWorkspaces.config`. Default wp-admin chrome hidden via plugin CSS. Authentication: existing cookie session; REST nonces via `wpApiSettings.nonce`.
 
 ### 12.2 Resolution sequence
 
 The runtime resolves artifacts in this order:
 
-1. Load merged `admin.json` from cascade (core + plugin + site + role + user origins).
+1. Load merged `workspace.json` from cascade (core + plugin + site + role + user origins).
 2. Load app manifests for every app referenced in `regions` and `routes`. Validate each app is registered.
 3. Load engine manifest for the configured `engine`.
-4. Resolve token references: engine `default-style` against merged `tokens.json` + admin.json `styles`; admin.json `styles` against merged `tokens.json`.
+4. Resolve token references: engine `default-style` against merged `tokens.json` + workspace.json `styles`; workspace.json `styles` against merged `tokens.json`.
 5. Validate each region's `app` config against the app manifest's `config-schema`.
 6. Validate user capabilities against each app's `capabilities[]` and each region's `capability`.
 7. Mount the engine.
@@ -917,19 +917,19 @@ Fourteen extension points, in increasing power:
 1. **Filter merged config.** `wp_admin_workspaces_data` (PHP) / `wp.hooks.applyFilters('adminShell.data', config)` (JS). Last-mile mutation.
 2. **Filter per-origin configs.** `wp_admin_workspaces_data_{origin}` for each cascade origin.
 3. **Register a `plugin:*` app.** New app available for routing/regions to reference. App manifest + script/style registration.
-4. **Register a region template.** Plugin contributes a new template engines can reference, or that admin.json can instantiate. Templates are part of an engine's manifest; plugins extending an engine declare additions via `wp_admin_workspaces_register_template( $engine_id, $template )`.
+4. **Register a region template.** Plugin contributes a new template engines can reference, or that workspace.json can instantiate. Templates are part of an engine's manifest; plugins extending an engine declare additions via `wp_admin_workspaces_register_template( $engine_id, $template )`.
 5. **Register an engine — including a complete design system.** A plugin ships an `engine.json`, the engine's React/JS implementation, an optional `ThemeProvider`, an optional icon table, an optional style compiler, optional CSS bundles, and (typically) a matched app set that emits components from the same DS. Used for floating-window, tiling, Material Design, brutalist, or any other paradigm a plugin author wants. See §13.1 for a worked example.
-6. **Register a complete shell.** A plugin programmatically registers an entire `admin.json` (e.g., based on user role at runtime). `wp_admin_workspaces_register_shell( $slug, $admin_json )`.
-7. **Filter a dataView config.** For each entity triple `(kind, name, variant|_default)` the cascade resolves a `dataView` doc (`fields`, `defaultView`, `defaultLayouts`, `actions`, `titleField` — every key maps 1:1 to `@wordpress/dataviews`' `<DataViews>` + `<DataForm>` props; the block IS literally DataViews configuration, which is why the primitive carries the package's name). The runtime walks `settings.dataViews[kind][name][variant|_default]` through the six origins; an app manifest's `dataView` block — top-level `kind`/`name` plus a `variants: { <id>: { … } }` family — carries through `core` via `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` filtered onto `wp_admin_workspaces_data_core` at priority 5 (both the `_default` and each declared variant are injected as full registry entries; admin.json wins per-triple). Variants are first-class registry entries, not inline screen deltas, and resolve independently — there is no implicit `_default` merge. Authors who want a `_default`-merge declare `"extends": "_default"` on the variant entry; `extends` is recursive (`drafts extends compact extends _default` legal) with cycle detection + max-depth 10. Screens point at a registry triple via `screens[id].dataViewRef: "kind/name/variant"` (or the explicit `dataViewKind` / `dataViewName` / `dataViewVariant` triplet); absent both, the resolver infers `(kind, name)` from `screen.app` + manifest and pulls `variant` from `screen.config.variant ?? '_default'`. An optional inline `screens[id].dataView` overlay then deep-merges on top of the resolved triple (id-keyed `fields[]` / `actions[]` merge, `null` tombstones supported). After resolution + overlay, the runtime runs `apply_filters( "wp_admin_workspaces_data_view_config_{$kind}_{$name}", $doc, $kind, $name, $variant )` and — when `variant !== '_default'` — the variant-qualified `apply_filters( "wp_admin_workspaces_data_view_config_{$kind}_{$name}_{$variant}", $doc, $kind, $name, $variant )` flavor (so plugin authors can target a single variant without inspecting `$variant` inside the base filter). Apps consume via `useDataView(screenId)` or `useDataView({ kind, name, variant })` — the React hook is overloaded; both paths share an inline-snapshot fast path and fall through to REST on a miss. Plugin engines shipping non-WPDS grids MAY ignore the `dataView` block or interpret per their own conventions — the block is package-bound to `@wordpress/dataviews` when the active engine + apps consume it, not a universal grid primitive. **REST permission floor.** `GET /wp-admin-workspaces/v1/data-view?screen=<id>`, `GET /wp-admin-workspaces/v1/data-view?kind=X&name=Y[&variant=Z]`, and `GET /wp-admin-workspaces/v1/data-view/variants?kind=X&name=Y` all require only `is_user_logged_in()`. DataView docs are *structural* metadata — field ids, action labels, default layouts — not data; per-app capability floors gate the React mount, not the REST read. A subscriber asking `/data-view?kind=postType&name=private-cpt` can learn that a CPT exists and what columns it would render, but cannot fetch any rows. Sites that need a stricter floor extend the filter — `wp_admin_workspaces_data_view_config_{kind}_{name}` runs against the response and can short-circuit to an empty object based on `current_user_can()`. **i18n.** DataView docs ship as locale-agnostic primitives. Field/action labels declared in `app.json#dataView` and admin.json `settings.dataViews` are raw strings — JSON can't carry `__()` calls — and render in whatever locale they were authored in. Translation is the consumer's responsibility: a plugin authoring its own admin.json wraps labels in `__()` inside a `wp_admin_workspaces_data_view_config_{kind}_{name}` filter callback (where PHP runs, `__()` works); apps wanting locale-aware defaults map field/action ids to `__()`-wrapped strings at render time inside their renderer tables. Bundled entity-CRUD apps (PostsApp et al.) do the latter — `FIELD_LABELS` / `ACTION_LABELS` tables keyed by id, consulted in the build-fields / build-actions compile step (see `docs/dataview-config.md`).
-8. **Register a data-field collection.** `wp_admin_workspaces_register_data_field_collection( $id, $kind, $name, $fields, $fields_module )` — registered by `WP_Admin_Workspaces_Data_Field_Collections`. A collection bundles field descriptors against `(kind, name)` (or universal, when `name === null`). DataView docs reference a collection via `fieldsRef`; the resolver merges fields with **ref wins, inline overrides per-field** semantics (the per-descriptor word `field` stays — `@wordpress/dataviews` itself uses it, so churning that costs reader-familiarity without buying clarity). Programmatic registrations contribute through the `plugin` origin so site/role/user overrides extend or replace via admin.json's `settings.dataFields` block (which lives under `settings` alongside `settings.dataViews` for symmetry). `fieldsModule` is reserved for forward-compat ESM script-module resolution (not loaded by the runtime; a future native-script-modules adoption arc wires it up).
-9. **Declare REST preloads.** `preload[]` block in admin.json — each entry is either a string path (`"/wp/v2/users/me"`) or a `[ path, method ]` tuple where method is `GET` or `OPTIONS`. The PHP enqueue hook walks every cascade origin's `preload[]` (each filtered through the existing `wp_admin_workspaces_data_{origin}` chain), concatenates them additively, dedupes by exact `path|method`, hydrates them through `rest_preload_api_request`, and ships the resulting cache as inline script attached to the `wp-api-fetch` handle so `wp.apiFetch.createPreloadingMiddleware` short-circuits on first read. Cascade semantics differ from the rest of admin.json: site/role/user simply *append* — preload is a strict union, not an override (preload entries carry no user-meaningful identity, so override semantics would be confusing). Conditional preloads belong in a `wp_admin_workspaces_data_{origin}` filter callback that mutates the array based on `current_user_can()` / feature flags / etc. Eliminates the cold-mount round-trips `@wordpress/core-data` resolvers make (loadPostTypeEntities, loadTaxonomyEntities, the root site/user fetches).
-10. **Register a nav menu item.** `wp_admin_workspaces_register_menu_item( $id, $args )`. Args: `to` (route path / hash / absolute URL), `label`, `icon`, `badge`, `parent`, `parent_type` (`drilldown` | `dropdown`), `position`, plus an optional `region` arg (defaults to the first `app: 'core:navigation'` region in the resolved tree — slash-paths or bare ids supported) and an optional `capability` arg (the cap flows through the 4-layer cap model so the registered item participates in nav prune the same as inline admin.json items). A registered item is emitted as a `screen` (drilldown parent) when EITHER it explicitly declares `parent_type=drilldown` OR another registered item in the same region bucket references it as `parent` — the latter is the ergonomic shortcut so a plugin author with one parent + N children doesn't have to declare a "shell" parent separately. The screen's id is the registered item's `$id` verbatim (the navigation app routes through `?screen=<id>`; pick URL-safe ids and check for collisions with inline admin.json `screen` ids — the shim does not namespace). `parent_type=dropdown` is not supported (shell nav has no dropdown primitive in this release); the shim falls back to drilldown with a one-time `WP_DEBUG` notice. Items targeting an unknown region drop silently; cross-region parent references silently land the child as a root in its own region's bucket (keep parent + child in the same region); positions sort with `null` last; absolute-URL `to` values are auto-flagged `external` unless the author passes explicit `external => false` (escape hatch for absolute URLs that should still hash-route). Registry contributes through the `wp_admin_workspaces_data_plugin` filter at priority 5 so plugin authors using the same filter at the default priority 10 still win on top. Duplicate ids return `WP_Error`; there is no `unregister`. Note: variant-addressable nav items (per the dataView triple) are out of scope here — filed in feedback inbox for a later pass.
-11. **Register an admin route.** `wp_admin_workspaces_register_admin_route( $path, $args )`. Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ] )` — `app` names the app to mount, `static_data` is folded into `config` for forward compatibility (explicit `config` keys win on collision — `static_data` is the preloaded base), and `gc_time` is accepted but ignored (no shell equivalent — emits a one-time `WP_DEBUG` notice per path). Path validates against `^/[A-Za-z0-9_/{}\-*]*$`. Registry contributes through the `wp_admin_workspaces_data_plugin` filter at priority 5 onto the `routes` block; admin.json declarations win on per-path collision. Duplicate paths return `WP_Error`. Capability gates live on the app manifest's `capabilities[]` floor and on the route's destination region — gates apply once the route resolves to its app, the same path inline `routes` declarations follow.
+6. **Register a complete shell.** A plugin programmatically registers an entire `workspace.json` (e.g., based on user role at runtime). `wp_admin_workspaces_register_shell( $slug, $admin_json )`.
+7. **Filter a dataView config.** For each entity triple `(kind, name, variant|_default)` the cascade resolves a `dataView` doc (`fields`, `defaultView`, `defaultLayouts`, `actions`, `titleField` — every key maps 1:1 to `@wordpress/dataviews`' `<DataViews>` + `<DataForm>` props; the block IS literally DataViews configuration, which is why the primitive carries the package's name). The runtime walks `settings.dataViews[kind][name][variant|_default]` through the six origins; an app manifest's `dataView` block — top-level `kind`/`name` plus a `variants: { <id>: { … } }` family — carries through `core` via `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` filtered onto `wp_admin_workspaces_data_core` at priority 5 (both the `_default` and each declared variant are injected as full registry entries; workspace.json wins per-triple). Variants are first-class registry entries, not inline screen deltas, and resolve independently — there is no implicit `_default` merge. Authors who want a `_default`-merge declare `"extends": "_default"` on the variant entry; `extends` is recursive (`drafts extends compact extends _default` legal) with cycle detection + max-depth 10. Screens point at a registry triple via `screens[id].dataViewRef: "kind/name/variant"` (or the explicit `dataViewKind` / `dataViewName` / `dataViewVariant` triplet); absent both, the resolver infers `(kind, name)` from `screen.app` + manifest and pulls `variant` from `screen.config.variant ?? '_default'`. An optional inline `screens[id].dataView` overlay then deep-merges on top of the resolved triple (id-keyed `fields[]` / `actions[]` merge, `null` tombstones supported). After resolution + overlay, the runtime runs `apply_filters( "wp_admin_workspaces_data_view_config_{$kind}_{$name}", $doc, $kind, $name, $variant )` and — when `variant !== '_default'` — the variant-qualified `apply_filters( "wp_admin_workspaces_data_view_config_{$kind}_{$name}_{$variant}", $doc, $kind, $name, $variant )` flavor (so plugin authors can target a single variant without inspecting `$variant` inside the base filter). Apps consume via `useDataView(screenId)` or `useDataView({ kind, name, variant })` — the React hook is overloaded; both paths share an inline-snapshot fast path and fall through to REST on a miss. Plugin engines shipping non-WPDS grids MAY ignore the `dataView` block or interpret per their own conventions — the block is package-bound to `@wordpress/dataviews` when the active engine + apps consume it, not a universal grid primitive. **REST permission floor.** `GET /wp-admin-workspaces/v1/data-view?screen=<id>`, `GET /wp-admin-workspaces/v1/data-view?kind=X&name=Y[&variant=Z]`, and `GET /wp-admin-workspaces/v1/data-view/variants?kind=X&name=Y` all require only `is_user_logged_in()`. DataView docs are *structural* metadata — field ids, action labels, default layouts — not data; per-app capability floors gate the React mount, not the REST read. A subscriber asking `/data-view?kind=postType&name=private-cpt` can learn that a CPT exists and what columns it would render, but cannot fetch any rows. Sites that need a stricter floor extend the filter — `wp_admin_workspaces_data_view_config_{kind}_{name}` runs against the response and can short-circuit to an empty object based on `current_user_can()`. **i18n.** DataView docs ship as locale-agnostic primitives. Field/action labels declared in `app.json#dataView` and workspace.json `settings.dataViews` are raw strings — JSON can't carry `__()` calls — and render in whatever locale they were authored in. Translation is the consumer's responsibility: a plugin authoring its own workspace.json wraps labels in `__()` inside a `wp_admin_workspaces_data_view_config_{kind}_{name}` filter callback (where PHP runs, `__()` works); apps wanting locale-aware defaults map field/action ids to `__()`-wrapped strings at render time inside their renderer tables. Bundled entity-CRUD apps (PostsApp et al.) do the latter — `FIELD_LABELS` / `ACTION_LABELS` tables keyed by id, consulted in the build-fields / build-actions compile step (see `docs/dataview-config.md`).
+8. **Register a data-field collection.** `wp_admin_workspaces_register_data_field_collection( $id, $kind, $name, $fields, $fields_module )` — registered by `WP_Admin_Workspaces_Data_Field_Collections`. A collection bundles field descriptors against `(kind, name)` (or universal, when `name === null`). DataView docs reference a collection via `fieldsRef`; the resolver merges fields with **ref wins, inline overrides per-field** semantics (the per-descriptor word `field` stays — `@wordpress/dataviews` itself uses it, so churning that costs reader-familiarity without buying clarity). Programmatic registrations contribute through the `plugin` origin so site/role/user overrides extend or replace via workspace.json's `settings.dataFields` block (which lives under `settings` alongside `settings.dataViews` for symmetry). `fieldsModule` is reserved for forward-compat ESM script-module resolution (not loaded by the runtime; a future native-script-modules adoption arc wires it up).
+9. **Declare REST preloads.** `preload[]` block in workspace.json — each entry is either a string path (`"/wp/v2/users/me"`) or a `[ path, method ]` tuple where method is `GET` or `OPTIONS`. The PHP enqueue hook walks every cascade origin's `preload[]` (each filtered through the existing `wp_admin_workspaces_data_{origin}` chain), concatenates them additively, dedupes by exact `path|method`, hydrates them through `rest_preload_api_request`, and ships the resulting cache as inline script attached to the `wp-api-fetch` handle so `wp.apiFetch.createPreloadingMiddleware` short-circuits on first read. Cascade semantics differ from the rest of workspace.json: site/role/user simply *append* — preload is a strict union, not an override (preload entries carry no user-meaningful identity, so override semantics would be confusing). Conditional preloads belong in a `wp_admin_workspaces_data_{origin}` filter callback that mutates the array based on `current_user_can()` / feature flags / etc. Eliminates the cold-mount round-trips `@wordpress/core-data` resolvers make (loadPostTypeEntities, loadTaxonomyEntities, the root site/user fetches).
+10. **Register a nav menu item.** `wp_admin_workspaces_register_menu_item( $id, $args )`. Args: `to` (route path / hash / absolute URL), `label`, `icon`, `badge`, `parent`, `parent_type` (`drilldown` | `dropdown`), `position`, plus an optional `region` arg (defaults to the first `app: 'core:navigation'` region in the resolved tree — slash-paths or bare ids supported) and an optional `capability` arg (the cap flows through the 4-layer cap model so the registered item participates in nav prune the same as inline workspace.json items). A registered item is emitted as a `screen` (drilldown parent) when EITHER it explicitly declares `parent_type=drilldown` OR another registered item in the same region bucket references it as `parent` — the latter is the ergonomic shortcut so a plugin author with one parent + N children doesn't have to declare a "shell" parent separately. The screen's id is the registered item's `$id` verbatim (the navigation app routes through `?screen=<id>`; pick URL-safe ids and check for collisions with inline workspace.json `screen` ids — the shim does not namespace). `parent_type=dropdown` is not supported (shell nav has no dropdown primitive in this release); the shim falls back to drilldown with a one-time `WP_DEBUG` notice. Items targeting an unknown region drop silently; cross-region parent references silently land the child as a root in its own region's bucket (keep parent + child in the same region); positions sort with `null` last; absolute-URL `to` values are auto-flagged `external` unless the author passes explicit `external => false` (escape hatch for absolute URLs that should still hash-route). Registry contributes through the `wp_admin_workspaces_data_plugin` filter at priority 5 so plugin authors using the same filter at the default priority 10 still win on top. Duplicate ids return `WP_Error`; there is no `unregister`. Note: variant-addressable nav items (per the dataView triple) are out of scope here — filed in feedback inbox for a later pass.
+11. **Register an admin route.** `wp_admin_workspaces_register_admin_route( $path, $args )`. Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ] )` — `app` names the app to mount, `static_data` is folded into `config` for forward compatibility (explicit `config` keys win on collision — `static_data` is the preloaded base), and `gc_time` is accepted but ignored (no shell equivalent — emits a one-time `WP_DEBUG` notice per path). Path validates against `^/[A-Za-z0-9_/{}\-*]*$`. Registry contributes through the `wp_admin_workspaces_data_plugin` filter at priority 5 onto the `routes` block; workspace.json declarations win on per-path collision. Duplicate paths return `WP_Error`. Capability gates live on the app manifest's `capabilities[]` floor and on the route's destination region — gates apply once the route resolves to its app, the same path inline `routes` declarations follow.
 12. **Contribute a cache-invalidation signal.** Filter `wp_admin_workspaces_cache_signals` (PHP) lets a contributor inject its own fingerprint into the cascade resolver's cache key. Default signals cover disk + option + user-meta surfaces only; anything held in static class state (programmatic registries, runtime-computed origins, in-memory config snapshots) is invisible to the default key and risks stale cache across requests when its shape changes. The menu-item + admin-route registries hook the filter and contribute `md5( wp_json_encode( $registry ) )` so registration deltas between page loads automatically pick a different cache bucket — no explicit `WP_Admin_Workspaces_Cache::flush()` needed for deterministic registrations. Plugin authors holding their own static state (e.g. a programmatic shell registry computed per-request from a feature flag) should hook the same filter rather than calling `flush()` defensively. Filter signature: `apply_filters( 'wp_admin_workspaces_cache_signals', array $signals, array $context )`. Returned array merges into the key-hashed signal map.
 
-13. **Bridge the classic wp-admin menu.** New PHP class `WP_Admin_Workspaces_Classic_Menu_Bridge` walks `$GLOBALS['menu']` + `$GLOBALS['submenu']` (populated by `admin_menu`) on every shell-page request and synthesizes v3 admin.json entries for the third-party plugin registrations the shell does NOT mirror natively. Core wp-admin slugs (`index.php`, `edit.php`, settings pages, etc.) are skipped via a static list extensible through the `wp_admin_workspaces_classic_menu_core_slugs` filter — plugins / sites adding a CPT screen natively expand the skip list this way. For each ingested top-level entry the bridge writes a `screens[ingested-<slugified>]` block (label / icon / path `/admin/<slugified>` / app `iframe:<original-slug>` / `permissions.capabilities[<menu-cap>]`) plus a `menu.ingested.items[ingested-<slugified>]` placement under a hardcoded "Plugins" container. Submenus under a third-party parent nest under the parent's ingested id; submenus under a CORE parent (e.g. plugins adding pages under `tools.php`) get a synthesized container record carrying the core parent label. Dashicons map by stripping the prefix (`dashicons-cart` → `cart`); data-URI SVGs map to a generic `menu` fallback (harvesting deferred). The bridge contributes through `wp_admin_workspaces_data_plugin` at priority **6** (after menu-items / admin-routes / dashboard-widgets at 5) so an explicit `wp_admin_workspaces_register_menu_item()` call wins via the same first-write-wins idempotency guard the other registries use. Admin.json declarations at any cascade origin win against the bridge contribution for the same id. Out of scope: removing the original entries from `$GLOBALS['menu']` (bridge is purely additive — wp-admin's native nav is unaffected); multi-pane parent screens (deferred); SVG icon harvesting (tracked as a follow-up).
+13. **Bridge the classic wp-admin menu.** New PHP class `WP_Admin_Workspaces_Classic_Menu_Bridge` walks `$GLOBALS['menu']` + `$GLOBALS['submenu']` (populated by `admin_menu`) on every shell-page request and synthesizes v3 workspace.json entries for the third-party plugin registrations the shell does NOT mirror natively. Core wp-admin slugs (`index.php`, `edit.php`, settings pages, etc.) are skipped via a static list extensible through the `wp_admin_workspaces_classic_menu_core_slugs` filter — plugins / sites adding a CPT screen natively expand the skip list this way. For each ingested top-level entry the bridge writes a `screens[ingested-<slugified>]` block (label / icon / path `/admin/<slugified>` / app `iframe:<original-slug>` / `permissions.capabilities[<menu-cap>]`) plus a `menu.ingested.items[ingested-<slugified>]` placement under a hardcoded "Plugins" container. Submenus under a third-party parent nest under the parent's ingested id; submenus under a CORE parent (e.g. plugins adding pages under `tools.php`) get a synthesized container record carrying the core parent label. Dashicons map by stripping the prefix (`dashicons-cart` → `cart`); data-URI SVGs map to a generic `menu` fallback (harvesting deferred). The bridge contributes through `wp_admin_workspaces_data_plugin` at priority **6** (after menu-items / admin-routes / dashboard-widgets at 5) so an explicit `wp_admin_workspaces_register_menu_item()` call wins via the same first-write-wins idempotency guard the other registries use. Admin.json declarations at any cascade origin win against the bridge contribution for the same id. Out of scope: removing the original entries from `$GLOBALS['menu']` (bridge is purely additive — wp-admin's native nav is unaffected); multi-pane parent screens (deferred); SVG icon harvesting (tracked as a follow-up).
 
-14. **Register a dashboard widget.** `wp_admin_workspaces_register_dashboard_widget( $id, $args )`. The shell's widget primitive is "an app with a `dashboardWidget` manifest block". An app participates iff its `app.json` (or runtime-registered manifest) declares a `dashboardWidget` block — the manifest is the eligibility check. `args` mirror the schema's `dashboardWidgetOverride` `(title?, defaultSize?, minSize?, position?, hidden?)` and contribute through the `plugin` origin so site/role/user origins extend or replace via admin.json's `dashboardWidgets` block. **Standalone flavor.** When `args` includes a `script` handle (plus optional `role`, `capabilities`, `dashboardWidget`), the function additionally synthesizes a minimal app manifest and queues it for forwarding to `wp_admin_workspaces_register_app()` so a single PHP call covers both the manifest entry and the widget block — useful when a mu-plugin ships a widget without a full `apps/{name}/app.json` on disk. The forwarding is deferred to `init` priority 7 (lazy-flushed earlier on first `wp_admin_workspaces_data_plugin` apply) so plugin authors can register from mu-plugin top-level or early `plugins_loaded` without the shell's manifest-registry class needing to be loaded yet. Mixed-source merging: top-level `args` placement keys win per-property over `args['dashboardWidget']` nested block, so a single resolved override flows to both the cascade contribution and the synthetic manifest. **Cascade resolution.** Two distinct merge layers stack: (1) admin.json `dashboardWidgets[id]` wins entirely over the PHP-registered override for the same id (entry-replacement, same pattern as `settings.dataFields`). (2) The resolved override then merges *per-property* over the app manifest's `dashboardWidget` block at render time — admin.json winning each field via `composeWidgets()`. The bundled host `core:dashboard-host` reads `window.wpAdminWorkspaces.manifests.apps` + the resolved `dashboardWidgets` block and renders surviving widgets as tiles; sizes translate to `grid-column: span N` / `grid-row: span M`, explicit positions to `grid-row/column-start`. Cap gating, theming, and DS-mismatch warnings flow through the existing 4-layer mount path because widgets are apps — there is no separate widget gating layer. The `core:dashboard-grid` region template ships with the `core:dynamic-children` platform service so a future engine compositor can drive widget mounts as runtime-mutable child regions, but the bundled host renders widgets directly via `<MountedApp>` for v1 simplicity. Drag-to-reorder, per-user widget ordering, and a wp-core dashboard-widget bridge are out of scope for this primitive.
+14. **Register a dashboard widget.** `wp_admin_workspaces_register_dashboard_widget( $id, $args )`. The shell's widget primitive is "an app with a `dashboardWidget` manifest block". An app participates iff its `app.json` (or runtime-registered manifest) declares a `dashboardWidget` block — the manifest is the eligibility check. `args` mirror the schema's `dashboardWidgetOverride` `(title?, defaultSize?, minSize?, position?, hidden?)` and contribute through the `plugin` origin so site/role/user origins extend or replace via workspace.json's `dashboardWidgets` block. **Standalone flavor.** When `args` includes a `script` handle (plus optional `role`, `capabilities`, `dashboardWidget`), the function additionally synthesizes a minimal app manifest and queues it for forwarding to `wp_admin_workspaces_register_app()` so a single PHP call covers both the manifest entry and the widget block — useful when a mu-plugin ships a widget without a full `apps/{name}/app.json` on disk. The forwarding is deferred to `init` priority 7 (lazy-flushed earlier on first `wp_admin_workspaces_data_plugin` apply) so plugin authors can register from mu-plugin top-level or early `plugins_loaded` without the shell's manifest-registry class needing to be loaded yet. Mixed-source merging: top-level `args` placement keys win per-property over `args['dashboardWidget']` nested block, so a single resolved override flows to both the cascade contribution and the synthetic manifest. **Cascade resolution.** Two distinct merge layers stack: (1) workspace.json `dashboardWidgets[id]` wins entirely over the PHP-registered override for the same id (entry-replacement, same pattern as `settings.dataFields`). (2) The resolved override then merges *per-property* over the app manifest's `dashboardWidget` block at render time — workspace.json winning each field via `composeWidgets()`. The bundled host `core:dashboard-host` reads `window.wpAdminWorkspaces.manifests.apps` + the resolved `dashboardWidgets` block and renders surviving widgets as tiles; sizes translate to `grid-column: span N` / `grid-row: span M`, explicit positions to `grid-row/column-start`. Cap gating, theming, and DS-mismatch warnings flow through the existing 4-layer mount path because widgets are apps — there is no separate widget gating layer. The `core:dashboard-grid` region template ships with the `core:dynamic-children` platform service so a future engine compositor can drive widget mounts as runtime-mutable child regions, but the bundled host renders widgets directly via `<MountedApp>` for v1 simplicity. Drag-to-reorder, per-user widget ordering, and a wp-core dashboard-widget bridge are out of scope for this primitive.
 
 What is **not** an extension point, by design:
 
@@ -944,7 +944,7 @@ App-internal extensibility (`PluginSidebar`, `InspectorControls`, `BlockControls
 
 ### 13.1 Worked example — shipping a Material Design engine
 
-A plugin wants to deliver a Google-Docs-flavored WordPress admin: Material-flavored chrome, document list, real-time-collab block editor. All of it bundled in one third-party plugin, zero modifications to the WP Admin Shell plugin.
+A plugin wants to deliver a Google-Docs-flavored WordPress admin: Material-flavored chrome, document list, real-time-collab block editor. All of it bundled in one third-party plugin, zero modifications to the WP Admin Workspaces plugin.
 
 **Plugin layout:**
 
@@ -965,7 +965,7 @@ my-material-shell/
 │       ├── app.json                  # designSystem: "mui"
 │       └── index.js                  # @wordpress/block-editor + MUI chrome + Gutenberg collab provider
 └── shells/
-    └── material-docs.json            # admin.json wiring the two apps into the engine
+    └── material-docs.json            # workspace.json wiring the two apps into the engine
 ```
 
 **Plugin bootstrap (PHP):**
@@ -1023,7 +1023,7 @@ function MaterialThemeProvider( { children } ) {
 }
 
 function compileStyles( styles /* , tokens */ ) {
-  // Map admin.json `styles.theme.color.primary` into Material's palette
+  // Map workspace.json `styles.theme.color.primary` into Material's palette
   // var, etc. Return { top, scoped, subtrees }.
   const top = {};
   if ( styles?.theme?.color?.primary ) {
@@ -1046,7 +1046,7 @@ export default {
 
 **What this buys the plugin author:**
 
-- Zero kernel modifications. The plugin loads alongside the unchanged WP Admin Shell plugin; users switch to `material-docs` shell via the shell switcher.
+- Zero kernel modifications. The plugin loads alongside the unchanged WP Admin Workspaces plugin; users switch to `material-docs` shell via the shell switcher.
 - Zero WPDS contact. No `--wpds-*` token, no `@wordpress/ui` component, no `@wordpress/icons` import. The plugin ships a complete Material visual identity.
 - Full kernel benefits: cascade resolver, capability gating, routing, dirty-state, bindings, manifest validation, REST endpoints, role/user prefs. The plugin's apps inherit all of it.
 - Gutenberg integration where it helps. The `material-doc-editor` app can still use `@wordpress/block-editor` internals for real-time collab, while wrapping the editor chrome in MUI components.
@@ -1054,7 +1054,7 @@ export default {
 **What the plugin author owns:**
 
 - The Material `ThemeProvider` and palette construction.
-- A `compileStyles` hook that maps admin.json seeds to Material's CSS variables.
+- A `compileStyles` hook that maps workspace.json seeds to Material's CSS variables.
 - An icon table that registers Material icons under the same name strings authors use (`post`, `edit`, `settings`).
 - The CSS bundles that ship with MUI (and the build pipeline that produces them).
 - A matched set of apps that emit Material components rather than `@wordpress/ui`.
@@ -1073,7 +1073,7 @@ export default {
 
 **Coexistence with wp-admin.** Standard wp-admin remains fully functional. As of 0.1.0 the shell takes over the admin root (`/wp-admin/`, bare `index.php`, bare `admin.php`) when a `wp-content/workspace.json` override is present — see §19. Classic stays reachable for every allowlisted endpoint (RPC / install / update / customizer / network admin), via plugin `?page=` pages, and via the cap-gated `?classic=1` cookie escape hatch.
 
-**No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. admin.json has a single shape (`workspace` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
+**No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. workspace.json has a single shape (`workspace` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
 
 ---
 
@@ -1087,7 +1087,7 @@ Three releases after MVP. Each builds on the prior.
 
 Goal: complete authoring surface (three artifacts, full vocabulary, two engines), plus the token system fully landed.
 
-- [ ] Three-artifact configuration: app manifest, engine manifest, admin.json
+- [ ] Three-artifact configuration: app manifest, engine manifest, workspace.json
 - [ ] Region vocabulary: role + layout + platform + routing
 - [ ] Nested regions; one-region-one-app rule
 - [ ] URL-driven navigation; per-region `route-key` resolution; multi-region URL state via query parameters
@@ -1112,7 +1112,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 - [ ] WP-CLI: `wp admin-shell list|activate|register|upgrade-config`
 - [ ] Coordinate `tokens.json` proposal with WordPress core for theme.json v3 alignment
 
-**Provisional surfaces.** v1 marks the engine API and the platform-services vocabulary as **provisional** until external validation. Both are likely to need refinement once third-party engines and apps build against them. The artifact shapes (admin.json, app.json, engine.json) are stable; the lower-level engine APIs (how engines render regions, what they receive as props) are subject to revision in v1.x without major-version bump.
+**Provisional surfaces.** v1 marks the engine API and the platform-services vocabulary as **provisional** until external validation. Both are likely to need refinement once third-party engines and apps build against them. The artifact shapes (workspace.json, app.json, engine.json) are stable; the lower-level engine APIs (how engines render regions, what they receive as props) are subject to revision in v1.x without major-version bump.
 
 ### v2 — Extension ecosystem (target: ~6-8 months post-MVP)
 
@@ -1131,7 +1131,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 ### v3 — Drop-in replacement + polish (target: ~9-12 months post-MVP)
 
 - [ ] **Drop-in replacement of `wp-admin`**: URL interception of `/wp-admin/*`, transparent route-to-app mapping for legacy URLs, parity coverage
-- [ ] Schema-aware authoring tool (visual `admin.json` editor)
+- [ ] Schema-aware authoring tool (visual `workspace.json` editor)
 - [ ] Shell marketplace patterns (sharing/exporting bundles)
 - [ ] Performance: app-level code splitting, suspense boundaries per app
 - [ ] Accessibility audit with assistive tech (NVDA, VoiceOver, JAWS)
@@ -1151,7 +1151,7 @@ These are explicitly out of scope. Listing them prevents scope creep arguments l
 - **Headless WordPress tooling.** Shell runs inside `wp-admin` against authenticated session.
 - **PHP-rendered admin pages.** Shell is React-only. Plugins wanting shell integration ship JS.
 - **Backwards compatibility with `admin_menu` / `add_submenu_page` hooks.** They continue to work in standard wp-admin; they do not appear in the shell unless an app explicitly wraps the legacy screen (typically via the SDK's legacy-PHP-region helper — see open question #10).
-- **Theme-based shells.** `admin.json` is plugin-shipped, not theme-shipped, in v1.
+- **Theme-based shells.** `workspace.json` is plugin-shipped, not theme-shipped, in v1.
 - **Live engine switching.** Switching engines reloads the shell.
 - **Per-region engines.** A single engine renders the entire shell.
 - **Region "slots" as a separate primitive.** Regions can hold child regions; that is the multi-app composition mechanism. There is no shell-level slot/fill concept distinct from React component composition.
@@ -1179,7 +1179,7 @@ Real unknowns. Each needs resolution before its dependent roadmap item ships.
 
 7. **Token-file extension and discovery.** §9 accepts both `tokens.json` and `*.tokens.json`. DTCG convention is `*.tokens.json`. WordPress convention is no dot prefix. Final pick affects schema URL, IDE config, and core proposal. Lean: accept both, document `tokens.json` as canonical.
 
-8. **App config: where does install-level customization live?** §4.1 puts app config in admin.json's routes block (and per-region `config` for fixed-app regions). Some customizations feel install-level (default sidebar in editor) but live as app config. Line is fuzzy but workable. Track real cases before formalizing a clearer split.
+8. **App config: where does install-level customization live?** §4.1 puts app config in workspace.json's routes block (and per-region `config` for fixed-app regions). Some customizations feel install-level (default sidebar in editor) but live as app config. Line is fuzzy but workable. Track real cases before formalizing a clearer split.
 
 9. **Binding-context vocabulary.** §8 punts per-context refinement to v1.x or v2. What does a context look like? Probably a string identifier matching an app's manifest declaration. Needs design before any app needs it.
 
@@ -1211,25 +1211,25 @@ This appendix preserves decisions made across the design process so context is n
 
 **`tokens.json` ships in v1** (resolved 2026-05-01). Earlier draft deferred to v2. Lifted to v1 because v1 without aliasing produces a worse author experience than today's `theme.json settings.custom` pattern. Rationale: completes the design system thought; without it, authors must inline ~150 WPDS slot values per shell.
 
-**Three artifacts, three responsibilities** (resolved 2026-05-01). App manifest (intrinsic), engine manifest (capabilities + templates), admin.json (install decisions). Earlier draft conflated app-intrinsic and install-level concerns in one `admin.json`. Rationale: installing a new app should not require admin.json edits for the app to work as itself; admin.json should contain only install-time decisions a site author plausibly makes.
+**Three artifacts, three responsibilities** (resolved 2026-05-01). App manifest (intrinsic), engine manifest (capabilities + templates), workspace.json (install decisions). Earlier draft conflated app-intrinsic and install-level concerns in one `workspace.json`. Rationale: installing a new app should not require workspace.json edits for the app to work as itself; workspace.json should contain only install-time decisions a site author plausibly makes.
 
 **Plugin extensibility is at the app layer, not the shell layer** (resolved 2026-05-01). The block editor's `PluginSidebar`, `InspectorControls`, etc. are governed by the editor app's React extension API, not by the shell. Rationale: validated by sketching the post editor against the architecture; the shell sees one app and has no business knowing about its extension surface.
 
 **`userCustomizable` renamed to `customizable`** (resolved 2026-05-01). The prior draft used `userCustomizable` because user prefs were the most common downstream override consumer. With per-role and per-user origins both in the cascade, the affordance applies to all downstream origins, not just user. Renamed for accuracy. Default value (`false`) and semantics (opt-in declaration of which fields downstream origins may modify) are unchanged.
 
-**Top-level `routes` (was `routing`)** (resolved 2026-05-01; refined 2026-05-04). The prior internal vocabulary used `routing` for both the URL-pattern table at admin.json's root *and* a region's URL participation declaration. Renamed the top-level table to `routes` (URL patterns → app + config tuples; no `target` field per the URL-only navigation decision) so it doesn't collide with the per-region `routing.route-key` field (which names the URL slot a region reads from). Two distinct concepts, two distinct names.
+**Top-level `routes` (was `routing`)** (resolved 2026-05-01; refined 2026-05-04). The prior internal vocabulary used `routing` for both the URL-pattern table at workspace.json's root *and* a region's URL participation declaration. Renamed the top-level table to `routes` (URL patterns → app + config tuples; no `target` field per the URL-only navigation decision) so it doesn't collide with the per-region `routing.route-key` field (which names the URL slot a region reads from). Two distinct concepts, two distinct names.
 
-**WPDS-native styles** (resolved 2026-04-29; carried forward). admin.json `styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-workspaces--chrome--*` (chrome) plus a fixed compat bridge. Rationale: `@wordpress/components` and `@wordpress/ui` converge on `--wpds-*`; setting shell theming on the WPDS surface means every component consumer inherits shell overrides automatically.
+**WPDS-native styles** (resolved 2026-04-29; carried forward). workspace.json `styles` is shaped 1:1 to the WPDS token matrix. Output is `--wpds-*` (full surface) plus `--wp-admin-workspaces--chrome--*` (chrome) plus a fixed compat bridge. Rationale: `@wordpress/components` and `@wordpress/ui` converge on `--wpds-*`; setting shell theming on the WPDS surface means every component consumer inherits shell overrides automatically.
 
-**`$wpds` field is top-level on admin.json** (resolved 2026-04-30; carried forward). Pins the WPDS slot matrix to a WordPress version. Top-level rather than under `styles` because it governs the entire resolver, not just styles.
+**`$wpds` field is top-level on workspace.json** (resolved 2026-04-30; carried forward). Pins the WPDS slot matrix to a WordPress version. Top-level rather than under `styles` because it governs the entire resolver, not just styles.
 
-**`color.palette[]` not in admin.json** (resolved 2026-04-30; carried forward). Palette is a `theme.json` concern (block bindings, block supports). Apps in the shell read `--wpds-*` directly.
+**`color.palette[]` not in workspace.json** (resolved 2026-04-30; carried forward). Palette is a `theme.json` concern (block bindings, block supports). Apps in the shell read `--wpds-*` directly.
 
 **Live engine switching not supported** (resolved 2026-04-29; carried forward). Switching engines reloads. Multiple sub-layouts within an engine are the engine's responsibility (e.g., "dwindle" vs "master" in a tiling engine), not separate engines.
 
 **Per-region engines not supported** (resolved 2026-04-29; carried forward). One engine renders the entire shell.
 
-**Bindings between theme.json and admin.json** (resolved 2026-04-29; carried forward). Both are sibling consumers of one DTCG `tokens.json`. They share primitives via aliasing; no automatic palette feed.
+**Bindings between theme.json and workspace.json** (resolved 2026-04-29; carried forward). Both are sibling consumers of one DTCG `tokens.json`. They share primitives via aliasing; no automatic palette feed.
 
 **Per-role + per-user shell selection** (resolved 2026-04-29; carried forward). Cascade: site default → role override → user override. Restrict-only semantics.
 
@@ -1237,7 +1237,7 @@ This appendix preserves decisions made across the design process so context is n
 
 **Aliasing syntax is DTCG curly-brace** (resolved 2026-04-29; carried forward). `"{path.to.token}"` everywhere. Resolver follows alias chains and detects cycles.
 
-**`tokens.json` shape is author-defined** (resolved 2026-04-29; carried forward). Any DTCG (W3C 2025.10) token file is valid. WordPress dictates only the *names* of the consumer slots in admin.json/theme.json `styles`. Tooling interop with Figma Tokens Studio, Style Dictionary, etc. comes for free.
+**`tokens.json` shape is author-defined** (resolved 2026-04-29; carried forward). Any DTCG (W3C 2025.10) token file is valid. WordPress dictates only the *names* of the consumer slots in workspace.json/theme.json `styles`. Tooling interop with Figma Tokens Studio, Style Dictionary, etc. comes for free.
 
 **Drop-in wp-admin replacement is v3** (resolved 2026-04-29; carried forward). v1 and v2 mount at one page; v3 intercepts `/wp-admin/*` URLs. Architecture is built for the eventual handoff so v3 doesn't require restructuring.
 
@@ -1302,7 +1302,7 @@ let a user opt out of the workspace:
   `wp_admin_workspaces_workspace_active()` returns false regardless of file
   or legacy active-shell. Surfaces: workspace **Settings → Workspace**
   (`core:settings-workspace` DataForm screen) and a parallel classic
-  **Settings → WP Admin Shell** (`add_options_page`) so a user who
+  **Settings → WP Admin Workspaces** (`add_options_page`) so a user who
   disabled from the workspace can re-enable from classic.
 - **`?classic=1`** (cap: `manage_options`) sets a session cookie that
   makes the hijack stand down for the browser session; `?classic=0`
@@ -1355,10 +1355,10 @@ full-navigate); no settings UI writes `wp-content/workspace.json`. See
 
 In-repo:
 
-- [`schema-sketch.md`](./schema-sketch.md) — **admin.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
+- [`schema-sketch.md`](./schema-sketch.md) — **workspace.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
 - [`dataview-config.md`](./dataview-config.md) — author-facing guide for the dataView primitive.
 - [`core-default-engine.md`](./core-default-engine.md) — engine contract worked example.
-- [`schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
+- [`schemas/workspace.json`](./schemas/workspace.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
 - [`public/workspace-json-reference.md`](./public/workspace-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
 - [`archive/research/admin-customization-prior-art.md`](./archive/research/admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context. (Archived.)
 - [`archive/research/shell-architecture-research.md`](./archive/research/shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design. (Archived.)

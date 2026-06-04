@@ -3,7 +3,7 @@
 	"id": "core:desktop-iframe",
 	"version": 1,
 	"title": "Desktop iframe",
-	"description": "Engine-owned iframe app for the `core:desktop` engine. Renders any wp-admin URL with the `wp_admin_workspaces_chromeless=1` query var so the parent admin's chrome is suppressed by the bridge (P2.T4) and the iframe contents can be observed via postMessage. Used when the compositor opens a target that has no native shell app — typically plugin settings screens, admin-ajax-driven pages, anything reached by `href` from the dock. Forks `core:iframe-fallback`: that app stays unchanged for `core:default` consumers; the chromeless protocol + observability handlers are desktop-only.",
+	"description": "Engine-owned iframe app for the `core:desktop` engine. Renders any wp-admin URL with the `wp_admin_workspaces_chromeless=1` query var so the parent admin's chrome is suppressed by the bridge (P2.T4) and the iframe contents can be observed via postMessage. Used when the compositor opens a target that has no native workspace app — typically plugin settings screens, admin-ajax-driven pages, anything reached by `href` from the dock. Forks `core:iframe-fallback`: that app stays unchanged for `core:default` consumers; the chromeless protocol + observability handlers are desktop-only.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"config-schema": {

@@ -3,7 +3,7 @@
  * Workspace-as-primary-entry hijack.
  *
  * When a workspace is active (see wp_admin_workspaces_is_active()), the
- * shell takes over the admin root — `/wp-admin/`, `index.php`, and a bare
+ * workspace takes over the admin root — `/wp-admin/`, `index.php`, and a bare
  * `admin.php` (no `?page`) — instead of living at a `?page=wp-admin-workspaces`
  * menu entry. The hijack runs at `admin_init` priority 0, before plugin
  * admin pages render. Classic wp-admin stays reachable via the endpoint
@@ -14,7 +14,7 @@
  * admin-footer.php so the standard `admin_enqueue_scripts` chain runs —
  * including the Gutenberg plugin's `wp-private-apis` override that every
  * `@wordpress/ui` overlay component depends on. wp_admin_workspaces_enqueue_
- * assets() is the gated callback that adds the shell bundle; its inline
+ * assets() is the gated callback that adds the workspace bundle; its inline
  * CSS hides the surrounding admin chrome so the workspace fills the
  * viewport.
  *
@@ -100,7 +100,7 @@ class WP_Admin_Workspaces_Hijack {
 			return false;
 		}
 		// Hard runtime dep: without the Gutenberg plugin the @wordpress/ui
-		// overlay components throw at module-load and the shell renders blank.
+		// overlay components throw at module-load and the workspace renders blank.
 		// Stand down so classic wp-admin stays reachable (the admin_notices
 		// warning explains why) rather than taking over `/wp-admin/` into a
 		// blank screen.
@@ -114,7 +114,7 @@ class WP_Admin_Workspaces_Hijack {
 		}
 		// Iframe-mounted admin pages never get the workspace treatment —
 		// the W5 redirect would 302 the iframe to `/wp-admin/#/…`, which
-		// is a root entry → W2 renders the shell INSIDE its own
+		// is a root entry → W2 renders the workspace INSIDE its own
 		// iframe-fallback → that screen mounts the same classic page in
 		// another iframe → infinite recursion. The chromeless-request
 		// signal (`Sec-Fetch-Dest: iframe` OR the explicit
@@ -345,7 +345,7 @@ class WP_Admin_Workspaces_Hijack {
 
 		// admin_init (priority 0) fires BEFORE wp-admin/menu.php builds the
 		// $menu / $submenu globals, but admin-header.php → menu-header.php
-		// iterate them. Seed empties so the menu renders nothing (the shell
+		// iterate them. Seed empties so the menu renders nothing (the workspace
 		// hides the chrome with CSS anyway) instead of tripping undefined-
 		// global notices.
 		if ( ! isset( $GLOBALS['menu'] ) ) {

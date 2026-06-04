@@ -38,13 +38,13 @@ Combined: **709 assertions**.
 
 ## Manual smoke
 
-Switch the active shell to `desktop-demo` via the shell-picker. Run
+Switch the active workspace to `desktop-demo` via the workspace-picker. Run
 through every section below. Mark blockers in
 [`docs/feedback.md`](feedback.md).
 
 ### Boot
 
-- [ ] Shell paints: wallpaper layer, empty workspace, dock visible.
+- [ ] Workspace paints: wallpaper layer, empty workspace, dock visible.
 - [ ] Dock launchers render with the correct icons (Posts, Media,
       Users, Settings, Site Health, Permalinks).
 - [ ] Console: no errors at boot.
@@ -125,7 +125,7 @@ through every section below. Mark blockers in
 - [ ] Clicking an external link in the iframe opens a new browser
       tab.
 - [ ] Clicking a same-origin wp-admin link in the iframe spawns a
-      new shell window with that URL.
+      new workspace window with that URL.
 - [ ] Clicking inside the iframe raises its window in the z-stack.
 - [ ] Pages with Screen Options / Help reveal show `screen-meta`
       messages in the parent console.
@@ -134,7 +134,7 @@ through every section below. Mark blockers in
 
 - **Command-palette harvest (bridge sub-system 11) is a stub.** Plan
   §D2 accepts the upstream WP-private-API breakage cost, but the
-  parent shell's `core:command-palette` app isn't wired to consume
+  parent workspace's `core:command-palette` app isn't wired to consume
   iframe commands yet either. Full harvester follows the parent
   consumer wiring.
 - **Instrument-set header integration** is storage-only — the

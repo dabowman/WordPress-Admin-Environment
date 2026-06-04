@@ -2,7 +2,7 @@
  * Pure helpers for persisting a DataViews `view` to user preferences —
  * the Screen-Options-equivalent (column visibility, sort, per-page, layout).
  *
- * Storage lives in the shell's `wp_admin_workspaces_user_prefs` user-meta, written
+ * Storage lives in the workspace's `wp_admin_workspaces_user_prefs` user-meta, written
  * through `POST /wp-admin-workspaces/v1/user-prefs` (partial deep-merge, `null`
  * tombstones a key). The blob lives under a top-level `dataViews` key, sub-
  * keyed by `screenId`:
@@ -10,11 +10,11 @@
  *   { "dataViews": { "posts": { "fields": [...], "sort": {...}, ... } } }
  *
  * The cascade resolver's consumer-origin `customizable` walker only copies the
- * recognized admin.json blocks (`settings` / `styles` / the v3 top-level
+ * recognized workspace.json blocks (`settings` / `styles` / the v3 top-level
  * blocks) into the merged doc, so a `dataViews` top-level key is **silently
  * dropped from the resolved config** — no pollution — while remaining stored in
  * the meta and readable via the `/user-prefs` GET endpoint (same pattern the
- * `shell` / `default-route` prefs already use). These helpers are side-effect
+ * `workspace` / `default-route` prefs already use). These helpers are side-effect
  * free so `tests/runtime/dataviews-shared.test.mjs` can import them directly.
  */
 

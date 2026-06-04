@@ -16,7 +16,7 @@ All eight options are non-REST in core 6.9; the plugin re-registers them in the 
 
 ## Architecture
 
-Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app declares the static `fields` array (the dimensions, the two booleans) and the `form` field order; the shared shell owns the null-guard spinner, `DataForm`, Save button, save handler, and the `wp-admin-workspaces-app--inset` padding wrapper (so the panel renders identically standalone and inside the `core:settings` host).
+Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app declares the static `fields` array (the dimensions, the two booleans) and the `form` field order; the shared workspace owns the null-guard spinner, `DataForm`, Save button, save handler, and the `wp-admin-workspaces-app--inset` padding wrapper (so the panel renders identically standalone and inside the `core:settings` host).
 
 Dimensions clamp to a non-negative integer (floor 0) in `setValue` — 0 means "do not generate this size", and the server schema floor would reject a negative value.
 

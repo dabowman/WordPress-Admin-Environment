@@ -4,7 +4,7 @@
 	"$wpds": "6.9",
 	"name": "wp-admin-default",
 	"title": "WordPress",
-	"description": "The default workspace shipped by WP Admin Shell — a recreation of the wp-admin experience with capability-gated screens, classic-menu bridging, and iframe escape hatches for legacy plugin pages.",
+	"description": "The default workspace shipped by WP Admin Workspaces — a recreation of the wp-admin experience with capability-gated screens, classic-menu bridging, and iframe escape hatches for legacy plugin pages.",
 	"engine": "core:default",
 	"default-screen": "dashboard-home",
 	"frame": {

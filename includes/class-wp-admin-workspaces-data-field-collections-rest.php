@@ -64,7 +64,7 @@ class WP_Admin_Workspaces_Data_Field_Collections_REST {
 		// Pull cascade-merged data-field collections from the resolved
 		// tree at `settings.dataFields`. Includes both programmatically-
 		// registered (via the `wp_admin_workspaces_data_plugin` injector in
-		// data-field-collections.php) and admin.json-authored entries;
+		// data-field-collections.php) and workspace.json-authored entries;
 		// cascade ordering already resolved by the resolver.
 		$all = isset( $config['settings']['dataFields'] ) && is_array( $config['settings']['dataFields'] )
 			? $config['settings']['dataFields']

@@ -489,7 +489,7 @@ class WP_Admin_Workspaces_Permissions {
 	 * log, the runtime checks at user_passes time), inflate empty
 	 * permissions to default admin-only, and bind the app floor.
 	 *
-	 * @param array $resolved Merged admin.json doc.
+	 * @param array $resolved Merged workspace.json doc.
 	 * @return array [ screen_id => resolved_perms ]
 	 */
 	public static function resolve_screens( $resolved ) {

@@ -20,7 +20,7 @@ import { store as noticesStore } from '@wordpress/notices';
  *      store entry to remove).
  *
  *      **Documented limitation.** `admin_notices` is a per-page-render
- *      hook; only GLOBAL notices that fire on the shell's own page load
+ *      hook; only GLOBAL notices that fire on the workspace's own page load
  *      are captured. Per-screen notices keyed on `$pagenow` / the current
  *      screen don't fire and aren't surfaced. Global-only is the accepted
  *      interim (the proper fix is a notices REST surface — upstream #155).

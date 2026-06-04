@@ -3,7 +3,7 @@
 	"id": "core:default",
 	"version": 3,
 	"title": "Default",
-	"description": "Default WP Admin Shell engine. Mirrors the site-editor visual idiom: dark chrome with elevated cards. Ships templates for sidebar, topbar (with start/center/end child regions), main, detail, and overlay; applies a dark chrome background and floats main + detail as elevated white cards.",
+	"description": "Default WP Admin Workspaces engine. Mirrors the site-editor visual idiom: dark chrome with elevated cards. Ships templates for sidebar, topbar (with start/center/end child regions), main, detail, and overlay; applies a dark chrome background and floats main + detail as elevated white cards.",
 
 	"designSystem": "@wordpress/ui",
 

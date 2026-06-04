@@ -3,7 +3,7 @@
  * v3 cap-gating smoke — screen + menu visibility per role.
  *
  * Replaces the v2-shape nav-items capability pruning smoke (Phase 3d.1
- * retired the v2 `shells/wp-admin-default.json`; the v3 equivalent is
+ * retired the v2 `workspaces/wp-admin-default.json`; the v3 equivalent is
  * screen-level + menu-level capability gating).
  *
  * Coverage:
@@ -450,7 +450,7 @@ foreach ( $roles_to_walk as $role ) {
 	}
 	WP_Admin_Workspaces_Resolver::reset_request_memo();
 
-	$resolved_doc = WP_Admin_Workspaces_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+	$resolved_doc = WP_Admin_Workspaces_Resolver::resolve( array( 'workspace' => 'wp-admin-default' ) );
 	$screens      = isset( $resolved_doc['screens'] ) && is_array( $resolved_doc['screens'] )
 		? $resolved_doc['screens']
 		: array();
@@ -569,13 +569,13 @@ function wpas_cap_smoke_count_menu_items( $menu, $screens, $user_id ) {
 // per-role using the admin-resolved tree. ASSUMPTION: `wp-admin-default`
 // declares no role/user-origin overrides to its menu shape — its menu is
 // admin-baseline across all roles, and per-role visibility differs only
-// via the inherited screen `permissions`. A future shell that customizes
+// via the inherited screen `permissions`. A future workspace that customizes
 // the menu per role (e.g. via `wp_admin_workspaces_data_role` filter) would
 // break this assumption — that case needs the per-role re-resolve pattern
 // used by the screen-visibility walk above.
 wp_set_current_user( $admin_id );
 WP_Admin_Workspaces_Resolver::reset_request_memo();
-$admin_resolved = WP_Admin_Workspaces_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+$admin_resolved = WP_Admin_Workspaces_Resolver::resolve( array( 'workspace' => 'wp-admin-default' ) );
 $menu           = isset( $admin_resolved['menu'] ) && is_array( $admin_resolved['menu'] )
 	? $admin_resolved['menu']
 	: array();

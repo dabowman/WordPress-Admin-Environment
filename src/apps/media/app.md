@@ -73,6 +73,6 @@ Preserve two patterns:
 - **No URL state.** Filters / pagination / open-detail are local; deep-linking + back/forward restoration deferred to #136.
 - **No embedded media picker** (selection mode, `media-upload.php` insert-into-post). Out of scope (separate / iframe).
 - **No drag-and-drop upload** — click-to-pick only.
-- **No "Uploaded to" attach/detach** affordance, no EXIF display, no subsize-generation polling. wp-admin has these; the shell omits them for now.
-- **No per-row capability gating** — wp-admin hides checkbox / destructive actions on rows the user can't edit/delete; the shell relies on the screen-level `upload_files` floor.
+- **No "Uploaded to" attach/detach** affordance, no EXIF display, no subsize-generation polling. wp-admin has these; the workspace omits them for now.
+- **No per-row capability gating** — wp-admin hides checkbox / destructive actions on rows the user can't edit/delete; the workspace relies on the screen-level `upload_files` floor.
 - **Copy URL relies on `navigator.clipboard`** — insecure-origin (HTTP-only dev) contexts deny access; the error notice is the fallback.

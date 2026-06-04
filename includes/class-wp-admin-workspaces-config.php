@@ -1,6 +1,6 @@
 <?php
 /**
- * WP_Admin_Workspaces_Config — read-only wrapper around a resolved admin.json.
+ * WP_Admin_Workspaces_Config — read-only wrapper around a resolved workspace.json.
  *
  * The resolver returns a plain associative array; this class wraps it in
  * a small accessor surface so callers don't have to hardcode the
@@ -38,7 +38,7 @@ class WP_Admin_Workspaces_Config {
 	}
 
 	public function get_active_engine() {
-		return $this->data['settings']['shell']['layoutEngine'] ?? null;
+		return $this->data['settings']['workspace']['layoutEngine'] ?? null;
 	}
 
 	public function get_default_route() {

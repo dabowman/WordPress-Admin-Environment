@@ -127,7 +127,7 @@ class WP_Admin_Workspaces_Appearance_Menu {
 	/**
 	 * `wp_admin_workspaces_data` callback. Stamps the signal + prunes.
 	 *
-	 * @param array $doc Resolved admin.json doc.
+	 * @param array $doc Resolved workspace.json doc.
 	 * @return array
 	 */
 	public static function prune( $doc ) {
@@ -171,7 +171,7 @@ class WP_Admin_Workspaces_Appearance_Menu {
 		// Decide which gated screen ids to drop given this theme.
 		$drop = array();
 		foreach ( self::RULES as $screen_id => $rule ) {
-			// Only consider screens the shell actually declares — pruning an
+			// Only consider screens the workspace actually declares — pruning an
 			// absent screen is a no-op, and we don't want to drop a menu node
 			// whose id collides with a rule but binds nothing.
 			if ( ! isset( $screens[ $screen_id ] ) ) {
@@ -235,7 +235,7 @@ class WP_Admin_Workspaces_Appearance_Menu {
 	 *
 	 * Collapse-empty-group guard: a drilldown node that STARTED with a
 	 * non-empty `items` list and ENDED with an empty one after recursion is
-	 * itself dropped — otherwise a custom shell whose only child of a group
+	 * itself dropped — otherwise a custom workspace whose only child of a group
 	 * is a theme-gated screen would render a clickable group that drills
 	 * into nothing. (Nodes that never had `items` — leaf screens, separators —
 	 * are untouched; a group authored with an empty `items` stays as-is,

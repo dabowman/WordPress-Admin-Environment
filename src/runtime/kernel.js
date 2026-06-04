@@ -40,7 +40,7 @@ export function kernel( config ) {
 		return (
 			<div style={ { padding: 32 } }>
 				{ __(
-					'Shell configuration not found.',
+					'Workspace configuration not found.',
 					'wp-admin-workspaces'
 				) }
 			</div>
@@ -72,7 +72,7 @@ export function kernel( config ) {
 		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.tokens ) ||
 		{};
 
-	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
+	// Workspace-switching plumbing (no UI surface in v1; v2 prefs UI).
 	attachWorkspaceSwitcherToWindow();
 
 	const engineId =
@@ -88,7 +88,7 @@ export function kernel( config ) {
 
 	const engineSource = registry.get( engineId, 'engine' );
 
-	// Engine `default-styles` deep-merged UNDER admin.json `styles`.
+	// Engine `default-styles` deep-merged UNDER workspace.json `styles`.
 	// PHP resolver already does this in `WP_Admin_Workspaces_Resolver::engine_origin`,
 	// so the kernel is normally a no-op. Defensive: covers tests and
 	// Storybook stories that mount the kernel with raw fixture config

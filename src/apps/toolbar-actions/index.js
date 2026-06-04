@@ -27,7 +27,7 @@ import ArbitraryIcon, {
  *      core-data), gated on each type's create capability, building
  *      `#/{rest_base}/new` hrefs. Mirrors wp-admin's runtime `+New`.
  *   3. **Admin-bar harvest (#128)** — plugin admin-bar nodes harvested
- *      server-side (`window.wpAdminWorkspaces.adminBar`) that the shell
+ *      server-side (`window.wpAdminWorkspaces.adminBar`) that the workspace
  *      doesn't own first-class. Each top-level node renders as a button
  *      (or a dropdown when it has children). Node titles are arbitrary
  *      admin HTML → rendered through the engine-side arbitrary-icon

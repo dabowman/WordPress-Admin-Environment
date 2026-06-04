@@ -110,7 +110,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Per-role totals for the roles filter elements (\"Editor (3)\"). One lightweight request per role value via `useEntityElementCounts`; role values come from the resolved spec elements, so the count set tracks whatever roles the shell exposes.",
+					"purpose": "Per-role totals for the roles filter elements (\"Editor (3)\"). One lightweight request per role value via `useEntityElementCounts`; role values come from the resolved spec elements, so the count set tracks whatever roles the workspace exposes.",
 					"fields": [ "id" ],
 					"query": {
 						"roles": "{spec.roles.elements[].value}",
@@ -208,7 +208,7 @@
 			},
 			{
 				"concern": "data-view-overridable",
-				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. admin.json `settings.dataViews.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_workspaces_data_view_config_root_user[_<variant>]` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
+				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. workspace.json `settings.dataViews.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_workspaces_data_view_config_root_user[_<variant>]` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
 			}
 		],
 		"design-system-leakage": [

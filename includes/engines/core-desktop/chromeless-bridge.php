@@ -3,7 +3,7 @@
  * core:desktop chromeless bridge.
  *
  * Emits the JS bridge inside chromeless admin pages. The bridge runs
- * inside the iframe and posts messages to the parent shell window for
+ * inside the iframe and posts messages to the parent workspace window for
  * observability + chrome interception. Parent-side handler stub lives
  * in `src/apps/desktop-iframe/index.js`.
  *
@@ -101,8 +101,8 @@ function wp_admin_workspaces_chromeless_bridge_script() {
 	 *
 	 * Everything admin-interesting (REST failures from Gutenberg,
 	 * admin-ajax 500s, plugin console warnings) fires inside the
-	 * iframe. Relay to the shell so monitor/debug widgets see the
-	 * actual error surface, not just the shell's own errors.
+	 * iframe. Relay to the workspace so monitor/debug widgets see the
+	 * actual error surface, not just the workspace's own errors.
 	 */
 	try {
 		window.addEventListener( 'error', function ( e ) {
@@ -390,11 +390,11 @@ function wp_admin_workspaces_chromeless_bridge_script() {
 	 *
 	 * Fires on admin pages whose completion commonly mutates the WP
 	 * menu globals (plugin activate/deactivate, install, theme switch).
-	 * The parent shell uses our admin.json, not WP's $menu, but plugin
-	 * authors who extend the shell via `wp_admin_workspaces_register_app()`
+	 * The parent workspace uses our workspace.json, not WP's $menu, but plugin
+	 * authors who extend the workspace via `wp_admin_workspaces_register_app()`
 	 * during one of those flows want a hook to refetch state. Payload
 	 * deliberately omits the full $menu serialization upstream ships
-	 * (~140 LOC) — the shell isn't a $menu mirror, so the signal alone
+	 * (~140 LOC) — the workspace isn't a $menu mirror, so the signal alone
 	 * is the contract.
 	 */
 	try {
@@ -749,7 +749,7 @@ function wp_admin_workspaces_chromeless_bridge_script() {
 	 * injection slot).
 	 *
 	 * Maintains a mutable `window.__wpAdminWorkspacesInstrument = { headers,
-	 * observe }` slot the parent shell overwrites via
+	 * observe }` slot the parent workspace overwrites via
 	 * `wp-admin-workspaces-instrument-set`. Headers are pre-merged by the
 	 * parent (RFC 7230 §3.2.2 join applied there). `observe: true`
 	 * opts into deeper observability — request + response headers in
@@ -792,7 +792,7 @@ function wp_admin_workspaces_chromeless_bridge_script() {
 	/*
 	 * Sub-system 15 — block-editor dirty-state relay.
 	 *
-	 * The shell's `core:dirty-state` service guards intra-shell
+	 * The workspace's `core:dirty-state` service guards intra-workspace
 	 * navigation (a sidebar click) the way the browser's `beforeunload`
 	 * guards a tab close. A native app reports through `useDirtyState`;
 	 * an iframed editor can't — its unsaved state lives in the iframe's

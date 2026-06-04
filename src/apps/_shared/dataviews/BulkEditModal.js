@@ -14,7 +14,7 @@ import {
 /**
  * The shared host for **Bulk Edit** — apply a chosen subset of fields to the M
  * selected rows (deliverable #2 of the DataViews interaction-pattern library —
- * see `docs/dataviews-interaction-patterns.md`). It is the shell-side substitute
+ * see `docs/dataviews-interaction-patterns.md`). It is the workspace-side substitute
  * for the upstream bulk-edit-form (#165) / editable-cell (#162) primitives:
  * when those land we swap the host, not the logic.
  *

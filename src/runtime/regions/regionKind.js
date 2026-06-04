@@ -4,7 +4,7 @@
  *
  * V2.M2 task 6: derives the kind from `getPlatformServices(region)`.
  * v2 declarations express the choice through `platform.modal`,
- * `role: dialog`, `dismiss-on`, etc. v1 shells still ship legacy
+ * `role: dialog`, `dismiss-on`, etc. v1 workspaces still ship legacy
  * `region.source` ids; the platform-services bridge in
  * `platformServices.mjs` maps each id to the equivalent platform
  * vocabulary so this helper returns the same bucket either way.
@@ -17,7 +17,7 @@
  * Region instances may force a bucket via `region.kind`. `floating` and
  * `tiled` collapse to `persistent` for v1.
  *
- * V2.M7 retires the legacy bridge once bundled shells migrate.
+ * V2.M7 retires the legacy bridge once bundled workspaces migrate.
  */
 
 import { placement } from './platformServices.mjs';

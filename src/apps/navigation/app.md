@@ -4,7 +4,7 @@ Prose accompanying `app.json#documentation` for the sidebar nav app.
 
 ## Overview
 
-NavigationApp is the most visually-substantial piece of shell chrome, and — as of the `menu-renderer` work — a thin **dispatcher**. It reads the resolved `menu` tree from the kernel config (nested entries, screen-bound by the PHP `bind_screens` pass), orders + prunes it once, then hands the shaped tree to whichever renderer the active engine named via its `engine.json` `menu-renderer` field. The field is threaded onto the runtime config by `buildRuntimeConfig`; dispatch resolves the renderer through the kernel menu-renderer registry (`src/runtime/config/menuRendererRegistry.js`).
+NavigationApp is the most visually-substantial piece of workspace chrome, and — as of the `menu-renderer` work — a thin **dispatcher**. It reads the resolved `menu` tree from the kernel config (nested entries, screen-bound by the PHP `bind_screens` pass), orders + prunes it once, then hands the shaped tree to whichever renderer the active engine named via its `engine.json` `menu-renderer` field. The field is threaded onto the runtime config by `buildRuntimeConfig`; dispatch resolves the renderer through the kernel menu-renderer registry (`src/runtime/config/menuRendererRegistry.js`).
 
 The active item derives from the URL primary path (the `aria-current="true"` attribute is the sole authority — no `.is-active` className) and is recomputed on every route change, regardless of renderer.
 
@@ -24,7 +24,7 @@ The split keeps each engine's renderer *with the engine*: when `core:single-pane
 
 ## Architecture
 
-**URL-as-state.** Sub-screen state is `?screen=<id>` in the URL, not `useState`. This is the corollary of the spec §6 / §18 URL-as-state principle: deep-links work, refreshes survive, browser back works. The `navigateScreen(id|null)` helper writes the slot on top of the current primary path, preserving any other params. Multiple sidebars in one shell would collide; namespace later (`?nav-{regionId}-screen=…`) if that lands.
+**URL-as-state.** Sub-screen state is `?screen=<id>` in the URL, not `useState`. This is the corollary of the spec §6 / §18 URL-as-state principle: deep-links work, refreshes survive, browser back works. The `navigateScreen(id|null)` helper writes the slot on top of the current primary path, preserving any other params. Multiple sidebars in one workspace would collide; namespace later (`?nav-{regionId}-screen=…`) if that lands.
 
 **Shared pure tree helpers.** Ordering + pruning + the walk helpers live in `src/runtime/menu/menuTree.mjs` — a DS-neutral, `window`-free, node-importable module so every renderer (bundled, engine-owned, plugin) shares one implementation. `pruneMenu( orderTree( rawMenu ), passes )` walks the tree recursively: an item failing the injected `passes` predicate is dropped; a container whose pruned children are empty and that has no own `href` is dropped; orphan separators at the top/bottom are stripped (mid-list separators stay). The host injects `itemPassesPermissions` (which reads `userCan()`); the predicate stays in the app — not the shared module — so the helpers don't pull in `window`.
 
@@ -47,7 +47,7 @@ Beyond those, the design surface is straightforward: a column list with optional
 
 ## Known limitations
 
-- **No multi-sidebar URL slot.** `?screen=` collides if a shell mounts two NavigationApp instances. Namespace later.
+- **No multi-sidebar URL slot.** `?screen=` collides if a workspace mounts two NavigationApp instances. Namespace later.
 - **No nested drill-down.** Drill-down screens cannot themselves contain screen items. A screen's children are flat (with optional groups + separators + external links).
 - **Tree expansion isn't URL state.** `sidebar-tree` / `drawer` expand-state is local `useState` (multiple branches open at once is the tree idiom), seeded from the active route on mount. Unlike drilldown's `?screen=` slot, a route change after mount won't auto-expand a newly-active branch. Acceptable for the multi-open model; revisit if deep-link-after-navigation expansion is needed.
 - **No persistent expanded-group state.** Groups (label + children) always render expanded. There's no collapse toggle.

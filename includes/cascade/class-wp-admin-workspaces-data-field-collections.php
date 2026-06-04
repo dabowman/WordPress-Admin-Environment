@@ -6,7 +6,7 @@
  * pair via `wp_admin_workspaces_register_data_field_collection()`. The registry
  * contributes to the cascade through the synthetic `plugin` origin so
  * site/role/user overrides can extend or replace collections via the
- * same admin.json `settings.dataFields` block.
+ * same workspace.json `settings.dataFields` block.
  *
  * v3 rename: v2's top-level `fieldCollections` block moved under
  * `settings.dataFields`. The per-descriptor word `field` stays — matches
@@ -180,7 +180,7 @@ class WP_Admin_Workspaces_Data_Field_Collections {
 		// translators: 1: collection id, 2: module handle.
 		$message = sprintf(
 			/* translators: %1$s: collection id, %2$s: fieldsModule handle */
-			__( 'Data field collection %1$s declared fieldsModule "%2$s". The shell does not resolve fieldsModule in this release; the value is reserved for future native script-modules support.', 'wp-admin-workspaces' ),
+			__( 'Data field collection %1$s declared fieldsModule "%2$s". The workspace does not resolve fieldsModule in this release; the value is reserved for future native script-modules support.', 'wp-admin-workspaces' ),
 			$id,
 			$module
 		);
@@ -205,7 +205,7 @@ function wp_admin_workspaces_register_data_field_collection( $id, $kind, $name, 
 /**
  * Cascade contribution — registered collections enter the resolver
  * through the `plugin` origin so site/role/user overrides can extend
- * or override via admin.json's `settings.dataFields` block. Runs at
+ * or override via workspace.json's `settings.dataFields` block. Runs at
  * filter priority 5 so plugin authors using
  * add_filter('wp_admin_workspaces_data_plugin', ...) directly win over
  * programmatic registrations (matches the convention for
@@ -223,7 +223,7 @@ add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
 		$doc['settings']['dataFields'] = array();
 	}
 	foreach ( $collections as $id => $collection_doc ) {
-		// admin.json declarations win — only inject when no inline
+		// workspace.json declarations win — only inject when no inline
 		// declaration claims the id.
 		if ( ! isset( $doc['settings']['dataFields'][ $id ] ) ) {
 			$doc['settings']['dataFields'][ $id ] = $collection_doc;

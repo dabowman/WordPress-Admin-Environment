@@ -2,11 +2,11 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/theme-editor.php` (paired conceptually with `plugin-editor.php`, which is specced separately under Plugins)
-**Current shell coverage:** None. Reachable today only via `iframe:theme-editor.php` and only when `DISALLOW_FILE_EDIT` is not set.
+**Current workspace coverage:** None. Reachable today only via `iframe:theme-editor.php` and only when `DISALLOW_FILE_EDIT` is not set.
 
 This spec describes the **semantic surface** of the Theme File Editor so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
-**Posture:** core has been deprioritizing this screen for years. Production sites are encouraged to set `define('DISALLOW_FILE_EDIT', true)` in `wp-config.php`, which removes the menu entry entirely. The shell should surface this screen only when explicitly enabled and only for advanced shells (e.g. `developer-admin`). It is not appropriate for `content-author` or `client-portal`.
+**Posture:** core has been deprioritizing this screen for years. Production sites are encouraged to set `define('DISALLOW_FILE_EDIT', true)` in `wp-config.php`, which removes the menu entry entirely. The workspace should surface this screen only when explicitly enabled and only for advanced workspaces (e.g. `developer-admin`). It is not appropriate for `content-author` or `client-portal`.
 
 This spec covers **theme file editing only**. The plugin file editor (`plugin-editor.php`) is structurally identical and lives in the Plugins screen specs.
 
@@ -41,7 +41,7 @@ Jobs to be done (advanced/dev only):
 - **Switch to a different theme to inspect its files** — Theme picker → Select.
 - **Look up a function** — open PHP file → Documentation dropdown → "Look Up".
 
-Most of this work is better done in `core:site-editor` Styles → Additional CSS (for CSS) or in a code editor on disk. The shell should treat this screen as an escape hatch, not a primary workflow.
+Most of this work is better done in `core:site-editor` Styles → Additional CSS (for CSS) or in a code editor on disk. The workspace should treat this screen as an escape hatch, not a primary workflow.
 
 ---
 
@@ -55,7 +55,7 @@ Most of this work is better done in `core:site-editor` Styles → Additional CSS
 
 **Permission-denied state:** core renders `wp_die()`. Mirror.
 
-**`DISALLOW_FILE_EDIT` gate:** when set, `current_user_can('edit_themes')` returns false in core. The shell should detect this constant via PHP-side capability map injection and hide the menu entry. Reaching the route directly should render an explanatory empty state pointing to alternative workflows (Site Editor for CSS, child themes for code).
+**`DISALLOW_FILE_EDIT` gate:** when set, `current_user_can('edit_themes')` returns false in core. The workspace should detect this constant via PHP-side capability map injection and hide the menu entry. Reaching the route directly should render an explanatory empty state pointing to alternative workflows (Site Editor for CSS, child themes for code).
 
 **Multisite:** redirects to network admin. Individual site admins can't edit theme files.
 
@@ -204,9 +204,9 @@ N/A — single-file editing.
 ### Tree
 | Filter | Field | Operators | Source |
 |---|---|---|---|
-| Search (shell-added) | filename / path | substring | client-side |
+| Search (workspace-added) | filename / path | substring | client-side |
 
-Core has no filter or search — the tree is fixed. The shell may add a filename filter as a usability improvement.
+Core has no filter or search — the tree is fixed. The workspace may add a filename filter as a usability improvement.
 
 ### Sort
 - Tree: ordered by `wp_make_theme_file_tree()` — `style.css` and `functions.php` pinned to top, then alphabetical by extension group.
@@ -238,7 +238,7 @@ N/A.
 
 ### Validation
 - Server: `validate_file_to_edit()` blocks path traversal; PHP safety net catches fatal errors.
-- Client (shell-added): warn on:
+- Client (workspace-added): warn on:
   - Editing the active theme directly (suggest child theme).
   - Editing a parent theme from a child theme context.
   - Editing minified stylesheets when an unminified sibling exists.
@@ -259,7 +259,7 @@ Original wp-admin URL params:
 - `theme-editor.php?theme={stylesheet}&file={relative-path}` — open specific file
 - `theme-editor.php?...&a=1` — flash success after redirect
 
-Shell hash routing:
+Workspace hash routing:
 ```
 #/theme-file-editor                                 # active theme + style.css
 #/theme-file-editor/{stylesheet}                    # switch theme
@@ -287,7 +287,7 @@ Browser back/forward must restore selection. Refresh must restore. Sharing URL m
 
 ### Inbound
 - From admin menu Appearance → Theme File Editor → screen.
-- From command palette (advanced shells only) → screen.
+- From command palette (advanced workspaces only) → screen.
 
 ---
 
@@ -316,7 +316,7 @@ Undo: not supported. Per-file revert is best-effort (re-load from disk via tree 
 | `Tab` (in editor) | Inserts a tab character (CodeMirror behavior) |
 | `Esc` then `Tab` | Move focus out of editor |
 | `Esc` `Esc` (screen reader, forms mode) | Exit forms mode |
-| `Cmd/Ctrl+S` | Save (shell-added; not in core) |
+| `Cmd/Ctrl+S` | Save (workspace-added; not in core) |
 
 ### ARIA & focus
 - Tree: `role="tree"` with `aria-labelledby="theme-files-label"`.
@@ -340,7 +340,7 @@ Undo: not supported. Per-file revert is best-effort (re-load from disk via tree 
 | `wp_edit_theme_plugin_file` (function) | Save with safety net | Preserve — must be the save path. |
 | `validate_file_to_edit` (function) | Path traversal guard | Preserve. |
 | `dismissed_wp_pointers` user meta | Track first-visit dismissal | Preserve. |
-| `screen_options_show_screen` filter | Show/hide screen options | Drop — shell owns chrome. |
+| `screen_options_show_screen` filter | Show/hide screen options | Drop — workspace owns chrome. |
 
 Plugin compatibility note: theme file edits don't have hookable extensibility around the editor UI. The few filters that exist are server-side and continue to work.
 
@@ -348,7 +348,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none registered.
 - **Workaround:** `iframe:theme-editor.php`. Works only when `DISALLOW_FILE_EDIT` is unset.
 
@@ -356,7 +356,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 | Gap | Priority | Notes |
 |---|---|---|
 | Propose REST surface `/wp-admin-workspaces/v1/theme-files` | High | Without it, native rebuild is awkward (form POST only). Specs the endpoint above. |
-| Register `core:theme-file-editor` app source | Low | Only relevant for `developer-admin`-style shells |
+| Register `core:theme-file-editor` app source | Low | Only relevant for `developer-admin`-style workspaces |
 | Tree component | Medium | `role="tree"` semantic is non-trivial |
 | Code editor integration | Medium | Use any code-editor library; not a `@wordpress/*` package fit. CodeMirror or Monaco; user choice. |
 | PHP syntax safety net surfacing | High | Critical UX — safety must be visible |
@@ -370,7 +370,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 | Diff against last save | Low | Better than current core; gap proposal |
 
 ### Acceptable interim
-For v1 of any shell config, `iframe:theme-editor.php` is acceptable as an escape hatch and is the recommended approach. Most shells will not surface this at all (`content-author`, `client-portal`). Only `developer-admin` should include it, gated on `! defined('DISALLOW_FILE_EDIT')`.
+For v1 of any workspace config, `iframe:theme-editor.php` is acceptable as an escape hatch and is the recommended approach. Most workspaces will not surface this at all (`content-author`, `client-portal`). Only `developer-admin` should include it, gated on `! defined('DISALLOW_FILE_EDIT')`.
 
 ---
 

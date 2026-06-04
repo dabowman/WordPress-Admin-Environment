@@ -5,12 +5,12 @@
  * An engine declares which renderer it wants for the resolved `menu`
  * tree via the `menu-renderer` field in its `engine.json` (e.g.
  * `sidebar-drilldown`, `drawer`, or a plugin id `plugin:{slug}/{name}`).
- * The bundled renderers ship inside the shell's JS bundle and register
+ * The bundled renderers ship inside the workspace's JS bundle and register
  * themselves at module load. A third-party renderer can't do that — its
  * code lives in a separate plugin — so this registry is the server-side
  * half: a plugin declares its renderer id + the script handle that
- * registers the React component, and the shell enqueues that script on
- * the admin-shell page.
+ * registers the React component, and the workspace enqueues that script on
+ * the admin-workspace page.
  *
  * The renderer's script must register the component against the kernel's
  * published surface:
@@ -30,7 +30,7 @@
  * reserved — plugin ids must match `plugin:{slug}/{name}`.
  *
  * No cache-signal contribution: renderer registration enqueues a script
- * but does not alter the resolved admin.json tree, so it can't stale the
+ * but does not alter the resolved workspace.json tree, so it can't stale the
  * resolver cache.
  *
  * NOTE (timing): the kernel mounts synchronously when its bundle runs, so
@@ -108,14 +108,14 @@ class WP_Admin_Workspaces_Menu_Renderers {
 
 	/**
 	 * Enqueue every registered renderer's script (+ optional style) on the
-	 * admin-shell page. Called from the shell's `admin_enqueue_scripts`
+	 * admin-workspace page. Called from the workspace's `admin_enqueue_scripts`
 	 * handler after the main `wp-admin-workspaces` bundle is enqueued, so a
 	 * renderer script that declares `wp-admin-workspaces` as a dependency loads
 	 * after the kernel boot module that publishes
 	 * `window.wpAdminWorkspaces.registerMenuRenderer`.
 	 *
 	 * Only already-registered handles enqueue — a plugin is responsible
-	 * for `wp_register_script()`-ing its handle before the shell page
+	 * for `wp_register_script()`-ing its handle before the workspace page
 	 * renders.
 	 */
 	public static function enqueue_assets() {

@@ -1,7 +1,7 @@
 /**
  * URL route primitives (V2.M3 task 2 + 5).
  *
- * Spec §6.2: admin.json's `routes` block maps URL patterns to app +
+ * Spec §6.2: workspace.json's `routes` block maps URL patterns to app +
  * config tuples. The runtime decomposes the URL, looks up each region's
  * `routing.route-key` slot value, and matches that value against the
  * routes block. Pattern syntax:

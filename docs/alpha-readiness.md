@@ -26,7 +26,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
   omits `workspace.engine`.
-- [manual] Copy `shells/single-pane-demo.json` → `wp-content/workspace.json`, load
+- [manual] Copy `workspaces/single-pane-demo.json` → `wp-content/workspace.json`, load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
   delta; the baseline's screens/menu stay, only the chrome retints.
@@ -47,7 +47,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 - [auto] `wp_admin_workspaces_workspace_active()`: true with a valid file OR
   an explicitly-written `wp_admin_workspaces_active_shell` option; false on a
   fresh install with neither. When the file is active,
-  `window.wpAdminWorkspaces.workspaceFileActive` is true — the shell switcher
+  `window.wpAdminWorkspaces.workspaceFileActive` is true — the workspace switcher
   hides and `switchShell()` throws (writing the option would be a silent
   no-op since the file wins).
 - [manual] Fresh install, no file, no option → `/wp-admin/` is untouched
@@ -78,13 +78,13 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in
   `run-alpha-trigger-tests.php` covers it: `workspace_enabled=false`
-  vetoes a present `wp-content/workspace.json` AND the legacy active-shell
+  vetoes a present `wp-content/workspace.json` AND the legacy active-workspace
   option; flipping back to true restores the file-trigger path.
 - [manual] **Workspace → Settings → Workspace.** Uncheck "Activate WP
   Admin Workspace", click Save → snackbar success → an inline "Reload
   to apply" notice appears with a Reload now button. Click it → land in
   classic wp-admin.
-- [manual] **Classic → Settings → WP Admin Shell.** Check the box and
+- [manual] **Classic → Settings → WP Admin Workspaces.** Check the box and
   click Save Changes → the next admin nav lands in the workspace. (This
   parallel `add_options_page` is the only way to re-enable from classic;
   without it the workspace would strand the user after disabling.)
@@ -149,7 +149,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   cross-origin `target=_parent` dropped.
 - [auto] `passes_base_gates` bails on chromeless requests
   (`Sec-Fetch-Dest: iframe` OR `?wp_admin_workspaces_chromeless=1`), so an
-  iframed classic page never re-enters the workspace → no nested-shell
+  iframed classic page never re-enters the workspace → no nested-workspace
   recursion regardless of whether the iframe URL hits a W5 redirect
   mapping or W2's root-entry render.
 - [manual] **Open an `iframe:` screen** (editor / site-editor / Plugins
@@ -168,7 +168,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 - [manual] **Session-expiry recovery.** Reload an iframed classic page
   after a session reset. WordPress would normally render `wp-login.php`
   inside the iframe; the iframe stays hidden, a heartbeat poll is
-  forced, and the standard wp-auth-check modal pops at the shell level.
+  forced, and the standard wp-auth-check modal pops at the workspace level.
   Sign in → heartbeat tick → iframe reloads to the real page.
 
 ## 8. Capability matrix
@@ -176,7 +176,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 - [manual] Walk subscriber → contributor → author → editor → admin. Each role
   sees exactly the screens/menu items wp-admin would surface natively
   (capability gating unchanged by the alpha entry work). Subscriber on an
-  admin-only screen gets the gate, not a blank shell.
+  admin-only screen gets the gate, not a blank workspace.
 
 ## Non-goals / known caveats (alpha)
 
@@ -191,7 +191,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   SFTP/git/wp-cli. No settings UI writes it (filesystem caps + nonce + locking
   are post-alpha). Ship the `.htaccess` / nginx note so the file isn't served
   as static JSON.
-- **Bundled `shells/*` are starter templates**, not a selectable catalog —
+- **Bundled `workspaces/*` are starter templates**, not a selectable catalog —
   copy one to `wp-content/workspace.json` and edit. The legacy
   `wp_admin_workspaces_active_shell` option still works as a back-compat
   trigger but is hidden by the switcher when a file override is active.

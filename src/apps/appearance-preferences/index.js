@@ -17,8 +17,8 @@ import { useKernel } from '../../runtime/kernel-context';
  * renamed from `core:appearance` to free the "Appearance" section name
  * for the real Appearance menu group (issue #121).
  *
- * Reads the active shell's `customizable` declarations off the resolved
- * config and renders only the controls that shell allows. MVP control
+ * Reads the active workspace's `customizable` declarations off the resolved
+ * config and renders only the controls that workspace allows. MVP control
  * set: density, accent override, default-route override.
  *
  * Saves go through POST /wp-admin-workspaces/v1/user-prefs (server deep-merges
@@ -168,7 +168,7 @@ export default function AppearancePreferencesApp() {
 				{ noControls && (
 					<Text variant="body-md">
 						{ __(
-							'The active shell does not expose any user-customizable appearance settings.',
+							'The active workspace does not expose any user-customizable appearance settings.',
 							'wp-admin-workspaces'
 						) }
 					</Text>
@@ -238,7 +238,7 @@ export default function AppearancePreferencesApp() {
 					<InputControl
 						label={ __( 'Default route', 'wp-admin-workspaces' ) }
 						description={ __(
-							'Where the shell lands when you open it (e.g. /posts, /media).',
+							'Where the workspace lands when you open it (e.g. /posts, /media).',
 							'wp-admin-workspaces'
 						) }
 						value={ defaultRoute }
@@ -255,7 +255,10 @@ export default function AppearancePreferencesApp() {
 					disabled={ isSaving }
 					loading={ isSaving }
 				>
-					{ __( 'Reset to shell defaults', 'wp-admin-workspaces' ) }
+					{ __(
+						'Reset to workspace defaults',
+						'wp-admin-workspaces'
+					) }
 				</Button>
 			</Stack>
 		</div>

@@ -13,7 +13,7 @@ import './index.css';
  * 2. Copy-paste WP-CLI command — pre-filled with the option name + value (or
  *    the given `command`). Always uses `wp option update`, never raw SQL.
  * 3. Agent prompt — an advisory paste-to-agent instruction. No privileged
- *    execution from the shell.
+ *    execution from the workspace.
  *
  * Two shapes:
  *

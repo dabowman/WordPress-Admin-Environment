@@ -9,7 +9,7 @@
  *   - Override flavor: contributes screens[<target>].apps[] entries to the cascade.
  *   - Custom target screen via $args['screen'].
  *   - Standalone flavor: also synthesizes an app manifest with slotHints.
- *   - admin.json declaration wins per-entry-id via the cascade's id-keyed array merge.
+ *   - workspace.json declaration wins per-entry-id via the cascade's id-keyed array merge.
  *   - Tombstone semantics: hidden:true marks the contributed entry as a cascade tombstone.
  *   - v2 `dashboardWidgets` block translated to screen-app entries at compile time.
  *   - Lazy + deferred manifest forwarding.
@@ -183,7 +183,7 @@ $T::assert_eq(
 	'dashboard-widget-quick-draft'
 );
 
-// --- admin.json wins per-entry-id (cascade id-keyed merge) ------------------
+// --- workspace.json wins per-entry-id (cascade id-keyed merge) ------------------
 
 WP_Admin_Workspaces_Dashboard_Widgets::reset();
 wp_admin_workspaces_register_dashboard_widget(
@@ -192,7 +192,7 @@ wp_admin_workspaces_register_dashboard_widget(
 		'defaultSize' => array( 'w' => 2, 'h' => 1 ),
 	)
 );
-// Simulate admin.json `screens[dashboard-widgets].apps[]` claiming the
+// Simulate workspace.json `screens[dashboard-widgets].apps[]` claiming the
 // same entry id with different placement. Run a manual cascade merge
 // to verify the contract.
 $plugin_origin = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
@@ -212,7 +212,7 @@ $site_origin   = array(
 );
 $merged = WP_Admin_Workspaces_Merge::merge( $plugin_origin, $site_origin );
 $T::assert_eq(
-	'admin.json (site origin) entry merges by id over plugin contribution',
+	'workspace.json (site origin) entry merges by id over plugin contribution',
 	$merged['screens']['dashboard-widgets']['apps'][0]['size'],
 	array( 'w' => 4, 'h' => 4 )
 );
@@ -347,7 +347,7 @@ $T::assert_true(
 
 // --- Filter idempotency ----------------------------------------------------
 // Reviewer flagged: `apply_filters('wp_admin_workspaces_data_plugin', ...)` may
-// fire twice in one request (cache miss after shell switch, test harness,
+// fire twice in one request (cache miss after workspace switch, test harness,
 // anything calling the resolver pipeline twice). A bare `apps[] []=` would
 // duplicate the entry. Guard checks for an existing entry id and skips.
 
@@ -424,7 +424,7 @@ WP_Admin_Workspaces_Dashboard_Widgets::reset();
 // Classic dashboard-widget BRIDGE (#134).
 // ===========================================================================
 // The bridge (WP_Admin_Workspaces_Dashboard_Bridge) harvests plugin dashboard
-// meta-boxes into captured-HTML tiles, skipping the core widgets the shell
+// meta-boxes into captured-HTML tiles, skipping the core widgets the workspace
 // ships native after #133.
 
 WP_Admin_Workspaces_Dashboard_Bridge::reset();
@@ -551,7 +551,7 @@ remove_action( 'wp_dashboard_setup', $register_widgets );
 
 // REGRESSION GUARD (#134 review): `ensure_dashboard_setup()` forces the
 // `dashboard` screen around `wp_dashboard_setup()` so widgets file under
-// `$wp_meta_boxes['dashboard']` regardless of the calling context (shell render
+// `$wp_meta_boxes['dashboard']` regardless of the calling context (workspace render
 // = `wp-admin-workspaces` screen; REST = no screen). The harvest MUST therefore
 // return a non-empty set here — these assertions run unconditionally (no
 // `! empty( $records )` skip-guard) so a screen-context regression fails CI.
@@ -652,7 +652,7 @@ $T::assert_eq(
 // --- Screen-context restoration --------------------------------------------
 // `ensure_dashboard_setup()` forces the `dashboard` screen then restores the
 // prior one. The harvest above must NOT have left the global current screen
-// pointing at `dashboard` (which would corrupt the surrounding shell render /
+// pointing at `dashboard` (which would corrupt the surrounding workspace render /
 // REST request). Prior screen was null here (CLI), so it should be cleared.
 WP_Admin_Workspaces_Dashboard_Bridge::reset();
 if ( function_exists( 'set_current_screen' ) && function_exists( 'get_current_screen' ) ) {

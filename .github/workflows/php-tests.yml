@@ -37,7 +37,7 @@ jobs:
         run: npm install -g @wordpress/env
 
       # wp-env reads .wp-env.json: mounts this repo as a plugin and pulls the
-      # Gutenberg plugin (a hard runtime dependency of the shell). The shell's
+      # Gutenberg plugin (a hard runtime dependency of the workspace). The workspace's
       # build/ assets aren't needed — the plugin bootstrap bails gracefully
       # when build/index.asset.php is absent, and the PHP suites load the
       # cascade/REST classes directly.

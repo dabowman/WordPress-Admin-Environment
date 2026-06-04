@@ -10,12 +10,12 @@ The toggle is a **veto** layer over the existing trigger logic, not a sufficient
 
 ## Re-enabling from classic
 
-A user who toggles the workspace off in workspace context lands in classic with no shell UI. To avoid stranding them, `wp-admin-workspaces.php` registers a parallel **Settings → WP Admin Shell** page (`add_options_page`) that writes the same option through the same sanitize callback. So:
+A user who toggles the workspace off in workspace context lands in classic with no workspace UI. To avoid stranding them, `wp-admin-workspaces.php` registers a parallel **Settings → WP Admin Workspaces** page (`add_options_page`) that writes the same option through the same sanitize callback. So:
 
 | Where you are | How to toggle |
 |---------------|---------------|
 | Workspace     | Settings → Workspace (this screen) |
-| Classic       | Settings → WP Admin Shell (`/wp-admin/options-general.php?page=wp-admin-workspaces-workspace`) |
+| Classic       | Settings → WP Admin Workspaces (`/wp-admin/options-general.php?page=wp-admin-workspaces-workspace`) |
 
 Both write `wp_admin_workspaces_workspace_enabled` via the `wp_admin_workspaces_settings` registration group; the next page load picks the right surface.
 
@@ -29,4 +29,4 @@ Both write `wp_admin_workspaces_workspace_enabled` via the `wp_admin_workspaces_
 ## Known limitations
 
 - **Reload required.** The workspace-active gate is server-evaluated on every admin request; the JS save updates the option but doesn't re-run the gate for the current session. The reload prompt is explicit so the user opts in to the disruption.
-- **No legacy-option migration.** This toggle is independent of `wp_admin_workspaces_active_workspace` (the back-compat shell selector). Both options exist; the enabled flag overrides everything when set to false.
+- **No legacy-option migration.** This toggle is independent of `wp_admin_workspaces_active_workspace` (the back-compat workspace selector). Both options exist; the enabled flag overrides everything when set to false.

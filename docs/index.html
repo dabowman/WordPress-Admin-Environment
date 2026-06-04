@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>WP Admin Shell — a configurable, React-based WordPress admin</title>
-<meta name="description" content="WP Admin Shell replaces wp-admin with a configurable, React-based admin environment driven by a single admin.json file. Same WordPress, same data, same plugins — a different admin for different people." />
+<title>WP Admin Workspaces — a configurable, React-based WordPress admin</title>
+<meta name="description" content="WP Admin Workspaces replaces wp-admin with a configurable, React-based admin workspace driven by a single workspace.json file. Same WordPress, same data, same plugins — a different admin for different people." />
 
 <!-- Open Graph -->
 <meta property="og:type" content="website" />
-<meta property="og:title" content="WP Admin Shell" />
-<meta property="og:description" content="Replace wp-admin with a configurable, React-based admin environment driven by a single admin.json file." />
+<meta property="og:title" content="WP Admin Workspaces" />
+<meta property="og:description" content="Replace wp-admin with a configurable, React-based admin workspace driven by a single workspace.json file." />
 <meta property="og:url" content="https://dabowman.github.io/WordPress-Admin-Environment/" />
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%233858e9'/%3E%3Crect x='10' y='12' width='9' height='24' rx='2' fill='%23fff' opacity='.9'/%3E%3Crect x='23' y='12' width='15' height='10' rx='2' fill='%23fff' opacity='.55'/%3E%3Crect x='23' y='26' width='15' height='10' rx='2' fill='%23fff' opacity='.55'/%3E%3C/svg%3E" />
@@ -186,7 +186,7 @@
   <div class="wrap">
     <a class="brand" href="#top">
       <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="10" fill="#3858e9"/><rect x="10" y="12" width="9" height="24" rx="2" fill="#fff" opacity=".9"/><rect x="23" y="12" width="15" height="10" rx="2" fill="#fff" opacity=".55"/><rect x="23" y="26" width="15" height="10" rx="2" fill="#fff" opacity=".55"/></svg>
-      WP Admin Shell
+      WP Admin Workspaces
     </a>
     <nav class="links">
       <a href="#features">Features</a>
@@ -205,7 +205,7 @@
     <div class="wrap">
       <span class="pill"><span class="dot"></span> v0.1.0 · first release</span>
       <h1>One WordPress.<br><span class="grad">A different admin for everyone.</span></h1>
-      <p class="lede">WP Admin Shell replaces <code style="font-family:var(--mono);font-size:.85em">wp-admin</code> with a configurable, React-based admin environment — driven by a single <strong>admin.json</strong> file.</p>
+      <p class="lede">WP Admin Workspaces replaces <code style="font-family:var(--mono);font-size:.85em">wp-admin</code> with a configurable, React-based admin workspace — driven by a single <strong>workspace.json</strong> file.</p>
       <p class="sub">A writer, a developer, a client, and a site manager don't need the same dashboard. Declare which screens exist, how navigation is structured, the branding, and the keyboard shortcuts. Swap the file, swap the experience. Same data, same plugins, same REST API underneath.</p>
       <div class="cta">
         <a class="btn" href="#install">Get started</a>
@@ -281,7 +281,7 @@
           <p>Region templates, chrome modes, slots, the menu renderer, a default region tree, and default styles. Ships with the engine's code.</p>
         </div>
         <div class="artifact">
-          <code class="kicker">admin.json</code>
+          <code class="kicker">workspace.json</code>
           <h3>The install <em>decisions</em></h3>
           <p>Which engine, which screens, the menu tree, commands, branding, and token overrides. This is the one file you author.</p>
         </div>
@@ -296,7 +296,7 @@
         <div>
           <p class="eyebrow">The whole config</p>
           <h2>A workspace is a delta</h2>
-          <p class="intro" style="margin-bottom:0">Drop an <code style="font-family:var(--mono)">admin.json</code> at <code style="font-family:var(--mono)">wp-content/workspace.json</code>. Like theme.json over core's defaults, you declare only what changes — everything else falls through from the baseline.</p>
+          <p class="intro" style="margin-bottom:0">Drop an <code style="font-family:var(--mono)">workspace.json</code> at <code style="font-family:var(--mono)">wp-content/workspace.json</code>. Like theme.json over core's defaults, you declare only what changes — everything else falls through from the baseline.</p>
           <ul class="checks">
             <li>Pick the <strong>mobile-first engine</strong> with one key.</li>
             <li>Rename <strong>Posts → “Stories”</strong> without touching PHP.</li>
@@ -347,7 +347,7 @@
           <tr><td><code>core:desktop</code></td><td>Windowed — compositor, dock, and draggable / resizable window frames.</td></tr>
         </tbody>
       </table>
-      <p class="note" style="margin-top:16px">Shipped shells: <code style="font-family:var(--mono)">wp-admin-default</code> (mirrors stock wp-admin), <code style="font-family:var(--mono)">single-pane-demo</code>, and <code style="font-family:var(--mono)">desktop-demo</code>.</p>
+      <p class="note" style="margin-top:16px">Shipped workspaces: <code style="font-family:var(--mono)">wp-admin-default</code> (mirrors stock wp-admin), <code style="font-family:var(--mono)">single-pane-demo</code>, and <code style="font-family:var(--mono)">desktop-demo</code>.</p>
     </div>
   </section>
 
@@ -356,11 +356,11 @@
     <div class="wrap">
       <p class="eyebrow">Get started</p>
       <h2>Install in a few minutes</h2>
-      <p class="intro">The plugin ships the <code style="font-family:var(--mono)">wp-admin-default</code> baseline. With no <code style="font-family:var(--mono)">admin.json</code> present, wp-admin stays classic and untouched — the file is both the trigger and the configuration.</p>
+      <p class="intro">The plugin ships the <code style="font-family:var(--mono)">wp-admin-default</code> baseline. With no <code style="font-family:var(--mono)">workspace.json</code> present, wp-admin stays classic and untouched — the file is both the trigger and the configuration.</p>
       <div class="steps">
-        <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the shell uses private APIs only Gutenberg's allowlist exposes).</p></div>
-        <div class="step"><div class="n"></div><p>Install <strong>WP Admin Shell</strong>: upload <code>wp-admin-workspaces.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
-        <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/workspace.json</code>, e.g. <code>cp shells/single-pane-demo.json wp-content/workspace.json</code> — then edit it down to your deltas.</p></div>
+        <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the workspace uses private APIs only Gutenberg's allowlist exposes).</p></div>
+        <div class="step"><div class="n"></div><p>Install <strong>WP Admin Workspaces</strong>: upload <code>wp-admin-workspaces.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
+        <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/workspace.json</code>, e.g. <code>cp workspaces/single-pane-demo.json wp-content/workspace.json</code> — then edit it down to your deltas.</p></div>
         <div class="step"><div class="n"></div><p>Visit <code>/wp-admin/</code>. Press <code>Cmd/Ctrl + K</code> for the command palette. A <strong>Classic wp-admin</strong> escape hatch stays in the admin bar.</p></div>
       </div>
     </div>
@@ -374,7 +374,7 @@
       <p class="intro">Author-facing guides and the JSON Schemas that power editor autocomplete and validation.</p>
       <div class="docs-grid">
         <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/workspace-json-reference.md">
-          <h3>admin.json reference</h3>
+          <h3>workspace.json reference</h3>
           <p>The workspace file — every block, every key, with examples.</p>
           <span class="arrow">Open reference →</span>
         </a>
@@ -390,7 +390,7 @@
         </a>
         <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/customizing-the-core-default-workspace.md">
           <h3>Customizing the default workspace</h3>
-          <p>A worked walkthrough of tailoring the flagship <code>core:default</code> shell.</p>
+          <p>A worked walkthrough of tailoring the flagship <code>core:default</code> workspace.</p>
           <span class="arrow">Open guide →</span>
         </a>
         <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/tree/main/docs/schemas">
@@ -411,7 +411,7 @@
   <section class="band">
     <div class="wrap">
       <h2>Make the admin fit the person using it.</h2>
-      <p>Grab the source, copy a starter shell, and reshape wp-admin with one file.</p>
+      <p>Grab the source, copy a starter workspace, and reshape wp-admin with one file.</p>
       <div class="cta" style="justify-content:center">
         <a class="btn" href="https://github.com/dabowman/WordPress-Admin-Environment">Get it on GitHub</a>
         <a class="btn ghost" href="#install">Installation steps</a>
@@ -423,7 +423,7 @@
 
 <footer class="site">
   <div class="wrap">
-    <span>WP Admin Shell · v0.1.0 · pre-release. APIs and the schema may still change.</span>
+    <span>WP Admin Workspaces · v0.1.0 · pre-release. APIs and the schema may still change.</span>
     <span>
       <a href="https://github.com/dabowman/WordPress-Admin-Environment">GitHub</a> ·
       <a href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/CHANGELOG.md">Changelog</a> ·

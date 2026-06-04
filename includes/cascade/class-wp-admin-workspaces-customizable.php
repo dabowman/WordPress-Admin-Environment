@@ -2,7 +2,7 @@
 /**
  * `customizable` enforcement (spec §4.4.2).
  *
- * Each admin.json entry may declare:
+ * Each workspace.json entry may declare:
  *   - `customizable: true`        — every field on this entry is writable downstream
  *   - `customizable: false`       — entry is locked; no fields writable
  *   - `customizable: [path,...]`  — only listed dotted paths are writable
@@ -12,7 +12,7 @@
  * never enter the merged tree.
  *
  * `filter_writes` operates on a single entry. `filter_doc` walks a full
- * admin.json doc and applies the filter at the document, regions/applications
+ * workspace.json doc and applies the filter at the document, regions/applications
  * keyed-array level, the styles tree, and the v3 top-level blocks
  * (workspace / menu / screens / commands / preload / regions / routes).
  *
@@ -201,7 +201,7 @@ class WP_Admin_Workspaces_Customizable {
 		}
 
 		// Root-level scalars (name/title/description/version) are never
-		// writable by a downstream origin — they identify the shell.
+		// writable by a downstream origin — they identify the workspace.
 
 		return $out;
 	}

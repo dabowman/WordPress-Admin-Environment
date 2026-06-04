@@ -7,7 +7,7 @@
 - `wp-admin/network/theme-editor.php` (delegates to `wp-admin/theme-editor.php`)
 - `wp-admin/includes/class-wp-ms-themes-list-table.php`
 
-**Current shell coverage:** None.
+**Current workspace coverage:** None.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_network_themes`.
 
@@ -27,7 +27,7 @@ This spec describes the **semantic surface** of the network-level Themes managem
 | Parent app | None — top-level network app |
 | Sub-screens | List (default), Install, File Editor, Bulk-update iframe, Bulk-delete confirmation |
 
-The shell's existing single-site themes flow (if any) does not cover network operations. "Network enable" is a multisite-only concept layered over the standard `WP_Theme` data: a theme present on disk becomes available to a site only if it's network-enabled OR the site has it in its `allowedthemes` option (see `network-sites.md` Edit Site → Themes tab).
+The workspace's existing single-site themes flow (if any) does not cover network operations. "Network enable" is a multisite-only concept layered over the standard `WP_Theme` data: a theme present on disk becomes available to a site only if it's network-enabled OR the site has it in its `allowedthemes` option (see `network-sites.md` Edit Site → Themes tab).
 
 ---
 
@@ -60,7 +60,7 @@ Jobs to be done:
 
 **Main-site protection:** the active theme on the network's main site cannot be deleted (`error=main`).
 
-**Permission-denied state:** `wp_die()` 403 throughout. Shell renders no-access state.
+**Permission-denied state:** `wp_die()` 403 throughout. Workspace renders no-access state.
 
 ---
 
@@ -302,7 +302,7 @@ Original wp-admin URL params (list):
 - `?theme_status={status}&s={query}&paged={n}`
 - `?action={enable|disable|update-selected|delete-selected|enable-auto-update|disable-auto-update}&theme={stylesheet}`
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-themes?status=disabled&s=astra
 #/network-themes/install
@@ -370,7 +370,7 @@ Recommended shell hash:
 |---|---|---|
 | `manage_themes-network_columns` | Add columns | Replace with `fields` API |
 | `manage_themes_custom_column` | Render column cell | Same |
-| `bulk_actions-themes-network` | Add bulk actions | Shell action registry |
+| `bulk_actions-themes-network` | Add bulk actions | Workspace action registry |
 | `theme_row_meta` (filter) | Per-row meta links | Slot |
 | `network_admin_plugin_action_links_{plugin}` | Per-row action links (themes use a generic equivalent) | Same |
 | `wp_is_auto_update_enabled_for_type` (filter) | Disable auto-update UI | Document |
@@ -380,7 +380,7 @@ Recommended shell hash:
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None.
 
 ### Gaps vs. this spec
@@ -393,7 +393,7 @@ Recommended shell hash:
 | Delete-theme endpoint | Medium | Themes REST controller does not implement DELETE |
 | Theme install (search wp.org) | Medium | Reuse single-site `wp-admin/theme-install.php` flow via iframe |
 | Theme file editor | Low | Iframe acceptable; security-sensitive |
-| Status tabs with counts | High | Computed shell-side from theme list |
+| Status tabs with counts | High | Computed workspace-side from theme list |
 | Broken-theme tab | Low | `wp_get_themes(['errors' => true])` shape |
 
 ### Acceptable interim

@@ -4,9 +4,9 @@ Prose accompanying `app.json#documentation` for the route-following preview pane
 
 ## Overview
 
-PreviewPaneApp is the reference consumer of the **URL-as-coordination** pattern (spec §6.4 / V2.M4). Earlier v1 designs had a shell-level "selection bus" with explicit dispatch + subscribe channels — apps would `selectionBus.set('content', { type: 'post', id: 42 })` and other apps would subscribe. v2 removed it. Region-to-region coordination happens through URL state instead: the editor region writes `/posts/42/edit`; the preview region reads `_self` (or a named slot) and matches it against the routes block.
+PreviewPaneApp is the reference consumer of the **URL-as-coordination** pattern (spec §6.4 / V2.M4). Earlier v1 designs had a workspace-level "selection bus" with explicit dispatch + subscribe channels — apps would `selectionBus.set('content', { type: 'post', id: 42 })` and other apps would subscribe. v2 removed it. Region-to-region coordination happens through URL state instead: the editor region writes `/posts/42/edit`; the preview region reads `_self` (or a named slot) and matches it against the routes block.
 
-The result is simpler and survives cross-cutting refresh / deep-link / browser-back semantics for free. The cost is "preview" use-cases need a route pattern that uniquely identifies the previewed entity. For the bundled shells, `post-type` + `post-id` route configs cover it.
+The result is simpler and survives cross-cutting refresh / deep-link / browser-back semantics for free. The cost is "preview" use-cases need a route pattern that uniquely identifies the previewed entity. For the bundled workspaces, `post-type` + `post-id` route configs cover it.
 
 ## Architecture
 

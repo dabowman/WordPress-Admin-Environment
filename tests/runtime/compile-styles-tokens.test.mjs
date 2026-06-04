@@ -3,7 +3,7 @@
  * End-to-end: compileStyles consumes resolved tokens.json (V2.M5).
  *
  * tokens-resolver.test covers the resolver alone. This suite verifies
- * the integration: when admin.json `styles` aliases `{color.brand.500}`
+ * the integration: when workspace.json `styles` aliases `{color.brand.500}`
  * and tokens.json declares that path, compileStyles emits the literal
  * value (not the var(...) fallback).
  */
@@ -70,7 +70,7 @@ console.log( '\n— within-doc alias still wins —' );
 		color: { $type: 'color', brand: { strong: { $value: '#000000' } } },
 	} );
 	eq(
-		'styles.* alias prefers admin.json tree',
+		'styles.* alias prefers workspace.json tree',
 		compiled.top[ '--wpds-color-pri-interactive-brand-strong' ],
 		'#fafafa'
 	);

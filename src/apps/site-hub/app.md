@@ -23,14 +23,14 @@ All three controls use `render={<a href={...}/>}` so they're real anchors. WPDS 
 A non-WPDS rebuild needs:
 
 - An anchor-rendering button primitive (or just `<a>` styled to look like a button).
-- A clipboard / command-palette integration. The shell uses `@wordpress/commands` for the open() dispatch; rebuilds must wire to whatever palette they ship.
+- A clipboard / command-palette integration. The workspace uses `@wordpress/commands` for the open() dispatch; rebuilds must wire to whatever palette they ship.
 - HTML-entity decoding for the site title. WordPress stores entities (`&amp;`) and serves them rendered; raw display would show the entities.
 - Logo path resolution matching `SiteIcon`'s priority order: branding logo → REST `site_icon_url` → default mark, with plugin-relative logos prefixed by the plugin asset URL.
 - Ellipsis-in-flex CSS for the title. Without it, long titles overflow the sidebar width.
 
 ## Known limitations
 
-- **No notification badge.** wp-admin shows update counts as a badge on the admin bar; the shell omits this here.
-- **No mobile variant.** edit-site ships a separate `SiteHubMobile` with back-navigation logic (block theme → `/`, classic-with-StyleBook → `/`, else → `/pattern`, root → dashboard) and an admin-bar-aware back-arrow-vs-icon swap. The shell renders one hub for the sidebar engine.
-- **Command palette shortcut is shell-level.** The `Mod+K` binding is declared in admin.json's `bindings` block, not by this app. The hub only renders the shortcut hint.
+- **No notification badge.** wp-admin shows update counts as a badge on the admin bar; the workspace omits this here.
+- **No mobile variant.** edit-site ships a separate `SiteHubMobile` with back-navigation logic (block theme → `/`, classic-with-StyleBook → `/`, else → `/pattern`, root → dashboard) and an admin-bar-aware back-arrow-vs-icon swap. The workspace renders one hub for the sidebar engine.
+- **Command palette shortcut is workspace-level.** The `Mod+K` binding is declared in workspace.json's `bindings` block, not by this app. The hub only renders the shortcut hint.
 - **`isTransparent` prop is engine-specific.** Single-pane engine uses it; default engine doesn't. Documented as a per-engine convention rather than a stable contract.

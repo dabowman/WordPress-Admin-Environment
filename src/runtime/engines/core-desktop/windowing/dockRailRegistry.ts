@@ -4,7 +4,7 @@
  * Pluggable renderer registry for the `core:desktop-dock-app` body.
  * Plugin authors swap the entire dock rail by registering a React
  * component under a name, then point `regions.dock.config.renderer` at
- * that name in their shell's admin.json. The default name `'default'`
+ * that name in their workspace's workspace.json. The default name `'default'`
  * resolves to the two-group renderer the engine ships (launcher tiles
  * + live-window tiles).
  *
@@ -14,7 +14,7 @@
  *     imperative `mount(container)` controllers. Matches the rest of
  *     the codebase; saves the controller-lifecycle plumbing.
  *   - No multi-rail partitioning (classic core/plugin split, spatial
- *     wallpaper-icon overflow). One rail per region; shells that want
+ *     wallpaper-icon overflow). One rail per region; workspaces that want
  *     two declare two regions.
  *   - No system-tile cohort, no attention modes, no submenu items.
  *     Those land as renderer-extension data once a plugin asks for them.
@@ -30,7 +30,7 @@ import type { IWindowManager, WindowEntry } from './WindowManager';
 export interface DockRailRendererProps {
 	/**
 	 * Launcher items declared on the region's `config.items` block.
-	 * Each entry is whatever the shell author authored — typically
+	 * Each entry is whatever the workspace author authored — typically
 	 * `{ label, icon?, app?, config?, href? }`. Renderers that want
 	 * stronger typing should narrow per their own contract.
 	 */
@@ -38,7 +38,7 @@ export interface DockRailRendererProps {
 	/** Live window stack, last = topmost. */
 	stack: ReadonlyArray< WindowEntry >;
 	/**
-	 * Resolved `routes` block from the active shell config. Renderers
+	 * Resolved `routes` block from the active workspace config. Renderers
 	 * resolve `item.href` against this when an item declares no
 	 * explicit `app`.
 	 */

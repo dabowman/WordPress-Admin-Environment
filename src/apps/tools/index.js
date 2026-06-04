@@ -5,11 +5,11 @@ import { __experimentalGrid as Grid } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
 
-// Each card routes to its in-shell screen via the router (`navigate`),
+// Each card routes to its in-workspace screen via the router (`navigate`),
 // keeping the user inside the workspace chrome. `path` is the screen's
-// `path` in admin.json (the route key the kernel synthesizes), NOT a bare
+// `path` in workspace.json (the route key the kernel synthesizes), NOT a bare
 // screen id — `navigate()` operates on URL paths, so it must match the
-// resolved route exactly. The default shell wraps the legacy
+// resolved route exactly. The default workspace wraps the legacy
 // import/export/personal-data tools in `iframe:` screens at these paths;
 // Site Health is a native sibling app on the same `/tools/*` prefix.
 const TOOLS = [

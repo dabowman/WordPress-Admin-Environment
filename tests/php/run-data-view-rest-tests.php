@@ -4,7 +4,7 @@
  *
  * Pre-fix the endpoint gated against `is_user_logged_in()` only — any
  * authenticated user could read any screen's resolved DataView config,
- * even screens the user couldn't visit in the shell. The fix routes
+ * even screens the user couldn't visit in the workspace. The fix routes
  * screen-keyed requests through the per-screen permissions block; triple-
  * keyed lookups (no screen) keep the logged-in floor.
  *
@@ -74,7 +74,7 @@ class WPAS_Data_View_REST_Test_Runner {
 $T = 'WPAS_Data_View_REST_Test_Runner';
 register_shutdown_function( array( $T, 'cleanup' ) );
 
-// Pin shell + flush caches so the resolver sees the test fixture.
+// Pin workspace + flush caches so the resolver sees the test fixture.
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();

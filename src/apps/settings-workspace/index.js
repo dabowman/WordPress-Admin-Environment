@@ -18,7 +18,7 @@ import { Page } from '../_shared/Page';
  * reload is the natural prompt.
  *
  * Re-enabling from classic happens via the parallel Settings → WP Admin
- * Shell page registered in `wp-admin-workspaces.php` (same option, same
+ * Workspace page registered in `wp-admin-workspaces.php` (same option, same
  * sanitize callback, same settings group).
  */
 
@@ -93,7 +93,7 @@ export default function SettingsWorkspaceApp() {
 
 				<Text variant="body-sm">
 					{ __(
-						'To re-enable from classic wp-admin, visit Settings → WP Admin Shell.',
+						'To re-enable from classic wp-admin, visit Settings → WP Admin Workspaces.',
 						'wp-admin-workspaces'
 					) }
 				</Text>

@@ -209,7 +209,7 @@ rmdir( "$tmp/apps" );
 rmdir( "$tmp/engines" );
 rmdir( $tmp );
 
-echo "\n— Boot-time registration: shell-bundled core engine —\n";
+echo "\n— Boot-time registration: workspace-bundled core engine —\n";
 WP_Admin_Workspaces_Manifest_Registry::reset();
 $registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 $registry->register_engine(

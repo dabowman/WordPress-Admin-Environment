@@ -4,13 +4,13 @@ Prose accompanying `app.json#documentation` for the command palette contributor.
 
 ## Overview
 
-CommandPaletteApp is unusual: it renders no UI. The palette itself lives in `@wordpress/commands` (a Gutenberg package that ships a portal-rendered modal with search-as-you-type). This app's job is to **contribute commands** — register a loader with `@wordpress/commands` that turns the shell's `commands[]` + `screens[]` blocks into a flat list of palette entries.
+CommandPaletteApp is unusual: it renders no UI. The palette itself lives in `@wordpress/commands` (a Gutenberg package that ships a portal-rendered modal with search-as-you-type). This app's job is to **contribute commands** — register a loader with `@wordpress/commands` that turns the workspace's `commands[]` + `screens[]` blocks into a flat list of palette entries.
 
-The split keeps responsibilities clean: the palette UI is one thing (and Gutenberg already does it well); the command set is shell-specific (every app, route, action that wants to be commandable). Plugins can register their own commands the same way without touching this app.
+The split keeps responsibilities clean: the palette UI is one thing (and Gutenberg already does it well); the command set is workspace-specific (every app, route, action that wants to be commandable). Plugins can register their own commands the same way without touching this app.
 
 The `core:dialog` role + `core:modal` + `core:dismiss-on` platform services are declared **for the conceptual contract**, not because this app renders the modal. The kernel's region wrapper applies the modal treatment when the palette is mounted; the actual dismiss + focus-trap behavior is handled by `@wordpress/commands` internally.
 
-`core:triggerable: true` is a declaration of *eligibility*, not a binding. The actual `Mod+K` flow lives entirely inside `@wordpress/commands` — the package ships its own global keystroke listener via `@wordpress/keyboard-shortcuts` and dispatches `core/commands#open()` directly. The kernel's `triggerStore` is not in the loop. The manifest declaration exists so a host that doesn't use `@wordpress/commands` (a hypothetical alternate-palette engine, or a plugin author wiring a non-Mod+K binding) could route a kernel binding to this app via admin.json's `commands[]` block. Today, on the bundled engines, that path is unused.
+`core:triggerable: true` is a declaration of *eligibility*, not a binding. The actual `Mod+K` flow lives entirely inside `@wordpress/commands` — the package ships its own global keystroke listener via `@wordpress/keyboard-shortcuts` and dispatches `core/commands#open()` directly. The kernel's `triggerStore` is not in the loop. The manifest declaration exists so a host that doesn't use `@wordpress/commands` (a hypothetical alternate-palette engine, or a plugin author wiring a non-Mod+K binding) could route a kernel binding to this app via workspace.json's `commands[]` block. Today, on the bundled engines, that path is unused.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ Two sources, processed in order:
 
 1. **`config.commands[]` — labelled first-class entries.** v3 replacement for v2's `bindings` array. Each entry:
    - Must have a `string` `id` (non-empty), a `string` `label` (non-empty), and at least one of `invoke` / `navigate`. Skipped otherwise.
-   - Emits a descriptor with `name = 'core/admin-shell/palette-' + encodeURIComponent(id)`.
+   - Emits a descriptor with `name = 'core/admin-workspace/palette-' + encodeURIComponent(id)`.
    - `action` shape: `{ kind: 'invoke', appId }` | `{ kind: 'navigate', path }` | `{ kind: 'compound', invoke, navigate }`. Compound = both fire; invoke runs first; navigate fires only when invoke didn't claim the trigger.
    - Records the entry's `navigate` (if any) in the path-dedup set so a downstream screen entry doesn't double up.
 
@@ -31,13 +31,13 @@ Two sources, processed in order:
    - `hidden: true` → skipped.
    - Parameterized (`{param}`) or wildcard (`/*`) path → skipped.
    - Path already in dedup set (covered by a `commands[]` entry) → skipped.
-   - Emits a descriptor with `name = 'core/admin-shell/palette-' + encodeURIComponent(screenId)` and `action = { kind: 'navigate', path }`.
+   - Emits a descriptor with `name = 'core/admin-workspace/palette-' + encodeURIComponent(screenId)` and `action = { kind: 'navigate', path }`.
    - Label: `Go to <screen.label>` (translatable wrapper) or `Go to <path>` when label is missing.
 
 Two dedup layers stack:
 
 - **By path.** A command's `navigate` suppresses a screen sharing that path. Canonical identity is the URL.
-- **By emitted name.** The unified `core/admin-shell/palette-<id>` prefix means screen ids and command ids share the namespace. First-write wins on collision — the command from `commands[]` is emitted first, so the screen entry of the same id is suppressed. The check is a real safety net (commands and screens are unrelated authoring surfaces; an id collision is plausible).
+- **By emitted name.** The unified `core/admin-workspace/palette-<id>` prefix means screen ids and command ids share the namespace. First-write wins on collision — the command from `commands[]` is emitted first, so the screen entry of the same id is suppressed. The check is a real safety net (commands and screens are unrelated authoring surfaces; an id collision is plausible).
 
 React wiring (`index.js`):
 
@@ -51,7 +51,7 @@ For a host that ships its own command palette (cmdk, kbar, ninja-keys):
 - Find the palette's contributor API. Most palettes accept a static array or a hook-style loader.
 - Reuse `compileCommands.mjs` directly — it's a pure function with a translator-formatter injection point. Pass your locale-aware formatter and you get back an array of descriptors with a stable `action` discriminated union.
 - Map each descriptor's `action` to your host's event model. `invoke` → app trigger; `navigate` → router push.
-- Wire keystroke binding to the palette through your host's keybinding system. The shell ships admin.json's `commands[]` block + a kernel-level handler (`BindingsConsumer`); descriptors map 1:1 to keystroke entries.
+- Wire keystroke binding to the palette through your host's keybinding system. The workspace ships workspace.json's `commands[]` block + a kernel-level handler (`BindingsConsumer`); descriptors map 1:1 to keystroke entries.
 
 A rebuild that wants to ship its own palette UI (rather than borrow from a package) should follow the same contributor split — keep this app's job small + composable so multiple sources (commands, screens, plugins) can all add entries.
 

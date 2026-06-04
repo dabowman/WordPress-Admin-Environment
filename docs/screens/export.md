@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/export.php` + `wp-admin/includes/export.php` (the WXR generator)
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the original via `iframe:export.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:export.php`.
 
 This spec describes the **semantic surface** of the WordPress Export screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -49,7 +49,7 @@ The export does **not** include uploaded media files themselves — only their m
 
 Default `export` cap is granted to administrators only. Editors and below cannot reach the screen.
 
-**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to export the content of this site.' )`. Shell renders 403 view.
+**Permission-denied state:** core uses `wp_die( 'Sorry, you are not allowed to export the content of this site.' )`. Workspace renders 403 view.
 
 **Multisite:** no special handling — runs per-site, exports current site's content only.
 
@@ -106,7 +106,7 @@ Generator: `export_wp()` in `wp-admin/includes/export.php`. Streams to STDOUT; l
 - The closest is `GET /wp-block-editor/v1/export` (template export for block themes) — completely different artifact (theme files, not content).
 - Generation happens entirely server-side via `export_wp()`.
 
-**Gap:** to rebuild natively, the shell needs a custom REST endpoint (`POST /wp-admin-workspaces/v1/export`) that wraps `export_wp()` and streams the result. Alternatively, the existing PHP page can be invoked directly (form GET to `export.php?download=true`) — works fine even when the rest of admin is replaced.
+**Gap:** to rebuild natively, the workspace needs a custom REST endpoint (`POST /wp-admin-workspaces/v1/export`) that wraps `export_wp()` and streams the result. Alternatively, the existing PHP page can be invoked directly (form GET to `export.php?download=true`) — works fine even when the rest of admin is replaced.
 
 ---
 
@@ -214,11 +214,11 @@ Original URL pattern:
 - `/wp-admin/export.php` — form view.
 - `/wp-admin/export.php?download=true&content=posts&cat=5&post_author=2&post_start_date=2026-01&post_end_date=2026-04&post_status=publish` — download.
 
-Refresh and back-button do not preserve form state in core (`<form method="get">` GET-encodes everything but the form starts blank on each page load). Rebuild can preserve form state via shell route state.
+Refresh and back-button do not preserve form state in core (`<form method="get">` GET-encodes everything but the form starts blank on each page load). Rebuild can preserve form state via workspace route state.
 
-Recommended shell URL:
+Recommended workspace URL:
 - `#/export` — form view.
-- Submit downloads via `apiFetch` POST to a custom shell endpoint, or by triggering a same-tab `window.location.assign('export.php?download=true&...')` for the legacy path.
+- Submit downloads via `apiFetch` POST to a custom workspace endpoint, or by triggering a same-tab `window.location.assign('export.php?download=true&...')` for the legacy path.
 
 ---
 
@@ -284,7 +284,7 @@ The original uses `slideUp/slideDown` (300ms). For users with `prefers-reduced-m
 | Hook | Purpose | Recommendation |
 |---|---|---|
 | `export_args` (filter) | Modify export args before generation | **Preserve** at PHP layer |
-| `export_filters` (action, fires at end of form) | Add custom filter UI panels | Replace with shell slot `core:export.filters` |
+| `export_filters` (action, fires at end of form) | Add custom filter UI panels | Replace with workspace slot `core:export.filters` |
 | `register_post_type( …, can_export => true )` | Make a CPT exportable | **Preserve** — this is the canonical extensibility |
 | `export_wxr_skip_postmeta` (filter) | Exclude postmeta keys | Preserve at PHP layer |
 | `wxr_export_skip_commentmeta` | Exclude commentmeta | Preserve |
@@ -295,9 +295,9 @@ Plugin compatibility note: WooCommerce, BuddyPress, and other plugins extend exp
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:export.php` works in `developer-admin` shell.
+- **What works:** `iframe:export.php` works in `developer-admin` workspace.
 
 ### Gaps vs. this spec
 
@@ -315,7 +315,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, and other plugins extend exp
 ### Acceptable interim
 `iframe:export.php` is the v1 implementation. Form is small enough that a native rebuild is straightforward but low-priority — exports are infrequent (monthly or less for most sites).
 
-For shells targeting power users, a **Quick Export** command in the command palette (`Cmd+K → "Export all content"`) that triggers `export.php?download=true&content=all` is a valuable lightweight addition — no UI rebuild needed.
+For workspaces targeting power users, a **Quick Export** command in the command palette (`Cmd+K → "Export all content"`) that triggers `export.php?download=true&content=all` is a valuable lightweight addition — no UI rebuild needed.
 
 ---
 

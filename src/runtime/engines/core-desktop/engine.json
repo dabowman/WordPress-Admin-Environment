@@ -3,7 +3,7 @@
 	"id": "core:desktop",
 	"version": 3,
 	"title": "Desktop",
-	"description": "Desktop-OS engine. Admin screens open as draggable, resizable windows in a wallpapered workspace, with a dock built from the resolved admin.json navigation. Ports the desktop-mode UX onto the WP Admin Shell kernel via the `core:dynamic-children` platform service (spec §5.5) — windows are runtime-mutated child regions of the workspace region, so per-window routing, dirty-state, triggerStore, and capability gating fall out of region-ID nesting with no engine-specific plumbing.",
+	"description": "Desktop-OS engine. Admin screens open as draggable, resizable windows in a wallpapered workspace, with a dock built from the resolved workspace.json navigation. Ports the desktop-mode UX onto the WP Admin Workspaces kernel via the `core:dynamic-children` platform service (spec §5.5) — windows are runtime-mutated child regions of the workspace region, so per-window routing, dirty-state, triggerStore, and capability gating fall out of region-ID nesting with no engine-specific plumbing.",
 
 	"designSystem": "@wordpress/ui",
 

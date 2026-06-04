@@ -104,7 +104,7 @@ export default function NavigationApp( { config: navConfig = {} } ) {
  * server-side only (no client-side role map). Server-side cap gating
  * still applies on top.
  *
- * Items without a `permissions` block are visible (admin.json fallback
+ * Items without a `permissions` block are visible (workspace.json fallback
  * to admin-only is enforced server-side and reflected in the cap map).
  *
  * Lives in the host (not the shared pure menu-tree module) because it

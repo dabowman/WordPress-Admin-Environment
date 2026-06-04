@@ -17,7 +17,7 @@ import IframeApp from '../iframe-fallback';
  *   3. Full-screen-mode CSS — edit-site applies `body.is-fullscreen-mode`
  *      styles that fight any embedding container's chrome.
  *   4. Hash-router collision — edit-site's internal hash routing
- *      mutates `window.location.hash`, conflicting with the shell's
+ *      mutates `window.location.hash`, conflicting with the workspace's
  *      v2 router.
  *   5. `@wordpress/edit-site` is not in the dep-extraction
  *      `BUNDLED_PACKAGES` list and isn't a default external; setting
@@ -26,7 +26,7 @@ import IframeApp from '../iframe-fallback';
  *
  * Authors target `core:site-editor` rather than wiring iframe paths
  * directly, so the native-mount path can land in a v2.x release
- * without admin.json changes.
+ * without workspace.json changes.
  * @param {*} props
  */
 export default function SiteEditorApp( props ) {

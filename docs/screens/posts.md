@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Serves as the template for all other tier-2 specs.
 **Source PHP:** `wp-admin/edit.php` + `WP_Posts_List_Table` (`wp-admin/includes/class-wp-posts-list-table.php`)
-**Current shell coverage:** `core:posts` → `src/apps/posts/index.js` (partial — see "Gaps" below)
+**Current workspace coverage:** `core:posts` → `src/apps/posts/index.js` (partial — see "Gaps" below)
 
 This spec describes the **semantic surface** of the Posts list screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -50,7 +50,7 @@ Jobs to be done:
 | Delete any | `cap.delete_others_posts` | Trash / Delete Permanently |
 | Delete own | `cap.delete_posts` | Trash own posts |
 
-**Permission-denied state:** if user lacks `edit_posts`, the menu entry is hidden by core. If they reach the URL anyway, core shows a generic "you don't have permission" message. The shell should mirror this — render a "no access" empty state, not blank.
+**Permission-denied state:** if user lacks `edit_posts`, the menu entry is hidden by core. If they reach the URL anyway, core shows a generic "you don't have permission" message. The workspace should mirror this — render a "no access" empty state, not blank.
 
 **Multisite:** no special handling at the list level. Capability checks already incorporate site context.
 
@@ -139,7 +139,7 @@ The list table also displays per-status **counts** in the status filter row: "Al
 └─────────────────────────────────────────────────────────────┘
 ```
 
-Optional **preview pane** (right-docked) — core does not have this; the shell adds it via `preview` config. When enabled:
+Optional **preview pane** (right-docked) — core does not have this; the workspace adds it via `preview` config. When enabled:
 - Selecting a row shows post preview/edit in adjacent pane
 - Primary list region constrains to `contentWidth`
 
@@ -271,7 +271,7 @@ Original wp-admin URL params:
 - `?paged={n}` — pagination
 - `?action={action}&post={id}` — destination for row actions
 
-The shell uses hash-based routing under `#/posts` (or `#/{app-id}`). Recommended URL state:
+The workspace uses hash-based routing under `#/posts` (or `#/{app-id}`). Recommended URL state:
 ```
 #/posts?status=draft&author=2&search=hello&page=2&sort=date:desc
 ```
@@ -351,27 +351,27 @@ Undo for trash: keep last operation in memory for 5s; "Undo" reissues a `status`
 
 ## 14. Extension points (core hooks)
 
-Core list-table exposes these. Decide for each whether the shell preserves them, replaces with shell-level extensibility, or drops.
+Core list-table exposes these. Decide for each whether the workspace preserves them, replaces with workspace-level extensibility, or drops.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `manage_{post_type}_posts_columns` | Add/remove columns | **Replace** with a shell-level `fields` extensibility API on the app config |
+| `manage_{post_type}_posts_columns` | Add/remove columns | **Replace** with a workspace-level `fields` extensibility API on the app config |
 | `manage_{post_type}_posts_custom_column` | Render custom column cell | Replace with field `render` registry |
 | `manage_edit-{post_type}_sortable_columns` | Mark columns sortable | Replace with field config `enableSorting` |
-| `bulk_actions-edit-{post_type}` | Add bulk actions | Replace with shell `actions` registry, `supportsBulk: true` |
-| `views_edit-{post_type}` | Add status filter tabs | Replace with shell-level filter tab API |
-| `post_row_actions` / `page_row_actions` | Per-row action links | Replace with shell `actions` registry |
-| `restrict_manage_posts` | Filter dropdowns above table | Replace with shell-level filter API |
+| `bulk_actions-edit-{post_type}` | Add bulk actions | Replace with workspace `actions` registry, `supportsBulk: true` |
+| `views_edit-{post_type}` | Add status filter tabs | Replace with workspace-level filter tab API |
+| `post_row_actions` / `page_row_actions` | Per-row action links | Replace with workspace `actions` registry |
+| `restrict_manage_posts` | Filter dropdowns above table | Replace with workspace-level filter API |
 | `posts_clauses` / `posts_where` | Modify query | Drop — REST handles via filters or custom endpoints |
-| `quick_edit_show_taxonomy` | Quick Edit field visibility | Replace with shell field-level conditional rendering |
+| `quick_edit_show_taxonomy` | Quick Edit field visibility | Replace with workspace field-level conditional rendering |
 
-Plugin compatibility note: third-party plugins relying on the original hooks won't work in the shell. Document this prominently. Provide a migration shim only if/when ecosystem demand justifies it.
+Plugin compatibility note: third-party plugins relying on the original hooks won't work in the workspace. Document this prominently. Provide a migration shim only if/when ecosystem demand justifies it.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:posts` → `src/apps/posts/index.js`
 - **What works:** list, search, status filter (single/multi), pagination, sort by date, edit/view/trash actions, bulk trash
 - **Layout:** table (DataViews `table` type)
@@ -400,7 +400,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 | Inline navigation to filtered views (click author, click term) | Low | |
 
 ### Acceptable interim
-For v1 of any new shell config, `iframe:edit.php?post_type={type}` is acceptable as an escape hatch. Mark such configs explicitly so they're tracked for replacement.
+For v1 of any new workspace config, `iframe:edit.php?post_type={type}` is acceptable as an escape hatch. Mark such configs explicitly so they're tracked for replacement.
 
 ---
 
@@ -421,8 +421,8 @@ For v1 of any new shell config, `iframe:edit.php?post_type={type}` is acceptable
 - Bulk Edit handler (admin-ajax): `wp-admin/includes/ajax-actions.php::wp_ajax_inline_save()`
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-posts-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/posts/`
-- Current shell impl: `src/apps/posts/index.js`
-- Shell config example: `shells/content-author.json`
+- Current workspace impl: `src/apps/posts/index.js`
+- Workspace config example: `workspaces/content-author.json`
 
 ---
 

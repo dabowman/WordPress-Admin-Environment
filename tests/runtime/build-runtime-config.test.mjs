@@ -10,7 +10,7 @@
  *   - synthesizeDefaultRoute — workspace.default-screen → path, with fallback
  *   - compileCommands       — dedupe by id (later wins)
  *   - translateIframeRef    — iframe:<slug> → core:iframe-fallback + config.url
- *   - buildRuntimeConfig    — orchestrator + e2e over every bundled shell
+ *   - buildRuntimeConfig    — orchestrator + e2e over every bundled workspace
  *
  * Run: `node tests/runtime/build-runtime-config.test.mjs` (chained from
  * `npm run test:runtime`).
@@ -422,8 +422,8 @@ ok(
 	! ( 'menu-renderer' in builtBadRenderer )
 );
 
-// ── e2e — every bundled shell against its engine manifest ───────────
-console.log( '\n— e2e: bundled shells —\n' );
+// ── e2e — every bundled workspace against its engine manifest ───────────
+console.log( '\n— e2e: bundled workspaces —\n' );
 
 function loadEngineManifest( engineId ) {
 	// `core:default` → engines/core-default/engine.json
@@ -442,12 +442,12 @@ const shellFiles = readdirSync( shellDir ).filter( ( f ) =>
 	f.endsWith( '.json' )
 );
 for ( const file of shellFiles.sort() ) {
-	const shell = JSON.parse(
+	const workspace = JSON.parse(
 		readFileSync( resolve( shellDir, file ), 'utf8' )
 	);
-	const engineId = shell.engine || 'core:default';
+	const engineId = workspace.engine || 'core:default';
 	const manifest = loadEngineManifest( engineId );
-	const rc = buildRuntimeConfig( shell, manifest );
+	const rc = buildRuntimeConfig( workspace, manifest );
 
 	ok( `${ file }: engine resolves`, rc.engine === engineId, rc.engine );
 	ok(

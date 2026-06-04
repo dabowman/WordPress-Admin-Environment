@@ -2,7 +2,7 @@
 /**
  * Field-aware merge engine for the cascade resolver.
  *
- * Mirrors `WP_Theme_JSON_Resolver`'s merge semantics adapted to admin.json:
+ * Mirrors `WP_Theme_JSON_Resolver`'s merge semantics adapted to workspace.json:
  *   - scalars         → replace
  *   - objects (assoc) → deep merge
  *   - keyed arrays    → merge by id/slug/name (override matches, append novel)
@@ -69,7 +69,7 @@ class WP_Admin_Workspaces_Merge {
 	/**
 	 * Authoritative field-aware merge — enumeration in `over` defines
 	 * the new canonical list. Use this when `over` is a *trusted* origin
-	 * (core/engine/plugin) declaring the shell's structure. Anything in
+	 * (core/engine/plugin) declaring the workspace's structure. Anything in
 	 * `base` not echoed by `over`'s keyed-array enumeration is
 	 * tombstoned, so later additive merges from consumer origins cannot
 	 * resurrect it. Tombstones are always honored.

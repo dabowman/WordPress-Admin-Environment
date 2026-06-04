@@ -13,10 +13,10 @@ registerIcons( iconTable, { fallback: fallbackIcon } );
  *   - P2.T1: scaffolding (engine.json templates, Layout, icon table).
  *   - P2.T2: WindowManager + Window frame + dock; drag, 8-handle resize,
  *     snap-to-edge; live-window dock tiles for minimize restore.
- *   - P2.T5: `compileStyles` hook maps admin.json
+ *   - P2.T5: `compileStyles` hook maps workspace.json
  *     `styles.chrome.*` slot overrides into CSS variables scoped to the
  *     kernel's ThemeProvider wrapper. `engine.json#default-styles`
- *     carries the desktop palette so consuming shells inherit. No
+ *     carries the desktop palette so consuming workspaces inherit. No
  *     `ThemeProvider` field — kernel renders this engine inside a
  *     neutral pass-through wrapper. Bundled apps inside windows still
  *     consume `--wpds-*` tokens; those resolve via the apps' own

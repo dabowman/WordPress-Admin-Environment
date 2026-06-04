@@ -4,7 +4,7 @@
 	"$wpds": "6.9",
 	"name": "desktop-demo",
 	"title": "Desktop demo (core:desktop engine)",
-	"description": "Demo shell exercising the windowed desktop engine. The three persistent regions (wallpaper, workspace, dock) map to engine templates of the same names. Workspace hosts the compositor app and accepts runtime-mutated child regions (one per open window) via the `core:dynamic-children` platform service. The dock reads its launcher tiles from the regions escape-hatch config; clicking a tile dispatches `openWindow` to the compositor.",
+	"description": "Demo workspace exercising the windowed desktop engine. The three persistent regions (wallpaper, workspace, dock) map to engine templates of the same names. Workspace hosts the compositor app and accepts runtime-mutated child regions (one per open window) via the `core:dynamic-children` platform service. The dock reads its launcher tiles from the regions escape-hatch config; clicking a tile dispatches `openWindow` to the compositor.",
 	"user-switchable": true,
 	"engine": "core:desktop",
 	"default-screen": "posts",
