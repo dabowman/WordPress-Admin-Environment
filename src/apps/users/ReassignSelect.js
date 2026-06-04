@@ -45,10 +45,22 @@ export default function ReassignSelect( { targets, value, setValue } ) {
 	const options = useMemo( () => {
 		const list = ( records ?? [] )
 			.filter( ( record ) => ! targetIds.has( record.id ) )
-			.map( ( record ) => ( {
-				value: record.id,
-				label: decodeEntities( record.name || '' ),
-			} ) );
+			.map( ( record ) => {
+				const name = decodeEntities( record.name || '' );
+				return {
+					value: record.id,
+					// Mark the acting user — the default reassign target — so it's
+					// always identifiable, not only in the unshift-fallback path.
+					label:
+						record.id === currentUserId
+							? sprintf(
+									/* translators: %s: the acting user's display name. */
+									__( '%s (you)', 'wp-admin-workspaces' ),
+									name
+							  )
+							: name,
+				};
+			} );
 
 		// Guarantee the acting user is selectable even if they fall outside the
 		// first page of candidates (the modal defaults the target to them).
@@ -85,7 +97,9 @@ export default function ReassignSelect( { targets, value, setValue } ) {
 				value: String( option.value ),
 				label: option.label,
 			} ) ) }
-			onChange={ ( next ) => setValue( Number( next ) ) }
+			onChange={ ( next ) =>
+				setValue( next ? Number( next ) : currentUserId )
+			}
 			__nextHasNoMarginBottom
 		/>
 	);
