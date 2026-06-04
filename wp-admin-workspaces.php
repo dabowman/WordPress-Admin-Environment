@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name: WP Admin Shell
+ * Plugin Name: WP Admin Workspaces
  * Plugin URI: https://github.com/dabowman/WordPress-Admin-Environment
  * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
- * Author: WP Admin Shell Contributors
+ * Author: WP Admin Workspaces Contributors
  * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -26,19 +26,19 @@ defined( 'ABSPATH' ) || exit;
 //   @wordpress/ui / @wordpress/dataviews. Only the Gutenberg plugin's
 //   wp-private-apis override whitelists them, so Gutenberg is required —
 //   without it every overlay component throws at module-load and the
-//   shell renders empty.
+//   workspace renders empty.
 // - WordPress >= 7.0: core bundles @wordpress/theme AND ships a
 //   wp-private-apis allowlist that includes @wordpress/theme,
 //   @wordpress/ui and @wordpress/dataviews (verified against the 7.0
 //   release — wp-includes/js/dist/private-apis.js
 //   CORE_MODULES_USING_PRIVATE_APIS). The opt-in consent string is
-//   unchanged, so the shell's bundled overlay components unlock against
+//   unchanged, so the workspace's bundled overlay components unlock against
 //   core's own wp.privateApis and Gutenberg is no longer required.
 //
 // Surface a clear notice when neither path is satisfied instead of
-// letting the shell render blank.
+// letting the workspace render blank.
 /**
- * Whether the WordPress version supplies the private-API allowlist the shell
+ * Whether the WordPress version supplies the private-API allowlist the workspace
  * needs in core (i.e. the Gutenberg plugin is no longer required).
  *
  * @param string|null $version WordPress version to test. Defaults to the
@@ -53,7 +53,7 @@ function wp_admin_workspaces_core_supplies_private_apis( $version = null ) {
 }
 
 /**
- * Whether the shell's runtime private-API dependency is satisfied.
+ * Whether the workspace's runtime private-API dependency is satisfied.
  *
  * Met when either WordPress core supplies the allowlist (7.0+) or the
  * Gutenberg plugin is active (its `wp-private-apis` override whitelists the
@@ -92,7 +92,7 @@ function wp_admin_workspaces_dependencies_met_from( $core_supplies, $gutenberg_p
 add_action( 'admin_notices', function () {
 	if ( ! wp_admin_workspaces_dependencies_met() ) {
 		echo '<div class="notice notice-error"><p>';
-		echo esc_html__( 'WP Admin Shell requires either WordPress 7.0+ or the Gutenberg plugin. The shell uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available.', 'wp-admin-workspaces' );
+		echo esc_html__( 'WP Admin Workspaces requires either WordPress 7.0+ or the Gutenberg plugin. The workspace uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available.', 'wp-admin-workspaces' );
 		echo '</p></div>';
 	}
 } );
@@ -143,7 +143,7 @@ add_action( 'init', function () {
 	}
 
 	if ( $current_version < 1 ) {
-		// Step 1 — pre-MVP active-config → MVP active-shell write-copy.
+		// Step 1 — pre-MVP active-config → MVP active-workspace write-copy.
 		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
 			$legacy = get_option( 'wp_admin_shell_active_config', '' );
 			if ( $legacy !== '' ) {
@@ -279,14 +279,14 @@ function wp_admin_workspaces_register_template( $engine_id, $template_id, $templ
  * field; a `plugin:{slug}/{name}` id resolves to a React component a
  * plugin supplies. This declares the id + the script handle that
  * registers that component (`window.wpAdminWorkspaces.registerMenuRenderer`).
- * The shell enqueues the script on the admin-shell page.
+ * The workspace enqueues the script on the admin-workspace page.
  *
  * The renderer component receives `{ items, currentPrimary, navConfig }`
  * — the host-pruned menu tree, the active URL primary path, and the
  * per-region nav config — and returns React.
  *
  * Timing: register the script handle (`wp_register_script`, with
- * `wp-admin-workspaces` as a dependency) before the shell page renders, then
+ * `wp-admin-workspaces` as a dependency) before the workspace page renders, then
  * call this from `admin_enqueue_scripts` or earlier.
  *
  * @param string $renderer_id Renderer id (`plugin:{slug}/{name}`).
@@ -298,12 +298,12 @@ function wp_admin_workspaces_register_menu_renderer( $renderer_id, $args ) {
 }
 
 /**
- * Register a complete shell programmatically (spec §13 #6). Use when
- * a shell's shape is computed at runtime (per role, per feature flag,
- * etc.) rather than stored on disk under `shells/`.
+ * Register a complete workspace programmatically (spec §13 #6). Use when
+ * a workspace's shape is computed at runtime (per role, per feature flag,
+ * etc.) rather than stored on disk under `workspaces/`.
  *
- * The registered shell participates in the same cascade as file
- * shells: site/role/user origins still merge on top.
+ * The registered workspace participates in the same cascade as file
+ * workspaces: site/role/user origins still merge on top.
  *
  * @param string $slug      Unique slug.
  * @param array  $admin_json Full admin.json document.
@@ -321,8 +321,8 @@ function wp_admin_workspaces_register_workspace( $slug, $admin_json ) {
  * that previously called `next_admin_register_menu_item()` rename to
  * `wp_admin_workspaces_register_menu_item()` and drop their inline
  * `current_user_can()` gates — the `capability` arg flows through the
- * shell's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
- * `parent`, `parent_type`, `position`) carry over 1:1; the shell adds
+ * workspace's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
+ * `parent`, `parent_type`, `position`) carry over 1:1; the workspace adds
  * an optional `region` arg (defaults to the first `core:navigation`
  * region in the resolved tree).
  *
@@ -357,7 +357,7 @@ function wp_admin_workspaces_register_menu_item( $id, $args ) {
  * `app` replaces `content_module`, `static_data` is folded into `config`
  * for forward compatibility (explicit `config` keys win on collision),
  * and `gc_time` is accepted but ignored (TanStack-specific cache GC,
- * no shell equivalent — emits a one-time `WP_DEBUG` notice).
+ * no workspace equivalent — emits a one-time `WP_DEBUG` notice).
  *
  * Timing: same as `wp_admin_workspaces_register_menu_item()` — call from
  * `init` priority 9 or earlier so the cascade resolver picks the route
@@ -376,10 +376,10 @@ function wp_admin_workspaces_register_route( $path, $args ) {
 /**
  * Manifest registration on init.
  *
- * Two phases at priority 8 (before main shell init at 10) so manifests
+ * Two phases at priority 8 (before main workspace init at 10) so manifests
  * are available when the kernel's inline-script handoff is composed:
  *
- *  1. Shell-bundled core manifests — registered explicitly. App
+ *  1. Workspace-bundled core manifests — registered explicitly. App
  *     manifests live under `src/apps/<name>/app.json`, engine
  *     manifests under `src/runtime/engines/<name>/engine.json` —
  *     co-located with their JS source rather than at the convention
@@ -395,7 +395,7 @@ function wp_admin_workspaces_register_route( $path, $args ) {
 add_action( 'init', function () {
 	$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
-	// 1. Shell-bundled core manifests. Co-located with their JS source
+	// 1. Workspace-bundled core manifests. Co-located with their JS source
 	// rather than at the plugin-root convention path. `discover()`
 	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`;
 	// `src/` covers all bundled apps, `src/runtime/` covers the engines
@@ -403,7 +403,7 @@ add_action( 'init', function () {
 	$registry->discover( WP_ADMIN_WORKSPACES_PATH . 'src/' );
 	$registry->discover( WP_ADMIN_WORKSPACES_PATH . 'src/runtime/' );
 
-	// 2. Convention-path discovery for the shell plugin itself + plugins
+	// 2. Convention-path discovery for the workspace plugin itself + plugins
 	// extending the discovery surface.
 	$registry->discover( WP_ADMIN_WORKSPACES_PATH );
 
@@ -416,7 +416,7 @@ add_action( 'init', function () {
 }, 8 );
 
 // Workspace-as-primary-entry hijack. When a workspace is active (see
-// wp_admin_workspaces_is_active()), the shell takes over the admin
+// wp_admin_workspaces_is_active()), the workspace takes over the admin
 // root (`/wp-admin/`, `index.php`, bare `admin.php`) at admin_init
 // priority 0 — there is no longer a `?page=wp-admin-workspaces` menu entry.
 // Classic stays reachable via the allowlist + the classic-mode cookie.
@@ -430,7 +430,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-clas
 WP_Admin_Workspaces_Classic_Mode::init();
 
 /**
- * Register a classic-wp-admin Settings page (Settings → WP Admin Shell)
+ * Register a classic-wp-admin Settings page (Settings → WP Admin Workspaces)
  * that mirrors the workspace's `core:settings-workspace` screen. Without
  * this, a user who toggles the workspace off would have no UI to turn it
  * back on — they'd be stuck in classic with no entry point.
@@ -441,8 +441,8 @@ WP_Admin_Workspaces_Classic_Mode::init();
  */
 add_action( 'admin_menu', function () {
 	add_options_page(
-		__( 'WP Admin Shell', 'wp-admin-workspaces' ),
-		__( 'WP Admin Shell', 'wp-admin-workspaces' ),
+		__( 'WP Admin Workspaces', 'wp-admin-workspaces' ),
+		__( 'WP Admin Workspaces', 'wp-admin-workspaces' ),
 		'manage_options',
 		'wp-admin-workspaces-workspace',
 		'wp_admin_workspaces_render_workspace_settings_page'
@@ -467,7 +467,7 @@ function wp_admin_workspaces_render_workspace_settings_page() {
 	$enabled = (bool) get_option( 'wp_admin_workspaces_enabled', true );
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-workspaces' ); ?></h1>
+		<h1><?php esc_html_e( 'WP Admin Workspaces', 'wp-admin-workspaces' ); ?></h1>
 		<form method="post" action="options.php">
 			<?php settings_fields( 'wp_admin_workspaces_settings' ); ?>
 			<table class="form-table" role="presentation">
@@ -490,12 +490,12 @@ function wp_admin_workspaces_render_workspace_settings_page() {
 }
 
 /**
- * Enqueue shell assets for a workspace takeover request.
+ * Enqueue workspace assets for a workspace takeover request.
  *
  * Runs on `admin_enqueue_scripts` during the hijack's admin-header
  * render (and is harmless elsewhere because it self-gates). The
  * `$hook` arg is ignored — `wp_admin_workspaces_is_active_request()` is the
- * sole gate now that the shell mounts at the admin root rather than a
+ * sole gate now that the workspace mounts at the admin root rather than a
  * registered page.
  *
  * @param string $hook Admin page hook suffix (unused).
@@ -547,7 +547,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 
 	// REST preload (spec §13 #9). Cascade-resolved `preload[]` paths
 	// hydrate through `rest_preload_api_request` and ship as inline
-	// script on `wp-api-fetch` before the shell bundle runs. Eliminates
+	// script on `wp-api-fetch` before the workspace bundle runs. Eliminates
 	// cold-mount round-trips for `useEntityRecord('root','user',me)`,
 	// `loadPostTypeEntities`, and similar resolvers.
 	WP_Admin_Workspaces_Preload::inject();
@@ -617,7 +617,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'siteName'      => get_bloginfo( 'name' ),
 		'workspaces'        => wp_admin_workspaces_get_available_workspaces(),
 		// True when a wp-content/workspace.json override is active — it wins over
-		// the active-shell option, so the shell switcher hides + switchWorkspace()
+		// the active-workspace option, so the workspace switcher hides + switchWorkspace()
 		// refuses (writing the option would be a silent no-op).
 		'fileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
 		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
@@ -625,7 +625,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
 		// JS shims default to `NODE_ENV !== 'production'` so prod builds
 		// stay silent. Site admins with `WP_DEBUG` on get JS warnings
-		// even when consuming a minified shell bundle. Removed in v3.1
+		// even when consuming a minified workspace bundle. Removed in v3.1
 		// when the shims themselves go away.
 		'debug'         => defined( 'WP_DEBUG' ) && WP_DEBUG,
 		'user'          => array(
@@ -650,7 +650,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// `compileStyles` consumes this when resolving non-`styles.*`
 		// curly-brace aliases in admin.json `styles`. Token serialization
 		// is skipped entirely when the resolved styles tree references
-		// zero token aliases — the DTCG layer is dead weight for shells
+		// zero token aliases — the DTCG layer is dead weight for workspaces
 		// that only set seeds + slot overrides. The empty-path cast to
 		// stdClass keeps the JS shape stable: `wp_json_encode( array() )`
 		// emits `[]`, but the kernel + downstream typedef `tokens` as an
@@ -662,13 +662,13 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// `modes` block is walked for `extends` chains (depth-limited),
 		// then the `wp_admin_workspaces_engine_modes_{engineId}` filter runs
 		// so plugins can contribute additional modes. Empty object when
-		// no engine is resolved (degenerate; the shell would fail to
+		// no engine is resolved (degenerate; the workspace would fail to
 		// mount upstream of this anyway).
 		'engineModes'   => $active_engine_manifest
 			? WP_Admin_Workspaces_Modes::resolve_engine_modes( $active_engine_manifest )
 			: WP_Admin_Workspaces_Modes::synthesize_default_catalog(),
 		// #128 — admin-bar runtime harvest. Plugin admin-bar nodes the
-		// shell doesn't own first-class (site-hub / user-menu / +New are
+		// workspace doesn't own first-class (site-hub / user-menu / +New are
 		// skipped), folded submenus → dropdowns. `core:toolbar-actions`
 		// reads this global. Empty array when no plugin registers a node.
 		'adminBar'      => WP_Admin_Workspaces_Chrome_Harvest::harvest_admin_bar(),
@@ -676,7 +676,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// classic). `core:notices-banner` renders it alongside its
 		// `@wordpress/notices` source. Empty string when none fire.
 		// Documented limitation: only GLOBAL notices that fire on the
-		// shell's own page load are captured (per-screen notices keyed on
+		// workspace's own page load are captured (per-screen notices keyed on
 		// `$pagenow` don't fire) — see the harvest class docblock.
 		'adminNotices'  => WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices(),
 	) ) . ';', 'before' );
@@ -696,8 +696,8 @@ add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
  *
  * Five origins (core / plugin / site / role / user) are loaded, filtered,
  * and merged into a single resolved doc. The legacy single-file loader is
- * gone — every shell file goes through the same pipeline so behavior is
- * uniform whether the shell ships with the plugin, lives in DB options,
+ * gone — every workspace file goes through the same pipeline so behavior is
+ * uniform whether the workspace ships with the plugin, lives in DB options,
  * or is contributed by a programmatic registration.
  */
 function wp_admin_workspaces_get_active_config() {
@@ -711,7 +711,7 @@ function wp_admin_workspaces_get_active_config() {
  * the classic-mode escape hatch. True when EITHER:
  *   - a valid `wp-content/workspace.json` override file is present, OR
  *   - the legacy `wp_admin_workspaces_active_workspace` option was explicitly
- *     written (back-compat for installs that selected a shell before the
+ *     written (back-compat for installs that selected a workspace before the
  *     file-based trigger landed).
  *
  * A fresh install with neither returns false, so the workspace never
@@ -721,7 +721,7 @@ function wp_admin_workspaces_get_active_config() {
  */
 function wp_admin_workspaces_is_active() {
 	// Explicit OFF wins over file/legacy triggers. Settings → Workspace
-	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
+	// (workspace) and Settings → WP Admin Workspaces (classic) surface this as a
 	// checkbox; the option defaults to enabled, so a fresh install with a
 	// file present still flips active true.
 	if ( ! get_option( 'wp_admin_workspaces_enabled', true ) ) {
@@ -748,7 +748,7 @@ function wp_admin_workspaces_is_active_request() {
 /**
  * Sanitize + validate the wp_admin_workspaces_active_workspace option write.
  *
- * Returns the sanitized slug if a matching shell file exists; returns
+ * Returns the sanitized slug if a matching workspace file exists; returns
  * the previous option value (or empty string for the first write)
  * when the slug is unknown. Empty string passes through so the
  * resolver's fallback chain still resolves (legacy active_config →
@@ -771,8 +771,8 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
 		'wp_admin_workspaces_active_workspace',
 		'wp_admin_workspaces_unknown_shell',
 		sprintf(
-			/* translators: %s: shell slug */
-			__( 'Unknown shell: "%s". The previous active shell was kept.', 'wp-admin-workspaces' ),
+			/* translators: %s: workspace slug */
+			__( 'Unknown workspace: "%s". The previous active workspace was kept.', 'wp-admin-workspaces' ),
 			esc_html( $sanitized )
 		),
 		'error'
@@ -791,7 +791,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
  * looks up dynamically.
  *
  * Cost: each unique declared cap costs one `current_user_can()` call.
- * A 50-app shell with 30 unique caps = 30 cap checks per page load on
+ * A 50-app workspace with 30 unique caps = 30 cap checks per page load on
  * a cold resolver-cache miss. The M2.7 resolver cache memoizes the
  * entire resolved config + cap precomputation across requests, so this
  * cost only fires when origin signals (option / user-meta / file-mtime)
@@ -826,7 +826,7 @@ function wp_admin_workspaces_prune_config_for_user( $config, $user_id ) {
 
 	/**
 	 * Escape hatch — return false to ship the full unpruned config (e.g. to
-	 * debug a shell whose screens vanish unexpectedly). Default true.
+	 * debug a workspace whose screens vanish unexpectedly). Default true.
 	 *
 	 * @param bool  $prune   Whether to prune.
 	 * @param array $config  The resolved doc.
@@ -1066,7 +1066,7 @@ function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
  * string leaf matches the alias pattern `{<path>}` where `<path>` does
  * NOT start with `styles.` (within-doc aliases are resolved without
  * touching the DTCG tokens table). Used to skip token serialization when
- * the shell ships seeds + slot overrides only — the DTCG layer would be
+ * the workspace ships seeds + slot overrides only — the DTCG layer would be
  * dead weight on the wire.
  *
  * Contract: DTCG aliases are valid ONLY under `admin.json#styles`. App
@@ -1117,7 +1117,7 @@ function wp_admin_workspaces_tree_has_token_alias( $node ) {
 }
 
 /**
- * Register the shell settings.
+ * Register the workspace settings.
  *
  * Also extend core `general` + `reading` options so the Settings apps can
  * read/write them via /wp/v2/settings. Core registers blogname/blogdescription/
@@ -1131,17 +1131,17 @@ function wp_admin_workspaces_tree_has_token_alias( $node ) {
  * filter below, since it has no dedicated REST-registerable option.
  */
 add_action( 'init', function () {
-	// Active shell (canonical v1 key). Sole setting on the
+	// Active workspace (canonical v1 key). Sole setting on the
 	// `wp_admin_workspaces_settings` page-form group so options.php doesn't
 	// NULL-out adjacent options when the form posts.
 	//
 	// Sanitize-and-validate: core's sanitize_file_name fatals on NULL
 	// since PHP 8.1 (see wp_is_valid_utf8 in /wp-includes/utf8.php), so
 	// the (string) coercion is required. Then verify the sanitized
-	// slug corresponds to a shell file on disk — unknown slugs return
+	// slug corresponds to a workspace file on disk — unknown slugs return
 	// the previous value, preserving the working state instead of
-	// putting the admin in a "Shell configuration not found" state on
-	// the next load. WP-CLI `wp admin-shell activate <slug>` and the
+	// putting the admin in a "Workspace configuration not found" state on
+	// the next load. WP-CLI `wp admin-workspace activate <slug>` and the
 	// JS `switchWorkspace()` both pre-validate, but this is the
 	// belt-and-suspenders against direct option writes (e.g. via
 	// `wp option update`).
@@ -1359,7 +1359,7 @@ add_action( 'init', function () {
 
 	// Thread depth clamps to [1, thread_comments_depth_max]. Core's default max
 	// is 10 (filterable via `thread_comments_depth_max`); honor the live filter
-	// server-side so a theme raising the max still validates. The shell's UI
+	// server-side so a theme raising the max still validates. The workspace's UI
 	// hardcodes 10 as a documented parity caveat (no read endpoint for the max).
 	// As above, the clamp is the sole authority — no schema `minimum` (it would
 	// 400 a sub-floor write before the sanitize clamp-up to 1 could run).
@@ -1382,7 +1382,7 @@ add_action( 'init', function () {
 			'default' => 'G',
 		),
 		'avatar_default'        => array(
-			// Core's built-in set (filterable via `avatar_defaults`). The shell
+			// Core's built-in set (filterable via `avatar_defaults`). The workspace
 			// uses this fixed set as a documented parity caveat — themes adding
 			// defaults via the filter won't appear in the workspace picker.
 			'enum'    => array(
@@ -1622,9 +1622,9 @@ function wp_admin_workspaces_get_settings_general_data() {
 }
 
 /**
- * List available shell configurations from the shells/ directory plus
- * any shells contributed via `wp_admin_workspaces_register_workspace()`. When a
- * programmatic registration shares a slug with a file-based shell, the
+ * List available workspace configurations from the workspaces/ directory plus
+ * any workspaces contributed via `wp_admin_workspaces_register_workspace()`. When a
+ * programmatic registration shares a slug with a file-based workspace, the
  * programmatic version wins (mirrors resolver precedence).
  */
 function wp_admin_workspaces_get_available_workspaces() {

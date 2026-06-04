@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Cloud-environment setup for WP Admin Shell (Claude Code on the web).
+# Cloud-environment setup for WP Admin Workspaces (Claude Code on the web).
 #
 # This file is committed to the repo so it stays version-controlled. Paste this
 # ONE LINE into the Setup script box at claude.ai/code ▸ environment:

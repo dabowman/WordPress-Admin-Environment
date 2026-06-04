@@ -32,7 +32,7 @@ The Details action uses DataViews' `RenderModal` shape — DataViews owns the fo
 ThemesApp consumes the dataView primitive (spec §13 #7). The cascade flow mirrors PostsApp's:
 
 1. **Baseline** lives in `app.json#dataView`. `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
-2. **Admin.json overrides** under `settings.dataViews.root.theme.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline.
+2. **workspace.json overrides** under `settings.dataViews.root.theme.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline.
 3. **Filter overrides** run last via `wp_admin_workspaces_data_view_config_root_theme` (`..._{$variant}` when present). Useful for dynamic mutations that JSON can't express.
 4. **ThemesApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminWorkspaces.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-workspaces/v1/data-view?screen=<id>`.
 

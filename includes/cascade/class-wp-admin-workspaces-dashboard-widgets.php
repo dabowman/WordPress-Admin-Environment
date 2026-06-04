@@ -372,7 +372,7 @@ add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
 		// request (cache miss after workspace switch, test harness, etc.), a
 		// bare `apps[] []=` would duplicate the entry. Check for an
 		// existing entry with the same id and skip when present.
-		// Admin.json-authored entries also win against this contribution
+		// workspace.json-authored entries also win against this contribution
 		// via the same id — first-write wins.
 		$entry_id = $record['entry_id'];
 		$already_present = false;

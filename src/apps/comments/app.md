@@ -30,7 +30,7 @@ The comment content cell uses `dangerouslySetInnerHTML` rather than text-only re
 CommentsApp consumes the dataView primitive (spec §13 #7). The cascade flow:
 
 1. **Baseline** lives in `app.json#dataView` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
-2. **Admin.json overrides** under `settings.dataViews.root.comment.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins can swap columns, change default page size, hide actions, or add custom moderation actions without forking the app.
+2. **workspace.json overrides** under `settings.dataViews.root.comment.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins can swap columns, change default page size, hide actions, or add custom moderation actions without forking the app.
 3. **Filter overrides** run last via `wp_admin_workspaces_data_view_config_root_comment` (always fires) plus `wp_admin_workspaces_data_view_config_root_comment_<variant>` (fires when `variant !== '_default'`). Useful for dynamic mutations (per-request, per-user) that JSON can't express.
 4. **CommentsApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminWorkspaces.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-workspaces/v1/data-view?screen=<id>` REST.
 

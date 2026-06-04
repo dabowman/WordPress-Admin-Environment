@@ -262,34 +262,34 @@ echo "\n— private-API dependency gate —\n";
 // WordPress 7.0+ ships the wp-private-apis allowlist (and @wordpress/theme)
 // in core, so the Gutenberg plugin is no longer required. < 7.0 still needs
 // it. The boundary is injectable for this assertion.
-$T::ok( 'WP 6.7 does NOT supply private-apis in core', wp_admin_shell_core_supplies_private_apis( '6.7' ) === false );
-$T::ok( 'WP 6.9 does NOT supply private-apis in core', wp_admin_shell_core_supplies_private_apis( '6.9' ) === false );
-$T::ok( 'WP 6.9.2 (patch) still excluded', wp_admin_shell_core_supplies_private_apis( '6.9.2' ) === false );
-$T::ok( 'WP 7.0 supplies private-apis in core', wp_admin_shell_core_supplies_private_apis( '7.0' ) === true );
-$T::ok( 'WP 7.0.1 (patch) included', wp_admin_shell_core_supplies_private_apis( '7.0.1' ) === true );
-$T::ok( 'WP 7.1 included', wp_admin_shell_core_supplies_private_apis( '7.1' ) === true );
+$T::ok( 'WP 6.7 does NOT supply private-apis in core', wp_admin_workspaces_core_supplies_private_apis( '6.7' ) === false );
+$T::ok( 'WP 6.9 does NOT supply private-apis in core', wp_admin_workspaces_core_supplies_private_apis( '6.9' ) === false );
+$T::ok( 'WP 6.9.2 (patch) still excluded', wp_admin_workspaces_core_supplies_private_apis( '6.9.2' ) === false );
+$T::ok( 'WP 7.0 supplies private-apis in core', wp_admin_workspaces_core_supplies_private_apis( '7.0' ) === true );
+$T::ok( 'WP 7.0.1 (patch) included', wp_admin_workspaces_core_supplies_private_apis( '7.0.1' ) === true );
+$T::ok( 'WP 7.1 included', wp_admin_workspaces_core_supplies_private_apis( '7.1' ) === true );
 // Conservative on pre-release builds: 7.0 betas/RCs sort below 7.0 final, so
 // they fall back to the Gutenberg-plugin path (which still works there).
-$T::ok( 'WP 7.0-beta1 falls below 7.0 final (Gutenberg fallback)', wp_admin_shell_core_supplies_private_apis( '7.0-beta1' ) === false );
+$T::ok( 'WP 7.0-beta1 falls below 7.0 final (Gutenberg fallback)', wp_admin_workspaces_core_supplies_private_apis( '7.0-beta1' ) === false );
 
 // The default dev/CI container runs WP 7.0+ (.wp-env `core: null` = latest
 // stable, and 7.0 is GA). Assert that directly — both that core supplies the
 // allowlist AND that dependencies_met() is therefore satisfied without
 // Gutenberg. This fails LOUDLY if CI ever resolves to < 7.0 (the scenario where
-// removing Gutenberg from .wp-env.json would silently render the shell empty),
+// removing Gutenberg from .wp-env.json would silently render the workspace empty),
 // turning the environment assumption into a guarded invariant rather than a
 // no-op. To exercise the < 7.0 Gutenberg-fallback path, pin an older `core` and
 // add `gutenberg` back per CLAUDE.md — that intentional deviation flips these.
-$T::ok( 'dev/CI container supplies private-apis in core (WP >= 7.0)', wp_admin_shell_core_supplies_private_apis() === true );
-$T::ok( 'dependencies_met true on a 7.0+ container without Gutenberg', wp_admin_shell_dependencies_met() === true );
+$T::ok( 'dev/CI container supplies private-apis in core (WP >= 7.0)', wp_admin_workspaces_core_supplies_private_apis() === true );
+$T::ok( 'dependencies_met true on a 7.0+ container without Gutenberg', wp_admin_workspaces_dependencies_met() === true );
 
 // Composition contract, deterministic across all four signal combinations —
 // exercises the Gutenberg-fallback branch a live 7.0 container short-circuits
 // past. Either signal satisfies the gate; neither leaves it unmet.
-$T::ok( 'met: core supplies + Gutenberg present', wp_admin_shell_dependencies_met_from( true, true ) === true );
-$T::ok( 'met: core supplies, no Gutenberg (the 7.0 path)', wp_admin_shell_dependencies_met_from( true, false ) === true );
-$T::ok( 'met: no core allowlist, Gutenberg present (the < 7.0 fallback)', wp_admin_shell_dependencies_met_from( false, true ) === true );
-$T::ok( 'unmet: neither core allowlist nor Gutenberg', wp_admin_shell_dependencies_met_from( false, false ) === false );
+$T::ok( 'met: core supplies + Gutenberg present', wp_admin_workspaces_dependencies_met_from( true, true ) === true );
+$T::ok( 'met: core supplies, no Gutenberg (the 7.0 path)', wp_admin_workspaces_dependencies_met_from( true, false ) === true );
+$T::ok( 'met: no core allowlist, Gutenberg present (the < 7.0 fallback)', wp_admin_workspaces_dependencies_met_from( false, true ) === true );
+$T::ok( 'unmet: neither core allowlist nor Gutenberg', wp_admin_workspaces_dependencies_met_from( false, false ) === false );
 
 // ── Summary ────────────────────────────────────────────────────────
 

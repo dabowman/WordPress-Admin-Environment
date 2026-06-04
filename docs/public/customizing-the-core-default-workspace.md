@@ -412,7 +412,7 @@ REST paths hydrated server-side and injected into the `apiFetch` preloading cach
 
 ### `regions` / `routes` — escape hatches
 
-The kernel synthesizes the runtime region map and route table from your `screens` + the engine's `defaultRegions`. The top-level `regions` / `routes` blocks are **escape hatches** for the rare case the `screens` shape can't express what you need (a wildcard route, a non-screen region composition). Admin.json declarations win on per-region-id / per-pattern collision against the synthesis.
+The kernel synthesizes the runtime region map and route table from your `screens` + the engine's `defaultRegions`. The top-level `regions` / `routes` blocks are **escape hatches** for the rare case the `screens` shape can't express what you need (a wildcard route, a non-screen region composition). workspace.json declarations win on per-region-id / per-pattern collision against the synthesis.
 
 **Avoid these unless you've confirmed `screens` can't do it** — most workspaces never write them. See design spec §5 (regions) and §6.2 (routes) before you do.
 

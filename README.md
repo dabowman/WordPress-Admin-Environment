@@ -1,6 +1,6 @@
-# WP Admin Shell
+# WP Admin Workspaces
 
-A WordPress plugin that replaces `wp-admin` with a configurable, React-based admin environment. The shell reads its layout, navigation, branding, and styling from `admin.json` configuration files and renders a complete admin UI on top of WordPress's existing REST API and design system.
+A WordPress plugin that replaces `wp-admin` with a configurable, React-based admin workspace. The workspace reads its layout, navigation, branding, and styling from `workspace.json` configuration files and renders a complete admin UI on top of WordPress's existing REST API and design system.
 
 > **Status:** pre-release. Nothing has shipped publicly; there is no installed base. The repository is being prepared for a first release — APIs and the schema may still change.
 
@@ -8,7 +8,7 @@ A WordPress plugin that replaces `wp-admin` with a configurable, React-based adm
 
 WordPress has one admin interface. Every user — writer, developer, client, site manager — sees the same dashboard, the same menus, the same screens. Plugins add more menus. Everyone gets everything.
 
-WP Admin Shell makes the admin **configurable**. A JSON file declares which screens are available, how navigation is structured, what branding to show, and which keyboard shortcuts do what. Swap the JSON file, swap the admin experience.
+WP Admin Workspaces makes the admin **configurable**. A JSON file declares which screens are available, how navigation is structured, what branding to show, and which keyboard shortcuts do what. Swap the JSON file, swap the admin experience.
 
 Same WordPress. Same data. Same plugins. Different admin for different people.
 
@@ -20,9 +20,9 @@ Three artifact types, three responsibilities:
 |---|---|---|
 | **app manifest** (`app.json`) | what an app *is* — ARIA role, requested platform services, capability floor, config schema, slots, DataView baseline | the app's code |
 | **engine manifest** (`engine.json`) | what an engine *provides* — region templates, modes, slots, menu renderer, default region tree, default styles | the engine's code |
-| **`admin.json`** | install *decisions* — which engine, which screens, the menu tree, commands, branding, token overrides | the install |
+| **`workspace.json`** | install *decisions* — which engine, which screens, the menu tree, commands, branding, token overrides | the install |
 
-`admin.json` is shaped around user-task surfaces:
+`workspace.json` is shaped around user-task surfaces:
 
 - **`workspace`** — engine selection, default screen, branding, notices, persistent widgets.
 - **`settings`** — reusable registries: `dataViews` (3-axis `@wordpress/dataviews` config keyed by `kind → name → variant`) and `dataFields` (named field collections).
@@ -43,7 +43,7 @@ Three artifact types, three responsibilities:
 - WordPress 6.7+
 - PHP 7.4+ (8.1+ supported)
 - Node.js 20+ (to build from source)
-- **WordPress 7.0+ _or_ the Gutenberg plugin** — runtime private-API dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist the loaded `wp-private-apis` script must include. WordPress 7.0 ships that allowlist (and `@wordpress/theme`) in core; on WordPress 6.7–6.9 only the Gutenberg plugin's `wp-private-apis` override supplies it. With neither present the workspace stands down to classic wp-admin. (The version gate lives in `wp_admin_shell_dependencies_met()`.)
+- **WordPress 7.0+ _or_ the Gutenberg plugin** — runtime private-API dependency. `@wordpress/ui` overlay components opt into `wp.privateApis` against an allowlist the loaded `wp-private-apis` script must include. WordPress 7.0 ships that allowlist (and `@wordpress/theme`) in core; on WordPress 6.7–6.9 only the Gutenberg plugin's `wp-private-apis` override supplies it. With neither present the workspace stands down to classic wp-admin. (The version gate lives in `wp_admin_workspaces_dependencies_met()`.)
 
 ## Installation
 
@@ -54,7 +54,7 @@ Most installs want the prebuilt zip — no Node toolchain required on the server
 1. Activate the **Gutenberg** plugin first (hard runtime dependency).
 2. In wp-admin, go to **Plugins → Add New → Upload Plugin**, choose
    `wp-admin-workspaces.zip`, and install.
-3. Activate **WP Admin Shell**.
+3. Activate **WP Admin Workspaces**.
 
 Grab `wp-admin-workspaces.zip` from the releases page, or build one yourself with
 `npm run build:zip` (see below).
@@ -68,7 +68,7 @@ npm install
 npm run build
 ```
 
-Copy the directory into `wp-content/plugins/`, then activate **WP Admin Shell** (activate Gutenberg first).
+Copy the directory into `wp-content/plugins/`, then activate **WP Admin Workspaces** (activate Gutenberg first).
 
 ### Building a distributable zip
 
@@ -78,7 +78,7 @@ To produce a `wp-admin-workspaces.zip` that can be uploaded via **Plugins → Ad
 npm run build:zip
 ```
 
-Output: `wp-admin-workspaces.zip` at the project root. It bundles `wp-admin-workspaces.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `shells/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+Output: `wp-admin-workspaces.zip` at the project root. It bundles `wp-admin-workspaces.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `workspaces/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
 
 ### With wp-env (development)
 
@@ -89,19 +89,19 @@ npx wp-env start
 ## Usage
 
 The plugin ships the `wp-admin-default` baseline (the cascade `core` origin).
-To turn the workspace on and customize it, drop an `admin.json` **override**
+To turn the workspace on and customize it, drop an `workspace.json` **override**
 at `wp-content/workspace.json` — it behaves like `theme.json` over core's
 defaults: you declare only what you want to change, and everything else falls
 through from the baseline.
 
 ```bash
 # Quickstart: copy a starter template, then visit /wp-admin/
-# (any valid admin.json here turns the workspace on)
-cp wp-content/plugins/wp-admin-workspaces/shells/single-pane-demo.json wp-content/workspace.json
+# (any valid workspace.json here turns the workspace on)
+cp wp-content/plugins/wp-admin-workspaces/workspaces/single-pane-demo.json wp-content/workspace.json
 ```
 
 1. Activate the plugin (and Gutenberg).
-2. Place a valid `wp-content/workspace.json` (copy one from `shells/` and edit, or
+2. Place a valid `wp-content/workspace.json` (copy one from `workspaces/` and edit, or
    write a small delta like `{ "$schema": "…", "version": 3, "$wpds": "6.9",
    "name": "mine", "engine": "core:default", "frame": { … }, "styles": { … } }`).
 3. Visit `/wp-admin/` — the workspace **replaces** classic wp-admin at the URL
@@ -126,7 +126,7 @@ bar shows a reciprocal **Back to workspace** link.
 | `core:single-pane` | Mobile-first: appbar + collapsible nav drawer |
 | `core:desktop` | Windowed: compositor, dock, draggable/resizable window frames |
 
-## Bundled shells
+## Bundled workspaces
 
 | Slug | Notes |
 |---|---|
@@ -134,9 +134,9 @@ bar shows a reciprocal **Back to workspace** link.
 | `single-pane-demo` | `core:single-pane` engine demo. |
 | `desktop-demo` | `core:desktop` engine demo. |
 
-## `admin.json` schema
+## `workspace.json` schema
 
-The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/workspace.json) (workspace), [`admin-app.json`](docs/schemas/workspace-app.json) (app manifest), [`admin-engine.json`](docs/schemas/workspace-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`workspace.json`](docs/schemas/workspace.json) (workspace), [`admin-app.json`](docs/schemas/workspace-app.json) (app manifest), [`admin-engine.json`](docs/schemas/workspace-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (workspace.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 
@@ -153,7 +153,7 @@ The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/s
 | `core:dashboard` / `core:dashboard-host` | ✅ | Overview cards / widget grid. |
 | `iframe:{slug}` | iframe | Any wp-admin URL with chrome hidden. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are declared explicitly in each shell's `workspace` / regions.
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are declared explicitly in each workspace's `workspace` / regions.
 
 ## Project structure
 
@@ -161,11 +161,11 @@ System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:c
 wp-admin-workspaces/
 ├── wp-admin-workspaces.php       # Plugin entry — admin page, asset enqueue, config handoff
 ├── webpack.config.js        # @wordpress/scripts + a copy step for the DataViews CSS
-├── shells/                  # Bundled admin.json configurations
+├── workspaces/                  # Bundled workspace.json configurations
 ├── includes/                # PHP
 │   ├── class-wp-admin-workspaces-config.php
 │   ├── class-wp-admin-workspaces-{can,prefs,data-view,data-field-collections}-rest.php
-│   ├── class-wp-admin-workspaces-cli.php          # wp admin-shell list | activate | register
+│   ├── class-wp-admin-workspaces-cli.php          # wp admin-workspace list | activate | register
 │   ├── cascade/             # Resolver, merge engine, customizable, cache, permissions,
 │   │                        #   modes, dataView/dataField registries, preload, menu/route
 │   │                        #   shims, classic-menu bridge, dashboard widgets
@@ -187,7 +187,7 @@ wp-admin-workspaces/
 │   └── apps/                # All bundled apps (one dir each: index.js + app.json + app.md)
 ├── tests/
 │   ├── php/                 # wp eval-file fixture runners
-│   ├── schema/              # Ajv 2020-12 sweep over shells + manifests + fixtures
+│   ├── schema/              # Ajv 2020-12 sweep over workspaces + manifests + fixtures
 │   ├── runtime/             # pure-ESM runtime modules (node)
 │   └── engines/             # core:desktop TS tests (node --experimental-strip-types)
 └── docs/                    # design spec, schema docs, schemas, public references, archive
@@ -212,9 +212,9 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 
 ## Why these choices
 
-- **Cascade resolver** — `theme.json` resolves through merged origins; admin.json takes the same shape so site admins, plugin authors, and end users can override the active shell along well-defined precedence boundaries.
+- **Cascade resolver** — `theme.json` resolves through merged origins; workspace.json takes the same shape so site admins, plugin authors, and end users can override the active workspace along well-defined precedence boundaries.
 - **Engine-owned theming** — the kernel never presupposes a design system. WPDS lives entirely inside `core:default`; a Material or Tailwind engine brings its own provider, icon table, and CSS.
-- **iframe for the editor / site editor** — both packages assume full-viewport ownership and private-API stores; the shell iframes them until a native mount lands.
+- **iframe for the editor / site editor** — both packages assume full-viewport ownership and private-API stores; the workspace iframes them until a native mount lands.
 - **`wp_add_inline_script`** for the config handoff — preserves type fidelity (`wp_localize_script` stringifies booleans and nested objects).
 
 ## License

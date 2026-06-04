@@ -41,7 +41,7 @@ different people.
 
 == Important: WordPress 7.0 or the Gutenberg plugin ==
 
-The shell has a **runtime private-API dependency**: `@wordpress/ui` overlay
+The workspace has a **runtime private-API dependency**: `@wordpress/ui` overlay
 components opt into private APIs against an allowlist that the loaded
 `wp-private-apis` script must include.
 
