@@ -11,13 +11,16 @@ import apiFetch from '@wordpress/api-fetch';
  *   3. Cache invalidation runs server-side via the
  *      `update_option_wp_admin_workspaces_active_workspace` hook the cache
  *      class registered in M2.7.
- *   4. The page reloads. The browser preserves the URL hash, so the
- *      route the user was on survives the switch when the new workspace
- *      registers a matching app id.
- *
- * v2 will surface a switcher inside `core:appearance-preferences` and add a
- * mid-session in-place re-mount path that re-builds the registry's
- * region tree without a hard reload.
+ *   4. When the in-process re-mount path is available
+ *      (`window.wpAdminWorkspaces.remountWorkspace`, published by
+ *      `src/index.js`), the freshly resolved config is re-fetched from REST
+ *      and the kernel re-renders into the same React root — no hard reload,
+ *      so ephemeral UI state (DataViews sort/filter/selection, scroll,
+ *      command-palette state, draft input) survives. Falls back to a hard
+ *      `window.location.reload()` when the remount surface is absent (older
+ *      bundle, or the REST round-trip fails). Either way the browser
+ *      preserves the URL hash, so the active route survives when the new
+ *      workspace carries an app of the same id.
  *
  * Exposed on `window.wpAdminWorkspaces.switchWorkspace` so custom workspace
  * code (and the `core:command-palette` integration) can call it.
@@ -67,11 +70,38 @@ export async function switchWorkspace( slug ) {
 		data: { wp_admin_workspaces_active_workspace: slug },
 	} );
 
-	if ( typeof window !== 'undefined' ) {
-		// Hash survives reload, so the active route is preserved when
-		// the new workspace carries an app of the same id.
-		window.location.reload();
+	if ( typeof window === 'undefined' ) {
+		return;
 	}
+
+	// In-process re-mount (issue #28). Re-fetch the freshly resolved config
+	// — the cascade cache was already invalidated server-side by the
+	// `update_option_wp_admin_workspaces_active_workspace` hook — and hand it
+	// to the kernel re-render published on the global. Preserves ephemeral UI
+	// state by re-rendering into the same React root instead of reloading.
+	const remount = window.wpAdminWorkspaces?.remountWorkspace;
+	if ( typeof remount === 'function' ) {
+		try {
+			const payload = await apiFetch( {
+				path: '/wp-admin-workspaces/v1/config',
+			} );
+			remount( payload );
+			return;
+		} catch ( err ) {
+			// REST hiccup or a malformed payload — fall through to the hard
+			// reload so the switch still takes effect (the option write above
+			// already landed). Surface the cause for debugging.
+			// eslint-disable-next-line no-console
+			console.error(
+				'[wp-admin-workspaces] in-process re-mount failed; falling back to reload.',
+				err
+			);
+		}
+	}
+
+	// Fallback: hard reload. Hash survives, so the active route is preserved
+	// when the new workspace carries an app of the same id.
+	window.location.reload();
 }
 
 export function attachWorkspaceSwitcherToWindow() {

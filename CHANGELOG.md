@@ -6,6 +6,38 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added: in-process workspace re-mount on switch (no hard reload) — issue #28
+
+`switchWorkspace()` no longer hard-reloads the page after writing the
+active-workspace option. It now re-fetches the freshly resolved config and
+re-renders the kernel into the same React root, so ephemeral UI state
+(DataViews sort/filter/selection, scroll position, command-palette state,
+draft input) survives a switch.
+
+- **New REST endpoint** `GET /wp-admin-workspaces/v1/config`
+  (`WP_Admin_Workspaces_Config_REST`) returns the workspace-variant slice the
+  kernel swaps on a re-mount — the user-pruned resolved `config`, the
+  pre-computed `capabilities` map, and the classic→workspace `adminRoutes`
+  legacy map. Workspace-invariant fields (siteUrl, user, nonce, manifests,
+  tokens, …) stay as injected at page load. Logged-in gated; per-screen
+  capability gating rides the same prune the inline payload uses.
+- **`window.wpAdminWorkspaces.remountWorkspace(payload)`** (published by
+  `src/index.js`) folds the REST payload into the global and re-renders. React
+  reconciliation does the region/app tree diff — matching region ids keep
+  their mounted component instances + local state; the rest unmount/mount.
+  `@wordpress/data` and the kernel `triggerStore` are module singletons, so
+  their state persists regardless. Dispatches a
+  `wp-admin-workspaces:remounted` `CustomEvent` (detail =
+  `{ added, removed, retained }` screen ids) for a future switcher UI /
+  telemetry.
+- **Graceful fallback**: if the remount surface is absent (older bundle) or
+  the REST round-trip fails, `switchWorkspace()` falls back to the prior hard
+  `window.location.reload()` — the option write already landed, so the switch
+  still takes effect. The `wp-content/workspace.json` file-override guard is
+  unchanged (switching stays disabled while a file override is active).
+- Pure diff/payload-apply helpers in `src/runtime/remount.mjs`, pinned by
+  `tests/runtime/remount.test.mjs`.
+
 ### Renamed: "WP Admin Shell" → "WP Admin Workspaces" (0.1.0 rebrand)
 
 The product, plugin, and every author/user-facing surface unified under
