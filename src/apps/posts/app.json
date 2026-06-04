@@ -39,7 +39,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "postType",
 		"name": "post",

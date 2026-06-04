@@ -14,7 +14,7 @@
  * harvest — the runtime-harvest pattern (skip-core-first, ingest-rest, expose
  * a skip-list filter). See `docs/runtime-harvest-pattern.md`.
  *
- * **Harvest pass.** At `wp_admin_shell_data_plugin` priority 6 (after the
+ * **Harvest pass.** At `wp_admin_workspaces_data_plugin` priority 6 (after the
  * dashboard-widgets registry contribution at priority 5, so author-registered
  * tiles win an id collision), the bridge:
  *
@@ -27,7 +27,7 @@
  *      #133 (`dashboard_right_now`, `dashboard_activity`,
  *      `dashboard_quick_press`, the recent-drafts box, `dashboard_primary` /
  *      `dashboard_php_nag`). Extensible via the
- *      `wp_admin_shell_dashboard_core_widget_ids` filter.
+ *      `wp_admin_workspaces_dashboard_core_widget_ids` filter.
  *   4. Synthesizes a `screens[dashboard-widgets].apps[]` entry for each
  *      surviving plugin widget — `slot: 'grid'`, `app:
  *      'core:dashboard-widget-classic'` (the captured-HTML tile renderer),
@@ -36,7 +36,7 @@
  *
  * **Render (app-space).** The tile app (`core:dashboard-widget-classic`)
  * lazily fetches the captured widget HTML from
- * `GET /wp-admin-shell/v1/dashboard-widget/{id}` (per-tile, so a slow plugin
+ * `GET /wp-admin-workspaces/v1/dashboard-widget/{id}` (per-tile, so a slow plugin
  * widget doesn't block the grid) and renders it at admin trust, with a
  * per-tile iframe fallback to classic `index.php` for widgets whose enqueued
  * JS won't run in captured HTML.
@@ -49,12 +49,12 @@
  * inside the already-admin-gated workspace. Identical exposure to the #128
  * notices buffer (see that class' awareness note).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Dashboard_Bridge {
+class WP_Admin_Workspaces_Dashboard_Bridge {
 
 	/**
 	 * Default target screen id the bridge contributes tiles into. Matches
@@ -81,7 +81,7 @@ class WP_Admin_Shell_Dashboard_Bridge {
 	/**
 	 * Core dashboard widget ids the shell ships as NATIVE tiles after #133,
 	 * so the bridge skips them to avoid double-rendering. Extensible via the
-	 * `wp_admin_shell_dashboard_core_widget_ids` filter.
+	 * `wp_admin_workspaces_dashboard_core_widget_ids` filter.
 	 *
 	 *   - `dashboard_right_now`     → `core:dashboard-widget-at-a-glance`.
 	 *   - `dashboard_activity`      → `core:dashboard-widget-activity`
@@ -136,7 +136,7 @@ class WP_Admin_Shell_Dashboard_Bridge {
 			return self::$core_widget_ids_cache;
 		}
 		$filtered = apply_filters(
-			'wp_admin_shell_dashboard_core_widget_ids',
+			'wp_admin_workspaces_dashboard_core_widget_ids',
 			self::$CORE_WIDGET_IDS
 		);
 		if ( ! is_array( $filtered ) ) {
@@ -168,7 +168,7 @@ class WP_Admin_Shell_Dashboard_Bridge {
 	 * **Screen context.** `wp_add_dashboard_widget()` → `add_meta_box()` files
 	 * each widget under `$wp_meta_boxes[ get_current_screen()->id ]`. In every
 	 * context this bridge runs the current screen is NOT `dashboard`: the shell
-	 * render sets `wp-admin-shell` (see `WP_Admin_Shell_Hijack`), and a REST
+	 * render sets `wp-admin-workspaces` (see `WP_Admin_Workspaces_Hijack`), and a REST
 	 * request has no admin screen at all (`get_current_screen()` is null, so
 	 * `add_meta_box()` hits its `! isset( $screen->id )` guard and registers
 	 * nothing). Either way `$wp_meta_boxes['dashboard']` stays empty and the
@@ -326,7 +326,7 @@ class WP_Admin_Shell_Dashboard_Bridge {
 								__METHOD__,
 								sprintf(
 									/* translators: 1: widget id, 2: disambiguated entry id */
-									esc_html__( 'Dashboard widget id "%1$s" collided with another widget on the derived tile id; disambiguated to "%2$s".', 'wp-admin-shell' ),
+									esc_html__( 'Dashboard widget id "%1$s" collided with another widget on the derived tile id; disambiguated to "%2$s".', 'wp-admin-workspaces' ),
 									esc_html( $widget_id ),
 									esc_html( $entry_id )
 								),
@@ -408,8 +408,8 @@ class WP_Admin_Shell_Dashboard_Bridge {
  * declarations win an entry-id collision via the cascade's id-keyed array
  * merge — the bridge only appends ids no one else already claimed.
  */
-add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
-	$records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
+	$records = WP_Admin_Workspaces_Dashboard_Bridge::harvest_widgets();
 	if ( empty( $records ) ) {
 		return $doc;
 	}
@@ -417,7 +417,7 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 	if ( ! isset( $doc['screens'] ) || ! is_array( $doc['screens'] ) ) {
 		$doc['screens'] = array();
 	}
-	$target = WP_Admin_Shell_Dashboard_Bridge::TARGET_SCREEN;
+	$target = WP_Admin_Workspaces_Dashboard_Bridge::TARGET_SCREEN;
 	if ( ! isset( $doc['screens'][ $target ] ) || ! is_array( $doc['screens'][ $target ] ) ) {
 		$doc['screens'][ $target ] = array();
 	}
@@ -440,7 +440,7 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 			continue;
 		}
 		$existing_ids[ $record['entry_id'] ] = true;
-		$doc['screens'][ $target ]['apps'][] = WP_Admin_Shell_Dashboard_Bridge::build_tile_entry( $record );
+		$doc['screens'][ $target ]['apps'][] = WP_Admin_Workspaces_Dashboard_Bridge::build_tile_entry( $record );
 	}
 
 	return $doc;

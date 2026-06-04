@@ -6,10 +6,10 @@ import apiFetch from '@wordpress/api-fetch';
  * v1 ships the plumbing without a user-facing toggle per spec §6.4.1:
  *
  *   1. Caller invokes `switchShell(slug)`.
- *   2. Function writes `wp_admin_shell_active_shell` via the core
+ *   2. Function writes `wp_admin_workspaces_active_shell` via the core
  *      settings REST (option is registered with show_in_rest).
  *   3. Cache invalidation runs server-side via the
- *      `update_option_wp_admin_shell_active_shell` hook the cache
+ *      `update_option_wp_admin_workspaces_active_shell` hook the cache
  *      class registered in M2.7.
  *   4. The page reloads. The browser preserves the URL hash, so the
  *      route the user was on survives the switch when the new shell
@@ -19,7 +19,7 @@ import apiFetch from '@wordpress/api-fetch';
  * mid-session in-place re-mount path that re-builds the registry's
  * region tree without a hard reload.
  *
- * Exposed on `window.wpAdminShell.switchShell` so custom shell code
+ * Exposed on `window.wpAdminWorkspaces.switchShell` so custom shell code
  * (and the `core:command-palette` integration) can call it.
  */
 
@@ -33,7 +33,7 @@ export async function switchShell( slug ) {
 	// instead of pretending the switch took effect.
 	if (
 		typeof window !== 'undefined' &&
-		window.wpAdminShell?.workspaceFileActive
+		window.wpAdminWorkspaces?.workspaceFileActive
 	) {
 		throw new Error(
 			'switchShell: a wp-content/admin.json override is active and takes precedence over the active-shell option. Edit or remove that file to change the workspace.'
@@ -43,11 +43,12 @@ export async function switchShell( slug ) {
 	// Client-side pre-flight against the shells list PHP injected on
 	// page load. Catches typos and stale slugs before the option write
 	// puts the admin in a broken-on-next-load state. Server-side
-	// sanitize_callback (registered in wp-admin-shell.php) is the
+	// sanitize_callback (registered in wp-admin-workspaces.php) is the
 	// second line of defense — rejects unknown slugs with the option's
 	// previous value preserved.
 	const shells =
-		( typeof window !== 'undefined' && window.wpAdminShell?.shells ) || [];
+		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.shells ) ||
+		[];
 	if ( shells.length > 0 && ! shells.some( ( s ) => s.slug === slug ) ) {
 		throw new Error(
 			`switchShell: unknown shell "${ slug }". Known: ${ shells
@@ -59,7 +60,7 @@ export async function switchShell( slug ) {
 	await apiFetch( {
 		path: '/wp/v2/settings',
 		method: 'POST',
-		data: { wp_admin_shell_active_shell: slug },
+		data: { wp_admin_workspaces_active_shell: slug },
 	} );
 
 	if ( typeof window !== 'undefined' ) {
@@ -73,6 +74,6 @@ export function attachShellSwitcherToWindow() {
 	if ( typeof window === 'undefined' ) {
 		return;
 	}
-	window.wpAdminShell = window.wpAdminShell || {};
-	window.wpAdminShell.switchShell = switchShell;
+	window.wpAdminWorkspaces = window.wpAdminWorkspaces || {};
+	window.wpAdminWorkspaces.switchShell = switchShell;
 }

@@ -40,8 +40,8 @@ export default function PreviewPaneApp( { config = {} } ) {
 
 	if ( ! matched ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
-				{ __( 'Select an item to preview.', 'wp-admin-shell' ) }
+			<div className="wp-admin-workspaces-region__empty">
+				{ __( 'Select an item to preview.', 'wp-admin-workspaces' ) }
 			</div>
 		);
 	}
@@ -83,15 +83,15 @@ function PreviewEntity( { kind, name, id } ) {
 
 	if ( isResolving ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
+			<div className="wp-admin-workspaces-region__empty">
 				<Spinner />
 			</div>
 		);
 	}
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
-				{ __( 'Item not found.', 'wp-admin-shell' ) }
+			<div className="wp-admin-workspaces-region__empty">
+				{ __( 'Item not found.', 'wp-admin-workspaces' ) }
 			</div>
 		);
 	}

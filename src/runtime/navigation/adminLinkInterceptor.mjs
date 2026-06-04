@@ -3,7 +3,7 @@
  *
  * Keeps clicks on classic `/wp-admin/...` links inside the workspace. A
  * capture-phase document listener resolves each anchor against the admin-
- * route registry (exposed at `window.wpAdminShell.adminRoutes`):
+ * route registry (exposed at `window.wpAdminWorkspaces.adminRoutes`):
  *
  *   - A registry HIT (the link maps to a workspace route via the route's
  *     `legacy_path` / `legacy_query`) → preventDefault + hash-navigate.

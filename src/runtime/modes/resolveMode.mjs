@@ -3,7 +3,7 @@
  *
  * The PHP side has already flattened the engine's `modes` catalog: every
  * mode's `extends` chain is walked, deep-merged, and plugin-contributed
- * modes (via the `wp_admin_shell_engine_modes_{engineId}` filter) are
+ * modes (via the `wp_admin_workspaces_engine_modes_{engineId}` filter) are
  * already in the catalog. This JS-side resolver does the per-screen step:
  *
  *   1. Look up the screen's mode (default: `'default'`).
@@ -19,7 +19,7 @@
  * fullWidth, ... }`). Region.js reads the map per-region at render time.
  *
  * Pure: no imports, no side effects. Mirrors the PHP semantics in
- * `WP_Admin_Shell_Modes::resolve_engine_modes` + per-screen merge.
+ * `WP_Admin_Workspaces_Modes::resolve_engine_modes` + per-screen merge.
  */
 
 const MAX_EXTENDS_DEPTH = 10;
@@ -29,7 +29,7 @@ const MAX_EXTENDS_DEPTH = 10;
  *
  * @param {string} screenId    Screen id (key under `screens`).
  * @param {Object} engineModes Flattened engine-modes catalog (from
- *                             `window.wpAdminShell.engineModes` in production
+ *                             `window.wpAdminWorkspaces.engineModes` in production
  *                             or a test-provided fixture).
  * @param {Object} screens     Map of screen id → screen doc.
  * @return {{ modal: boolean, regions: Object|null, modeId: string }}

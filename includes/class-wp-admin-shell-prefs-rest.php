@@ -1,8 +1,8 @@
 <?php
 /**
- * /wp-admin-shell/v1/user-prefs — read + write the user-origin slice.
+ * /wp-admin-workspaces/v1/user-prefs — read + write the user-origin slice.
  *
- * Backs `core:appearance-preferences`. Returns the full `wp_admin_shell_user_prefs`
+ * Backs `core:appearance-preferences`. Returns the full `wp_admin_workspaces_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
  * `customizable` paths the active shell exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save
@@ -13,15 +13,15 @@
  * the user shouldn't have set when it merges; this endpoint stores
  * what the UI sends so the user has a record of their attempt.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Prefs_REST {
+class WP_Admin_Workspaces_Prefs_REST {
 
-	const NAMESPACE = 'wp-admin-shell/v1';
-	const META_KEY  = 'wp_admin_shell_user_prefs';
+	const NAMESPACE = 'wp-admin-workspaces/v1';
+	const META_KEY  = 'wp_admin_workspaces_user_prefs';
 
 	public static function register() {
 		register_rest_route(
@@ -63,7 +63,7 @@ class WP_Admin_Shell_Prefs_REST {
 	public static function set_prefs( $request ) {
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			return new WP_Error( 'rest_forbidden', __( 'Login required.', 'wp-admin-shell' ), array( 'status' => 403 ) );
+			return new WP_Error( 'rest_forbidden', __( 'Login required.', 'wp-admin-workspaces' ), array( 'status' => 403 ) );
 		}
 		$existing = get_user_meta( $user_id, self::META_KEY, true );
 		if ( ! is_array( $existing ) ) {
@@ -71,7 +71,7 @@ class WP_Admin_Shell_Prefs_REST {
 		}
 		$patch = $request->get_json_params();
 		if ( ! is_array( $patch ) ) {
-			return new WP_Error( 'rest_invalid_param', __( 'Body must be an object.', 'wp-admin-shell' ), array( 'status' => 400 ) );
+			return new WP_Error( 'rest_invalid_param', __( 'Body must be an object.', 'wp-admin-workspaces' ), array( 'status' => 400 ) );
 		}
 		// Bound the write — prefs are structural UI state, not a data store.
 		// Without this any logged-in user could POST a multi-MB object that is
@@ -82,14 +82,14 @@ class WP_Admin_Shell_Prefs_REST {
 		if ( is_string( $body ) && strlen( $body ) > self::MAX_BYTES ) {
 			return new WP_Error(
 				'rest_request_too_large',
-				__( 'Preferences payload too large.', 'wp-admin-shell' ),
+				__( 'Preferences payload too large.', 'wp-admin-workspaces' ),
 				array( 'status' => 413 )
 			);
 		}
 		if ( self::count_keys( $patch ) > self::MAX_KEYS ) {
 			return new WP_Error(
 				'rest_request_too_large',
-				__( 'Preferences payload has too many keys.', 'wp-admin-shell' ),
+				__( 'Preferences payload has too many keys.', 'wp-admin-workspaces' ),
 				array( 'status' => 413 )
 			);
 		}
@@ -167,4 +167,4 @@ class WP_Admin_Shell_Prefs_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Prefs_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Prefs_REST', 'register' ) );

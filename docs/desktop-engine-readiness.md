@@ -118,10 +118,10 @@ through every section below. Mark blockers in
 ### Iframe + bridge
 
 - [ ] Click "Permalinks" launcher → iframe window opens loading
-      `/wp-admin/options-permalink.php?wp_admin_shell_chromeless=1`.
+      `/wp-admin/options-permalink.php?wp_admin_workspaces_chromeless=1`.
 - [ ] Parent console shows `[core:desktop-iframe] bridge message
-      wp-admin-shell-iframe-ready …` followed by
-      `wp-admin-shell-iframe-network …` for each REST call.
+      wp-admin-workspaces-iframe-ready …` followed by
+      `wp-admin-workspaces-iframe-network …` for each REST call.
 - [ ] Clicking an external link in the iframe opens a new browser
       tab.
 - [ ] Clicking a same-origin wp-admin link in the iframe spawns a
@@ -138,10 +138,10 @@ through every section below. Mark blockers in
   iframe commands yet either. Full harvester follows the parent
   consumer wiring.
 - **Instrument-set header integration** is storage-only — the
-  fetch / XHR wraps don't merge `__wpAdminShellInstrument.headers`
+  fetch / XHR wraps don't merge `__wpAdminWorkspacesInstrument.headers`
   into outgoing requests yet, and observed network reports don't
   capture request / response headers. Devtools widgets that push
-  state into `__wpAdminShellInstrument` see their writes round-trip
+  state into `__wpAdminWorkspacesInstrument` see their writes round-trip
   but can't act on the data via the bridge until the wrap
   integration ships.
 

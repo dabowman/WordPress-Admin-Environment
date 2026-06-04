@@ -236,7 +236,7 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- REST handles 2 fields today; the ~22 remaining are reachable through the same `/wp/v2/settings` POST once each option is re-registered via `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )`. The Settings-API `sanitize_option` path runs server-side regardless, so no custom `/wp-admin-shell/v1/options/discussion` endpoint is required — prefer the `register_setting` shim over a bespoke endpoint or 22 sequential AJAX requests.
+- REST handles 2 fields today; the ~22 remaining are reachable through the same `/wp/v2/settings` POST once each option is re-registered via `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )`. The Settings-API `sanitize_option` path runs server-side regardless, so no custom `/wp-admin-workspaces/v1/options/discussion` endpoint is required — prefer the `register_setting` shim over a bespoke endpoint or 22 sequential AJAX requests.
 - Validation: server authoritative. Client may pre-validate numeric mins/enum values.
 
 ---

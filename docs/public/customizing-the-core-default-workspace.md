@@ -222,7 +222,7 @@ There is **no top-level `dashboardWidgets` block** — widgets are `apps[]` entr
 }
 ```
 
-`iframe:<slug>` is sugar — the compiler expands it to `core:iframe-fallback` + `config.url`, resolved relative to `window.wpAdminShell.adminUrl`. Pair it with `mode: "takeover"` so the shell hides its own chrome and the iframed page owns the viewport. This is a first-class feature, not a compromise — the block editor and Site Editor use it.
+`iframe:<slug>` is sugar — the compiler expands it to `core:iframe-fallback` + `config.url`, resolved relative to `window.wpAdminWorkspaces.adminUrl`. Pair it with `mode: "takeover"` so the shell hides its own chrome and the iframed page owns the viewport. This is a first-class feature, not a compromise — the block editor and Site Editor use it.
 
 ---
 
@@ -408,7 +408,7 @@ REST paths hydrated server-side and injected into the `apiFetch` preloading cach
 - String → `GET` shorthand; `[ path, method ]` for `OPTIONS` preflight. Methods restricted to `GET` / `OPTIONS`.
 - Additive across origins (union, deduped by exact `path+method`) — no override semantics.
 - Per-screen `screens[id].preload` is additive with this list — prefer it for paths only one screen needs.
-- **Conditional** preloads (depend on the request/user) belong in a `wp_admin_shell_data_{origin}` PHP filter, not here.
+- **Conditional** preloads (depend on the request/user) belong in a `wp_admin_workspaces_data_{origin}` PHP filter, not here.
 
 ---
 
@@ -456,7 +456,7 @@ Example — a focus screen that *also* keeps the toolbar minimal rather than mer
 }
 ```
 
-> Plugins can extend the catalog via the `wp_admin_shell_engine_modes_core:default` filter (e.g. a `kiosk` mode that `extends` `takeover`). Modes support `extends` inheritance, depth-limited to 10.
+> Plugins can extend the catalog via the `wp_admin_workspaces_engine_modes_core:default` filter (e.g. a `kiosk` mode that `extends` `takeover`). Modes support `extends` inheritance, depth-limited to 10.
 
 ### Slots
 
@@ -487,10 +487,10 @@ What the engine renders without any `regions` block from you (this is why you ra
 
 | `styles.chrome` path | CSS variable |
 |---|---|
-| `sidebar.background` / `.foreground` | `--wp-admin-shell--chrome--sidebar--{background,foreground}` |
-| `sidebar.width` / padding | `--wp-admin-shell--chrome--sidebar--{width,padding-block,padding-inline}` |
-| `toolbar.background` / `.foreground` / `.border` | `--wp-admin-shell--chrome--toolbar--{background,foreground,border}` |
-| `content` card | `--wp-admin-shell--chrome--content--card-background` |
+| `sidebar.background` / `.foreground` | `--wp-admin-workspaces--chrome--sidebar--{background,foreground}` |
+| `sidebar.width` / padding | `--wp-admin-workspaces--chrome--sidebar--{width,padding-block,padding-inline}` |
+| `toolbar.background` / `.foreground` / `.border` | `--wp-admin-workspaces--chrome--toolbar--{background,foreground,border}` |
+| `content` card | `--wp-admin-workspaces--chrome--content--card-background` |
 
 ---
 
@@ -640,7 +640,7 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 | dataView semantics, variants, filter hooks, `useDataView` | [`../dataview-config.md`](../dataview-config.md) |
 | Theming mechanics, token→DOM paths, WPDS CSS gotchas | [`../engines-and-design-systems.md`](../engines-and-design-systems.md) |
 | Design rationale, cascade trust tiers, mode catalog | [`../schema-sketch.md`](../schema-sketch.md) |
-| Runtime architecture — regions, routing, gating | [`../wp-admin-shell-design-spec.md`](../wp-admin-shell-design-spec.md) |
+| Runtime architecture — regions, routing, gating | [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md) |
 | Starter files to copy | `shells/canonical-demo.json`, `shells/content-author.json`, `shells/wp-admin-default.json` |
 </content>
 </invoke>

@@ -1,6 +1,6 @@
 # app.json Reference
 
-`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a workspace. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_shell_register_app()`.
+`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a workspace. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_workspaces_register_app()`.
 
 Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `admin.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
 
@@ -354,7 +354,7 @@ Each read entry requires `source` and `via`.
 
 | Property   | Description                                                                                                                                                            | Type   | Default |
 |------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| source     | REST endpoint (`/wp/v2/posts`), `core-data` entity path (`postType/post`, `root/site`), external URL, or window-global property (`window.wpAdminShell.user`). Required. | string | —       |
+| source     | REST endpoint (`/wp/v2/posts`), `core-data` entity path (`postType/post`, `root/site`), external URL, or window-global property (`window.wpAdminWorkspaces.user`). Required. | string | —       |
 | via        | One of `core-data`, `api-fetch`, `window-global`, `external`, `commands`, `kernel-config`. Required.                                                                  | string | —       |
 | context    | REST context: `view`, `edit`, or `embed`. `edit` is required for any field whose `raw` value will be edited.                                                          | string | —       |
 | purpose    | What this read is for in the app's flow.                                                                                                                               | string | —       |

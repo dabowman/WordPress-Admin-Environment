@@ -2,7 +2,7 @@
 /**
  * Admin-routes registry — programmatic URL→app registration.
  *
- * Plugins call `wp_admin_shell_register_admin_route( $path, $args )` to
+ * Plugins call `wp_admin_workspaces_register_admin_route( $path, $args )` to
  * declare URL routes at runtime. The registry contributes them to the
  * cascade through the synthetic `plugin` origin so admin.json can still
  * override per-path.
@@ -13,12 +13,12 @@
  * compatibility, and `gc_time` is accepted but ignored (no shell
  * equivalent — emits a one-time `WP_DEBUG` notice).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Admin_Routes {
+class WP_Admin_Workspaces_Admin_Routes {
 
 	/**
 	 * Registry: path → resolved route doc (`app` + `config`).
@@ -55,34 +55,34 @@ class WP_Admin_Shell_Admin_Routes {
 	public static function register( $path, $args ) {
 		if ( ! is_string( $path ) || $path === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_admin_route_invalid_path',
-				__( 'Admin route path must be a non-empty string.', 'wp-admin-shell' )
+				'wp_admin_workspaces_admin_route_invalid_path',
+				__( 'Admin route path must be a non-empty string.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! preg_match( self::PATH_PATTERN, $path ) ) {
 			return new WP_Error(
-				'wp_admin_shell_admin_route_invalid_path',
+				'wp_admin_workspaces_admin_route_invalid_path',
 				/* translators: %s: route path */
-				sprintf( __( 'Admin route path %s does not match the route pattern (leading slash, alnum/underscore/hyphen/curly-brace/asterisk segments).', 'wp-admin-shell' ), $path )
+				sprintf( __( 'Admin route path %s does not match the route pattern (leading slash, alnum/underscore/hyphen/curly-brace/asterisk segments).', 'wp-admin-workspaces' ), $path )
 			);
 		}
 		if ( ! is_array( $args ) ) {
 			return new WP_Error(
-				'wp_admin_shell_admin_route_invalid_args',
-				__( 'Admin route args must be an array.', 'wp-admin-shell' )
+				'wp_admin_workspaces_admin_route_invalid_args',
+				__( 'Admin route args must be an array.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! isset( $args['app'] ) || ! is_string( $args['app'] ) || $args['app'] === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_admin_route_invalid_app',
-				__( 'Admin route requires a non-empty "app" arg.', 'wp-admin-shell' )
+				'wp_admin_workspaces_admin_route_invalid_app',
+				__( 'Admin route requires a non-empty "app" arg.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( isset( self::$registry[ $path ] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_admin_route_duplicate_path',
+				'wp_admin_workspaces_admin_route_duplicate_path',
 				/* translators: %s: route path */
-				sprintf( __( 'Admin route %s is already registered. Use a different path.', 'wp-admin-shell' ), $path )
+				sprintf( __( 'Admin route %s is already registered. Use a different path.', 'wp-admin-workspaces' ), $path )
 			);
 		}
 
@@ -92,8 +92,8 @@ class WP_Admin_Shell_Admin_Routes {
 		if ( isset( $args['config'] ) ) {
 			if ( ! is_array( $args['config'] ) ) {
 				return new WP_Error(
-					'wp_admin_shell_admin_route_invalid_config',
-					__( 'Admin route "config" must be an array when provided.', 'wp-admin-shell' )
+					'wp_admin_workspaces_admin_route_invalid_config',
+					__( 'Admin route "config" must be an array when provided.', 'wp-admin-workspaces' )
 				);
 			}
 			$config = $args['config'];
@@ -101,8 +101,8 @@ class WP_Admin_Shell_Admin_Routes {
 		if ( isset( $args['static_data'] ) ) {
 			if ( ! is_array( $args['static_data'] ) ) {
 				return new WP_Error(
-					'wp_admin_shell_admin_route_invalid_static_data',
-					__( 'Admin route "static_data" must be an array when provided.', 'wp-admin-shell' )
+					'wp_admin_workspaces_admin_route_invalid_static_data',
+					__( 'Admin route "static_data" must be an array when provided.', 'wp-admin-workspaces' )
 				);
 			}
 			// Fold `static_data` into `config` so the route schema (which
@@ -154,7 +154,7 @@ class WP_Admin_Shell_Admin_Routes {
 	 * Walks resolved `screens` (each screen may declare `legacy_path` +
 	 * optional `legacy_query` / `legacy_params`) and the programmatic
 	 * registry, keyed by the workspace route path. Shared by the JS admin-
-	 * link interceptor (W4, emitted as `window.wpAdminShell.adminRoutes`)
+	 * link interceptor (W4, emitted as `window.wpAdminWorkspaces.adminRoutes`)
 	 * and the classic→workspace redirect (W5).
 	 *
 	 * Keyed by workspace route path; a programmatic route sharing a path
@@ -244,20 +244,20 @@ class WP_Admin_Shell_Admin_Routes {
 		self::$warned_gc_time[ $path ] = true;
 		$message = sprintf(
 			/* translators: %s: route path */
-			__( 'Admin route %s declared "gc_time". The shell does not implement TanStack Router cache GC; the value is accepted and ignored.', 'wp-admin-shell' ),
+			__( 'Admin route %s declared "gc_time". The shell does not implement TanStack Router cache GC; the value is accepted and ignored.', 'wp-admin-workspaces' ),
 			$path
 		);
 		trigger_error( esc_html( $message ), E_USER_NOTICE );
 	}
 }
 
-add_filter( 'wp_admin_shell_data_plugin', array( 'WP_Admin_Shell_Admin_Routes', 'contribute' ), 5 );
+add_filter( 'wp_admin_workspaces_data_plugin', array( 'WP_Admin_Workspaces_Admin_Routes', 'contribute' ), 5 );
 
 // Registry state lives in static class memory — invisible to the
 // default cache-signal map. Hook into the cache layer's filter so a
 // route registration delta forces a fresh resolver run cross-request.
-add_filter( 'wp_admin_shell_cache_signals', function ( $signals ) {
-	$registry = WP_Admin_Shell_Admin_Routes::all();
+add_filter( 'wp_admin_workspaces_cache_signals', function ( $signals ) {
+	$registry = WP_Admin_Workspaces_Admin_Routes::all();
 	if ( ! empty( $registry ) ) {
 		$signals['admin_routes'] = md5( wp_json_encode( $registry ) );
 	}

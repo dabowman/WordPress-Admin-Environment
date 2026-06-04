@@ -17,7 +17,7 @@ Always set `"version": 3`.
 | `docs/public/admin-json-reference.md` | Author-facing reference. Per-field tables, examples for every top-level block. |
 | `docs/schema-sketch.md` | Design doc. Cascade semantics, OR-semantic permissions w/ trust tiers, mode catalog, slot vocabulary, classic wp-admin menu bridge, programmatic registration. |
 | `docs/dataview-config.md` | dataView 3-axis registry (`kind/name/variant`), `extends`, filter hooks, REST endpoints. |
-| `docs/wp-admin-shell-design-spec.md` | Master spec — runtime architecture, region vocabulary, URL routing, capability gating, theming model, extension points. Read §5 (regions) and §6 (routing) when using the escape hatches. |
+| `docs/wp-admin-workspaces-design-spec.md` | Master spec — runtime architecture, region vocabulary, URL routing, capability gating, theming model, extension points. Read §5 (regions) and §6 (routing) when using the escape hatches. |
 | `shells/single-pane-demo.json` | Compact example — start here. |
 | `shells/wp-admin-default.json` | Largest example — every wp-admin screen, iframe fallbacks, multi-app screens. |
 
@@ -211,7 +211,7 @@ Both shapes coexist. The resolver normalizes shorthand to `apps: [ { "id": "main
 }
 ```
 
-`iframe:<slug>` is sugar — the compiler translates it to `core:iframe-fallback` + `config.url` at the end of resolution. URLs resolve relative to `adminUrl` (`window.wpAdminShell.adminUrl`).
+`iframe:<slug>` is sugar — the compiler translates it to `core:iframe-fallback` + `config.url` at the end of resolution. URLs resolve relative to `adminUrl` (`window.wpAdminWorkspaces.adminUrl`).
 
 ### `menu`
 
@@ -318,7 +318,7 @@ WPDS-shaped theme tree. Four customization paths in increasing escape-hatch orde
 
 **Chrome slots** — shell-only surfaces WPDS doesn't cover. Sub-namespaces: `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`. Engines that consume custom chrome slugs declare them in their manifest.
 
-`tokens.json` (DTCG) sits alongside admin.json. The PHP `WP_Admin_Shell_Tokens` resolver deep-merges site → theme → plugin → core token files; aliases resolve curly-brace references.
+`tokens.json` (DTCG) sits alongside admin.json. The PHP `WP_Admin_Workspaces_Tokens` resolver deep-merges site → theme → plugin → core token files; aliases resolve curly-brace references.
 
 ### `preload`
 
@@ -335,7 +335,7 @@ REST paths to hydrate server-side and inject as `wp.apiFetch.createPreloadingMid
 - String → GET shorthand. `[ path, method ]` for OPTIONS preflight.
 - Methods restricted to GET / OPTIONS.
 - Across origins: additive concatenation. Dedupe by exact `path+method`.
-- Conditional preloads live in a `wp_admin_shell_data_{origin}` PHP filter callback, NOT in admin.json.
+- Conditional preloads live in a `wp_admin_workspaces_data_{origin}` PHP filter callback, NOT in admin.json.
 - Per-screen `screens[id].preload` is additive with this workspace-level list.
 
 ### `regions` / `routes` (escape hatches)
@@ -385,7 +385,7 @@ Six origins merge in fixed order: **core → engine → plugin → site → role
 
 **Path collisions** between two distinct screen IDs claiming the same `path` fail the resolver. Override path on an existing screen by id is a normal cascade — not a collision.
 
-**`customizable` allowlist.** Consumer origins (role / user) can only write paths the workspace declares as customizable. The DENY_PATTERNS list (`WP_Admin_Shell_Customizable::DENY_PATTERNS`) makes `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` non-customizable even when allowed — these are security gates.
+**`customizable` allowlist.** Consumer origins (role / user) can only write paths the workspace declares as customizable. The DENY_PATTERNS list (`WP_Admin_Workspaces_Customizable::DENY_PATTERNS`) makes `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` non-customizable even when allowed — these are security gates.
 
 ## Engine selection guide
 
@@ -607,5 +607,5 @@ For non-trivial changes, also load the workspace in `wp-env` and walk the screen
 | What dataView variants does app X ship? | `src/apps/<id>/app.json` → `dataView.variants`. |
 | What's the WPDS slot list at $wpds version Y? | `src/runtime/styles/wpds-defaults/<wpds>.json`. |
 | Spec rationale for a block? | `docs/schema-sketch.md`. |
-| Runtime architecture (regions, routing, gating)? | `docs/wp-admin-shell-design-spec.md`. |
+| Runtime architecture (regions, routing, gating)? | `docs/wp-admin-workspaces-design-spec.md`. |
 | Per-screen functional specs (wp-admin rebuilds)? | `docs/screens/*.md`. |

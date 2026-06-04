@@ -53,10 +53,10 @@ Most installs want the prebuilt zip — no Node toolchain required on the server
 
 1. Activate the **Gutenberg** plugin first (hard runtime dependency).
 2. In wp-admin, go to **Plugins → Add New → Upload Plugin**, choose
-   `wp-admin-shell.zip`, and install.
+   `wp-admin-workspaces.zip`, and install.
 3. Activate **WP Admin Shell**.
 
-Grab `wp-admin-shell.zip` from the releases page, or build one yourself with
+Grab `wp-admin-workspaces.zip` from the releases page, or build one yourself with
 `npm run build:zip` (see below).
 
 ### From source (development)
@@ -72,13 +72,13 @@ Copy the directory into `wp-content/plugins/`, then activate **WP Admin Shell** 
 
 ### Building a distributable zip
 
-To produce a `wp-admin-shell.zip` that can be uploaded via **Plugins → Add New → Upload Plugin** on any WordPress site:
+To produce a `wp-admin-workspaces.zip` that can be uploaded via **Plugins → Add New → Upload Plugin** on any WordPress site:
 
 ```bash
 npm run build:zip
 ```
 
-Output: `wp-admin-shell.zip` at the project root. It bundles `wp-admin-shell.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `shells/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+Output: `wp-admin-workspaces.zip` at the project root. It bundles `wp-admin-workspaces.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `shells/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
 
 ### With wp-env (development)
 
@@ -97,7 +97,7 @@ through from the baseline.
 ```bash
 # Quickstart: copy a starter template, then visit /wp-admin/
 # (any valid admin.json here turns the workspace on)
-cp wp-content/plugins/wp-admin-shell/shells/single-pane-demo.json wp-content/admin.json
+cp wp-content/plugins/wp-admin-workspaces/shells/single-pane-demo.json wp-content/admin.json
 ```
 
 1. Activate the plugin (and Gutenberg).
@@ -113,7 +113,7 @@ cp wp-content/plugins/wp-admin-shell/shells/single-pane-demo.json wp-content/adm
 available to every logged-in user, down to the `read` floor); the classic admin
 bar shows a reciprocal **Back to workspace** link.
 
-> The legacy `admin.php?page=wp-admin-shell` entry is gone as of `0.1.0`. The
+> The legacy `admin.php?page=wp-admin-workspaces` entry is gone as of `0.1.0`. The
 > file is the trigger and the configuration. See
 > [`docs/alpha-readiness.md`](docs/alpha-readiness.md) for the full behavior
 > map and the alpha caveats (network admin + customizer stay classic).
@@ -136,7 +136,7 @@ bar shows a reciprocal **Back to workspace** link.
 
 ## `admin.json` schema
 
-The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-shell-design-spec.md`](docs/wp-admin-shell-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 
@@ -158,14 +158,14 @@ System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:c
 ## Project structure
 
 ```
-wp-admin-shell/
-├── wp-admin-shell.php       # Plugin entry — admin page, asset enqueue, config handoff
+wp-admin-workspaces/
+├── wp-admin-workspaces.php       # Plugin entry — admin page, asset enqueue, config handoff
 ├── webpack.config.js        # @wordpress/scripts + a copy step for the DataViews CSS
 ├── shells/                  # Bundled admin.json configurations
 ├── includes/                # PHP
-│   ├── class-wp-admin-shell-config.php
-│   ├── class-wp-admin-shell-{can,prefs,data-view,data-field-collections}-rest.php
-│   ├── class-wp-admin-shell-cli.php          # wp admin-shell list | activate | register
+│   ├── class-wp-admin-workspaces-config.php
+│   ├── class-wp-admin-workspaces-{can,prefs,data-view,data-field-collections}-rest.php
+│   ├── class-wp-admin-workspaces-cli.php          # wp admin-shell list | activate | register
 │   ├── cascade/             # Resolver, merge engine, customizable, cache, permissions,
 │   │                        #   modes, dataView/dataField registries, preload, menu/route
 │   │                        #   shims, classic-menu bridge, dashboard widgets
@@ -173,7 +173,7 @@ wp-admin-shell/
 │   ├── manifests/           # app.json / engine.json discovery + registry + validator
 │   └── tokens/              # DTCG tokens.json resolver
 ├── src/
-│   ├── index.js             # Entry — kernel(window.wpAdminShell.config)
+│   ├── index.js             # Entry — kernel(window.wpAdminWorkspaces.config)
 │   └── runtime/             # DS-neutral kernel
 │       ├── kernel.js, kernel-context.js
 │       ├── compile/         # screens/workspace → regions / routes / default-route / commands

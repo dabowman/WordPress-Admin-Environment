@@ -38,7 +38,7 @@ export default function SidebarNavigationScreen( {
 		<>
 			<Stack
 				className={
-					'wp-admin-shell-sidebar-navigation-screen__main' +
+					'wp-admin-workspaces-sidebar-navigation-screen__main' +
 					( footer ? ' has-footer' : '' )
 				}
 				direction="column"
@@ -48,7 +48,7 @@ export default function SidebarNavigationScreen( {
 					direction="row"
 					gap="md"
 					align="flex-start"
-					className="wp-admin-shell-sidebar-navigation-screen__title-icon"
+					className="wp-admin-workspaces-sidebar-navigation-screen__title-icon"
 				>
 					{ ! isRoot && (
 						<SidebarButton
@@ -59,7 +59,7 @@ export default function SidebarNavigationScreen( {
 								onBack?.();
 							} }
 							icon={ icon }
-							label={ __( 'Back', 'wp-admin-shell' ) }
+							label={ __( 'Back', 'wp-admin-workspaces' ) }
 						/>
 					) }
 					{ isRoot && (
@@ -67,28 +67,28 @@ export default function SidebarNavigationScreen( {
 							icon={ icon }
 							label={ __(
 								'Go to the Dashboard',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
-							href={ window.wpAdminShell?.dashboardUrl }
+							href={ window.wpAdminWorkspaces?.dashboardUrl }
 						/>
 					) }
 					<Text
 						variant="heading-lg"
 						render={ <h1 /> }
-						className="wp-admin-shell-sidebar-navigation-screen__title"
+						className="wp-admin-workspaces-sidebar-navigation-screen__title"
 					>
 						{ title }
 					</Text>
 					{ actions && (
-						<div className="wp-admin-shell-sidebar-navigation-screen__actions">
+						<div className="wp-admin-workspaces-sidebar-navigation-screen__actions">
 							{ actions }
 						</div>
 					) }
 				</Stack>
 
-				<div className="wp-admin-shell-sidebar-navigation-screen__content">
+				<div className="wp-admin-workspaces-sidebar-navigation-screen__content">
 					{ description && (
-						<div className="wp-admin-shell-sidebar-navigation-screen__description">
+						<div className="wp-admin-workspaces-sidebar-navigation-screen__description">
 							{ description }
 						</div>
 					) }
@@ -97,7 +97,7 @@ export default function SidebarNavigationScreen( {
 			</Stack>
 
 			{ footer && (
-				<footer className="wp-admin-shell-sidebar-navigation-screen__footer">
+				<footer className="wp-admin-workspaces-sidebar-navigation-screen__footer">
 					{ footer }
 				</footer>
 			) }

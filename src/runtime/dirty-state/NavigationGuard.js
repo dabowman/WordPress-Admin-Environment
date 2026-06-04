@@ -5,7 +5,7 @@ import { hasBlockingDirty } from './dirtyState.mjs';
 
 const CONFIRM_MESSAGE = __(
 	'You have unsaved changes. Are you sure you want to leave?',
-	'wp-admin-shell'
+	'wp-admin-workspaces'
 );
 
 /**

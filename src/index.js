@@ -11,12 +11,12 @@ import './index.css';
 // before this module can't be lost — though scripts enqueued after the
 // bundle still race the synchronous mount below (see the
 // kernel-import-surface gap in docs/feedback.md).
-if ( window.wpAdminShell ) {
-	window.wpAdminShell.registerMenuRenderer = registerMenuRenderer;
+if ( window.wpAdminWorkspaces ) {
+	window.wpAdminWorkspaces.registerMenuRenderer = registerMenuRenderer;
 }
 
-const container = document.getElementById( 'wp-admin-shell' );
+const container = document.getElementById( 'wp-admin-workspaces' );
 if ( container ) {
 	const root = createRoot( container );
-	root.render( kernel( window.wpAdminShell?.config ) );
+	root.render( kernel( window.wpAdminWorkspaces?.config ) );
 }

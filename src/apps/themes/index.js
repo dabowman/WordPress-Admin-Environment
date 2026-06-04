@@ -23,23 +23,23 @@ function stripTags( html ) {
 }
 
 const STATUS_LABELS = {
-	active: __( 'Active', 'wp-admin-shell' ),
-	inactive: __( 'Inactive', 'wp-admin-shell' ),
+	active: __( 'Active', 'wp-admin-workspaces' ),
+	inactive: __( 'Inactive', 'wp-admin-workspaces' ),
 };
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	name: __( 'Name', 'wp-admin-shell' ),
-	screenshot: __( 'Screenshot', 'wp-admin-shell' ),
-	status: __( 'Status', 'wp-admin-shell' ),
-	description: __( 'Description', 'wp-admin-shell' ),
-	version: __( 'Version', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
+	name: __( 'Name', 'wp-admin-workspaces' ),
+	screenshot: __( 'Screenshot', 'wp-admin-workspaces' ),
+	status: __( 'Status', 'wp-admin-workspaces' ),
+	description: __( 'Description', 'wp-admin-workspaces' ),
+	version: __( 'Version', 'wp-admin-workspaces' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	activate: __( 'Activate', 'wp-admin-shell' ),
-	details: __( 'Details', 'wp-admin-shell' ),
+	activate: __( 'Activate', 'wp-admin-workspaces' ),
+	details: __( 'Details', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -75,7 +75,9 @@ function screenshotUrl( item ) {
 		return '';
 	}
 	const siteUrl =
-		( typeof window !== 'undefined' && window.wpAdminShell?.siteUrl ) || '';
+		( typeof window !== 'undefined' &&
+			window.wpAdminWorkspaces?.siteUrl ) ||
+		'';
 	return `${ siteUrl }/wp-content/themes/${ encodeURIComponent(
 		item.stylesheet
 	) }/screenshot.png`;
@@ -130,7 +132,7 @@ export default function ThemesApp( { config = {} } ) {
 		async ( theme ) => {
 			try {
 				await apiFetch( {
-					path: '/wp-admin-shell/v1/activate-theme',
+					path: '/wp-admin-workspaces/v1/activate-theme',
 					method: 'POST',
 					data: { stylesheet: theme.stylesheet },
 				} );
@@ -141,7 +143,7 @@ export default function ThemesApp( { config = {} } ) {
 				] );
 				createNotice(
 					'success',
-					__( 'Theme activated.', 'wp-admin-shell' ),
+					__( 'Theme activated.', 'wp-admin-workspaces' ),
 					{ type: 'snackbar' }
 				);
 				return true;
@@ -151,7 +153,7 @@ export default function ThemesApp( { config = {} } ) {
 					err?.message ||
 						__(
 							'The theme could not be activated.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						),
 					{ type: 'snackbar', isDismissible: true }
 				);
@@ -172,7 +174,7 @@ export default function ThemesApp( { config = {} } ) {
 				<Stack
 					direction="column"
 					gap="md"
-					className="wp-admin-shell-app-themes__details-modal"
+					className="wp-admin-workspaces-app-themes__details-modal"
 				>
 					{ screenshotUrl( item ) && (
 						<img src={ screenshotUrl( item ) } alt="" />
@@ -182,10 +184,11 @@ export default function ThemesApp( { config = {} } ) {
 					</Text>
 					<Text>{ item.description }</Text>
 					<Text variant="body-sm">
-						{ __( 'Version', 'wp-admin-shell' ) }: { item.version }
+						{ __( 'Version', 'wp-admin-workspaces' ) }:{ ' ' }
+						{ item.version }
 						{ item.author
 							? ' · ' +
-							  __( 'Author', 'wp-admin-shell' ) +
+							  __( 'Author', 'wp-admin-workspaces' ) +
 							  ': ' +
 							  item.author
 							: '' }
@@ -203,11 +206,11 @@ export default function ThemesApp( { config = {} } ) {
 									/>
 								}
 							>
-								{ __( 'Theme site', 'wp-admin-shell' ) }
+								{ __( 'Theme site', 'wp-admin-workspaces' ) }
 							</Button>
 						) }
 						<Button variant="minimal" onClick={ closeModal }>
-							{ __( 'Close', 'wp-admin-shell' ) }
+							{ __( 'Close', 'wp-admin-workspaces' ) }
 						</Button>
 						{ ! isActive && (
 							<Button
@@ -220,7 +223,7 @@ export default function ThemesApp( { config = {} } ) {
 									}
 								} }
 							>
-								{ __( 'Activate', 'wp-admin-shell' ) }
+								{ __( 'Activate', 'wp-admin-workspaces' ) }
 							</Button>
 						) }
 					</Stack>
@@ -286,9 +289,9 @@ export default function ThemesApp( { config = {} } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-themes wp-admin-shell-app--fill">
+		<div className="wp-admin-workspaces-app-themes wp-admin-workspaces-app--fill">
 			{ ! themes ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (

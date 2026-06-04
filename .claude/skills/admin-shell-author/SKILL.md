@@ -56,7 +56,7 @@ Each sub-skill restates its own validation steps inline.
 
 ## Quick links
 
-- Master spec: `docs/wp-admin-shell-design-spec.md`
+- Master spec: `docs/wp-admin-workspaces-design-spec.md`
 - Design doc: `docs/schema-sketch.md`
 - Public references: `docs/public/{admin,app,engine}-json-reference.md`
 - Schemas: `docs/schemas/{admin,admin-app,admin-engine,tokens}.json`

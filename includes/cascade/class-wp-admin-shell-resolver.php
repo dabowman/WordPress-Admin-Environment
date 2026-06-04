@@ -3,9 +3,9 @@
  * Cascade resolver — merges the five origins into a single config tree.
  *
  * Origins (highest → lowest precedence):
- *   user   — wp_admin_shell_user_prefs (current user only)
- *   role   — wp_admin_shell_role_config[<role>]
- *   site   — wp_admin_shell_site_config option
+ *   user   — wp_admin_workspaces_user_prefs (current user only)
+ *   role   — wp_admin_workspaces_role_config[<role>]
+ *   site   — wp_admin_workspaces_site_config option
  *   plugin — wp-content/admin.json override (partial delta) when present;
  *            otherwise the back-compat selected shell (full, replaces the
  *            baseline)
@@ -14,32 +14,32 @@
  *            present; otherwise the empty guard baseline
  *
  * Each origin is loaded into a normalized doc, optionally filtered with
- * `wp_admin_shell_data_{origin}`, run through `customizable` filtering
+ * `wp_admin_workspaces_data_{origin}`, run through `customizable` filtering
  * against the upstream merged tree, and merged with restrict-only
- * semantics. After all origins fold in, `wp_admin_shell_data` runs as
+ * semantics. After all origins fold in, `wp_admin_workspaces_data` runs as
  * the final filter.
  *
  * Cache + filter timing.
- * The resolver memoizes through WP_Admin_Shell_Cache (object cache +
+ * The resolver memoizes through WP_Admin_Workspaces_Cache (object cache +
  * transient). On a cache hit, origin loaders AND filters are skipped —
  * the merged tree returns directly. This matches `WP_Theme_JSON_Resolver`
  * behavior. Implications for plugin authors:
  *
- *   - `wp_admin_shell_data_*` filter changes do not take effect until
+ *   - `wp_admin_workspaces_data_*` filter changes do not take effect until
  *     the next natural cache invalidation (option/meta write,
  *     plugin/theme activation, role change) or a manual flush via
- *     `WP_Admin_Shell_Cache::flush()`.
+ *     `WP_Admin_Workspaces_Cache::flush()`.
  *   - Plugins hooking the filter at activation time get a flush
  *     automatically (the `activated_plugin` action triggers it).
  *   - Plugins hooking conditionally (e.g. only when a setting toggles)
  *     should call the flush themselves on the trigger.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Resolver {
+class WP_Admin_Workspaces_Resolver {
 
 	const ORIGINS_ORDER = array( 'core', 'engine', 'plugin', 'site', 'role', 'user' );
 
@@ -49,8 +49,8 @@ class WP_Admin_Shell_Resolver {
 	public static function resolve( $context = array() ) {
 		$context['shell'] = $context['shell'] ?? self::active_shell_slug();
 
-		$cache_key = class_exists( 'WP_Admin_Shell_Cache' )
-			? WP_Admin_Shell_Cache::key_for( $context )
+		$cache_key = class_exists( 'WP_Admin_Workspaces_Cache' )
+			? WP_Admin_Workspaces_Cache::key_for( $context )
 			: null;
 
 		// Request-scope memo — zero cost on repeat calls within a single
@@ -61,7 +61,7 @@ class WP_Admin_Shell_Resolver {
 		}
 
 		if ( $cache_key !== null ) {
-			$cached = WP_Admin_Shell_Cache::get( $cache_key );
+			$cached = WP_Admin_Workspaces_Cache::get( $cache_key );
 			if ( $cached !== null ) {
 				self::$request_memo[ $cache_key ] = $cached;
 				return $cached;
@@ -72,7 +72,7 @@ class WP_Admin_Shell_Resolver {
 		$resolved = self::resolve_with( $origins );
 
 		if ( $cache_key !== null ) {
-			WP_Admin_Shell_Cache::set( $cache_key, $resolved );
+			WP_Admin_Workspaces_Cache::set( $cache_key, $resolved );
 			self::$request_memo[ $cache_key ] = $resolved;
 		}
 		return $resolved;
@@ -105,9 +105,9 @@ class WP_Admin_Shell_Resolver {
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
-			$doc    = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
-			$tagged = WP_Admin_Shell_Merge::tag_origin( $doc, $origin );
-			$merged = WP_Admin_Shell_Merge::merge_authoritative( $merged, $tagged );
+			$doc    = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc );
+			$tagged = WP_Admin_Workspaces_Merge::tag_origin( $doc, $origin );
+			$merged = WP_Admin_Workspaces_Merge::merge_authoritative( $merged, $tagged );
 		}
 
 		// Phase 2 — consumer origins (additive, customizable-filtered).
@@ -123,13 +123,13 @@ class WP_Admin_Shell_Resolver {
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
-			$doc    = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
-			$doc    = WP_Admin_Shell_Customizable::filter_doc( $merged, $doc, $origin );
-			$doc    = WP_Admin_Shell_Permissions::enforce_origin_tier( $doc, $merged, $origin );
-			$tagged = WP_Admin_Shell_Merge::tag_origin( $doc, $origin );
+			$doc    = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc );
+			$doc    = WP_Admin_Workspaces_Customizable::filter_doc( $merged, $doc, $origin );
+			$doc    = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $doc, $merged, $origin );
+			$tagged = WP_Admin_Workspaces_Merge::tag_origin( $doc, $origin );
 			$merged = $origin === 'site'
-				? WP_Admin_Shell_Merge::merge_with_tombstones( $merged, $tagged )
-				: WP_Admin_Shell_Merge::merge( $merged, $tagged );
+				? WP_Admin_Workspaces_Merge::merge_with_tombstones( $merged, $tagged )
+				: WP_Admin_Workspaces_Merge::merge( $merged, $tagged );
 		}
 
 		/**
@@ -143,7 +143,7 @@ class WP_Admin_Shell_Resolver {
 		 * flows straight through to the runtime.
 		 *
 		 * Plugin authors contributing screens, menu items, or commands
-		 * should prefer the per-origin `wp_admin_shell_data_{origin}`
+		 * should prefer the per-origin `wp_admin_workspaces_data_{origin}`
 		 * filters at priority 5 — those fire before this hook, before
 		 * `customizable` filtering, and before the merge, so the
 		 * contribution flows through the cascade naturally (and reaches
@@ -151,19 +151,19 @@ class WP_Admin_Shell_Resolver {
 		 *
 		 * @param array $merged The cascade-merged author-shape doc.
 		 */
-		$merged = apply_filters( 'wp_admin_shell_data', $merged );
-		$merged = WP_Admin_Shell_Merge::strip_origin_tags( $merged );
+		$merged = apply_filters( 'wp_admin_workspaces_data', $merged );
+		$merged = WP_Admin_Workspaces_Merge::strip_origin_tags( $merged );
 
 		// Stamp the resolved per-screen DataView doc onto each v3 screen
 		// (the resolved (kind, name, variant) triple + the screen's inline
-		// `dataView` overlay, with the `wp_admin_shell_data_view_config_*`
+		// `dataView` overlay, with the `wp_admin_workspaces_data_view_config_*`
 		// filters applied) so the JS `useDataView` hook's synchronous fast
 		// path resolves without a REST round-trip. Runs last, after the
-		// `wp_admin_shell_data` filter and origin-tag stripping. The kernel
+		// `wp_admin_workspaces_data` filter and origin-tag stripping. The kernel
 		// derives `routes` / `regions` / `default-route` / `commands` from
 		// the v3 blocks JS-side — PHP serializes the author-shape doc.
-		if ( class_exists( 'WP_Admin_Shell_Data_View_Config' ) ) {
-			$merged = WP_Admin_Shell_Data_View_Config::stamp_screen_data_views( $merged );
+		if ( class_exists( 'WP_Admin_Workspaces_Data_View_Config' ) ) {
+			$merged = WP_Admin_Workspaces_Data_View_Config::stamp_screen_data_views( $merged );
 		}
 
 		return $merged;
@@ -181,7 +181,7 @@ class WP_Admin_Shell_Resolver {
 	 * (programmatic plugin shells, network site config), extract then.
 	 */
 	public static function load_origins( $context = array() ) {
-		$plugin_dir = trailingslashit( WP_ADMIN_SHELL_PATH );
+		$plugin_dir = trailingslashit( WP_ADMIN_WORKSPACES_PATH );
 
 		// File-override path (theme.json model). A valid
 		// `wp-content/admin.json` is a PARTIAL delta layered on the
@@ -190,13 +190,13 @@ class WP_Admin_Shell_Resolver {
 		// file's keys over the baseline. The file wins over the legacy
 		// active-shell option. A one-key `{ "styles": … }` file retints
 		// the chrome while every baseline screen / menu / command survives.
-		$file_doc = class_exists( 'WP_Admin_Shell_Origin_File' )
-			? WP_Admin_Shell_Origin_File::load()
+		$file_doc = class_exists( 'WP_Admin_Workspaces_Origin_File' )
+			? WP_Admin_Workspaces_Origin_File::load()
 			: null;
 
 		if ( is_array( $file_doc ) ) {
 			$plugin_doc       = $file_doc;
-			$core_doc         = WP_Admin_Shell_Origin_Core::load_baseline();
+			$core_doc         = WP_Admin_Workspaces_Origin_Core::load_baseline();
 			$effective_engine = $plugin_doc['workspace']['engine']
 				?? $plugin_doc['engine']
 				?? ( is_array( $core_doc ) ? ( $core_doc['workspace']['engine'] ?? $core_doc['engine'] ?? null ) : null );
@@ -207,11 +207,11 @@ class WP_Admin_Shell_Resolver {
 			// file-based shells of the same slug (spec §13 #6).
 			$shell_slug = $context['shell'] ?? self::active_shell_slug();
 
-			if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $shell_slug ) ) {
-				$plugin_doc = WP_Admin_Shell_Shells::get( $shell_slug );
+			if ( class_exists( 'WP_Admin_Workspaces_Shells' ) && WP_Admin_Workspaces_Shells::has( $shell_slug ) ) {
+				$plugin_doc = WP_Admin_Workspaces_Shells::get( $shell_slug );
 			} else {
 				$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
-				$plugin_doc = WP_Admin_Shell_Origin_Core::load( $shell_path );
+				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $shell_path );
 			}
 
 			// A full selected shell declaring an engine (v2 root `engine`
@@ -225,7 +225,7 @@ class WP_Admin_Shell_Resolver {
 					isset( $plugin_doc['workspace']['engine'] ) ||
 					isset( $plugin_doc['settings']['shell']['layoutEngine'] )
 				) );
-			$core_doc         = $has_plugin_engine ? array() : WP_Admin_Shell_Origin_Core::empty_doc();
+			$core_doc         = $has_plugin_engine ? array() : WP_Admin_Workspaces_Origin_Core::empty_doc();
 			$effective_engine = is_array( $plugin_doc )
 				? ( $plugin_doc['workspace']['engine'] ?? $plugin_doc['engine'] ?? null )
 				: null;
@@ -235,7 +235,7 @@ class WP_Admin_Shell_Resolver {
 			'core'   => $core_doc,
 			'engine' => self::engine_origin( $effective_engine ),
 			'plugin' => $plugin_doc,
-			'site'   => is_array( get_option( 'wp_admin_shell_site_config', array() ) ) ? get_option( 'wp_admin_shell_site_config', array() ) : array(),
+			'site'   => is_array( get_option( 'wp_admin_workspaces_site_config', array() ) ) ? get_option( 'wp_admin_workspaces_site_config', array() ) : array(),
 			'role'   => self::role_origin(),
 			'user'   => self::user_origin(),
 		);
@@ -266,10 +266,10 @@ class WP_Admin_Shell_Resolver {
 		if ( ! is_string( $engine_id ) || $engine_id === '' ) {
 			return array();
 		}
-		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+		if ( ! class_exists( 'WP_Admin_Workspaces_Manifest_Registry' ) ) {
 			return array();
 		}
-		$manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $engine_id );
+		$manifest = WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $engine_id );
 		if ( ! is_array( $manifest ) ) {
 			return array();
 		}
@@ -281,7 +281,7 @@ class WP_Admin_Shell_Resolver {
 	}
 
 	private static function role_origin() {
-		$role_config = get_option( 'wp_admin_shell_role_config', array() );
+		$role_config = get_option( 'wp_admin_workspaces_role_config', array() );
 		if ( ! is_array( $role_config ) ) {
 			return array();
 		}
@@ -303,7 +303,7 @@ class WP_Admin_Shell_Resolver {
 		if ( ! $user_id ) {
 			return array();
 		}
-		$prefs = get_user_meta( $user_id, 'wp_admin_shell_user_prefs', true );
+		$prefs = get_user_meta( $user_id, 'wp_admin_workspaces_user_prefs', true );
 		return is_array( $prefs ) ? $prefs : array();
 	}
 
@@ -311,10 +311,10 @@ class WP_Admin_Shell_Resolver {
 	 * Active shell slug — site default with role/user override.
 	 */
 	public static function active_shell_slug() {
-		$slug = get_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+		$slug = get_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
 
 		// Role override (per-role shell selection).
-		$role_config = get_option( 'wp_admin_shell_role_config', array() );
+		$role_config = get_option( 'wp_admin_workspaces_role_config', array() );
 		$user        = wp_get_current_user();
 		if ( $user && ! empty( $user->roles ) && is_array( $role_config ) ) {
 			foreach ( (array) $user->roles as $role ) {
@@ -328,7 +328,7 @@ class WP_Admin_Shell_Resolver {
 		// User override — only if active shell allows it.
 		$user_id = get_current_user_id();
 		if ( $user_id ) {
-			$prefs = get_user_meta( $user_id, 'wp_admin_shell_user_prefs', true );
+			$prefs = get_user_meta( $user_id, 'wp_admin_workspaces_user_prefs', true );
 			if ( is_array( $prefs ) && ! empty( $prefs['shell'] ) ) {
 				if ( self::shell_allows_user_switch( $prefs['shell'] ) ) {
 					$slug = $prefs['shell'];
@@ -340,7 +340,7 @@ class WP_Admin_Shell_Resolver {
 	}
 
 	private static function shell_allows_user_switch( $shell_slug ) {
-		$path = WP_ADMIN_SHELL_PATH . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
+		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
 		if ( ! file_exists( $path ) ) {
 			return false;
 		}

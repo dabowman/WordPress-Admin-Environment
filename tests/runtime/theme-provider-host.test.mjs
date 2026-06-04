@@ -232,11 +232,11 @@ console.log( '\n— buildScopedDetailCss —' );
 			top: {},
 			scoped: [
 				{
-					selector: '.wp-admin-shell-nav',
+					selector: '.wp-admin-workspaces-nav',
 					vars: { '--nav-bg': 'navy' },
 				},
 				{
-					selector: '.wp-admin-shell-toolbar',
+					selector: '.wp-admin-workspaces-toolbar',
 					vars: { '--tb-bg': 'slate' },
 				},
 			],
@@ -251,13 +251,13 @@ console.log( '\n— buildScopedDetailCss —' );
 	} );
 	ok(
 		'scoped bucket emits first scoped selector prefixed with the scope wrapper',
-		css.includes( '[data-theme-scope-id="pid4"] .wp-admin-shell-nav {' ),
+		css.includes( '[data-theme-scope-id="pid4"] .wp-admin-workspaces-nav {' ),
 		`css = ${ css }`
 	);
 	ok(
 		'scoped bucket emits second scoped selector prefixed with the scope wrapper',
 		css.includes(
-			'[data-theme-scope-id="pid4"] .wp-admin-shell-toolbar {'
+			'[data-theme-scope-id="pid4"] .wp-admin-workspaces-toolbar {'
 		),
 		`css = ${ css }`
 	);

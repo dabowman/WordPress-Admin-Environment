@@ -55,7 +55,7 @@ const RealThemeProvider = ( () => {
 	} catch ( e ) {
 		// eslint-disable-next-line no-console
 		console.warn(
-			'wp-admin-shell: @wordpress/theme.ThemeProvider unavailable. ' +
+			'wp-admin-workspaces: @wordpress/theme.ThemeProvider unavailable. ' +
 				'Shell will render empty. Ensure the Gutenberg plugin is active. ' +
 				( e?.message || e )
 		);
@@ -127,7 +127,7 @@ function pickCursor( styles ) {
  * @param {*}      root0.children
  */
 function RegionThemedSubtree( { children } ) {
-	const slotName = `wp-admin-shell-overlays-${ useId() }`;
+	const slotName = `wp-admin-workspaces-overlays-${ useId() }`;
 	return createElement(
 		'div',
 		{
@@ -149,7 +149,7 @@ export function WpdsThemeProvider( { styles, density, isRoot, children } ) {
 	if ( ! RealThemeProvider ) {
 		// eslint-disable-next-line no-console
 		console.error(
-			'wp-admin-shell: @wordpress/theme.ThemeProvider not reachable. Activate the Gutenberg plugin.'
+			'wp-admin-workspaces: @wordpress/theme.ThemeProvider not reachable. Activate the Gutenberg plugin.'
 		);
 		return null;
 	}

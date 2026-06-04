@@ -2,7 +2,7 @@
 
 When a wp-admin capability has **no REST surface**, the shell must not dead-end or silently drop the control. It offers a **consistent, tiered fallback** so the user — or their agent — can still complete the action. This is the companion to the `iframe:` escape hatch: a deliberate feature, not a compromise.
 
-> Use this anywhere the workspace can't write something through `/wp/v2/*` or `/wp-admin-shell/v1/*`. A large share of the parity backlog is `[upstream]`/no-REST (session destroy, admin password reset, confirmation flows, page-attribute templates, legacy options); they should all be handled **identically** via this pattern.
+> Use this anywhere the workspace can't write something through `/wp/v2/*` or `/wp-admin-workspaces/v1/*`. A large share of the parity backlog is `[upstream]`/no-REST (session destroy, admin password reset, confirmation flows, page-attribute templates, legacy options); they should all be handled **identically** via this pattern.
 
 ---
 

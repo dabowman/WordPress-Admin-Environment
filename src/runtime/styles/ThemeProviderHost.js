@@ -85,7 +85,7 @@ export function ScopedThemeProvider( { styles, children } ) {
 		return children;
 	}
 	const tokens =
-		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) ||
+		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.tokens ) ||
 		EMPTY_TOKENS;
 	const density = pickDensity( styles );
 	return createElement(
@@ -136,7 +136,7 @@ function ProviderShell( {
 		'div',
 		{
 			[ THEME_SCOPE_ATTRIBUTE ]: id,
-			className: 'wp-admin-shell-theme-root',
+			className: 'wp-admin-workspaces-theme-root',
 			style: { display: 'contents' },
 		},
 		children
@@ -196,7 +196,7 @@ function NeutralProvider( { detailStyleNode, children } ) {
  * Wraps the active engine's ThemeProvider in a render-error boundary.
  * Engine-supplied providers ship outside the kernel's review process
  * (extensions can register their own engines via
- * `wp_admin_shell_register_engine`); a thrown render here would crash
+ * `wp_admin_workspaces_register_engine`); a thrown render here would crash
  * the entire shell. Catch + log + fall back to the neutral wrapper so
  * the shell still paints — though without engine-specific DS theming
  * until the engine ships a working provider.
@@ -214,7 +214,7 @@ class ThemeProviderErrorBoundary extends Component {
 	componentDidCatch( error ) {
 		// eslint-disable-next-line no-console
 		console.error(
-			'wp-admin-shell: engine ThemeProvider threw during render. ' +
+			'wp-admin-workspaces: engine ThemeProvider threw during render. ' +
 				'Falling back to a neutral pass-through wrapper; engine ' +
 				'theming will not apply until the provider is fixed. ' +
 				( error?.message || error )

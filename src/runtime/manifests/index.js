@@ -1,10 +1,10 @@
 /**
  * Kernel-side accessor for the v2 manifest payload (V2.M1 task 5).
  *
- * PHP composes `window.wpAdminShell.manifests` as part of the inline-
+ * PHP composes `window.wpAdminWorkspaces.manifests` as part of the inline-
  * script handoff. Apps and engines registered via `app.json` /
  * `engine.json` files (convention-path discovery or programmatic
- * `wp_admin_shell_register_app()` / `wp_admin_shell_register_engine()`)
+ * `wp_admin_workspaces_register_app()` / `wp_admin_workspaces_register_engine()`)
  * appear here keyed by id.
  *
  * The kernel uses these accessors during composition. The legacy
@@ -23,7 +23,7 @@ function manifestPayload() {
 	if ( typeof window === 'undefined' ) {
 		return { apps: {}, engines: {} };
 	}
-	return window.wpAdminShell?.manifests || { apps: {}, engines: {} };
+	return window.wpAdminWorkspaces?.manifests || { apps: {}, engines: {} };
 }
 
 export function getApp( id ) {
@@ -46,7 +46,7 @@ export function listEngines() {
 
 /**
  * Resolve a region's role through template inheritance — JS mirror of
- * `WP_Admin_Shell_Manifest_Resolver::resolve_role()`.
+ * `WP_Admin_Workspaces_Manifest_Resolver::resolve_role()`.
  *
  * @param {Object} region           Region declaration from admin.json.
  * @param {string} engineId         Active engine id.

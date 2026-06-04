@@ -9,7 +9,7 @@
  *     (dashboard + bare admin.php; NOT `?page=` plugin pages or other
  *     classic screens).
  *   - is_allowlisted_endpoint(): the never-hijack list + the
- *     `wp_admin_shell_hijack_allowlist` extension filter + network admin.
+ *     `wp_admin_workspaces_hijack_allowlist` extension filter + network admin.
  *   - is_active_request(): the context guard short-circuits under
  *     non-page contexts (including WP-CLI, where this runs).
  *
@@ -50,15 +50,15 @@ class WPAS_Alpha_Routing_Runner {
 		} else {
 			$_GET['page'] = $page;
 		}
-		WP_Admin_Shell_Hijack::reset();
+		WP_Admin_Workspaces_Hijack::reset();
 	}
 }
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-if ( ! file_exists( $plugin_dir . 'wp-admin-shell.php' ) ) {
-	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-shell/';
+if ( ! file_exists( $plugin_dir . 'wp-admin-workspaces.php' ) ) {
+	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
 }
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 $user = get_user_by( 'login', 'admin' ) ?: get_user_by( 'id', 1 );
 if ( $user ) {
@@ -67,7 +67,7 @@ if ( $user ) {
 
 $T = 'WPAS_Alpha_Routing_Runner';
 
-$ref          = new ReflectionClass( 'WP_Admin_Shell_Hijack' );
+$ref          = new ReflectionClass( 'WP_Admin_Workspaces_Hijack' );
 $is_root      = $ref->getMethod( 'is_root_entry' );
 $is_allowed   = $ref->getMethod( 'is_allowlisted_endpoint' );
 $is_root->setAccessible( true );
@@ -115,10 +115,10 @@ $extend = function ( $list ) {
 	$list[] = 'edit.php';
 	return $list;
 };
-add_filter( 'wp_admin_shell_hijack_allowlist', $extend );
+add_filter( 'wp_admin_workspaces_hijack_allowlist', $extend );
 $T::request( 'edit.php' );
-$T::ok( 'wp_admin_shell_hijack_allowlist extends the list', $is_allowed->invoke( null ) === true );
-remove_filter( 'wp_admin_shell_hijack_allowlist', $extend );
+$T::ok( 'wp_admin_workspaces_hijack_allowlist extends the list', $is_allowed->invoke( null ) === true );
+remove_filter( 'wp_admin_workspaces_hijack_allowlist', $extend );
 $T::request( 'edit.php' );
 $T::ok( 'allowlist filter removal restores default', $is_allowed->invoke( null ) === false );
 
@@ -129,21 +129,21 @@ echo "\n— is_active_request context guard —\n";
 // Under WP-CLI is_admin() is false, so the takeover never fires here —
 // this asserts the guard, not the positive path (which is manual-smoke).
 $T::request( 'index.php' );
-$T::ok( 'is_active_request false under non-admin (CLI) context', WP_Admin_Shell_Hijack::is_active_request() === false );
+$T::ok( 'is_active_request false under non-admin (CLI) context', WP_Admin_Workspaces_Hijack::is_active_request() === false );
 
 // ── W3: classic-mode cookie + admin bar ────────────────────────────
 
 echo "\n— classic-mode cookie + admin bar —\n";
 
-$cm  = new ReflectionClass( 'WP_Admin_Shell_Classic_Mode' );
+$cm  = new ReflectionClass( 'WP_Admin_Workspaces_Classic_Mode' );
 $set = $cm->getMethod( 'set_cookie' );
 $set->setAccessible( true );
 
-unset( $_COOKIE['wp_admin_shell_classic'] );
+unset( $_COOKIE['wp_admin_workspaces_classic'] );
 $set->invoke( null, true );
-$T::ok( 'set_cookie(true) marks $_COOKIE', ( $_COOKIE['wp_admin_shell_classic'] ?? '' ) === '1' );
+$T::ok( 'set_cookie(true) marks $_COOKIE', ( $_COOKIE['wp_admin_workspaces_classic'] ?? '' ) === '1' );
 $set->invoke( null, false );
-$T::ok( 'set_cookie(false) clears $_COOKIE', ! isset( $_COOKIE['wp_admin_shell_classic'] ) );
+$T::ok( 'set_cookie(false) clears $_COOKIE', ! isset( $_COOKIE['wp_admin_workspaces_classic'] ) );
 
 // Stub admin bar — captures add_node() calls without needing WP_Admin_Bar.
 $make_bar = function () {
@@ -160,53 +160,53 @@ $GLOBALS['wpas_routing_override'] = '';
 $path_filter = function () {
 	return $GLOBALS['wpas_routing_override'] ? $GLOBALS['wpas_routing_override'] : '/__no_admin_json__';
 };
-add_filter( 'wp_admin_shell_admin_json_path', $path_filter );
+add_filter( 'wp_admin_workspaces_admin_json_path', $path_filter );
 
 $fix = $plugin_dir . 'tests/php/fixtures/alpha/';
 
 // Cookie set + workspace active → node present.
 $GLOBALS['wpas_routing_override'] = $fix . 'override-styles-only.json';
-WP_Admin_Shell_Origin_File::reset_memo();
-$_COOKIE['wp_admin_shell_classic'] = '1';
+WP_Admin_Workspaces_Origin_File::reset_memo();
+$_COOKIE['wp_admin_workspaces_classic'] = '1';
 $bar = $make_bar();
-WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
-$T::ok( 'Back-to-workspace node shown when cookie set + workspace active', isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+WP_Admin_Workspaces_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'Back-to-workspace node shown when cookie set + workspace active', isset( $bar->nodes['wp-admin-workspaces-back-to-workspace'] ) );
 
 // Cookie absent → no back-to-workspace node, but the reciprocal "Classic
 // wp-admin" escape node IS shown (workspace still active → there's something
 // to escape from). The escape control mirrors the hijack's read floor.
-unset( $_COOKIE['wp_admin_shell_classic'] );
+unset( $_COOKIE['wp_admin_workspaces_classic'] );
 $bar = $make_bar();
-WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
-$T::ok( 'no back-to-workspace node when classic cookie absent', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
-$T::ok( 'classic-escape node shown in workspace (cookie absent + active)', isset( $bar->nodes['wp-admin-shell-classic'] ) );
+WP_Admin_Workspaces_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'no back-to-workspace node when classic cookie absent', ! isset( $bar->nodes['wp-admin-workspaces-back-to-workspace'] ) );
+$T::ok( 'classic-escape node shown in workspace (cookie absent + active)', isset( $bar->nodes['wp-admin-workspaces-classic'] ) );
 
 // Garbage truthy cookie (`=yes`) must NOT count as classic — the hijack only
 // stands down on exactly '1', so the bar must show the escape node, not "back".
-$_COOKIE['wp_admin_shell_classic'] = 'yes';
+$_COOKIE['wp_admin_workspaces_classic'] = 'yes';
 $bar = $make_bar();
-WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
-$T::ok( 'forged truthy cookie → escape node, not back-to-workspace', isset( $bar->nodes['wp-admin-shell-classic'] ) && ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
-unset( $_COOKIE['wp_admin_shell_classic'] );
+WP_Admin_Workspaces_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'forged truthy cookie → escape node, not back-to-workspace', isset( $bar->nodes['wp-admin-workspaces-classic'] ) && ! isset( $bar->nodes['wp-admin-workspaces-back-to-workspace'] ) );
+unset( $_COOKIE['wp_admin_workspaces_classic'] );
 
 // Cookie set but workspace inactive (no file + no option) → no node.
 $GLOBALS['wpas_routing_override'] = '';
-WP_Admin_Shell_Origin_File::reset_memo();
-$saved_shell = get_option( 'wp_admin_shell_active_shell', null );
-$had_shell   = ( false !== get_option( 'wp_admin_shell_active_shell', false ) );
-delete_option( 'wp_admin_shell_active_shell' );
-$_COOKIE['wp_admin_shell_classic'] = '1';
+WP_Admin_Workspaces_Origin_File::reset_memo();
+$saved_shell = get_option( 'wp_admin_workspaces_active_shell', null );
+$had_shell   = ( false !== get_option( 'wp_admin_workspaces_active_shell', false ) );
+delete_option( 'wp_admin_workspaces_active_shell' );
+$_COOKIE['wp_admin_workspaces_classic'] = '1';
 $bar = $make_bar();
-WP_Admin_Shell_Classic_Mode::admin_bar_node( $bar );
-$T::ok( 'no node when workspace inactive', ! isset( $bar->nodes['wp-admin-shell-back-to-workspace'] ) );
+WP_Admin_Workspaces_Classic_Mode::admin_bar_node( $bar );
+$T::ok( 'no node when workspace inactive', ! isset( $bar->nodes['wp-admin-workspaces-back-to-workspace'] ) );
 
 // Restore option + cookie + filter state.
 if ( $had_shell && is_string( $saved_shell ) ) {
-	update_option( 'wp_admin_shell_active_shell', $saved_shell );
+	update_option( 'wp_admin_workspaces_active_shell', $saved_shell );
 }
-unset( $_COOKIE['wp_admin_shell_classic'] );
-remove_filter( 'wp_admin_shell_admin_json_path', $path_filter );
-WP_Admin_Shell_Origin_File::reset_memo();
+unset( $_COOKIE['wp_admin_workspaces_classic'] );
+remove_filter( 'wp_admin_workspaces_admin_json_path', $path_filter );
+WP_Admin_Workspaces_Origin_File::reset_memo();
 
 // ── W5: classic→workspace legacy redirect mapping ──────────────────
 
@@ -248,7 +248,7 @@ $_GET = array();
 
 // Baseline screens populate the legacy map.
 $baseline = json_decode( file_get_contents( $plugin_dir . 'shells/wp-admin-default.json' ), true );
-$lm       = WP_Admin_Shell_Admin_Routes::legacy_map( $baseline );
+$lm       = WP_Admin_Workspaces_Admin_Routes::legacy_map( $baseline );
 $T::ok( 'baseline maps /posts → edit.php', ( $lm['/posts']['legacy_path'] ?? '' ) === 'edit.php' );
 $T::ok( 'baseline constrains /posts to post_type=post (CPTs fall through)', ( $lm['/posts']['legacy_query']['post_type'] ?? '' ) === 'post' );
 $T::ok( 'baseline maps /pages with post_type=page', ( $lm['/pages']['legacy_query']['post_type'] ?? '' ) === 'page' );

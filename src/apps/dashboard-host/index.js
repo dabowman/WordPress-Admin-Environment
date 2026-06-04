@@ -57,12 +57,12 @@ import './index.css';
 function greetingForNow() {
 	const hour = new Date().getHours();
 	if ( hour < 12 ) {
-		return __( 'Good morning', 'wp-admin-shell' );
+		return __( 'Good morning', 'wp-admin-workspaces' );
 	}
 	if ( hour < 18 ) {
-		return __( 'Good afternoon', 'wp-admin-shell' );
+		return __( 'Good afternoon', 'wp-admin-workspaces' );
 	}
-	return __( 'Good evening', 'wp-admin-shell' );
+	return __( 'Good evening', 'wp-admin-workspaces' );
 }
 
 function tileStyle( widget ) {
@@ -97,8 +97,8 @@ function tileStyle( widget ) {
 export default function DashboardHostApp( { config = {} } = {} ) {
 	const { config: kernelConfig } = useKernel();
 
-	const userId = window.wpAdminShell?.userId;
-	// `window.wpAdminShell.userId` is always present in practice. When it's
+	const userId = window.wpAdminWorkspaces?.userId;
+	// `window.wpAdminWorkspaces.userId` is always present in practice. When it's
 	// falsy, `enabled: false` skips resolution entirely (the established
 	// fail-closed idiom — see dashboard-widget-recent-posts/index.js:29,
 	// preview-pane, simple-editor). A bare `undefined` id would NOT skip:
@@ -112,7 +112,7 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 	const heading = displayName
 		? sprintf(
 				/* translators: 1: greeting, 2: user display name */
-				__( '%1$s, %2$s', 'wp-admin-shell' ),
+				__( '%1$s, %2$s', 'wp-admin-workspaces' ),
 				greeting,
 				displayName
 		  )
@@ -124,7 +124,7 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 			: '';
 
 	const widgets = useMemo( () => {
-		const manifests = window.wpAdminShell?.manifests?.apps || {};
+		const manifests = window.wpAdminWorkspaces?.manifests?.apps || {};
 		const screen =
 			screenId &&
 			kernelConfig?.screens &&
@@ -135,43 +135,43 @@ export default function DashboardHostApp( { config = {} } = {} ) {
 	}, [ screenId, kernelConfig?.screens ] );
 
 	return (
-		<div className="wp-admin-shell-dashboard wp-admin-shell-app--inset">
-			<header className="wp-admin-shell-dashboard__greeting">
-				<h1 className="wp-admin-shell-dashboard__greeting-title">
+		<div className="wp-admin-workspaces-dashboard wp-admin-workspaces-app--inset">
+			<header className="wp-admin-workspaces-dashboard__greeting">
+				<h1 className="wp-admin-workspaces-dashboard__greeting-title">
 					{ heading }
 				</h1>
-				<p className="wp-admin-shell-dashboard__greeting-subtitle">
+				<p className="wp-admin-workspaces-dashboard__greeting-subtitle">
 					{ __(
 						'Here is a snapshot of your site.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</p>
 			</header>
 
 			{ widgets.length === 0 ? (
-				<div className="wp-admin-shell-dashboard-host-empty">
+				<div className="wp-admin-workspaces-dashboard-host-empty">
 					<p>
 						{ __(
 							'No dashboard widgets are registered.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</p>
 				</div>
 			) : (
-				<div className="wp-admin-shell-dashboard-host">
+				<div className="wp-admin-workspaces-dashboard-host">
 					{ widgets.map( ( widget ) => (
 						<div
 							key={ widget.id }
-							className="wp-admin-shell-dashboard-tile"
+							className="wp-admin-workspaces-dashboard-tile"
 							data-widget-id={ widget.id }
 							style={ tileStyle( widget ) }
 						>
-							<div className="wp-admin-shell-dashboard-tile__header">
-								<span className="wp-admin-shell-dashboard-tile__title">
+							<div className="wp-admin-workspaces-dashboard-tile__header">
+								<span className="wp-admin-workspaces-dashboard-tile__title">
 									{ widget.title }
 								</span>
 							</div>
-							<div className="wp-admin-shell-dashboard-tile__body">
+							<div className="wp-admin-workspaces-dashboard-tile__body">
 								<MountedApp
 									appRef={
 										widget.config

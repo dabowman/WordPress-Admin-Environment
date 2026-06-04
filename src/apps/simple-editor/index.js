@@ -35,18 +35,18 @@ import DocumentSettingsSidebar from './DocumentSettingsSidebar';
 function SaveStatus( { status, hasEdits, isSaving, error } ) {
 	let label;
 	if ( status === 'error' ) {
-		label = error || __( 'Save failed', 'wp-admin-shell' );
+		label = error || __( 'Save failed', 'wp-admin-workspaces' );
 	} else if ( isSaving || status === 'saving' ) {
-		label = __( 'Saving…', 'wp-admin-shell' );
+		label = __( 'Saving…', 'wp-admin-workspaces' );
 	} else if ( status === 'autosaved' ) {
 		// Published/scheduled posts route autosaves to a per-user revision;
 		// the live record is intentionally untouched, so distinguish it from
 		// a real "Saved" of the live record.
-		label = __( 'Auto-saved', 'wp-admin-shell' );
+		label = __( 'Auto-saved', 'wp-admin-workspaces' );
 	} else if ( status === 'saved' ) {
-		label = __( 'Saved', 'wp-admin-shell' );
+		label = __( 'Saved', 'wp-admin-workspaces' );
 	} else if ( hasEdits ) {
-		label = __( 'Unsaved changes', 'wp-admin-shell' );
+		label = __( 'Unsaved changes', 'wp-admin-workspaces' );
 	} else {
 		label = '';
 	}
@@ -57,7 +57,7 @@ function SaveStatus( { status, hasEdits, isSaving, error } ) {
 
 	return (
 		<span
-			className={ `wp-admin-shell-app-simple-editor__status wp-admin-shell-app-simple-editor__status--${ status }` }
+			className={ `wp-admin-workspaces-app-simple-editor__status wp-admin-workspaces-app-simple-editor__status--${ status }` }
 		>
 			{ label }
 		</span>
@@ -191,7 +191,10 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 				if ( ! cancelled ) {
 					setError(
 						err?.message ||
-							__( 'Failed to create draft.', 'wp-admin-shell' )
+							__(
+								'Failed to create draft.',
+								'wp-admin-workspaces'
+							)
 					);
 					setIsCreating( false );
 				}
@@ -207,25 +210,27 @@ export default function SimpleEditorApp( { config = {}, regionId } ) {
 
 	if ( error ) {
 		return (
-			<div className="wp-admin-shell-app-simple-editor">
-				<div className="wp-admin-shell-app-simple-editor__toolbar">
+			<div className="wp-admin-workspaces-app-simple-editor">
+				<div className="wp-admin-workspaces-app-simple-editor__toolbar">
 					<Button
 						onClick={ () => navigate( backHref ) }
 						variant="minimal"
 					>
 						<Icon icon={ arrowLeft } size={ 16 } />
-						{ __( 'Back to list', 'wp-admin-shell' ) }
+						{ __( 'Back to list', 'wp-admin-workspaces' ) }
 					</Button>
 				</div>
-				<div className="wp-admin-shell-content__empty">{ error }</div>
+				<div className="wp-admin-workspaces-content__empty">
+					{ error }
+				</div>
 			</div>
 		);
 	}
 
 	if ( isCreating || ! postId ) {
 		return (
-			<div className="wp-admin-shell-app-simple-editor">
-				<div className="wp-admin-shell-app-simple-editor__loading">
+			<div className="wp-admin-workspaces-app-simple-editor">
+				<div className="wp-admin-workspaces-app-simple-editor__loading">
 					<Spinner />
 				</div>
 			</div>
@@ -357,7 +362,7 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const settings = useMemo(
 		() => ( {
 			allowedBlockTypes: ALLOWED_BLOCKS,
-			bodyPlaceholder: __( 'Tell your story…', 'wp-admin-shell' ),
+			bodyPlaceholder: __( 'Tell your story…', 'wp-admin-workspaces' ),
 			__experimentalBlockPatterns: [],
 			__experimentalBlockPatternCategories: [],
 			__experimentalReusableBlocks: [],
@@ -371,8 +376,8 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 
 	if ( isResolving || ! record || ! hydrated ) {
 		return (
-			<div className="wp-admin-shell-app-simple-editor">
-				<div className="wp-admin-shell-app-simple-editor__loading">
+			<div className="wp-admin-workspaces-app-simple-editor">
+				<div className="wp-admin-workspaces-app-simple-editor__loading">
 					<Spinner />
 				</div>
 			</div>
@@ -397,15 +402,15 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 	const isBusy = isSaving || isSaveBusy;
 
 	return (
-		<div className="wp-admin-shell-app-simple-editor">
-			<div className="wp-admin-shell-app-simple-editor__toolbar">
+		<div className="wp-admin-workspaces-app-simple-editor">
+			<div className="wp-admin-workspaces-app-simple-editor__toolbar">
 				<Button
 					onClick={ () => navigate( backHref ) }
 					variant="minimal"
 					size="compact"
 				>
 					<Icon icon={ arrowLeft } size={ 16 } />
-					{ __( 'Back to list', 'wp-admin-shell' ) }
+					{ __( 'Back to list', 'wp-admin-workspaces' ) }
 				</Button>
 				<SaveStatus
 					status={ saveStatus }
@@ -422,24 +427,27 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 					loading={ isBusy }
 				>
 					{ isPublished
-						? __( 'Update', 'wp-admin-shell' )
-						: __( 'Publish', 'wp-admin-shell' ) }
+						? __( 'Update', 'wp-admin-workspaces' )
+						: __( 'Publish', 'wp-admin-workspaces' ) }
 				</Button>
 			</div>
-			<div className="wp-admin-shell-app-simple-editor__main">
+			<div className="wp-admin-workspaces-app-simple-editor__main">
 				<div
-					className="wp-admin-shell-app-simple-editor__body"
+					className="wp-admin-workspaces-app-simple-editor__body"
 					ref={ bodyRef }
 				>
-					<div className="wp-admin-shell-app-simple-editor__column">
+					<div className="wp-admin-workspaces-app-simple-editor__column">
 						<input
 							type="text"
-							className="wp-admin-shell-app-simple-editor__title"
+							className="wp-admin-workspaces-app-simple-editor__title"
 							value={ titleValue }
 							onChange={ onTitleChange }
 							onKeyDown={ onTitleKeyDown }
-							placeholder={ __( 'Title', 'wp-admin-shell' ) }
-							aria-label={ __( 'Post title', 'wp-admin-shell' ) }
+							placeholder={ __( 'Title', 'wp-admin-workspaces' ) }
+							aria-label={ __(
+								'Post title',
+								'wp-admin-workspaces'
+							) }
 						/>
 						<BlockEditorProvider
 							value={ blocks }
@@ -468,8 +476,11 @@ function SimpleEditor( { postType, postId, backHref, regionId } ) {
 					canAssignAuthor={ canAssignAuthor }
 				/>
 				<aside
-					className="wp-admin-shell-app-simple-editor__sidebar"
-					aria-label={ __( 'Document settings', 'wp-admin-shell' ) }
+					className="wp-admin-workspaces-app-simple-editor__sidebar"
+					aria-label={ __(
+						'Document settings',
+						'wp-admin-workspaces'
+					) }
 				>
 					<Slot
 						name="core:editor.sidebar"

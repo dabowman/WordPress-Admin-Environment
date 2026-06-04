@@ -6,13 +6,13 @@ Prose accompanying `app.json#documentation` for the site-hub header.
 
 SiteHubApp pins to the top of the navigation sidebar in the default engine. Three controls: site icon (→ dashboard), site title (→ home URL, new tab), command-palette toggle. The role is `banner` (ARIA landmark for the site identity surface).
 
-The title-source-of-truth distinction matters: `useEntityRecord('root','site').record.title` is the canonical source; `window.wpAdminShell.siteName` is a fallback for the brief window before core-data hydrates. A prior bug had the site-hub render the window-global value indefinitely, missing user-edits from the settings page until refresh.
+The title-source-of-truth distinction matters: `useEntityRecord('root','site').record.title` is the canonical source; `window.wpAdminWorkspaces.siteName` is a fallback for the brief window before core-data hydrates. A prior bug had the site-hub render the window-global value indefinitely, missing user-edits from the settings page until refresh.
 
 ## Architecture
 
 `memo + forwardRef` wrapping is deliberate. Engines may attach refs to measure the hub's rendered size for layout calculations; the forwardRef keeps that contract usable. `memo` is a defensive optimization — the hub re-renders on every kernel state change otherwise.
 
-`SiteIcon` (sibling helper) resolves the icon in priority order: the author-declared `styles.branding.*` logo from the cascade → the site's REST `site_icon_url` (read from `root/__unstableBase`, the icon a user sets in Settings → General) → the default WordPress mark. While `__unstableBase` is still resolving and no branding logo is set, it renders an empty sized placeholder so the fallback mark doesn't flash before a configured icon paints — mirroring edit-site's `SiteIcon`. A `branding.logo` that is absolute (`https?:`) or protocol-relative (`/…`) is used as-is; anything else is treated as plugin-relative and prefixed with `window.wpAdminShell.pluginUrl`.
+`SiteIcon` (sibling helper) resolves the icon in priority order: the author-declared `styles.branding.*` logo from the cascade → the site's REST `site_icon_url` (read from `root/__unstableBase`, the icon a user sets in Settings → General) → the default WordPress mark. While `__unstableBase` is still resolving and no branding logo is set, it renders an empty sized placeholder so the fallback mark doesn't flash before a configured icon paints — mirroring edit-site's `SiteIcon`. A `branding.logo` that is absolute (`https?:`) or protocol-relative (`/…`) is used as-is; anything else is treated as plugin-relative and prefixed with `window.wpAdminWorkspaces.pluginUrl`.
 
 The ellipsis-in-flex pattern for the title is the one CLAUDE.md calls out: `display: flex; min-width: 0;` on the wrapper + `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap` on the Button. Both halves are required — WPDS Button is `inline-flex` by default; the wrapper's `min-width: 0` overrides the default `min-width: auto`; the wrapper's `display: flex` makes the Button's `flex-grow` actually stretch.
 

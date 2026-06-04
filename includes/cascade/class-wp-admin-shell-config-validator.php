@@ -14,12 +14,12 @@
  * a second cross-request layer here would invalidate on the same signal
  * the resolver cache invalidates on, with no additional benefit.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Config_Validator {
+class WP_Admin_Workspaces_Config_Validator {
 
 	/** @var array<string, array{ valid: bool, errors: string[] }> */
 	private static $cache = array();

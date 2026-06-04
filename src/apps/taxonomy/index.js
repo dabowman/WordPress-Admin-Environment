@@ -21,21 +21,21 @@ import { buildTermTree, flattenTreeOrder, indentLabel } from './termTree.mjs';
 import { Page } from '../_shared/Page';
 
 const DEFAULT_TAXONOMY_LABEL = {
-	category: __( 'Categories', 'wp-admin-shell' ),
-	post_tag: __( 'Tags', 'wp-admin-shell' ),
+	category: __( 'Categories', 'wp-admin-workspaces' ),
+	post_tag: __( 'Tags', 'wp-admin-workspaces' ),
 };
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	name: __( 'Name', 'wp-admin-shell' ),
-	slug: __( 'Slug', 'wp-admin-shell' ),
-	count: __( 'Count', 'wp-admin-shell' ),
-	description: __( 'Description', 'wp-admin-shell' ),
+	name: __( 'Name', 'wp-admin-workspaces' ),
+	slug: __( 'Slug', 'wp-admin-workspaces' ),
+	count: __( 'Count', 'wp-admin-workspaces' ),
+	description: __( 'Description', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	delete: __( 'Delete', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	delete: __( 'Delete', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -104,7 +104,7 @@ function buildFieldRenderers( {
 							<span className="screen-reader-text">
 								{ sprintf(
 									/* translators: %d: term nesting depth, 1-based. */
-									__( 'Level %d', 'wp-admin-shell' ),
+									__( 'Level %d', 'wp-admin-workspaces' ),
 									depth + 1
 								) }
 							</span>
@@ -119,7 +119,7 @@ function buildFieldRenderers( {
 					</Button>
 					{ isDefault && (
 						<Badge intent="neutral">
-							{ __( 'Default', 'wp-admin-shell' ) }
+							{ __( 'Default', 'wp-admin-workspaces' ) }
 						</Badge>
 					) }
 				</Stack>
@@ -257,7 +257,7 @@ export default function TaxonomyApp( { config = {} } ) {
 			return null;
 		}
 		return [
-			{ value: 0, label: __( 'None', 'wp-admin-shell' ) },
+			{ value: 0, label: __( 'None', 'wp-admin-workspaces' ) },
 			...termTree.map( ( node ) => ( {
 				value: node.id,
 				label: indentLabel(
@@ -335,12 +335,12 @@ export default function TaxonomyApp( { config = {} } ) {
 		const deleteModal = createBulkConfirmModal( {
 			getMessage: ( items ) =>
 				items.length === 1
-					? __( 'Delete this term?', 'wp-admin-shell' )
+					? __( 'Delete this term?', 'wp-admin-workspaces' )
 					: __(
 							'Delete these terms? Posts assigned to them will lose this term.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete', 'wp-admin-workspaces' ),
 			// Terms have no trash — `force: true` is required or the request
 			// 400s.
 			mutate: ( item ) =>
@@ -362,12 +362,15 @@ export default function TaxonomyApp( { config = {} } ) {
 					);
 					createErrorNotice(
 						first?.reason?.message ||
-							__( 'Failed to delete term.', 'wp-admin-shell' ),
+							__(
+								'Failed to delete term.',
+								'wp-admin-workspaces'
+							),
 						{ isDismissible: true }
 					);
 				} else {
 					createSuccessNotice(
-						__( 'Term deleted.', 'wp-admin-shell' ),
+						__( 'Term deleted.', 'wp-admin-workspaces' ),
 						{ type: 'snackbar' }
 					);
 				}
@@ -418,12 +421,12 @@ export default function TaxonomyApp( { config = {} } ) {
 					size="compact"
 				>
 					<Icon icon={ plus } size={ 16 } />
-					{ __( 'Add new', 'wp-admin-shell' ) }
+					{ __( 'Add new', 'wp-admin-workspaces' ) }
 				</Button>
 			}
 		>
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (
@@ -462,14 +465,17 @@ export default function TaxonomyApp( { config = {} } ) {
 							queryArgs,
 						] );
 						createSuccessNotice(
-							__( 'Term saved.', 'wp-admin-shell' ),
+							__( 'Term saved.', 'wp-admin-workspaces' ),
 							{ type: 'snackbar' }
 						);
 					} }
 					onError={ ( err ) =>
 						createErrorNotice(
 							err?.message ||
-								__( 'Failed to save term.', 'wp-admin-shell' ),
+								__(
+									'Failed to save term.',
+									'wp-admin-workspaces'
+								),
 							{ isDismissible: true }
 						)
 					}
@@ -483,18 +489,18 @@ const BASE_TERM_FIELDS = [
 	{
 		id: 'name',
 		type: 'text',
-		label: __( 'Name', 'wp-admin-shell' ),
+		label: __( 'Name', 'wp-admin-workspaces' ),
 		isValid: { required: true },
 	},
 	{
 		id: 'slug',
 		type: 'text',
-		label: __( 'Slug', 'wp-admin-shell' ),
+		label: __( 'Slug', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'description',
 		type: 'text',
-		label: __( 'Description', 'wp-admin-shell' ),
+		label: __( 'Description', 'wp-admin-workspaces' ),
 		Edit: { control: 'textarea', rows: 4 },
 	},
 ];
@@ -538,7 +544,7 @@ function TermEditModal( {
 			{
 				id: 'parent',
 				type: 'integer',
-				label: __( 'Parent', 'wp-admin-shell' ),
+				label: __( 'Parent', 'wp-admin-workspaces' ),
 				elements,
 			},
 		];
@@ -580,8 +586,8 @@ function TermEditModal( {
 		<Modal
 			title={
 				isNew
-					? __( 'Add term', 'wp-admin-shell' )
-					: __( 'Edit term', 'wp-admin-shell' )
+					? __( 'Add term', 'wp-admin-workspaces' )
+					: __( 'Edit term', 'wp-admin-workspaces' )
 			}
 			onRequestClose={ onClose }
 		>
@@ -596,7 +602,7 @@ function TermEditModal( {
 				/>
 				<Stack direction="row" justify="flex-end" gap="sm">
 					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -606,8 +612,8 @@ function TermEditModal( {
 						disabled={ ! data.name || isSaving }
 					>
 						{ isNew
-							? __( 'Add term', 'wp-admin-shell' )
-							: __( 'Save', 'wp-admin-shell' ) }
+							? __( 'Add term', 'wp-admin-workspaces' )
+							: __( 'Save', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

@@ -2,7 +2,7 @@
  * Source-type contracts for the WP Admin Shell v1 runtime.
  *
  * These are JSDoc typedefs only — pure shape, no runtime. They mirror
- * spec §5 of `docs/wp-admin-shell-design-spec.md`.
+ * spec §5 of `docs/wp-admin-workspaces-design-spec.md`.
  *
  * Three kinds of `Source` exist: `app`, `region`, `engine`. All share
  * a common identity envelope; per-kind props differ in what `Component`

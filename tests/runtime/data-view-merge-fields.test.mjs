@@ -2,7 +2,7 @@
 /**
  * mergeFields — pure ref-wins-inline-overrides merge.
  *
- * Mirrors the PHP `WP_Admin_Shell_Data_View_Config::merge_fields`
+ * Mirrors the PHP `WP_Admin_Workspaces_Data_View_Config::merge_fields`
  * semantics on the JS side. The inline-hydration path in `useDataView`
  * reuses the same merge so first-paint renders against the inline
  * cascade snapshot without waiting on /data-view REST.

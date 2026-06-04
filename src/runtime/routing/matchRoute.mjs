@@ -12,7 +12,7 @@
  * Pattern resolution is most-specific-wins: `/posts/new` beats
  * `/posts/{id}` for `/posts/new`. "Specific" means literal segments
  * outweigh parameter segments; longer literal-prefix wins ties. The
- * scoring matches the PHP resolver in `WP_Admin_Shell_Manifest_Resolver`.
+ * scoring matches the PHP resolver in `WP_Admin_Workspaces_Manifest_Resolver`.
  *
  * Spec §6.3: route configs may reference captured params via `{name}`
  * curly braces. `interpolate(config, params)` substitutes string values

@@ -1,6 +1,6 @@
 /* SiteHubApp — sidebar header w/ site icon + title link + actions slot. */
 
-.wp-admin-shell-site-hub {
+.wp-admin-workspaces-site-hub {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -9,17 +9,17 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-site-hub__icon-container {
+.wp-admin-workspaces-site-hub__icon-container {
 	height: 64px;
 	width: 60px;
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-site-hub__icon-container.has-transparent-background .wp-admin-shell-site-hub__icon-button {
+.wp-admin-workspaces-site-hub__icon-container.has-transparent-background .wp-admin-workspaces-site-hub__icon-button {
 	background: transparent;
 }
 
-.wp-admin-shell-site-hub__icon-button {
+.wp-admin-workspaces-site-hub__icon-button {
 	position: relative;
 	height: 64px;
 	width: 60px;
@@ -28,27 +28,27 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral));
+	background: var(--wp-admin-workspaces--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral));
 	border-radius: 0;
 }
 
-.wp-admin-shell-site-hub__icon-button:focus-visible {
+.wp-admin-workspaces-site-hub__icon-button:focus-visible {
 	box-shadow:
-		0 0 0 3px var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
+		0 0 0 3px var(--wp-admin-workspaces--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
 		0 0 0 6px var(--wpds-color-fg-interactive-brand);
 	outline: 4px solid transparent;
 	outline-offset: 4px;
 }
 
-.wp-admin-shell-site-icon__image {
-	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
-	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
+.wp-admin-workspaces-site-icon__image {
+	width: var(--wp-admin-workspaces--chrome--site-hub--icon-size, 34px);
+	height: var(--wp-admin-workspaces--chrome--site-hub--icon-size, 34px);
 	aspect-ratio: 1 / 1;
 	object-fit: cover;
 	border-radius: var(--wpds-border-radius-sm);
 }
 
-.wp-admin-shell-site-icon__default {
+.wp-admin-workspaces-site-icon__default {
 	display: flex;
 	height: 64px;
 	width: 60px;
@@ -58,9 +58,9 @@
 
 /* Match the configured-image footprint (34px) so the icon size doesn't
  * jump between the default mark and a set logo. */
-.wp-admin-shell-site-icon__default svg {
-	width: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
-	height: var(--wp-admin-shell--chrome--site-hub--icon-size, 34px);
+.wp-admin-workspaces-site-icon__default svg {
+	width: var(--wp-admin-workspaces--chrome--site-hub--icon-size, 34px);
+	height: var(--wp-admin-workspaces--chrome--site-hub--icon-size, 34px);
 }
 
 /* Title wrapper is a flex item of the inner site-hub Stack. Default
@@ -71,13 +71,13 @@
  * is inline-flex by @wordpress/ui Button default; flex-grow only
  * applies when its parent is itself a flex container). The title text
  * then truncates inside its own `__title-text` flex item (below). */
-.wp-admin-shell-site-hub__title {
+.wp-admin-workspaces-site-hub__title {
 	display: flex;
 	min-width: 0;
 	flex: 1;
 }
 
-.wp-admin-shell-site-hub__title :is(button, a) {
+.wp-admin-workspaces-site-hub__title :is(button, a) {
 	flex-grow: 1;
 	min-width: 0;
 	padding: 0;
@@ -96,7 +96,7 @@
  * the bare text node is an anonymous flex item the rule can't act on.
  * padding-inline-end reserves room for the ↗ glyph that fades in on
  * hover (::after, below) so the ellipsis never sits under it. */
-.wp-admin-shell-site-hub__title-text {
+.wp-admin-workspaces-site-hub__title-text {
 	flex: 1;
 	min-width: 0;
 	overflow: hidden;
@@ -105,20 +105,20 @@
 	padding-inline-end: 1.5em;
 }
 
-.wp-admin-shell-site-hub__title :is(button, a):focus {
+.wp-admin-workspaces-site-hub__title :is(button, a):focus {
 	box-shadow: none;
 	outline: none;
 }
 
-.wp-admin-shell-site-hub__title :is(button, a):focus-visible {
+.wp-admin-workspaces-site-hub__title :is(button, a):focus-visible {
 	box-shadow:
-		0 0 0 var(--wpds-border-width-focus) var(--wp-admin-shell--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
+		0 0 0 var(--wpds-border-width-focus) var(--wp-admin-workspaces--chrome--site-hub--background, var(--wpds-color-bg-surface-neutral)),
 		0 0 0 calc(2 * var(--wpds-border-width-focus)) var(--wpds-color-fg-interactive-brand);
 	outline: 2px solid transparent;
 	outline-offset: 2px;
 }
 
-.wp-admin-shell-site-hub__title :is(button, a)::after {
+.wp-admin-workspaces-site-hub__title :is(button, a)::after {
 	content: "\2197";
 	font-weight: 400;
 	opacity: 0;
@@ -127,31 +127,31 @@
 }
 
 @media not (prefers-reduced-motion) {
-	.wp-admin-shell-site-hub__title :is(button, a)::after {
+	.wp-admin-workspaces-site-hub__title :is(button, a)::after {
 		transition: opacity 0.1s linear;
 	}
 }
 
-.wp-admin-shell-site-hub__title :is(button, a):hover::after,
-.wp-admin-shell-site-hub__title :is(button, a):focus::after,
-.wp-admin-shell-site-hub__title :is(button, a):active::after {
+.wp-admin-workspaces-site-hub__title :is(button, a):hover::after,
+.wp-admin-workspaces-site-hub__title :is(button, a):focus::after,
+.wp-admin-workspaces-site-hub__title :is(button, a):active::after {
 	opacity: 1;
 }
 
-.wp-admin-shell-site-hub__actions {
+.wp-admin-workspaces-site-hub__actions {
 	flex-shrink: 0;
 }
 
 /* Command-palette toggle matches the Figma site-hub action button:
  * 32×32 hit area, 4px padding, 24px glyph, small radius. */
-.wp-admin-shell-site-hub__command-toggle {
+.wp-admin-workspaces-site-hub__command-toggle {
 	width: 32px;
 	height: 32px;
 	padding: 4px;
 	border-radius: var(--wpds-border-radius-sm);
 }
 
-.wp-admin-shell-site-hub__command-toggle svg {
+.wp-admin-workspaces-site-hub__command-toggle svg {
 	width: 24px;
 	height: 24px;
 }

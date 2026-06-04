@@ -24,7 +24,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 880,

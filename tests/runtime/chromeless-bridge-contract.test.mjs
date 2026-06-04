@@ -47,28 +47,28 @@ const isPlainObject = ( v ) =>
  * are read.
  */
 const CONTRACTS = {
-	'wp-admin-shell-iframe-ready': ( m ) =>
+	'wp-admin-workspaces-iframe-ready': ( m ) =>
 		isPlainObject( m ) &&
-		m.type === 'wp-admin-shell-iframe-ready' &&
+		m.type === 'wp-admin-workspaces-iframe-ready' &&
 		isNonEmptyString( m.url ),
-	'wp-admin-shell-focus-request': ( m ) =>
-		isPlainObject( m ) && m.type === 'wp-admin-shell-focus-request',
-	'wp-admin-shell-admin-link': ( m ) =>
+	'wp-admin-workspaces-focus-request': ( m ) =>
+		isPlainObject( m ) && m.type === 'wp-admin-workspaces-focus-request',
+	'wp-admin-workspaces-admin-link': ( m ) =>
 		isPlainObject( m ) &&
-		m.type === 'wp-admin-shell-admin-link' &&
+		m.type === 'wp-admin-workspaces-admin-link' &&
 		isNonEmptyString( m.url ) &&
 		// label is optional but, when present, must be string.
 		( m.label === undefined || isString( m.label ) ),
-	'wp-admin-shell-external-link': ( m ) =>
+	'wp-admin-workspaces-external-link': ( m ) =>
 		isPlainObject( m ) &&
-		m.type === 'wp-admin-shell-external-link' &&
+		m.type === 'wp-admin-workspaces-external-link' &&
 		isNonEmptyString( m.url ),
 	// Sub-system 15: block-editor dirty-state relay. Read by
 	// `installIframeBridge`'s `onDirty` (src/apps/editor/index.js). The
 	// boolean is the whole payload; the listener coerces with `!!`.
-	'wp-admin-shell-dirty-state': ( m ) =>
+	'wp-admin-workspaces-dirty-state': ( m ) =>
 		isPlainObject( m ) &&
-		m.type === 'wp-admin-shell-dirty-state' &&
+		m.type === 'wp-admin-workspaces-dirty-state' &&
 		typeof m.dirty === 'boolean',
 };
 
@@ -78,24 +78,24 @@ console.log( '\n— message envelopes match the parent listener contract —' );
 
 ok(
 	'iframe-ready envelope: type + url',
-	CONTRACTS[ 'wp-admin-shell-iframe-ready' ]( {
-		type: 'wp-admin-shell-iframe-ready',
-		url: 'http://example.test/wp-admin/edit.php?wp_admin_shell_chromeless=1',
+	CONTRACTS[ 'wp-admin-workspaces-iframe-ready' ]( {
+		type: 'wp-admin-workspaces-iframe-ready',
+		url: 'http://example.test/wp-admin/edit.php?wp_admin_workspaces_chromeless=1',
 		userAgent: 'Mozilla/5.0',
 	} )
 );
 
 ok(
 	'focus-request envelope: type only',
-	CONTRACTS[ 'wp-admin-shell-focus-request' ]( {
-		type: 'wp-admin-shell-focus-request',
+	CONTRACTS[ 'wp-admin-workspaces-focus-request' ]( {
+		type: 'wp-admin-workspaces-focus-request',
 	} )
 );
 
 ok(
 	'admin-link envelope: type + url + optional label',
-	CONTRACTS[ 'wp-admin-shell-admin-link' ]( {
-		type: 'wp-admin-shell-admin-link',
+	CONTRACTS[ 'wp-admin-workspaces-admin-link' ]( {
+		type: 'wp-admin-workspaces-admin-link',
 		url: 'edit.php?post_type=page',
 		label: 'Pages',
 	} )
@@ -103,28 +103,28 @@ ok(
 
 ok(
 	'admin-link envelope: label omitted is valid',
-	CONTRACTS[ 'wp-admin-shell-admin-link' ]( {
-		type: 'wp-admin-shell-admin-link',
+	CONTRACTS[ 'wp-admin-workspaces-admin-link' ]( {
+		type: 'wp-admin-workspaces-admin-link',
 		url: 'edit.php',
 	} )
 );
 
 ok(
 	'external-link envelope: type + url',
-	CONTRACTS[ 'wp-admin-shell-external-link' ]( {
-		type: 'wp-admin-shell-external-link',
+	CONTRACTS[ 'wp-admin-workspaces-external-link' ]( {
+		type: 'wp-admin-workspaces-external-link',
 		url: 'https://wordpress.org/',
 	} )
 );
 
 ok(
 	'dirty-state envelope: type + boolean dirty',
-	CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
-		type: 'wp-admin-shell-dirty-state',
+	CONTRACTS[ 'wp-admin-workspaces-dirty-state' ]( {
+		type: 'wp-admin-workspaces-dirty-state',
 		dirty: true,
 	} ) &&
-		CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
-			type: 'wp-admin-shell-dirty-state',
+		CONTRACTS[ 'wp-admin-workspaces-dirty-state' ]( {
+			type: 'wp-admin-workspaces-dirty-state',
 			dirty: false,
 		} )
 );
@@ -135,22 +135,22 @@ console.log( '\n— envelopes missing required keys are rejected —' );
 
 ok(
 	'admin-link without url rejected',
-	! CONTRACTS[ 'wp-admin-shell-admin-link' ]( {
-		type: 'wp-admin-shell-admin-link',
+	! CONTRACTS[ 'wp-admin-workspaces-admin-link' ]( {
+		type: 'wp-admin-workspaces-admin-link',
 	} )
 );
 
 ok(
 	'external-link without url rejected',
-	! CONTRACTS[ 'wp-admin-shell-external-link' ]( {
-		type: 'wp-admin-shell-external-link',
+	! CONTRACTS[ 'wp-admin-workspaces-external-link' ]( {
+		type: 'wp-admin-workspaces-external-link',
 	} )
 );
 
 ok(
 	'admin-link with non-string label rejected',
-	! CONTRACTS[ 'wp-admin-shell-admin-link' ]( {
-		type: 'wp-admin-shell-admin-link',
+	! CONTRACTS[ 'wp-admin-workspaces-admin-link' ]( {
+		type: 'wp-admin-workspaces-admin-link',
 		url: 'edit.php',
 		label: 42,
 	} )
@@ -158,15 +158,15 @@ ok(
 
 ok(
 	'iframe-ready with missing url rejected',
-	! CONTRACTS[ 'wp-admin-shell-iframe-ready' ]( {
-		type: 'wp-admin-shell-iframe-ready',
+	! CONTRACTS[ 'wp-admin-workspaces-iframe-ready' ]( {
+		type: 'wp-admin-workspaces-iframe-ready',
 	} )
 );
 
 ok(
 	'dirty-state with non-boolean dirty rejected',
-	! CONTRACTS[ 'wp-admin-shell-dirty-state' ]( {
-		type: 'wp-admin-shell-dirty-state',
+	! CONTRACTS[ 'wp-admin-workspaces-dirty-state' ]( {
+		type: 'wp-admin-workspaces-dirty-state',
 		dirty: 'yes',
 	} )
 );
@@ -175,9 +175,9 @@ ok(
 
 console.log( '\n— listener type-prefix invariant —' );
 
-const TYPE_PREFIX = 'wp-admin-shell-';
+const TYPE_PREFIX = 'wp-admin-workspaces-';
 ok(
-	'every contracted type starts with the wp-admin-shell- prefix',
+	'every contracted type starts with the wp-admin-workspaces- prefix',
 	Object.keys( CONTRACTS ).every( ( t ) => t.startsWith( TYPE_PREFIX ) )
 );
 

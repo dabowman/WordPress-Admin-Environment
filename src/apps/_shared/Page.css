@@ -5,7 +5,7 @@
  * DataViews table fills the region); `.has-padding` insets + scrolls it for
  * native / form screens. App-space, WPDS-flavored — the kernel stays DS-neutral.
  */
-.wp-admin-shell-page {
+.wp-admin-workspaces-page {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -14,7 +14,7 @@
 
 /* Header. The root owns padding + the divider so the title row and subtitle
  * sit gap-free, matching the design's container-padded layout. */
-.wp-admin-shell-page__header {
+.wp-admin-workspaces-page__header {
 	flex-shrink: 0;
 	box-sizing: border-box;
 	padding-block: var( --wpds-dimension-padding-md );
@@ -23,7 +23,7 @@
 		var( --wpds-color-stroke-surface-neutral );
 }
 
-.wp-admin-shell-page__header-content {
+.wp-admin-workspaces-page__header-content {
 	display: flex;
 	align-items: center;
 	gap: var( --wpds-dimension-gap-lg );
@@ -32,38 +32,38 @@
 
 /* Title takes the lead edge; actions pin to the trailing edge regardless of
  * whether a title, badges, or `before` content is present. */
-.wp-admin-shell-page__actions {
+.wp-admin-workspaces-page__actions {
 	margin-inline-start: auto;
 }
 
-.wp-admin-shell-page__subtitle {
+.wp-admin-workspaces-page__subtitle {
 	display: block;
 	margin-block-start: var( --wpds-dimension-gap-xs );
 	color: var( --wpds-color-fg-content-neutral-weak );
 }
 
 /* Content area — full-bleed flex column by default so DataViews fills. */
-.wp-admin-shell-page__content {
+.wp-admin-workspaces-page__content {
 	flex: 1;
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
 }
 
-.wp-admin-shell-page__content > * {
+.wp-admin-workspaces-page__content > * {
 	min-height: 0;
 }
 
-.wp-admin-shell-page__content .dataviews-wrapper {
+.wp-admin-workspaces-page__content .dataviews-wrapper {
 	flex: 1;
 	min-height: 0;
 }
 
 /* Native / form screens: inset (themeable via the chrome slot) + own scroll. */
-.wp-admin-shell-page__content.has-padding {
+.wp-admin-workspaces-page__content.has-padding {
 	display: block;
 	padding: var(
-		--wp-admin-shell--chrome--content--inset,
+		--wp-admin-workspaces--chrome--content--inset,
 		var( --wpds-dimension-padding-2xl )
 	);
 	overflow: auto;

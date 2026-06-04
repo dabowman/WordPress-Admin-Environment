@@ -71,7 +71,7 @@ export default function SidebarNavigationItem( {
 
 	return (
 		<Item
-			className={ `wp-admin-shell-sidebar-navigation-item ${
+			className={ `wp-admin-workspaces-sidebar-navigation-item ${
 				! withChevron && suffix ? 'with-suffix' : ''
 			} ${ className || '' }`.trim() }
 			id={ uid }
@@ -95,7 +95,7 @@ export default function SidebarNavigationItem( {
 				{ withChevron && (
 					<Icon
 						icon={ isRTL() ? chevronLeftSmall : chevronRightSmall }
-						className="wp-admin-shell-sidebar-navigation-item__drilldown-indicator"
+						className="wp-admin-workspaces-sidebar-navigation-item__drilldown-indicator"
 						size={ 24 }
 					/>
 				) }

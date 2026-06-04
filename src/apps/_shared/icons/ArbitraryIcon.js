@@ -47,7 +47,7 @@ export default function ArbitraryIcon( {
 		if ( type === 'url' && typeof value === 'string' && value !== '' ) {
 			return (
 				<img
-					className="wp-admin-shell-arbitrary-icon"
+					className="wp-admin-workspaces-arbitrary-icon"
 					src={ value }
 					alt={ alt }
 					width={ size }
@@ -67,7 +67,7 @@ export default function ArbitraryIcon( {
 		) {
 			return (
 				<span
-					className={ `dashicons dashicons-${ value } wp-admin-shell-arbitrary-icon` }
+					className={ `dashicons dashicons-${ value } wp-admin-workspaces-arbitrary-icon` }
 					aria-hidden="true"
 					style={ { fontSize: size, width: size, height: size } }
 				/>
@@ -111,7 +111,7 @@ export function TrustedNodeTitle( { html } ) {
 	}
 	return (
 		<span
-			className="wp-admin-shell-arbitrary-node-title"
+			className="wp-admin-workspaces-arbitrary-node-title"
 			// eslint-disable-next-line react/no-danger -- admin-context node title; same trust as classic wp-admin (see runtime-harvest-pattern.md).
 			dangerouslySetInnerHTML={ { __html: html } }
 		/>

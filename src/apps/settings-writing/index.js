@@ -7,16 +7,16 @@ import { EntityDataForm } from '../_shared/forms/EntityDataForm';
 import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 
 const POST_FORMAT_OPTIONS = [
-	{ value: 'standard', label: __( 'Standard', 'wp-admin-shell' ) },
-	{ value: 'aside', label: __( 'Aside', 'wp-admin-shell' ) },
-	{ value: 'chat', label: __( 'Chat', 'wp-admin-shell' ) },
-	{ value: 'gallery', label: __( 'Gallery', 'wp-admin-shell' ) },
-	{ value: 'link', label: __( 'Link', 'wp-admin-shell' ) },
-	{ value: 'image', label: __( 'Image', 'wp-admin-shell' ) },
-	{ value: 'quote', label: __( 'Quote', 'wp-admin-shell' ) },
-	{ value: 'status', label: __( 'Status', 'wp-admin-shell' ) },
-	{ value: 'video', label: __( 'Video', 'wp-admin-shell' ) },
-	{ value: 'audio', label: __( 'Audio', 'wp-admin-shell' ) },
+	{ value: 'standard', label: __( 'Standard', 'wp-admin-workspaces' ) },
+	{ value: 'aside', label: __( 'Aside', 'wp-admin-workspaces' ) },
+	{ value: 'chat', label: __( 'Chat', 'wp-admin-workspaces' ) },
+	{ value: 'gallery', label: __( 'Gallery', 'wp-admin-workspaces' ) },
+	{ value: 'link', label: __( 'Link', 'wp-admin-workspaces' ) },
+	{ value: 'image', label: __( 'Image', 'wp-admin-workspaces' ) },
+	{ value: 'quote', label: __( 'Quote', 'wp-admin-workspaces' ) },
+	{ value: 'status', label: __( 'Status', 'wp-admin-workspaces' ) },
+	{ value: 'video', label: __( 'Video', 'wp-admin-workspaces' ) },
+	{ value: 'audio', label: __( 'Audio', 'wp-admin-workspaces' ) },
 ];
 
 const FORM = {
@@ -35,33 +35,39 @@ const FORM = {
 const LEGACY_WRITING_OPTIONS = [
 	{
 		name: 'mailserver_url',
-		label: __( 'Mail Server (Post via Email)', 'wp-admin-shell' ),
+		label: __( 'Mail Server (Post via Email)', 'wp-admin-workspaces' ),
 	},
 	{
 		name: 'mailserver_login',
-		label: __( 'Mail Server Login (Post via Email)', 'wp-admin-shell' ),
+		label: __(
+			'Mail Server Login (Post via Email)',
+			'wp-admin-workspaces'
+		),
 	},
 	{
 		name: 'mailserver_port',
-		label: __( 'Mail Server Port (Post via Email)', 'wp-admin-shell' ),
+		label: __( 'Mail Server Port (Post via Email)', 'wp-admin-workspaces' ),
 	},
 	{
 		name: 'default_email_category',
-		label: __( 'Default Mail Category (Post via Email)', 'wp-admin-shell' ),
+		label: __(
+			'Default Mail Category (Post via Email)',
+			'wp-admin-workspaces'
+		),
 	},
 	{
 		name: 'ping_sites',
-		label: __( 'Update Services', 'wp-admin-shell' ),
+		label: __( 'Update Services', 'wp-admin-workspaces' ),
 	},
 	{
 		name: 'default_link_category',
-		label: __( 'Default Link Category', 'wp-admin-shell' ),
+		label: __( 'Default Link Category', 'wp-admin-workspaces' ),
 	},
 	{
 		name: 'use_balanceTags',
 		label: __(
 			'Correct invalidly nested XHTML automatically',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 	},
 ];
@@ -83,7 +89,7 @@ export default function SettingsWritingApp() {
 			{
 				id: 'default_category',
 				type: 'text',
-				label: __( 'Default Post Category', 'wp-admin-shell' ),
+				label: __( 'Default Post Category', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: categoryOptions,
 				// Opt out of DataViews' implicit elements-membership validation:
@@ -99,7 +105,7 @@ export default function SettingsWritingApp() {
 			{
 				id: 'default_post_format',
 				type: 'text',
-				label: __( 'Default Post Format', 'wp-admin-shell' ),
+				label: __( 'Default Post Format', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: POST_FORMAT_OPTIONS,
 				getValue: ( { item } ) =>
@@ -110,27 +116,27 @@ export default function SettingsWritingApp() {
 
 	return (
 		<EntityDataForm
-			className="wp-admin-shell-app-settings-writing"
+			className="wp-admin-workspaces-app-settings-writing"
 			entity={ [ 'root', 'site' ] }
 			fields={ fields }
 			form={ FORM }
-			title={ __( 'Writing', 'wp-admin-shell' ) }
+			title={ __( 'Writing', 'wp-admin-workspaces' ) }
 			messages={ {
-				success: __( 'Settings saved.', 'wp-admin-shell' ),
-				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+				success: __( 'Settings saved.', 'wp-admin-workspaces' ),
+				error: __( 'Failed to save settings.', 'wp-admin-workspaces' ),
 			} }
 		>
 			<Stack direction="column" gap="md">
 				<Text variant="heading-md" render={ <h3 /> }>
 					{ __(
 						'Settings not available through the workspace API',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 				<Text variant="body-sm">
 					{ __(
 						'Post via email, update services, the Link Manager default category, and the XHTML auto-correction toggle have no REST surface. Use the classic screen, WP-CLI, or your coding agent to change them.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 				{ LEGACY_WRITING_OPTIONS.map( ( option ) => (

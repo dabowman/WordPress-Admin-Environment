@@ -1,16 +1,16 @@
 import { mergeFields } from './mergeFields.mjs';
 
 /**
- * Max `extends` chain depth — mirrors PHP `WP_Admin_Shell_Data_View_Config`.
+ * Max `extends` chain depth — mirrors PHP `WP_Admin_Workspaces_Data_View_Config`.
  * Triples that exceed this short-circuit to the base entry.
  */
 const MAX_EXTENDS_DEPTH = 10;
 
 /**
  * Read the resolved per-screen DataView doc from a pre-serialized inline
- * snapshot (typically `window.wpAdminShell.config`). Returns `null` when
+ * snapshot (typically `window.wpAdminWorkspaces.config`). Returns `null` when
  * the snapshot has no entry for the screen — callers fall through to
- * `/wp-admin-shell/v1/data-view?screen=<id>` for late-registered screens.
+ * `/wp-admin-workspaces/v1/data-view?screen=<id>` for late-registered screens.
  *
  * The PHP resolver pre-computes each screen's resolved doc (the resolved
  * (kind, name, variant) triple + the screen's inline `dataView` overlay)
@@ -22,7 +22,7 @@ const MAX_EXTENDS_DEPTH = 10;
  * `settings.dataViews` + `settings.dataFields` + app manifest baselines.
  *
  * @param {Object|null|undefined} inline   Serialized config snapshot.
- *                                         Typically `window.wpAdminShell.config`.
+ *                                         Typically `window.wpAdminWorkspaces.config`.
  * @param {string}                screenId Screen id.
  * @returns {Object|null}
  */
@@ -107,7 +107,7 @@ export function hydrateInlineDataViewTriple( inline, kind, name, variant ) {
 
 /**
  * Recursive `extends` chain resolver. Cycle-safe + depth-capped. Mirror
- * of PHP `WP_Admin_Shell_Data_View_Config::resolve_extends_chain`.
+ * of PHP `WP_Admin_Workspaces_Data_View_Config::resolve_extends_chain`.
  *
  * @param {Object}   inline
  * @param {string}   kind
@@ -196,7 +196,7 @@ function applyFieldsRef( doc, inline ) {
 /**
  * Per-key deep merge with three special-cases: `fields[]` + `actions[]`
  * merge by `id`, and a `null` value tombstones the key. Mirrors PHP
- * `WP_Admin_Shell_Data_View_Config::deep_merge_view`.
+ * `WP_Admin_Workspaces_Data_View_Config::deep_merge_view`.
  *
  * @param {Object} base
  * @param {Object} overlay
@@ -292,7 +292,7 @@ function mergeIdKeyed( base, overlay ) {
 
 /**
  * Infer the `(kind, name, variant)` triple a screen consumes. Same
- * precedence as PHP `WP_Admin_Shell_Data_View_Config::infer_kind_name_variant`.
+ * precedence as PHP `WP_Admin_Workspaces_Data_View_Config::infer_kind_name_variant`.
  *
  * @param {Object} inline Serialized config snapshot.
  * @param {Object} screen Screen entry.

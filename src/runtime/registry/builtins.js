@@ -4,7 +4,7 @@
  * V2.M4 task 6: imperative `register({ ... configSchema ... })` calls
  * are gone. The single source of truth is each app's `app.json` /
  * engine's `engine.json`, validated PHP-side at boot and shipped to
- * the browser via `window.wpAdminShell.manifests`. This bootstrap
+ * the browser via `window.wpAdminWorkspaces.manifests`. This bootstrap
  * pairs each manifest id with its React component module and folds
  * the manifest's intrinsic fields (`title`, `role`, `capabilities`,
  * `config-schema`, `platform`) onto the registry entry the kernel
@@ -294,7 +294,7 @@ export function registerBuiltins( registry ) {
 	registry.register( coreSinglePane );
 	registry.register( coreDesktop );
 
-	const manifests = window.wpAdminShell?.manifests?.apps || {};
+	const manifests = window.wpAdminWorkspaces?.manifests?.apps || {};
 	const seen = new Set();
 
 	for ( const [ id, manifest ] of Object.entries( manifests ) ) {
@@ -328,7 +328,7 @@ export function registerBuiltins( registry ) {
 	if ( missing.length && process.env.NODE_ENV !== 'production' ) {
 		// eslint-disable-next-line no-console
 		console.warn(
-			'[wp-admin-shell] expected app manifests not found in window.wpAdminShell.manifests:',
+			'[wp-admin-workspaces] expected app manifests not found in window.wpAdminWorkspaces.manifests:',
 			missing
 		);
 	}

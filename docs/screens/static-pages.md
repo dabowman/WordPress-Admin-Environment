@@ -306,7 +306,7 @@ These screens have very low ROI on full reimplementation. Three recommended appr
 | `core:about` shell source | Low | Tabbed app with four sub-routes |
 | Tab navigation host | Low | `Tabs.Root` + `Tabs.List` + `Tabs.Tab` from `@wordpress/ui` |
 | Per-release content management | High effort | Static copy needs updating each WP release. Either: (a) hard-code per-release in shell PHP, or (b) parse upstream `wp-admin/about.php` at render time, or (c) fetch from `api.wordpress.org` if it ever exposes one |
-| `wp_credits()` REST exposure | Medium | Currently PHP-only. Shell could expose `GET /wp-admin-shell/v1/credits` that calls `wp_credits()` server-side and caches |
+| `wp_credits()` REST exposure | Medium | Currently PHP-only. Shell could expose `GET /wp-admin-workspaces/v1/credits` that calls `wp_credits()` server-side and caches |
 | Asset hosting (s.w.org images, admin SVGs) | Low | Either proxy through shell or load directly from `https://s.w.org/...` (these are CDN-served WordPress.org assets) |
 | After-update arrival flag | Low | Detect `?updated` and surface "Go to Updates" link |
 | Privacy tab integration | Out of scope | Privacy is dynamic; separate spec |

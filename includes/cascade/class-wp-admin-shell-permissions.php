@@ -38,12 +38,12 @@
  * `is_super_admin($user_id)` rather than direct `$user->roles`
  * membership — multisite-aware.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Permissions {
+class WP_Admin_Workspaces_Permissions {
 
 	/** Origins that may both add to and remove from the OR-set. */
 	const ADD_REMOVE_ORIGINS = array( 'core', 'engine', 'plugin', 'site' );
@@ -53,7 +53,7 @@ class WP_Admin_Shell_Permissions {
 
 	/**
 	 * Resolver-side enforcement entry point. Called from
-	 * `WP_Admin_Shell_Resolver::resolve_with()` after each consumer-origin
+	 * `WP_Admin_Workspaces_Resolver::resolve_with()` after each consumer-origin
 	 * filter pass, BEFORE the merge. Walks every
 	 * `screens[id].permissions` block in the incoming origin doc and
 	 * applies the shrink-only rule for role / user origins: any cap or
@@ -139,7 +139,7 @@ class WP_Admin_Shell_Permissions {
 			);
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( sprintf(
-					'[wp-admin-shell] trust-tier violation: %s origin tried to add capability "%s" to screen "%s" OR-set; rejected.',
+					'[wp-admin-workspaces] trust-tier violation: %s origin tried to add capability "%s" to screen "%s" OR-set; rejected.',
 					$origin,
 					$cap,
 					$screen_id
@@ -167,7 +167,7 @@ class WP_Admin_Shell_Permissions {
 			);
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( sprintf(
-					'[wp-admin-shell] trust-tier violation: %s origin tried to add role "%s" to screen "%s" OR-set; rejected.',
+					'[wp-admin-workspaces] trust-tier violation: %s origin tried to add role "%s" to screen "%s" OR-set; rejected.',
 					$origin,
 					$role,
 					$screen_id
@@ -326,7 +326,7 @@ class WP_Admin_Shell_Permissions {
 				);
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log( sprintf(
-						'[wp-admin-shell] trust-tier violation: %s origin tried to add capability "%s" to screen "%s" OR-set; rejected.',
+						'[wp-admin-workspaces] trust-tier violation: %s origin tried to add capability "%s" to screen "%s" OR-set; rejected.',
 						$origin,
 						$cap,
 						$screen_id
@@ -348,7 +348,7 @@ class WP_Admin_Shell_Permissions {
 				);
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					error_log( sprintf(
-						'[wp-admin-shell] trust-tier violation: %s origin tried to add role "%s" to screen "%s" OR-set; rejected.',
+						'[wp-admin-workspaces] trust-tier violation: %s origin tried to add role "%s" to screen "%s" OR-set; rejected.',
 						$origin,
 						$role,
 						$screen_id
@@ -484,7 +484,7 @@ class WP_Admin_Shell_Permissions {
 	 * The cascade merge engine already merged per-origin contributions
 	 * into one screen.permissions by the time this runs. Trust-tier
 	 * enforcement at the merge layer is handled by the merge engine's
-	 * restrict-only invariants (see `WP_Admin_Shell_Merge`); this method
+	 * restrict-only invariants (see `WP_Admin_Workspaces_Merge`); this method
 	 * applies the SCREEN-LEVEL pass: shrink unknown-slug entries (no
 	 * log, the runtime checks at user_passes time), inflate empty
 	 * permissions to default admin-only, and bind the app floor.
@@ -523,10 +523,10 @@ class WP_Admin_Shell_Permissions {
 	 * @return string[]
 	 */
 	public static function app_floor_for( $screen ) {
-		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+		if ( ! class_exists( 'WP_Admin_Workspaces_Manifest_Registry' ) ) {
 			return array();
 		}
-		$registry = WP_Admin_Shell_Manifest_Registry::instance();
+		$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 		$ids      = array();
 
 		if ( isset( $screen['app'] ) && is_string( $screen['app'] ) ) {
@@ -684,7 +684,7 @@ class WP_Admin_Shell_Permissions {
 		);
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			error_log( sprintf(
-				'[wp-admin-shell] unknown %s slug "%s" — fail-closed (no user can satisfy).',
+				'[wp-admin-workspaces] unknown %s slug "%s" — fail-closed (no user can satisfy).',
 				$kind,
 				$slug
 			) );

@@ -63,12 +63,12 @@ export function Page( {
 	return (
 		<div className={ rootClass }>
 			{ hasHeader ? (
-				<header className="wp-admin-shell-page__header">
-					<div className="wp-admin-shell-page__header-content">
+				<header className="wp-admin-workspaces-page__header">
+					<div className="wp-admin-workspaces-page__header-content">
 						{ before }
 						{ title ? (
 							<Text
-								className="wp-admin-shell-page__title"
+								className="wp-admin-workspaces-page__title"
 								render={ <HeadingTag /> }
 								variant="heading-lg"
 							>
@@ -81,7 +81,7 @@ export function Page( {
 								direction="row"
 								align="center"
 								gap="sm"
-								className="wp-admin-shell-page__actions"
+								className="wp-admin-workspaces-page__actions"
 							>
 								{ actions }
 							</Stack>
@@ -91,7 +91,7 @@ export function Page( {
 						<Text
 							render={ <p /> }
 							variant="body-md"
-							className="wp-admin-shell-page__subtitle"
+							className="wp-admin-workspaces-page__subtitle"
 						>
 							{ subTitle }
 						</Text>

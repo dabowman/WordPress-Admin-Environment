@@ -2,9 +2,9 @@
 /**
  * Workspace-as-primary-entry hijack.
  *
- * When a workspace is active (see wp_admin_shell_workspace_active()), the
+ * When a workspace is active (see wp_admin_workspaces_workspace_active()), the
  * shell takes over the admin root — `/wp-admin/`, `index.php`, and a bare
- * `admin.php` (no `?page`) — instead of living at a `?page=wp-admin-shell`
+ * `admin.php` (no `?page`) — instead of living at a `?page=wp-admin-workspaces`
  * menu entry. The hijack runs at `admin_init` priority 0, before plugin
  * admin pages render. Classic wp-admin stays reachable via the endpoint
  * allowlist (RPC + install/update flows + plugin `?page=` URLs + network
@@ -13,7 +13,7 @@
  * The render path delegates to WordPress's own admin-header.php /
  * admin-footer.php so the standard `admin_enqueue_scripts` chain runs —
  * including the Gutenberg plugin's `wp-private-apis` override that every
- * `@wordpress/ui` overlay component depends on. wp_admin_shell_enqueue_
+ * `@wordpress/ui` overlay component depends on. wp_admin_workspaces_enqueue_
  * assets() is the gated callback that adds the shell bundle; its inline
  * CSS hides the surrounding admin chrome so the workspace fills the
  * viewport.
@@ -23,19 +23,19 @@
  * manual smoke checklist rather than the automated suite. The decision
  * logic (allowlist, root-entry detection, gates) IS unit-tested.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Hijack {
+class WP_Admin_Workspaces_Hijack {
 
 	/**
 	 * Admin entry scripts that must NEVER be hijacked — RPC endpoints,
 	 * async upload, the install/update flows (separate nonce chains), the
 	 * customizer, and the deprecated-but-still-routed bookmark targets.
 	 * Matched against the `$pagenow` global. Extended via the
-	 * `wp_admin_shell_hijack_allowlist` filter.
+	 * `wp_admin_workspaces_hijack_allowlist` filter.
 	 *
 	 * @var string[]
 	 */
@@ -104,8 +104,8 @@ class WP_Admin_Shell_Hijack {
 		// Stand down so classic wp-admin stays reachable (the admin_notices
 		// warning explains why) rather than taking over `/wp-admin/` into a
 		// blank screen.
-		if ( function_exists( 'wp_admin_shell_dependencies_met' )
-			&& ! wp_admin_shell_dependencies_met() ) {
+		if ( function_exists( 'wp_admin_workspaces_dependencies_met' )
+			&& ! wp_admin_workspaces_dependencies_met() ) {
 			return false;
 		}
 		// Allowlisted endpoints always fall through to classic.
@@ -118,20 +118,20 @@ class WP_Admin_Shell_Hijack {
 		// iframe-fallback → that screen mounts the same classic page in
 		// another iframe → infinite recursion. The chromeless-request
 		// signal (`Sec-Fetch-Dest: iframe` OR the explicit
-		// `?wp_admin_shell_chromeless=1` flag the bridge layer sets)
+		// `?wp_admin_workspaces_chromeless=1` flag the bridge layer sets)
 		// catches every same-origin iframe load.
-		if ( function_exists( 'wp_admin_shell_is_chromeless_request' )
-			&& wp_admin_shell_is_chromeless_request() ) {
+		if ( function_exists( 'wp_admin_workspaces_is_chromeless_request' )
+			&& wp_admin_workspaces_is_chromeless_request() ) {
 			return false;
 		}
 		// Explicit classic-mode escape hatch (W3). Match the exact value the
 		// toggle sets — a garbage / forged non-empty cookie shouldn't be able
 		// to permanently disable the workspace for a browser.
-		if ( isset( $_COOKIE['wp_admin_shell_classic'] ) && '1' === $_COOKIE['wp_admin_shell_classic'] ) {
+		if ( isset( $_COOKIE['wp_admin_workspaces_classic'] ) && '1' === $_COOKIE['wp_admin_workspaces_classic'] ) {
 			return false;
 		}
 		// Workspace must be active (override file present or explicit option).
-		if ( ! function_exists( 'wp_admin_shell_workspace_active' ) || ! wp_admin_shell_workspace_active() ) {
+		if ( ! function_exists( 'wp_admin_workspaces_workspace_active' ) || ! wp_admin_workspaces_workspace_active() ) {
 			return false;
 		}
 		// Mirror the legacy entry's capability floor.
@@ -172,11 +172,11 @@ class WP_Admin_Shell_Hijack {
 		/**
 		 * Filter the endpoint allowlist — admin scripts that always fall
 		 * through to classic wp-admin even when a workspace is active.
-		 * Mirrors the `wp_admin_shell_classic_menu_core_slugs` pattern.
+		 * Mirrors the `wp_admin_workspaces_classic_menu_core_slugs` pattern.
 		 *
 		 * @param string[] $allowlist Array of `$pagenow` values.
 		 */
-		$allowlist = apply_filters( 'wp_admin_shell_hijack_allowlist', self::ENDPOINT_ALLOWLIST );
+		$allowlist = apply_filters( 'wp_admin_workspaces_hijack_allowlist', self::ENDPOINT_ALLOWLIST );
 
 		if ( in_array( $pagenow, (array) $allowlist, true ) ) {
 			return true;
@@ -218,7 +218,7 @@ class WP_Admin_Shell_Hijack {
 		if ( 'GET' !== $method ) {
 			return;
 		}
-		if ( ! function_exists( 'wp_admin_shell_get_active_config' ) || ! class_exists( 'WP_Admin_Shell_Admin_Routes' ) ) {
+		if ( ! function_exists( 'wp_admin_workspaces_get_active_config' ) || ! class_exists( 'WP_Admin_Workspaces_Admin_Routes' ) ) {
 			return;
 		}
 
@@ -234,7 +234,7 @@ class WP_Admin_Shell_Hijack {
 			return;
 		}
 
-		$map = WP_Admin_Shell_Admin_Routes::legacy_map( wp_admin_shell_get_active_config() );
+		$map = WP_Admin_Workspaces_Admin_Routes::legacy_map( wp_admin_workspaces_get_active_config() );
 		$hash = self::match_legacy_hash( $pagenow, $map );
 		if ( null === $hash ) {
 			return;
@@ -334,13 +334,13 @@ class WP_Admin_Shell_Hijack {
 	private static function render_and_exit() {
 		// admin-header.php expects a title + screen context.
 		if ( empty( $GLOBALS['title'] ) ) {
-			$GLOBALS['title'] = __( 'Admin', 'wp-admin-shell' );
+			$GLOBALS['title'] = __( 'Admin', 'wp-admin-workspaces' );
 		}
 		if ( empty( $GLOBALS['hook_suffix'] ) ) {
-			$GLOBALS['hook_suffix'] = 'wp-admin-shell';
+			$GLOBALS['hook_suffix'] = 'wp-admin-workspaces';
 		}
 		if ( function_exists( 'set_current_screen' ) ) {
-			set_current_screen( 'wp-admin-shell' );
+			set_current_screen( 'wp-admin-workspaces' );
 		}
 
 		// admin_init (priority 0) fires BEFORE wp-admin/menu.php builds the
@@ -356,7 +356,7 @@ class WP_Admin_Shell_Hijack {
 		}
 
 		require_once ABSPATH . 'wp-admin/admin-header.php';
-		echo '<div id="wp-admin-shell"></div>';
+		echo '<div id="wp-admin-workspaces"></div>';
 		require_once ABSPATH . 'wp-admin/admin-footer.php';
 		exit;
 	}

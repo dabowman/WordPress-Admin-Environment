@@ -1,6 +1,6 @@
 <?php
 /**
- * /wp-admin-shell/v1/data-view — resolved DataView config (3-axis registry + screen overlay).
+ * /wp-admin-workspaces/v1/data-view — resolved DataView config (3-axis registry + screen overlay).
  *
  * v3 restoration replacement for the post-3b `/screen-view` single
  * endpoint. Three routes:
@@ -24,20 +24,20 @@
  *
  * Permission floor:
  *   - Screen-keyed requests (`?screen=<id>`) gate against the screen's
- *     resolved `permissions` block via WP_Admin_Shell_Permissions. 401
+ *     resolved `permissions` block via WP_Admin_Workspaces_Permissions. 401
  *     for logged-out, 404 for unknown screen, 403 for known-but-denied.
  *   - Triple-keyed requests (`?kind=X&name=Y&variant=Z`) keep the
  *     `is_user_logged_in()` floor — triples aren't screen-scoped, no
  *     cap floor to gate against.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Data_View_REST {
+class WP_Admin_Workspaces_Data_View_REST {
 
-	const REST_NAMESPACE = 'wp-admin-shell/v1';
+	const REST_NAMESPACE = 'wp-admin-workspaces/v1';
 
 	/**
 	 * Register the data-view routes.
@@ -60,17 +60,17 @@ class WP_Admin_Shell_Data_View_REST {
 						'kind'    => array(
 							'type'              => 'string',
 							'required'          => false,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 						'name'    => array(
 							'type'              => 'string',
 							'required'          => false,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 						'variant' => array(
 							'type'              => 'string',
 							'required'          => false,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_View_Config', 'sanitize_variant_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_View_Config', 'sanitize_variant_segment' ),
 						),
 					),
 				),
@@ -89,12 +89,12 @@ class WP_Admin_Shell_Data_View_REST {
 						'kind' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 						'name' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 					),
 				),
@@ -107,7 +107,7 @@ class WP_Admin_Shell_Data_View_REST {
 	 *
 	 * Logged-out → 401 floor. For screen-keyed requests, additionally
 	 * resolve the requested screen's `permissions` block + `appFloor` and
-	 * route through `WP_Admin_Shell_Permissions::user_passes()` — 404 on
+	 * route through `WP_Admin_Workspaces_Permissions::user_passes()` — 404 on
 	 * unknown screen id, 403 on known-but-denied. Triple-keyed requests
 	 * (kind/name/variant without a screen) keep the logged-in floor only
 	 * — they aren't screen-scoped, and the underlying registry entries
@@ -120,7 +120,7 @@ class WP_Admin_Shell_Data_View_REST {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'rest_not_logged_in',
-				__( 'You must be logged in to access this endpoint.', 'wp-admin-shell' ),
+				__( 'You must be logged in to access this endpoint.', 'wp-admin-workspaces' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -130,24 +130,24 @@ class WP_Admin_Shell_Data_View_REST {
 			return true;
 		}
 
-		$config  = wp_admin_shell_get_active_config();
+		$config  = wp_admin_workspaces_get_active_config();
 		$screens = isset( $config['screens'] ) && is_array( $config['screens'] ) ? $config['screens'] : array();
 		if ( ! isset( $screens[ $screen ] ) || ! is_array( $screens[ $screen ] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_data_view_unknown_screen',
-				__( 'Unknown screen id.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_data_view_unknown_screen',
+				__( 'Unknown screen id.', 'wp-admin-workspaces' ),
 				array( 'status' => 404 )
 			);
 		}
 		$screen_entry = $screens[ $screen ];
 		$perms        = $screen_entry['permissions'] ?? null;
-		$app_floor    = WP_Admin_Shell_Permissions::app_floor_for( $screen_entry );
-		$resolved     = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
+		$app_floor    = WP_Admin_Workspaces_Permissions::app_floor_for( $screen_entry );
+		$resolved     = WP_Admin_Workspaces_Permissions::resolve( $perms, $app_floor );
 
-		if ( ! WP_Admin_Shell_Permissions::user_passes( get_current_user_id(), $resolved ) ) {
+		if ( ! WP_Admin_Workspaces_Permissions::user_passes( get_current_user_id(), $resolved ) ) {
 			return new WP_Error(
 				'rest_forbidden',
-				__( 'You are not allowed to read this screen view.', 'wp-admin-shell' ),
+				__( 'You are not allowed to read this screen view.', 'wp-admin-workspaces' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -169,22 +169,22 @@ class WP_Admin_Shell_Data_View_REST {
 
 		if ( $has_screen && $has_triple ) {
 			return new WP_Error(
-				'wp_admin_shell_data_view_ambiguous_query',
-				__( 'Pass either `screen` OR `kind`+`name`, not both.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_data_view_ambiguous_query',
+				__( 'Pass either `screen` OR `kind`+`name`, not both.', 'wp-admin-workspaces' ),
 				array( 'status' => 400 )
 			);
 		}
 		if ( ! $has_screen && ! $has_triple ) {
 			return new WP_Error(
-				'wp_admin_shell_data_view_missing_query',
-				__( 'Pass `screen=<id>` for per-screen resolution or `kind=<X>&name=<Y>[&variant=<Z>]` for direct triple lookup.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_data_view_missing_query',
+				__( 'Pass `screen=<id>` for per-screen resolution or `kind=<X>&name=<Y>[&variant=<Z>]` for direct triple lookup.', 'wp-admin-workspaces' ),
 				array( 'status' => 400 )
 			);
 		}
 
 		if ( $has_screen ) {
-			$config = wp_admin_shell_get_active_config();
-			$doc    = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( $screen, $config );
+			$config = wp_admin_workspaces_get_active_config();
+			$doc    = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( $screen, $config );
 
 			// Surface the resolved identity for client-side cross-ref.
 			$screen_entry = isset( $config['screens'][ $screen ] ) && is_array( $config['screens'][ $screen ] )
@@ -206,7 +206,7 @@ class WP_Admin_Shell_Data_View_REST {
 		if ( $variant === '' ) {
 			$variant = '_default';
 		}
-		$doc = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( $kind, $name, $variant );
+		$doc = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( $kind, $name, $variant );
 
 		return rest_ensure_response( array(
 			'kind'    => $kind,
@@ -225,13 +225,13 @@ class WP_Admin_Shell_Data_View_REST {
 
 		if ( $kind === '' || $name === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_data_view_variants_invalid_segment',
-				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_data_view_variants_invalid_segment',
+				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-workspaces' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		$variants = WP_Admin_Shell_Data_View_Config::list_variants( $kind, $name );
+		$variants = WP_Admin_Workspaces_Data_View_Config::list_variants( $kind, $name );
 
 		return rest_ensure_response( array(
 			'kind'     => $kind,
@@ -257,7 +257,7 @@ class WP_Admin_Shell_Data_View_REST {
 		if ( ! is_array( $screen ) ) {
 			return array( 'kind' => '', 'name' => '', 'variant' => '_default' );
 		}
-		list( $kind, $name, $variant ) = WP_Admin_Shell_Data_View_Config::infer_kind_name_variant( $screen );
+		list( $kind, $name, $variant ) = WP_Admin_Workspaces_Data_View_Config::infer_kind_name_variant( $screen );
 		return array(
 			'kind'    => (string) $kind,
 			'name'    => (string) $name,
@@ -266,4 +266,4 @@ class WP_Admin_Shell_Data_View_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Data_View_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Data_View_REST', 'register' ) );

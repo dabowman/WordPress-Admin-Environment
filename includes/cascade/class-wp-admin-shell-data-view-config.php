@@ -30,20 +30,20 @@
  * ref-wins-inline-overrides per-field.
  *
  * Filter hooks:
- *   - `wp_admin_shell_data_view_config_{kind}_{name}` — always fires
+ *   - `wp_admin_workspaces_data_view_config_{kind}_{name}` — always fires
  *     after the triple resolves. Receives `(doc, kind, name, variant)`.
- *   - `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` —
+ *   - `wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}` —
  *     fires after the base filter when `variant !== '_default'`.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Data_View_Config {
+class WP_Admin_Workspaces_Data_View_Config {
 
 	/**
-	 * Max `extends` chain depth. Matches `WP_Admin_Shell_Modes`
+	 * Max `extends` chain depth. Matches `WP_Admin_Workspaces_Modes`
 	 * convention. A chain longer than this short-circuits to the base
 	 * doc with a one-time WP_DEBUG notice.
 	 */
@@ -72,9 +72,9 @@ class WP_Admin_Shell_Data_View_Config {
 	 * cascade-resolved tree, resolves any `extends` chain (max depth 10,
 	 * cycle detection), resolves any `fieldsRef` against
 	 * `settings.dataFields`, then runs the base filter
-	 * `wp_admin_shell_data_view_config_{$kind}_{$name}` plus the
+	 * `wp_admin_workspaces_data_view_config_{$kind}_{$name}` plus the
 	 * variant-suffixed filter
-	 * `wp_admin_shell_data_view_config_{$kind}_{$name}_{$variant}`
+	 * `wp_admin_workspaces_data_view_config_{$kind}_{$name}_{$variant}`
 	 * (only when `variant !== '_default'`).
 	 *
 	 * @param string     $kind    Entity kind.
@@ -85,8 +85,8 @@ class WP_Admin_Shell_Data_View_Config {
 	 * @return array Resolved DataView doc. Empty array when no entry exists.
 	 */
 	public static function resolve_data_view_triple( $kind, $name, $variant = '_default', $config = null ) {
-		$kind    = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( (string) $kind );
-		$name    = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( (string) $name );
+		$kind    = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( (string) $kind );
+		$name    = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( (string) $name );
 		$variant = self::sanitize_variant_segment( (string) $variant );
 
 		if ( $kind === '' || $name === '' ) {
@@ -97,20 +97,20 @@ class WP_Admin_Shell_Data_View_Config {
 		}
 
 		if ( $config === null ) {
-			$config = wp_admin_shell_get_active_config();
+			$config = wp_admin_workspaces_get_active_config();
 		}
 
 		$doc = self::resolve_extends_chain( $kind, $name, $variant, $config, array() );
 		$doc = self::apply_fields_ref( $doc, $config );
 
-		$base_filter = sprintf( 'wp_admin_shell_data_view_config_%s_%s', $kind, $name );
+		$base_filter = sprintf( 'wp_admin_workspaces_data_view_config_%s_%s', $kind, $name );
 		$doc         = apply_filters( $base_filter, $doc, $kind, $name, $variant );
 		if ( ! is_array( $doc ) ) {
 			$doc = array();
 		}
 
 		if ( $variant !== '_default' ) {
-			$variant_filter = sprintf( 'wp_admin_shell_data_view_config_%s_%s_%s', $kind, $name, $variant );
+			$variant_filter = sprintf( 'wp_admin_workspaces_data_view_config_%s_%s_%s', $kind, $name, $variant );
 			$doc            = apply_filters( $variant_filter, $doc, $kind, $name, $variant );
 			if ( ! is_array( $doc ) ) {
 				$doc = array();
@@ -146,7 +146,7 @@ class WP_Admin_Shell_Data_View_Config {
 			return array();
 		}
 		if ( $config === null ) {
-			$config = wp_admin_shell_get_active_config();
+			$config = wp_admin_workspaces_get_active_config();
 		}
 
 		$screen = $config['screens'][ $screen_id ] ?? null;
@@ -194,7 +194,7 @@ class WP_Admin_Shell_Data_View_Config {
 	 * synchronous fast path reads this stamp; without it, entity-CRUD apps
 	 * render with empty fields until the REST fallback resolves.
 	 *
-	 * Runs as the last resolver step (after the `wp_admin_shell_data`
+	 * Runs as the last resolver step (after the `wp_admin_workspaces_data`
 	 * filter + origin-tag stripping) so the stamped doc reflects every
 	 * cascade origin, baseline injection, and the per-triple filters.
 	 * Author-declared inline overlays are preserved alongside the
@@ -242,13 +242,13 @@ class WP_Admin_Shell_Data_View_Config {
 	 * @return string[] Sorted list of variant ids. `_default` first when present.
 	 */
 	public static function list_variants( $kind, $name, $config = null ) {
-		$kind = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( (string) $kind );
-		$name = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( (string) $name );
+		$kind = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( (string) $kind );
+		$name = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( (string) $name );
 		if ( $kind === '' || $name === '' ) {
 			return array();
 		}
 		if ( $config === null ) {
-			$config = wp_admin_shell_get_active_config();
+			$config = wp_admin_workspaces_get_active_config();
 		}
 
 		$reg = $config['settings']['dataViews'][ $kind ][ $name ] ?? null;
@@ -291,7 +291,7 @@ class WP_Admin_Shell_Data_View_Config {
 				$kind . '/' . $name . '/_default:default_extends',
 				sprintf(
 					/* translators: 1: kind, 2: name */
-					__( 'settings.dataViews.%1$s.%2$s._default declared `extends`. The implicit base cannot extend a sibling; ignoring.', 'wp-admin-shell' ),
+					__( 'settings.dataViews.%1$s.%2$s._default declared `extends`. The implicit base cannot extend a sibling; ignoring.', 'wp-admin-workspaces' ),
 					$kind,
 					$name
 				)
@@ -311,7 +311,7 @@ class WP_Admin_Shell_Data_View_Config {
 				$kind . '/' . $name . '/' . $variant . ':depth',
 				sprintf(
 					/* translators: 1: chain, 2: max depth */
-					__( 'settings.dataViews `extends` chain %1$s exceeded max depth %2$d; returning base entry without inheritance.', 'wp-admin-shell' ),
+					__( 'settings.dataViews `extends` chain %1$s exceeded max depth %2$d; returning base entry without inheritance.', 'wp-admin-workspaces' ),
 					implode( ' → ', array_merge( $stack, array( $variant ) ) ),
 					self::MAX_EXTENDS_DEPTH
 				)
@@ -326,7 +326,7 @@ class WP_Admin_Shell_Data_View_Config {
 				$kind . '/' . $name . '/' . $variant . ':cycle',
 				sprintf(
 					/* translators: 1: chain */
-					__( 'settings.dataViews `extends` chain %1$s contained a cycle; returning base entry without inheritance.', 'wp-admin-shell' ),
+					__( 'settings.dataViews `extends` chain %1$s contained a cycle; returning base entry without inheritance.', 'wp-admin-workspaces' ),
 					implode( ' → ', array_merge( $stack, array( $variant, $parent_variant ) ) )
 				)
 			);
@@ -529,8 +529,8 @@ class WP_Admin_Shell_Data_View_Config {
 				? $screen['dataViewVariant']
 				: '_default';
 			return array(
-				WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $screen['dataViewKind'] ),
-				WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $screen['dataViewName'] ),
+				WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $screen['dataViewKind'] ),
+				WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $screen['dataViewName'] ),
 				self::sanitize_variant_segment( $variant ),
 			);
 		}
@@ -551,10 +551,10 @@ class WP_Admin_Shell_Data_View_Config {
 			return array( '', '', '_default' );
 		}
 
-		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+		if ( ! class_exists( 'WP_Admin_Workspaces_Manifest_Registry' ) ) {
 			return array( '', '', '_default' );
 		}
-		$manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( $app_id );
+		$manifest = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( $app_id );
 		if ( ! is_array( $manifest ) || empty( $manifest['dataView'] ) || ! is_array( $manifest['dataView'] ) ) {
 			return array( '', '', '_default' );
 		}
@@ -581,8 +581,8 @@ class WP_Admin_Shell_Data_View_Config {
 		}
 
 		return array(
-			WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $kind ),
-			WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $name ),
+			WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $kind ),
+			WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $name ),
 			self::sanitize_variant_segment( $variant ),
 		);
 	}
@@ -606,8 +606,8 @@ class WP_Admin_Shell_Data_View_Config {
 			return null;
 		}
 		list( $kind, $name, $variant ) = $parts;
-		$kind    = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $kind );
-		$name    = WP_Admin_Shell_Data_Field_Collections::sanitize_segment( $name );
+		$kind    = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $kind );
+		$name    = WP_Admin_Workspaces_Data_Field_Collections::sanitize_segment( $name );
 		$variant = self::sanitize_variant_segment( $variant );
 		if ( $kind === '' || $name === '' || $variant === '' ) {
 			return null;
@@ -623,7 +623,7 @@ class WP_Admin_Shell_Data_View_Config {
 	 * binds to only when nothing in the cascade declared them.
 	 * Declared triples are authoritative — admin.json / site / role /
 	 * user wins outright, no deep-merge. To extend a manifest baseline,
-	 * hook `wp_admin_shell_data_view_config_{$kind}_{$name}[_{$variant}]`.
+	 * hook `wp_admin_workspaces_data_view_config_{$kind}_{$name}[_{$variant}]`.
 	 *
 	 * v3 restoration: the manifest's `dataView` block carries a
 	 * `variants: { <id>: <doc> }` family. Every variant is injected as
@@ -640,10 +640,10 @@ class WP_Admin_Shell_Data_View_Config {
 	 * @return array
 	 */
 	public static function inject_app_baselines( $doc ) {
-		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+		if ( ! class_exists( 'WP_Admin_Workspaces_Manifest_Registry' ) ) {
 			return $doc;
 		}
-		$apps = WP_Admin_Shell_Manifest_Registry::instance()->list_apps();
+		$apps = WP_Admin_Workspaces_Manifest_Registry::instance()->list_apps();
 		if ( empty( $apps ) ) {
 			return $doc;
 		}
@@ -807,7 +807,7 @@ class WP_Admin_Shell_Data_View_Config {
 }
 
 // Post-merge so admin.json (and downstream origins) are authoritative.
-// Priority 6 — sequenced AFTER `WP_Admin_Shell_Menu_Items::bind_screens` at
+// Priority 6 — sequenced AFTER `WP_Admin_Workspaces_Menu_Items::bind_screens` at
 // priority 5 so screens contributed by the menu-item shim are visible when
 // dataView baselines attach.
-add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Data_View_Config', 'inject_app_baselines' ), 6 );
+add_filter( 'wp_admin_workspaces_data', array( 'WP_Admin_Workspaces_Data_View_Config', 'inject_app_baselines' ), 6 );

@@ -3,12 +3,12 @@
  *
  * The PHP chromeless bridge (`includes/engines/core-desktop/chromeless-
  * bridge.php`) injects a script into every same-origin admin iframe — its
- * gate (`wp_admin_shell_is_chromeless_request()`) keys off the browser's
+ * gate (`wp_admin_workspaces_is_chromeless_request()`) keys off the browser's
  * `Sec-Fetch-Dest: iframe` header, so it fires for ANY iframe-mounted
  * admin page, not just the desktop engine. Among other things it
  * intercepts in-iframe link clicks (which don't bubble to the parent
- * document) and posts them up as `wp-admin-shell-admin-link` /
- * `wp-admin-shell-external-link` messages.
+ * document) and posts them up as `wp-admin-workspaces-admin-link` /
+ * `wp-admin-workspaces-external-link` messages.
  *
  * This module is the engine-neutral parent-side consumer. It mirrors the
  * desktop-iframe app's handler but routes generically:
@@ -50,11 +50,11 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 	// click is guarded the same way a native app's `useDirtyState` is.
 	// No URL — only the boolean matters; the origin/source pins in
 	// `installIframeBridge` still gate who may send it.
-	if ( 'wp-admin-shell-dirty-state' === data.type ) {
+	if ( 'wp-admin-workspaces-dirty-state' === data.type ) {
 		return { type: 'dirty', dirty: !! data.dirty };
 	}
 
-	if ( 'wp-admin-shell-admin-link' === data.type ) {
+	if ( 'wp-admin-workspaces-admin-link' === data.type ) {
 		if ( ! url ) {
 			return { type: 'ignore' };
 		}
@@ -107,7 +107,7 @@ export function classifyBridgeMessage( data, { adminUrl, routes } = {} ) {
 		return { type: 'ignore' };
 	}
 
-	if ( 'wp-admin-shell-external-link' === data.type ) {
+	if ( 'wp-admin-workspaces-external-link' === data.type ) {
 		// Defense in depth: only hand http(s) / mailto to window.open, never
 		// a `javascript:` / `data:` URL a compromised same-origin embed might
 		// post (the origin/source pins already gate who can reach here).

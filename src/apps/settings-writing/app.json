@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "DataForm over the REST-exposed slice of WordPress's Writing Settings: `default_category` (select of categories) + `default_post_format` (select of the ten core post formats). Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `writing` panel; shells mount it directly as a Writing screen.",
 		"rebuilds": "settings-writing",

@@ -119,7 +119,7 @@ REST gap: none of the auto-update toggles are exposed via REST. Rebuild requires
 - **Bulk update execution** → no REST (per-item upgrade exists but is undocumented)
 - **`wp_get_update_data()`** (counts shown in toolbar bubble) → no REST
 
-These are tracked at WP Trac across multiple tickets; until resolved, the shell rebuild calls a custom REST endpoint (`/wp-admin-shell/v1/updates/*`) that wraps the PHP functions, or accepts the iframe fallback.
+These are tracked at WP Trac across multiple tickets; until resolved, the shell rebuild calls a custom REST endpoint (`/wp-admin-workspaces/v1/updates/*`) that wraps the PHP functions, or accepts the iframe fallback.
 
 ---
 

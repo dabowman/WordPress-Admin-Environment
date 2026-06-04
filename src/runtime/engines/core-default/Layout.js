@@ -90,19 +90,19 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	return (
 		<SlotFillProvider>
 			<div
-				className="wp-admin-shell-layout"
+				className="wp-admin-workspaces-layout"
 				data-engine="core:default"
 				data-mode={ modeId }
 			>
 				{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
-				<div className="wp-admin-shell-layout__body">
+				<div className="wp-admin-workspaces-layout__body">
 					{ sidebar && (
 						<Region key={ sidebar.id } region={ sidebar } />
 					) }
 
 					<div
-						className={ `wp-admin-shell-areas${
+						className={ `wp-admin-workspaces-areas${
 							preview ? ' has-preview' : ''
 						}` }
 					>

@@ -289,5 +289,5 @@ function warn( message ) {
 		return;
 	}
 	// eslint-disable-next-line no-console
-	console.warn( `[wp-admin-shell] ${ message }` );
+	console.warn( `[wp-admin-workspaces] ${ message }` );
 }

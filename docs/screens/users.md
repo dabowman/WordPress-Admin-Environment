@@ -139,7 +139,7 @@ The role filter row shows: `All (N) | Administrator (N) | Editor (N) | Author (N
 - Source: `count_users()` in PHP — returns `total_users` and per-role counts including `none` for users with no role on the current site.
 - REST exposure: **gap.** `count_users()` is not exposed via REST. Workarounds:
   - 6+ requests to `/wp/v2/users?roles={role}&per_page=1` reading `X-WP-Total`. Fine for small role sets.
-  - Custom `/wp-admin-shell/v1/user-counts` proxy.
+  - Custom `/wp-admin-workspaces/v1/user-counts` proxy.
 - Large-network fallback: `wp_is_large_user_count()` returns true when total > 10000; core then suppresses counts entirely. Mirror this in shell.
 
 ### Fields used by the edit / profile form
@@ -170,9 +170,9 @@ In addition to the list fields:
 
 **Personal Options gap:** the Visual Editor / Syntax Highlighting / Admin Color / Keyboard Shortcuts / Toolbar fields are stored as user meta but not registered in the default REST users schema. Shell needs either:
 - Custom REST user meta registration that exposes them through `meta`, or
-- A custom `/wp-admin-shell/v1/user-prefs/{id}` endpoint.
+- A custom `/wp-admin-workspaces/v1/user-prefs/{id}` endpoint.
 
-The existing M5 user prefs endpoint (`/wp-admin-shell/v1/user-prefs`) handles shell-specific prefs only (density, accent, default route). Core wp-admin prefs are a separate concern.
+The existing M5 user prefs endpoint (`/wp-admin-workspaces/v1/user-prefs`) handles shell-specific prefs only (density, accent, default route). Core wp-admin prefs are a separate concern.
 
 ### Application Passwords data model
 
@@ -425,7 +425,7 @@ On approve: a new application password is created via `WP_Application_Passwords:
 | Delete | `delete_user` (single-site, not self) | Mutation | Two-step: confirmation page asks how to handle the user's content (delete all / reassign to another user). `DELETE /wp/v2/users/{id}` requires `force=true` and accepts `reassign={target_id}`. |
 | Remove | `remove_user` (multisite) | Mutation | Removes site membership but preserves user on the network. |
 | View | none | External | Author archive `link`; new tab. |
-| Send password reset | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — core uses `users.php?action=resetpassword`, which calls `retrieve_password()`. Shell needs `POST /wp-admin-shell/v1/users/{id}/password-reset` proxy. |
+| Send password reset | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — core uses `users.php?action=resetpassword`, which calls `retrieve_password()`. Shell needs `POST /wp-admin-workspaces/v1/users/{id}/password-reset` proxy. |
 | View posts | none | Navigation | `core:posts?author={id}` |
 
 ### Users list — bulk
@@ -455,7 +455,7 @@ Selection model: checkbox per row + select all + select all matching (rare). Sel
 | Generate password | none (client-side) | `wp_generate_password(24)` server-side seed; client populates field; user can edit. |
 | Cancel password change | none | Resets password fields to empty; nothing sent on save. |
 | Send Reset Link (Edit User) | `edit_user` + `wp_is_password_reset_allowed_for_user` | Same gap as list. |
-| Log Out Everywhere Else (Profile) | `read` | **Gap in REST** — core uses `WP_Session_Tokens::destroy_others`. Custom `POST /wp-admin-shell/v1/users/me/sessions/destroy-others` needed. |
+| Log Out Everywhere Else (Profile) | `read` | **Gap in REST** — core uses `WP_Session_Tokens::destroy_others`. Custom `POST /wp-admin-workspaces/v1/users/me/sessions/destroy-others` needed. |
 | Log Out Everywhere (Edit User) | `edit_user` + super-admin or admin | Same gap; destroys all sessions including current (so the user is logged out everywhere). |
 | Add Application Password | `create_app_password` | `POST /wp/v2/users/{id}/application-passwords` `{ name, app_id? }`. Response **once** includes `password` — UI must display and copy this immediately, store nothing. |
 | Revoke Application Password | `delete_app_password` | `DELETE /wp/v2/users/{id}/application-passwords/{uuid}`. |
@@ -738,7 +738,7 @@ Plugin compatibility note: most useful hooks for end-user plugins are `user_row_
 | Add User (single-site create form) | High | `POST /wp/v2/users`. `send_user_notification` flag is gap. |
 | Add Existing User (multisite invite) | Medium | No REST equivalent. Custom endpoint. |
 | Edit User (full admin form, separate from Profile) | High | Mostly same component as Profile with extra Role field + admin sections. |
-| Personal Options section | High | rich_editing / syntax_highlighting / admin_color / comment_shortcuts / show_admin_bar_front not in REST users schema. Register as `meta` or build `/wp-admin-shell/v1/user-prefs/{id}`. |
+| Personal Options section | High | rich_editing / syntax_highlighting / admin_color / comment_shortcuts / show_admin_bar_front not in REST users schema. Register as `meta` or build `/wp-admin-workspaces/v1/user-prefs/{id}`. |
 | Display name dropdown | Medium | Computed locally from first/last/nickname/login permutations. |
 | Password change form | High | REST accepts `password`. Strength meter reproducible client-side via `zxcvbn` (already loaded as `password-strength-meter`). Generate-password helper needed. |
 | Send password reset (admin-initiated) | Medium | Custom endpoint. |

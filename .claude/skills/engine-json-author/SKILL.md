@@ -1,13 +1,13 @@
 ---
 name: engine-json-author
-description: Author or edit WP Admin Shell engine.json manifests. Use whenever a user wants to build a new rendering engine (sidebar/toolbar/content; mobile drawer; windowed/MDI; tiling; Material Design; brand-locked), declare region templates, ship a chrome mode catalog (default/focus/takeover/modal/custom), expose engine-declared slots (detail/inspector/dashboard-grid/toolbar/sidebar-footer/status-bar), pick a menu renderer (sidebar-drilldown/sidebar-tree/dock/drawer/none/plugin), declare an engine-shipped default region tree, set engine-shipped default-styles (theme seeds + chrome palette), or wire an engine to a non-WPDS design system. Triggers on phrases like "ship a custom engine", "build a tiling engine", "add a focus-tight mode", "expose a new slot", "use a dock menu", "engine for Material Design", "register an engine via wp_admin_shell_register_engine", "engine manifest", "engine default-styles". Covers admin-engine.json schema, the three bundled engines (core:default, core:single-pane, core:desktop), the kernel/engine DS boundary, and the pluggable ThemeProvider seam.
+description: Author or edit WP Admin Shell engine.json manifests. Use whenever a user wants to build a new rendering engine (sidebar/toolbar/content; mobile drawer; windowed/MDI; tiling; Material Design; brand-locked), declare region templates, ship a chrome mode catalog (default/focus/takeover/modal/custom), expose engine-declared slots (detail/inspector/dashboard-grid/toolbar/sidebar-footer/status-bar), pick a menu renderer (sidebar-drilldown/sidebar-tree/dock/drawer/none/plugin), declare an engine-shipped default region tree, set engine-shipped default-styles (theme seeds + chrome palette), or wire an engine to a non-WPDS design system. Triggers on phrases like "ship a custom engine", "build a tiling engine", "add a focus-tight mode", "expose a new slot", "use a dock menu", "engine for Material Design", "register an engine via wp_admin_workspaces_register_engine", "engine manifest", "engine default-styles". Covers admin-engine.json schema, the three bundled engines (core:default, core:single-pane, core:desktop), the kernel/engine DS boundary, and the pluggable ThemeProvider seam.
 ---
 
 # engine.json Authoring Skill
 
 `engine.json` is the manifest for a WP Admin Shell **engine**: the spatial + chrome layer that reads a region tree and renders it to DOM. Engines pick a design system, ship region templates, declare chrome modes, expose slot vocabulary, decide how the workspace menu renders, and optionally ship the kernel's `ThemeProvider`.
 
-Three engines ship with the plugin: **`core:default`** (sidebar + topbar + content, WPDS), **`core:single-pane`** (mobile-first drawer, WPDS), **`core:desktop`** (windowed compositor + dock, WPDS). Plugins ship more via `wp_admin_shell_register_engine()` or the convention path `{plugin}/engines/{name}/engine.json`.
+Three engines ship with the plugin: **`core:default`** (sidebar + topbar + content, WPDS), **`core:single-pane`** (mobile-first drawer, WPDS), **`core:desktop`** (windowed compositor + dock, WPDS). Plugins ship more via `wp_admin_workspaces_register_engine()` or the convention path `{plugin}/engines/{name}/engine.json`.
 
 ## Authoritative references
 
@@ -17,7 +17,7 @@ Three engines ship with the plugin: **`core:default`** (sidebar + topbar + conte
 | `docs/public/engine-json-reference.md` | Author-facing reference. Per-field tables. |
 | `docs/core-default-engine.md` | Worked example: modes catalog, slots, region templates, default-styles for `core:default`. |
 | `docs/engines-and-design-systems.md` | Authoritative for the kernel/engine/app DS boundary and the three engine contracts (reuse-WPDS, token-bridge, engine-native apps). |
-| `docs/wp-admin-shell-design-spec.md` | §4.2 (engine manifest), §5 (region vocabulary), §9 (tokens + styling), §13.1 (Material Design worked example). |
+| `docs/wp-admin-workspaces-design-spec.md` | §4.2 (engine manifest), §5 (region vocabulary), §9 (tokens + styling), §13.1 (Material Design worked example). |
 | `docs/desktop-engine-readiness.md` | Manual smoke + automated test gates for desktop-flavored engines. |
 | `src/runtime/engines/core-default/engine.json` | Reference manifest. Read first. |
 | `src/runtime/engines/core-single-pane/engine.json` | Drawer-flavored engine. |
@@ -110,10 +110,10 @@ Region-template catalog. Authors instantiate a template from `admin.json` by ref
         "platform": { "core:persists-across-navigation": true },
         "default-style": {
             "display": "flex", "flex-direction": "column",
-            "inline-size": "var(--wp-admin-shell--chrome--sidebar--width, 280px)",
+            "inline-size": "var(--wp-admin-workspaces--chrome--sidebar--width, 280px)",
             "block-size": "100%",
-            "background": "var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
-            "color":      "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
+            "background": "var(--wp-admin-workspaces--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral))",
+            "color":      "var(--wp-admin-workspaces--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
         }
     },
     "core:topbar": {
@@ -139,7 +139,7 @@ Region-template catalog. Authors instantiate a template from `admin.json` by ref
 | `default-style` | CSS applied to the region's container element. Values may be literal CSS or `{styles.chrome.sidebar.background}` token aliases. |
 | `regions` | Nested child regions, addressable as `{parent}/{child}` in admin.json. Each child has the full template contract recursively. |
 
-**Two-arg `var()` chain.** Convention: `var(--wp-admin-shell--chrome--<surface>--<slot>, var(--wpds-<wpds-slot>))`. Chrome var wins when the author declares it; falls through to WPDS slot when chrome layer is empty. Lets authors override without touching DS-internal vars.
+**Two-arg `var()` chain.** Convention: `var(--wp-admin-workspaces--chrome--<surface>--<slot>, var(--wpds-<wpds-slot>))`. Chrome var wins when the author declares it; falls through to WPDS slot when chrome layer is empty. Lets authors override without touching DS-internal vars.
 
 **Template ids match `^(core:[a-z][a-z0-9-]*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$`** — same namespace pattern as apps/engines.
 
@@ -205,7 +205,7 @@ The chrome modes catalog. Each mode declares per-region states (`hidden`, `compa
 | Persistent regions | Hidden via CSS, NOT unmounted. State (scroll position, drilldown depth) survives transitions. |
 | Modal stack | Multiple modal screens stack LIFO; topmost owns focus + Escape. Engines that don't stack collapse to "exclusive modal". |
 
-**Conventions:** `default`, `focus`, `takeover`, `modal` are the four core mode names. Engines may add more (`kiosk`, `focus-tight`, `presentation`). Plugins extend a specific engine's catalog via the `wp_admin_shell_engine_modes_{engineId}` PHP filter.
+**Conventions:** `default`, `focus`, `takeover`, `modal` are the four core mode names. Engines may add more (`kiosk`, `focus-tight`, `presentation`). Plugins extend a specific engine's catalog via the `wp_admin_workspaces_engine_modes_{engineId}` PHP filter.
 
 **Per-region override from admin.json.** A screen with `regions.sidebar.hidden: false` overrides whatever the mode declared for that region. Engine merges screen overrides on top of mode region states.
 
@@ -334,11 +334,11 @@ The resolver synthesizes an `engine` cascade origin between `core` and `plugin` 
 Standard WordPress asset handles. Must be registered with WordPress (via `wp_register_script` / `wp_register_style`) before the manifest references them.
 
 ```json
-"script": "wp-admin-shell",
-"style":  "wp-admin-shell",
+"script": "wp-admin-workspaces",
+"style":  "wp-admin-workspaces",
 "styles": [
-    { "handle": "wp-admin-shell-wpds-tokens", "src": "build/wpds-tokens.css" },
-    { "handle": "wp-admin-shell-dataviews", "src": "build/dataviews.css", "deps": [ "wp-components" ] }
+    { "handle": "wp-admin-workspaces-wpds-tokens", "src": "build/wpds-tokens.css" },
+    { "handle": "wp-admin-workspaces-dataviews", "src": "build/dataviews.css", "deps": [ "wp-components" ] }
 ]
 ```
 
@@ -479,7 +479,7 @@ See spec §13.1 for the worked example. Highlights:
 PHP filter on a specific engine's catalog:
 
 ```php
-add_filter( 'wp_admin_shell_engine_modes_core:default', function( $modes ) {
+add_filter( 'wp_admin_workspaces_engine_modes_core:default', function( $modes ) {
     $modes['kiosk'] = [
         'label'   => 'Kiosk',
         'regions' => [
@@ -534,7 +534,7 @@ For new engines, walk the manual smoke checklist in `docs/desktop-engine-readine
 | What does `core:default` ship for template X? | `src/runtime/engines/core-default/engine.json` |
 | How does single-pane handle modes? | `src/runtime/engines/core-single-pane/engine.json` + `index.css` |
 | How does desktop handle dynamic children? | `src/runtime/engines/core-desktop/windowing/*.ts` + `engine.json` |
-| Region vocabulary contract? | `docs/wp-admin-shell-design-spec.md` §5 |
-| URL routing + route-key semantics? | `docs/wp-admin-shell-design-spec.md` §6 |
+| Region vocabulary contract? | `docs/wp-admin-workspaces-design-spec.md` §5 |
+| URL routing + route-key semantics? | `docs/wp-admin-workspaces-design-spec.md` §6 |
 | Theming model (4 tiers + chrome bridge)? | Project CLAUDE.md "Theming model" section + `docs/engines-and-design-systems.md` |
-| Material Design worked example? | `docs/wp-admin-shell-design-spec.md` §13.1 |
+| Material Design worked example? | `docs/wp-admin-workspaces-design-spec.md` §13.1 |

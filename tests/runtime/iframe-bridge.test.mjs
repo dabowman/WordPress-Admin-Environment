@@ -51,13 +51,13 @@ ok(
 );
 ok(
 	'unknown type → ignore',
-	classifyBridgeMessage( { type: 'wp-admin-shell-iframe-ready' }, ctx )
+	classifyBridgeMessage( { type: 'wp-admin-workspaces-iframe-ready' }, ctx )
 		.type === 'ignore'
 );
 
 const mapped = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 	},
 	ctx
@@ -69,7 +69,7 @@ ok(
 
 const unmapped = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'options-general.php',
 	},
 	ctx
@@ -82,7 +82,7 @@ ok(
 
 ok(
 	'admin-link without url → ignore',
-	classifyBridgeMessage( { type: 'wp-admin-shell-admin-link' }, ctx ).type ===
+	classifyBridgeMessage( { type: 'wp-admin-workspaces-admin-link' }, ctx ).type ===
 		'ignore'
 );
 
@@ -91,7 +91,7 @@ ok(
 	'admin-link to RPC endpoint → ignore (not iframe sink)',
 	classifyBridgeMessage(
 		{
-			type: 'wp-admin-shell-admin-link',
+			type: 'wp-admin-workspaces-admin-link',
 			url: ADMIN_URL + 'admin-ajax.php?action=x',
 		},
 		ctx
@@ -100,13 +100,13 @@ ok(
 ok(
 	'admin-link with classic toggle → ignore (not iframe sink)',
 	classifyBridgeMessage(
-		{ type: 'wp-admin-shell-admin-link', url: ADMIN_URL + '?classic=1' },
+		{ type: 'wp-admin-workspaces-admin-link', url: ADMIN_URL + '?classic=1' },
 		ctx
 	).type === 'ignore'
 );
 
 const ext = classifyBridgeMessage(
-	{ type: 'wp-admin-shell-external-link', url: 'https://example.com' },
+	{ type: 'wp-admin-workspaces-external-link', url: 'https://example.com' },
 	ctx
 );
 ok(
@@ -115,27 +115,27 @@ ok(
 );
 ok(
 	'external-link without url → ignore',
-	classifyBridgeMessage( { type: 'wp-admin-shell-external-link' }, ctx )
+	classifyBridgeMessage( { type: 'wp-admin-workspaces-external-link' }, ctx )
 		.type === 'ignore'
 );
 ok(
 	'external mailto → external',
 	classifyBridgeMessage(
-		{ type: 'wp-admin-shell-external-link', url: 'mailto:a@b.test' },
+		{ type: 'wp-admin-workspaces-external-link', url: 'mailto:a@b.test' },
 		ctx
 	).type === 'external'
 );
 ok(
 	'external javascript: → ignore (scheme allowlist)',
 	classifyBridgeMessage(
-		{ type: 'wp-admin-shell-external-link', url: 'javascript:alert(1)' },
+		{ type: 'wp-admin-workspaces-external-link', url: 'javascript:alert(1)' },
 		ctx
 	).type === 'ignore'
 );
 ok(
 	'external data: → ignore (scheme allowlist)',
 	classifyBridgeMessage(
-		{ type: 'wp-admin-shell-external-link', url: 'data:text/html,x' },
+		{ type: 'wp-admin-workspaces-external-link', url: 'data:text/html,x' },
 		ctx
 	).type === 'ignore'
 );
@@ -146,7 +146,7 @@ ok(
 // the workspace-route mapping that would otherwise drop them.
 const parentNonced = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'update.php?action=upload-plugin&_wpnonce=abc',
 		target: '_parent',
 	},
@@ -159,7 +159,7 @@ ok(
 );
 const parentMapped = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 		target: '_parent',
 	},
@@ -171,7 +171,7 @@ ok(
 );
 const parentCrossOrigin = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: 'https://evil.test/something',
 		target: '_parent',
 	},
@@ -187,7 +187,7 @@ ok(
 // tampered payload can't point the iframe at e.g. an uploads file.
 const parentNonAdminPath = classifyBridgeMessage(
 	{
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: 'https://site.test/wp-content/uploads/x.html',
 		target: '_parent',
 	},
@@ -201,7 +201,7 @@ ok(
 // ── dirty-state relay ──────────────────────────────────────────────
 
 const dirtyTrue = classifyBridgeMessage(
-	{ type: 'wp-admin-shell-dirty-state', dirty: true },
+	{ type: 'wp-admin-workspaces-dirty-state', dirty: true },
 	ctx
 );
 ok(
@@ -209,7 +209,7 @@ ok(
 	dirtyTrue.type === 'dirty' && dirtyTrue.dirty === true
 );
 const dirtyFalse = classifyBridgeMessage(
-	{ type: 'wp-admin-shell-dirty-state', dirty: false },
+	{ type: 'wp-admin-workspaces-dirty-state', dirty: false },
 	ctx
 );
 ok(
@@ -218,7 +218,7 @@ ok(
 );
 ok(
 	'dirty-state with missing flag → dirty=false (coerced)',
-	classifyBridgeMessage( { type: 'wp-admin-shell-dirty-state' }, ctx )
+	classifyBridgeMessage( { type: 'wp-admin-workspaces-dirty-state' }, ctx )
 		.dirty === false
 );
 
@@ -284,7 +284,7 @@ win.dispatch( {
 	origin: 'https://evil.test',
 	source: iframeWindow,
 	data: {
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 	},
 } );
@@ -295,7 +295,7 @@ win.dispatch( {
 	origin: 'https://site.test',
 	source: otherWindow,
 	data: {
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 	},
 } );
@@ -306,7 +306,7 @@ win.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
 	data: {
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 	},
 } );
@@ -317,7 +317,7 @@ win.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
 	data: {
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'options-general.php',
 	},
 } );
@@ -330,7 +330,7 @@ ok(
 win.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
-	data: { type: 'wp-admin-shell-external-link', url: 'https://example.com' },
+	data: { type: 'wp-admin-workspaces-external-link', url: 'https://example.com' },
 } );
 ok( 'external-link opens externally', externalTo === 'https://example.com' );
 
@@ -338,25 +338,25 @@ ok( 'external-link opens externally', externalTo === 'https://example.com' );
 win.dispatch( {
 	origin: 'https://evil.test',
 	source: iframeWindow,
-	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+	data: { type: 'wp-admin-workspaces-dirty-state', dirty: true },
 } );
 ok( 'dirty-state from wrong origin dropped', dirtyTo === null );
 win.dispatch( {
 	origin: 'https://site.test',
 	source: otherWindow,
-	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+	data: { type: 'wp-admin-workspaces-dirty-state', dirty: true },
 } );
 ok( 'dirty-state from spoofed source dropped', dirtyTo === null );
 win.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
-	data: { type: 'wp-admin-shell-dirty-state', dirty: true },
+	data: { type: 'wp-admin-workspaces-dirty-state', dirty: true },
 } );
 ok( 'dirty-state true relayed to onDirty', dirtyTo === true );
 win.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
-	data: { type: 'wp-admin-shell-dirty-state', dirty: false },
+	data: { type: 'wp-admin-workspaces-dirty-state', dirty: false },
 } );
 ok( 'dirty-state false relayed to onDirty', dirtyTo === false );
 
@@ -378,7 +378,7 @@ win2.dispatch( {
 	origin: 'https://site.test',
 	source: iframeWindow,
 	data: {
-		type: 'wp-admin-shell-admin-link',
+		type: 'wp-admin-workspaces-admin-link',
 		url: ADMIN_URL + 'edit.php?post_type=page',
 	},
 } );

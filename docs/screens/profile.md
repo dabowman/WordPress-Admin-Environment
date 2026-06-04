@@ -77,7 +77,7 @@ This is where own-vs-other diverges most. The same template renders a different 
 - Own profile is always reachable by any logged-in user (`read`).
 - Application Passwords section is hidden entirely when `wp_is_application_passwords_available_for_user( $user )` is false (no HTTPS, or disabled by filter, or Basic-Auth-protected site).
 
-**Shell reality:** `core:profile` is **self-only by construction** — `userId` is always `window.wpAdminShell.userId` (`index.js:25`), so it always targets the acting user (effectively `/wp/v2/users/me`). REST `update_current_item_permissions_check` enforces the floor. The edit-another-user branch (role, capabilities, reset-link, Super Admin) has no shell home.
+**Shell reality:** `core:profile` is **self-only by construction** — `userId` is always `window.wpAdminWorkspaces.userId` (`index.js:25`), so it always targets the acting user (effectively `/wp/v2/users/me`). REST `update_current_item_permissions_check` enforces the floor. The edit-another-user branch (role, capabilities, reset-link, Super Admin) has no shell home.
 
 ---
 
@@ -398,7 +398,7 @@ Decide for each whether to preserve, replace with a shell slot, or drop.
 | Interface Language (`locale`) field | High | In REST, writable; trivially added to the existing `DataForm`. Needs a language-list preload surface. Language-pack-download-on-save stays wp-admin-only. **Shell-side.** |
 | Basic password-change field (+ client confirm + strength meter) | High | `password` is REST-writable; document no current-password re-auth + no server weak-gate. **Shell-side** (B9 not a hard blocker). |
 | Username (read-only) + avatar/Gravatar (read-only) display | Medium | Cheap parity wins; both REST-readable. **Shell-side.** |
-| Personal Options (color scheme, editor toggles, shortcuts, toolbar) | Medium | Blocked — meta not in REST. **B1–B2:** [upstream] `register_meta(... show_in_rest ...)`, **or** [shell] bridge through `WP_Admin_Shell_Prefs_REST` to `update_user_meta`. |
+| Personal Options (color scheme, editor toggles, shortcuts, toolbar) | Medium | Blocked — meta not in REST. **B1–B2:** [upstream] `register_meta(... show_in_rest ...)`, **or** [shell] bridge through `WP_Admin_Workspaces_Prefs_REST` to `update_user_meta`. |
 | **Email pending-change confirmation flow + Cancel** | Medium (security) | **B4** — own-email REST writes are immediate, bypassing the confirm-by-link safeguard. Security-relevant. [upstream] to route through the flow; **document loudly now**. |
 | Field-level error mapping | Medium | Map `WP_Error` `data.params` to per-field messages instead of one banner. **Shell-side.** |
 | Nickname-required + URL normalization | Medium | Mark required + normalize bare host on save. **Shell-side.** |

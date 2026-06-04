@@ -67,14 +67,14 @@ The resolver caps `extends` chains at depth 10 and detects cycles. `drafts exten
 
 Two filters fire on every resolved `dataView` doc. Both run after the cascade merge and `extends` resolution, before `fieldsRef` expansion is finalized.
 
-1. **`wp_admin_shell_data_view_config_{kind}_{name}`** — always fires, on every variant lookup. Use for changes that should apply across every variant of an entity.
-2. **`wp_admin_shell_data_view_config_{kind}_{name}_{variant}`** — fires when `variant !== '_default'`. Use for variant-targeted changes.
+1. **`wp_admin_workspaces_data_view_config_{kind}_{name}`** — always fires, on every variant lookup. Use for changes that should apply across every variant of an entity.
+2. **`wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}`** — fires when `variant !== '_default'`. Use for variant-targeted changes.
 
 Example PHP adding an SEO-score column to every Posts variant:
 
 ```php
 add_filter(
-    'wp_admin_shell_data_view_config_postType_post',
+    'wp_admin_workspaces_data_view_config_postType_post',
     function ( $doc, $kind, $name, $variant ) {
         $doc['fields'][] = [
             'id'    => 'seo-score',
@@ -88,7 +88,7 @@ add_filter(
 );
 ```
 
-Migrating from CIAB: `s/next_admin_entity_view_config_/wp_admin_shell_data_view_config_/g`. The mechanical rename ports both the base filter and the per-variant filter — CIAB's 3-axis hook naming maps directly.
+Migrating from CIAB: `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`. The mechanical rename ports both the base filter and the per-variant filter — CIAB's 3-axis hook naming maps directly.
 
 ## REST endpoints
 
@@ -96,9 +96,9 @@ Three endpoints expose the resolved registry to JS clients.
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /wp-admin-shell/v1/data-view?screen=<id>` | Resolved per-screen doc — the registry triple plus any inline `screens[id].dataView` overlay. What `useDataView(screenId)` calls for late-registered screens. |
-| `GET /wp-admin-shell/v1/data-view?kind=X&name=Y[&variant=Z]` | Direct registry lookup. `variant` defaults to `_default`. |
-| `GET /wp-admin-shell/v1/data-view/variants?kind=X&name=Y` | Variant discovery. Returns `{ variants: [ "_default", "drafts", ... ] }`. |
+| `GET /wp-admin-workspaces/v1/data-view?screen=<id>` | Resolved per-screen doc — the registry triple plus any inline `screens[id].dataView` overlay. What `useDataView(screenId)` calls for late-registered screens. |
+| `GET /wp-admin-workspaces/v1/data-view?kind=X&name=Y[&variant=Z]` | Direct registry lookup. `variant` defaults to `_default`. |
+| `GET /wp-admin-workspaces/v1/data-view/variants?kind=X&name=Y` | Variant discovery. Returns `{ variants: [ "_default", "drafts", ... ] }`. |
 
 Permission floor is `is_user_logged_in()`. `dataView` blocks are structural metadata, not entity data — column shapes don't require entity capability checks. To gate further, add an `is_user_allowed` check inside the filter callback.
 
@@ -143,10 +143,10 @@ const { config, isLoading } = useDataView( screenId );
 const { config, isLoading } = useDataView( { kind: 'postType', name: 'post', variant: 'drafts' } );
 ```
 
-String argument routes through `/data-view?screen=<id>`; object argument routes through `/data-view?kind=X&name=Y&variant=Z`. Both paths consult the inline `window.wpAdminShell.config` snapshot first and only fall through to REST when the snapshot doesn't carry the requested entry. The hook source lives at `src/runtime/dataView/useDataView.js`.
+String argument routes through `/data-view?screen=<id>`; object argument routes through `/data-view?kind=X&name=Y&variant=Z`. Both paths consult the inline `window.wpAdminWorkspaces.config` snapshot first and only fall through to REST when the snapshot doesn't carry the requested entry. The hook source lives at `src/runtime/dataView/useDataView.js`.
 
 ## See also
 
-- `docs/wp-admin-shell-design-spec.md` §13 #7–#8 — spec-level normative description.
+- `docs/wp-admin-workspaces-design-spec.md` §13 #7–#8 — spec-level normative description.
 - `docs/schema-sketch.md` — design rationale + cascade examples.
 - [`@wordpress/dataviews`](https://www.npmjs.com/package/@wordpress/dataviews) — upstream component reference.

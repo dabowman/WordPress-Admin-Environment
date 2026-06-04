@@ -39,7 +39,9 @@ import { useMode } from '../modes/useMode';
 import { readRegionState } from '../modes/resolveMode.mjs';
 
 export function Region( { region } ) {
-	if ( ! shouldRenderRegion( region, window.wpAdminShell?.capabilities ) ) {
+	if (
+		! shouldRenderRegion( region, window.wpAdminWorkspaces?.capabilities )
+	) {
 		return null;
 	}
 	return (
@@ -311,8 +313,8 @@ function ModalRegion( { region, services, matched, regionState, modeId } ) {
 			<button
 				type="button"
 				tabIndex={ -1 }
-				aria-label={ __( 'Close', 'wp-admin-shell' ) }
-				className="wp-admin-shell-region__backdrop"
+				aria-label={ __( 'Close', 'wp-admin-workspaces' ) }
+				className="wp-admin-workspaces-region__backdrop"
 				data-region-id={ region.id }
 				onClick={ closeOnBackdrop ? close : undefined }
 			/>
@@ -368,10 +370,10 @@ function kebabToCamel( key ) {
 }
 
 function regionClassName( region, regionState ) {
-	const classes = [ 'wp-admin-shell-region' ];
+	const classes = [ 'wp-admin-workspaces-region' ];
 	if ( region.id ) {
 		const slug = String( region.id ).replace( /\//g, '__' );
-		classes.push( `wp-admin-shell-region--${ slug }` );
+		classes.push( `wp-admin-workspaces-region--${ slug }` );
 	}
 	// v3 mode state — each boolean-true key becomes a modifier class so
 	// engine CSS can target both `[data-mode-*]` attributes and BEM
@@ -380,7 +382,7 @@ function regionClassName( region, regionState ) {
 	if ( regionState && typeof regionState === 'object' ) {
 		for ( const [ key, value ] of Object.entries( regionState ) ) {
 			if ( value === true ) {
-				classes.push( `wp-admin-shell-region--${ kebab( key ) }` );
+				classes.push( `wp-admin-workspaces-region--${ kebab( key ) }` );
 			}
 		}
 	}
@@ -455,7 +457,7 @@ function renderRegionApp( region, matched ) {
 		return null;
 	}
 	return (
-		<div className="wp-admin-shell-region__app">
+		<div className="wp-admin-workspaces-region__app">
 			<MountedApp appRef={ ref } regionId={ region.id } />
 		</div>
 	);

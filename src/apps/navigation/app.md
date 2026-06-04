@@ -18,7 +18,7 @@ The active item derives from the URL primary path (the `aria-current="true"` att
 | `none` | renders nothing | — |
 | `plugin:{slug}/{name}` | whatever a plugin registers | a third-party plugin |
 
-Built-in + engine-owned renderers register via a direct ESM import (`registerMenuRenderer(id, Component)`) at module load — race-free against the kernel's synchronous mount. A loose plugin renderer registers through `window.wpAdminShell.registerMenuRenderer` from a script the PHP `wp_admin_shell_register_menu_renderer()` entry point enqueues; that path can race the first paint until the kernel ships a published import surface (see `docs/feedback.md`). Every renderer receives `{ items, currentPrimary, navConfig }` and never re-prunes — the host did that once.
+Built-in + engine-owned renderers register via a direct ESM import (`registerMenuRenderer(id, Component)`) at module load — race-free against the kernel's synchronous mount. A loose plugin renderer registers through `window.wpAdminWorkspaces.registerMenuRenderer` from a script the PHP `wp_admin_workspaces_register_menu_renderer()` entry point enqueues; that path can race the first paint until the kernel ships a published import surface (see `docs/feedback.md`). Every renderer receives `{ items, currentPrimary, navConfig }` and never re-prunes — the host did that once.
 
 The split keeps each engine's renderer *with the engine*: when `core:single-pane` / `core:desktop` are extracted to standalone plugins, their renderers move with them and the bundled dispatcher is untouched. `core:desktop`'s `dock` is the exception — it's rendered by the separate `core:desktop-dock-app`, not via `core:navigation`, so the `menu-renderer: "dock"` declaration is intent-only.
 

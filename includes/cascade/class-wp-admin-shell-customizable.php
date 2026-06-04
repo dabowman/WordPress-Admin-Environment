@@ -30,17 +30,17 @@
  *   - `commands[].invoke` (the action target)
  *   - `workspace.engine` (the runtime engine)
  *
- * Emergency bypass — undocumented. The `wp_admin_shell_customizable_bypass`
+ * Emergency bypass — undocumented. The `wp_admin_workspaces_customizable_bypass`
  * filter (default-off) short-circuits the entire per-field walker. Intended
  * as a dev-time "uh-oh" lever, NOT a long-term contract — production code
  * MUST NOT depend on it.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Customizable {
+class WP_Admin_Workspaces_Customizable {
 
 	const FIELD = 'customizable';
 
@@ -151,7 +151,7 @@ class WP_Admin_Shell_Customizable {
 		// depend on this filter. Removed from documentation deliberately;
 		// the only sane caller is an integration test exercising what
 		// breaks when enforcement misfires.
-		if ( apply_filters( 'wp_admin_shell_customizable_bypass', false ) ) {
+		if ( apply_filters( 'wp_admin_workspaces_customizable_bypass', false ) ) {
 			return $downstream;
 		}
 
@@ -301,7 +301,7 @@ class WP_Admin_Shell_Customizable {
 		if ( ! is_array( $value ) || empty( $value ) ) {
 			return;
 		}
-		if ( WP_Admin_Shell_Merge::is_assoc( $value ) ) {
+		if ( WP_Admin_Workspaces_Merge::is_assoc( $value ) ) {
 			foreach ( $value as $k => $v ) {
 				self::collect_list_shapes( $v, $path_prefix . '.' . $k, $out );
 			}
@@ -371,7 +371,7 @@ class WP_Admin_Shell_Customizable {
 
 			$container_path = $rel === '' ? null : explode( '.', $rel );
 			$node           = self::dot_ref( $out, $container_path );
-			if ( ! is_array( $node ) || empty( $node ) || ! WP_Admin_Shell_Merge::is_assoc( $node ) ) {
+			if ( ! is_array( $node ) || empty( $node ) || ! WP_Admin_Workspaces_Merge::is_assoc( $node ) ) {
 				continue;
 			}
 			$relisted = array();
@@ -452,7 +452,7 @@ class WP_Admin_Shell_Customizable {
 			$out[ $path_prefix ] = $value;
 			return;
 		}
-		if ( WP_Admin_Shell_Merge::is_assoc( $value ) ) {
+		if ( WP_Admin_Workspaces_Merge::is_assoc( $value ) ) {
 			foreach ( $value as $k => $v ) {
 				self::collect_leaves( $v, $path_prefix . '.' . $k, $out );
 			}
@@ -584,7 +584,7 @@ class WP_Admin_Shell_Customizable {
 			}
 			// Step into the node. List form needs id lookup.
 			$next = null;
-			if ( WP_Admin_Shell_Merge::is_assoc( $cur ) ) {
+			if ( WP_Admin_Workspaces_Merge::is_assoc( $cur ) ) {
 				$next = $cur[ $seg ] ?? null;
 			} else {
 				foreach ( $cur as $entry ) {
@@ -642,7 +642,7 @@ class WP_Admin_Shell_Customizable {
 			return;
 		}
 		error_log( sprintf(
-			'[wp-admin-shell] customizable enforcement: dropped %s-origin write to "%s" (reason: %s)',
+			'[wp-admin-workspaces] customizable enforcement: dropped %s-origin write to "%s" (reason: %s)',
 			$origin,
 			$path,
 			$reason
@@ -660,7 +660,7 @@ class WP_Admin_Shell_Customizable {
 			$out_list = array();
 
 			$entries = $downstream[ $coll ];
-			if ( is_array( $entries ) && WP_Admin_Shell_Merge::is_assoc( $entries ) ) {
+			if ( is_array( $entries ) && WP_Admin_Workspaces_Merge::is_assoc( $entries ) ) {
 				// Map form (regions:{id:body}) — convert to list-of-entries
 				// for filtering, return as map.
 				$map_form = true;
@@ -731,7 +731,7 @@ class WP_Admin_Shell_Customizable {
 
 	private static function index_by_key( $entries, $key ) {
 		$out = array();
-		if ( is_array( $entries ) && WP_Admin_Shell_Merge::is_assoc( $entries ) ) {
+		if ( is_array( $entries ) && WP_Admin_Workspaces_Merge::is_assoc( $entries ) ) {
 			foreach ( $entries as $id => $body ) {
 				$row = is_array( $body ) ? $body : array();
 				$row[ $key ] = $id;

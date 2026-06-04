@@ -4,10 +4,10 @@
  *
  * Subcommands:
  *   list                          Print registered shells with their origins.
- *   activate <slug>               Set wp_admin_shell_active_shell.
+ *   activate <slug>               Set wp_admin_workspaces_active_shell.
  *   register <name> <path>        Register a programmatic shell from JSON on disk.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -16,7 +16,7 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	return;
 }
 
-class WP_Admin_Shell_CLI {
+class WP_Admin_Workspaces_CLI {
 
 	/**
 	 * List registered shells with their origins.
@@ -28,9 +28,9 @@ class WP_Admin_Shell_CLI {
 	 * @when after_wp_load
 	 */
 	public function list( $args, $assoc_args ) {
-		$shells = wp_admin_shell_get_available_shells();
+		$shells = wp_admin_workspaces_get_available_shells();
 
-		$active = get_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+		$active = get_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
 
 		$rows = array();
 		foreach ( $shells as $shell ) {
@@ -64,12 +64,12 @@ class WP_Admin_Shell_CLI {
 		list( $slug ) = $args;
 		$slug = sanitize_file_name( $slug );
 
-		$path = WP_ADMIN_SHELL_PATH . 'shells/' . $slug . '.json';
+		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $slug . '.json';
 		if ( ! file_exists( $path ) ) {
 			WP_CLI::error( "Shell not found: $slug (looked in shells/$slug.json)" );
 		}
 
-		update_option( 'wp_admin_shell_active_shell', $slug );
+		update_option( 'wp_admin_workspaces_active_shell', $slug );
 		WP_CLI::success( "Active shell set to: $slug" );
 	}
 
@@ -118,7 +118,7 @@ class WP_Admin_Shell_CLI {
 			WP_CLI::error( 'Source file is not valid JSON.' );
 		}
 
-		$dest = WP_ADMIN_SHELL_PATH . 'shells/' . $name . '.json';
+		$dest = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $name . '.json';
 		if ( file_exists( $dest ) && empty( $assoc_args['force'] ) ) {
 			WP_CLI::error( "Shell already exists: $name (use --force to overwrite)" );
 		}
@@ -128,4 +128,4 @@ class WP_Admin_Shell_CLI {
 	}
 }
 
-WP_CLI::add_command( 'admin-shell', 'WP_Admin_Shell_CLI' );
+WP_CLI::add_command( 'admin-shell', 'WP_Admin_Workspaces_CLI' );

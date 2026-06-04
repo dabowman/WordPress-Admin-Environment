@@ -39,7 +39,7 @@ export default function SidebarTreeRenderer( { items, currentPrimary } ) {
 	// declares `role="navigation"` (engine.json), so a nested <nav> would
 	// double the landmark. Same rule the drilldown renderer follows.
 	return (
-		<div className="wp-admin-shell-sidebar-navigation-tree">
+		<div className="wp-admin-workspaces-sidebar-navigation-tree">
 			<TreeList
 				items={ items }
 				currentPrimary={ currentPrimary }
@@ -55,7 +55,7 @@ function TreeList( { items, currentPrimary, depth } ) {
 	}
 	return (
 		<ItemGroup
-			className="wp-admin-shell-sidebar-navigation-tree__list"
+			className="wp-admin-workspaces-sidebar-navigation-tree__list"
 			role="list"
 		>
 			{ items.map( ( item, index ) => {
@@ -63,7 +63,7 @@ function TreeList( { items, currentPrimary, depth } ) {
 					return (
 						<hr
 							key={ `sep-${ item.id || index }` }
-							className="wp-admin-shell-nav__separator"
+							className="wp-admin-workspaces-nav__separator"
 						/>
 					);
 				}
@@ -102,7 +102,7 @@ function TreeBranch( { item, currentPrimary, depth } ) {
 			<Item
 				as="button"
 				type="button"
-				className="wp-admin-shell-sidebar-navigation-item wp-admin-shell-sidebar-navigation-tree__branch"
+				className="wp-admin-workspaces-sidebar-navigation-item wp-admin-workspaces-sidebar-navigation-tree__branch"
 				aria-expanded={ expanded }
 				style={ depthStyle( depth ) }
 				onClick={ () => setExpanded( ( prev ) => ! prev ) }
@@ -128,7 +128,7 @@ function TreeBranch( { item, currentPrimary, depth } ) {
 					) }
 					<FlexBlock>{ item.label || item.id }</FlexBlock>
 					<Icon
-						className="wp-admin-shell-sidebar-navigation-tree__toggle-indicator"
+						className="wp-admin-workspaces-sidebar-navigation-tree__toggle-indicator"
 						icon={ expanded ? chevronDown : chevronRight }
 						size={ 24 }
 					/>
@@ -157,7 +157,7 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 				rel="noopener noreferrer"
 				suffix={
 					<Icon
-						className="wp-admin-shell-sidebar-navigation-item__external-indicator"
+						className="wp-admin-workspaces-sidebar-navigation-item__external-indicator"
 						icon={ resolveIcon( 'external' ) }
 						size={ 20 }
 					/>

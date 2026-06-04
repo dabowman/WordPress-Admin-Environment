@@ -10,7 +10,7 @@
  * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: wp-admin-shell
+ * Text Domain: wp-admin-workspaces
  * Domain Path: /languages
  */
 
@@ -45,7 +45,7 @@ defined( 'ABSPATH' ) || exit;
  *                             running install's version. Injectable for tests.
  * @return bool True on WordPress 7.0+.
  */
-function wp_admin_shell_core_supplies_private_apis( $version = null ) {
+function wp_admin_workspaces_core_supplies_private_apis( $version = null ) {
 	if ( null === $version ) {
 		$version = get_bloginfo( 'version' );
 	}
@@ -62,15 +62,15 @@ function wp_admin_shell_core_supplies_private_apis( $version = null ) {
  *
  * @return bool
  */
-function wp_admin_shell_dependencies_met() {
+function wp_admin_workspaces_dependencies_met() {
 	if ( ! function_exists( 'is_plugin_active' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
 	$gutenberg_present =
 		defined( 'GUTENBERG_VERSION' ) ||
 		is_plugin_active( 'gutenberg/gutenberg.php' );
-	return wp_admin_shell_dependencies_met_from(
-		wp_admin_shell_core_supplies_private_apis(),
+	return wp_admin_workspaces_dependencies_met_from(
+		wp_admin_workspaces_core_supplies_private_apis(),
 		$gutenberg_present
 	);
 }
@@ -85,14 +85,14 @@ function wp_admin_shell_dependencies_met() {
  * @param bool $gutenberg_present Whether the Gutenberg plugin is active.
  * @return bool Whether the dependency is satisfied.
  */
-function wp_admin_shell_dependencies_met_from( $core_supplies, $gutenberg_present ) {
+function wp_admin_workspaces_dependencies_met_from( $core_supplies, $gutenberg_present ) {
 	return (bool) ( $core_supplies || $gutenberg_present );
 }
 
 add_action( 'admin_notices', function () {
-	if ( ! wp_admin_shell_dependencies_met() ) {
+	if ( ! wp_admin_workspaces_dependencies_met() ) {
 		echo '<div class="notice notice-error"><p>';
-		echo esc_html__( 'WP Admin Shell requires either WordPress 7.0+ or the Gutenberg plugin. The shell uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available.', 'wp-admin-shell' );
+		echo esc_html__( 'WP Admin Shell requires either WordPress 7.0+ or the Gutenberg plugin. The shell uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available.', 'wp-admin-workspaces' );
 		echo '</p></div>';
 	}
 } );
@@ -100,91 +100,91 @@ add_action( 'admin_notices', function () {
 // Single source of truth for the plugin version — keep in sync with the
 // `Version:` header above and `package.json`. Used for asset cache-busting
 // fallbacks and surfaced to support/debug tooling.
-define( 'WP_ADMIN_SHELL_VERSION', '0.1.0' );
-define( 'WP_ADMIN_SHELL_PATH', plugin_dir_path( __FILE__ ) );
-define( 'WP_ADMIN_SHELL_URL', plugin_dir_url( __FILE__ ) );
-define( 'WP_ADMIN_SHELL_DB_VERSION', 1 );
+define( 'WP_ADMIN_WORKSPACES_VERSION', '0.1.0' );
+define( 'WP_ADMIN_WORKSPACES_PATH', plugin_dir_path( __FILE__ ) );
+define( 'WP_ADMIN_WORKSPACES_URL', plugin_dir_url( __FILE__ ) );
+define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 1 );
 
 /**
  * Version-stamped migration. Plan §M2.9 + issue #6.
  *
- * The `wp_admin_shell_db_version` option stamps the highest migration
+ * The `wp_admin_workspaces_db_version` option stamps the highest migration
  * step that has run for this install. Each step runs at most once per
  * install lifetime; reactivation / downgrade-then-upgrade cycles
  * cannot re-fire steps that already completed (which would otherwise
  * clobber a user's later choice with the legacy MVP value).
  *
- * Step 1: copy legacy `wp_admin_shell_active_config` into v1's
- *         `wp_admin_shell_active_shell` if the new key is empty AND
+ * Step 1: copy legacy `wp_admin_workspaces_active_config` into v1's
+ *         `wp_admin_workspaces_active_shell` if the new key is empty AND
  *         the legacy key has a non-default value. The legacy key
  *         survives one minor cycle so MVP reads still work; reads in
  *         v1 check the new key first.
  *
  * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
- * disk), bump WP_ADMIN_SHELL_DB_VERSION and add a step here. Steps
+ * disk), bump WP_ADMIN_WORKSPACES_DB_VERSION and add a step here. Steps
  * must be idempotent w.r.t. their own stamp — running twice is a bug,
  * but a partially-failed migration that re-runs from a lower stamp
  * should converge.
  */
 add_action( 'init', function () {
-	$current_version = (int) get_option( 'wp_admin_shell_db_version', 0 );
-	if ( $current_version >= WP_ADMIN_SHELL_DB_VERSION ) {
+	$current_version = (int) get_option( 'wp_admin_workspaces_db_version', 0 );
+	if ( $current_version >= WP_ADMIN_WORKSPACES_DB_VERSION ) {
 		return;
 	}
 
 	if ( $current_version < 1 ) {
 		// Step 1 — legacy active-config write-copy.
-		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
-			$legacy = get_option( 'wp_admin_shell_active_config', '' );
+		if ( get_option( 'wp_admin_workspaces_active_shell', '' ) === '' ) {
+			$legacy = get_option( 'wp_admin_workspaces_active_config', '' );
 			if ( $legacy !== '' ) {
-				update_option( 'wp_admin_shell_active_shell', $legacy );
+				update_option( 'wp_admin_workspaces_active_shell', $legacy );
 			}
 		}
 	}
 
-	update_option( 'wp_admin_shell_db_version', WP_ADMIN_SHELL_DB_VERSION );
+	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
 }, 5 );
 
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-can-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-prefs-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-themes-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-merge.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-customizable.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-cache.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-config-validator.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-core.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/origins/class-wp-admin-shell-origin-file.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-resolver.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-field-collections.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-data-view-config.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-widgets.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-dashboard-bridge.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-preload.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-menu-items.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-appearance-menu.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-admin-routes.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-classic-menu-bridge.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-chrome-harvest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-modes.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/cascade/class-wp-admin-shell-permissions.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-config.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-view-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-dashboard-widget-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-data-field-collections-rest.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-cli.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-validator.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-registry.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-manifest-resolver.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/manifests/class-wp-admin-shell-menu-renderers.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/tokens/class-wp-admin-shell-tokens.php';
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-shells.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-prefs-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-themes-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-merge.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-customizable.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-cache.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-config-validator.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/origins/class-wp-admin-workspaces-origin-core.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/origins/class-wp-admin-workspaces-origin-file.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-resolver.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-field-collections.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-view-config.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-bridge.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-preload.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-menu-items.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-appearance-menu.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-admin-routes.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-classic-menu-bridge.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-chrome-harvest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-modes.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-permissions.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-cli.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-validator.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-registry.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-resolver.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-menu-renderers.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/tokens/class-wp-admin-workspaces-tokens.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-shells.php';
 
 // Engine-specific PHP — each engine that needs server hooks ships
 // under `includes/engines/<engine-id>/`. Bootstrap files load
 // unconditionally; their handlers gate themselves on the active engine
 // or per-request signals (`core:desktop` only hooks the chromeless
-// bridge when the request carries `wp_admin_shell_chromeless=1`).
-require_once WP_ADMIN_SHELL_PATH . 'includes/engines/core-desktop/bootstrap.php';
+// bridge when the request carries `wp_admin_workspaces_chromeless=1`).
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/engines/core-desktop/bootstrap.php';
 
 /**
  * V2.M1 — Public manifest registration API.
@@ -197,12 +197,12 @@ require_once WP_ADMIN_SHELL_PATH . 'includes/engines/core-desktop/bootstrap.php'
  *
  * @return string|WP_Error Manifest id on success, WP_Error on failure.
  */
-function wp_admin_shell_register_app( $manifest_or_path ) {
-	return WP_Admin_Shell_Manifest_Registry::instance()->register_app( $manifest_or_path );
+function wp_admin_workspaces_register_app( $manifest_or_path ) {
+	return WP_Admin_Workspaces_Manifest_Registry::instance()->register_app( $manifest_or_path );
 }
 
-function wp_admin_shell_register_engine( $manifest_or_path ) {
-	return WP_Admin_Shell_Manifest_Registry::instance()->register_engine( $manifest_or_path );
+function wp_admin_workspaces_register_engine( $manifest_or_path ) {
+	return WP_Admin_Workspaces_Manifest_Registry::instance()->register_engine( $manifest_or_path );
 }
 
 /**
@@ -217,8 +217,8 @@ function wp_admin_shell_register_engine( $manifest_or_path ) {
  *
  * @return string|WP_Error template id on success, WP_Error on failure.
  */
-function wp_admin_shell_register_template( $engine_id, $template_id, $template ) {
-	return WP_Admin_Shell_Manifest_Registry::instance()->register_template(
+function wp_admin_workspaces_register_template( $engine_id, $template_id, $template ) {
+	return WP_Admin_Workspaces_Manifest_Registry::instance()->register_template(
 		$engine_id,
 		$template_id,
 		$template
@@ -231,7 +231,7 @@ function wp_admin_shell_register_template( $engine_id, $template_id, $template )
  * An engine names a renderer through its `engine.json` `menu-renderer`
  * field; a `plugin:{slug}/{name}` id resolves to a React component a
  * plugin supplies. This declares the id + the script handle that
- * registers that component (`window.wpAdminShell.registerMenuRenderer`).
+ * registers that component (`window.wpAdminWorkspaces.registerMenuRenderer`).
  * The shell enqueues the script on the admin-shell page.
  *
  * The renderer component receives `{ items, currentPrimary, navConfig }`
@@ -239,15 +239,15 @@ function wp_admin_shell_register_template( $engine_id, $template_id, $template )
  * per-region nav config — and returns React.
  *
  * Timing: register the script handle (`wp_register_script`, with
- * `wp-admin-shell` as a dependency) before the shell page renders, then
+ * `wp-admin-workspaces` as a dependency) before the shell page renders, then
  * call this from `admin_enqueue_scripts` or earlier.
  *
  * @param string $renderer_id Renderer id (`plugin:{slug}/{name}`).
- * @param array  $args        See `WP_Admin_Shell_Menu_Renderers::register`.
+ * @param array  $args        See `WP_Admin_Workspaces_Menu_Renderers::register`.
  * @return string|WP_Error Renderer id on success, WP_Error on failure.
  */
-function wp_admin_shell_register_menu_renderer( $renderer_id, $args ) {
-	return WP_Admin_Shell_Menu_Renderers::register( $renderer_id, $args );
+function wp_admin_workspaces_register_menu_renderer( $renderer_id, $args ) {
+	return WP_Admin_Workspaces_Menu_Renderers::register( $renderer_id, $args );
 }
 
 /**
@@ -263,8 +263,8 @@ function wp_admin_shell_register_menu_renderer( $renderer_id, $args ) {
  *
  * @return string|WP_Error slug on success, WP_Error on failure.
  */
-function wp_admin_shell_register_shell( $slug, $admin_json ) {
-	return WP_Admin_Shell_Shells::register( $slug, $admin_json );
+function wp_admin_workspaces_register_shell( $slug, $admin_json ) {
+	return WP_Admin_Workspaces_Shells::register( $slug, $admin_json );
 }
 
 /**
@@ -272,7 +272,7 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
  *
  * Mechanical port of CIAB's `next_admin_register_menu_item()`. Plugins
  * that previously called `next_admin_register_menu_item()` rename to
- * `wp_admin_shell_register_menu_item()` and drop their inline
+ * `wp_admin_workspaces_register_menu_item()` and drop their inline
  * `current_user_can()` gates — the `capability` arg flows through the
  * shell's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
  * `parent`, `parent_type`, `position`) carry over 1:1; the shell adds
@@ -281,23 +281,23 @@ function wp_admin_shell_register_shell( $slug, $admin_json ) {
  *
  * Timing: call from `init` priority 9 or earlier (`plugins_loaded` is
  * fine). The cascade resolver's first run on the page render or first
- * REST hit triggers `wp_admin_shell_data_plugin` and memoizes the
- * resolved tree through `WP_Admin_Shell_Cache`. Registrations made
+ * REST hit triggers `wp_admin_workspaces_data_plugin` and memoizes the
+ * resolved tree through `WP_Admin_Workspaces_Cache`. Registrations made
  * after the resolver's first run miss the current request entirely.
  *
  * Cross-request invalidation: the registry serializes its current
- * state into the cache key via the `wp_admin_shell_cache_signals`
+ * state into the cache key via the `wp_admin_workspaces_cache_signals`
  * filter, so a registration delta between page loads (e.g. plugin
  * toggles a feature flag that changes which items it registers)
  * automatically picks a different cache bucket on the next hit. No
  * explicit `flush()` needed for deterministic registrations.
  *
  * @param string $id   Menu-item id (must be unique within the registry).
- * @param array  $args Args. See `WP_Admin_Shell_Menu_Items::register`.
+ * @param array  $args Args. See `WP_Admin_Workspaces_Menu_Items::register`.
  * @return string|WP_Error Id on success, WP_Error on failure.
  */
-function wp_admin_shell_register_menu_item( $id, $args ) {
-	return WP_Admin_Shell_Menu_Items::register( $id, $args );
+function wp_admin_workspaces_register_menu_item( $id, $args ) {
+	return WP_Admin_Workspaces_Menu_Items::register( $id, $args );
 }
 
 /**
@@ -312,18 +312,18 @@ function wp_admin_shell_register_menu_item( $id, $args ) {
  * and `gc_time` is accepted but ignored (TanStack-specific cache GC,
  * no shell equivalent — emits a one-time `WP_DEBUG` notice).
  *
- * Timing: same as `wp_admin_shell_register_menu_item()` — call from
+ * Timing: same as `wp_admin_workspaces_register_menu_item()` — call from
  * `init` priority 9 or earlier so the cascade resolver picks the route
  * up on its first memoized run. Cross-request cache invalidation also
  * works the same way: the registry's serialized state contributes to
- * the resolver cache key via the `wp_admin_shell_cache_signals` filter.
+ * the resolver cache key via the `wp_admin_workspaces_cache_signals` filter.
  *
  * @param string $path Route path (`/posts`, `/posts/{id}`, `/media/*`).
- * @param array  $args Args. See `WP_Admin_Shell_Admin_Routes::register`.
+ * @param array  $args Args. See `WP_Admin_Workspaces_Admin_Routes::register`.
  * @return string|WP_Error Path on success, WP_Error on failure.
  */
-function wp_admin_shell_register_admin_route( $path, $args ) {
-	return WP_Admin_Shell_Admin_Routes::register( $path, $args );
+function wp_admin_workspaces_register_admin_route( $path, $args ) {
+	return WP_Admin_Workspaces_Admin_Routes::register( $path, $args );
 }
 
 /**
@@ -342,25 +342,25 @@ function wp_admin_shell_register_admin_route( $path, $args ) {
  *     path `<plugin>/apps/<name>/app.json` and
  *     `<plugin>/engines/<name>/engine.json`. Plugins can also extend
  *     discovery by adding paths via the
- *     `wp_admin_shell_manifest_discovery_paths` filter (useful for
+ *     `wp_admin_workspaces_manifest_discovery_paths` filter (useful for
  *     plugins that ship manifests at a non-standard location).
  */
 add_action( 'init', function () {
-	$registry = WP_Admin_Shell_Manifest_Registry::instance();
+	$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 	// 1. Shell-bundled core manifests. Co-located with their JS source
 	// rather than at the plugin-root convention path. `discover()`
 	// scans `<base>/apps/<name>/app.json` + `<base>/engines/<name>/engine.json`;
 	// `src/` covers all bundled apps, `src/runtime/` covers the engines
 	// (still co-located with their layout JS).
-	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/' );
-	$registry->discover( WP_ADMIN_SHELL_PATH . 'src/runtime/' );
+	$registry->discover( WP_ADMIN_WORKSPACES_PATH . 'src/' );
+	$registry->discover( WP_ADMIN_WORKSPACES_PATH . 'src/runtime/' );
 
 	// 2. Convention-path discovery for the shell plugin itself + plugins
 	// extending the discovery surface.
-	$registry->discover( WP_ADMIN_SHELL_PATH );
+	$registry->discover( WP_ADMIN_WORKSPACES_PATH );
 
-	$additional = apply_filters( 'wp_admin_shell_manifest_discovery_paths', array() );
+	$additional = apply_filters( 'wp_admin_workspaces_manifest_discovery_paths', array() );
 	foreach ( (array) $additional as $path ) {
 		if ( is_string( $path ) ) {
 			$registry->discover( $path );
@@ -369,18 +369,18 @@ add_action( 'init', function () {
 }, 8 );
 
 // Workspace-as-primary-entry hijack. When a workspace is active (see
-// wp_admin_shell_workspace_active()), the shell takes over the admin
+// wp_admin_workspaces_workspace_active()), the shell takes over the admin
 // root (`/wp-admin/`, `index.php`, bare `admin.php`) at admin_init
-// priority 0 — there is no longer a `?page=wp-admin-shell` menu entry.
+// priority 0 — there is no longer a `?page=wp-admin-workspaces` menu entry.
 // Classic stays reachable via the allowlist + the classic-mode cookie.
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-hijack.php';
-WP_Admin_Shell_Hijack::init();
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-hijack.php';
+WP_Admin_Workspaces_Hijack::init();
 
 // Classic-mode escape hatch — cap-gated `?classic=1` cookie toggle that
 // lets an admin drop into classic wp-admin (and back). Runs at admin_init
 // priority -10, before the hijack.
-require_once WP_ADMIN_SHELL_PATH . 'includes/class-wp-admin-shell-classic-mode.php';
-WP_Admin_Shell_Classic_Mode::init();
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-classic-mode.php';
+WP_Admin_Workspaces_Classic_Mode::init();
 
 /**
  * Register a classic-wp-admin Settings page (Settings → WP Admin Shell)
@@ -394,17 +394,17 @@ WP_Admin_Shell_Classic_Mode::init();
  */
 add_action( 'admin_menu', function () {
 	add_options_page(
-		__( 'WP Admin Shell', 'wp-admin-shell' ),
-		__( 'WP Admin Shell', 'wp-admin-shell' ),
+		__( 'WP Admin Shell', 'wp-admin-workspaces' ),
+		__( 'WP Admin Shell', 'wp-admin-workspaces' ),
 		'manage_options',
-		'wp-admin-shell-workspace',
-		'wp_admin_shell_render_workspace_settings_page'
+		'wp-admin-workspaces-workspace',
+		'wp_admin_workspaces_render_workspace_settings_page'
 	);
 } );
 
 /**
  * Classic-side render callback for the workspace toggle. The form posts
- * to options.php with the `wp_admin_shell_settings` group, which is the
+ * to options.php with the `wp_admin_workspaces_settings` group, which is the
  * same group `register_setting` uses below — the option goes through the
  * registered `rest_sanitize_boolean` callback either way.
  *
@@ -413,26 +413,26 @@ add_action( 'admin_menu', function () {
  * checkboxes from form submission); options.php picks the last value
  * sent, so checked → 1, unchecked → 0.
  */
-function wp_admin_shell_render_workspace_settings_page() {
+function wp_admin_workspaces_render_workspace_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$enabled = (bool) get_option( 'wp_admin_shell_workspace_enabled', true );
+	$enabled = (bool) get_option( 'wp_admin_workspaces_workspace_enabled', true );
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-shell' ); ?></h1>
+		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-workspaces' ); ?></h1>
 		<form method="post" action="options.php">
-			<?php settings_fields( 'wp_admin_shell_settings' ); ?>
+			<?php settings_fields( 'wp_admin_workspaces_settings' ); ?>
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Workspace', 'wp-admin-shell' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Workspace', 'wp-admin-workspaces' ); ?></th>
 					<td>
 						<label>
-							<input type="hidden" name="wp_admin_shell_workspace_enabled" value="0" />
-							<input type="checkbox" name="wp_admin_shell_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
-							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-shell' ); ?>
+							<input type="hidden" name="wp_admin_workspaces_workspace_enabled" value="0" />
+							<input type="checkbox" name="wp_admin_workspaces_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
+							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-workspaces' ); ?>
 						</label>
-						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic.', 'wp-admin-shell' ); ?></p>
+						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic.', 'wp-admin-workspaces' ); ?></p>
 					</td>
 				</tr>
 			</table>
@@ -447,18 +447,18 @@ function wp_admin_shell_render_workspace_settings_page() {
  *
  * Runs on `admin_enqueue_scripts` during the hijack's admin-header
  * render (and is harmless elsewhere because it self-gates). The
- * `$hook` arg is ignored — `wp_admin_shell_is_active_request()` is the
+ * `$hook` arg is ignored — `wp_admin_workspaces_is_active_request()` is the
  * sole gate now that the shell mounts at the admin root rather than a
  * registered page.
  *
  * @param string $hook Admin page hook suffix (unused).
  */
-function wp_admin_shell_enqueue_assets( $hook = '' ) {
-	if ( ! wp_admin_shell_is_active_request() ) {
+function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
+	if ( ! wp_admin_workspaces_is_active_request() ) {
 		return;
 	}
 
-	$asset_path = WP_ADMIN_SHELL_PATH . 'build/index.asset.php';
+	$asset_path = WP_ADMIN_WORKSPACES_PATH . 'build/index.asset.php';
 	if ( ! file_exists( $asset_path ) ) {
 		return;
 	}
@@ -473,8 +473,8 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 	} );
 
 	wp_enqueue_script(
-		'wp-admin-shell',
-		WP_ADMIN_SHELL_URL . 'build/index.js',
+		'wp-admin-workspaces',
+		WP_ADMIN_WORKSPACES_URL . 'build/index.js',
 		array_values( $deps ),
 		$asset['version'],
 		true
@@ -483,27 +483,27 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 	// JS i18n: load translations for every `__()`/`_n()`/`sprintf` string in
 	// the bundle (and lazily-loaded app chunks, which share the handle's
 	// domain). `.json` translation files live in `languages/`; regenerate the
-	// `.pot` with `wp i18n make-pot . languages/wp-admin-shell.pot`.
+	// `.pot` with `wp i18n make-pot . languages/wp-admin-workspaces.pot`.
 	wp_set_script_translations(
-		'wp-admin-shell',
-		'wp-admin-shell',
-		WP_ADMIN_SHELL_PATH . 'languages'
+		'wp-admin-workspaces',
+		'wp-admin-workspaces',
+		WP_ADMIN_WORKSPACES_PATH . 'languages'
 	);
 
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
-	// `wp-admin-shell` as a dependency loads once the kernel has published
-	// `window.wpAdminShell.registerMenuRenderer`.
-	WP_Admin_Shell_Menu_Renderers::enqueue_assets();
+	// `wp-admin-workspaces` as a dependency loads once the kernel has published
+	// `window.wpAdminWorkspaces.registerMenuRenderer`.
+	WP_Admin_Workspaces_Menu_Renderers::enqueue_assets();
 
-	$config = wp_admin_shell_get_active_config();
+	$config = wp_admin_workspaces_get_active_config();
 
 	// REST preload (spec §13 #9). Cascade-resolved `preload[]` paths
 	// hydrate through `rest_preload_api_request` and ship as inline
 	// script on `wp-api-fetch` before the shell bundle runs. Eliminates
 	// cold-mount round-trips for `useEntityRecord('root','user',me)`,
 	// `loadPostTypeEntities`, and similar resolvers.
-	WP_Admin_Shell_Preload::inject();
+	WP_Admin_Workspaces_Preload::inject();
 
 	// Engine-driven style enqueue. Each registered engine declares a
 	// `styles` array in its manifest listing the CSS bundles it depends
@@ -513,7 +513,7 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 	$active_engine_id      = is_array( $config )
 		? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
 		: null;
-	$active_engine_manifest = $active_engine_id ? WP_Admin_Shell_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
+	$active_engine_manifest = $active_engine_id ? WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
 
 	if ( is_array( $active_engine_manifest ) && isset( $active_engine_manifest['styles'] ) && is_array( $active_engine_manifest['styles'] ) ) {
 		foreach ( $active_engine_manifest['styles'] as $style ) {
@@ -524,7 +524,7 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 			$deps = isset( $style['deps'] ) && is_array( $style['deps'] ) ? $style['deps'] : array();
 			// Plugin-relative path → resolve against plugin URL. Absolute
 			// URLs pass through unchanged.
-			$resolved_src = ( strpos( $src, '//' ) === 0 || preg_match( '#^https?://#', $src ) ) ? $src : WP_ADMIN_SHELL_URL . ltrim( $src, '/' );
+			$resolved_src = ( strpos( $src, '//' ) === 0 || preg_match( '#^https?://#', $src ) ) ? $src : WP_ADMIN_WORKSPACES_URL . ltrim( $src, '/' );
 			wp_enqueue_style( $style['handle'], $resolved_src, $deps, $asset['version'] );
 		}
 	}
@@ -535,44 +535,44 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 	wp_enqueue_style( 'wp-format-library' );
 
 	wp_enqueue_style(
-		'wp-admin-shell',
-		WP_ADMIN_SHELL_URL . 'build/index.css',
+		'wp-admin-workspaces',
+		WP_ADMIN_WORKSPACES_URL . 'build/index.css',
 		array( 'wp-components' ),
 		$asset['version']
 	);
 
 	$current_user = wp_get_current_user();
 
-	$manifest_registry = WP_Admin_Shell_Manifest_Registry::instance();
+	$manifest_registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 	// Server-side visibility prune: ship only the screens + menu this user can
 	// reach. The full $config stays available above for engine/preload/style
 	// selection (user-invariant); everything user-facing below reads the
 	// pruned copy so the page source never carries an unreachable screen's
 	// permissions/legacy maps or a role-gated nav item the client can't gate.
-	$client_config = wp_admin_shell_prune_config_for_user( $config, get_current_user_id() );
+	$client_config = wp_admin_workspaces_prune_config_for_user( $config, get_current_user_id() );
 
-	wp_add_inline_script( 'wp-admin-shell', 'window.wpAdminShell = ' . wp_json_encode( array(
+	wp_add_inline_script( 'wp-admin-workspaces', 'window.wpAdminWorkspaces = ' . wp_json_encode( array(
 		'config'        => $client_config,
 		'siteUrl'       => get_site_url(),
 		'homeUrl'       => home_url(),
 		'adminUrl'      => admin_url(),
 		'dashboardUrl'  => admin_url(),
-		'pluginUrl'     => WP_ADMIN_SHELL_URL,
+		'pluginUrl'     => WP_ADMIN_WORKSPACES_URL,
 		// Classic→workspace legacy-route map for the admin-link interceptor
 		// (W4). Keyed by workspace route path → { legacy_path, legacy_query,
 		// legacy_params }. Empty until screens / programmatic routes declare
 		// `legacy_path`.
-		'adminRoutes'   => WP_Admin_Shell_Admin_Routes::legacy_map( $client_config ),
+		'adminRoutes'   => WP_Admin_Workspaces_Admin_Routes::legacy_map( $client_config ),
 		'restUrl'       => get_rest_url(),
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
-		'shells'        => wp_admin_shell_get_available_shells(),
+		'shells'        => wp_admin_workspaces_get_available_shells(),
 		// True when a wp-content/admin.json override is active — it wins over
 		// the active-shell option, so the shell switcher hides + switchShell()
 		// refuses (writing the option would be a silent no-op).
-		'workspaceFileActive' => class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid(),
+		'workspaceFileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
 		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
 		// production builds. PHP `_deprecated_hook` is gated by
 		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
@@ -588,9 +588,9 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 			'logoutUrl'   => wp_logout_url( admin_url( '/' ) ),
 		),
 		'settingsGeneral' => current_user_can( 'manage_options' )
-			? wp_admin_shell_get_settings_general_data()
+			? wp_admin_workspaces_get_settings_general_data()
 			: null,
-		'capabilities'  => wp_admin_shell_resolve_capabilities( $client_config ),
+		'capabilities'  => wp_admin_workspaces_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
 		// the imperative registry during the v1→v2 transition.
@@ -608,41 +608,41 @@ function wp_admin_shell_enqueue_assets( $hook = '' ) {
 		// stdClass keeps the JS shape stable: `wp_json_encode( array() )`
 		// emits `[]`, but the kernel + downstream typedef `tokens` as an
 		// object — `(object) array()` serializes as `{}`.
-		'tokens'        => wp_admin_shell_styles_reference_tokens( $config )
-			? WP_Admin_Shell_Tokens::resolve()
+		'tokens'        => wp_admin_workspaces_styles_reference_tokens( $config )
+			? WP_Admin_Workspaces_Tokens::resolve()
 			: (object) array(),
 		// v3 — flattened engine-modes catalog. The active engine's
 		// `modes` block is walked for `extends` chains (depth-limited),
-		// then the `wp_admin_shell_engine_modes_{engineId}` filter runs
+		// then the `wp_admin_workspaces_engine_modes_{engineId}` filter runs
 		// so plugins can contribute additional modes. Empty object when
 		// no engine is resolved (degenerate; the shell would fail to
 		// mount upstream of this anyway).
 		'engineModes'   => $active_engine_manifest
-			? WP_Admin_Shell_Modes::resolve_engine_modes( $active_engine_manifest )
-			: WP_Admin_Shell_Modes::synthesize_default_catalog(),
+			? WP_Admin_Workspaces_Modes::resolve_engine_modes( $active_engine_manifest )
+			: WP_Admin_Workspaces_Modes::synthesize_default_catalog(),
 		// #128 — admin-bar runtime harvest. Plugin admin-bar nodes the
 		// shell doesn't own first-class (site-hub / user-menu / +New are
 		// skipped), folded submenus → dropdowns. `core:toolbar-actions`
 		// reads this global. Empty array when no plugin registers a node.
-		'adminBar'      => WP_Admin_Shell_Chrome_Harvest::harvest_admin_bar(),
+		'adminBar'      => WP_Admin_Workspaces_Chrome_Harvest::harvest_admin_bar(),
 		// #128 — buffered global `admin_notices` HTML (admin trust, same as
 		// classic). `core:notices-banner` renders it alongside its
 		// `@wordpress/notices` source. Empty string when none fire.
 		// Documented limitation: only GLOBAL notices that fire on the
 		// shell's own page load are captured (per-screen notices keyed on
 		// `$pagenow` don't fire) — see the harvest class docblock.
-		'adminNotices'  => WP_Admin_Shell_Chrome_Harvest::capture_admin_notices(),
+		'adminNotices'  => WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices(),
 	) ) . ';', 'before' );
 
-	wp_add_inline_style( 'wp-admin-shell', '
+	wp_add_inline_style( 'wp-admin-workspaces', '
 		#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter { display: none !important; }
 		#wpcontent { margin-left: 0 !important; }
 		#wpbody-content { padding-bottom: 0; }
 		html.wp-toolbar { padding-top: 0 !important; }
-		#wp-admin-shell { position: fixed; inset: 0; z-index: 99999; }
+		#wp-admin-workspaces { position: fixed; inset: 0; z-index: 99999; }
 	' );
 }
-add_action( 'admin_enqueue_scripts', 'wp_admin_shell_enqueue_assets' );
+add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
 /**
  * Read the active admin.json configuration through the M2 cascade resolver.
@@ -653,8 +653,8 @@ add_action( 'admin_enqueue_scripts', 'wp_admin_shell_enqueue_assets' );
  * uniform whether the shell ships with the plugin, lives in DB options,
  * or is contributed by a programmatic registration.
  */
-function wp_admin_shell_get_active_config() {
-	return WP_Admin_Shell_Resolver::resolve();
+function wp_admin_workspaces_get_active_config() {
+	return WP_Admin_Workspaces_Resolver::resolve();
 }
 
 /**
@@ -663,7 +663,7 @@ function wp_admin_shell_get_active_config() {
  * Single source of truth for the workspace-as-primary-entry hijack and
  * the classic-mode escape hatch. True when EITHER:
  *   - a valid `wp-content/admin.json` override file is present, OR
- *   - the legacy `wp_admin_shell_active_shell` option was explicitly
+ *   - the legacy `wp_admin_workspaces_active_shell` option was explicitly
  *     written (back-compat for installs that selected a shell before the
  *     file-based trigger landed).
  *
@@ -672,34 +672,34 @@ function wp_admin_shell_get_active_config() {
  *
  * @return bool
  */
-function wp_admin_shell_workspace_active() {
+function wp_admin_workspaces_workspace_active() {
 	// Explicit OFF wins over file/legacy triggers. Settings → Workspace
 	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
 	// checkbox; the option defaults to enabled, so a fresh install with a
 	// file present still flips active true.
-	if ( ! get_option( 'wp_admin_shell_workspace_enabled', true ) ) {
+	if ( ! get_option( 'wp_admin_workspaces_workspace_enabled', true ) ) {
 		return false;
 	}
-	if ( class_exists( 'WP_Admin_Shell_Origin_File' ) && WP_Admin_Shell_Origin_File::exists_and_valid() ) {
+	if ( class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid() ) {
 		return true;
 	}
-	$active_shell = get_option( 'wp_admin_shell_active_shell', null );
+	$active_shell = get_option( 'wp_admin_workspaces_active_shell', null );
 	return is_string( $active_shell ) && $active_shell !== '';
 }
 
 /**
  * Whether the current request is a workspace takeover (the W2 hijack
- * fired / will fire). Thin wrapper over WP_Admin_Shell_Hijack so the
+ * fired / will fire). Thin wrapper over WP_Admin_Workspaces_Hijack so the
  * asset-enqueue gate and other callers don't reach into the class.
  *
  * @return bool
  */
-function wp_admin_shell_is_active_request() {
-	return class_exists( 'WP_Admin_Shell_Hijack' ) && WP_Admin_Shell_Hijack::is_active_request();
+function wp_admin_workspaces_is_active_request() {
+	return class_exists( 'WP_Admin_Workspaces_Hijack' ) && WP_Admin_Workspaces_Hijack::is_active_request();
 }
 
 /**
- * Sanitize + validate the wp_admin_shell_active_shell option write.
+ * Sanitize + validate the wp_admin_workspaces_active_shell option write.
  *
  * Returns the sanitized slug if a matching shell file exists; returns
  * the previous option value (or empty string for the first write)
@@ -707,31 +707,31 @@ function wp_admin_shell_is_active_request() {
  * resolver's fallback chain still resolves (legacy active_config →
  * default).
  */
-function wp_admin_shell_sanitize_active_shell( $value ) {
+function wp_admin_workspaces_sanitize_active_shell( $value ) {
 	$sanitized = sanitize_file_name( (string) $value );
 	if ( $sanitized === '' ) {
 		return '';
 	}
-	$path = WP_ADMIN_SHELL_PATH . 'shells/' . $sanitized . '.json';
+	$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $sanitized . '.json';
 	if ( file_exists( $path ) ) {
 		return $sanitized;
 	}
-	if ( class_exists( 'WP_Admin_Shell_Shells' ) && WP_Admin_Shell_Shells::has( $sanitized ) ) {
+	if ( class_exists( 'WP_Admin_Workspaces_Shells' ) && WP_Admin_Workspaces_Shells::has( $sanitized ) ) {
 		return $sanitized;
 	}
 
 	add_settings_error(
-		'wp_admin_shell_active_shell',
-		'wp_admin_shell_unknown_shell',
+		'wp_admin_workspaces_active_shell',
+		'wp_admin_workspaces_unknown_shell',
 		sprintf(
 			/* translators: %s: shell slug */
-			__( 'Unknown shell: "%s". The previous active shell was kept.', 'wp-admin-shell' ),
+			__( 'Unknown shell: "%s". The previous active shell was kept.', 'wp-admin-workspaces' ),
 			esc_html( $sanitized )
 		),
 		'error'
 	);
 
-	$previous = get_option( 'wp_admin_shell_active_shell', '' );
+	$previous = get_option( 'wp_admin_workspaces_active_shell', '' );
 	return $previous;
 }
 
@@ -740,7 +740,7 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
  * config. Walks regions[*].capability + applications[*].capability, plus
  * built-in source capability floors. The runtime sees an absolute
  * `{cap: bool}` map for everything that matters during initial render;
- * the /wp-admin-shell/v1/can/{cap} endpoint covers anything plugin code
+ * the /wp-admin-workspaces/v1/can/{cap} endpoint covers anything plugin code
  * looks up dynamically.
  *
  * Cost: each unique declared cap costs one `current_user_can()` call.
@@ -771,8 +771,8 @@ function wp_admin_shell_sanitize_active_shell( $value ) {
  * @param int   $user_id Current user id.
  * @return array Pruned copy.
  */
-function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
-	if ( ! is_array( $config ) || ! class_exists( 'WP_Admin_Shell_Permissions' ) ) {
+function wp_admin_workspaces_prune_config_for_user( $config, $user_id ) {
+	if ( ! is_array( $config ) || ! class_exists( 'WP_Admin_Workspaces_Permissions' ) ) {
 		return $config;
 	}
 	$user_id = (int) $user_id;
@@ -785,7 +785,7 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
 	 * @param array $config  The resolved doc.
 	 * @param int   $user_id Current user id.
 	 */
-	if ( ! apply_filters( 'wp_admin_shell_prune_unreachable', true, $config, $user_id ) ) {
+	if ( ! apply_filters( 'wp_admin_workspaces_prune_unreachable', true, $config, $user_id ) ) {
 		return $config;
 	}
 
@@ -803,11 +803,11 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
 			if ( (string) $screen_id === $default_screen ) {
 				continue;
 			}
-			$resolved = WP_Admin_Shell_Permissions::resolve(
+			$resolved = WP_Admin_Workspaces_Permissions::resolve(
 				$screen['permissions'] ?? null,
-				WP_Admin_Shell_Permissions::app_floor_for( $screen )
+				WP_Admin_Workspaces_Permissions::app_floor_for( $screen )
 			);
-			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
+			if ( ! WP_Admin_Workspaces_Permissions::user_passes( $user_id, $resolved ) ) {
 				unset( $config['screens'][ $screen_id ] );
 				$removed[ (string) $screen_id ] = true;
 			}
@@ -818,14 +818,14 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
 	//    failing permissions (the role-gated nav-item leak the client can't
 	//    evaluate). Reachable children of a pruned node are hoisted, not lost.
 	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
-		$config['menu'] = wp_admin_shell_prune_menu_for_user( $config['menu'], $removed, $user_id, 0 );
+		$config['menu'] = wp_admin_workspaces_prune_menu_for_user( $config['menu'], $removed, $user_id, 0 );
 	}
 
 	return $config;
 }
 
 /**
- * Recursive helper for {@see wp_admin_shell_prune_config_for_user()}. Drops
+ * Recursive helper for {@see wp_admin_workspaces_prune_config_for_user()}. Drops
  * menu nodes bound to a removed screen id and nodes whose own `permissions`
  * fail for the user.
  *
@@ -835,7 +835,7 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
  * an unreachable parent (e.g. `profile`, `read`-floor, living solely at
  * `menu.users.items.profile` under the admin-only `users` node) would vanish
  * from a non-admin's menu even though the screen itself survives. Mirrors
- * `WP_Admin_Shell_Menu_Items::drop_deeper_duplicates()`.
+ * `WP_Admin_Workspaces_Menu_Items::drop_deeper_duplicates()`.
  *
  * @param array $tree            Menu (sub-)tree.
  * @param array $removed_screens Map of removed screen id → true.
@@ -843,7 +843,7 @@ function wp_admin_shell_prune_config_for_user( $config, $user_id ) {
  * @param int   $depth           Recursion guard.
  * @return array
  */
-function wp_admin_shell_prune_menu_for_user( $tree, $removed_screens, $user_id, $depth ) {
+function wp_admin_workspaces_prune_menu_for_user( $tree, $removed_screens, $user_id, $depth ) {
 	if ( ! is_array( $tree ) || $depth > 20 ) {
 		return $tree;
 	}
@@ -853,15 +853,15 @@ function wp_admin_shell_prune_menu_for_user( $tree, $removed_screens, $user_id, 
 		// itself turns out to be unreachable.
 		$children = null;
 		if ( is_array( $item ) && isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			$children = wp_admin_shell_prune_menu_for_user( $item['items'], $removed_screens, $user_id, $depth + 1 );
+			$children = wp_admin_workspaces_prune_menu_for_user( $item['items'], $removed_screens, $user_id, $depth + 1 );
 		}
 
 		// Is this node itself unreachable — bound to a pruned screen, or its
 		// own (possibly screen-inherited) permissions fail?
 		$drop = isset( $removed_screens[ (string) $id ] );
 		if ( ! $drop && is_array( $item ) && isset( $item['permissions'] ) && is_array( $item['permissions'] ) ) {
-			$resolved = WP_Admin_Shell_Permissions::resolve( $item['permissions'], array() );
-			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $resolved ) ) {
+			$resolved = WP_Admin_Workspaces_Permissions::resolve( $item['permissions'], array() );
+			if ( ! WP_Admin_Workspaces_Permissions::user_passes( $user_id, $resolved ) ) {
 				$drop = true;
 			}
 		}
@@ -887,7 +887,7 @@ function wp_admin_shell_prune_menu_for_user( $tree, $removed_screens, $user_id, 
 	return $out;
 }
 
-function wp_admin_shell_resolve_capabilities( $config ) {
+function wp_admin_workspaces_resolve_capabilities( $config ) {
 	$declared = array();
 
 	// Escape-hatch `regions` block (recursive). A region may declare a
@@ -907,7 +907,7 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 			}
 			$items = $region['config']['items'] ?? null;
 			if ( is_array( $items ) ) {
-				wp_admin_shell_collect_nav_item_caps( $items, $declared );
+				wp_admin_workspaces_collect_nav_item_caps( $items, $declared );
 			}
 			if ( ! empty( $region['regions'] ) && is_array( $region['regions'] ) ) {
 				$collect_from_regions( $region['regions'] );
@@ -942,7 +942,7 @@ function wp_admin_shell_resolve_capabilities( $config ) {
 
 	// Menu items can carry their own `permissions.capabilities[]` when
 	// they don't inherit from a bound screen (e.g. standalone link
-	// items registered via `wp_admin_shell_register_menu_item()`). Walk
+	// items registered via `wp_admin_workspaces_register_menu_item()`). Walk
 	// the menu tree so those caps reach the runtime cap-map too — without
 	// this, `userCan()` would default-false on inline-permissioned menu
 	// items that have no screen binding.
@@ -997,7 +997,7 @@ function wpas_collect_menu_item_caps( $menu, &$declared ) {
  * and collect every `capability` declaration. Recurses into `screen`/
  * `group` children.
  */
-function wp_admin_shell_collect_nav_item_caps( $items, &$declared ) {
+function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
 	if ( ! is_array( $items ) ) {
 		return;
 	}
@@ -1009,7 +1009,7 @@ function wp_admin_shell_collect_nav_item_caps( $items, &$declared ) {
 			$declared[ $item['capability'] ] = true;
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			wp_admin_shell_collect_nav_item_caps( $item['items'], $declared );
+			wp_admin_workspaces_collect_nav_item_caps( $item['items'], $declared );
 		}
 	}
 }
@@ -1034,11 +1034,11 @@ function wp_admin_shell_collect_nav_item_caps( $items, &$declared ) {
  * @param array $config Resolved admin.json config.
  * @return bool
  */
-function wp_admin_shell_styles_reference_tokens( $config ) {
+function wp_admin_workspaces_styles_reference_tokens( $config ) {
 	if ( ! is_array( $config ) || empty( $config['styles'] ) || ! is_array( $config['styles'] ) ) {
 		return false;
 	}
-	return wp_admin_shell_tree_has_token_alias( $config['styles'] );
+	return wp_admin_workspaces_tree_has_token_alias( $config['styles'] );
 }
 
 /**
@@ -1047,7 +1047,7 @@ function wp_admin_shell_styles_reference_tokens( $config ) {
  * @param mixed $node Styles node (string leaf or nested array).
  * @return bool
  */
-function wp_admin_shell_tree_has_token_alias( $node ) {
+function wp_admin_workspaces_tree_has_token_alias( $node ) {
 	if ( is_string( $node ) ) {
 		if ( ! preg_match( '/^\{([^}]+)\}$/', $node, $m ) ) {
 			return false;
@@ -1062,7 +1062,7 @@ function wp_admin_shell_tree_has_token_alias( $node ) {
 		return false;
 	}
 	foreach ( $node as $value ) {
-		if ( wp_admin_shell_tree_has_token_alias( $value ) ) {
+		if ( wp_admin_workspaces_tree_has_token_alias( $value ) ) {
 			return true;
 		}
 	}
@@ -1085,7 +1085,7 @@ function wp_admin_shell_tree_has_token_alias( $node ) {
  */
 add_action( 'init', function () {
 	// Active shell (canonical v1 key). Sole setting on the
-	// `wp_admin_shell_settings` page-form group so options.php doesn't
+	// `wp_admin_workspaces_settings` page-form group so options.php doesn't
 	// NULL-out adjacent options when the form posts.
 	//
 	// Sanitize-and-validate: core's sanitize_file_name fatals on NULL
@@ -1098,10 +1098,10 @@ add_action( 'init', function () {
 	// JS `switchShell()` both pre-validate, but this is the
 	// belt-and-suspenders against direct option writes (e.g. via
 	// `wp option update`).
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_active_shell', array(
+	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_active_shell', array(
 		'type'              => 'string',
 		'default'           => '',
-		'sanitize_callback' => 'wp_admin_shell_sanitize_active_shell',
+		'sanitize_callback' => 'wp_admin_workspaces_sanitize_active_shell',
 		'show_in_rest'      => true,
 	) );
 
@@ -1109,9 +1109,9 @@ add_action( 'init', function () {
 	// (/wp/v2/settings) exposes this to the workspace's DataForm settings
 	// screen (`core:settings-workspace`); the classic-side `add_options_page`
 	// below writes it through the standard options.php submission. When
-	// false, wp_admin_shell_workspace_active() returns false regardless of
+	// false, wp_admin_workspaces_workspace_active() returns false regardless of
 	// file presence — the user sees classic until they re-enable.
-	register_setting( 'wp_admin_shell_settings', 'wp_admin_shell_workspace_enabled', array(
+	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_workspace_enabled', array(
 		'type'              => 'boolean',
 		'default'           => true,
 		'sanitize_callback' => 'rest_sanitize_boolean',
@@ -1122,7 +1122,7 @@ add_action( 'init', function () {
 	// not edited by the settings page. Keeping them off the page-form
 	// group avoids the "form posts only one option, options.php NULLs the
 	// rest" failure mode the MVP migration hit on PHP 8.1+.
-	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_site_config', array(
+	register_setting( 'wp_admin_workspaces_cascade', 'wp_admin_workspaces_site_config', array(
 		'type'         => 'object',
 		'default'      => array(),
 		'show_in_rest' => array(
@@ -1133,7 +1133,7 @@ add_action( 'init', function () {
 		),
 	) );
 
-	register_setting( 'wp_admin_shell_cascade', 'wp_admin_shell_role_config', array(
+	register_setting( 'wp_admin_workspaces_cascade', 'wp_admin_workspaces_role_config', array(
 		'type'         => 'object',
 		'default'      => array(),
 		'show_in_rest' => array(
@@ -1151,19 +1151,19 @@ add_action( 'init', function () {
 				'schema' => array( 'format' => 'uri' ),
 			),
 			'type'         => 'string',
-			'description'  => __( 'Site address (front-end URL).', 'wp-admin-shell' ),
+			'description'  => __( 'Site address (front-end URL).', 'wp-admin-workspaces' ),
 		) );
 
 		register_setting( 'general', 'users_can_register', array(
 			'show_in_rest' => true,
 			'type'         => 'boolean',
-			'description'  => __( 'Allow new user registration.', 'wp-admin-shell' ),
+			'description'  => __( 'Allow new user registration.', 'wp-admin-workspaces' ),
 		) );
 
 		register_setting( 'general', 'default_role', array(
 			'show_in_rest' => true,
 			'type'         => 'string',
-			'description'  => __( 'Default role for new users.', 'wp-admin-shell' ),
+			'description'  => __( 'Default role for new users.', 'wp-admin-workspaces' ),
 		) );
 	}
 
@@ -1181,14 +1181,14 @@ add_action( 'init', function () {
 		),
 		'type'         => 'integer',
 		'default'      => 10,
-		'description'  => __( 'Number of items shown in syndication feeds.', 'wp-admin-shell' ),
+		'description'  => __( 'Number of items shown in syndication feeds.', 'wp-admin-workspaces' ),
 	) );
 
 	register_setting( 'reading', 'rss_use_excerpt', array(
 		'show_in_rest' => true,
 		'type'         => 'boolean',
 		'default'      => false,
-		'description'  => __( 'Whether syndication feeds show an excerpt rather than full text.', 'wp-admin-shell' ),
+		'description'  => __( 'Whether syndication feeds show an excerpt rather than full text.', 'wp-admin-workspaces' ),
 	) );
 
 	// --- Media options (issue #117) -----------------------------------------
@@ -1218,7 +1218,7 @@ add_action( 'init', function () {
 			),
 			'type'         => 'integer',
 			'default'      => $wpas_media_default,
-			'description'  => __( 'Image size dimension (pixels).', 'wp-admin-shell' ),
+			'description'  => __( 'Image size dimension (pixels).', 'wp-admin-workspaces' ),
 		) );
 	}
 
@@ -1226,14 +1226,14 @@ add_action( 'init', function () {
 		'show_in_rest' => true,
 		'type'         => 'boolean',
 		'default'      => true,
-		'description'  => __( 'Whether thumbnails are cropped to exact dimensions.', 'wp-admin-shell' ),
+		'description'  => __( 'Whether thumbnails are cropped to exact dimensions.', 'wp-admin-workspaces' ),
 	) );
 
 	register_setting( 'media', 'uploads_use_yearmonth_folders', array(
 		'show_in_rest' => true,
 		'type'         => 'boolean',
 		'default'      => true,
-		'description'  => __( 'Whether uploads are organized into month- and year-based folders.', 'wp-admin-shell' ),
+		'description'  => __( 'Whether uploads are organized into month- and year-based folders.', 'wp-admin-workspaces' ),
 	) );
 
 	// --- Discussion options (issue #118) ------------------------------------
@@ -1393,7 +1393,7 @@ add_action( 'init', function () {
 /**
  * Route a manual UTC-offset timezone write to `gmt_offset`.
  *
- * The Timezone select (wp_admin_shell_get_settings_general_data) offers a
+ * The Timezone select (wp_admin_workspaces_get_settings_general_data) offers a
  * "Manual offsets" optgroup of `UTC±X` values alongside the IANA city zones.
  * Both write the single REST `timezone` field (core option `timezone_string`).
  * For a `UTC±X` value `sanitize_option('timezone_string')` rejects the
@@ -1448,7 +1448,7 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
  * languages, roles, date/time format presets, format previews). Uses the same
  * core helpers wp-admin/options-general.php uses so the app stays in lockstep.
  */
-function wp_admin_shell_get_settings_general_data() {
+function wp_admin_workspaces_get_settings_general_data() {
 	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
 
 	// Languages (locales installed + downloadable translations).
@@ -1481,7 +1481,7 @@ function wp_admin_shell_get_settings_general_data() {
 	// Timezones, grouped by continent. Mirrors wp_timezone_choice() output.
 	$tz_identifiers = timezone_identifiers_list();
 	$tz_groups      = array(
-		array( 'label' => __( 'UTC', 'wp-admin-shell' ), 'options' => array(
+		array( 'label' => __( 'UTC', 'wp-admin-workspaces' ), 'options' => array(
 			array( 'value' => 'UTC', 'label' => 'UTC' ),
 		) ),
 	);
@@ -1514,7 +1514,7 @@ function wp_admin_shell_get_settings_general_data() {
 		$offset_options[] = array( 'value' => $value, 'label' => $value );
 	}
 	$tz_groups[] = array(
-		'label'   => __( 'Manual offsets', 'wp-admin-shell' ),
+		'label'   => __( 'Manual offsets', 'wp-admin-workspaces' ),
 		'options' => $offset_options,
 	);
 
@@ -1576,13 +1576,13 @@ function wp_admin_shell_get_settings_general_data() {
 
 /**
  * List available shell configurations from the shells/ directory plus
- * any shells contributed via `wp_admin_shell_register_shell()`. When a
+ * any shells contributed via `wp_admin_workspaces_register_shell()`. When a
  * programmatic registration shares a slug with a file-based shell, the
  * programmatic version wins (mirrors resolver precedence).
  */
-function wp_admin_shell_get_available_shells() {
+function wp_admin_workspaces_get_available_shells() {
 	$by_slug = array();
-	$dir     = WP_ADMIN_SHELL_PATH . 'shells/';
+	$dir     = WP_ADMIN_WORKSPACES_PATH . 'shells/';
 
 	foreach ( glob( $dir . '*.json' ) ?: array() as $file ) {
 		$data = json_decode( file_get_contents( $file ), true );
@@ -1598,8 +1598,8 @@ function wp_admin_shell_get_available_shells() {
 		);
 	}
 
-	if ( class_exists( 'WP_Admin_Shell_Shells' ) ) {
-		foreach ( WP_Admin_Shell_Shells::all() as $slug => $data ) {
+	if ( class_exists( 'WP_Admin_Workspaces_Shells' ) ) {
+		foreach ( WP_Admin_Workspaces_Shells::all() as $slug => $data ) {
 			$by_slug[ $slug ] = array(
 				'slug'             => $slug,
 				'title'            => $data['title'] ?? $slug,

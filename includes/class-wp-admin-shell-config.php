@@ -1,18 +1,18 @@
 <?php
 /**
- * WP_Admin_Shell_Config — read-only wrapper around a resolved admin.json.
+ * WP_Admin_Workspaces_Config — read-only wrapper around a resolved admin.json.
  *
  * The resolver returns a plain associative array; this class wraps it in
  * a small accessor surface so callers don't have to hardcode the
  * `settings.regions[id]` / `settings.applications[]` paths. Mirrors
  * `WP_Theme_JSON`'s role of "merged result, structured access".
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Config {
+class WP_Admin_Workspaces_Config {
 
 	/** @var array */
 	private $data;
@@ -69,7 +69,7 @@ class WP_Admin_Shell_Config {
 		if ( ! is_array( $apps ) ) {
 			return array();
 		}
-		if ( WP_Admin_Shell_Merge::is_assoc( $apps ) ) {
+		if ( WP_Admin_Workspaces_Merge::is_assoc( $apps ) ) {
 			$out = array();
 			foreach ( $apps as $id => $body ) {
 				$out[] = array_merge( array( 'id' => $id ), is_array( $body ) ? $body : array() );

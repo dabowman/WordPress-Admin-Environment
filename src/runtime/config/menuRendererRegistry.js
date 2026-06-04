@@ -31,7 +31,7 @@
  *
  * Published surface for loose plugin scripts: `src/index.js` mirrors the
  * default-registry `registerMenuRenderer` onto
- * `window.wpAdminShell.registerMenuRenderer` so a third-party renderer
+ * `window.wpAdminWorkspaces.registerMenuRenderer` so a third-party renderer
  * shipped as a standalone script (no bundler access to this module) can
  * still register. NOTE: that loose-script path can race the kernel's
  * synchronous first mount — see the kernel-import-surface gap tracked in
@@ -72,7 +72,7 @@ export function createMenuRendererRegistry() {
 			if ( IS_DEV ) {
 				// eslint-disable-next-line no-console
 				console.warn(
-					`wp-admin-shell menuRendererRegistry: duplicate id "${ id }" ignored (first registration wins).`
+					`wp-admin-workspaces menuRendererRegistry: duplicate id "${ id }" ignored (first registration wins).`
 				);
 			}
 			return;
@@ -92,7 +92,7 @@ export function createMenuRendererRegistry() {
 			warned.add( id );
 			// eslint-disable-next-line no-console
 			console.warn(
-				`wp-admin-shell menuRendererRegistry: unknown menu-renderer id "${ id }". Known: ${ Object.keys(
+				`wp-admin-workspaces menuRendererRegistry: unknown menu-renderer id "${ id }". Known: ${ Object.keys(
 					registry
 				)
 					.sort()

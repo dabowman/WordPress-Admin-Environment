@@ -1,6 +1,6 @@
 <?php
 /**
- * /wp-admin-shell/v1/activate-theme — switch the active theme.
+ * /wp-admin-workspaces/v1/activate-theme — switch the active theme.
  *
  * Shell-side workaround: WordPress core ships no writable themes REST
  * endpoint (upstream parity ticket #143), so `core:themes` has no
@@ -13,14 +13,14 @@
  * that fallback. apiFetch's `wp-api-fetch` middleware sends the REST
  * nonce automatically.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Themes_REST {
+class WP_Admin_Workspaces_Themes_REST {
 
-	const NAMESPACE = 'wp-admin-shell/v1';
+	const NAMESPACE = 'wp-admin-workspaces/v1';
 
 	public static function register() {
 		register_rest_route(
@@ -66,7 +66,7 @@ class WP_Admin_Shell_Themes_REST {
 		if ( '' === $stylesheet ) {
 			return new WP_Error(
 				'rest_invalid_param',
-				__( 'A theme stylesheet is required.', 'wp-admin-shell' ),
+				__( 'A theme stylesheet is required.', 'wp-admin-workspaces' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -75,7 +75,7 @@ class WP_Admin_Shell_Themes_REST {
 		if ( ! $theme->exists() ) {
 			return new WP_Error(
 				'rest_theme_not_found',
-				__( 'The requested theme is not installed.', 'wp-admin-shell' ),
+				__( 'The requested theme is not installed.', 'wp-admin-workspaces' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -86,7 +86,7 @@ class WP_Admin_Shell_Themes_REST {
 		if ( ! $theme->is_allowed() ) {
 			return new WP_Error(
 				'rest_theme_not_allowed',
-				__( 'This theme is not allowed on this site.', 'wp-admin-shell' ),
+				__( 'This theme is not allowed on this site.', 'wp-admin-workspaces' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -96,7 +96,7 @@ class WP_Admin_Shell_Themes_REST {
 			return new WP_Error(
 				'rest_theme_broken',
 				/* translators: %s: theme error message. */
-				sprintf( __( 'The theme cannot be activated: %s', 'wp-admin-shell' ), $errors->get_error_message() ),
+				sprintf( __( 'The theme cannot be activated: %s', 'wp-admin-workspaces' ), $errors->get_error_message() ),
 				array( 'status' => 400 )
 			);
 		}
@@ -126,4 +126,4 @@ class WP_Admin_Shell_Themes_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Themes_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Themes_REST', 'register' ) );

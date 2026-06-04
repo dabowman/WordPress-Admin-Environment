@@ -20,21 +20,21 @@
  * them into the composition pipeline that produces a mountable region
  * tree from a v2 admin.json.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Manifest_Resolver {
+class WP_Admin_Workspaces_Manifest_Resolver {
 
 	const SLUG_PATTERN       = '/^[a-z][a-z0-9-]*$/';
 	const ROUTE_KEY_PATTERN  = '/^(_self|[a-z][a-z0-9-]*)$/';
 	const ROUTE_PATTERN_RE   = '/^\/[A-Za-z0-9_\/{}\-*]*$/';
 
-	/** @var WP_Admin_Shell_Manifest_Registry */
+	/** @var WP_Admin_Workspaces_Manifest_Registry */
 	private $registry;
 
-	public function __construct( WP_Admin_Shell_Manifest_Registry $registry ) {
+	public function __construct( WP_Admin_Workspaces_Manifest_Registry $registry ) {
 		$this->registry = $registry;
 	}
 

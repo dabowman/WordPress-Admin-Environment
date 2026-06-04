@@ -13,5 +13,5 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-workspaces"
 }

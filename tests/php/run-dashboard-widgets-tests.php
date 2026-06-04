@@ -5,7 +5,7 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-dashboard-widgets-tests.php`
  *
  * Coverage:
- *   - `WP_Admin_Shell_Dashboard_Widgets::register` validation + readback.
+ *   - `WP_Admin_Workspaces_Dashboard_Widgets::register` validation + readback.
  *   - Override flavor: contributes screens[<target>].apps[] entries to the cascade.
  *   - Custom target screen via $args['screen'].
  *   - Standalone flavor: also synthesizes an app manifest with slotHints.
@@ -45,36 +45,36 @@ class WPAS_Dashboard_Widgets_Test_Runner {
 
 $T = 'WPAS_Dashboard_Widgets_Test_Runner';
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
 
 // --- Registration validation -----------------------------------------------
 
-$err = wp_admin_shell_register_dashboard_widget( '', array() );
+$err = wp_admin_workspaces_register_dashboard_widget( '', array() );
 $T::assert_wp_error( 'register rejects empty id', $err );
 
-$err = wp_admin_shell_register_dashboard_widget( 'no-namespace', array() );
+$err = wp_admin_workspaces_register_dashboard_widget( 'no-namespace', array() );
 $T::assert_wp_error( 'register rejects un-namespaced id', $err );
 
-$err = wp_admin_shell_register_dashboard_widget( 'plugin:bad slug/widget', array() );
+$err = wp_admin_workspaces_register_dashboard_widget( 'plugin:bad slug/widget', array() );
 $T::assert_wp_error( 'register rejects malformed plugin id', $err );
 
 // --- Entry-id derivation ----------------------------------------------------
 
 $T::assert_eq(
 	'entry-id derivation: core: prefix stripped',
-	WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'core:dashboard-widget-recent-posts' ),
+	WP_Admin_Workspaces_Dashboard_Widgets::derive_entry_id( 'core:dashboard-widget-recent-posts' ),
 	'dashboard-widget-recent-posts'
 );
 $T::assert_eq(
 	'entry-id derivation: plugin slug preserved (collision-safe)',
-	WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:acme/sales-stats' ),
+	WP_Admin_Workspaces_Dashboard_Widgets::derive_entry_id( 'plugin:acme/sales-stats' ),
 	'acme-sales-stats'
 );
 
 // --- Override flavor --------------------------------------------------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
-$id = wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+$id = wp_admin_workspaces_register_dashboard_widget(
 	'core:dashboard-widget-recent-posts',
 	array(
 		'position'    => array( 'row' => 1, 'col' => 1 ),
@@ -83,7 +83,7 @@ $id = wp_admin_shell_register_dashboard_widget(
 );
 $T::assert_eq( 'register returns id (override flavor)', $id, 'core:dashboard-widget-recent-posts' );
 
-$record = WP_Admin_Shell_Dashboard_Widgets::get( 'core:dashboard-widget-recent-posts' );
+$record = WP_Admin_Workspaces_Dashboard_Widgets::get( 'core:dashboard-widget-recent-posts' );
 $T::assert_eq(
 	'record placement.position preserved',
 	$record['placement']['position'],
@@ -102,7 +102,7 @@ $T::assert_eq(
 
 // --- Cascade contribution: screens[<target>].apps[] -------------------------
 
-$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$plugin_doc = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 $T::assert_true(
 	'plugin origin creates screens[dashboard-widgets] when registrations exist',
 	isset( $plugin_doc['screens']['dashboard-widgets']['apps'] )
@@ -141,15 +141,15 @@ $T::assert_eq(
 
 // --- Custom target screen ---------------------------------------------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'core:dashboard-widget-recent-posts',
 	array(
 		'screen'      => 'home-dashboard',
 		'defaultSize' => array( 'w' => 2, 'h' => 1 ),
 	)
 );
-$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$plugin_doc = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 $T::assert_true(
 	'custom screen target receives contribution',
 	isset( $plugin_doc['screens']['home-dashboard']['apps'] )
@@ -166,12 +166,12 @@ $T::assert_eq(
 
 // --- Hidden tombstone -------------------------------------------------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'core:dashboard-widget-quick-draft',
 	array( 'hidden' => true )
 );
-$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$plugin_doc = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 $entry      = $plugin_doc['screens']['dashboard-widgets']['apps'][0];
 $T::assert_true(
 	'hidden:true contributes a tombstone marker',
@@ -185,8 +185,8 @@ $T::assert_eq(
 
 // --- admin.json wins per-entry-id (cascade id-keyed merge) ------------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'core:dashboard-widget-recent-posts',
 	array(
 		'defaultSize' => array( 'w' => 2, 'h' => 1 ),
@@ -195,7 +195,7 @@ wp_admin_shell_register_dashboard_widget(
 // Simulate admin.json `screens[dashboard-widgets].apps[]` claiming the
 // same entry id with different placement. Run a manual cascade merge
 // to verify the contract.
-$plugin_origin = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$plugin_origin = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 $site_origin   = array(
 	'screens' => array(
 		'dashboard-widgets' => array(
@@ -210,7 +210,7 @@ $site_origin   = array(
 		),
 	),
 );
-$merged = WP_Admin_Shell_Merge::merge( $plugin_origin, $site_origin );
+$merged = WP_Admin_Workspaces_Merge::merge( $plugin_origin, $site_origin );
 $T::assert_eq(
 	'admin.json (site origin) entry merges by id over plugin contribution',
 	$merged['screens']['dashboard-widgets']['apps'][0]['size'],
@@ -224,9 +224,9 @@ $T::assert_eq(
 
 // --- Standalone flavor (synthesizes a manifest with slotHints) --------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
 
-$standalone = wp_admin_shell_register_dashboard_widget(
+$standalone = wp_admin_workspaces_register_dashboard_widget(
 	'plugin:wpas-test/sales',
 	array(
 		'title'        => 'Sales',
@@ -246,9 +246,9 @@ $T::assert_eq(
 	'plugin:wpas-test/sales'
 );
 
-WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+WP_Admin_Workspaces_Dashboard_Widgets::flush_pending_registrations();
 
-$manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/sales' );
+$manifest = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/sales' );
 $T::assert_true(
 	'standalone register seeds manifest registry',
 	is_array( $manifest )
@@ -274,42 +274,42 @@ $T::assert_true(
 
 // Pre-flush state: a freshly-registered widget must NOT hit the manifest
 // registry synchronously.
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'plugin:wpas-test/deferred',
 	array( 'script' => 'wpas-test' )
 );
-$pre_flush = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
+$pre_flush = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
 $T::assert_true(
 	'standalone register does NOT synchronously hit the manifest registry',
 	$pre_flush === null
 );
 
-WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
-$post_flush = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
+WP_Admin_Workspaces_Dashboard_Widgets::flush_pending_registrations();
+$post_flush = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/deferred' );
 $T::assert_true(
 	'flush_pending_registrations forwards the manifest',
 	is_array( $post_flush )
 );
 
-// Lazy flush via wp_admin_shell_data_plugin filter (covers the
+// Lazy flush via wp_admin_workspaces_data_plugin filter (covers the
 // register-then-resolve order where init priority 7 hasn't fired yet).
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'plugin:wpas-test/lazy',
 	array( 'script' => 'wpas-test' )
 );
-apply_filters( 'wp_admin_shell_data_plugin', array() );
-$lazy = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/lazy' );
+apply_filters( 'wp_admin_workspaces_data_plugin', array() );
+$lazy = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/lazy' );
 $T::assert_true(
-	'apply_filters(wp_admin_shell_data_plugin) lazy-flushes',
+	'apply_filters(wp_admin_workspaces_data_plugin) lazy-flushes',
 	is_array( $lazy )
 );
 
 // Standalone-flavor dual-source: top-level placement keys + nested
 // slotHints both supplied. Top-level wins per-property.
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'plugin:wpas-test/dual-source',
 	array(
 		'script'      => 'wpas-test',
@@ -320,8 +320,8 @@ wp_admin_shell_register_dashboard_widget(
 		),
 	)
 );
-WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
-$dual_manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/dual-source' );
+WP_Admin_Workspaces_Dashboard_Widgets::flush_pending_registrations();
+$dual_manifest = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/dual-source' );
 $T::assert_eq(
 	'synthetic manifest slotHints carries the top-level-wins defaultSize',
 	$dual_manifest['slotHints']['defaultSize'],
@@ -334,25 +334,25 @@ $T::assert_eq(
 );
 
 // Override-only call (no script) should NOT add to the manifest registry.
-WP_Admin_Shell_Dashboard_Widgets::reset();
-wp_admin_shell_register_dashboard_widget(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+wp_admin_workspaces_register_dashboard_widget(
 	'plugin:wpas-test/override-only',
 	array( 'hidden' => true )
 );
-$override_only_manifest = WP_Admin_Shell_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/override-only' );
+$override_only_manifest = WP_Admin_Workspaces_Manifest_Registry::instance()->get_app( 'plugin:wpas-test/override-only' );
 $T::assert_true(
 	'override-only call does NOT synthesize a manifest',
 	$override_only_manifest === null
 );
 
 // --- Filter idempotency ----------------------------------------------------
-// Reviewer flagged: `apply_filters('wp_admin_shell_data_plugin', ...)` may
+// Reviewer flagged: `apply_filters('wp_admin_workspaces_data_plugin', ...)` may
 // fire twice in one request (cache miss after shell switch, test harness,
 // anything calling the resolver pipeline twice). A bare `apps[] []=` would
 // duplicate the entry. Guard checks for an existing entry id and skips.
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
-WP_Admin_Shell_Dashboard_Widgets::register(
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
+WP_Admin_Workspaces_Dashboard_Widgets::register(
 	'core:dashboard-widget-recent-posts',
 	array(
 		'defaultSize' => array( 'w' => 2, 'h' => 1 ),
@@ -370,8 +370,8 @@ $idem_doc = array(
 	),
 );
 
-$idem_first  = apply_filters( 'wp_admin_shell_data_plugin', $idem_doc );
-$idem_second = apply_filters( 'wp_admin_shell_data_plugin', $idem_first );
+$idem_first  = apply_filters( 'wp_admin_workspaces_data_plugin', $idem_doc );
+$idem_second = apply_filters( 'wp_admin_workspaces_data_plugin', $idem_first );
 
 $T::assert_eq(
 	'idempotency: first apply adds the registered entry',
@@ -397,10 +397,10 @@ $T::assert_true(
 // plugins shipping the same widget name silently collided. New derivation
 // keeps slug + name joined.
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
 
-$id_acme  = WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:acme/widget' );
-$id_bravo = WP_Admin_Shell_Dashboard_Widgets::derive_entry_id( 'plugin:bravo/widget' );
+$id_acme  = WP_Admin_Workspaces_Dashboard_Widgets::derive_entry_id( 'plugin:acme/widget' );
+$id_bravo = WP_Admin_Workspaces_Dashboard_Widgets::derive_entry_id( 'plugin:bravo/widget' );
 $T::assert_eq(
 	'entry-id collision: plugin:acme/widget derives acme-widget',
 	$id_acme,
@@ -418,63 +418,63 @@ $T::assert_true(
 
 // --- Reset cleanup ---------------------------------------------------------
 
-WP_Admin_Shell_Dashboard_Widgets::reset();
+WP_Admin_Workspaces_Dashboard_Widgets::reset();
 
 // ===========================================================================
 // Classic dashboard-widget BRIDGE (#134).
 // ===========================================================================
-// The bridge (WP_Admin_Shell_Dashboard_Bridge) harvests plugin dashboard
+// The bridge (WP_Admin_Workspaces_Dashboard_Bridge) harvests plugin dashboard
 // meta-boxes into captured-HTML tiles, skipping the core widgets the shell
 // ships native after #133.
 
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 
 // --- Skip-list: core widget ids -------------------------------------------
 
 $T::assert_true(
 	'bridge skips dashboard_right_now (native at-a-glance)',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_right_now' )
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'dashboard_right_now' )
 );
 $T::assert_true(
 	'bridge skips dashboard_activity (native activity)',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_activity' )
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'dashboard_activity' )
 );
 $T::assert_true(
 	'bridge skips dashboard_quick_press (native quick-draft)',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_quick_press' )
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'dashboard_quick_press' )
 );
 $T::assert_true(
 	'bridge skips dashboard_primary (news feed)',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'dashboard_primary' )
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'dashboard_primary' )
 );
 $T::assert_eq(
 	'bridge does NOT skip an arbitrary plugin widget id',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_sales_widget' ),
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'acme_sales_widget' ),
 	false
 );
 $T::assert_eq(
 	'bridge is_core_widget rejects non-string',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( null ),
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( null ),
 	false
 );
 
 // --- Skip-list filter ------------------------------------------------------
 
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 $skip_cb = function ( $ids ) {
 	$ids[] = 'acme_promoted_native';
 	return $ids;
 };
-add_filter( 'wp_admin_shell_dashboard_core_widget_ids', $skip_cb );
+add_filter( 'wp_admin_workspaces_dashboard_core_widget_ids', $skip_cb );
 $T::assert_true(
-	'wp_admin_shell_dashboard_core_widget_ids filter extends the skip-list',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' )
+	'wp_admin_workspaces_dashboard_core_widget_ids filter extends the skip-list',
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' )
 );
-remove_filter( 'wp_admin_shell_dashboard_core_widget_ids', $skip_cb );
-WP_Admin_Shell_Dashboard_Bridge::reset();
+remove_filter( 'wp_admin_workspaces_dashboard_core_widget_ids', $skip_cb );
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 $T::assert_eq(
 	'skip-list filter memo resets — id no longer core after reset',
-	WP_Admin_Shell_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' ),
+	WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( 'acme_promoted_native' ),
 	false
 );
 
@@ -482,30 +482,30 @@ $T::assert_eq(
 
 $T::assert_eq(
 	'bridge entry-id: underscores → kebab + classic- prefix',
-	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'acme_sales_stats' ),
+	WP_Admin_Workspaces_Dashboard_Bridge::derive_entry_id( 'acme_sales_stats' ),
 	'classic-acme-sales-stats'
 );
 $T::assert_eq(
 	'bridge entry-id: uppercase + mixed chars normalized',
-	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'My_Plugin.Box-1' ),
+	WP_Admin_Workspaces_Dashboard_Bridge::derive_entry_id( 'My_Plugin.Box-1' ),
 	'classic-my-plugin-box-1'
 );
 $T::assert_eq(
 	'bridge entry-id: empty falls back to classic-widget',
-	WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( '___' ),
+	WP_Admin_Workspaces_Dashboard_Bridge::derive_entry_id( '___' ),
 	'classic-widget'
 );
 $T::assert_true(
 	'bridge entry-id matches the appsEntry id pattern ^[a-z][a-z0-9-]*$',
 	(bool) preg_match(
 		'/^[a-z][a-z0-9-]*$/',
-		WP_Admin_Shell_Dashboard_Bridge::derive_entry_id( 'Weird__Id!!' )
+		WP_Admin_Workspaces_Dashboard_Bridge::derive_entry_id( 'Weird__Id!!' )
 	)
 );
 
 // --- Tile-entry shape ------------------------------------------------------
 
-$tile = WP_Admin_Shell_Dashboard_Bridge::build_tile_entry( array(
+$tile = WP_Admin_Workspaces_Dashboard_Bridge::build_tile_entry( array(
 	'widget_id' => 'acme_sales_stats',
 	'entry_id'  => 'classic-acme-sales-stats',
 	'title'     => 'Acme Sales',
@@ -521,7 +521,7 @@ $T::assert_eq( 'tile entry config.title is the harvested title', $tile['config']
 // Register a fake plugin widget + a core widget id into the dashboard, run the
 // harvest, and assert the bridge synthesizes a tile for the plugin one only.
 
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 
 $register_widgets = function () {
 	// Plugin widget — should be harvested.
@@ -545,14 +545,14 @@ $register_widgets = function () {
 };
 add_action( 'wp_dashboard_setup', $register_widgets );
 
-$records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+$records = WP_Admin_Workspaces_Dashboard_Bridge::harvest_widgets();
 
 remove_action( 'wp_dashboard_setup', $register_widgets );
 
 // REGRESSION GUARD (#134 review): `ensure_dashboard_setup()` forces the
 // `dashboard` screen around `wp_dashboard_setup()` so widgets file under
 // `$wp_meta_boxes['dashboard']` regardless of the calling context (shell render
-// = `wp-admin-shell` screen; REST = no screen). The harvest MUST therefore
+// = `wp-admin-workspaces` screen; REST = no screen). The harvest MUST therefore
 // return a non-empty set here — these assertions run unconditionally (no
 // `! empty( $records )` skip-guard) so a screen-context regression fails CI.
 $T::assert_true(
@@ -593,7 +593,7 @@ if ( is_array( $acme ) ) {
 }
 
 // Cascade contribution synthesizes the tile into the target screen.
-$bridge_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$bridge_doc = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 $T::assert_true(
 	'bridge contributes screens[dashboard-widgets].apps[]',
 	isset( $bridge_doc['screens']['dashboard-widgets']['apps'] )
@@ -615,7 +615,7 @@ if ( is_array( $bridge_entry ) ) {
 
 // First-write-wins: an author entry with the same id is NOT overwritten,
 // and the bridge appends nothing for that id (idempotent).
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 add_action( 'wp_dashboard_setup', $register_widgets );
 $pre_doc = array(
 	'screens' => array(
@@ -629,7 +629,7 @@ $pre_doc = array(
 		),
 	),
 );
-$after = apply_filters( 'wp_admin_shell_data_plugin', $pre_doc );
+$after = apply_filters( 'wp_admin_workspaces_data_plugin', $pre_doc );
 remove_action( 'wp_dashboard_setup', $register_widgets );
 $matching = array_filter(
 	$after['screens']['dashboard-widgets']['apps'],
@@ -654,12 +654,12 @@ $T::assert_eq(
 // prior one. The harvest above must NOT have left the global current screen
 // pointing at `dashboard` (which would corrupt the surrounding shell render /
 // REST request). Prior screen was null here (CLI), so it should be cleared.
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 if ( function_exists( 'set_current_screen' ) && function_exists( 'get_current_screen' ) ) {
-	set_current_screen( 'wp-admin-shell' );
+	set_current_screen( 'wp-admin-workspaces' );
 	$before_id = get_current_screen() ? get_current_screen()->id : null;
 	add_action( 'wp_dashboard_setup', $register_widgets );
-	WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+	WP_Admin_Workspaces_Dashboard_Bridge::harvest_widgets();
 	remove_action( 'wp_dashboard_setup', $register_widgets );
 	$after_id = get_current_screen() ? get_current_screen()->id : null;
 	$T::assert_eq(
@@ -672,7 +672,7 @@ if ( function_exists( 'set_current_screen' ) && function_exists( 'get_current_sc
 // --- entry_id collision disambiguation -------------------------------------
 // Two DISTINCT raw widget ids that kebab-normalize to the same entry_id must
 // both survive — the second is disambiguated with a short hash, not dropped.
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 $collide_widgets = function () {
 	if ( function_exists( 'wp_add_dashboard_widget' ) ) {
 		wp_add_dashboard_widget( 'Acme_Box', 'Acme Box A', function () {
@@ -684,7 +684,7 @@ $collide_widgets = function () {
 	}
 };
 add_action( 'wp_dashboard_setup', $collide_widgets );
-$collide_records = WP_Admin_Shell_Dashboard_Bridge::harvest_widgets();
+$collide_records = WP_Admin_Workspaces_Dashboard_Bridge::harvest_widgets();
 remove_action( 'wp_dashboard_setup', $collide_widgets );
 $collide_entries = array_column( $collide_records, 'entry_id' );
 // Both raw ids surface (both have a record).
@@ -707,7 +707,7 @@ $T::assert_true(
 	(bool) preg_match( '/^classic-acme-box(-[0-9a-f]{6})?$/', $collide_entries[1] )
 );
 
-WP_Admin_Shell_Dashboard_Bridge::reset();
+WP_Admin_Workspaces_Dashboard_Bridge::reset();
 
 // --- Summary ---------------------------------------------------------------
 

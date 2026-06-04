@@ -17,11 +17,11 @@ import { decodeEntities } from '@wordpress/html-entities';
 import './document-settings.css';
 
 const VISIBILITY_OPTIONS = [
-	{ value: 'public', label: __( 'Public', 'wp-admin-shell' ) },
-	{ value: 'private', label: __( 'Private', 'wp-admin-shell' ) },
+	{ value: 'public', label: __( 'Public', 'wp-admin-workspaces' ) },
+	{ value: 'private', label: __( 'Private', 'wp-admin-workspaces' ) },
 	{
 		value: 'password',
-		label: __( 'Password protected', 'wp-admin-shell' ),
+		label: __( 'Password protected', 'wp-admin-workspaces' ),
 	},
 ];
 
@@ -57,15 +57,15 @@ function Panel( { title, initialOpen = true, summary, children } ) {
 	return (
 		<Collapsible.Root
 			defaultOpen={ initialOpen }
-			className="wp-admin-shell-doc-settings__panel"
+			className="wp-admin-workspaces-doc-settings__panel"
 		>
-			<Collapsible.Trigger className="wp-admin-shell-doc-settings__panel-trigger">
+			<Collapsible.Trigger className="wp-admin-workspaces-doc-settings__panel-trigger">
 				<Text variant="heading-sm" render={ <span /> }>
 					{ title }
 				</Text>
 				{ summary }
 			</Collapsible.Trigger>
-			<Collapsible.Panel className="wp-admin-shell-doc-settings__panel-body">
+			<Collapsible.Panel className="wp-admin-workspaces-doc-settings__panel-body">
 				<Stack direction="column" gap="md">
 					{ children }
 				</Stack>
@@ -142,18 +142,18 @@ function PublishPanel( { editedRecord, edit } ) {
 
 	return (
 		<Panel
-			title={ __( 'Status & visibility', 'wp-admin-shell' ) }
+			title={ __( 'Status & visibility', 'wp-admin-workspaces' ) }
 			summary={
 				<Badge
 					intent={ isPublished ? 'success' : 'neutral' }
-					className="wp-admin-shell-doc-settings__summary"
+					className="wp-admin-workspaces-doc-settings__summary"
 				>
 					{ status }
 				</Badge>
 			}
 		>
 			<SelectControl
-				label={ __( 'Visibility', 'wp-admin-shell' ) }
+				label={ __( 'Visibility', 'wp-admin-workspaces' ) }
 				value={ visibility }
 				options={ VISIBILITY_OPTIONS }
 				onChange={ onVisibilityChange }
@@ -162,11 +162,11 @@ function PublishPanel( { editedRecord, edit } ) {
 			{ visibility === 'password' && (
 				<BaseControl
 					__nextHasNoMarginBottom
-					id="wp-admin-shell-doc-settings-password"
-					label={ __( 'Password', 'wp-admin-shell' ) }
+					id="wp-admin-workspaces-doc-settings-password"
+					label={ __( 'Password', 'wp-admin-workspaces' ) }
 				>
 					<input
-						id="wp-admin-shell-doc-settings-password"
+						id="wp-admin-workspaces-doc-settings-password"
 						type="text"
 						className="components-text-control__input"
 						value={ password }
@@ -178,15 +178,15 @@ function PublishPanel( { editedRecord, edit } ) {
 			) }
 			<BaseControl
 				__nextHasNoMarginBottom
-				id="wp-admin-shell-doc-settings-date"
-				label={ __( 'Publish on', 'wp-admin-shell' ) }
+				id="wp-admin-workspaces-doc-settings-date"
+				label={ __( 'Publish on', 'wp-admin-workspaces' ) }
 				help={ __(
 					'Set a future date to schedule. Use the Publish button to go live.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				) }
 			>
 				<input
-					id="wp-admin-shell-doc-settings-date"
+					id="wp-admin-workspaces-doc-settings-date"
 					type="datetime-local"
 					className="components-text-control__input"
 					value={ dateValue }
@@ -221,14 +221,17 @@ function PublishPanel( { editedRecord, edit } ) {
  */
 function SlugPanel( { editedRecord, edit } ) {
 	return (
-		<Panel title={ __( 'URL', 'wp-admin-shell' ) } initialOpen={ false }>
+		<Panel
+			title={ __( 'URL', 'wp-admin-workspaces' ) }
+			initialOpen={ false }
+		>
 			<BaseControl
 				__nextHasNoMarginBottom
-				id="wp-admin-shell-doc-settings-slug"
-				label={ __( 'Slug', 'wp-admin-shell' ) }
+				id="wp-admin-workspaces-doc-settings-slug"
+				label={ __( 'Slug', 'wp-admin-workspaces' ) }
 			>
 				<input
-					id="wp-admin-shell-doc-settings-slug"
+					id="wp-admin-workspaces-doc-settings-slug"
 					type="text"
 					className="components-text-control__input"
 					value={ editedRecord?.slug ?? '' }
@@ -339,9 +342,9 @@ function CategoryChecklist( { taxonomy, value, onChange } ) {
 
 	return (
 		<div
-			className="wp-admin-shell-doc-settings__checklist"
+			className="wp-admin-workspaces-doc-settings__checklist"
 			role="group"
-			aria-label={ __( 'Categories', 'wp-admin-shell' ) }
+			aria-label={ __( 'Categories', 'wp-admin-workspaces' ) }
 		>
 			{ records.map( ( term ) => (
 				<CheckboxControl
@@ -377,12 +380,12 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
 
 	return (
 		<Panel
-			title={ __( 'Featured image', 'wp-admin-shell' ) }
+			title={ __( 'Featured image', 'wp-admin-workspaces' ) }
 			initialOpen={ false }
 		>
 			<MediaUploadCheck>
 				<MediaUpload
-					title={ __( 'Featured image', 'wp-admin-shell' ) }
+					title={ __( 'Featured image', 'wp-admin-workspaces' ) }
 					allowedTypes={ [ 'image' ] }
 					value={ id }
 					onSelect={ ( m ) => edit( { featured_media: m.id } ) }
@@ -392,7 +395,7 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
 								<img
 									src={ media.source_url }
 									alt={ media.alt_text || '' }
-									className="wp-admin-shell-doc-settings__thumb"
+									className="wp-admin-workspaces-doc-settings__thumb"
 								/>
 							) }
 							<Stack direction="row" gap="sm">
@@ -405,11 +408,11 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
 									{ id
 										? __(
 												'Replace image',
-												'wp-admin-shell'
+												'wp-admin-workspaces'
 										  )
 										: __(
 												'Set featured image',
-												'wp-admin-shell'
+												'wp-admin-workspaces'
 										  ) }
 								</Button>
 								{ !! id && (
@@ -420,7 +423,10 @@ function FeaturedImagePanel( { editedRecord, edit } ) {
 											edit( { featured_media: 0 } )
 										}
 									>
-										{ __( 'Remove', 'wp-admin-shell' ) }
+										{ __(
+											'Remove',
+											'wp-admin-workspaces'
+										) }
 									</Button>
 								) }
 							</Stack>
@@ -466,9 +472,12 @@ function AuthorPanel( { editedRecord, edit } ) {
 	} ) );
 
 	return (
-		<Panel title={ __( 'Author', 'wp-admin-shell' ) } initialOpen={ false }>
+		<Panel
+			title={ __( 'Author', 'wp-admin-workspaces' ) }
+			initialOpen={ false }
+		>
 			<SelectControl
-				label={ __( 'Author', 'wp-admin-shell' ) }
+				label={ __( 'Author', 'wp-admin-workspaces' ) }
 				value={ String( editedRecord?.author ?? '' ) }
 				options={ options }
 				onChange={ ( v ) => edit( { author: Number( v ) } ) }
@@ -493,11 +502,14 @@ function ExcerptPanel( { editedRecord, edit } ) {
 			: editedRecord?.excerpt?.raw ?? '';
 	return (
 		<Panel
-			title={ __( 'Excerpt', 'wp-admin-shell' ) }
+			title={ __( 'Excerpt', 'wp-admin-workspaces' ) }
 			initialOpen={ false }
 		>
 			<TextareaControl
-				label={ __( 'Write an excerpt (optional)', 'wp-admin-shell' ) }
+				label={ __(
+					'Write an excerpt (optional)',
+					'wp-admin-workspaces'
+				) }
 				value={ excerpt }
 				rows={ 4 }
 				onChange={ ( v ) => edit( { excerpt: v } ) }
@@ -525,12 +537,12 @@ function DiscussionPanel( { editedRecord, edit, supportsComments } ) {
 	const pingsOpen = editedRecord?.ping_status === 'open';
 	return (
 		<Panel
-			title={ __( 'Discussion', 'wp-admin-shell' ) }
+			title={ __( 'Discussion', 'wp-admin-workspaces' ) }
 			initialOpen={ false }
 		>
 			<Stack direction="row" justify="space-between" align="center">
 				<Text render={ <span /> }>
-					{ __( 'Allow comments', 'wp-admin-shell' ) }
+					{ __( 'Allow comments', 'wp-admin-workspaces' ) }
 				</Text>
 				<FormToggle
 					checked={ commentsOpen }
@@ -543,7 +555,10 @@ function DiscussionPanel( { editedRecord, edit, supportsComments } ) {
 			</Stack>
 			<Stack direction="row" justify="space-between" align="center">
 				<Text render={ <span /> }>
-					{ __( 'Allow pingbacks & trackbacks', 'wp-admin-shell' ) }
+					{ __(
+						'Allow pingbacks & trackbacks',
+						'wp-admin-workspaces'
+					) }
 				</Text>
 				<FormToggle
 					checked={ pingsOpen }
@@ -598,13 +613,13 @@ export default function DocumentSettingsSidebar( {
 
 	return (
 		<Fill name="core:editor.sidebar">
-			<div className="wp-admin-shell-doc-settings">
+			<div className="wp-admin-workspaces-doc-settings">
 				<Text
 					variant="heading-md"
 					render={ <h2 /> }
-					className="wp-admin-shell-doc-settings__title"
+					className="wp-admin-workspaces-doc-settings__title"
 				>
-					{ __( 'Post', 'wp-admin-shell' ) }
+					{ __( 'Post', 'wp-admin-workspaces' ) }
 				</Text>
 
 				<PublishPanel editedRecord={ editedRecord } edit={ edit } />
@@ -612,7 +627,7 @@ export default function DocumentSettingsSidebar( {
 
 				{ taxonomies.includes( 'category' ) && (
 					<Panel
-						title={ __( 'Categories', 'wp-admin-shell' ) }
+						title={ __( 'Categories', 'wp-admin-workspaces' ) }
 						initialOpen={ false }
 					>
 						<CategoryChecklist
@@ -625,11 +640,11 @@ export default function DocumentSettingsSidebar( {
 
 				{ taxonomies.includes( 'post_tag' ) && (
 					<Panel
-						title={ __( 'Tags', 'wp-admin-shell' ) }
+						title={ __( 'Tags', 'wp-admin-workspaces' ) }
 						initialOpen={ false }
 					>
 						<TaxonomyTokenField
-							label={ __( 'Add tags', 'wp-admin-shell' ) }
+							label={ __( 'Add tags', 'wp-admin-workspaces' ) }
 							taxonomy="post_tag"
 							value={ editedRecord?.tags }
 							onChange={ setTermIds( 'tags' ) }

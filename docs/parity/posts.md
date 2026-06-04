@@ -16,7 +16,7 @@
   - `src/wp-admin/includes/template.php` — `_post_states()` / `get_post_states()` (line 2254+) for the title-cell state badges (Sticky / Draft / Pending / Private / Front Page …).
 - **REST / core-data surface the shell app uses:**
   - `useEntityRecords('postType', config.postType, queryArgs)` → `GET /wp/v2/posts` (or `/pages`, or any post type's `rest_base`), `context=edit`, `_embed=author` (`src/apps/posts/index.js:147`).
-  - `useDataView(screenId)` → resolved DataView doc (kernel-config fast path, `/wp-admin-shell/v1/data-view` fallback).
+  - `useDataView(screenId)` → resolved DataView doc (kernel-config fast path, `/wp-admin-workspaces/v1/data-view` fallback).
   - `useEntityElementCounts('postType', postType, 'status', …)` → one `GET …?status=X&per_page=1&_fields=id` per status, reads `X-WP-Total` (`src/apps/_shared/dataviews/useEntityElementCounts.js`).
   - `deleteEntityRecord('postType', postType, id)` (no `force`) → `DELETE /wp/v2/posts/{id}` = trash (`src/apps/posts/index.js:212`).
 - **Project screen spec:** `docs/screens/posts.md` exists (23 KB, thorough — it independently flags the AJAX/Quick-Edit gap, the counts workaround, and the restore-to-draft caveat). Not MISSING.

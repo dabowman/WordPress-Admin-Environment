@@ -18,7 +18,7 @@ The app is hand-rolled native UI (not a DataViews list) because the reorder UX a
 4. **`items`** — `useEntityRecords('root', 'menuItem', { menus: activeMenuId, per_page: 100, context: 'edit' }, { enabled: activeMenuId !== null })`. Flat item records carrying `parent` + `menu_order`.
 5. **`menuModal` / `itemModal`** — modal toggles (`'create'` or a record).
 
-`window.wpAdminShell.config.workspace['theme-support']['block-theme']` is read once at mount (helper `readThemeSupport`). When true, the editor body never mounts — a disabled panel renders instead.
+`window.wpAdminWorkspaces.config.workspace['theme-support']['block-theme']` is read once at mount (helper `readThemeSupport`). When true, the editor body never mounts — a disabled panel renders instead.
 
 ### Entity names
 
@@ -75,7 +75,7 @@ Success → snackbar, failure → dismissible banner, via `@wordpress/notices` �
 
 ## Block-theme fallback (shared signal with #121)
 
-`WP_Admin_Shell_Appearance_Menu` (PHP, `wp_admin_shell_data` priority 4) stamps `workspace.theme-support` with `{ block-theme, theme-supports }` and **also** prunes the native `menus` screen on block themes (and gates it on `current_theme_supports('menus')` for classic themes via the `requires` rule). The `nav-menus` iframe screen is deliberately **theme-agnostic** — it is NOT in the prune rules, so it survives on every theme as the deterministic full-fidelity classic editor.
+`WP_Admin_Workspaces_Appearance_Menu` (PHP, `wp_admin_workspaces_data` priority 4) stamps `workspace.theme-support` with `{ block-theme, theme-supports }` and **also** prunes the native `menus` screen on block themes (and gates it on `current_theme_supports('menus')` for classic themes via the `requires` rule). The `nav-menus` iframe screen is deliberately **theme-agnostic** — it is NOT in the prune rules, so it survives on every theme as the deterministic full-fidelity classic editor.
 
 So on a block theme the native `menus` screen is normally pruned before it ever reaches the runtime; the app's own `block-theme` short-circuit is defense-in-depth (and covers a custom shell that surfaces the screen unconditionally). When it fires, the panel links to `#/site-editor` (router navigation) and to `#/nav-menus` (the iframe screen). We link to the **workspace route** `#/nav-menus`, not the raw `/wp-admin/nav-menus.php`: the raw path is claimed by the native `menus` screen's `legacy_path`, so the capture-phase admin-link interceptor would map it back to `#/menus` (this same disabled panel on a block theme). Routing to `#/nav-menus` mounts the iframe screen deterministically — which is why that screen must stay agnostic to the prune.
 

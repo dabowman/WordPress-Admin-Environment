@@ -166,7 +166,7 @@ Save handler: form post to `site-new.php?action=add-site`, calls `wpmu_create_bl
 | Per-site theme allowlist | None | **GAP** — toggles `allowedthemes` site option, no REST. |
 | Edit a site's `wp_options` | `GET /wp/v2/settings` exposes only registered settings; raw option editor has no REST | **GAP** — by design, raw option editing is unsafe. |
 
-This screen is the single largest REST gap in core. A v1 shell implementation must either ship custom endpoints (`/wp-admin-shell/v1/network/sites/*`) or render the original PHP screens in iframe.
+This screen is the single largest REST gap in core. A v1 shell implementation must either ship custom endpoints (`/wp-admin-workspaces/v1/network/sites/*`) or render the original PHP screens in iframe.
 
 ---
 

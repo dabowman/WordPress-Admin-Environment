@@ -39,7 +39,7 @@
  *      the proper fix is a notices REST surface (upstream #155).
  *
  *      **Double-dispatch guard.** `capture_admin_notices()` is invoked from
- *      `wp_admin_shell_enqueue_assets()` (hooked on `admin_enqueue_scripts`,
+ *      `wp_admin_workspaces_enqueue_assets()` (hooked on `admin_enqueue_scripts`,
  *      fired near the TOP of `wp-admin/admin-header.php`). The hijack then
  *      renders the shell through that same `admin-header.php`, which fires
  *      `do_action( 'admin_notices' )` + `do_action( 'all_admin_notices' )`
@@ -65,18 +65,18 @@
  * (a plugin that can inject here can already act as admin), so this is an
  * accepted-risk decision, not "zero new exposure".
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Chrome_Harvest {
+class WP_Admin_Workspaces_Chrome_Harvest {
 
 	/**
 	 * Core admin-bar node ids the shell already renders first-class, so
 	 * the harvest skips them (and their descendants) to avoid
 	 * double-rendering. Extensible via the
-	 * `wp_admin_shell_admin_bar_core_node_ids` filter.
+	 * `wp_admin_workspaces_admin_bar_core_node_ids` filter.
 	 *
 	 *   - `wp-logo` + descendants: the WordPress logo / about cluster.
 	 *   - `site-name` + descendants: site title + visit-site → `site-hub`.
@@ -153,7 +153,7 @@ class WP_Admin_Shell_Chrome_Harvest {
 			return self::$core_node_ids_cache;
 		}
 		$filtered = apply_filters(
-			'wp_admin_shell_admin_bar_core_node_ids',
+			'wp_admin_workspaces_admin_bar_core_node_ids',
 			self::$CORE_NODE_IDS
 		);
 		if ( ! is_array( $filtered ) ) {

@@ -10,7 +10,7 @@ TaxonomyApp manages categories, tags, and any custom taxonomy through a single D
 
 Four pieces of state drive the app:
 
-1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` bound to `(taxonomy, category)` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.taxonomy.<name>.<variant|_default>` or the `wp_admin_shell_data_view_config_taxonomy_<name>[_<variant>]` filter. For `post_tag` and custom taxonomies the manifest baseline does not apply — those triples consume cascade-only entries or filter overrides (bundled `developer-admin.json` ships a baseline for `post_tag`). **Field renderers and action callbacks live in the React layer** — the spec carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
+1. **`dataView`** — pulled via `useDataView(screenId)`. Holds the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` bound to `(taxonomy, category)` and reaches the resolved cascade via `inject_app_baselines`. Site authors and plugin code override via admin.json `settings.dataViews.taxonomy.<name>.<variant|_default>` or the `wp_admin_workspaces_data_view_config_taxonomy_<name>[_<variant>]` filter. For `post_tag` and custom taxonomies the manifest baseline does not apply — those triples consume cascade-only entries or filter overrides (bundled `developer-admin.json` ships a baseline for `post_tag`). **Field renderers and action callbacks live in the React layer** — the spec carries data; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
 2. **`view`** — owned by the shared `useEntityDataView()` hook (`src/apps/_shared/dataviews/`), seeded from `VIEW_DEFAULTS` + `dataView.defaultView`. Holds search string, active filters, page, perPage, sort, fields, and layout. DataViews calls `onChangeView(next)` whenever the user changes anything. The hook's resync `useEffect` (keyed `[screenId, taxonomy]`) reseeds the view when the triple flips on the same hook instance so a `category` → `post_tag` rebind doesn't inherit the previous triple's filters/sort. Field/action compilation also runs through the shared `buildFields` / `buildActions`; the delete confirm is built with `createBulkConfirmModal`.
 3. **`editTerm` / `isCreating`** — modal toggles for the term editor. The same `TermEditModal` covers create and edit; only the payload `id` field and submit button label differ. The modal renders a `@wordpress/dataviews` `DataForm` (name / slug / description, plus a `parent` integer picker for hierarchical taxonomies) over one local `data` `useState`, so the parent doesn't observe in-progress edits and state cleans up on unmount.
 4. **`records / isResolving / totalItems / totalPages`** — pulled from `useEntityRecords('taxonomy', config.taxonomy, queryArgs)`. `context: 'edit'` keeps `description` populated.
@@ -44,8 +44,8 @@ TaxonomyApp consumes the dataView primitive (spec §13 #7). The cascade flow mir
 
 1. **Baseline** lives in `app.json#dataView` bound to `(taxonomy, category)` (machine-readable; same shape Ajv validates). `inject_app_baselines` injects it into the post-merge resolved tree only when nothing in the cascade declared the same triple.
 2. **Admin.json overrides** under `settings.dataViews.taxonomy.<name>.<variant|_default>` cascade through the 6 origins (core / engine / plugin / site / role / user). Declared triples are authoritative — they win outright over the manifest baseline. Sites and plugins swap columns, change default page size, hide the delete action, etc., without forking the app. The bundled `developer-admin.json` ships a baseline for `(taxonomy, post_tag)` so the Tags mount renders parity columns; sites that surface other taxonomies (custom taxonomies, `nav_menu`) add their own entries the same way.
-3. **Filter overrides** run last via `wp_admin_shell_data_view_config_taxonomy_<name>[_<variant>]`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
-4. **TaxonomyApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminShell.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-shell/v1/data-view?screen=<id>` REST.
+3. **Filter overrides** run last via `wp_admin_workspaces_data_view_config_taxonomy_<name>[_<variant>]`. Useful for dynamic mutations (per-request, per-user) that JSON can't express.
+4. **TaxonomyApp consumes** via `useDataView(screenId)` → `{ config, isLoading }`. The hook reads from the inline `window.wpAdminWorkspaces.config` snapshot synchronously when present; otherwise falls through to `/wp-admin-workspaces/v1/data-view?screen=<id>` REST.
 
 The renderer tables (`buildFieldRenderers`, `buildActions`, action callbacks keyed by `spec.id`) stay app-side. Any dataView override that uses an unfamiliar field id falls through to DataViews' default renderer for the declared `type`; unfamiliar action ids surface with no callback (action declared but inert) until the app side adds a mapping.
 
@@ -55,15 +55,15 @@ DataView docs ship as locale-agnostic JSON primitives — `app.json#dataView` an
 
 ```js
 const FIELD_LABELS = {
-    name:        __( 'Name',        'wp-admin-shell' ),
-    slug:        __( 'Slug',        'wp-admin-shell' ),
-    count:       __( 'Count',       'wp-admin-shell' ),
-    description: __( 'Description', 'wp-admin-shell' ),
+    name:        __( 'Name',        'wp-admin-workspaces' ),
+    slug:        __( 'Slug',        'wp-admin-workspaces' ),
+    count:       __( 'Count',       'wp-admin-workspaces' ),
+    description: __( 'Description', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-    edit:   __( 'Edit',   'wp-admin-shell' ),
-    delete: __( 'Delete', 'wp-admin-shell' ),
+    edit:   __( 'Edit',   'wp-admin-workspaces' ),
+    delete: __( 'Delete', 'wp-admin-workspaces' ),
 };
 ```
 

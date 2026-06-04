@@ -14,18 +14,18 @@
  * cascade cache layer so repeated registrations during a request hit
  * the object cache instead of re-parsing JSON.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Manifest_Validator {
+class WP_Admin_Workspaces_Manifest_Validator {
 
 	const NAMESPACE_PATTERN = '/^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*|plugin:[a-z][a-z0-9-]*\/[a-z][a-z0-9]*(-[a-z0-9]+)*)$/';
 	const SLUG_PATTERN      = '/^[a-z][a-z0-9-]*$/';
 	const ARRANGEMENT_PATTERN = '/^[a-z][a-z0-9-]*$/';
 
-	const CACHE_GROUP = 'wp_admin_shell_manifests';
+	const CACHE_GROUP = 'wp_admin_workspaces_manifests';
 
 	/**
 	 * Required fields per manifest type. Each entry: field => spec.

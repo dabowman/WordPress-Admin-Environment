@@ -29,17 +29,17 @@
  *     double-bridging.
  *
  * **Hook timing.** The bridge contributes through the
- * `wp_admin_shell_data_plugin` filter at **priority 6** — after
- * `WP_Admin_Shell_Menu_Items::contribute()` (priority 5),
- * `WP_Admin_Shell_Admin_Routes::contribute()` (priority 5), and
- * `WP_Admin_Shell_Dashboard_Widgets::contribute()` (priority 5). The
- * later priority means an explicit `wp_admin_shell_register_menu_item()`
+ * `wp_admin_workspaces_data_plugin` filter at **priority 6** — after
+ * `WP_Admin_Workspaces_Menu_Items::contribute()` (priority 5),
+ * `WP_Admin_Workspaces_Admin_Routes::contribute()` (priority 5), and
+ * `WP_Admin_Workspaces_Dashboard_Widgets::contribute()` (priority 5). The
+ * later priority means an explicit `wp_admin_workspaces_register_menu_item()`
  * call wins on entry-id collision via the idempotency guard.
  *
  * **Core detection.** A static slug list (see `$CORE_SLUGS`) covers
  * every default wp-admin top-level entry plus the well-known submenu
  * scripts. Plugins / sites can extend the skip list via the
- * `wp_admin_shell_classic_menu_core_slugs` filter when they
+ * `wp_admin_workspaces_classic_menu_core_slugs` filter when they
  * additionally ship a custom CPT that the shell mirrors natively.
  *
  * **Menu icon harvesting (#127).** `map_icon()` resolves a
@@ -68,12 +68,12 @@
  * `$GLOBALS['menu']` (the bridge is purely additive — wp-admin's native
  * nav is unaffected).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Classic_Menu_Bridge {
+class WP_Admin_Workspaces_Classic_Menu_Bridge {
 
 	/**
 	 * Default container under which all ingested items + screens land
@@ -136,7 +136,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	 * children ingested with a synthesized parent container so the
 	 * children are still reachable through the bridge.
 	 *
-	 * Expand via the `wp_admin_shell_classic_menu_core_slugs` filter
+	 * Expand via the `wp_admin_workspaces_classic_menu_core_slugs` filter
 	 * when a plugin shell mirrors additional CPT/screens natively.
 	 *
 	 * @var string[]
@@ -175,10 +175,10 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 		'media-new.php',
 		'user-new.php',
 		// The shell's own classic Settings page (`add_options_page` →
-		// `options-general.php?page=wp-admin-shell-workspace`). It's a non-core
+		// `options-general.php?page=wp-admin-workspaces-workspace`). It's a non-core
 		// child of a core parent, so without this skip the bridge would
 		// synthesize an `ingested-*` entry linking back into classic.
-		'wp-admin-shell-workspace',
+		'wp-admin-workspaces-workspace',
 	);
 
 	/**
@@ -369,7 +369,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			return self::$core_slugs_cache;
 		}
 		$filtered = apply_filters(
-			'wp_admin_shell_classic_menu_core_slugs',
+			'wp_admin_workspaces_classic_menu_core_slugs',
 			self::$CORE_SLUGS
 		);
 		if ( ! is_array( $filtered ) ) {
@@ -420,7 +420,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	/**
 	 * Is this slug a known wp-admin core entry that the shell already
 	 * mirrors natively? Filterable via
-	 * `wp_admin_shell_classic_menu_core_slugs`.
+	 * `wp_admin_workspaces_classic_menu_core_slugs`.
 	 *
 	 * @param string $slug
 	 * @return bool
@@ -761,7 +761,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	private static function ensure_container( &$doc ) {
 		if ( ! isset( $doc['menu'][ self::DEFAULT_CONTAINER ] ) || ! is_array( $doc['menu'][ self::DEFAULT_CONTAINER ] ) ) {
 			$doc['menu'][ self::DEFAULT_CONTAINER ] = array(
-				'label'    => __( 'Plugins', 'wp-admin-shell' ),
+				'label'    => __( 'Plugins', 'wp-admin-workspaces' ),
 				'icon'     => 'plugins',
 				'position' => 200,
 				'items'    => array(),
@@ -864,7 +864,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 	/**
 	 * Lowercase + kebab-case a string, collapsing any non-[a-z0-9]
 	 * run to a single `-`. Mirrors
-	 * `WP_Admin_Shell_Dashboard_Widgets::derive_entry_id`'s suffix
+	 * `WP_Admin_Workspaces_Dashboard_Widgets::derive_entry_id`'s suffix
 	 * normalizer.
 	 *
 	 * @param string $value
@@ -923,7 +923,7 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
 			$GLOBALS['submenu'] = $saved_submenu;
 		}
 		// Drain the filtered core-slug memo so tests can register a
-		// new `wp_admin_shell_classic_menu_core_slugs` filter between
+		// new `wp_admin_workspaces_classic_menu_core_slugs` filter between
 		// scenarios and see it take effect on the next scan.
 		self::$core_slugs_cache = null;
 	}
@@ -936,14 +936,14 @@ class WP_Admin_Shell_Classic_Menu_Bridge {
  *   - menu-items shim (priority 5),
  *   - admin-routes shim (priority 5),
  *   - dashboard-widgets shim (priority 5),
- * so an explicit `wp_admin_shell_register_menu_item()` call wins via
+ * so an explicit `wp_admin_workspaces_register_menu_item()` call wins via
  * the idempotency guard (first writer wins on entry id) and a plugin
- * author hooking `wp_admin_shell_data_plugin` at default priority 10
+ * author hooking `wp_admin_workspaces_data_plugin` at default priority 10
  * still wins on top.
  */
 add_filter(
-	'wp_admin_shell_data_plugin',
-	array( 'WP_Admin_Shell_Classic_Menu_Bridge', 'contribute' ),
+	'wp_admin_workspaces_data_plugin',
+	array( 'WP_Admin_Workspaces_Classic_Menu_Bridge', 'contribute' ),
 	6
 );
 
@@ -958,7 +958,7 @@ add_filter(
  * contribute() pass writes) — purely structural, no secrets.
  */
 add_filter(
-	'wp_admin_shell_cache_signals',
+	'wp_admin_workspaces_cache_signals',
 	function ( $signals ) {
 		// Avoid running `scan()` during early requests when neither
 		// global is populated — both null/missing → empty scan → no
@@ -966,7 +966,7 @@ add_filter(
 		if ( ! isset( $GLOBALS['menu'] ) && ! isset( $GLOBALS['submenu'] ) ) {
 			return $signals;
 		}
-		$records = WP_Admin_Shell_Classic_Menu_Bridge::scan();
+		$records = WP_Admin_Workspaces_Classic_Menu_Bridge::scan();
 		if ( ! empty( $records ) ) {
 			$signals['classic_menu_bridge'] = md5( wp_json_encode( $records ) );
 		}

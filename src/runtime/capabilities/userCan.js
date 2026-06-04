@@ -3,7 +3,7 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * userCan — synchronous capability check.
  *
- * Reads from the pre-computed map at `window.wpAdminShell.capabilities`
+ * Reads from the pre-computed map at `window.wpAdminWorkspaces.capabilities`
  * which the PHP enqueue layer populates by walking the resolved config
  * for every declared `capability` field plus the built-in source floors.
  *
@@ -13,14 +13,14 @@ import apiFetch from '@wordpress/api-fetch';
  * surface as inline errors in the consuming app.
  *
  * For caps the runtime can't pre-compute (plugin-driven, dynamic, etc.),
- * use `checkCan(cap)` async — it goes through /wp-admin-shell/v1/can/{cap}.
+ * use `checkCan(cap)` async — it goes through /wp-admin-workspaces/v1/can/{cap}.
  * @param {*} capability
  */
 export function userCan( capability ) {
 	if ( ! capability || typeof capability !== 'string' ) {
 		return true;
 	}
-	const map = window.wpAdminShell?.capabilities;
+	const map = window.wpAdminWorkspaces?.capabilities;
 	if ( ! map || ! ( capability in map ) ) {
 		return true;
 	}
@@ -37,16 +37,16 @@ export async function checkCan( capability ) {
 		return cache.get( capability );
 	}
 	if (
-		window.wpAdminShell?.capabilities &&
-		capability in window.wpAdminShell.capabilities
+		window.wpAdminWorkspaces?.capabilities &&
+		capability in window.wpAdminWorkspaces.capabilities
 	) {
-		const result = !! window.wpAdminShell.capabilities[ capability ];
+		const result = !! window.wpAdminWorkspaces.capabilities[ capability ];
 		cache.set( capability, result );
 		return result;
 	}
 	try {
 		const response = await apiFetch( {
-			path: `/wp-admin-shell/v1/can/${ encodeURIComponent(
+			path: `/wp-admin-workspaces/v1/can/${ encodeURIComponent(
 				capability
 			) }`,
 		} );

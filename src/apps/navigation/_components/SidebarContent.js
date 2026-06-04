@@ -15,7 +15,7 @@ import { useSidebarNavigation } from './SidebarNavigationContext';
  */
 export default function SidebarContent( { screenKey, children } ) {
 	return (
-		<div className="wp-admin-shell-sidebar__content">
+		<div className="wp-admin-workspaces-sidebar__content">
 			<SidebarContentWrapper key={ screenKey }>
 				{ children }
 			</SidebarContentWrapper>
@@ -47,7 +47,7 @@ function SidebarContentWrapper( { children } ) {
 	return (
 		<div
 			ref={ wrapperRef }
-			className={ `wp-admin-shell-sidebar__screen-wrapper${ animationClass }` }
+			className={ `wp-admin-workspaces-sidebar__screen-wrapper${ animationClass }` }
 		>
 			{ children }
 		</div>

@@ -16,7 +16,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Spec §6.4 + V2.M4: regions coordinate via URL state, not a shell-level selection bus. PreviewPaneApp reads the routes block + URL slot at `config.follow` (default `_self`), maps the matched route's `config` to a `core-data` entity (`post-type` + `post-id`), and renders the entity as JSON. Designed for shells whose `detail` region (or any routable region) holds an editor-style app and whose `preview` region wants to mirror what the editor is editing.",
 		"data": {

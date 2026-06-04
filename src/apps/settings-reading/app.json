@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "DataForm over the REST-exposed slice of WordPress's Reading Settings: `show_on_front` (latest posts vs static page), conditional `page_on_front` / `page_for_posts` selects, `posts_per_page`, `posts_per_rss`, and `rss_use_excerpt`. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `reading` panel; shells mount it directly as a Reading screen.",
 		"rebuilds": "settings-reading",

@@ -2,8 +2,8 @@
  * Pure helpers for persisting a DataViews `view` to user preferences —
  * the Screen-Options-equivalent (column visibility, sort, per-page, layout).
  *
- * Storage lives in the shell's `wp_admin_shell_user_prefs` user-meta, written
- * through `POST /wp-admin-shell/v1/user-prefs` (partial deep-merge, `null`
+ * Storage lives in the shell's `wp_admin_workspaces_user_prefs` user-meta, written
+ * through `POST /wp-admin-workspaces/v1/user-prefs` (partial deep-merge, `null`
  * tombstones a key). The blob lives under a top-level `dataViews` key, sub-
  * keyed by `screenId`:
  *

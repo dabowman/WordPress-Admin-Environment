@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "DataForm over the REST-exposed slice of WordPress's Media Settings: thumbnail / medium / large image dimensions (`thumbnail_size_w/h`, `medium_size_w/h`, `large_size_w/h`), the `thumbnail_crop` flag, and `uploads_use_yearmonth_folders`. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. The plugin's `register_setting` shims expose these eight options through `/wp/v2/settings` (they are non-REST in core). Composable host (`core:settings`) mounts this for the `media` panel; shells mount it directly as a Media screen.",
 		"rebuilds": "settings-media",

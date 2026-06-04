@@ -47,43 +47,43 @@ import IframeApp from '../iframe-fallback';
 const BUILTIN_PANELS = [
 	{
 		id: 'general',
-		label: __( 'General', 'wp-admin-shell' ),
+		label: __( 'General', 'wp-admin-workspaces' ),
 		Component: SettingsGeneralApp,
 		capability: 'manage_options',
 	},
 	{
 		id: 'writing',
-		label: __( 'Writing', 'wp-admin-shell' ),
+		label: __( 'Writing', 'wp-admin-workspaces' ),
 		Component: SettingsWritingApp,
 		capability: 'manage_options',
 	},
 	{
 		id: 'reading',
-		label: __( 'Reading', 'wp-admin-shell' ),
+		label: __( 'Reading', 'wp-admin-workspaces' ),
 		Component: SettingsReadingApp,
 		capability: 'manage_options',
 	},
 	{
 		id: 'discussion',
-		label: __( 'Discussion', 'wp-admin-shell' ),
+		label: __( 'Discussion', 'wp-admin-workspaces' ),
 		Component: SettingsDiscussionApp,
 		capability: 'manage_options',
 	},
 	{
 		id: 'permalinks',
-		label: __( 'Permalinks', 'wp-admin-shell' ),
+		label: __( 'Permalinks', 'wp-admin-workspaces' ),
 		iframe: 'options-permalink.php',
 		capability: 'manage_options',
 	},
 	{
 		id: 'media',
-		label: __( 'Media', 'wp-admin-shell' ),
+		label: __( 'Media', 'wp-admin-workspaces' ),
 		Component: SettingsMediaApp,
 		capability: 'manage_options',
 	},
 	{
 		id: 'privacy',
-		label: __( 'Privacy', 'wp-admin-shell' ),
+		label: __( 'Privacy', 'wp-admin-workspaces' ),
 		iframe: 'options-privacy.php',
 		capability: 'manage_options',
 	},
@@ -111,8 +111,11 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 
 	if ( ! activePanel ) {
 		return (
-			<div className="wp-admin-shell-content__empty">
-				{ __( 'No settings panels are available.', 'wp-admin-shell' ) }
+			<div className="wp-admin-workspaces-content__empty">
+				{ __(
+					'No settings panels are available.',
+					'wp-admin-workspaces'
+				) }
 			</div>
 		);
 	}
@@ -121,14 +124,14 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 	const iframeUrl = activePanel.iframe;
 
 	return (
-		<div className="wp-admin-shell-app-settings">
+		<div className="wp-admin-workspaces-app-settings">
 			<Stack
 				direction="row"
 				align="flex-start"
 				gap="xs"
 				style={ { height: '100%' } }
 			>
-				<div className="wp-admin-shell-app-settings__nav">
+				<div className="wp-admin-workspaces-app-settings__nav">
 					<ItemGroup isBordered={ false } isSeparated={ false }>
 						{ panels.map( ( panel ) => (
 							<Item
@@ -146,7 +149,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 						) ) }
 					</ItemGroup>
 				</div>
-				<div className="wp-admin-shell-app-settings__panel">
+				<div className="wp-admin-workspaces-app-settings__panel">
 					{ ( () => {
 						if ( PanelComponent ) {
 							return (

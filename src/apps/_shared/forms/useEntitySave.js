@@ -47,9 +47,10 @@ export function useEntitySave( save, messages = {}, entity = {} ) {
 		[]
 	);
 	const successMessage =
-		messages.success || __( 'Changes saved.', 'wp-admin-shell' );
+		messages.success || __( 'Changes saved.', 'wp-admin-workspaces' );
 	const errorMessage =
-		messages.error || __( 'Failed to save changes.', 'wp-admin-shell' );
+		messages.error ||
+		__( 'Failed to save changes.', 'wp-admin-workspaces' );
 
 	return useCallback( async () => {
 		try {

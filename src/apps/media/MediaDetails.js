@@ -60,8 +60,8 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 	const handleSave = useEntitySave(
 		save,
 		{
-			success: __( 'Media details saved.', 'wp-admin-shell' ),
-			error: __( 'Failed to save media details.', 'wp-admin-shell' ),
+			success: __( 'Media details saved.', 'wp-admin-workspaces' ),
+			error: __( 'Failed to save media details.', 'wp-admin-workspaces' ),
 		},
 		{ kind: 'root', name: 'media', recordId: id }
 	);
@@ -71,7 +71,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 			{
 				id: 'title',
 				type: 'text',
-				label: __( 'Title', 'wp-admin-shell' ),
+				label: __( 'Title', 'wp-admin-workspaces' ),
 				// title is `{ raw, rendered }`; bind to the raw value so the form
 				// edits what the REST `title` field accepts back.
 				getValue: ( { item } ) => item?.title?.raw ?? item?.title ?? '',
@@ -80,12 +80,12 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 			{
 				id: 'alt_text',
 				type: 'text',
-				label: __( 'Alt Text', 'wp-admin-shell' ),
+				label: __( 'Alt Text', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'caption',
 				type: 'text',
-				label: __( 'Caption', 'wp-admin-shell' ),
+				label: __( 'Caption', 'wp-admin-workspaces' ),
 				Edit: { control: 'textarea', rows: 2 },
 				getValue: ( { item } ) =>
 					item?.caption?.raw ?? item?.caption ?? '',
@@ -94,7 +94,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 			{
 				id: 'description',
 				type: 'text',
-				label: __( 'Description', 'wp-admin-shell' ),
+				label: __( 'Description', 'wp-admin-workspaces' ),
 				Edit: { control: 'textarea', rows: 4 },
 				getValue: ( { item } ) =>
 					item?.description?.raw ?? item?.description ?? '',
@@ -127,12 +127,13 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 		try {
 			await navigator.clipboard.writeText( record?.source_url || '' );
 			createSuccessNotice(
-				__( 'URL copied to clipboard.', 'wp-admin-shell' ),
+				__( 'URL copied to clipboard.', 'wp-admin-workspaces' ),
 				{ type: 'snackbar' }
 			);
 		} catch ( err ) {
 			createErrorNotice(
-				err?.message || __( 'Failed to copy URL.', 'wp-admin-shell' ),
+				err?.message ||
+					__( 'Failed to copy URL.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		}
@@ -151,7 +152,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 		try {
 			await deleteEntityRecord( 'root', 'media', id, { force: true } );
 			createSuccessNotice(
-				__( 'Attachment permanently deleted.', 'wp-admin-shell' ),
+				__( 'Attachment permanently deleted.', 'wp-admin-workspaces' ),
 				{ type: 'snackbar' }
 			);
 			onMutated?.();
@@ -159,7 +160,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 		} catch ( err ) {
 			createErrorNotice(
 				err?.message ||
-					__( 'Failed to delete attachment.', 'wp-admin-shell' ),
+					__( 'Failed to delete attachment.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		}
@@ -174,7 +175,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
@@ -185,7 +186,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 			direction="row"
 			align="flex-start"
 			gap="xl"
-			className="wp-admin-shell-app-media__details"
+			className="wp-admin-workspaces-app-media__details"
 		>
 			{ /* Preview slot — own sibling sub-component. #125 image editor lands here. */ }
 			<MediaPreview record={ record } />
@@ -200,7 +201,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 
 				<Text
 					variant="body-sm"
-					className="wp-admin-shell-app__muted wp-admin-shell-app-media__details-url"
+					className="wp-admin-workspaces-app__muted wp-admin-workspaces-app-media__details-url"
 				>
 					{ record.source_url }
 				</Text>
@@ -214,7 +215,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 							size="compact"
 						>
 							<Icon icon={ copy } size={ 16 } />
-							{ __( 'Copy URL', 'wp-admin-shell' ) }
+							{ __( 'Copy URL', 'wp-admin-workspaces' ) }
 						</Button>
 						<DestructiveButton
 							icon={ trash }
@@ -223,7 +224,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 							onClick={ onDelete }
 							size="compact"
 						>
-							{ __( 'Delete', 'wp-admin-shell' ) }
+							{ __( 'Delete', 'wp-admin-workspaces' ) }
 						</DestructiveButton>
 					</Stack>
 					<Button
@@ -233,7 +234,7 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 						loading={ isSaving }
 						disabled={ ! hasEdits || isSaving }
 					>
-						{ __( 'Save', 'wp-admin-shell' ) }
+						{ __( 'Save', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>
@@ -256,14 +257,14 @@ function MediaPreview( { record } ) {
 
 	if ( record.media_type === 'image' ) {
 		return (
-			<div className="wp-admin-shell-app-media__preview">
+			<div className="wp-admin-workspaces-app-media__preview">
 				<img src={ src } alt={ record.alt_text || '' } />
 			</div>
 		);
 	}
 	if ( record.media_type === 'audio' ) {
 		return (
-			<div className="wp-admin-shell-app-media__preview">
+			<div className="wp-admin-workspaces-app-media__preview">
 				{ /* eslint-disable-next-line jsx-a11y/media-has-caption -- user media, no caption track available. */ }
 				<audio controls src={ record.source_url } />
 			</div>
@@ -271,14 +272,14 @@ function MediaPreview( { record } ) {
 	}
 	if ( record.media_type === 'video' ) {
 		return (
-			<div className="wp-admin-shell-app-media__preview">
+			<div className="wp-admin-workspaces-app-media__preview">
 				{ /* eslint-disable-next-line jsx-a11y/media-has-caption -- user media, no caption track available. */ }
 				<video controls src={ record.source_url } />
 			</div>
 		);
 	}
 	return (
-		<div className="wp-admin-shell-app-media__preview wp-admin-shell-app-media__preview--file">
+		<div className="wp-admin-workspaces-app-media__preview wp-admin-workspaces-app-media__preview--file">
 			<Text>{ record.mime_type }</Text>
 		</div>
 	);

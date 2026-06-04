@@ -76,12 +76,12 @@
 				"display": "flex",
 				"flex-direction": "column",
 				"flex-shrink": "0",
-				"inline-size": "var(--wp-admin-shell--chrome--sidebar--width, 280px)",
+				"inline-size": "var(--wp-admin-workspaces--chrome--sidebar--width, 280px)",
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--sidebar--background, transparent)",
-				"color": "var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
+				"background": "var(--wp-admin-workspaces--chrome--sidebar--background, transparent)",
+				"color": "var(--wp-admin-workspaces--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral))"
 			}
 		},
 
@@ -94,11 +94,11 @@
 				"flex-shrink": "0",
 				"inline-size": "100%",
 				"box-sizing": "border-box",
-				"background": "var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral))",
-				"color": "var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral-weak))",
-				"border-block-end": "0px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
-				"padding-block": "var(--wp-admin-shell--chrome--toolbar--padding-block, var(--wpds-dimension-padding-xs))",
-				"padding-inline": "var(--wp-admin-shell--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
+				"background": "var(--wp-admin-workspaces--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral))",
+				"color": "var(--wp-admin-workspaces--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral-weak))",
+				"border-block-end": "0px solid var(--wp-admin-workspaces--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral))",
+				"padding-block": "var(--wp-admin-workspaces--chrome--toolbar--padding-block, var(--wpds-dimension-padding-xs))",
+				"padding-inline": "var(--wp-admin-workspaces--chrome--toolbar--padding-inline, var(--wpds-dimension-padding-lg))"
 			},
 			"regions": {
 				"start": {
@@ -135,10 +135,10 @@
 				"min-inline-size": "0",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--content--card-background, transparent)",
-				"border-radius": "var(--wp-admin-shell--chrome--content--card-radius, var(--wpds-border-radius-lg))",
-				"box-shadow": "var(--wp-admin-shell--chrome--content--card-shadow, var(--wpds-elevation-xs))",
-				"margin": "var(--wp-admin-shell--chrome--content--card-margin, 0)"
+				"background": "var(--wp-admin-workspaces--chrome--content--card-background, transparent)",
+				"border-radius": "var(--wp-admin-workspaces--chrome--content--card-radius, var(--wpds-border-radius-lg))",
+				"box-shadow": "var(--wp-admin-workspaces--chrome--content--card-shadow, var(--wpds-elevation-xs))",
+				"margin": "var(--wp-admin-workspaces--chrome--content--card-margin, 0)"
 			}
 		},
 
@@ -153,9 +153,9 @@
 				"block-size": "100%",
 				"overflow-y": "auto",
 				"overflow-x": "hidden",
-				"background": "var(--wp-admin-shell--chrome--detail--card-background, transparent)",
-				"border-radius": "var(--wp-admin-shell--chrome--detail--card-radius, var(--wpds-border-radius-lg))",
-				"box-shadow": "var(--wp-admin-shell--chrome--detail--card-shadow, var(--wpds-elevation-sm))"
+				"background": "var(--wp-admin-workspaces--chrome--detail--card-background, transparent)",
+				"border-radius": "var(--wp-admin-workspaces--chrome--detail--card-radius, var(--wpds-border-radius-lg))",
+				"box-shadow": "var(--wp-admin-workspaces--chrome--detail--card-shadow, var(--wpds-elevation-sm))"
 			}
 		},
 
@@ -189,16 +189,16 @@
 
 	"default-arrangement": "wp-chrome",
 
-	"script": "wp-admin-shell",
-	"style": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
+	"style": "wp-admin-workspaces",
 
 	"styles": [
 		{
-			"handle": "wp-admin-shell-wpds-tokens",
+			"handle": "wp-admin-workspaces-wpds-tokens",
 			"src": "build/wpds-tokens.css"
 		},
 		{
-			"handle": "wp-admin-shell-dataviews",
+			"handle": "wp-admin-workspaces-dataviews",
 			"src": "build/dataviews.css",
 			"deps": [ "wp-components" ]
 		}

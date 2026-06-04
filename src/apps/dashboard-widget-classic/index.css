@@ -9,7 +9,7 @@
  * is the fidelity path).
  */
 
-.wp-admin-shell-classic-widget {
+.wp-admin-workspaces-classic-widget {
 	display: flex;
 	flex-direction: column;
 	min-block-size: 0;
@@ -17,19 +17,19 @@
 	inline-size: 100%;
 }
 
-.wp-admin-shell-classic-widget__toolbar {
+.wp-admin-workspaces-classic-widget__toolbar {
 	display: flex;
 	justify-content: flex-end;
 	padding-block-end: var( --wpds-dimension-padding-xs );
 }
 
-.wp-admin-shell-classic-widget__body {
+.wp-admin-workspaces-classic-widget__body {
 	flex: 1 1 auto;
 	min-block-size: 0;
 	overflow: auto;
 }
 
-.wp-admin-shell-classic-widget__center {
+.wp-admin-workspaces-classic-widget__center {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -45,21 +45,21 @@
  * Captured classic markup. Let links pick up the themed foreground; keep
  * images responsive so a widget logo doesn't overflow the tile.
  */
-.wp-admin-shell-classic-widget__html {
+.wp-admin-workspaces-classic-widget__html {
 	font-size: var( --wpds-typography-font-size-sm );
 	line-height: 1.5;
 }
 
-.wp-admin-shell-classic-widget__html img {
+.wp-admin-workspaces-classic-widget__html img {
 	max-inline-size: 100%;
 	block-size: auto;
 }
 
-.wp-admin-shell-classic-widget__html a {
+.wp-admin-workspaces-classic-widget__html a {
 	color: var( --wpds-color-fg-interactive-brand );
 }
 
-.wp-admin-shell-classic-widget__iframe {
+.wp-admin-workspaces-classic-widget__iframe {
 	flex: 1 1 auto;
 	inline-size: 100%;
 	min-block-size: 240px;

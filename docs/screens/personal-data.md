@@ -119,7 +119,7 @@ Read via custom SQL in `WP_Privacy_Requests_Table::get_request_counts()` — dir
 - Export ZIP generation is async via WP Cron (`wp_privacy_generate_personal_data_export_file`).
 - Erasure is async via WP Cron (`wp_privacy_personal_data_erasers` callbacks).
 
-Rebuild requires custom shell endpoints (`/wp-admin-shell/v1/privacy-requests/*`) wrapping the existing PHP functions. None of this is in core REST today.
+Rebuild requires custom shell endpoints (`/wp-admin-workspaces/v1/privacy-requests/*`) wrapping the existing PHP functions. None of this is in core REST today.
 
 ### Email content (server-only)
 
@@ -422,8 +422,8 @@ Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all ho
 |---|---|---|
 | Register `core:personal-data-export` AppSource | Medium | Compliance-critical; relatively rarely visited |
 | Register `core:personal-data-erase` AppSource | Medium | Same |
-| Custom REST endpoint `GET /wp-admin-shell/v1/privacy-requests` | High | `user_request` post type is not REST-public; must wrap |
-| Custom REST endpoint `POST /wp-admin-shell/v1/privacy-requests` (create) | High | |
+| Custom REST endpoint `GET /wp-admin-workspaces/v1/privacy-requests` | High | `user_request` post type is not REST-public; must wrap |
+| Custom REST endpoint `POST /wp-admin-workspaces/v1/privacy-requests` (create) | High | |
 | Custom REST endpoint `PATCH .../privacy-requests/{id}` (resend, mark-complete, retry) | High | |
 | Custom REST endpoint `DELETE .../privacy-requests/{id}` | High | |
 | Custom REST endpoint for force-export trigger | Medium | Wraps cron job kickoff |

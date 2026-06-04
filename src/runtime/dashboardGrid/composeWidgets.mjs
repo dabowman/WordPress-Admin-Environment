@@ -5,7 +5,7 @@
  * store.
  *
  * Inputs:
- *   - `manifests`      — `window.wpAdminShell.manifests.apps` (id → app.json)
+ *   - `manifests`      — `window.wpAdminWorkspaces.manifests.apps` (id → app.json)
  *   - `overrides`      — resolved-config `dashboardWidgets` block
  *
  * Output: ordered array of `{ id, title, defaultSize, minSize, position }`.

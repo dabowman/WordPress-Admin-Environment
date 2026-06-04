@@ -6,12 +6,12 @@
  * loader is just `file_get_contents` + `json_decode` plus the empty
  * fallback returned when the shell file is missing or malformed.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Origin_Core {
+class WP_Admin_Workspaces_Origin_Core {
 
 	const ENGINE_ID = 'core:default';
 
@@ -32,7 +32,7 @@ class WP_Admin_Shell_Origin_Core {
 	 * @return array
 	 */
 	public static function load_baseline() {
-		$base = defined( 'WP_ADMIN_SHELL_PATH' ) ? WP_ADMIN_SHELL_PATH : '';
+		$base = defined( 'WP_ADMIN_WORKSPACES_PATH' ) ? WP_ADMIN_WORKSPACES_PATH : '';
 		return self::load( $base . 'shells/' . self::BASELINE_SLUG . '.json' );
 	}
 

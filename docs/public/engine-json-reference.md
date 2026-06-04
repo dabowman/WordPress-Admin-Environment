@@ -4,7 +4,7 @@
 
 The default engine `core:default` ships with the shell plugin alongside `core:single-pane` and `core:desktop`. Alternative engines (plugin-contributed) implement the same contract differently and may ship their own design system, chrome conventions, and arrangement algorithm.
 
-Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_shell_register_engine()`.
+Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_workspaces_register_engine()`.
 
 This reference covers the engine manifest schema (`admin-engine.json`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`.
 
@@ -230,7 +230,7 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 | modes.<name>.regions | Map of region id → state object. State keys (`hidden`, `compact`, etc.) are engine-defined.                                                          | object | —       |
 | modes.<name>.extends | Optional. Inherit from another mode in the catalog. Recursive, cycle-safe, max depth 10.                                                              | string | —       |
 
-Plugins may extend the catalog via the `wp_admin_shell_engine_modes_{engineId}` PHP filter — see [`docs/schema-sketch.md`](../schema-sketch.md#plugin-contributed-modes).
+Plugins may extend the catalog via the `wp_admin_workspaces_engine_modes_{engineId}` PHP filter — see [`docs/schema-sketch.md`](../schema-sketch.md#plugin-contributed-modes).
 
 ## slots
 
@@ -258,7 +258,7 @@ See [`docs/schema-sketch.md#slots`](../schema-sketch.md#slots) for the slot voca
 
 ## menu-renderer
 
-Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_shell_register_menu_renderer( $id, $callback )`. Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
+Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_workspaces_register_menu_renderer( $id, $callback )`. Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
 
 | Property        | Description                                                                                              | Type   | Default |
 |-----------------|----------------------------------------------------------------------------------------------------------|--------|---------|
@@ -276,7 +276,7 @@ Conventional values: `wp-chrome` (sidebar + topbar + content), `tiling-dwindle` 
 
 ## defaultRegions
 
-Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in admin.json — see [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary).
+Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in admin.json — see [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary).
 
 ```json
 {
@@ -328,8 +328,8 @@ Optional list of additional CSS bundles the engine wants enqueued whenever it's 
 ```json
 {
 	"styles": [
-		{ "handle": "wp-admin-shell-wpds-tokens", "src": "build/wpds-tokens.css" },
-		{ "handle": "wp-admin-shell-dataviews-css", "src": "build/dataviews.css", "deps": [ "wp-components" ] }
+		{ "handle": "wp-admin-workspaces-wpds-tokens", "src": "build/wpds-tokens.css" },
+		{ "handle": "wp-admin-workspaces-dataviews-css", "src": "build/dataviews.css", "deps": [ "wp-components" ] }
 	]
 }
 ```

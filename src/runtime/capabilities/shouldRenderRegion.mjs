@@ -13,7 +13,7 @@
  * without standing up React.
  *
  * Caller passes a `capMap` snapshot — the same map the kernel ships to
- * JS via `window.wpAdminShell.capabilities`. The decision mirrors
+ * JS via `window.wpAdminWorkspaces.capabilities`. The decision mirrors
  * `userCan(cap)`'s optimistic policy (`src/runtime/capabilities/userCan.js`):
  *
  *   - region with no `capability`           → render

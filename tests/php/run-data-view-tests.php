@@ -5,10 +5,10 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php`
  *
  * Coverage (3-axis registry restoration):
- *   - `WP_Admin_Shell_Data_Field_Collections::register` validation + readback.
- *   - `wp_admin_shell_register_data_field_collection()` + legacy wrapper.
+ *   - `WP_Admin_Workspaces_Data_Field_Collections::register` validation + readback.
+ *   - `wp_admin_workspaces_register_data_field_collection()` + legacy wrapper.
  *   - `find_for` exact + universal match.
- *   - `WP_Admin_Shell_Data_View_Config::resolve_data_view_triple()` 3-axis lookup.
+ *   - `WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple()` 3-axis lookup.
  *   - `_default` resolution when variant param omitted.
  *   - `extends` chain — single-level + multi-level + cycle + depth-cap.
  *   - `_default` declaring `extends` is rejected (extends ignored).
@@ -26,7 +26,7 @@
  *   - `fieldsRef` resolution against `settings.dataFields`.
  *   - `list_variants()` returns sorted ids with `_default` first.
  *   - Cascade contribution — registered data-field collections enter
- *     `settings.dataFields` via `wp_admin_shell_data_plugin` filter.
+ *     `settings.dataFields` via `wp_admin_workspaces_data_plugin` filter.
  *
  * The harness builds synthetic pre-resolved config trees and calls the
  * resolver directly with `$config` to avoid depending on disk shells.
@@ -59,12 +59,12 @@ class WPAS_Data_View_Test_Runner {
 	}
 }
 
-WP_Admin_Shell_Data_Field_Collections::reset();
-WP_Admin_Shell_Data_View_Config::reset();
+WP_Admin_Workspaces_Data_Field_Collections::reset();
+WP_Admin_Workspaces_Data_View_Config::reset();
 
 // --- Data-field-collection registration -------------------------------------
 
-$id = wp_admin_shell_register_data_field_collection(
+$id = wp_admin_workspaces_register_data_field_collection(
 	'core/post-fields',
 	'postType',
 	'post',
@@ -75,7 +75,7 @@ $id = wp_admin_shell_register_data_field_collection(
 );
 WPAS_Data_View_Test_Runner::assert_eq( 'register returns id', $id, 'core/post-fields' );
 
-$registry = WP_Admin_Shell_Data_Field_Collections::all();
+$registry = WP_Admin_Workspaces_Data_Field_Collections::all();
 WPAS_Data_View_Test_Runner::assert_true(
 	'registry contains registered id',
 	isset( $registry['core/post-fields'] )
@@ -87,14 +87,14 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Universal collection (null name).
-wp_admin_shell_register_data_field_collection(
+wp_admin_workspaces_register_data_field_collection(
 	'core/audit-fields',
 	'postType',
 	null,
 	array( array( 'id' => 'modified', 'type' => 'datetime', 'label' => 'Modified' ) )
 );
 
-$matches = WP_Admin_Shell_Data_Field_Collections::find_for( 'postType', 'post' );
+$matches = WP_Admin_Workspaces_Data_Field_Collections::find_for( 'postType', 'post' );
 WPAS_Data_View_Test_Runner::assert_true(
 	'find_for picks up exact match',
 	isset( $matches['core/post-fields'] )
@@ -106,10 +106,10 @@ WPAS_Data_View_Test_Runner::assert_true(
 
 // --- Validation rejections --------------------------------------------------
 
-$err = wp_admin_shell_register_data_field_collection( '', 'postType', 'post', array() );
+$err = wp_admin_workspaces_register_data_field_collection( '', 'postType', 'post', array() );
 WPAS_Data_View_Test_Runner::assert_wp_error( 'register rejects empty id', $err );
 
-$err = wp_admin_shell_register_data_field_collection( 'x', 'postType', 'post', 'not-an-array' );
+$err = wp_admin_workspaces_register_data_field_collection( 'x', 'postType', 'post', 'not-an-array' );
 WPAS_Data_View_Test_Runner::assert_wp_error( 'register rejects non-array fields', $err );
 
 // --- merge_fields semantics -------------------------------------------------
@@ -122,7 +122,7 @@ $inline = array(
 	array( 'id' => 'status', 'label' => 'Post Status' ),
 	array( 'id' => 'author', 'type' => 'text', 'label' => 'Author' ),
 );
-$merged = WP_Admin_Shell_Data_View_Config::merge_fields( $base, $inline );
+$merged = WP_Admin_Workspaces_Data_View_Config::merge_fields( $base, $inline );
 
 WPAS_Data_View_Test_Runner::assert_eq(
 	'merge keeps base count + appends inline-only ids',
@@ -207,7 +207,7 @@ $synthetic = array(
 );
 
 // Default variant resolves.
-$default_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
+$default_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'resolve_data_view_triple reads _default leaf',
 	$default_resolved['defaultView']['type'],
@@ -225,7 +225,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Variant omitted → defaults to _default.
-$default_implicit = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
+$default_implicit = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'variant omitted defaults to _default',
 	$default_implicit['defaultView']['type'],
@@ -233,7 +233,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Single-level extends chain (drafts extends _default).
-$drafts_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
+$drafts_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'extends — drafts picks up _default defaultView.perPage',
 	$drafts_resolved['defaultView']['perPage'],
@@ -255,7 +255,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 );
 
 // Multi-level chain: compact-drafts → compact → _default.
-$multi_level = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'compact-drafts', $synthetic );
+$multi_level = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'compact-drafts', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'multi-level extends — compact-drafts picks up compact.perPage',
 	$multi_level['defaultView']['perPage'],
@@ -277,7 +277,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 // entry's body (cycle-a's `perPage: 5`), not the would-be parent's
 // (`cycle-b`'s `perPage: 7`). Confirms cycle detection short-circuits
 // before merging anything from the cycle partner.
-$cycle_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'cycle-a', $synthetic );
+$cycle_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'cycle-a', $synthetic );
 WPAS_Data_View_Test_Runner::assert_true(
 	'cycle-a returns a finite array (no infinite loop)',
 	is_array( $cycle_resolved )
@@ -311,7 +311,7 @@ $deep_synthetic = array(
 		),
 	),
 );
-$deep_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'level-12', $deep_synthetic );
+$deep_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'level-12', $deep_synthetic );
 WPAS_Data_View_Test_Runner::assert_true(
 	'depth-cap — chain of 12 returns array without infinite recursion',
 	is_array( $deep_resolved )
@@ -350,7 +350,7 @@ $bad_default_synthetic = array(
 		),
 	),
 );
-$bad_default_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'page', '_default', $bad_default_synthetic );
+$bad_default_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'page', '_default', $bad_default_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'_default declaring extends — own defaultView still resolves',
 	$bad_default_resolved['defaultView']['perPage'],
@@ -362,7 +362,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 );
 
 // Unknown pair returns empty array.
-$missing = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'unknown', '_default', $synthetic );
+$missing = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'unknown', '_default', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'unknown name returns empty array',
 	$missing,
@@ -370,7 +370,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Unknown variant returns empty array.
-$missing_variant = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'nonexistent', $synthetic );
+$missing_variant = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'nonexistent', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'unknown variant returns empty array',
 	$missing_variant,
@@ -378,7 +378,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Empty kind returns empty.
-$empty_kind = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( '', 'post', '_default', $synthetic );
+$empty_kind = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( '', 'post', '_default', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'empty kind returns empty array',
 	$empty_kind,
@@ -401,13 +401,13 @@ $variant_callback = function ( $doc, $kind, $name, $variant ) use ( &$variant_fi
 	return $doc;
 };
 
-add_filter( 'wp_admin_shell_data_view_config_postType_post', $base_callback, 10, 4 );
-add_filter( 'wp_admin_shell_data_view_config_postType_post_drafts', $variant_callback, 10, 4 );
+add_filter( 'wp_admin_workspaces_data_view_config_postType_post', $base_callback, 10, 4 );
+add_filter( 'wp_admin_workspaces_data_view_config_postType_post_drafts', $variant_callback, 10, 4 );
 
 // _default resolution fires base filter only.
 $base_filter_calls    = array();
 $variant_filter_calls = array();
-$base_only = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
+$base_only = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'base filter fires exactly once for _default',
 	count( $base_filter_calls ),
@@ -426,7 +426,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 // drafts resolution fires both filters, in order.
 $base_filter_calls    = array();
 $variant_filter_calls = array();
-$drafts_filtered = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
+$drafts_filtered = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', 'drafts', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'base filter fires once for variant lookup',
 	count( $base_filter_calls ),
@@ -452,14 +452,14 @@ WPAS_Data_View_Test_Runner::assert_true(
 	! empty( $drafts_filtered['_baseFiltered'] ) && ! empty( $drafts_filtered['_variantFiltered'] )
 );
 
-remove_filter( 'wp_admin_shell_data_view_config_postType_post', $base_callback, 10 );
-remove_filter( 'wp_admin_shell_data_view_config_postType_post_drafts', $variant_callback, 10 );
+remove_filter( 'wp_admin_workspaces_data_view_config_postType_post', $base_callback, 10 );
+remove_filter( 'wp_admin_workspaces_data_view_config_postType_post_drafts', $variant_callback, 10 );
 
-WP_Admin_Shell_Data_View_Config::reset();
+WP_Admin_Workspaces_Data_View_Config::reset();
 
 // --- parse_data_view_ref ----------------------------------------------------
 
-$ok_ref = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( 'postType/post/drafts' );
+$ok_ref = WP_Admin_Workspaces_Data_View_Config::parse_data_view_ref( 'postType/post/drafts' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'parse_data_view_ref kind',
 	$ok_ref[0],
@@ -476,28 +476,28 @@ WPAS_Data_View_Test_Runner::assert_eq(
 	'drafts'
 );
 
-$ok_default_ref = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( 'postType/post/_default' );
+$ok_default_ref = WP_Admin_Workspaces_Data_View_Config::parse_data_view_ref( 'postType/post/_default' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'parse_data_view_ref accepts _default variant',
 	$ok_default_ref[2],
 	'_default'
 );
 
-$two_segments = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( 'postType/post' );
+$two_segments = WP_Admin_Workspaces_Data_View_Config::parse_data_view_ref( 'postType/post' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'parse_data_view_ref rejects 2-segment refs',
 	$two_segments,
 	null
 );
 
-$four_segments = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( 'postType/post/drafts/extra' );
+$four_segments = WP_Admin_Workspaces_Data_View_Config::parse_data_view_ref( 'postType/post/drafts/extra' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'parse_data_view_ref rejects 4-segment refs',
 	$four_segments,
 	null
 );
 
-$empty_segments = WP_Admin_Shell_Data_View_Config::parse_data_view_ref( '//drafts' );
+$empty_segments = WP_Admin_Workspaces_Data_View_Config::parse_data_view_ref( '//drafts' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'parse_data_view_ref rejects empty segments',
 	$empty_segments,
@@ -506,7 +506,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 
 // --- Screen DataView resolution: dataViewRef + inference --------------------
 
-$reg = WP_Admin_Shell_Manifest_Registry::instance();
+$reg = WP_Admin_Workspaces_Manifest_Registry::instance();
 $reg->register_app( array(
 	'id'         => 'plugin:wpas-test/screen-dv-posts',
 	'version'    => 1,
@@ -631,7 +631,7 @@ $screen_synthetic = array(
 );
 
 // Screen without ref + without explicit — manifest inference, defaults to _default.
-$base_screen = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts', $screen_synthetic );
+$base_screen = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'screen without ref returns _default via inference',
 	$base_screen['defaultView']['perPage'],
@@ -644,7 +644,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // dataViewRef resolves drafts variant.
-$drafts_screen = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-drafts', $screen_synthetic );
+$drafts_screen = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-drafts', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'dataViewRef resolves drafts filter via extends chain',
 	$drafts_screen['defaultView']['filters'][0]['value'],
@@ -657,7 +657,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // dataViewRef resolves trash with action-array tombstone + append.
-$trash_screen = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-trash', $screen_synthetic );
+$trash_screen = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-trash', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'trash variant — actions count after tombstone + append',
 	count( $trash_screen['actions'] ),
@@ -680,7 +680,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 );
 
 // Explicit dataViewKind/Name/Variant resolves equivalently.
-$explicit_screen = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-explicit-fields', $screen_synthetic );
+$explicit_screen = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-explicit-fields', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'explicit dataViewKind/Name/Variant resolves drafts',
 	$explicit_screen['defaultView']['filters'][0]['value'],
@@ -688,7 +688,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Ref + explicit conflict — ref wins (would-resolve trash if explicit won; resolves drafts).
-$ref_wins = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-ref-wins', $screen_synthetic );
+$ref_wins = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-ref-wins', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'dataViewRef wins over explicit fields',
 	$ref_wins['defaultView']['filters'][0]['value'],
@@ -696,7 +696,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Inline overlay deep-merges with resolved triple.
-$compact = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-drafts-compact', $screen_synthetic );
+$compact = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-drafts-compact', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'inline overlay applies its perPage on top of triple',
 	$compact['defaultView']['perPage'],
@@ -709,14 +709,14 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Tombstone in inline overlay removes top-level key.
-$no_default = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-no-default', $screen_synthetic );
+$no_default = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-no-default', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_true(
 	'null tombstone removes defaultView from merged doc',
 	! isset( $no_default['defaultView'] )
 );
 
 // Invalid dataViewRef → falls back to inference (manifest → _default).
-$bad_ref = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-bad-ref', $screen_synthetic );
+$bad_ref = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-bad-ref', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'invalid dataViewRef falls back to manifest inference _default',
 	$bad_ref['defaultView']['perPage'],
@@ -724,7 +724,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // v2 back-compat — config.variant flows into inference.
-$v2_variant = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'posts-v2-variant', $screen_synthetic );
+$v2_variant = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'posts-v2-variant', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'screen.config.variant (v2 back-compat) resolves drafts via inference',
 	$v2_variant['defaultView']['filters'][0]['value'],
@@ -732,7 +732,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Unknown screen returns empty.
-$nothing = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'no-such', $screen_synthetic );
+$nothing = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'no-such', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'unknown screen id returns empty array',
 	$nothing,
@@ -740,7 +740,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // Empty / non-string screen id returns empty.
-$empty_id = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( '', $screen_synthetic );
+$empty_id = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( '', $screen_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'empty screen id returns empty array',
 	$empty_id,
@@ -780,7 +780,7 @@ $tax_synthetic = array(
 		),
 	),
 );
-$tags = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'tags', $tax_synthetic );
+$tags = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'tags', $tax_synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'config.taxonomy overrides manifest baseline name',
 	$tags['defaultView']['type'],
@@ -825,7 +825,7 @@ $reg->register_app( array(
 	),
 ) );
 
-$injected = WP_Admin_Shell_Data_View_Config::inject_app_baselines( array() );
+$injected = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'baseline injected at settings.dataViews[kind][name][_default]',
 	isset( $injected['settings']['dataViews']['postType']['recipe']['_default'] )
@@ -850,7 +850,7 @@ WPAS_Data_View_Test_Runner::assert_eq(
 );
 
 // admin.json-declared entries win — `_default` already declared survives untouched.
-$prepopulated = WP_Admin_Shell_Data_View_Config::inject_app_baselines( array(
+$prepopulated = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array(
 	'settings' => array(
 		'dataViews' => array(
 			'postType' => array(
@@ -889,7 +889,7 @@ $reg->register_app( array(
 		),
 	),
 ) );
-$flat_injected = WP_Admin_Shell_Data_View_Config::inject_app_baselines( array() );
+$flat_injected = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'flat-shape manifest gets _default baseline',
 	isset( $flat_injected['settings']['dataViews']['postType']['flat']['_default'] )
@@ -908,7 +908,7 @@ $reg->register_app( array(
 	'role'    => 'main',
 	'script'  => 'wpas-test',
 ) );
-$injected_after = WP_Admin_Shell_Data_View_Config::inject_app_baselines( array() );
+$injected_after = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'app without dataView block does not add stray entries',
 	! isset( $injected_after['settings']['dataViews']['no-dataview-app'] )
@@ -923,7 +923,7 @@ $reg->register_app( array(
 	'script'  => 'wpas-test',
 	'dataView' => array( 'kind' => '', 'name' => '' ),
 ) );
-$injected_bad = WP_Admin_Shell_Data_View_Config::inject_app_baselines( array() );
+$injected_bad = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'manifest with empty kind/name skipped',
 	! isset( $injected_bad['settings']['dataViews'][''] )
@@ -931,7 +931,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 
 // --- list_variants ----------------------------------------------------------
 
-$variants = WP_Admin_Shell_Data_View_Config::list_variants( 'postType', 'post', $synthetic );
+$variants = WP_Admin_Workspaces_Data_View_Config::list_variants( 'postType', 'post', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'list_variants returns _default first',
 	$variants[0],
@@ -946,7 +946,7 @@ WPAS_Data_View_Test_Runner::assert_true(
 	in_array( 'compact', $variants, true )
 );
 
-$no_variants = WP_Admin_Shell_Data_View_Config::list_variants( 'postType', 'no-such', $synthetic );
+$no_variants = WP_Admin_Workspaces_Data_View_Config::list_variants( 'postType', 'no-such', $synthetic );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'list_variants returns empty for unknown pair',
 	$no_variants,
@@ -989,7 +989,7 @@ $views_over = array(
 );
 // Tombstones gated to trust-tier origins post-PR 1 (core/engine/plugin/site).
 // Use merge_with_tombstones to model the site-origin contribution path.
-$views_merged = WP_Admin_Shell_Merge::merge_with_tombstones( $views_base, $views_over );
+$views_merged = WP_Admin_Workspaces_Merge::merge_with_tombstones( $views_base, $views_over );
 $mfields = $views_merged['settings']['dataViews']['postType']['post']['_default']['fields'];
 WPAS_Data_View_Test_Runner::assert_eq(
 	'cascade __tombstone removes a field from settings.dataViews.*.fields[]',
@@ -1008,37 +1008,37 @@ WPAS_Data_View_Test_Runner::assert_true(
 
 // --- Duplicate-id rejection ------------------------------------------------
 
-WP_Admin_Shell_Data_Field_Collections::reset();
-$first = wp_admin_shell_register_data_field_collection( 'core/dup', 'postType', 'post', array() );
+WP_Admin_Workspaces_Data_Field_Collections::reset();
+$first = wp_admin_workspaces_register_data_field_collection( 'core/dup', 'postType', 'post', array() );
 WPAS_Data_View_Test_Runner::assert_eq( 'first registration succeeds', $first, 'core/dup' );
-$second = wp_admin_shell_register_data_field_collection( 'core/dup', 'postType', 'post', array() );
+$second = wp_admin_workspaces_register_data_field_collection( 'core/dup', 'postType', 'post', array() );
 WPAS_Data_View_Test_Runner::assert_wp_error( 'duplicate id rejected', $second );
-WP_Admin_Shell_Data_Field_Collections::reset();
+WP_Admin_Workspaces_Data_Field_Collections::reset();
 
 // --- Cascade contribution — registry → settings.dataFields via plugin origin
 
-wp_admin_shell_register_data_field_collection(
+wp_admin_workspaces_register_data_field_collection(
 	'plugin/extra-fields',
 	'postType',
 	'product',
 	array( array( 'id' => 'sku', 'type' => 'text', 'label' => 'SKU' ) )
 );
-$plugin_doc = apply_filters( 'wp_admin_shell_data_plugin', array() );
+$plugin_doc = apply_filters( 'wp_admin_workspaces_data_plugin', array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'plugin origin contains injected dataFields collection',
 	isset( $plugin_doc['settings']['dataFields']['plugin/extra-fields'] )
 );
-WP_Admin_Shell_Data_Field_Collections::reset();
+WP_Admin_Workspaces_Data_Field_Collections::reset();
 
 // --- Implicit cascade load (resolve with $config = null) -------------------
 
-$auto_resolved = WP_Admin_Shell_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default' );
+$auto_resolved = WP_Admin_Workspaces_Data_View_Config::resolve_data_view_triple( 'postType', 'post', '_default' );
 WPAS_Data_View_Test_Runner::assert_true(
 	'resolve_data_view_triple() with null config returns array (cascade auto-load)',
 	is_array( $auto_resolved )
 );
 
-$auto_screen = WP_Admin_Shell_Data_View_Config::resolve_screen_data_view( 'no-such-screen' );
+$auto_screen = WP_Admin_Workspaces_Data_View_Config::resolve_screen_data_view( 'no-such-screen' );
 WPAS_Data_View_Test_Runner::assert_eq(
 	'resolve_screen_data_view() unknown screen returns empty',
 	$auto_screen,
@@ -1047,21 +1047,21 @@ WPAS_Data_View_Test_Runner::assert_eq(
 
 // --- Cache-fingerprint signal — registry mutations contribute to the cache key
 
-WP_Admin_Shell_Data_Field_Collections::reset();
+WP_Admin_Workspaces_Data_Field_Collections::reset();
 
-$baseline_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$baseline_signals = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'cache signals — no data_field_collections key when registry empty',
 	! isset( $baseline_signals['data_field_collections'] )
 );
 
-wp_admin_shell_register_data_field_collection(
+wp_admin_workspaces_register_data_field_collection(
 	'core/cache-fp',
 	'postType',
 	'post',
 	array( array( 'id' => 'sku', 'type' => 'text', 'label' => 'SKU' ) )
 );
-$after_first = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$after_first = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'field-collection registration adds data_field_collections fingerprint',
 	isset( $after_first['data_field_collections'] )
@@ -1069,23 +1069,23 @@ WPAS_Data_View_Test_Runner::assert_true(
 WPAS_Data_View_Test_Runner::assert_eq(
 	'fingerprint matches md5 of all() contents',
 	$after_first['data_field_collections'],
-	md5( wp_json_encode( WP_Admin_Shell_Data_Field_Collections::all() ) )
+	md5( wp_json_encode( WP_Admin_Workspaces_Data_Field_Collections::all() ) )
 );
 
-wp_admin_shell_register_data_field_collection(
+wp_admin_workspaces_register_data_field_collection(
 	'core/cache-fp-2',
 	'postType',
 	'page',
 	array( array( 'id' => 'template', 'type' => 'text', 'label' => 'Template' ) )
 );
-$after_second = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$after_second = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'second registration changes data_field_collections fingerprint',
 	$after_first['data_field_collections'] !== $after_second['data_field_collections']
 );
 
-WP_Admin_Shell_Data_Field_Collections::reset();
-$cleared_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WP_Admin_Workspaces_Data_Field_Collections::reset();
+$cleared_signals = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Data_View_Test_Runner::assert_true(
 	'reset clears data_field_collections fingerprint',
 	! isset( $cleared_signals['data_field_collections'] )

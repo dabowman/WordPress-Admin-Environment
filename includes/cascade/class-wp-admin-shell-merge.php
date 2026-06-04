@@ -26,12 +26,12 @@
  * spec §4.4.1. Tags are stripped before the resolver returns the merged
  * config to consumers.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Merge {
+class WP_Admin_Workspaces_Merge {
 
 	const ORIGIN_KEY = '__origin';
 
@@ -137,10 +137,10 @@ class WP_Admin_Shell_Merge {
 					unset( $out[ $k ] );
 				} elseif ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					_doing_it_wrong(
-						'WP_Admin_Shell_Merge::merge',
+						'WP_Admin_Workspaces_Merge::merge',
 						sprintf(
 							/* translators: %s: key name */
-							esc_html__( 'Consumer-origin (role/user) null tombstone for key "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keys via null. Author your override as an empty / replacement value instead.', 'wp-admin-shell' ),
+							esc_html__( 'Consumer-origin (role/user) null tombstone for key "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keys via null. Author your override as an empty / replacement value instead.', 'wp-admin-workspaces' ),
 							esc_html( (string) $k )
 						),
 						'v3.0'
@@ -261,10 +261,10 @@ class WP_Admin_Shell_Merge {
 				}
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					_doing_it_wrong(
-						'WP_Admin_Shell_Merge::merge_keyed_arrays',
+						'WP_Admin_Workspaces_Merge::merge_keyed_arrays',
 						sprintf(
 							/* translators: %s: entry id */
-							esc_html__( 'Consumer-origin (role/user) __tombstone marker for entry "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keyed-array entries.', 'wp-admin-shell' ),
+							esc_html__( 'Consumer-origin (role/user) __tombstone marker for entry "%s" ignored — only trust-tier origins (core/engine/plugin/site) may drop keyed-array entries.', 'wp-admin-workspaces' ),
 							esc_html( (string) $id )
 						),
 						'v3.0'

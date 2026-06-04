@@ -7,26 +7,26 @@
  * etc.). Screens declare which mode they want via `screens[id].mode`. The
  * resolver flattens the engine's catalog by walking each entry's `extends`
  * chain (depth limit 10, circular-ref guarded), then runs the
- * `wp_admin_shell_engine_modes_{engineId}` filter to let plugins extend
+ * `wp_admin_workspaces_engine_modes_{engineId}` filter to let plugins extend
  * the catalog (the filter contributes through the `plugin` cascade origin,
  * conceptually).
  *
  * The resolver does NOT perform the per-screen merge — that's done in JS
  * at render time so the active screen's `regions` override flows in without
  * a server round trip. The PHP side only produces the flat, plugin-extended
- * engine catalog that ships in the inline `window.wpAdminShell.config` payload
+ * engine catalog that ships in the inline `window.wpAdminWorkspaces.config` payload
  * under `engineModes`.
  *
  * See:
  *   - docs/schema-sketch.md §Modes
  *   - docs/core-default-engine.md
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Modes {
+class WP_Admin_Workspaces_Modes {
 
 	const MAX_EXTENDS_DEPTH = 10;
 
@@ -103,7 +103,7 @@ class WP_Admin_Shell_Modes {
 		}
 
 		// Plugin filter — additive: plugins ship extra modes via
-		// `wp_admin_shell_engine_modes_{engineId}`. Filter fires with the
+		// `wp_admin_workspaces_engine_modes_{engineId}`. Filter fires with the
 		// already-flattened catalog; plugin-contributed entries may also
 		// declare `extends`, so re-flatten the result against itself.
 		$engine_id = isset( $engine_manifest['id'] ) && is_string( $engine_manifest['id'] )
@@ -121,7 +121,7 @@ class WP_Admin_Shell_Modes {
 	 *
 	 * Plugins extend an engine's catalog by adding entries via:
 	 *
-	 *     add_filter( 'wp_admin_shell_engine_modes_{engineId}', function( $modes ) {
+	 *     add_filter( 'wp_admin_workspaces_engine_modes_{engineId}', function( $modes ) {
 	 *         $modes[ 'kiosk' ] = [ 'label' => 'Kiosk', 'regions' => [ ... ] ];
 	 *         return $modes;
 	 *     } );
@@ -134,7 +134,7 @@ class WP_Admin_Shell_Modes {
 	 * @return array
 	 */
 	public static function apply_plugin_filter( $modes, $engine_id ) {
-		$filter_name = 'wp_admin_shell_engine_modes_' . $engine_id;
+		$filter_name = 'wp_admin_workspaces_engine_modes_' . $engine_id;
 		$filtered    = apply_filters( $filter_name, $modes, $engine_id );
 		if ( ! is_array( $filtered ) ) {
 			return $modes;

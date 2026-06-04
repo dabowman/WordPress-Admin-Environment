@@ -19,12 +19,12 @@
  * <section class="…__tiers">. Add breathing room so it doesn't crowd the inline
  * explanation notice above it.
  */
-.wp-admin-shell-unavailable-via-api__tiers {
+.wp-admin-workspaces-unavailable-via-api__tiers {
 	margin-top: var( --wpds-dimension-padding-md );
 }
 
-.wp-admin-shell-unavailable-via-api__code,
-.wp-admin-shell-unavailable-via-api__agent-prompt {
+.wp-admin-workspaces-unavailable-via-api__code,
+.wp-admin-workspaces-unavailable-via-api__agent-prompt {
 	/* Wrap long content rather than overflowing the notice. */
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
@@ -34,7 +34,7 @@
 	min-width: 0;
 }
 
-.wp-admin-shell-unavailable-via-api__code {
+.wp-admin-workspaces-unavailable-via-api__code {
 	font-family: var( --wpds-typography-font-family-mono );
 	font-size: var( --wpds-typography-font-size-sm );
 	padding: var( --wpds-dimension-padding-xs )
@@ -49,7 +49,7 @@
  * "Copied!" button-label flip is visual-only; this carries the message to
  * screen readers without occupying layout.
  */
-.wp-admin-shell-unavailable-via-api__status {
+.wp-admin-workspaces-unavailable-via-api__status {
 	position: absolute;
 	width: 1px;
 	height: 1px;

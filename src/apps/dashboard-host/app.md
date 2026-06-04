@@ -44,7 +44,7 @@ The host reads three inputs:
 
 1. **`config.screenId`** — injected by the v3 compiler when a route mounts this app (the compiler always adds `screenId` to the route's config). Tells the host which screen to look up.
 2. **`config.screens[screenId].apps[]`** — the workspace's screen definition. The host filters this array to entries carrying `slot: "grid"`.
-3. **`window.wpAdminShell.manifests.apps`** — the per-mount app manifest. Each widget app's `slotHints` block supplies size + position defaults.
+3. **`window.wpAdminWorkspaces.manifests.apps`** — the per-mount app manifest. Each widget app's `slotHints` block supplies size + position defaults.
 
 `composeScreenWidgets({ screen, manifests })` builds the resolved tile list. Per-entry `size` / `position` override the manifest's `slotHints` per-property at the install layer.
 
@@ -73,7 +73,7 @@ Tiles set inline `grid-column: span N` / `grid-row: span M` from their resolved 
 
 ## Programmatic registration
 
-`wp_admin_shell_register_dashboard_widget($id, $args)` survives untouched as a public API. Under the hood it contributes a screen-app entry into `screens[dashboard-widgets].apps[]` (or whatever `$args['screen']` names), pointing at `$id` with `slot: "grid"` and any supplied `size` / `position`.
+`wp_admin_workspaces_register_dashboard_widget($id, $args)` survives untouched as a public API. Under the hood it contributes a screen-app entry into `screens[dashboard-widgets].apps[]` (or whatever `$args['screen']` names), pointing at `$id` with `slot: "grid"` and any supplied `size` / `position`.
 
 Two flavors as before:
 
@@ -95,7 +95,7 @@ A rebuild needs:
 ## Known limitations
 
 - **No drag-to-reorder.** Widget order is config-driven. Authors reorder via the entry order in `apps[]` and `position` overrides.
-- **Classic dashboard widgets surface via the #134 bridge.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Shell_Dashboard_Bridge` into `slot: "grid"` tiles mounting `core:dashboard-widget-classic` (captured HTML + per-tile iframe fallback). Widgets relying on enqueued JS degrade to static HTML — see that app's `app.md` for the JS-loss limitation. The host renders these tiles like any other grid entry; no host-side special-casing.
+- **Classic dashboard widgets surface via the #134 bridge.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Workspaces_Dashboard_Bridge` into `slot: "grid"` tiles mounting `core:dashboard-widget-classic` (captured HTML + per-tile iframe fallback). Widgets relying on enqueued JS degrade to static HTML — see that app's `app.md` for the JS-loss limitation. The host renders these tiles like any other grid entry; no host-side special-casing.
 - **No min-height enforcement at the widget level.** `minSize` clamps `defaultSize` but the CSS grid's `grid-auto-rows: minmax(160px, auto)` sets the floor uniformly. A widget asking for `minSize: { w: 1, h: 2 }` gets 2 grid-row spans, not 2× the row-min.
 - **Single grid per screen.** The host expects to be one of the apps in a single screen. Multiple grids on the same screen (e.g., split-view with two separate widget regions) aren't modeled — declare a second screen if needed.
 
@@ -103,7 +103,7 @@ A rebuild needs:
 
 The host **is** the workspace dashboard home now — the retired `core:dashboard` monolith (`src/apps/dashboard/`, deleted in #133) was folded into this host plus the four default-tile apps above. Remaining gaps versus wp-admin's dashboard:
 
-- **Classic dashboard-widget bridge (#134) lands them as captured-HTML tiles.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Shell_Dashboard_Bridge` and mounted as `core:dashboard-widget-classic` tiles. JS-driven widgets degrade to static HTML with a per-tile iframe fidelity fallback (see `src/apps/dashboard-widget-classic/app.md`).
+- **Classic dashboard-widget bridge (#134) lands them as captured-HTML tiles.** Plugin widgets registered via `wp_add_dashboard_widget()` are harvested by `WP_Admin_Workspaces_Dashboard_Bridge` and mounted as `core:dashboard-widget-classic` tiles. JS-driven widgets degrade to static HTML with a per-tile iframe fidelity fallback (see `src/apps/dashboard-widget-classic/app.md`).
 - **No "Welcome" / Site Health / Events-and-News widgets.** Only the four canonical tiles ship by default (the classic Events-and-News / Site Health boxes are core widgets the bridge skips, not yet ported).
 - **At-a-Glance counts don't deep-link** to their filtered list screens yet.
 - **No drag-to-reorder** — widget order is config-driven via `apps[]` order + `position` overrides.

@@ -53,7 +53,7 @@ function tripleKey( kind, name, variant ) {
  * @param {string} screenId
  */
 async function fetchScreenDataView( screenId ) {
-	const path = addQueryArgs( '/wp-admin-shell/v1/data-view', {
+	const path = addQueryArgs( '/wp-admin-workspaces/v1/data-view', {
 		screen: screenId,
 	} );
 	const response = await apiFetch( { path } );
@@ -68,7 +68,7 @@ async function fetchScreenDataView( screenId ) {
  * @param {string} variant
  */
 async function fetchDataViewTriple( kind, name, variant ) {
-	const path = addQueryArgs( '/wp-admin-shell/v1/data-view', {
+	const path = addQueryArgs( '/wp-admin-workspaces/v1/data-view', {
 		kind,
 		name,
 		variant,
@@ -87,7 +87,7 @@ function readInlineScreen( screenId ) {
 		return cache.get( key );
 	}
 	const hydrated = hydrateInlineScreenDataView(
-		typeof window !== 'undefined' ? window.wpAdminShell?.config : null,
+		typeof window !== 'undefined' ? window.wpAdminWorkspaces?.config : null,
 		screenId
 	);
 	if ( hydrated ) {
@@ -109,7 +109,7 @@ function readInlineTriple( kind, name, variant ) {
 		return cache.get( key );
 	}
 	const inline =
-		typeof window !== 'undefined' ? window.wpAdminShell?.config : null;
+		typeof window !== 'undefined' ? window.wpAdminWorkspaces?.config : null;
 	if ( ! inline ) {
 		return null;
 	}
@@ -133,9 +133,9 @@ function readInlineTriple( kind, name, variant ) {
  *   triple-keyed lookup. Hits `settings.dataViews[kind][name][variant]`
  *   directly with `extends` chain + `fieldsRef` resolution.
  *
- * Hot path: synchronous read from `window.wpAdminShell.config`. Falls
- * through to `/wp-admin-shell/v1/data-view?screen=<id>` or
- * `/wp-admin-shell/v1/data-view?kind=X&name=Y&variant=Z` when the
+ * Hot path: synchronous read from `window.wpAdminWorkspaces.config`. Falls
+ * through to `/wp-admin-workspaces/v1/data-view?screen=<id>` or
+ * `/wp-admin-workspaces/v1/data-view?kind=X&name=Y&variant=Z` when the
  * snapshot doesn't carry the requested entry.
  *
  * @param {string|{kind:string,name:string,variant?:string}} arg                Screen id (string) or triple object.

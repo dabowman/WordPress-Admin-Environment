@@ -71,7 +71,7 @@
 
 		"menu-renderer": {
 			"$ref": "#/$defs/menuRenderer",
-			"description": "Strategy this engine uses to render the resolved workspace `menu` tree. Required for any engine that wants screens to appear in a menu; omitting the field is equivalent to declaring `\"none\"` — the engine ignores the `menu` block and authors must drive navigation through the `regions` / `routes` escape hatches instead. The four core strategies are `sidebar-drilldown` (flagship `core:default`: items with children become slide-in sub-screens with a back link), `sidebar-tree` (expandable tree nodes), `dock` (`core:desktop`: tiles in a dock rail; containers become folders), `drawer` (`core:single-pane`: collapsible drawer with accordion sections for containers). Plugin-namespaced renderer ids (`plugin:{slug}/{name}`) are accepted — the engine's render path consults the runtime renderer registry populated via `wp_admin_shell_register_menu_renderer()`. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup. See docs/core-default-engine.md."
+			"description": "Strategy this engine uses to render the resolved workspace `menu` tree. Required for any engine that wants screens to appear in a menu; omitting the field is equivalent to declaring `\"none\"` — the engine ignores the `menu` block and authors must drive navigation through the `regions` / `routes` escape hatches instead. The four core strategies are `sidebar-drilldown` (flagship `core:default`: items with children become slide-in sub-screens with a back link), `sidebar-tree` (expandable tree nodes), `dock` (`core:desktop`: tiles in a dock rail; containers become folders), `drawer` (`core:single-pane`: collapsible drawer with accordion sections for containers). Plugin-namespaced renderer ids (`plugin:{slug}/{name}`) are accepted — the engine's render path consults the runtime renderer registry populated via `wp_admin_workspaces_register_menu_renderer()`. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup. See docs/core-default-engine.md."
 		},
 
 		"slots": {
@@ -94,7 +94,7 @@
 				}
 			},
 			"additionalProperties": false,
-			"description": "Catalog of named chrome modes a screen may request via `screens[id].mode`. Every engine ships at least a `default` mode — the schema enforces its presence here. The four conventional modes from the v1 core vocabulary are `default` (full chrome), `focus` (strip nav + reduce toolbar), `takeover` (hide all workspace chrome), `modal` (overlay on top of current screen; chrome unchanged). Engines may add their own — `core:desktop` adds windowed-mode flavors; `core:single-pane` adds drawer-state variants. Modes may chain via `extends` to inherit and partially override another mode in the same catalog (depth limit 10; circular references produce a runtime diagnostic). The resolver pipeline reads `screens[id].mode`, walks the extends chain bottom-up with deep-merge, deep-merges the screen's own `regions` override on top, then hands the resolved region-state map to each region's wrapper for paint. Apps stay mounted across mode changes — visibility is paint-only (matches `core:persists-across-navigation` semantics). Plugins extend an engine's catalog via the `wp_admin_shell_engine_modes_{engineId}` filter at the plugin cascade origin. See docs/core-default-engine.md."
+			"description": "Catalog of named chrome modes a screen may request via `screens[id].mode`. Every engine ships at least a `default` mode — the schema enforces its presence here. The four conventional modes from the v1 core vocabulary are `default` (full chrome), `focus` (strip nav + reduce toolbar), `takeover` (hide all workspace chrome), `modal` (overlay on top of current screen; chrome unchanged). Engines may add their own — `core:desktop` adds windowed-mode flavors; `core:single-pane` adds drawer-state variants. Modes may chain via `extends` to inherit and partially override another mode in the same catalog (depth limit 10; circular references produce a runtime diagnostic). The resolver pipeline reads `screens[id].mode`, walks the extends chain bottom-up with deep-merge, deep-merges the screen's own `regions` override on top, then hands the resolved region-state map to each region's wrapper for paint. Apps stay mounted across mode changes — visibility is paint-only (matches `core:persists-across-navigation` semantics). Plugins extend an engine's catalog via the `wp_admin_workspaces_engine_modes_{engineId}` filter at the plugin cascade origin. See docs/core-default-engine.md."
 		},
 
 		"templates": {
@@ -139,7 +139,7 @@
 					"handle": {
 						"type": "string",
 						"pattern": "^[a-z][a-z0-9-]*$",
-						"description": "WordPress style handle. Must be unique across all enqueued engines. Convention: `<plugin-slug>-<engine-name>-<asset>` (e.g. `wp-admin-shell-wpds-tokens`)."
+						"description": "WordPress style handle. Must be unique across all enqueued engines. Convention: `<plugin-slug>-<engine-name>-<asset>` (e.g. `wp-admin-workspaces-wpds-tokens`)."
 					},
 					"src": {
 						"type": "string",
@@ -187,7 +187,7 @@
 		"menuRenderer": {
 			"type": "string",
 			"pattern": "^(sidebar-drilldown|sidebar-tree|dock|drawer|none|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$",
-			"description": "Menu-renderer identifier. One of the four core strategies (`sidebar-drilldown`, `sidebar-tree`, `dock`, `drawer`), the explicit opt-out (`none`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`). Plugin renderers must be registered at runtime via `wp_admin_shell_register_menu_renderer()` before the engine activates, or the engine's render path falls back to `none` with a dev-mode warning. The core strategies match named conventions (drilldown / tree / dock / drawer) so authors writing menus author once and any engine using one of those strategies renders the same tree natively. Renderers may impose their own depth limits (default convention: 3); items deeper than the limit are flattened or dropped per renderer policy."
+			"description": "Menu-renderer identifier. One of the four core strategies (`sidebar-drilldown`, `sidebar-tree`, `dock`, `drawer`), the explicit opt-out (`none`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`). Plugin renderers must be registered at runtime via `wp_admin_workspaces_register_menu_renderer()` before the engine activates, or the engine's render path falls back to `none` with a dev-mode warning. The core strategies match named conventions (drilldown / tree / dock / drawer) so authors writing menus author once and any engine using one of those strategies renders the same tree natively. Renderers may impose their own depth limits (default convention: 3); items deeper than the limit are flattened or dropped per renderer policy."
 		},
 
 		"engineSlot": {

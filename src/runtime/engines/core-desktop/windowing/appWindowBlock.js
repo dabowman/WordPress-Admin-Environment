@@ -2,7 +2,7 @@
  * App-manifest `window` block lookup.
  *
  * The PHP manifest registry serializes each app's `app.json` to
- * `window.wpAdminShell.manifests.apps[id]`. This helper reads the
+ * `window.wpAdminWorkspaces.manifests.apps[id]`. This helper reads the
  * optional `window` block — `{ defaultSize, minSize, multiInstance,
  * icon, chrome }` — and applies sensible fallbacks. Apps without a
  * `window` block get the kernel-default size/min pair.
@@ -21,7 +21,7 @@ function readManifest( appId ) {
 	if ( ! appId || typeof appId !== 'string' ) {
 		return null;
 	}
-	const apps = window?.wpAdminShell?.manifests?.apps;
+	const apps = window?.wpAdminWorkspaces?.manifests?.apps;
 	if ( ! apps || typeof apps !== 'object' ) {
 		return null;
 	}

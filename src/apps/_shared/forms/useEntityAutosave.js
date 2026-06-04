@@ -138,7 +138,7 @@ export function useEntityAutosave( {
 		} catch ( err ) {
 			setSaveStatus( 'error' );
 			setSaveError(
-				err?.message || __( 'Save failed.', 'wp-admin-shell' )
+				err?.message || __( 'Save failed.', 'wp-admin-workspaces' )
 			);
 		}
 	}, [ save ] );
@@ -170,7 +170,7 @@ export function useEntityAutosave( {
 		} catch ( err ) {
 			setSaveStatus( 'error' );
 			setSaveError(
-				err?.message || __( 'Save failed.', 'wp-admin-shell' )
+				err?.message || __( 'Save failed.', 'wp-admin-workspaces' )
 			);
 		}
 	}, [ editedRecord, postId, restBase, hasPendingNonContentEdit ] );

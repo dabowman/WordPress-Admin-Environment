@@ -2,33 +2,33 @@
 /**
  * Two-layer cache for the cascade resolver (plan §M2.7).
  *
- *   1. Request-scope: WP_Object_Cache group `wp_admin_shell`. One read
+ *   1. Request-scope: WP_Object_Cache group `wp_admin_workspaces`. One read
  *      per request after the first; persistent object caches (Redis,
  *      Memcached) further hold it across requests.
- *   2. Cross-request transient: `wp_admin_shell_resolved_<hash>`. Falls
+ *   2. Cross-request transient: `wp_admin_workspaces_resolved_<hash>`. Falls
  *      back to options when no persistent cache is configured.
  *
  * The cache key is a hash over signals that uniquely identify each
  * origin's content:
  *   - core:   bundled JSON file mtimes (shells dir)
  *   - plugin: active shell slug + that file's mtime
- *   - site:   `wp_admin_shell_site_config` option contents
- *   - role:   current user's role(s) + `wp_admin_shell_role_config` option
- *   - user:   current user's id + `wp_admin_shell_user_prefs` user meta
+ *   - site:   `wp_admin_workspaces_site_config` option contents
+ *   - role:   current user's role(s) + `wp_admin_workspaces_role_config` option
+ *   - user:   current user's id + `wp_admin_workspaces_user_prefs` user meta
  *
  * Any origin write (option update, user-meta update, file edit) results
  * in a different hash, so cache invalidation is automatic. Explicit
  * `flush()` is exposed for option-update hooks that want to be defensive.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Cache {
+class WP_Admin_Workspaces_Cache {
 
-	const GROUP          = 'wp_admin_shell';
-	const TRANSIENT_BASE = 'wp_admin_shell_resolved_';
+	const GROUP          = 'wp_admin_workspaces';
+	const TRANSIENT_BASE = 'wp_admin_workspaces_resolved_';
 	const TTL_SECONDS    = 300; // 5 minutes; short because invalidation is hash-driven anyway.
 
 	public static function get( $key ) {
@@ -77,7 +77,7 @@ class WP_Admin_Shell_Cache {
 	/**
 	 * Compute a stable cache key over every origin's signal source.
 	 *
-	 * Filter `wp_admin_shell_cache_signals` lets in-process contributors
+	 * Filter `wp_admin_workspaces_cache_signals` lets in-process contributors
 	 * (programmatic shim registries, runtime-computed origins) inject
 	 * their own fingerprints so the cached tree invalidates when those
 	 * inputs change. Default signal set covers disk + option + user-meta
@@ -92,19 +92,19 @@ class WP_Admin_Shell_Cache {
 			// wp-content/admin.json override signal (mtime:size) — edits to
 			// the file invalidate the cached tree automatically, including
 			// a same-second malformed→fixed edit (size disambiguates).
-			'admin_json'  => class_exists( 'WP_Admin_Shell_Origin_File' ) ? WP_Admin_Shell_Origin_File::signal() : '0:0',
-			'site_opt'    => self::option_signal( 'wp_admin_shell_site_config' ),
-			'role_opt'    => self::option_signal( 'wp_admin_shell_role_config' ),
+			'admin_json'  => class_exists( 'WP_Admin_Workspaces_Origin_File' ) ? WP_Admin_Workspaces_Origin_File::signal() : '0:0',
+			'site_opt'    => self::option_signal( 'wp_admin_workspaces_site_config' ),
+			'role_opt'    => self::option_signal( 'wp_admin_workspaces_role_config' ),
 			'user_id'     => get_current_user_id(),
-			'user_prefs'  => self::user_meta_signal( 'wp_admin_shell_user_prefs' ),
+			'user_prefs'  => self::user_meta_signal( 'wp_admin_workspaces_user_prefs' ),
 			'user_roles'  => self::current_user_roles(),
 		);
-		$signals = apply_filters( 'wp_admin_shell_cache_signals', $signals, $context );
+		$signals = apply_filters( 'wp_admin_workspaces_cache_signals', $signals, $context );
 		return substr( md5( wp_json_encode( $signals ) ), 0, 16 );
 	}
 
 	private static function shells_mtime() {
-		$dir = WP_ADMIN_SHELL_PATH . 'shells/';
+		$dir = WP_ADMIN_WORKSPACES_PATH . 'shells/';
 		if ( ! is_dir( $dir ) ) {
 			return 0;
 		}
@@ -147,29 +147,29 @@ class WP_Admin_Shell_Cache {
 }
 
 // Defensive flush hooks — anything that writes a cascade origin invalidates.
-add_action( 'update_option_wp_admin_shell_active_shell', array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'update_option_wp_admin_shell_site_config',  array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'update_option_wp_admin_shell_role_config',   array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_workspaces_active_shell', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_workspaces_site_config',  array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_workspaces_role_config',   array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 add_action( 'updated_user_meta', function ( $meta_id, $object_id, $meta_key ) {
-	if ( $meta_key === 'wp_admin_shell_user_prefs' ) {
-		WP_Admin_Shell_Cache::flush();
+	if ( $meta_key === 'wp_admin_workspaces_user_prefs' ) {
+		WP_Admin_Workspaces_Cache::flush();
 	}
 }, 10, 3 );
 
 // Plugin activation/deactivation invalidates the cache so freshly-
-// hooked `wp_admin_shell_data_*` filters or sources contributed by
+// hooked `wp_admin_workspaces_data_*` filters or sources contributed by
 // the activated plugin take effect on the next page load. The
 // `activated_plugin` / `deactivated_plugin` actions fire for every
 // plugin (not just ours); the cost of an extra flush during plugin
 // management is well below the cost of a plugin author seeing stale
 // cache and filing a bug.
-add_action( 'activated_plugin',   array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'deactivated_plugin', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'activated_plugin',   array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'deactivated_plugin', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 
 // Theme switch can change source registrations and capability surfaces.
-add_action( 'switch_theme', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'switch_theme', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 
 // User role changes affect cap precomputation + role-origin reads.
-add_action( 'set_user_role',    array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'add_user_role',    array( 'WP_Admin_Shell_Cache', 'flush' ) );
-add_action( 'remove_user_role', array( 'WP_Admin_Shell_Cache', 'flush' ) );
+add_action( 'set_user_role',    array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'add_user_role',    array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'remove_user_role', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );

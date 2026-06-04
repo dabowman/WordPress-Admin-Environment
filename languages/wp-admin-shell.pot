@@ -9,137 +9,137 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
-"X-Domain: wp-admin-shell\n"
+"X-Domain: wp-admin-workspaces\n"
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:105
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:105
 msgid "Admin route \"static_data\" must be an array when provided."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:247
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:247
 msgid "Admin route %s declared \"gc_time\". The shell does not implement TanStack Router cache GC; the value is accepted and ignored."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:59
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:59
 msgid "Admin route path must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:66
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:66
 msgid "Admin route path %s does not match the route pattern (leading slash, alnum/underscore/hyphen/curly-brace/asterisk segments)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:72
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:72
 msgid "Admin route args must be an array."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:78
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:78
 msgid "Admin route requires a non-empty \"app\" arg."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:85
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:85
 msgid "Admin route %s is already registered. Use a different path."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-admin-routes.php:96
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:96
 msgid "Admin route \"config\" must be an array when provided."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-classic-menu-bridge.php:601
+#: includes/cascade/class-wp-admin-workspaces-classic-menu-bridge.php:601
 msgid "Plugins"
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-dashboard-widgets.php:87
+#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:87
 msgid "Dashboard widget id must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-dashboard-widgets.php:97
+#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:97
 msgid "Dashboard widget id %s must be namespaced (core:* or plugin:slug/name)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:183
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:183
 msgid "Data field collection %1$s declared fieldsModule \"%2$s\". The shell does not resolve fieldsModule in this release; the value is reserved for future native script-modules support."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:55
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:55
 msgid "Data field collection id must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:61
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:61
 msgid "Data field collection kind must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:67
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:67
 msgid "Data field collection name must be a non-empty string or null (universal)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:73
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:73
 msgid "Data field collection fields must be an array."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:80
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:80
 msgid "Data field collection %s is already registered. Use a different id."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-field-collections.php:94
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:94
 msgid "fieldsModule must be a non-empty string or omitted."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-view-config.php:294
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:294
 msgid "settings.dataViews.%1$s.%2$s._default declared `extends`. The implicit base cannot extend a sibling; ignoring."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-view-config.php:314
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:314
 msgid "settings.dataViews `extends` chain %1$s exceeded max depth %2$d; returning base entry without inheritance."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-data-view-config.php:329
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:329
 msgid "settings.dataViews `extends` chain %1$s contained a cycle; returning base entry without inheritance."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:106
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:106
 msgid "Menu item %s is already registered. Use a different id."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:130
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:130
 msgid "Menu item \"label\" must be a non-empty string when set."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:138
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:138
 msgid "Menu item \"href\" value %s uses a scheme that is not in the allowlist (http/https/ftp/ftps/mailto/tel/sms or relative `/`/`#`)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:145
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:145
 msgid "Menu item \"parent\" must be a non-empty string id when set."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:152
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:152
 msgid "Menu item \"position\" must be an integer or null."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:639
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:639
 msgid "Menu item %1$s declared parent %2$s but no such item exists in the menu tree. Falling back to root."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:93
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:93
 msgid "Menu item id must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-menu-items.php:99
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:99
 msgid "Menu item args must be an array."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-merge.php:143
+#: includes/cascade/class-wp-admin-workspaces-merge.php:143
 msgid "Consumer-origin (role/user) null tombstone for key \"%s\" ignored — only trust-tier origins (core/engine/plugin/site) may drop keys via null. Author your override as an empty / replacement value instead."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-merge.php:267
+#: includes/cascade/class-wp-admin-workspaces-merge.php:267
 msgid "Consumer-origin (role/user) __tombstone marker for entry \"%s\" ignored — only trust-tier origins (core/engine/plugin/site) may drop keyed-array entries."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-shell-preload.php:176
+#: includes/cascade/class-wp-admin-workspaces-preload.php:176
 msgid "WP Admin Shell preload skipped %1$s: %2$s"
 msgstr ""
 
-#: includes/origins/class-wp-admin-shell-origin-file.php:235
+#: includes/origins/class-wp-admin-workspaces-origin-file.php:235
 msgid "Ignoring %1$s — %2$s. Falling back to the wp-admin-default baseline."
 msgstr ""
 
@@ -853,7 +853,7 @@ msgstr ""
 msgid "Reload now"
 msgstr ""
 
-#: src/apps/settings-workspace/index.js:28 wp-admin-shell.php:384
+#: src/apps/settings-workspace/index.js:28 wp-admin-workspaces.php:384
 msgid "Activate WP Admin Workspace"
 msgstr ""
 
@@ -869,7 +869,7 @@ msgstr ""
 msgid "Failed to save workspace setting."
 msgstr ""
 
-#: src/apps/settings-workspace/index.js:80 wp-admin-shell.php:379
+#: src/apps/settings-workspace/index.js:80 wp-admin-workspaces.php:379
 msgid "Workspace"
 msgstr ""
 
@@ -1231,38 +1231,38 @@ msgstr ""
 msgid "Failed to load app."
 msgstr ""
 
-#: wp-admin-shell.php:1002
+#: wp-admin-workspaces.php:1002
 msgid "Site address (front-end URL)."
 msgstr ""
 
-#: wp-admin-shell.php:1008
+#: wp-admin-workspaces.php:1008
 msgid "Allow new user registration."
 msgstr ""
 
-#: wp-admin-shell.php:1014
+#: wp-admin-workspaces.php:1014
 msgid "Default role for new users."
 msgstr ""
 
-#: wp-admin-shell.php:1057
+#: wp-admin-workspaces.php:1057
 msgid "UTC"
 msgstr ""
 
-#: wp-admin-shell.php:1090
+#: wp-admin-workspaces.php:1090
 msgid "Manual offsets"
 msgstr ""
 
-#: wp-admin-shell.php:348 wp-admin-shell.php:349 wp-admin-shell.php:374
+#: wp-admin-workspaces.php:348 wp-admin-workspaces.php:349 wp-admin-workspaces.php:374
 msgid "WP Admin Shell"
 msgstr ""
 
-#: wp-admin-shell.php:386
+#: wp-admin-workspaces.php:386
 msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic."
 msgstr ""
 
-#: wp-admin-shell.php:51
+#: wp-admin-workspaces.php:51
 msgid "WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated."
 msgstr ""
 
-#: wp-admin-shell.php:659
+#: wp-admin-workspaces.php:659
 msgid "Unknown shell: \"%s\". The previous active shell was kept."
 msgstr ""

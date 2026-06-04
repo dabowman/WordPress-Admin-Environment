@@ -222,7 +222,7 @@ N/A.
 - Custom POST handler at `/wp-admin/options-permalink.php`.
 - Nonce: `update-permalink`.
 - After save, redirect to `options-permalink.php?settings-updated=true`.
-- For shell rebuild: implement a custom REST endpoint (`/wp-admin-shell/v1/settings/permalinks`) that wraps the same logic — set values via `WP_Rewrite` setters, call `flush_rewrite_rules()`, return a structured result with `{ writable: bool, server: 'apache'|'iis7'|'nginx'|'caddy', rules: string|null, message: string }`.
+- For shell rebuild: implement a custom REST endpoint (`/wp-admin-workspaces/v1/settings/permalinks`) that wraps the same logic — set values via `WP_Rewrite` setters, call `flush_rewrite_rules()`, return a structured result with `{ writable: bool, server: 'apache'|'iis7'|'nginx'|'caddy', rules: string|null, message: string }`.
 
 ---
 

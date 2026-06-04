@@ -15,46 +15,46 @@ import { navigate } from '../../runtime/routing/router';
 const TOOLS = [
 	{
 		id: 'site-health',
-		title: __( 'Site Health', 'wp-admin-shell' ),
+		title: __( 'Site Health', 'wp-admin-workspaces' ),
 		description: __(
 			'Check that your site is running on the latest WordPress and that key services are reachable.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		path: '/tools/site-health',
 	},
 	{
 		id: 'import',
-		title: __( 'Import', 'wp-admin-shell' ),
+		title: __( 'Import', 'wp-admin-workspaces' ),
 		description: __(
 			'Pull content into this site from another WordPress install or a third-party platform.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		path: '/tools/import',
 	},
 	{
 		id: 'export',
-		title: __( 'Export', 'wp-admin-shell' ),
+		title: __( 'Export', 'wp-admin-workspaces' ),
 		description: __(
 			'Download an XML archive of posts, pages, comments, custom fields, terms, and authors.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		path: '/tools/export',
 	},
 	{
 		id: 'export-personal-data',
-		title: __( 'Export personal data', 'wp-admin-shell' ),
+		title: __( 'Export personal data', 'wp-admin-workspaces' ),
 		description: __(
 			'Generate a privacy-compliant export of a user’s personal data on request.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		path: '/tools/export-personal-data',
 	},
 	{
 		id: 'erase-personal-data',
-		title: __( 'Erase personal data', 'wp-admin-shell' ),
+		title: __( 'Erase personal data', 'wp-admin-workspaces' ),
 		description: __(
 			'Delete a user’s personal data on request.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		path: '/tools/erase-personal-data',
 	},
@@ -62,16 +62,16 @@ const TOOLS = [
 
 export default function ToolsApp() {
 	return (
-		<div className="wp-admin-shell-app-tools wp-admin-shell-app--inset">
+		<div className="wp-admin-workspaces-app-tools wp-admin-workspaces-app--inset">
 			<Stack direction="column" gap="xl">
 				<Stack direction="column" gap="xs">
 					<Text variant="heading-xl" render={ <h1 /> }>
-						{ __( 'Tools', 'wp-admin-shell' ) }
+						{ __( 'Tools', 'wp-admin-workspaces' ) }
 					</Text>
 					<Text variant="body-md">
 						{ __(
 							'Routine maintenance tasks. Each opens inside the workspace; some are presented as the classic WordPress screen.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</Text>
 				</Stack>
@@ -99,7 +99,7 @@ export default function ToolsApp() {
 										variant="outline"
 										onClick={ () => navigate( tool.path ) }
 									>
-										{ __( 'Open', 'wp-admin-shell' ) }
+										{ __( 'Open', 'wp-admin-workspaces' ) }
 									</Button>
 								</Stack>
 							</Card.Content>

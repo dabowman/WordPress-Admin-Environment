@@ -36,7 +36,7 @@
 | **Type filter counts** | List table view links have no counts in REST; admin derives from `wp_count_attachments()` (PHP) | Counts on each option, e.g. "Images (12)" (index.js:91-98 + `withElementCounts`) | ✅ full | Shell actually **exceeds** classic grid here (grid mode shows no counts) |
 | **Date filter** | `months_dropdown('attachment')` → `?m=YYYYMM` (`extra_tablenav():239`) | None | ❌ missing | REST `after`/`before` params exist (posts-controller:2983, 3014) — achievable |
 | **Author filter** | Click author link → `?author={id}` (`column_author():545`) | None | ❌ missing | REST `author[]` param (posts-controller:2996) — achievable |
-| **"Mine" filter** | `?attachment-filter=mine` (`get_views():183`) | None | ❌ missing | REST `author=<currentUserId>` — achievable (`window.wpAdminShell.userId`) |
+| **"Mine" filter** | `?attachment-filter=mine` (`get_views():183`) | None | ❌ missing | REST `author=<currentUserId>` — achievable (`window.wpAdminWorkspaces.userId`) |
 | **"Unattached" filter** | `?attachment-filter=detached` → `post_parent = 0` (`get_views():181`; constructor:52) | None | ❌ missing | REST `parent[]=0` → maps to `post_parent__in` (posts-controller:256) — achievable |
 | **Trash filter/view** | Only when `MEDIA_TRASH` constant defined (`get_views():189-195`) | None | ⚪ n/a | Off by default; media has no trash without the opt-in constant |
 | **Pagination** | `WP_List_Table` pager; per-page via Screen Options (`upload.php:364`) | Prev / Next + "X / Y" (index.js:317-347) | 🟡 partial | Fixed `per_page:40`, no jump-to-page, **not URL-driven** (refresh → page 1) |

@@ -3,7 +3,7 @@
  * and the workspace's explicit `regions` block (the v3 escape hatch).
  *
  * Workspace declarations win per-field over engine defaults — the same
- * deep-merge contract the cascade `wp_admin_shell_data_*` filters expect.
+ * deep-merge contract the cascade `wp_admin_workspaces_data_*` filters expect.
  *
  * @param {Object} engineDefaults   Engine manifest `defaultRegions`.
  * @param {Object} workspaceRegions Workspace `regions` block (escape hatch).

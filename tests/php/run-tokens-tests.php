@@ -6,8 +6,8 @@
  *
  * Coverage:
  *   - Core baseline (`core.tokens.json`) loads
- *   - `wp_admin_shell_plugin_tokens` filter contributes plugin tokens
- *   - `wp_admin_shell_site_tokens` option contributes site tokens
+ *   - `wp_admin_workspaces_plugin_tokens` filter contributes plugin tokens
+ *   - `wp_admin_workspaces_site_tokens` option contributes site tokens
  *   - Theme `tokens.json` contributes theme tokens (skipped if no theme)
  *   - Origins deep-merge: site > theme > plugin > core
  *   - Cache hit returns same array
@@ -47,15 +47,15 @@ $T = 'WPAS_Tokens_Test_Runner';
 
 // Reset cascade state between assertions.
 function wpas_tokens_reset() {
-	delete_option( 'wp_admin_shell_site_tokens' );
-	remove_all_filters( 'wp_admin_shell_plugin_tokens' );
-	WP_Admin_Shell_Tokens::flush();
+	delete_option( 'wp_admin_workspaces_site_tokens' );
+	remove_all_filters( 'wp_admin_workspaces_plugin_tokens' );
+	WP_Admin_Workspaces_Tokens::flush();
 }
 
 echo "\n— core.tokens.json baseline —\n";
 {
 	wpas_tokens_reset();
-	$tokens = WP_Admin_Shell_Tokens::resolve();
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_true( 'tokens is associative array', is_array( $tokens ) && ! empty( $tokens ) );
 	$T::assert_true( 'core color tree present', isset( $tokens['color']['$type'] ) );
 	$T::assert_eq( 'core color $type', 'color', $tokens['color']['$type'] );
@@ -65,7 +65,7 @@ echo "\n— core.tokens.json baseline —\n";
 echo "\n— plugin filter origin —\n";
 {
 	wpas_tokens_reset();
-	add_filter( 'wp_admin_shell_plugin_tokens', function () {
+	add_filter( 'wp_admin_workspaces_plugin_tokens', function () {
 		return array(
 			'plugin' => array(
 				'$type'  => 'color',
@@ -73,7 +73,7 @@ echo "\n— plugin filter origin —\n";
 			),
 		);
 	} );
-	$tokens = WP_Admin_Shell_Tokens::resolve();
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_true( 'plugin contribution merged', isset( $tokens['plugin']['extra']['$value'] ) );
 	$T::assert_eq( 'plugin extra value', '#abc123', $tokens['plugin']['extra']['$value'] );
 	$T::assert_true( 'core baseline still present', isset( $tokens['color']['brand']['500'] ) );
@@ -82,7 +82,7 @@ echo "\n— plugin filter origin —\n";
 echo "\n— site option origin overrides plugin —\n";
 {
 	wpas_tokens_reset();
-	add_filter( 'wp_admin_shell_plugin_tokens', function () {
+	add_filter( 'wp_admin_workspaces_plugin_tokens', function () {
 		return array(
 			'color' => array(
 				'$type' => 'color',
@@ -90,13 +90,13 @@ echo "\n— site option origin overrides plugin —\n";
 			),
 		);
 	} );
-	update_option( 'wp_admin_shell_site_tokens', array(
+	update_option( 'wp_admin_workspaces_site_tokens', array(
 		'color' => array(
 			'$type' => 'color',
 			'brand' => array( '500' => array( '$value' => '#zzzzzz' ) ),
 		),
 	) );
-	$tokens = WP_Admin_Shell_Tokens::resolve();
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_eq(
 		'site value wins over plugin/core',
 		'#zzzzzz',
@@ -107,12 +107,12 @@ echo "\n— site option origin overrides plugin —\n";
 echo "\n— deep merge keeps unrelated branches —\n";
 {
 	wpas_tokens_reset();
-	update_option( 'wp_admin_shell_site_tokens', array(
+	update_option( 'wp_admin_workspaces_site_tokens', array(
 		'color' => array(
 			'brand' => array( '500' => array( '$value' => '#site' ) ),
 		),
 	) );
-	$tokens = WP_Admin_Shell_Tokens::resolve();
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_eq( 'site overrode brand.500', '#site', $tokens['color']['brand']['500']['$value'] );
 	$T::assert_true(
 		'core color.brand.600 preserved through deep merge',
@@ -127,14 +127,14 @@ echo "\n— deep merge keeps unrelated branches —\n";
 echo "\n— cache —\n";
 {
 	wpas_tokens_reset();
-	$first = WP_Admin_Shell_Tokens::resolve();
-	add_filter( 'wp_admin_shell_plugin_tokens', function () {
+	$first = WP_Admin_Workspaces_Tokens::resolve();
+	add_filter( 'wp_admin_workspaces_plugin_tokens', function () {
 		return array( 'late' => array( '$value' => 'wins after flush' ) );
 	} );
-	$cached = WP_Admin_Shell_Tokens::resolve();
+	$cached = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_true( 'cache hit ignored late filter (no flush)', ! isset( $cached['late'] ) );
-	WP_Admin_Shell_Tokens::flush();
-	$fresh = WP_Admin_Shell_Tokens::resolve();
+	WP_Admin_Workspaces_Tokens::flush();
+	$fresh = WP_Admin_Workspaces_Tokens::resolve();
 	$T::assert_true( 'flush() picks up late filter', isset( $fresh['late'] ) );
 }
 

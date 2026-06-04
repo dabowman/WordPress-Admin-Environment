@@ -50,7 +50,7 @@ class WPAS_Shape_Test_Runner {
 
 $T          = 'WPAS_Shape_Test_Runner';
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 $user = get_user_by( 'login', 'admin' ) ?: get_user_by( 'id', 1 );
 wp_set_current_user( $user->ID );
@@ -99,11 +99,11 @@ function wpas_is_valid_app_ref( $ref ) {
 
 foreach ( $shells as $slug ) {
 	echo "\n— Shell: $slug —\n";
-	update_option( 'wp_admin_shell_active_shell', $slug );
-	WP_Admin_Shell_Cache::flush();
-	WP_Admin_Shell_Resolver::reset_request_memo();
+	update_option( 'wp_admin_workspaces_active_shell', $slug );
+	WP_Admin_Workspaces_Cache::flush();
+	WP_Admin_Workspaces_Resolver::reset_request_memo();
 
-	$config = wp_admin_shell_get_active_config();
+	$config = wp_admin_workspaces_get_active_config();
 
 	// All bundled shells are v3-shape. The resolver serializes the
 	// author-shape doc (`workspace` / `screens` / `menu` / `settings` /
@@ -178,9 +178,9 @@ foreach ( $shells as $slug ) {
 }
 
 // Reset.
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
-WP_Admin_Shell_Cache::flush();
-WP_Admin_Shell_Resolver::reset_request_memo();
+update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+WP_Admin_Workspaces_Cache::flush();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
 
 echo "\n— Summary —\n";
 echo 'PASS: ' . $T::$pass . '  FAIL: ' . $T::$fail . "\n";

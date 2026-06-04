@@ -1,11 +1,11 @@
 /* Grid + table thumbnail cell. */
-.wp-admin-shell-app-media__thumb {
+.wp-admin-workspaces-app-media__thumb {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
 }
 
-.wp-admin-shell-app-media__file-icon {
+.wp-admin-workspaces-app-media__file-icon {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -21,23 +21,23 @@
 }
 
 /* MediaDetails (host-agnostic) — preview slot + form. */
-.wp-admin-shell-app-media__details {
+.wp-admin-workspaces-app-media__details {
 	min-width: 0;
 }
 
-.wp-admin-shell-app-media__preview {
+.wp-admin-workspaces-app-media__preview {
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-app-media__preview img,
-.wp-admin-shell-app-media__preview video {
+.wp-admin-workspaces-app-media__preview img,
+.wp-admin-workspaces-app-media__preview video {
 	max-width: 300px;
 	max-height: 300px;
 	object-fit: contain;
 	border-radius: var(--wpds-border-radius-md);
 }
 
-.wp-admin-shell-app-media__preview--file {
+.wp-admin-workspaces-app-media__preview--file {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -47,6 +47,6 @@
 	border-radius: var(--wpds-border-radius-md);
 }
 
-.wp-admin-shell-app-media__details-url {
+.wp-admin-workspaces-app-media__details-url {
 	word-break: break-all;
 }

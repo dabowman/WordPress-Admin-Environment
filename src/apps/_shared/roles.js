@@ -10,11 +10,11 @@ import { __ } from '@wordpress/i18n';
  * "promote to a shared location only when a second consumer appears").
  */
 export const STANDARD_ROLE_LABELS = {
-	administrator: __( 'Administrator', 'wp-admin-shell' ),
-	editor: __( 'Editor', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	contributor: __( 'Contributor', 'wp-admin-shell' ),
-	subscriber: __( 'Subscriber', 'wp-admin-shell' ),
+	administrator: __( 'Administrator', 'wp-admin-workspaces' ),
+	editor: __( 'Editor', 'wp-admin-workspaces' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
+	contributor: __( 'Contributor', 'wp-admin-workspaces' ),
+	subscriber: __( 'Subscriber', 'wp-admin-workspaces' ),
 };
 
 /**

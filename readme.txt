@@ -56,7 +56,7 @@ instead.
 == Installation ==
 
 1. Activate the **Gutenberg** plugin.
-2. Upload `wp-admin-shell.zip` via **Plugins → Add New → Upload Plugin**, or copy the
+2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
 3. Activate **WP Admin Shell**.
 4. To turn the workspace on, drop a valid `admin.json` at `wp-content/admin.json`

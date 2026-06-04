@@ -5,11 +5,11 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-preload-tests.php`
  *
  * Coverage:
- *   - `WP_Admin_Shell_Preload::normalize_entry` accepts strings + 2-tuples,
+ *   - `WP_Admin_Workspaces_Preload::normalize_entry` accepts strings + 2-tuples,
  *     rejects malformed shapes (number, object, bad verb, missing leading slash).
  *   - `collect_from_origins` concatenates additively across cascade origins.
  *   - Duplicate `path|method` pairs dedupe across origins (first occurrence wins).
- *   - Per-origin `wp_admin_shell_data_{origin}` filters can mutate the
+ *   - Per-origin `wp_admin_workspaces_data_{origin}` filters can mutate the
  *     preload list before collection.
  *   - `hydrate` actually invokes `rest_preload_api_request` (counted via
  *     `rest_pre_dispatch`) and returns a non-empty cache for known routes.
@@ -57,50 +57,50 @@ if ( ! empty( $admin_ids ) ) {
 
 WPAS_Preload_Test_Runner::assert_eq(
 	'string entry → [path, GET]',
-	WP_Admin_Shell_Preload::normalize_entry( '/wp/v2/users/me' ),
+	WP_Admin_Workspaces_Preload::normalize_entry( '/wp/v2/users/me' ),
 	array( '/wp/v2/users/me', 'GET' )
 );
 WPAS_Preload_Test_Runner::assert_eq(
 	'tuple entry → [path, OPTIONS]',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/settings', 'OPTIONS' ) ),
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/settings', 'OPTIONS' ) ),
 	array( '/wp/v2/settings', 'OPTIONS' )
 );
 WPAS_Preload_Test_Runner::assert_eq(
 	'tuple entry — lowercase verb uppercased',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/posts', 'get' ) ),
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/posts', 'get' ) ),
 	array( '/wp/v2/posts', 'GET' )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects missing leading slash',
-	WP_Admin_Shell_Preload::normalize_entry( 'wp/v2/users/me' )
+	WP_Admin_Workspaces_Preload::normalize_entry( 'wp/v2/users/me' )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects empty string',
-	WP_Admin_Shell_Preload::normalize_entry( '' )
+	WP_Admin_Workspaces_Preload::normalize_entry( '' )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects integer',
-	WP_Admin_Shell_Preload::normalize_entry( 42 )
+	WP_Admin_Workspaces_Preload::normalize_entry( 42 )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects assoc-shape entry',
-	WP_Admin_Shell_Preload::normalize_entry( array( 'url' => '/wp/v2/users/me', 'method' => 'GET' ) )
+	WP_Admin_Workspaces_Preload::normalize_entry( array( 'url' => '/wp/v2/users/me', 'method' => 'GET' ) )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects 1-tuple',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/users/me' ) )
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/users/me' ) )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects 3-tuple',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/users/me', 'GET', 'extra' ) )
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/users/me', 'GET', 'extra' ) )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects unknown verb',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/users/me', 'POST' ) )
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/users/me', 'POST' ) )
 );
 WPAS_Preload_Test_Runner::assert_null(
 	'rejects non-string method',
-	WP_Admin_Shell_Preload::normalize_entry( array( '/wp/v2/users/me', 1 ) )
+	WP_Admin_Workspaces_Preload::normalize_entry( array( '/wp/v2/users/me', 1 ) )
 );
 
 // --- collect_from_origins — single origin ----------------------------------
@@ -113,7 +113,7 @@ $origins_one = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$collected_one = WP_Admin_Shell_Preload::collect_from_origins( $origins_one );
+$collected_one = WP_Admin_Workspaces_Preload::collect_from_origins( $origins_one );
 WPAS_Preload_Test_Runner::assert_eq(
 	'single origin preload preserved',
 	$collected_one,
@@ -133,7 +133,7 @@ $origins_multi = array(
 	'role'   => array(),
 	'user'   => array( 'preload' => array( array( '/wp/v2/users/me', 'GET' ) ) ),
 );
-$collected_multi = WP_Admin_Shell_Preload::collect_from_origins( $origins_multi );
+$collected_multi = WP_Admin_Workspaces_Preload::collect_from_origins( $origins_multi );
 
 WPAS_Preload_Test_Runner::assert_eq(
 	'multi-origin concatenated, dedup drops user-origin repeat',
@@ -158,7 +158,7 @@ $origins_methods = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$collected_methods = WP_Admin_Shell_Preload::collect_from_origins( $origins_methods );
+$collected_methods = WP_Admin_Workspaces_Preload::collect_from_origins( $origins_methods );
 WPAS_Preload_Test_Runner::assert_eq(
 	'distinct verbs on same path both kept',
 	count( $collected_methods ),
@@ -182,7 +182,7 @@ $origins_messy = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$collected_messy = WP_Admin_Shell_Preload::collect_from_origins( $origins_messy );
+$collected_messy = WP_Admin_Workspaces_Preload::collect_from_origins( $origins_messy );
 WPAS_Preload_Test_Runner::assert_eq(
 	'malformed entries skipped, valid neighbors survive',
 	$collected_messy,
@@ -201,7 +201,7 @@ $origin_filter = function ( $doc ) {
 	$doc['preload'][] = '/wp/v2/categories';
 	return $doc;
 };
-add_filter( 'wp_admin_shell_data_plugin', $origin_filter );
+add_filter( 'wp_admin_workspaces_data_plugin', $origin_filter );
 
 $origins_filtered = array(
 	'core'   => array(),
@@ -211,7 +211,7 @@ $origins_filtered = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$collected_filtered = WP_Admin_Shell_Preload::collect_from_origins( $origins_filtered );
+$collected_filtered = WP_Admin_Workspaces_Preload::collect_from_origins( $origins_filtered );
 
 WPAS_Preload_Test_Runner::assert_eq(
 	'per-origin filter contribution lands in collected list',
@@ -221,7 +221,7 @@ WPAS_Preload_Test_Runner::assert_eq(
 		array( '/wp/v2/categories', 'GET' ),
 	)
 );
-remove_filter( 'wp_admin_shell_data_plugin', $origin_filter );
+remove_filter( 'wp_admin_workspaces_data_plugin', $origin_filter );
 
 // --- hydrate calls rest_preload_api_request -------------------------------
 
@@ -234,7 +234,7 @@ $counter        = function ( $result, $server, $request ) use ( &$dispatch_count
 };
 add_filter( 'rest_pre_dispatch', $counter, 10, 3 );
 
-$cache = WP_Admin_Shell_Preload::hydrate( array(
+$cache = WP_Admin_Workspaces_Preload::hydrate( array(
 	array( '/wp/v2/users/me', 'GET' ),
 	array( '/wp/v2/settings', 'OPTIONS' ),
 ) );
@@ -258,7 +258,7 @@ WPAS_Preload_Test_Runner::assert_true(
 );
 
 // Empty input → empty cache, no fatals.
-$empty_cache = WP_Admin_Shell_Preload::hydrate( array() );
+$empty_cache = WP_Admin_Workspaces_Preload::hydrate( array() );
 WPAS_Preload_Test_Runner::assert_eq(
 	'hydrate empty list → empty cache',
 	$empty_cache,
@@ -278,11 +278,11 @@ $inject_filter = function ( $doc ) {
 	$doc['preload'] = array( '/wp/v2/users/me' );
 	return $doc;
 };
-add_filter( 'wp_admin_shell_data_plugin', $inject_filter );
+add_filter( 'wp_admin_workspaces_data_plugin', $inject_filter );
 
-WP_Admin_Shell_Preload::inject();
+WP_Admin_Workspaces_Preload::inject();
 
-remove_filter( 'wp_admin_shell_data_plugin', $inject_filter );
+remove_filter( 'wp_admin_workspaces_data_plugin', $inject_filter );
 
 $inline_after = wp_scripts()->get_data( 'wp-api-fetch', 'after' );
 $inline_str   = is_array( $inline_after ) ? implode( "\n", $inline_after ) : (string) $inline_after;

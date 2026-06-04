@@ -19,7 +19,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "root",
 		"name": "theme",
@@ -66,7 +66,7 @@
 		"icon": "layout"
 	},
 	"documentation": {
-		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the shell's custom `/wp-admin-shell/v1/activate-theme` endpoint (gated on `switch_themes`); on failure it surfaces an error snackbar. The Details action opens a modal with full description + version + author + theme-site link.",
+		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the shell's custom `/wp-admin-workspaces/v1/activate-theme` endpoint (gated on `switch_themes`); on failure it surfaces an error snackbar. The Details action opens a modal with full description + version + author + theme-site link.",
 		"rebuilds": "themes",
 		"data": {
 			"reads": [
@@ -105,7 +105,7 @@
 			],
 			"writes": [
 				{
-					"source": "/wp-admin-shell/v1/activate-theme",
+					"source": "/wp-admin-workspaces/v1/activate-theme",
 					"via": "api-fetch",
 					"operation": "custom",
 					"purpose": "Switch the active theme via the shell's custom endpoint.",
@@ -135,7 +135,7 @@
 		"interactions": [
 			{
 				"trigger": "Activate row action",
-				"effect": "POST `/wp-admin-shell/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme` and show a success snackbar. On failure show an error snackbar with the decoded WP_Error message.",
+				"effect": "POST `/wp-admin-workspaces/v1/activate-theme` with `{ stylesheet }`; on success invalidate `root/theme` and show a success snackbar. On failure show an error snackbar with the decoded WP_Error message.",
 				"guards": [
 					"item.status === 'inactive'"
 				]
@@ -162,7 +162,7 @@
 			},
 			{
 				"concern": "no-core-rest-theme-switch",
-				"note": "WordPress core REST does not expose a theme-switch operation (upstream parity #143). The shell ships a custom `/wp-admin-shell/v1/activate-theme` endpoint (`WP_Admin_Shell_Themes_REST`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`); rebuilds must provide the equivalent server-side hook."
+				"note": "WordPress core REST does not expose a theme-switch operation (upstream parity #143). The shell ships a custom `/wp-admin-workspaces/v1/activate-theme` endpoint (`WP_Admin_Workspaces_Themes_REST`, gated on `switch_themes`, validates the stylesheet via `wp_get_theme()` then calls `switch_theme()`); rebuilds must provide the equivalent server-side hook."
 			},
 			{
 				"concern": "error-surfacing",

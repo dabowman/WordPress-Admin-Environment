@@ -28,7 +28,7 @@ import { injectChromeHide } from '../_shared/iframe/chromeHide.mjs';
  * `includes/engines/core-desktop/chromeless-bridge.php`):
  *
  *   - **Dirty-state.** The bridge relays `core/editor`'s
- *     `isEditedPostDirty()` up as `wp-admin-shell-dirty-state`; we feed
+ *     `isEditedPostDirty()` up as `wp-admin-workspaces-dirty-state`; we feed
  *     it into `useDirtyState` so a sidebar click is guarded like any
  *     native app's unsaved-changes state (the manifest declares
  *     `core:dirty-state` + `core:block-navigation-on-dirty`).
@@ -147,7 +147,10 @@ export default function EditorApp( { config = {}, regionId } ) {
 				if ( ! cancelled ) {
 					setError(
 						err?.message ||
-							__( 'Failed to create draft.', 'wp-admin-shell' )
+							__(
+								'Failed to create draft.',
+								'wp-admin-workspaces'
+							)
 					);
 					setIsCreating( false );
 				}
@@ -163,13 +166,13 @@ export default function EditorApp( { config = {}, regionId } ) {
 
 	// Parent-side chromeless-bridge listener. The bridge inside the
 	// iframe (injected for any same-origin iframe admin page) posts
-	// in-iframe link clicks up as `wp-admin-shell-admin-link` /
+	// in-iframe link clicks up as `wp-admin-workspaces-admin-link` /
 	// `-external-link`, and `core/editor` dirty transitions as
-	// `wp-admin-shell-dirty-state`. Origin- + source-pinned to the
+	// `wp-admin-workspaces-dirty-state`. Origin- + source-pinned to the
 	// editor iframe.
 	useEffect( () => {
 		const shell =
-			typeof window !== 'undefined' ? window.wpAdminShell : null;
+			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
 		const bridgeAdminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
 		const routes = ( shell && shell.adminRoutes ) || {};
 		return installIframeBridge( {
@@ -287,56 +290,58 @@ export default function EditorApp( { config = {}, regionId } ) {
 
 	if ( error ) {
 		return (
-			<div className="wp-admin-shell-app-editor">
-				<div className="wp-admin-shell-app-editor__toolbar">
+			<div className="wp-admin-workspaces-app-editor">
+				<div className="wp-admin-workspaces-app-editor__toolbar">
 					<Button
 						onClick={ () => navigate( backRoute ) }
 						variant="minimal"
 					>
 						<Icon icon={ arrowLeft } size={ 16 } />
-						{ __( 'Back to list', 'wp-admin-shell' ) }
+						{ __( 'Back to list', 'wp-admin-workspaces' ) }
 					</Button>
 				</div>
-				<div className="wp-admin-shell-content__empty">{ error }</div>
+				<div className="wp-admin-workspaces-content__empty">
+					{ error }
+				</div>
 			</div>
 		);
 	}
 
 	if ( isCreating || ! postId ) {
 		return (
-			<div className="wp-admin-shell-app-editor">
-				<div className="wp-admin-shell-app-editor__loading">
+			<div className="wp-admin-workspaces-app-editor">
+				<div className="wp-admin-workspaces-app-editor__loading">
 					<Spinner />
 				</div>
 			</div>
 		);
 	}
 
-	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const editorUrl = `${ adminUrl }post.php?post=${ postId }&action=edit`;
 
 	return (
-		<div className="wp-admin-shell-app-editor">
-			<div className="wp-admin-shell-app-editor__toolbar">
+		<div className="wp-admin-workspaces-app-editor">
+			<div className="wp-admin-workspaces-app-editor__toolbar">
 				<Button
 					onClick={ () => navigate( backRoute ) }
 					variant="minimal"
 					size="compact"
 				>
 					<Icon icon={ arrowLeft } size={ 16 } />
-					{ __( 'Back to list', 'wp-admin-shell' ) }
+					{ __( 'Back to list', 'wp-admin-workspaces' ) }
 				</Button>
 			</div>
 			{ iframeLoading && (
-				<div className="wp-admin-shell-app-editor__loading">
+				<div className="wp-admin-workspaces-app-editor__loading">
 					<Spinner />
 				</div>
 			) }
 			<iframe
 				ref={ iframeRef }
 				src={ editorUrl }
-				title={ __( 'Editor', 'wp-admin-shell' ) }
-				className="wp-admin-shell-app-editor__frame"
+				title={ __( 'Editor', 'wp-admin-workspaces' ) }
+				className="wp-admin-workspaces-app-editor__frame"
 				onLoad={ onIframeLoad }
 			/>
 		</div>

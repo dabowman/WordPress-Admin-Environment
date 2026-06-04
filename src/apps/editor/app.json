@@ -24,7 +24,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 1200,
@@ -43,12 +43,12 @@
 		"data": {
 			"reads": [
 				{
-					"source": "window.wpAdminShell.adminUrl",
+					"source": "window.wpAdminWorkspaces.adminUrl",
 					"via": "window-global",
 					"purpose": "Base URL for the iframe `src` attribute, and the origin pin for the chromeless-bridge message listener."
 				},
 				{
-					"source": "window.wpAdminShell.adminRoutes",
+					"source": "window.wpAdminWorkspaces.adminRoutes",
 					"via": "window-global",
 					"purpose": "Legacy admin-route map; the iframe bridge uses it to route in-iframe wp-admin link clicks to a workspace route."
 				}
@@ -105,11 +105,11 @@
 				"effect": "If the loaded document is the wp-login form (session expired) keep the loading mask up and call `wp.heartbeat.connectNow()` so the shell-level wp-auth-check modal appears; otherwise set `iframeLoading=false` and inject the chrome-hide CSS. Cross-origin iframes silently skip inspection + injection."
 			},
 			{
-				"trigger": "In-iframe link click (chromeless bridge `wp-admin-shell-admin-link` / `-external-link`)",
+				"trigger": "In-iframe link click (chromeless bridge `wp-admin-workspaces-admin-link` / `-external-link`)",
 				"effect": "`installIframeBridge` routes it: a link that maps to a workspace screen hash-navigates the workspace; an unmapped same-origin wp-admin link (e.g. the post-trash redirect to `edit.php`) navigates the iframe itself; an external link opens in a new tab. Origin- + source-pinned to the editor iframe."
 			},
 			{
-				"trigger": "`core/editor` dirty transition (chromeless bridge `wp-admin-shell-dirty-state`)",
+				"trigger": "`core/editor` dirty transition (chromeless bridge `wp-admin-workspaces-dirty-state`)",
 				"effect": "Update local `isDirty`; `useDirtyState(regionId, isDirty, { blocksNavigation: true })` reports it to the shell so NavigationGuard intercepts a sidebar click while there are unsaved edits."
 			},
 			{
@@ -135,7 +135,7 @@
 			},
 			{
 				"concern": "dirty-state-via-bridge",
-				"note": "The declared `core:dirty-state` + `core:block-navigation-on-dirty` services ARE honored: the chromeless bridge (sub-system 15) relays the iframe's `core/editor` `isEditedPostDirty()` up as `wp-admin-shell-dirty-state`, and the app feeds it into `useDirtyState`. The relay only fires when the iframe page has a `core/editor` store, so it is a no-op on any other iframed admin page the bridge also injects into. If the bridge ever stops shipping that sub-system this guard silently degrades to the iframe's own `beforeunload` (full-page exits only)."
+				"note": "The declared `core:dirty-state` + `core:block-navigation-on-dirty` services ARE honored: the chromeless bridge (sub-system 15) relays the iframe's `core/editor` `isEditedPostDirty()` up as `wp-admin-workspaces-dirty-state`, and the app feeds it into `useDirtyState`. The relay only fires when the iframe page has a `core/editor` store, so it is a no-op on any other iframed admin page the bridge also injects into. If the bridge ever stops shipping that sub-system this guard silently degrades to the iframe's own `beforeunload` (full-page exits only)."
 			},
 			{
 				"concern": "iframe-bridge-shared-security",

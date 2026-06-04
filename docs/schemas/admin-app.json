@@ -129,7 +129,7 @@
 
 		"dataView": {
 			"$ref": "#/$defs/appDataView",
-			"description": "Optional primary DataView family the app ships as its baseline. Names the entity `(kind, name)` this app primarily renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). The runtime injects manifest-declared variants as baselines into `settings.dataViews[kind][name][<variant>]` at the `core` origin; admin.json / site / role / user wins per-triple. Filter `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. The consuming app reads the resolved value via `useDataView`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Plugin engines shipping non-WPDS grids MAY ignore the block. See `docs/schema-sketch.md` § Settings and spec §13 #7."
+			"description": "Optional primary DataView family the app ships as its baseline. Names the entity `(kind, name)` this app primarily renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). The runtime injects manifest-declared variants as baselines into `settings.dataViews[kind][name][<variant>]` at the `core` origin; admin.json / site / role / user wins per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. The consuming app reads the resolved value via `useDataView`. Apps that don't render a single entity (command palette, dashboard host, simple editor) omit this field. Plugin engines shipping non-WPDS grids MAY ignore the block. See `docs/schema-sketch.md` § Settings and spec §13 #7."
 		},
 
 		"documentation": {
@@ -378,7 +378,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "name" ],
-			"description": "An app-shipped DataView family baseline. Names the entity `(kind, name)` the app renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration document. The runtime injects each variant as a baseline into `settings.dataViews[kind][name][<variant>]` at the `core` origin so admin.json / site / role / user origins can override per-triple. Filter `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. See `docs/schema-sketch.md` § Settings.",
+			"description": "An app-shipped DataView family baseline. Names the entity `(kind, name)` the app renders and declares a `variants: { <id>: ... }` family. Each variant is a complete `@wordpress/dataviews` configuration document. The runtime injects each variant as a baseline into `settings.dataViews[kind][name][<variant>]` at the `core` origin so admin.json / site / role / user origins can override per-triple. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` runs last on the resolved doc. See `docs/schema-sketch.md` § Settings.",
 			"properties": {
 				"kind": {
 					"type": "string",
@@ -656,11 +656,11 @@
 				"source": {
 					"type": "string",
 					"minLength": 1,
-					"description": "REST endpoint (e.g. `/wp/v2/posts`), `core-data` entity path (e.g. `postType/post`, `root/site`, `root/user`), external URL, or window-global property (e.g. `window.wpAdminShell.user`)."
+					"description": "REST endpoint (e.g. `/wp/v2/posts`), `core-data` entity path (e.g. `postType/post`, `root/site`, `root/user`), external URL, or window-global property (e.g. `window.wpAdminWorkspaces.user`)."
 				},
 				"via": {
 					"enum": [ "core-data", "api-fetch", "window-global", "external", "commands", "kernel-config" ],
-					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call (includes apps that read a sync cache populated by an `api-fetch` REST call, e.g. the `userCan` helper); `window-global` = read from `window.wpAdminShell.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry; `kernel-config` = props passed by the runtime from the resolved admin.json tree or kernel context (e.g. `config.styles.branding`, `config.routes`, `config.left/right`, `config.screens[id]`)."
+					"description": "Access mechanism. `core-data` = `useEntityRecord`/`useEntityRecords` from `@wordpress/core-data`; `api-fetch` = `@wordpress/api-fetch` direct call (includes apps that read a sync cache populated by an `api-fetch` REST call, e.g. the `userCan` helper); `window-global` = read from `window.wpAdminWorkspaces.*` (config injected by PHP); `external` = `fetch()` against a non-WordPress origin; `commands` = `@wordpress/commands` registry; `kernel-config` = props passed by the runtime from the resolved admin.json tree or kernel context (e.g. `config.styles.branding`, `config.routes`, `config.left/right`, `config.screens[id]`)."
 				},
 				"context": {
 					"enum": [ "view", "edit", "embed" ],

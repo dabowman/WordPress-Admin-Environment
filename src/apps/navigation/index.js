@@ -108,7 +108,7 @@ export default function NavigationApp( { config: navConfig = {} } ) {
  * to admin-only is enforced server-side and reflected in the cap map).
  *
  * Lives in the host (not the shared pure menu-tree module) because it
- * reads `window.wpAdminShell.capabilities` via `userCan` — keeping the
+ * reads `window.wpAdminWorkspaces.capabilities` via `userCan` — keeping the
  * shared helpers node-importable.
  *
  * @param {Object} item Menu item.
@@ -132,7 +132,7 @@ function itemPassesPermissions( item ) {
 	// No client-side role map, so role-only gates can't be evaluated here.
 	// This is no longer the security boundary: the server prunes screens +
 	// role-gated menu items the user can't reach BEFORE serializing the config
-	// (`wp_admin_shell_prune_config_for_user`), so a `roles:[...]` item the
+	// (`wp_admin_workspaces_prune_config_for_user`), so a `roles:[...]` item the
 	// user fails never reaches this code. Rendering it when present is then
 	// correct — the server already vouched for visibility (and 403s the route
 	// regardless).

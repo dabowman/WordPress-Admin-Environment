@@ -44,10 +44,10 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 - [manual] With `WP_DEBUG` on, a malformed `wp-content/admin.json` emits
   a `_doing_it_wrong` notice and the admin still loads (degrades to
   baseline) — it does **not** white-screen.
-- [auto] `wp_admin_shell_workspace_active()`: true with a valid file OR
-  an explicitly-written `wp_admin_shell_active_shell` option; false on a
+- [auto] `wp_admin_workspaces_workspace_active()`: true with a valid file OR
+  an explicitly-written `wp_admin_workspaces_active_shell` option; false on a
   fresh install with neither. When the file is active,
-  `window.wpAdminShell.workspaceFileActive` is true — the shell switcher
+  `window.wpAdminWorkspaces.workspaceFileActive` is true — the shell switcher
   hides and `switchShell()` throws (writing the option would be a silent
   no-op since the file wins).
 - [manual] Fresh install, no file, no option → `/wp-admin/` is untouched
@@ -62,7 +62,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   guard short-circuits non-page contexts.
 - [manual] With a file in place, `/wp-admin/` and `/wp-admin/index.php`
   mount the workspace. `/wp-admin/admin-ajax.php` still serves AJAX. The
-  old `admin.php?page=wp-admin-shell` URL 404s (intentional — bookmark
+  old `admin.php?page=wp-admin-workspaces` URL 404s (intentional — bookmark
   cleanup is a release note).
 - [manual] A third-party plugin page at `admin.php?page=acme` (or a
   dashboard subpage at `index.php?page=acme`) still loads classic, and
@@ -73,7 +73,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 ## 4. Escape hatches — persistent toggle + session cookie
 
 The workspace can be left in two ways. The persistent **Settings →
-Workspace** screen flips the `wp_admin_shell_workspace_enabled` option;
+Workspace** screen flips the `wp_admin_workspaces_workspace_enabled` option;
 the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in
@@ -148,7 +148,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   (URL preserved, including nonces); spoofed origin/source + tampered
   cross-origin `target=_parent` dropped.
 - [auto] `passes_base_gates` bails on chromeless requests
-  (`Sec-Fetch-Dest: iframe` OR `?wp_admin_shell_chromeless=1`), so an
+  (`Sec-Fetch-Dest: iframe` OR `?wp_admin_workspaces_chromeless=1`), so an
   iframed classic page never re-enters the workspace → no nested-shell
   recursion regardless of whether the iframe URL hits a W5 redirect
   mapping or W2's root-entry render.
@@ -193,7 +193,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   as static JSON.
 - **Bundled `shells/*` are starter templates**, not a selectable catalog —
   copy one to `wp-content/admin.json` and edit. The legacy
-  `wp_admin_shell_active_shell` option still works as a back-compat
+  `wp_admin_workspaces_active_shell` option still works as a back-compat
   trigger but is hidden by the switcher when a file override is active.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it

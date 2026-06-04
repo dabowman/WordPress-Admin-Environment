@@ -3,7 +3,7 @@
  * Data-field collections registry.
  *
  * Plugins register named field bundles bound to an entity `(kind, name)`
- * pair via `wp_admin_shell_register_data_field_collection()`. The registry
+ * pair via `wp_admin_workspaces_register_data_field_collection()`. The registry
  * contributes to the cascade through the synthetic `plugin` origin so
  * site/role/user overrides can extend or replace collections via the
  * same admin.json `settings.dataFields` block.
@@ -15,12 +15,12 @@
  *
  * Schema: see `docs/schemas/admin-v3.json#/$defs/dataFieldCollection`.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Data_Field_Collections {
+class WP_Admin_Workspaces_Data_Field_Collections {
 
 	/**
 	 * Global registry: id → collection doc.
@@ -51,33 +51,33 @@ class WP_Admin_Shell_Data_Field_Collections {
 	public static function register( $id, $kind, $name, $fields, $fields_module = null ) {
 		if ( ! is_string( $id ) || $id === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_data_field_collection_invalid_id',
-				__( 'Data field collection id must be a non-empty string.', 'wp-admin-shell' )
+				'wp_admin_workspaces_data_field_collection_invalid_id',
+				__( 'Data field collection id must be a non-empty string.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! is_string( $kind ) || $kind === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_data_field_collection_invalid_kind',
-				__( 'Data field collection kind must be a non-empty string.', 'wp-admin-shell' )
+				'wp_admin_workspaces_data_field_collection_invalid_kind',
+				__( 'Data field collection kind must be a non-empty string.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( $name !== null && ( ! is_string( $name ) || $name === '' ) ) {
 			return new WP_Error(
-				'wp_admin_shell_data_field_collection_invalid_name',
-				__( 'Data field collection name must be a non-empty string or null (universal).', 'wp-admin-shell' )
+				'wp_admin_workspaces_data_field_collection_invalid_name',
+				__( 'Data field collection name must be a non-empty string or null (universal).', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! is_array( $fields ) ) {
 			return new WP_Error(
-				'wp_admin_shell_data_field_collection_invalid_fields',
-				__( 'Data field collection fields must be an array.', 'wp-admin-shell' )
+				'wp_admin_workspaces_data_field_collection_invalid_fields',
+				__( 'Data field collection fields must be an array.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( isset( self::$registry[ $id ] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_data_field_collection_duplicate_id',
+				'wp_admin_workspaces_data_field_collection_duplicate_id',
 				/* translators: %s: collection id */
-				sprintf( __( 'Data field collection %s is already registered. Use a different id.', 'wp-admin-shell' ), $id )
+				sprintf( __( 'Data field collection %s is already registered. Use a different id.', 'wp-admin-workspaces' ), $id )
 			);
 		}
 
@@ -90,8 +90,8 @@ class WP_Admin_Shell_Data_Field_Collections {
 		if ( $fields_module !== null ) {
 			if ( ! is_string( $fields_module ) || $fields_module === '' ) {
 				return new WP_Error(
-					'wp_admin_shell_data_field_collection_invalid_module',
-					__( 'fieldsModule must be a non-empty string or omitted.', 'wp-admin-shell' )
+					'wp_admin_workspaces_data_field_collection_invalid_module',
+					__( 'fieldsModule must be a non-empty string or omitted.', 'wp-admin-workspaces' )
 				);
 			}
 			$doc['fieldsModule'] = $fields_module;
@@ -180,7 +180,7 @@ class WP_Admin_Shell_Data_Field_Collections {
 		// translators: 1: collection id, 2: module handle.
 		$message = sprintf(
 			/* translators: %1$s: collection id, %2$s: fieldsModule handle */
-			__( 'Data field collection %1$s declared fieldsModule "%2$s". The shell does not resolve fieldsModule in this release; the value is reserved for future native script-modules support.', 'wp-admin-shell' ),
+			__( 'Data field collection %1$s declared fieldsModule "%2$s". The shell does not resolve fieldsModule in this release; the value is reserved for future native script-modules support.', 'wp-admin-workspaces' ),
 			$id,
 			$module
 		);
@@ -198,8 +198,8 @@ class WP_Admin_Shell_Data_Field_Collections {
  * @param string|null $fields_module Optional, reserved.
  * @return string|WP_Error
  */
-function wp_admin_shell_register_data_field_collection( $id, $kind, $name, $fields, $fields_module = null ) {
-	return WP_Admin_Shell_Data_Field_Collections::register( $id, $kind, $name, $fields, $fields_module );
+function wp_admin_workspaces_register_data_field_collection( $id, $kind, $name, $fields, $fields_module = null ) {
+	return WP_Admin_Workspaces_Data_Field_Collections::register( $id, $kind, $name, $fields, $fields_module );
 }
 
 /**
@@ -207,12 +207,12 @@ function wp_admin_shell_register_data_field_collection( $id, $kind, $name, $fiel
  * through the `plugin` origin so site/role/user overrides can extend
  * or override via admin.json's `settings.dataFields` block. Runs at
  * filter priority 5 so plugin authors using
- * add_filter('wp_admin_shell_data_plugin', ...) directly win over
+ * add_filter('wp_admin_workspaces_data_plugin', ...) directly win over
  * programmatic registrations (matches the convention for
  * shell_register_app / register_engine).
  */
-add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
-	$collections = WP_Admin_Shell_Data_Field_Collections::all();
+add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
+	$collections = WP_Admin_Workspaces_Data_Field_Collections::all();
 	if ( empty( $collections ) ) {
 		return $doc;
 	}
@@ -235,8 +235,8 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 // Registry state lives in static class memory — invisible to the
 // default cache-signal map. Hook into the cache layer's filter so a
 // field-collection registration delta forces a fresh resolver run cross-request.
-add_filter( 'wp_admin_shell_cache_signals', function ( $signals ) {
-	$registry = WP_Admin_Shell_Data_Field_Collections::all();
+add_filter( 'wp_admin_workspaces_cache_signals', function ( $signals ) {
+	$registry = WP_Admin_Workspaces_Data_Field_Collections::all();
 	if ( ! empty( $registry ) ) {
 		$signals['data_field_collections'] = md5( wp_json_encode( $registry ) );
 	}

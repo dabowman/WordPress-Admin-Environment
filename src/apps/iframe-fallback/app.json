@@ -15,7 +15,7 @@
 		},
 		"additionalProperties": true
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 1024,
@@ -29,11 +29,11 @@
 		"icon": "external"
 	},
 	"documentation": {
-		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The shell's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
+		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The shell's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
 		"data": {
 			"reads": [
 				{
-					"source": "window.wpAdminShell.adminUrl",
+					"source": "window.wpAdminWorkspaces.adminUrl",
 					"via": "window-global",
 					"purpose": "Base URL for relative `config.url` paths."
 				}
@@ -92,7 +92,7 @@
 			},
 			{
 				"concern": "desktop-engine-bridge-consumer",
-				"note": "On the `core:desktop` engine, `core:desktop-iframe` is the sibling app that wraps any wp-admin URL with `?wp_admin_shell_chromeless=1`. That triggers a PHP-side chromeless bridge (`includes/engines/core-desktop/chromeless-bridge.php`) attaching a 14-subsystem JS payload — error/fetch/XHR wraps, navigation interception, auth recovery, command-palette harvest (stub). This iframe-fallback app is the underlying primitive; `core:desktop-iframe` extends it with a parent-side `postMessage` listener routing `focus-request` / `admin-link` / `external-link` events. A rebuild of this app in a non-default engine should be aware of the bridge contract so a desktop-style engine port can wire its parent-side listener the same way."
+				"note": "On the `core:desktop` engine, `core:desktop-iframe` is the sibling app that wraps any wp-admin URL with `?wp_admin_workspaces_chromeless=1`. That triggers a PHP-side chromeless bridge (`includes/engines/core-desktop/chromeless-bridge.php`) attaching a 14-subsystem JS payload — error/fetch/XHR wraps, navigation interception, auth recovery, command-palette harvest (stub). This iframe-fallback app is the underlying primitive; `core:desktop-iframe` extends it with a parent-side `postMessage` listener routing `focus-request` / `admin-link` / `external-link` events. A rebuild of this app in a non-default engine should be aware of the bridge contract so a desktop-style engine port can wire its parent-side listener the same way."
 			}
 		],
 		"design-system-leakage": [

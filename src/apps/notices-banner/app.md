@@ -7,7 +7,7 @@ Prose accompanying `app.json#documentation` for the persistent banner notice hos
 NoticesBannerApp renders two sources at the top of its region:
 
 1. **`@wordpress/notices`** filtered to `type: 'default'`, one `Notice.Root` each. The notice bus is the shell's primary cross-app messaging channel — apps fire `createNotice('error', message)` from anywhere; the banner host (mounted once per shell) surfaces them.
-2. **Harvested `admin_notices` HTML (#128)** — global `admin_notices` output buffered server-side (`WP_Admin_Shell_Chrome_Harvest::capture_admin_notices()`) and exposed at `window.wpAdminShell.adminNotices`. Rendered unchanged inside a single neutral `Notice.Root` so an un-ported plugin's notice still surfaces in the workspace. Read once at mount (it's a static server-render snapshot) and locally dismissible.
+2. **Harvested `admin_notices` HTML (#128)** — global `admin_notices` output buffered server-side (`WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices()`) and exposed at `window.wpAdminWorkspaces.adminNotices`. Rendered unchanged inside a single neutral `Notice.Root` so an un-ported plugin's notice still surfaces in the workspace. Read once at mount (it's a static server-render snapshot) and locally dismissible.
 
 No data ownership for stream 1: the app is a renderer. State lives in `@wordpress/notices`; updates flow through `useSelect` + `useDispatch`. Stream 2 is a static HTML snapshot dismissed via local `useState`.
 
@@ -24,9 +24,9 @@ A non-WPDS rebuild needs a Notice / Alert primitive with intent variants + a clo
 
 ## Harvested admin_notices (server side)
 
-`WP_Admin_Shell_Chrome_Harvest::capture_admin_notices()` wraps `ob_start()` around `do_action('admin_notices')` + `do_action('all_admin_notices')` on the shell's own render pass and returns the captured HTML. The markup is admin-context (same author-trust as classic wp-admin) and rendered via `dangerouslySetInnerHTML` — the shell only ever renders it inside the already-admin-gated workspace.
+`WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices()` wraps `ob_start()` around `do_action('admin_notices')` + `do_action('all_admin_notices')` on the shell's own render pass and returns the captured HTML. The markup is admin-context (same author-trust as classic wp-admin) and rendered via `dangerouslySetInnerHTML` — the shell only ever renders it inside the already-admin-gated workspace.
 
-**Double-dispatch guard.** Capture runs from `wp_admin_shell_enqueue_assets()` on `admin_enqueue_scripts` (top of `admin-header.php`), which the hijack renders the shell through — and `admin-header.php` fires those same two actions AGAIN near its bottom. So immediately after buffering, the harvest `remove_all_actions()` on both hooks: the later native pass becomes a no-op (no double side effects, no duplicate markup beside the shell mount), and the buffered HTML is the single source this banner renders. The capture is memoized so a second call returns the same HTML without re-dispatching a now-drained hook. See the harvest class docblock.
+**Double-dispatch guard.** Capture runs from `wp_admin_workspaces_enqueue_assets()` on `admin_enqueue_scripts` (top of `admin-header.php`), which the hijack renders the shell through — and `admin-header.php` fires those same two actions AGAIN near its bottom. So immediately after buffering, the harvest `remove_all_actions()` on both hooks: the later native pass becomes a no-op (no double side effects, no duplicate markup beside the shell mount), and the buffered HTML is the single source this banner renders. The capture is memoized so a second call returns the same HTML without re-dispatching a now-drained hook. See the harvest class docblock.
 
 ## Known limitations
 

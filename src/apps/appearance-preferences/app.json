@@ -3,14 +3,14 @@
 	"id": "core:appearance-preferences",
 	"version": 1,
 	"title": "Appearance Preferences",
-	"description": "Per-user appearance-preferences UI driven by the `customizable` field. Per-user overrides persist via `/wp-admin-shell/v1/user-prefs`. NOT the wp-admin Appearance hub (themes / editor / menus) — this is a personalization panel (density / accent / default-route).",
+	"description": "Per-user appearance-preferences UI driven by the `customizable` field. Per-user overrides persist via `/wp-admin-workspaces/v1/user-prefs`. NOT the wp-admin Appearance hub (themes / editor / menus) — this is a personalization panel (density / accent / default-route).",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"config-schema": {
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 720,
@@ -24,11 +24,11 @@
 		"icon": "page"
 	},
 	"documentation": {
-		"purpose": "Per-user customization screen for shell appearance. Reads the active shell's `customizable` declarations from the resolved config and renders ONLY the controls the shell allows. MVP controls: density (default / compact / comfortable), accent color (color picker that writes a single token override), default-route override (text input for landing path). Saves go through `POST /wp-admin-shell/v1/user-prefs`; the server deep-merges onto the existing prefs blob and the resolver re-runs on next mount.",
+		"purpose": "Per-user customization screen for shell appearance. Reads the active shell's `customizable` declarations from the resolved config and renders ONLY the controls the shell allows. MVP controls: density (default / compact / comfortable), accent color (color picker that writes a single token override), default-route override (text input for landing path). Saves go through `POST /wp-admin-workspaces/v1/user-prefs`; the server deep-merges onto the existing prefs blob and the resolver re-runs on next mount.",
 		"data": {
 			"reads": [
 				{
-					"source": "/wp-admin-shell/v1/user-prefs",
+					"source": "/wp-admin-workspaces/v1/user-prefs",
 					"via": "api-fetch",
 					"purpose": "Existing per-user overrides on mount."
 				},
@@ -40,13 +40,13 @@
 			],
 			"writes": [
 				{
-					"source": "/wp-admin-shell/v1/user-prefs",
+					"source": "/wp-admin-workspaces/v1/user-prefs",
 					"via": "api-fetch",
 					"operation": "partial-update",
 					"purpose": "Patch user prefs via POST with the changed key only — server deep-merges."
 				},
 				{
-					"source": "/wp-admin-shell/v1/user-prefs",
+					"source": "/wp-admin-workspaces/v1/user-prefs",
 					"via": "api-fetch",
 					"operation": "delete",
 					"purpose": "DELETE wipes all per-user overrides (Reset to shell defaults)."
@@ -78,7 +78,7 @@
 		"interactions": [
 			{
 				"trigger": "Mount",
-				"effect": "Fetch `/wp-admin-shell/v1/user-prefs`; on success set state to result; on failure set state to `{}`."
+				"effect": "Fetch `/wp-admin-workspaces/v1/user-prefs`; on success set state to result; on failure set state to `{}`."
 			},
 			{
 				"trigger": "Change density radio",
@@ -103,7 +103,7 @@
 			},
 			{
 				"trigger": "Click Reset to shell defaults",
-				"effect": "DELETE `/wp-admin-shell/v1/user-prefs` to clear all per-user overrides; on success local `prefs` state resets to `{}` and a snackbar confirms."
+				"effect": "DELETE `/wp-admin-workspaces/v1/user-prefs` to clear all per-user overrides; on success local `prefs` state resets to `{}` and a snackbar confirms."
 			}
 		],
 		"a11y": {
@@ -128,7 +128,7 @@
 			},
 			{
 				"concern": "cache-flush-on-prefs-write",
-				"note": "WordPress hook `wp_admin_shell_user_prefs` user-meta updates triggers the cascade cache flush; next page-load resolves the new prefs."
+				"note": "WordPress hook `wp_admin_workspaces_user_prefs` user-meta updates triggers the cascade cache flush; next page-load resolves the new prefs."
 			},
 			{
 				"concern": "form-fallbacks",

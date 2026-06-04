@@ -150,7 +150,7 @@ Each field has `label` and `value` (string or array); a few are special (`upload
 ### REST gap: bulk debug data
 
 Info tab has **no first-class REST endpoint** for the full debug-data dump. `WP_Debug_Data::debug_data()` is admin-only PHP. Rebuild requires:
-1. Adding a custom shell endpoint (`GET /wp-admin-shell/v1/site-health/info`) wrapping `WP_Debug_Data::debug_data()`, or
+1. Adding a custom shell endpoint (`GET /wp-admin-workspaces/v1/site-health/info`) wrapping `WP_Debug_Data::debug_data()`, or
 2. Iframing the existing PHP page.
 
 The directory-sizes part is REST-able. The text-format clipboard export is generated server-side via `WP_Debug_Data::format( $info, 'debug' )` and is currently embedded into the page HTML as a `data-clipboard-text` attribute — pure client-side copy.
@@ -380,10 +380,10 @@ Plugin compatibility note: many security and performance plugins (e.g. iThemes S
 |---|---|---|
 | Register `core:site-health` AppSource | High | Composes well with REST; high-value for transparency |
 | Status tab native rendering | High | Direct + async test fan-out via `wp-site-health/v1/tests/*` |
-| Direct-test results endpoint | Medium | No REST endpoint returns the full direct-test set in one call. Either add `GET /wp-admin-shell/v1/site-health/tests` or run them client-side as REST per-test |
+| Direct-test results endpoint | Medium | No REST endpoint returns the full direct-test set in one call. Either add `GET /wp-admin-workspaces/v1/site-health/tests` or run them client-side as REST per-test |
 | Score calculation client-side | Medium | Pure derivation from test results |
 | Score ring SVG | Low | Pure presentation |
-| Info tab native rendering | Medium | Needs custom REST `GET /wp-admin-shell/v1/site-health/info` wrapping `WP_Debug_Data::debug_data()` |
+| Info tab native rendering | Medium | Needs custom REST `GET /wp-admin-workspaces/v1/site-health/info` wrapping `WP_Debug_Data::debug_data()` |
 | Directory sizes async loading | Medium | Existing endpoint; honor multisite skip |
 | Copy-to-clipboard with REST-fetched data | Medium | Format on server; serve via custom endpoint or compose client-side |
 | HTTPS update flow | Medium | Custom REST or fall back to existing PHP page |

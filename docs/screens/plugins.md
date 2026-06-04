@@ -139,7 +139,7 @@ Distinct entity. Source is the WordPress.org Plugin Directory API (`api.wordpres
 | `short_description` | wp.org | card description |
 | `sections` | wp.org | object with `description`, `installation`, `faq`, `changelog`, `screenshots`, `reviews` (HTML) — used by More Details modal |
 
-REST exposure: **gap.** `WP_REST_Plugins_Controller::create_item` consumes the wp.org API server-side via `plugins_api()` and only returns the installed plugin record. The browse / search / details data has **no REST endpoint**. Shell options: (a) call `plugins_api()` through a custom `/wp-admin-shell/v1/plugins-directory` proxy endpoint, or (b) call `https://api.wordpress.org/plugins/info/1.2/` directly from the browser (CORS allows it).
+REST exposure: **gap.** `WP_REST_Plugins_Controller::create_item` consumes the wp.org API server-side via `plugins_api()` and only returns the installed plugin record. The browse / search / details data has **no REST endpoint**. Shell options: (a) call `plugins_api()` through a custom `/wp-admin-workspaces/v1/plugins-directory` proxy endpoint, or (b) call `https://api.wordpress.org/plugins/info/1.2/` directly from the browser (CORS allows it).
 
 ### Data model: Plugin File Editor
 
@@ -322,7 +322,7 @@ If `DISALLOW_FILE_EDIT` is defined: render an empty state ("File editing is disa
 | View details | `install_plugins` (modal) | Modal | Opens Add Plugin More Details modal for this plugin (via wp.org `plugins_api`). Only when the plugin is in the wp.org directory. |
 | Resume | `resume_plugin` | Mutation | Visible only when paused. **Gap in REST** — no endpoint; handled by `plugins.php?action=resume`. |
 | Visit plugin site | none | External | `plugin_uri` link, new tab. |
-| Enable / Disable auto-updates | `update_plugins` + `wp_is_auto_update_enabled_for_type('plugin')` | Mutation | Toggle in right column. Backed by `auto_update_plugins` site option. **Gap in REST** — no endpoint; core uses admin-ajax (`toggle-auto-updates` action via `wp.updates` JS). Shell needs a custom `POST /wp-admin-shell/v1/plugin-auto-updates` endpoint or replicate the option write via `/wp/v2/settings` (the option is not registered for REST by default). |
+| Enable / Disable auto-updates | `update_plugins` + `wp_is_auto_update_enabled_for_type('plugin')` | Mutation | Toggle in right column. Backed by `auto_update_plugins` site option. **Gap in REST** — no endpoint; core uses admin-ajax (`toggle-auto-updates` action via `wp.updates` JS). Shell needs a custom `POST /wp-admin-workspaces/v1/plugin-auto-updates` endpoint or replicate the option write via `/wp/v2/settings` (the option is not registered for REST by default). |
 
 ### Bulk actions (installed list)
 
@@ -345,7 +345,7 @@ Selection model: checkbox per row + "select all on page". Must-use and Drop-ins 
 | Install Now | `install_plugins` | `POST /wp/v2/plugins` `{ slug, status: 'inactive' }`. Returns 201 with full plugin record. |
 | Install + Activate | `install_plugins` + `activate_plugins` | `POST /wp/v2/plugins` `{ slug, status: 'active' }` (or `network-active`). |
 | More Details | `install_plugins` | Open modal w/ `plugins_api({slug, sections: true})` data. |
-| Upload | `upload_plugins` | **Gap in REST** — REST `POST /wp/v2/plugins` only accepts wp.org slug, not file upload. Core uses `update.php?action=upload-plugin` multipart form. Shell options: custom `/wp-admin-shell/v1/plugin-upload` endpoint that wraps `Plugin_Upgrader::install` against an uploaded `.zip`. |
+| Upload | `upload_plugins` | **Gap in REST** — REST `POST /wp/v2/plugins` only accepts wp.org slug, not file upload. Core uses `update.php?action=upload-plugin` multipart form. Shell options: custom `/wp-admin-workspaces/v1/plugin-upload` endpoint that wraps `Plugin_Upgrader::install` against an uploaded `.zip`. |
 | Favorite a wp.org user's plugins | `install_plugins` | persisted in `wporg_favorites` user meta |
 
 ### Plugin File Editor actions
@@ -584,7 +584,7 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 | `core:plugins-install` browse / search / favorites | High | Either (a) custom REST proxy for `plugins_api()`, or (b) call `api.wordpress.org/plugins/info/1.2/` from the browser. |
 | `core:plugins-install` upload | Medium | Custom REST endpoint wrapping `Plugin_Upgrader::install` with file upload. |
 | More Details modal | Medium | wp.org `plugins_api({sections: true})`. |
-| Compatibility check (PHP / WP version) | Medium | Computed client-side from `requires` / `requires_php` versus `window.wpAdminShell.serverVersions`. |
+| Compatibility check (PHP / WP version) | Medium | Computed client-side from `requires` / `requires_php` versus `window.wpAdminWorkspaces.serverVersions`. |
 | `core:plugin-editor` | Low | Recommend **drop**. Cap-gated by default; dangerous; deprecation candidate. Acceptable interim: `iframe:plugin-editor.php`. |
 | `core:plugins.row-actions` slot for plugin compat | High | Required so shell-aware plugins can inject row actions. |
 | Network-admin variants | n/a | Separate spec (`network-admin/plugins.md`). |

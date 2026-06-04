@@ -49,7 +49,7 @@ export function trigger( appId ) {
 		return true;
 	} catch ( e ) {
 		// eslint-disable-next-line no-console
-		console.error( '[wp-admin-shell] trigger handler threw', e );
+		console.error( '[wp-admin-workspaces] trigger handler threw', e );
 		return false;
 	}
 }

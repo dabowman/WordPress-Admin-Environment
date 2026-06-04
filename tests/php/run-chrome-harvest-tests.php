@@ -49,36 +49,36 @@ $T = 'WPAS_Chrome_Harvest_Test_Runner';
 
 $T::assert_true(
 	'is_core_node: site-name detected',
-	WP_Admin_Shell_Chrome_Harvest::is_core_node( 'site-name' )
+	WP_Admin_Workspaces_Chrome_Harvest::is_core_node( 'site-name' )
 );
 $T::assert_true(
 	'is_core_node: my-account detected',
-	WP_Admin_Shell_Chrome_Harvest::is_core_node( 'my-account' )
+	WP_Admin_Workspaces_Chrome_Harvest::is_core_node( 'my-account' )
 );
 $T::assert_true(
 	'is_core_node: new-content (+New) detected — built natively by #129',
-	WP_Admin_Shell_Chrome_Harvest::is_core_node( 'new-content' )
+	WP_Admin_Workspaces_Chrome_Harvest::is_core_node( 'new-content' )
 );
 $T::assert_true(
 	'is_core_node: third-party node id NOT core',
-	! WP_Admin_Shell_Chrome_Harvest::is_core_node( 'acme-bar-node' )
+	! WP_Admin_Workspaces_Chrome_Harvest::is_core_node( 'acme-bar-node' )
 );
 
 // Filter-expanded skip list (memoized — reset() between scenarios).
 add_filter(
-	'wp_admin_shell_admin_bar_core_node_ids',
+	'wp_admin_workspaces_admin_bar_core_node_ids',
 	function ( $ids ) {
 		$ids[] = 'acme-bar-node';
 		return $ids;
 	}
 );
-WP_Admin_Shell_Chrome_Harvest::reset();
+WP_Admin_Workspaces_Chrome_Harvest::reset();
 $T::assert_true(
 	'is_core_node: filter expansion adds a custom node id to the skip list',
-	WP_Admin_Shell_Chrome_Harvest::is_core_node( 'acme-bar-node' )
+	WP_Admin_Workspaces_Chrome_Harvest::is_core_node( 'acme-bar-node' )
 );
-remove_all_filters( 'wp_admin_shell_admin_bar_core_node_ids' );
-WP_Admin_Shell_Chrome_Harvest::reset();
+remove_all_filters( 'wp_admin_workspaces_admin_bar_core_node_ids' );
+WP_Admin_Workspaces_Chrome_Harvest::reset();
 
 // --- harvest_admin_bar(): skip core, ingest plugin nodes -----------------
 // Register a fake admin_bar_menu callback that adds: a core-id node (must be
@@ -172,8 +172,8 @@ $harvest_cb = function ( $bar ) {
 };
 
 add_action( 'admin_bar_menu', $harvest_cb, 100 );
-WP_Admin_Shell_Chrome_Harvest::reset();
-$nodes = WP_Admin_Shell_Chrome_Harvest::harvest_admin_bar();
+WP_Admin_Workspaces_Chrome_Harvest::reset();
+$nodes = WP_Admin_Workspaces_Chrome_Harvest::harvest_admin_bar();
 
 // Find the acme record among whatever core/other plugins also registered.
 $acme = null;
@@ -274,16 +274,16 @@ if ( $beta !== null ) {
 }
 
 remove_action( 'admin_bar_menu', $harvest_cb, 100 );
-WP_Admin_Shell_Chrome_Harvest::reset();
+WP_Admin_Workspaces_Chrome_Harvest::reset();
 
 // --- capture_admin_notices(): buffers do_action('admin_notices') ---------
 
-WP_Admin_Shell_Chrome_Harvest::reset();
+WP_Admin_Workspaces_Chrome_Harvest::reset();
 $notice_cb = function () {
 	echo '<div class="notice notice-warning"><p>Plugin global notice</p></div>';
 };
 add_action( 'admin_notices', $notice_cb );
-$captured = WP_Admin_Shell_Chrome_Harvest::capture_admin_notices();
+$captured = WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices();
 $T::assert_true(
 	'capture_admin_notices: global admin_notices HTML buffered',
 	strpos( $captured, 'Plugin global notice' ) !== false
@@ -305,7 +305,7 @@ $T::assert_eq(
 
 // A second capture_admin_notices() in the SAME request returns the memo
 // without re-dispatching (hooks are already drained).
-$memoized = WP_Admin_Shell_Chrome_Harvest::capture_admin_notices();
+$memoized = WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices();
 $T::assert_true(
 	'capture_admin_notices: second call returns the memoized HTML (no re-buffer of a drained hook)',
 	strpos( $memoized, 'Plugin global notice' ) !== false
@@ -313,8 +313,8 @@ $T::assert_true(
 remove_action( 'admin_notices', $notice_cb );
 
 // After reset(), with no notice callbacks registered, capture is empty.
-WP_Admin_Shell_Chrome_Harvest::reset();
-$empty_capture = WP_Admin_Shell_Chrome_Harvest::capture_admin_notices();
+WP_Admin_Workspaces_Chrome_Harvest::reset();
+$empty_capture = WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices();
 $T::assert_eq(
 	'capture_admin_notices: no notices → empty string',
 	$empty_capture,

@@ -75,9 +75,9 @@ export default function ViewTabs( {
 
 	return (
 		<div
-			className="wp-admin-shell-view-tabs"
+			className="wp-admin-workspaces-view-tabs"
 			role="group"
-			aria-label={ __( 'Filter view', 'wp-admin-shell' ) }
+			aria-label={ __( 'Filter view', 'wp-admin-workspaces' ) }
 		>
 			{ enriched.map( ( segment ) => {
 				const active = isSegmentActive( segment, currentValue );
@@ -85,7 +85,7 @@ export default function ViewTabs( {
 					segment.count !== undefined
 						? sprintf(
 								/* translators: 1: segment label, 2: item count. */
-								__( '%1$s (%2$s)', 'wp-admin-shell' ),
+								__( '%1$s (%2$s)', 'wp-admin-workspaces' ),
 								segment.label,
 								segment.count.toLocaleString()
 						  )
@@ -98,7 +98,7 @@ export default function ViewTabs( {
 						tone={ active ? 'brand' : 'neutral' }
 						aria-pressed={ active }
 						onClick={ () => onSelect?.( segment ) }
-						className="wp-admin-shell-view-tabs__tab"
+						className="wp-admin-workspaces-view-tabs__tab"
 					>
 						{ label }
 					</Button>

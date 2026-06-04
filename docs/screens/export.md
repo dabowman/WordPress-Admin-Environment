@@ -106,7 +106,7 @@ Generator: `export_wp()` in `wp-admin/includes/export.php`. Streams to STDOUT; l
 - The closest is `GET /wp-block-editor/v1/export` (template export for block themes) — completely different artifact (theme files, not content).
 - Generation happens entirely server-side via `export_wp()`.
 
-**Gap:** to rebuild natively, the shell needs a custom REST endpoint (`POST /wp-admin-shell/v1/export`) that wraps `export_wp()` and streams the result. Alternatively, the existing PHP page can be invoked directly (form GET to `export.php?download=true`) — works fine even when the rest of admin is replaced.
+**Gap:** to rebuild natively, the shell needs a custom REST endpoint (`POST /wp-admin-workspaces/v1/export`) that wraps `export_wp()` and streams the result. Alternatively, the existing PHP page can be invoked directly (form GET to `export.php?download=true`) — works fine even when the rest of admin is replaced.
 
 ---
 
@@ -306,7 +306,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, and other plugins extend exp
 | Register `core:export` AppSource | Medium | Form is simple; lookups all REST-able with workarounds |
 | Date-range dropdown options endpoint | High | No REST equivalent for `export_date_options()`'s YEAR+MONTH distinct query. Either: (a) compute client-side from earliest/latest post dates per type, (b) add a custom REST endpoint |
 | `can_export` flag in `/wp/v2/types` | Medium | Currently not exposed; rebuild must filter all CPTs and rely on server-side enforcement |
-| Custom REST endpoint for export generation | Medium | `POST /wp-admin-shell/v1/export` would let the rebuild stream the WXR through `apiFetch` and surface a real loading state |
+| Custom REST endpoint for export generation | Medium | `POST /wp-admin-workspaces/v1/export` would let the rebuild stream the WXR through `apiFetch` and surface a real loading state |
 | Submit-button loading state | Low | Trivial UX win once REST endpoint exists |
 | Author multi-select handling | Low | Original form's `multi: true` is broken (single int parsed). Rebuild should drop multi-select |
 | Slot for `export_filters` | Medium | Plugin compat |

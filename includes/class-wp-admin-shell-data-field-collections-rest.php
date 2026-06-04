@@ -1,6 +1,6 @@
 <?php
 /**
- * /wp-admin-shell/v1/field-collections — data-field collections matching `(kind, name)`.
+ * /wp-admin-workspaces/v1/field-collections — data-field collections matching `(kind, name)`.
  *
  * GET /field-collections?kind=postType&name=post
  *   Returns `{ kind, name, collections: { id: { kind, name, fields, fieldsModule? }, ... } }`.
@@ -8,14 +8,14 @@
  *   collection's `name === null`). v3 reads `settings.dataFields[]` (the
  *   renamed home of v2's top-level `fieldCollections` block).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Data_Field_Collections_REST {
+class WP_Admin_Workspaces_Data_Field_Collections_REST {
 
-	const REST_NAMESPACE = 'wp-admin-shell/v1';
+	const REST_NAMESPACE = 'wp-admin-workspaces/v1';
 
 	public static function register() {
 		register_rest_route(
@@ -30,12 +30,12 @@ class WP_Admin_Shell_Data_Field_Collections_REST {
 						'kind' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 						'name' => array(
 							'type'              => 'string',
 							'required'          => true,
-							'sanitize_callback' => array( 'WP_Admin_Shell_Data_Field_Collections', 'sanitize_segment' ),
+							'sanitize_callback' => array( 'WP_Admin_Workspaces_Data_Field_Collections', 'sanitize_segment' ),
 						),
 					),
 				),
@@ -53,17 +53,17 @@ class WP_Admin_Shell_Data_Field_Collections_REST {
 
 		if ( $kind === '' || $name === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_field_collections_invalid_segment',
-				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_field_collections_invalid_segment',
+				__( 'kind and name must contain at least one [A-Za-z0-9_-] character after sanitization.', 'wp-admin-workspaces' ),
 				array( 'status' => 400 )
 			);
 		}
 
-		$config = wp_admin_shell_get_active_config();
+		$config = wp_admin_workspaces_get_active_config();
 
 		// Pull cascade-merged data-field collections from the resolved
 		// tree at `settings.dataFields`. Includes both programmatically-
-		// registered (via the `wp_admin_shell_data_plugin` injector in
+		// registered (via the `wp_admin_workspaces_data_plugin` injector in
 		// data-field-collections.php) and admin.json-authored entries;
 		// cascade ordering already resolved by the resolver.
 		$all = isset( $config['settings']['dataFields'] ) && is_array( $config['settings']['dataFields'] )
@@ -94,4 +94,4 @@ class WP_Admin_Shell_Data_Field_Collections_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Data_Field_Collections_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Data_Field_Collections_REST', 'register' ) );

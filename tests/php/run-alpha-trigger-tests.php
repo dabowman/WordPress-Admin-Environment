@@ -5,7 +5,7 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-alpha-trigger-tests.php`
  *
  * Covers the theme.json-style override origin:
- *   - WP_Admin_Shell_Origin_File partial-permissive validation (valid
+ *   - WP_Admin_Workspaces_Origin_File partial-permissive validation (valid
  *     partial loads; malformed / non-object / empty-object / absent all
  *     degrade to null).
  *   - load_origins() file-override branch: the wp-admin-default baseline
@@ -14,7 +14,7 @@
  *     (delta wins, baseline screens survive, engine falls back to the
  *     baseline), and a trusted-origin null tombstone removes a baseline
  *     screen.
- *   - wp_admin_shell_workspace_active() truth table (file / option / none).
+ *   - wp_admin_workspaces_workspace_active() truth table (file / option / none).
  *   - the admin.json mtime contributes to the resolver cache key.
  *
  * Class-scoped state because `wp eval-file` wraps the file in `eval()`,
@@ -63,19 +63,19 @@ class WPAS_Alpha_Trigger_Runner {
 		} else {
 			self::$override_path = $name ? self::$fixture_dir . $name : '';
 		}
-		WP_Admin_Shell_Origin_File::reset_memo();
-		WP_Admin_Shell_Resolver::reset_request_memo();
-		if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-			WP_Admin_Shell_Cache::flush();
+		WP_Admin_Workspaces_Origin_File::reset_memo();
+		WP_Admin_Workspaces_Resolver::reset_request_memo();
+		if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+			WP_Admin_Workspaces_Cache::flush();
 		}
 	}
 }
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-if ( ! file_exists( $plugin_dir . 'wp-admin-shell.php' ) ) {
-	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-shell/';
+if ( ! file_exists( $plugin_dir . 'wp-admin-workspaces.php' ) ) {
+	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
 }
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 WPAS_Alpha_Trigger_Runner::$fixture_dir = $plugin_dir . 'tests/php/fixtures/alpha/';
 
@@ -86,7 +86,7 @@ if ( $user ) {
 
 // Route the override loader at our fixtures. '' → a path that does not
 // exist, exercising the absent-file branch.
-add_filter( 'wp_admin_shell_admin_json_path', function () {
+add_filter( 'wp_admin_workspaces_admin_json_path', function () {
 	return WPAS_Alpha_Trigger_Runner::$override_path
 		? WPAS_Alpha_Trigger_Runner::$override_path
 		: WPAS_Alpha_Trigger_Runner::$fixture_dir . '__missing__.json';
@@ -99,28 +99,28 @@ $T = 'WPAS_Alpha_Trigger_Runner';
 echo "\n— Origin_File validation —\n";
 
 $T::use_override( 'override-styles-only.json' );
-$doc = WP_Admin_Shell_Origin_File::load();
+$doc = WP_Admin_Workspaces_Origin_File::load();
 $T::ok( 'valid partial: load returns assoc array', is_array( $doc ) && isset( $doc['styles'] ) );
-$T::ok( 'valid partial: exists_and_valid true', WP_Admin_Shell_Origin_File::exists_and_valid() );
-$T::ok( 'valid partial: mtime > 0', WP_Admin_Shell_Origin_File::mtime() > 0 );
+$T::ok( 'valid partial: exists_and_valid true', WP_Admin_Workspaces_Origin_File::exists_and_valid() );
+$T::ok( 'valid partial: mtime > 0', WP_Admin_Workspaces_Origin_File::mtime() > 0 );
 
 $T::use_override( 'malformed.json' );
-$T::ok( 'malformed JSON: load null', WP_Admin_Shell_Origin_File::load() === null );
+$T::ok( 'malformed JSON: load null', WP_Admin_Workspaces_Origin_File::load() === null );
 
 $T::use_override( 'not-an-object.json' );
-$T::ok( 'JSON array (not object): load null', WP_Admin_Shell_Origin_File::load() === null );
+$T::ok( 'JSON array (not object): load null', WP_Admin_Workspaces_Origin_File::load() === null );
 
 $T::use_override( 'empty-object.json' );
-$T::ok( 'empty object treated as no override: load null', WP_Admin_Shell_Origin_File::load() === null );
+$T::ok( 'empty object treated as no override: load null', WP_Admin_Workspaces_Origin_File::load() === null );
 
 $T::use_override( 'bad-screens-type.json' );
-$T::ok( 'structurally bad block (screens: string) → load null', WP_Admin_Shell_Origin_File::load() === null );
+$T::ok( 'structurally bad block (screens: string) → load null', WP_Admin_Workspaces_Origin_File::load() === null );
 
 // A list-shaped object block (`"screens": [ … ]`) is `is_array()`-true but
 // would flow into merge_authoritative against the assoc baseline — reject it
 // the same as a scalar block. (Empty `[]` is ambiguous with `{}` and allowed.)
 $T::use_override( 'list-shaped-screens.json' );
-$T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Shell_Origin_File::load() === null );
+$T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Workspaces_Origin_File::load() === null );
 
 // …but `commands` IS a list block (schema types it `array`, merged by id).
 // Symmetric counterpart to the screens reject above: a list-shaped commands
@@ -128,7 +128,7 @@ $T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Shell_Ori
 // where `commands` was grouped with the object-shaped blocks, which silently
 // rejected every valid shell dropped at wp-content/admin.json.
 $T::use_override( 'commands-list-block.json' );
-$doc = WP_Admin_Shell_Origin_File::load();
+$doc = WP_Admin_Workspaces_Origin_File::load();
 $T::ok( 'list block (commands: [ … ]) accepted → load non-null', is_array( $doc ) && isset( $doc['commands'] ) );
 
 // Strongest guard: every bundled shell must pass the loader as-is. The shells
@@ -138,21 +138,21 @@ foreach ( glob( $plugin_dir . 'shells/*.json' ) as $shell_path ) {
 	$T::use_override( $shell_path );
 	$T::ok(
 		'bundled shell ' . basename( $shell_path ) . ' passes the file loader',
-		WP_Admin_Shell_Origin_File::exists_and_valid()
+		WP_Admin_Workspaces_Origin_File::exists_and_valid()
 	);
 }
 
 $T::use_override( '' );
-$T::ok( 'absent file: load null', WP_Admin_Shell_Origin_File::load() === null );
-$T::ok( 'absent file: exists_and_valid false', ! WP_Admin_Shell_Origin_File::exists_and_valid() );
-$T::eq( 'absent file: mtime 0', WP_Admin_Shell_Origin_File::mtime(), 0 );
+$T::ok( 'absent file: load null', WP_Admin_Workspaces_Origin_File::load() === null );
+$T::ok( 'absent file: exists_and_valid false', ! WP_Admin_Workspaces_Origin_File::exists_and_valid() );
+$T::eq( 'absent file: mtime 0', WP_Admin_Workspaces_Origin_File::mtime(), 0 );
 
 // ── load_origins file-override branch ───────────────────────────────
 
 echo "\n— load_origins file-override branch —\n";
 
 $T::use_override( 'override-styles-only.json' );
-$origins = WP_Admin_Shell_Resolver::load_origins();
+$origins = WP_Admin_Workspaces_Resolver::load_origins();
 $T::eq( 'core slot holds the wp-admin-default baseline', $origins['core']['name'] ?? null, 'wp-admin-default' );
 $T::ok( 'plugin slot holds the override file', is_array( $origins['plugin'] ) && isset( $origins['plugin']['styles'] ) );
 $T::eq( 'baseline engine present in core slot', $origins['core']['workspace']['engine'] ?? null, 'core:default' );
@@ -162,14 +162,14 @@ $T::eq( 'baseline engine present in core slot', $origins['core']['workspace']['e
 echo "\n— resolve(): partial override over baseline —\n";
 
 $T::use_override( 'override-rename-screen.json' );
-$resolved = WP_Admin_Shell_Resolver::resolve();
+$resolved = WP_Admin_Workspaces_Resolver::resolve();
 $T::eq( 'override renames baseline screen', $resolved['screens']['posts']['label'] ?? null, 'Articles' );
 $T::ok( 'overridden screen keeps baseline path', ( $resolved['screens']['posts']['path'] ?? '' ) !== '' );
 $T::ok( 'baseline screens survive partial override', isset( $resolved['screens']['dashboard-home'] ) );
 $T::eq( 'engine falls back to baseline when file omits it', $resolved['workspace']['engine'] ?? null, 'core:default' );
 
 $T::use_override( 'override-tombstone-screen.json' );
-$resolved = WP_Admin_Shell_Resolver::resolve();
+$resolved = WP_Admin_Workspaces_Resolver::resolve();
 $T::ok( 'trusted-origin null tombstone removes baseline screen', ! isset( $resolved['screens']['posts'] ) );
 $T::ok( 'tombstone leaves sibling screens intact', isset( $resolved['screens']['dashboard-home'] ) );
 
@@ -189,50 +189,50 @@ $baseline = array(
 	'styles'    => array( 'color' => array( 'background' => '#ffffff', 'text' => '#111111' ) ),
 );
 $delta    = array( 'styles' => array( 'color' => array( 'background' => '#123456' ) ) );
-$merged   = WP_Admin_Shell_Resolver::resolve_with( array( 'core' => $baseline, 'plugin' => $delta ) );
+$merged   = WP_Admin_Workspaces_Resolver::resolve_with( array( 'core' => $baseline, 'plugin' => $delta ) );
 $T::eq( 'delta styles win', $merged['styles']['color']['background'] ?? null, '#123456' );
 $T::eq( 'baseline styles survive deep-merge', $merged['styles']['color']['text'] ?? null, '#111111' );
 $T::ok( 'baseline screens untouched by styles-only delta', isset( $merged['screens']['home'], $merged['screens']['posts'] ) );
 
-// ── wp_admin_shell_workspace_active() truth table ───────────────────
+// ── wp_admin_workspaces_workspace_active() truth table ───────────────────
 
-echo "\n— wp_admin_shell_workspace_active() —\n";
+echo "\n— wp_admin_workspaces_workspace_active() —\n";
 
-$saved_shell  = get_option( 'wp_admin_shell_active_shell', null );
-$had_shell    = ( false !== get_option( 'wp_admin_shell_active_shell', false ) );
-delete_option( 'wp_admin_shell_active_shell' );
+$saved_shell  = get_option( 'wp_admin_workspaces_active_shell', null );
+$had_shell    = ( false !== get_option( 'wp_admin_workspaces_active_shell', false ) );
+delete_option( 'wp_admin_workspaces_active_shell' );
 
-$saved_enabled = get_option( 'wp_admin_shell_workspace_enabled', null );
-$had_enabled   = ( false !== get_option( 'wp_admin_shell_workspace_enabled', false ) );
-delete_option( 'wp_admin_shell_workspace_enabled' );
+$saved_enabled = get_option( 'wp_admin_workspaces_workspace_enabled', null );
+$had_enabled   = ( false !== get_option( 'wp_admin_workspaces_workspace_enabled', false ) );
+delete_option( 'wp_admin_workspaces_workspace_enabled' );
 
 $T::use_override( 'override-styles-only.json' );
-$T::ok( 'file present → workspace active', wp_admin_shell_workspace_active() === true );
+$T::ok( 'file present → workspace active', wp_admin_workspaces_workspace_active() === true );
 
 $T::use_override( '' );
-$T::ok( 'no file + no option → workspace inactive', wp_admin_shell_workspace_active() === false );
+$T::ok( 'no file + no option → workspace inactive', wp_admin_workspaces_workspace_active() === false );
 
-update_option( 'wp_admin_shell_active_shell', 'single-pane-demo' );
-$T::ok( 'no file + explicit option → workspace active', wp_admin_shell_workspace_active() === true );
+update_option( 'wp_admin_workspaces_active_shell', 'single-pane-demo' );
+$T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_workspace_active() === true );
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.
 $T::use_override( 'override-styles-only.json' );
-update_option( 'wp_admin_shell_workspace_enabled', false );
-$T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_shell_workspace_active() === false );
-delete_option( 'wp_admin_shell_active_shell' );
-$T::ok( 'workspace_enabled=false still false with file only', wp_admin_shell_workspace_active() === false );
-update_option( 'wp_admin_shell_workspace_enabled', true );
-$T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_shell_workspace_active() === true );
+update_option( 'wp_admin_workspaces_workspace_enabled', false );
+$T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_workspaces_workspace_active() === false );
+delete_option( 'wp_admin_workspaces_active_shell' );
+$T::ok( 'workspace_enabled=false still false with file only', wp_admin_workspaces_workspace_active() === false );
+update_option( 'wp_admin_workspaces_workspace_enabled', true );
+$T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_workspaces_workspace_active() === true );
 
 // Restore option state.
-delete_option( 'wp_admin_shell_workspace_enabled' );
+delete_option( 'wp_admin_workspaces_workspace_enabled' );
 if ( $had_enabled ) {
-	update_option( 'wp_admin_shell_workspace_enabled', $saved_enabled );
+	update_option( 'wp_admin_workspaces_workspace_enabled', $saved_enabled );
 }
 if ( $had_shell && is_string( $saved_shell ) ) {
-	update_option( 'wp_admin_shell_active_shell', $saved_shell );
+	update_option( 'wp_admin_workspaces_active_shell', $saved_shell );
 } else {
-	delete_option( 'wp_admin_shell_active_shell' );
+	delete_option( 'wp_admin_workspaces_active_shell' );
 }
 
 // ── admin.json mtime contributes to the cache key ───────────────────
@@ -240,9 +240,9 @@ if ( $had_shell && is_string( $saved_shell ) ) {
 echo "\n— cache key signal —\n";
 
 $T::use_override( '' );
-$key_absent = WP_Admin_Shell_Cache::key_for( array() );
+$key_absent = WP_Admin_Workspaces_Cache::key_for( array() );
 $T::use_override( 'override-styles-only.json' );
-$key_present = WP_Admin_Shell_Cache::key_for( array() );
+$key_present = WP_Admin_Workspaces_Cache::key_for( array() );
 $T::ok( 'admin.json presence changes the resolver cache key', $key_absent !== $key_present );
 
 $T::use_override( '' );

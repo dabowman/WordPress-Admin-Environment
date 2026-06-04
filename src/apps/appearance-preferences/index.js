@@ -21,16 +21,16 @@ import { useKernel } from '../../runtime/kernel-context';
  * config and renders only the controls that shell allows. MVP control
  * set: density, accent override, default-route override.
  *
- * Saves go through POST /wp-admin-shell/v1/user-prefs (server deep-merges
+ * Saves go through POST /wp-admin-workspaces/v1/user-prefs (server deep-merges
  * onto the existing prefs object). The resolver re-runs on the next
- * mount; the cache flush hook on `wp_admin_shell_user_prefs` user-meta
+ * mount; the cache flush hook on `wp_admin_workspaces_user_prefs` user-meta
  * updates picks up the change automatically.
  *
  * `customizable` enforcement is server-authoritative — controls hidden
  * here is a UX nicety, not a security boundary.
  */
 
-const PREFS_PATH = '/wp-admin-shell/v1/user-prefs';
+const PREFS_PATH = '/wp-admin-workspaces/v1/user-prefs';
 
 const IS_DEV =
 	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
@@ -62,7 +62,7 @@ function isCustomizable( declaration, path ) {
 		warnedDeclarations.add( declaration );
 		// eslint-disable-next-line no-console
 		console.warn(
-			'wp-admin-shell AppearancePreferencesApp: malformed customizable declaration; expected boolean | string[]. Got:',
+			'wp-admin-workspaces AppearancePreferencesApp: malformed customizable declaration; expected boolean | string[]. Got:',
 			declaration
 		);
 	}
@@ -85,7 +85,7 @@ export default function AppearancePreferencesApp() {
 
 	if ( prefs === null ) {
 		return (
-			<div className="wp-admin-shell-app-appearance__loading">
+			<div className="wp-admin-workspaces-app-appearance__loading">
 				<Spinner />
 			</div>
 		);
@@ -121,12 +121,15 @@ export default function AppearancePreferencesApp() {
 				data: patch,
 			} );
 			setPrefs( next );
-			createSuccessNotice( __( 'Appearance saved.', 'wp-admin-shell' ), {
-				type: 'snackbar',
-			} );
+			createSuccessNotice(
+				__( 'Appearance saved.', 'wp-admin-workspaces' ),
+				{
+					type: 'snackbar',
+				}
+			);
 		} catch ( err ) {
 			createErrorNotice(
-				err?.message || __( 'Save failed.', 'wp-admin-shell' ),
+				err?.message || __( 'Save failed.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		}
@@ -138,12 +141,15 @@ export default function AppearancePreferencesApp() {
 		try {
 			await apiFetch( { path: PREFS_PATH, method: 'DELETE' } );
 			setPrefs( {} );
-			createSuccessNotice( __( 'Appearance reset.', 'wp-admin-shell' ), {
-				type: 'snackbar',
-			} );
+			createSuccessNotice(
+				__( 'Appearance reset.', 'wp-admin-workspaces' ),
+				{
+					type: 'snackbar',
+				}
+			);
 		} catch ( err ) {
 			createErrorNotice(
-				err?.message || __( 'Reset failed.', 'wp-admin-shell' ),
+				err?.message || __( 'Reset failed.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		}
@@ -153,36 +159,39 @@ export default function AppearancePreferencesApp() {
 	const noControls = ! allowDensity && ! allowAccent && ! allowDefaultRoute;
 
 	return (
-		<div className="wp-admin-shell-app-appearance wp-admin-shell-app--inset">
+		<div className="wp-admin-workspaces-app-appearance wp-admin-workspaces-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-xl" render={ <h2 /> }>
-					{ __( 'Appearance Preferences', 'wp-admin-shell' ) }
+					{ __( 'Appearance Preferences', 'wp-admin-workspaces' ) }
 				</Text>
 
 				{ noControls && (
 					<Text variant="body-md">
 						{ __(
 							'The active shell does not expose any user-customizable appearance settings.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</Text>
 				) }
 
 				{ allowDensity && (
 					<RadioControl
-						label={ __( 'Density', 'wp-admin-shell' ) }
+						label={ __( 'Density', 'wp-admin-workspaces' ) }
 						selected={ density }
 						options={ [
 							{
-								label: __( 'Default', 'wp-admin-shell' ),
+								label: __( 'Default', 'wp-admin-workspaces' ),
 								value: 'default',
 							},
 							{
-								label: __( 'Compact', 'wp-admin-shell' ),
+								label: __( 'Compact', 'wp-admin-workspaces' ),
 								value: 'compact',
 							},
 							{
-								label: __( 'Comfortable', 'wp-admin-shell' ),
+								label: __(
+									'Comfortable',
+									'wp-admin-workspaces'
+								),
 								value: 'comfortable',
 							},
 						] }
@@ -194,10 +203,13 @@ export default function AppearancePreferencesApp() {
 
 				{ allowAccent && (
 					<InputControl
-						label={ __( 'Accent color (hex)', 'wp-admin-shell' ) }
+						label={ __(
+							'Accent color (hex)',
+							'wp-admin-workspaces'
+						) }
 						description={ __(
 							'Used by the brand surface, focus ring, and compat bridge.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 						value={ accent }
 						onChange={ ( e ) => {
@@ -224,10 +236,10 @@ export default function AppearancePreferencesApp() {
 
 				{ allowDefaultRoute && (
 					<InputControl
-						label={ __( 'Default route', 'wp-admin-shell' ) }
+						label={ __( 'Default route', 'wp-admin-workspaces' ) }
 						description={ __(
 							'Where the shell lands when you open it (e.g. /posts, /media).',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 						value={ defaultRoute }
 						onChange={ ( e ) =>
@@ -243,7 +255,7 @@ export default function AppearancePreferencesApp() {
 					disabled={ isSaving }
 					loading={ isSaving }
 				>
-					{ __( 'Reset to shell defaults', 'wp-admin-shell' ) }
+					{ __( 'Reset to shell defaults', 'wp-admin-workspaces' ) }
 				</Button>
 			</Stack>
 		</div>

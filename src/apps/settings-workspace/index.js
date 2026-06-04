@@ -18,24 +18,24 @@ import { Page } from '../_shared/Page';
  * reload is the natural prompt.
  *
  * Re-enabling from classic happens via the parallel Settings → WP Admin
- * Shell page registered in `wp-admin-shell.php` (same option, same
+ * Shell page registered in `wp-admin-workspaces.php` (same option, same
  * sanitize callback, same settings group).
  */
 
 const FIELDS = [
 	{
-		id: 'wp_admin_shell_workspace_enabled',
+		id: 'wp_admin_workspaces_workspace_enabled',
 		type: 'boolean',
-		label: __( 'Activate WP Admin Workspace', 'wp-admin-shell' ),
+		label: __( 'Activate WP Admin Workspace', 'wp-admin-workspaces' ),
 		description: __(
 			'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Disable to fall back to classic.',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 	},
 ];
 
 const FORM = {
-	fields: [ 'wp_admin_shell_workspace_enabled' ],
+	fields: [ 'wp_admin_workspaces_workspace_enabled' ],
 };
 
 export default function SettingsWorkspaceApp() {
@@ -45,8 +45,8 @@ export default function SettingsWorkspaceApp() {
 	const [ pendingReload, setPendingReload ] = useState( false );
 
 	const handleSave = useCallback( async () => {
-		const before = !! record?.wp_admin_shell_workspace_enabled;
-		const after = !! editedRecord?.wp_admin_shell_workspace_enabled;
+		const before = !! record?.wp_admin_workspaces_workspace_enabled;
+		const after = !! editedRecord?.wp_admin_workspaces_workspace_enabled;
 		try {
 			await save();
 			if ( before !== after ) {
@@ -54,13 +54,16 @@ export default function SettingsWorkspaceApp() {
 			}
 			createNotice(
 				'success',
-				__( 'Workspace setting saved.', 'wp-admin-shell' ),
+				__( 'Workspace setting saved.', 'wp-admin-workspaces' ),
 				{ type: 'snackbar' }
 			);
 		} catch ( err ) {
 			createNotice(
 				'error',
-				__( 'Failed to save workspace setting.', 'wp-admin-shell' ),
+				__(
+					'Failed to save workspace setting.',
+					'wp-admin-workspaces'
+				),
 				{ type: 'snackbar' }
 			);
 		}
@@ -68,18 +71,18 @@ export default function SettingsWorkspaceApp() {
 
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
 	}
 
 	return (
-		<Page title={ __( 'Workspace', 'wp-admin-shell' ) } hasPadding>
+		<Page title={ __( 'Workspace', 'wp-admin-workspaces' ) } hasPadding>
 			<Stack
 				direction="column"
 				gap="xl"
-				className="wp-admin-shell-app-settings-workspace"
+				className="wp-admin-workspaces-app-settings-workspace"
 			>
 				<DataForm
 					data={ editedRecord }
@@ -91,7 +94,7 @@ export default function SettingsWorkspaceApp() {
 				<Text variant="body-sm">
 					{ __(
 						'To re-enable from classic wp-admin, visit Settings → WP Admin Shell.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 
@@ -100,7 +103,7 @@ export default function SettingsWorkspaceApp() {
 						<Notice.Description>
 							{ __(
 								'Reload the page to apply the change.',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 						</Notice.Description>
 						<Notice.Actions>
@@ -109,7 +112,7 @@ export default function SettingsWorkspaceApp() {
 								variant="solid"
 								onClick={ () => window.location.reload() }
 							>
-								{ __( 'Reload now', 'wp-admin-shell' ) }
+								{ __( 'Reload now', 'wp-admin-workspaces' ) }
 							</Button>
 						</Notice.Actions>
 					</Notice.Root>
@@ -123,7 +126,7 @@ export default function SettingsWorkspaceApp() {
 						disabled={ ! hasEdits || isSaving }
 						loading={ isSaving }
 					>
-						{ __( 'Save Changes', 'wp-admin-shell' ) }
+						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

@@ -1,5 +1,5 @@
 {
-	"name": "wp-admin-shell",
+	"name": "wp-admin-workspaces",
 	"version": "0.1.0",
 	"description": "A configurable, React-based WordPress admin environment.",
 	"scripts": {
@@ -30,7 +30,7 @@
 		"ajv-formats": "^3.0.1"
 	},
 	"files": [
-		"wp-admin-shell.php",
+		"wp-admin-workspaces.php",
 		"uninstall.php",
 		"includes",
 		"build",

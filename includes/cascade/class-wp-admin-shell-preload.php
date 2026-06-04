@@ -19,24 +19,24 @@
  * plugin shell already declared doesn't double-fetch.
  *
  * Per-origin contribution rides the existing
- * `wp_admin_shell_data_{origin}` filters — no new filter added.
+ * `wp_admin_workspaces_data_{origin}` filters — no new filter added.
  *
  * Filter idempotence requirement.
- * The collector calls `wp_admin_shell_data_{origin}` against each raw
- * origin doc independently of `WP_Admin_Shell_Resolver::resolve_with`
+ * The collector calls `wp_admin_workspaces_data_{origin}` against each raw
+ * origin doc independently of `WP_Admin_Workspaces_Resolver::resolve_with`
  * (which also runs them). Two passes per render. Pure-functional
  * filters: harmless. Side-effecting filters (logging, registry
  * mutation, REST registration): fire twice. **Per-origin filter
  * callbacks MUST be idempotent.** If a callback's side effect would
  * be wrong to repeat, gate it with a static or hook a different
- * filter that runs once (e.g. `wp_admin_shell_data` post-merge).
+ * filter that runs once (e.g. `wp_admin_workspaces_data` post-merge).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Preload {
+class WP_Admin_Workspaces_Preload {
 
 	/** Verbs `rest_preload_api_request` actually dispatches. */
 	const ALLOWED_METHODS = array( 'GET', 'OPTIONS' );
@@ -45,7 +45,7 @@ class WP_Admin_Shell_Preload {
 	 * Collect the deduped preload list from a pre-loaded origin map.
 	 *
 	 * Each origin's `preload[]` runs through
-	 * `wp_admin_shell_data_{origin}` first — same filter the resolver
+	 * `wp_admin_workspaces_data_{origin}` first — same filter the resolver
 	 * uses — so plugin authors hooking those filters see their entries
 	 * applied without writing a separate hook. The resolved list
 	 * concatenates origins in cascade order (core → engine → plugin →
@@ -63,12 +63,12 @@ class WP_Admin_Shell_Preload {
 		$out  = array();
 		$seen = array();
 
-		foreach ( WP_Admin_Shell_Resolver::ORIGINS_ORDER as $origin ) {
+		foreach ( WP_Admin_Workspaces_Resolver::ORIGINS_ORDER as $origin ) {
 			$doc = $origins[ $origin ] ?? null;
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
-			$doc      = apply_filters( "wp_admin_shell_data_{$origin}", $doc );
+			$doc      = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc );
 			$entries  = $doc['preload'] ?? null;
 			if ( ! is_array( $entries ) ) {
 				continue;
@@ -95,11 +95,11 @@ class WP_Admin_Shell_Preload {
 	 * preload list. Use this on the enqueue path; tests call
 	 * `collect_from_origins` directly with hand-rolled origin maps.
 	 *
-	 * @param array $context Same shape as `WP_Admin_Shell_Resolver::resolve`.
+	 * @param array $context Same shape as `WP_Admin_Workspaces_Resolver::resolve`.
 	 * @return array<int, array{0:string,1:string}>
 	 */
 	public static function collect( $context = array() ) {
-		$origins = WP_Admin_Shell_Resolver::load_origins( $context );
+		$origins = WP_Admin_Workspaces_Resolver::load_origins( $context );
 		return self::collect_from_origins( $origins );
 	}
 
@@ -116,7 +116,7 @@ class WP_Admin_Shell_Preload {
 	 * preload bundle. The successful entries still land in the cache;
 	 * the failures simply round-trip from the client on first read.
 	 *
-	 * @param array $context Forwarded to `WP_Admin_Shell_Resolver::load_origins`.
+	 * @param array $context Forwarded to `WP_Admin_Workspaces_Resolver::load_origins`.
 	 */
 	public static function inject( $context = array() ) {
 		if ( ! function_exists( 'rest_preload_api_request' ) ) {
@@ -173,7 +173,7 @@ class WP_Admin_Shell_Preload {
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 					/* translators: 1: preload path, 2: error message */
 					$msg = sprintf(
-						__( 'WP Admin Shell preload skipped %1$s: %2$s', 'wp-admin-shell' ),
+						__( 'WP Admin Shell preload skipped %1$s: %2$s', 'wp-admin-workspaces' ),
 						$path,
 						$e->getMessage()
 					);

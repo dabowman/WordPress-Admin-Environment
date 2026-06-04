@@ -1,23 +1,23 @@
 <?php
 /**
- * /wp-admin-shell/v1/can/{capability} — runtime capability check.
+ * /wp-admin-workspaces/v1/can/{capability} — runtime capability check.
  *
- * Companion to the inline pre-computed map at `window.wpAdminShell.capabilities`.
+ * Companion to the inline pre-computed map at `window.wpAdminWorkspaces.capabilities`.
  * Authors call this when they need a cap that isn't part of the declared
  * config surface (custom plugin caps, dynamic resource-bound checks).
  *
  * Per-request caching via WP_Object_Cache so repeat calls within the same
  * request are free even when the user holds the cap.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Can_REST {
+class WP_Admin_Workspaces_Can_REST {
 
-	const NAMESPACE = 'wp-admin-shell/v1';
-	const CACHE_GROUP = 'wp_admin_shell_caps';
+	const NAMESPACE = 'wp-admin-workspaces/v1';
+	const CACHE_GROUP = 'wp_admin_workspaces_caps';
 
 	public static function register() {
 		register_rest_route(
@@ -55,4 +55,4 @@ class WP_Admin_Shell_Can_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Can_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Can_REST', 'register' ) );

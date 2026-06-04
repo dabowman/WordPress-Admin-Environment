@@ -60,11 +60,11 @@ export function injectChromeHide( iframeEl ) {
 			e &&
 			e.name !== 'SecurityError' &&
 			typeof window !== 'undefined' &&
-			window.wpAdminShell &&
-			window.wpAdminShell.debug
+			window.wpAdminWorkspaces &&
+			window.wpAdminWorkspaces.debug
 		) {
 			// eslint-disable-next-line no-console
-			console.warn( 'wp-admin-shell: chrome-hide injection failed:', e );
+			console.warn( 'wp-admin-workspaces: chrome-hide injection failed:', e );
 		}
 		return false;
 	}

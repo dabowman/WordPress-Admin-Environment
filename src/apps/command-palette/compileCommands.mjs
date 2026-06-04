@@ -33,7 +33,7 @@
  *     matches a command id wins for the command — first-write wins).
  *
  * `goToLabel` is the localized "Go to <target>" wrapper. The React
- * layer passes `(target) => sprintf(__('Go to %s', 'wp-admin-shell'),
+ * layer passes `(target) => sprintf(__('Go to %s', 'wp-admin-workspaces'),
  * target)` so the `wp-i18n` literal-string check sees the literal at
  * the React call site. Tests pass an identity wrapper that returns
  * `'Go to ' + target` for deterministic, locale-agnostic assertions.

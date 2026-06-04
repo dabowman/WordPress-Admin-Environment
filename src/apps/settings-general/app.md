@@ -13,7 +13,7 @@ The interesting bits are the **date/time format pickers**: WordPress's wp-admin 
 Two data sources:
 
 1. **`useEntityRecord('root', 'site')`** — the writable site options. Save flows through `save()`.
-2. **`window.wpAdminShell.settingsGeneral`** — PHP-injected read-only metadata: role list, language optgroups, timezone groups, weekday labels, preset date/time format arrays, multisite flag, pending admin-email target, constant flags. This data is computed PHP-side because it requires reading `WP_LANG_DIR` (installed locales), the active translation set (available locales), timezone identifiers from PHP's `DateTimeZone::listIdentifiers()`, and `defined('WP_SITEURL') / WP_HOME` PHP constants. None of these are REST-exposed.
+2. **`window.wpAdminWorkspaces.settingsGeneral`** — PHP-injected read-only metadata: role list, language optgroups, timezone groups, weekday labels, preset date/time format arrays, multisite flag, pending admin-email target, constant flags. This data is computed PHP-side because it requires reading `WP_LANG_DIR` (installed locales), the active translation set (available locales), timezone identifiers from PHP's `DateTimeZone::listIdentifiers()`, and `defined('WP_SITEURL') / WP_HOME` PHP constants. None of these are REST-exposed.
 
 Date/Time format logic:
 

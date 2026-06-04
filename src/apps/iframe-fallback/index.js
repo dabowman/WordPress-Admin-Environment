@@ -26,14 +26,14 @@ import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
  * once the user has re-authenticated.
  *
  * Source: `config.url` (the v2-canonical placement). Absolute URLs
- * pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`.
+ * pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`.
  * @param {Object} root0
  * @param {*}      root0.app
  * @param {*}      root0.config
  */
 export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';
-	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 
 	// `isReady` gates the iframe's visibility. Inverted from the old
@@ -55,7 +55,7 @@ export default function IframeApp( { app, config = {} } ) {
 	// external links in a new tab. Origin- + source-pinned.
 	useEffect( () => {
 		const shell =
-			typeof window !== 'undefined' ? window.wpAdminShell : null;
+			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
 		const bridgeAdminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
 		const routes = ( shell && shell.adminRoutes ) || {};
 		return installIframeBridge( {
@@ -174,9 +174,9 @@ export default function IframeApp( { app, config = {} } ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-iframe">
+		<div className="wp-admin-workspaces-app-iframe">
 			{ ! isReady && (
-				<div className="wp-admin-shell-app-iframe__loading">
+				<div className="wp-admin-workspaces-app-iframe__loading">
 					<Spinner />
 				</div>
 			) }
@@ -184,7 +184,7 @@ export default function IframeApp( { app, config = {} } ) {
 				ref={ iframeRef }
 				src={ src }
 				title={ app?.title }
-				className="wp-admin-shell-app-iframe__frame"
+				className="wp-admin-workspaces-app-iframe__frame"
 				style={ { visibility: isReady ? 'visible' : 'hidden' } }
 				onLoad={ onIframeLoad }
 			/>

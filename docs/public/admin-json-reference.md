@@ -64,7 +64,7 @@ The schema is also available in-repo at [`docs/schemas/admin.json`](../schemas/a
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
 | `commands` | First-class palette entries + keyboard shortcuts. Each command has an explicit `id` field. | Merge by `id`. |
-| `styles` | Tokens, slot overrides, chrome. theme-developer surface intact from v2 (see [§9 of the design spec](../wp-admin-shell-design-spec.md#9-tokens-and-styling)). | Deep-merge per-field. |
+| `styles` | Tokens, slot overrides, chrome. theme-developer surface intact from v2 (see [§9 of the design spec](../wp-admin-workspaces-design-spec.md#9-tokens-and-styling)). | Deep-merge per-field. |
 | `preload` | Workspace-boot REST preloads. Additional per-screen preloads live in `screens[id].preload`. | Additive concatenation; dedupe by `path+method`. |
 | `regions` | **Escape hatch** — direct region tree for engines that need it (windowed, MDI, multi-pane). | Deep-merge. Optional in v3; `screens` block synthesizes regions for the common case. |
 | `routes` | **Escape hatch** — direct URL→app mapping for non-screen compositions. | Deep-merge by route key. Optional in v3. |
@@ -359,7 +359,7 @@ The v2 → v3 rename: `bindings[]` → `commands[]`. Each entry gains an explici
 
 ## styles
 
-WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-shell--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers.
+WPDS-shaped style tree. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers.
 
 Slot values may be DTCG token aliases (`"{color.brand.500}"`), literal CSS values (`"#3858e9"`, `"16px"`), or inline DTCG objects. WPDS slot validation runs against the pinned `$wpds` matrix at the runtime resolver — the schema is intentionally loose here because the slot list grows with WordPress versions.
 
@@ -411,7 +411,7 @@ Per-app style overrides, keyed by app id. Same shape as the top-level `styles` t
 
 REST paths to preload server-side and inject as `wp.apiFetch.createPreloadingMiddleware` cache before the shell bundle runs. Each entry is either a string path (defaults to `GET`) or a `[ path, method ]` tuple. Methods are restricted to `GET` and `OPTIONS`.
 
-Across origins the resolved value is the concatenation of every origin's `preload[]` — there are no override semantics, only additive union. Duplicates by exact `path + method` are deduped before serialization. Conditional preloads belong in a `wp_admin_shell_data_{origin}` filter callback. Per-screen preloads live in `screens[id].preload`.
+Across origins the resolved value is the concatenation of every origin's `preload[]` — there are no override semantics, only additive union. Duplicates by exact `path + method` are deduped before serialization. Conditional preloads belong in a `wp_admin_workspaces_data_{origin}` filter callback. Per-screen preloads live in `screens[id].preload`.
 
 ```json
 {
@@ -434,11 +434,11 @@ Across origins the resolved value is the concatenation of every origin's `preloa
 
 The kernel synthesizes the runtime regions map + routes table from `screens[]` + the active engine's `defaultRegions` (`src/runtime/compile/`). Authors who need a region or route the `screens` shape can't express write top-level `regions` / `routes` blocks — admin.json's escape-hatch declarations win on per-region-id / per-pattern collision against the synthesis.
 
-See [§5 of the design spec](../wp-admin-shell-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-shell-design-spec.md#62-routes-block) for route patterns. Avoid these blocks when the `screens` surface can express the same thing.
+See [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary) for region declarations and [§6.2](../wp-admin-workspaces-design-spec.md#62-routes-block) for route patterns. Avoid these blocks when the `screens` surface can express the same thing.
 
 ## customizable
 
-`customizable` is a per-entry write allowlist: it declares what the consumer cascade origins (`role`, `user`) may write to that entry and its descendants. Trust-tier origins (`core`, `engine`, `plugin`, `site`) author the declaration and are exempt from it — the field is *their* statement about what downstream consumers may touch. Enforcement runs server-side in `WP_Admin_Shell_Customizable` before the merge, so blocked fields never enter the resolved tree.
+`customizable` is a per-entry write allowlist: it declares what the consumer cascade origins (`role`, `user`) may write to that entry and its descendants. Trust-tier origins (`core`, `engine`, `plugin`, `site`) author the declaration and are exempt from it — the field is *their* statement about what downstream consumers may touch. Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` before the merge, so blocked fields never enter the resolved tree.
 
 Three accepted shapes:
 

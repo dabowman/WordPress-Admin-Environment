@@ -1,11 +1,11 @@
 ---
 name: app-json-author
-description: Author or edit WP Admin Shell app.json manifests. Use whenever a user wants to create a new admin surface (a React app that mounts inside a WP Admin Shell region), declare its ARIA role and capability floor, write a JSON Schema for its config, register a script handle, ship a baseline dataView family with variants, declare window-mount hints for windowed engines, expose slots for sub-mount points, declare slotHints (grid-cell defaults a host can honor), or write the machine-readable documentation contract a rebuild needs. Triggers on phrases like "ship a new admin app", "build a Stripe customers list inside wp-admin", "register an app called acme/orders", "add a window hint to my app", "expose a grid slot in my dashboard host", "add a dataView variant", "ship a dashboard widget", "app config-schema for postType", "app.json for my plugin", "register_app via wp_admin_shell_register_app". Covers the admin-app.json schema, namespacing (core:* vs plugin:{slug}/{name}), platform service requests, the four-layer capability gating model, and the per-app documentation block + sibling app.md prose contract.
+description: Author or edit WP Admin Shell app.json manifests. Use whenever a user wants to create a new admin surface (a React app that mounts inside a WP Admin Shell region), declare its ARIA role and capability floor, write a JSON Schema for its config, register a script handle, ship a baseline dataView family with variants, declare window-mount hints for windowed engines, expose slots for sub-mount points, declare slotHints (grid-cell defaults a host can honor), or write the machine-readable documentation contract a rebuild needs. Triggers on phrases like "ship a new admin app", "build a Stripe customers list inside wp-admin", "register an app called acme/orders", "add a window hint to my app", "expose a grid slot in my dashboard host", "add a dataView variant", "ship a dashboard widget", "app config-schema for postType", "app.json for my plugin", "register_app via wp_admin_workspaces_register_app". Covers the admin-app.json schema, namespacing (core:* vs plugin:{slug}/{name}), platform service requests, the four-layer capability gating model, and the per-app documentation block + sibling app.md prose contract.
 ---
 
 # app.json Authoring Skill
 
-`app.json` is the manifest for a WP Admin Shell **app**: an admin surface (a posts list, an editor, a command palette, a settings panel, a dashboard widget) that mounts into a region of a workspace. The manifest ships alongside the app's React code at the convention path `{plugin}/apps/{name}/app.json` (or is registered programmatically via `wp_admin_shell_register_app()`).
+`app.json` is the manifest for a WP Admin Shell **app**: an admin surface (a posts list, an editor, a command palette, a settings panel, a dashboard widget) that mounts into a region of a workspace. The manifest ships alongside the app's React code at the convention path `{plugin}/apps/{name}/app.json` (or is registered programmatically via `wp_admin_workspaces_register_app()`).
 
 Manifests carry **intrinsic, install-independent** declarations: ARIA role, platform services, capability floor, config schema, script handle, optional dataView baseline / window hints / slot exposures / slot hints. Manifests deliberately **do not** declare layout, geometry, keystroke bindings, dashboard-widget identity (`title`, `hidden`), or which install they belong to — those are install decisions and live in `admin.json`.
 
@@ -15,7 +15,7 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
 |---|---|
 | `docs/schemas/admin-app.json` | JSON Schema. Inline `description` fields on every key. |
 | `docs/public/app-json-reference.md` | Author-facing reference. Per-field tables. |
-| `docs/wp-admin-shell-design-spec.md` | §4.1 (app manifest), §5.3 (platform services), §11 (capabilities + permissions), §13 (extension points). |
+| `docs/wp-admin-workspaces-design-spec.md` | §4.1 (app manifest), §5.3 (platform services), §11 (capabilities + permissions), §13 (extension points). |
 | `docs/dataview-config.md` | dataView 3-axis registry, `extends`, variant resolution. |
 | `docs/admin-json-api-validation.md` | REST API coverage per app source. |
 | `docs/research/app-validation-2026-05-04.md` | WPDS / REST / core-data audit of every bundled `src/apps/*`. |
@@ -344,7 +344,7 @@ Update both `app.json#documentation` AND `app.md` whenever touching app behavior
 `via:` values:
 - `core-data` — `useEntityRecord` / `useEntityRecords` / `useDispatch( coreStore )`
 - `api-fetch` — `wp.apiFetch()` (non-entity ops: media upload, auto-draft, etc.)
-- `window-global` — reads from `window.wpAdminShell.*` etc.
+- `window-global` — reads from `window.wpAdminWorkspaces.*` etc.
 - `external` — external HTTP API
 - `commands` — invoked via the command palette
 - `kernel-config` — read via `useKernel()` / kernel context
@@ -615,7 +615,7 @@ If the app is a dashboard widget (mounted via `screens[id].apps[i].slot: "grid"`
 | What does `useDataView` return? | `src/runtime/dataView/useDataView.js`. |
 | How do I dispatch a write via `core-data`? | `dvdbwmn-wordpress:wordpress-core-data` skill. |
 | Which fields work in a dataView config? | `docs/dataview-config.md`. |
-| How does the capability fast-path work? | `docs/wp-admin-shell-design-spec.md` §11. |
+| How does the capability fast-path work? | `docs/wp-admin-workspaces-design-spec.md` §11. |
 | What WPDS components are available? | `dvdbwmn-wordpress:wordpress-design-system` skill + CLAUDE.md "Component-mapping cheat sheet". |
 | Per-screen spec for what my app rebuilds? | `docs/screens/<slug>.md`. |
 | Existing app's documentation block? | `src/apps/<id>/app.json` (`documentation`) + `src/apps/<id>/app.md`. |

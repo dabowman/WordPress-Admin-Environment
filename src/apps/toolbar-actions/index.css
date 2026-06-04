@@ -6,7 +6,7 @@
  * DS-neutral.
  */
 
-.wp-admin-shell-arbitrary-node-title {
+.wp-admin-workspaces-arbitrary-node-title {
 	display: inline-flex;
 	align-items: center;
 	gap: var( --wpds-dimension-padding-xs );
@@ -16,9 +16,9 @@
 
 /* Constrain any icon/img a harvested node title carries so a plugin's
  * oversized markup can't blow out the toolbar row. */
-.wp-admin-shell-arbitrary-node-title img,
-.wp-admin-shell-arbitrary-node-title svg,
-.wp-admin-shell-arbitrary-node-title .ab-icon::before {
+.wp-admin-workspaces-arbitrary-node-title img,
+.wp-admin-workspaces-arbitrary-node-title svg,
+.wp-admin-workspaces-arbitrary-node-title .ab-icon::before {
 	width: 20px;
 	height: 20px;
 	max-width: 20px;
@@ -28,7 +28,7 @@
 }
 
 /* The data-URI / image-URL menu icon (shared with the nav renderers). */
-.wp-admin-shell-arbitrary-icon {
+.wp-admin-workspaces-arbitrary-icon {
 	display: inline-block;
 	vertical-align: middle;
 	object-fit: contain;
@@ -42,7 +42,7 @@
  * of routing arbitrary markup through `IconButton`'s children. Styled to
  * sit in the toolbar row like the `IconButton`-backed actions.
  */
-.wp-admin-shell-toolbar-action {
+.wp-admin-workspaces-toolbar-action {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -59,7 +59,7 @@
 	line-height: 1;
 }
 
-.wp-admin-shell-toolbar-action:hover,
-.wp-admin-shell-toolbar-action:focus-visible {
+.wp-admin-workspaces-toolbar-action:hover,
+.wp-admin-workspaces-toolbar-action:focus-visible {
 	background: var(--wpds-color-bg-surface-neutral-strong);
 }

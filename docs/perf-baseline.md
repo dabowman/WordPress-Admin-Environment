@@ -7,10 +7,10 @@ This file holds the recorded measurement that supports the v1 readiness claim. *
 ## Methodology
 
 1. Plain wp-env install with the plugin active (Gutenberg also active per the runtime dep).
-2. Login as administrator, set `wp_admin_shell_active_shell = wp-admin-default`.
+2. Login as administrator, set `wp_admin_workspaces_active_shell = wp-admin-default`.
 3. Open Chrome (or equivalent), DevTools → Network → "Disable cache" + Performance → throttle to **Fast 4G** + **CPU: 4× slowdown**.
 4. In Performance, start recording.
-5. Hard reload `http://localhost:8888/wp-admin/admin.php?page=wp-admin-shell`.
+5. Hard reload `http://localhost:8888/wp-admin/admin.php?page=wp-admin-workspaces`.
 6. Stop recording when the routed app's first paint settles.
 7. Measure from `navigationStart` to first paint of the routable region's first app (the Dashboard iframe for `wp-admin-default`, the Posts list for `developer-admin`).
 

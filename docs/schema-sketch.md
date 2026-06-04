@@ -2,7 +2,7 @@
 
 > Authoritative for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
 >
-> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-shell-design-spec.md`](../wp-admin-shell-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/admin.json`](../schemas/admin.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
+> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/admin.json`](../schemas/admin.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
 
 v3 reshapes admin.json around user-task surfaces instead of runtime-pipeline surfaces.
 
@@ -208,12 +208,12 @@ Resolver normalizes the shorthand to `apps: [ { "id": "main", "app": "...", "con
 - **`permissions`** declares access (see Permissions section). Default when absent: admin-only.
 - **`preload[]`** lists REST paths to hydrate when the screen activates. Additive with workspace-level `preload[]`.
 - **`hidden`** at any cascade origin suppresses the screen entirely.
-- **`legacy_path` / `legacy_query` / `legacy_params`** map this screen to the classic wp-admin script it replaces (e.g. `edit.php` + `{ "post_type": "page" }`). They drive bidirectional link interception (0.1.0): the JS admin-link interceptor rewrites clicks on the classic URL to this screen's `path`, and the server redirects direct GET navigations to the classic URL into the workspace. Most-specific mapping wins (most satisfied `legacy_query` constraints), so a bare `edit.php` entry can't shadow a constrained sibling. Two WordPress conventions live in the matcher itself: (a) an absent `?post_type=` is compared as `post` (so bare `edit.php` still maps to a `post_type=post`-constrained entry); (b) an entry that doesn't itself constrain `?action=` is skipped when the URL carries one, so a nonce-less state-changing GET isn't redirected with its action dropped. `?_wpnonce` requests are never mapped. Both directions read one source — `WP_Admin_Shell_Admin_Routes::legacy_map()`.
+- **`legacy_path` / `legacy_query` / `legacy_params`** map this screen to the classic wp-admin script it replaces (e.g. `edit.php` + `{ "post_type": "page" }`). They drive bidirectional link interception (0.1.0): the JS admin-link interceptor rewrites clicks on the classic URL to this screen's `path`, and the server redirects direct GET navigations to the classic URL into the workspace. Most-specific mapping wins (most satisfied `legacy_query` constraints), so a bare `edit.php` entry can't shadow a constrained sibling. Two WordPress conventions live in the matcher itself: (a) an absent `?post_type=` is compared as `post` (so bare `edit.php` still maps to a `post_type=post`-constrained entry); (b) an entry that doesn't itself constrain `?action=` is skipped when the URL carries one, so a nonce-less state-changing GET isn't redirected with its action dropped. `?_wpnonce` requests are never mapped. Both directions read one source — `WP_Admin_Workspaces_Admin_Routes::legacy_map()`.
 - **Eligibility is implicit.** Any app may be placed in any slot. App authors who want to enforce constraints do so inside their render (no schema-level eligibility enforcement).
 
 ### The `wp-content/admin.json` override origin (0.1.0)
 
-The canonical workspace trigger is a `wp-content/admin.json` file loaded into the `plugin` cascade slot as a **partial delta** over the `wp-admin-default` baseline (now the `core` slot) — the theme.json model. Validation is **partial-permissive**: PHP ships no JSON-Schema validator (schema conformance is the JS-side Ajv `test:schema` sweep), so the runtime gate only requires the file to decode to a JSON object; the schema-`required` top-level keys (`version`/`$wpds`/`name`/`workspace`/`screens`) are NOT required of the override — it's a delta. Completeness of the *merged* doc is enforced post-resolution by `run-shape-tests.php`. A malformed file degrades to the bare baseline (with a `WP_DEBUG` notice). See `docs/wp-admin-shell-design-spec.md` §19.
+The canonical workspace trigger is a `wp-content/admin.json` file loaded into the `plugin` cascade slot as a **partial delta** over the `wp-admin-default` baseline (now the `core` slot) — the theme.json model. Validation is **partial-permissive**: PHP ships no JSON-Schema validator (schema conformance is the JS-side Ajv `test:schema` sweep), so the runtime gate only requires the file to decode to a JSON object; the schema-`required` top-level keys (`version`/`$wpds`/`name`/`workspace`/`screens`) are NOT required of the override — it's a delta. Completeness of the *merged* doc is enforced post-resolution by `run-shape-tests.php`. A malformed file degrades to the bare baseline (with a `WP_DEBUG` notice). See `docs/wp-admin-workspaces-design-spec.md` §19.
 
 ### Multi-pane / split-view
 
@@ -303,7 +303,7 @@ The extension chain resolves at engine-manifest load time. Inheritance is bounde
 Plugins can extend an existing engine's catalog via filter:
 
 ```php
-add_filter( 'wp_admin_shell_engine_modes_core:default', function( $modes ) {
+add_filter( 'wp_admin_workspaces_engine_modes_core:default', function( $modes ) {
     $modes['kiosk'] = [
         'label'   => 'Kiosk',
         'regions' => [
@@ -518,7 +518,7 @@ Engines that ship alternative grid implementations MAY ignore the `dataView` blo
 - **Registry lives at `settings.dataViews.<kind>.<name>.<variant>`.** Three axes; each leaf is a complete `@wordpress/dataviews` configuration (`fieldsRef`, `defaultView`, `defaultLayouts`, `actions`, etc.). The `_default` variant is the unqualified base; other variant ids are author-defined.
 - **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge (CIAB independent-resolution rule). Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
 - **Inline override on screens via `screens[id].dataView`.** Deep-merges on top of the resolved triple. Per-screen tweak pattern that survives alongside `dataViewRef`.
-- **Per-base + per-variant filter hooks.** `wp_admin_shell_data_view_config_{kind}_{name}` fires for every triple; `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` fires additionally whenever the variant is non-`_default`.
+- **Per-base + per-variant filter hooks.** `wp_admin_workspaces_data_view_config_{kind}_{name}` fires for every triple; `wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}` fires additionally whenever the variant is non-`_default`.
 - **Tombstones via `null`.** A higher origin sets `settings.dataViews.postType.post._default.fields.author: null` to remove the author column from the base globally. Or `screens.posts.dataView.fields.author: null` to remove it only on the Posts screen.
 
 ### DataFields
@@ -575,7 +575,7 @@ To honor "anchor to existing WordPress entities" — the bridge ingests classic 
 - Hide entirely: `screens.woocommerce.hidden: true`.
 - Replace app: `screens.woocommerce.app: "plugin:my-replacement/dashboard"`.
 
-**Container placement:** the bridge synthesizes a `menu.ingested` top-level item by default (label "Plugins"). Site authors can reparent ingested screens into other containers as needed. Plugin developers who want to claim a different container declare it via filter (`wp_admin_shell_ingested_menu_container`).
+**Container placement:** the bridge synthesizes a `menu.ingested` top-level item by default (label "Plugins"). Site authors can reparent ingested screens into other containers as needed. Plugin developers who want to claim a different container declare it via filter (`wp_admin_workspaces_ingested_menu_container`).
 
 ## Cascade semantics
 
@@ -827,7 +827,7 @@ The `workspace.widgets.<slot>` map declares apps that mount persistently across 
 Plugins ship workspaces programmatically via:
 
 ```php
-wp_admin_shell_register_workspace( 'my-shell', array(
+wp_admin_workspaces_register_workspace( 'my-shell', array(
     'version'   => 3,
     '$wpds'     => '6.9',
     'name'      => 'my-shell',
@@ -852,7 +852,7 @@ The plugin-extension surfaces:
 ### Plugin-contributed modes
 
 ```php
-add_filter( 'wp_admin_shell_engine_modes_{engineId}', function( $modes ) {
+add_filter( 'wp_admin_workspaces_engine_modes_{engineId}', function( $modes ) {
     $modes['kiosk'] = [ ... ];
     return $modes;
 } );
@@ -865,14 +865,14 @@ Filter fires per-engine-id when the engine manifest loads. See [Modes](#modes) s
 Engines accept plugin-namespaced renderer ids in their `menu-renderer` field. Plugins register the renderer at runtime:
 
 ```php
-wp_admin_shell_register_menu_renderer( 'plugin:my/breadcrumb-nav', $callback );
+wp_admin_workspaces_register_menu_renderer( 'plugin:my/breadcrumb-nav', $callback );
 ```
 
 The engine's render path consults the renderer registry. Plugin renderers receive the resolved menu tree + active screen id as arguments and return rendered React or markup.
 
 ### Plugin-contributed dataView overrides
 
-Preserved from v2 with the v3 rename: the `wp_admin_shell_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_shell_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant. CIAB plugins migrate via `s/next_admin_entity_view_config_/wp_admin_shell_data_view_config_/g`.
+Preserved from v2 with the v3 rename: the `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_workspaces_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant. CIAB plugins migrate via `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`.
 
 ## Open design questions
 

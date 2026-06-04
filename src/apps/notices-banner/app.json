@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Renders persistent banner notices (info / warning / success / error) at the top of whatever region pins it. Source: `@wordpress/notices` store, filtered to `type === 'default'`. Any app calling `wp.data.dispatch('core/notices').createNotice(...)` lands here. Dismissible notices show a close icon that fires `removeNotice(id)`.",
 		"data": {
@@ -25,9 +25,9 @@
 					"fields": [ "id", "type", "status", "content", "isDismissible" ]
 				},
 				{
-					"source": "window.wpAdminShell.adminNotices",
+					"source": "window.wpAdminWorkspaces.adminNotices",
 					"via": "window-global",
-					"purpose": "Admin-notices harvest (#128): global `admin_notices` HTML buffered server-side by WP_Admin_Shell_Chrome_Harvest. Rendered unchanged (admin trust) inside one neutral Notice.Root, locally dismissible. Global-only — per-screen `$pagenow`-keyed notices don't fire on the shell page."
+					"purpose": "Admin-notices harvest (#128): global `admin_notices` HTML buffered server-side by WP_Admin_Workspaces_Chrome_Harvest. Rendered unchanged (admin trust) inside one neutral Notice.Root, locally dismissible. Global-only — per-screen `$pagenow`-keyed notices don't fire on the shell page."
 				}
 			],
 			"writes": [

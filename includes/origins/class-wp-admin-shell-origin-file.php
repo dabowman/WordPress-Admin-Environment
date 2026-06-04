@@ -33,12 +33,12 @@
  * access, which already implies running arbitrary plugin code, so there's
  * no privilege boundary to defend here. See spec §19.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Origin_File {
+class WP_Admin_Workspaces_Origin_File {
 
 	/** Maximum override-file size. Structural config, not data — 1 MB is generous. */
 	const MAX_BYTES = 1048576;
@@ -63,7 +63,7 @@ class WP_Admin_Shell_Origin_File {
 		 *
 		 * @param string $default `WP_CONTENT_DIR/admin.json`.
 		 */
-		return (string) apply_filters( 'wp_admin_shell_admin_json_path', $default );
+		return (string) apply_filters( 'wp_admin_workspaces_admin_json_path', $default );
 	}
 
 	/**
@@ -191,7 +191,7 @@ class WP_Admin_Shell_Origin_File {
 	 * @return bool
 	 */
 	private static function is_valid_partial( $doc ) {
-		if ( ! is_array( $doc ) || empty( $doc ) || ! WP_Admin_Shell_Merge::is_assoc( $doc ) ) {
+		if ( ! is_array( $doc ) || empty( $doc ) || ! WP_Admin_Workspaces_Merge::is_assoc( $doc ) ) {
 			return false;
 		}
 		// Known object-shaped top-level blocks must be objects (assoc arrays)
@@ -210,7 +210,7 @@ class WP_Admin_Shell_Origin_File {
 			if ( ! is_array( $doc[ $block ] ) ) {
 				return false;
 			}
-			if ( ! empty( $doc[ $block ] ) && ! WP_Admin_Shell_Merge::is_assoc( $doc[ $block ] ) ) {
+			if ( ! empty( $doc[ $block ] ) && ! WP_Admin_Workspaces_Merge::is_assoc( $doc[ $block ] ) ) {
 				return false;
 			}
 		}
@@ -231,10 +231,10 @@ class WP_Admin_Shell_Origin_File {
 			? json_last_error_msg()
 			: 'not a JSON object';
 		_doing_it_wrong(
-			'WP_Admin_Shell_Origin_File::load',
+			'WP_Admin_Workspaces_Origin_File::load',
 			sprintf(
 				/* translators: 1: file path, 2: reason */
-				esc_html__( 'Ignoring %1$s — %2$s. Falling back to the wp-admin-default baseline.', 'wp-admin-shell' ),
+				esc_html__( 'Ignoring %1$s — %2$s. Falling back to the wp-admin-default baseline.', 'wp-admin-workspaces' ),
 				esc_html( $path ),
 				esc_html( $reason )
 			),

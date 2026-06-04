@@ -20,7 +20,7 @@ import { installAdminLinkInterceptor } from './adminLinkInterceptor.mjs';
 export function AdminLinkInterceptor() {
 	useEffect( () => {
 		const shell =
-			typeof window !== 'undefined' ? window.wpAdminShell : null;
+			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
 		// Always pass an ABSOLUTE admin URL — `classifyAdminLink` does
 		// `new URL( adminUrl )` with no base, which throws on a relative
 		// string and would silently disable all interception. `admin_url()`

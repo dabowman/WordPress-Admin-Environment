@@ -136,7 +136,7 @@ If `install_languages` cap and writable filesystem, the dropdown can install mis
 | `mu_menu_items` data | None | **GAP**. |
 | Install language pack | None | **GAP** — `wp_download_language_pack()` is PHP-only. |
 
-The settings controller does not expose site options. To rebuild this screen the shell must ship custom endpoints (e.g. `/wp-admin-shell/v1/network/options`), enumerate the option keys above, and apply server-side validation matching the form handler in `network/settings.php`.
+The settings controller does not expose site options. To rebuild this screen the shell must ship custom endpoints (e.g. `/wp-admin-workspaces/v1/network/options`), enumerate the option keys above, and apply server-side validation matching the form handler in `network/settings.php`.
 
 For the Setup screen, the snippet rendering is purely a function of network state (subdomain vs. subdirectory + domain + path); no mutation. Read-only endpoint suffices.
 

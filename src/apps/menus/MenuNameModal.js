@@ -42,7 +42,7 @@ export function MenuNameModal( { menu, onClose, onSave, onSaved, onError } ) {
 			const record = await onSave( 'root', 'menu', payload );
 			if ( ! record ) {
 				throw new Error(
-					__( 'The menu could not be saved.', 'wp-admin-shell' )
+					__( 'The menu could not be saved.', 'wp-admin-workspaces' )
 				);
 			}
 			onSaved?.( record );
@@ -58,14 +58,14 @@ export function MenuNameModal( { menu, onClose, onSave, onSaved, onError } ) {
 		<Modal
 			title={
 				isNew
-					? __( 'Create menu', 'wp-admin-shell' )
-					: __( 'Rename menu', 'wp-admin-shell' )
+					? __( 'Create menu', 'wp-admin-workspaces' )
+					: __( 'Rename menu', 'wp-admin-workspaces' )
 			}
 			onRequestClose={ onClose }
 		>
 			<Stack direction="column" gap="md">
 				<InputControl
-					label={ __( 'Menu name', 'wp-admin-shell' ) }
+					label={ __( 'Menu name', 'wp-admin-workspaces' ) }
 					value={ name }
 					onChange={ ( e ) =>
 						setName(
@@ -75,7 +75,7 @@ export function MenuNameModal( { menu, onClose, onSave, onSaved, onError } ) {
 				/>
 				<Stack direction="row" justify="flex-end" gap="sm">
 					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -85,8 +85,8 @@ export function MenuNameModal( { menu, onClose, onSave, onSaved, onError } ) {
 						disabled={ ! name.trim() || isSaving }
 					>
 						{ isNew
-							? __( 'Create', 'wp-admin-shell' )
-							: __( 'Save', 'wp-admin-shell' ) }
+							? __( 'Create', 'wp-admin-workspaces' )
+							: __( 'Save', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

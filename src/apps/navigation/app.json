@@ -27,7 +27,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Menu host + renderer dispatcher. Reads the resolved `menu` tree from the kernel config (nested entries, screen-bound by the PHP `bind_screens` pass), orders + prunes it once (sort by `position`; recursively drop hidden, capability-denied, and orphan-separator items), then dispatches to the renderer the active engine named via its `engine.json` `menu-renderer` field (threaded onto the runtime config by `buildRuntimeConfig`). Dispatch goes through the kernel menu-renderer registry (`src/runtime/config/menuRendererRegistry.js`), so a `plugin:*` renderer resolves by the same path as a built-in. Ships two renderers — `sidebar-drilldown` (default; slide-in sub-screens + `?screen=<id>` URL slot, honors `config.collapsed` icon rail) and `sidebar-tree` (expandable in-place tree). `core:single-pane`'s `drawer` renderer registers from that engine's module. `menu-renderer: none` → renders nothing; absent → falls back to `sidebar-drilldown`. Active state derives from the URL primary path via `aria-current=\"true\"`.",
 		"data": {
@@ -44,7 +44,7 @@
 					"fields": [ "title" ]
 				},
 				{
-					"source": "/wp-admin-shell/v1/can/{cap}",
+					"source": "/wp-admin-workspaces/v1/can/{cap}",
 					"via": "api-fetch",
 					"purpose": "Per-item capability check via the kernel's `userCan(cap)` helper. Reads a sync cache populated by an `api-fetch` REST call. Items declaring `capability` get pruned recursively when the user lacks the cap."
 				}
@@ -75,15 +75,15 @@
 		"constraints": [
 			{ "concern": "url-slot-state", "note": "Sub-screen state is `?screen=<id>` in the URL, not `useState`. Deep-links + refresh survive. Multiple sidebars in one shell would collide on the slot — namespace later (`?nav-{regionId}-screen=…`) if needed." },
 			{ "concern": "aria-current-sole-authority", "note": "Active state lives on `aria-current=\"true\"` only — no `.is-active` class. CSS targets the attribute; the redundant class would cause drift." },
-			{ "concern": "edit-site-class-naming", "note": "Sidebar internals mirror `@wordpress/edit-site/src/components/sidebar*` BEM naming — `wp-admin-shell-sidebar-navigation-{screen,item}`. Keep one-for-one with edit-site so its source is the structural reference." },
+			{ "concern": "edit-site-class-naming", "note": "Sidebar internals mirror `@wordpress/edit-site/src/components/sidebar*` BEM naming — `wp-admin-workspaces-sidebar-navigation-{screen,item}`. Keep one-for-one with edit-site so its source is the structural reference." },
 			{ "concern": "iconbutton-href-render", "note": "WPDS IconButton wraps Base UI Button which always renders a native `<button>` and silently drops `href`. We use `render={<a href={...}/>}` to swap the element." },
 			{ "concern": "active-class-fallback-not-set", "note": "SidebarNavigationItem only sets `aria-current`; legacy `.is-active` is intentionally absent." },
 			{ "concern": "item-prune-recursive", "note": "`pruneNavItems` recursively walks the tree. A screen/group whose children all prune renders nothing (the screen itself drops). Orphan separators at top/bottom are stripped." },
 			{ "concern": "experimental-itemgroup", "note": "Uses legacy `__experimentalItemGroup` from `@wordpress/components` — WPDS 0.12 has no port." },
 			{ "concern": "no-app-landmark", "note": "Region wrapper renders `<div role=\"navigation\">`; the app must NOT nest its own `<nav>` (would double the landmark)." },
-			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }` rule that wins against `@wordpress/ui` Button's layered color. The bundled `core:default` engine ships a defensive unlayered `.wp-admin-shell-region--sidebar a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for whatever color scheme its chrome uses, or anchor-rendered nav buttons will inherit wp-admin's blue." },
-			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs do not set `fill`, so library icons paint browser-default black. The bundled `core:default` engine ships `.wp-admin-shell-region--sidebar svg { fill: currentColor }`. A non-WPDS engine MUST force `fill: currentColor` on the icons it pairs with this app or icons render in the wrong color." },
-			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack's `display: flex` rule lives in `@layer wp-ui-components` and loses against unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `.wp-admin-shell [class*=\"__stack\"] { display: flex }` defensive rule. A rebuild that uses Stack-style flex containers must defeat unlayered host CSS the same way (or use a non-layered layout primitive)." }
+			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }` rule that wins against `@wordpress/ui` Button's layered color. The bundled `core:default` engine ships a defensive unlayered `.wp-admin-workspaces-region--sidebar a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent unlayered rule for whatever color scheme its chrome uses, or anchor-rendered nav buttons will inherit wp-admin's blue." },
+			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs do not set `fill`, so library icons paint browser-default black. The bundled `core:default` engine ships `.wp-admin-workspaces-region--sidebar svg { fill: currentColor }`. A non-WPDS engine MUST force `fill: currentColor` on the icons it pairs with this app or icons render in the wrong color." },
+			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack's `display: flex` rule lives in `@layer wp-ui-components` and loses against unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `.wp-admin-workspaces [class*=\"__stack\"] { display: flex }` defensive rule. A rebuild that uses Stack-style flex containers must defeat unlayered host CSS the same way (or use a non-layered layout primitive)." }
 		],
 		"design-system-leakage": [
 			{ "import": "@wordpress/ui#IconButton, Stack", "purpose": "Collapsed-rail buttons + layout." },

@@ -52,21 +52,21 @@ export default function CoreDesktopLayout( { regions } ) {
 		<SlotFillProvider>
 			<WindowManagerProvider>
 				<div
-					className="wp-admin-shell-layout wp-admin-shell-layout--desktop"
+					className="wp-admin-workspaces-layout wp-admin-workspaces-layout--desktop"
 					data-engine="core:desktop"
 				>
 					{ wallpaper && (
-						<div className="wp-admin-shell-desktop__wallpaper-slot">
+						<div className="wp-admin-workspaces-desktop__wallpaper-slot">
 							<Region region={ wallpaper } />
 						</div>
 					) }
 					{ workspace && (
-						<div className="wp-admin-shell-desktop__workspace-slot">
+						<div className="wp-admin-workspaces-desktop__workspace-slot">
 							<Region region={ workspace } />
 						</div>
 					) }
 					{ dock && (
-						<div className="wp-admin-shell-desktop__dock-slot">
+						<div className="wp-admin-workspaces-desktop__dock-slot">
 							<Region region={ dock } />
 						</div>
 					) }

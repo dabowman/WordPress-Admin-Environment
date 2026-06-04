@@ -21,7 +21,7 @@ A toolbar above the DataViews list carries two header actions:
 
 ## Architecture
 
-The DataViews spec — fields, default view, default layouts, actions — comes from the dataView primitive at `(root, plugin, <variant|_default>)`. The app's `dataView` block in `app.json` is the baseline; admin.json `settings.dataViews.root.plugin.<variant|_default>` and the `wp_admin_shell_data_view_config_root_plugin[_<variant>]` filter override per-field. The hook call is `useDataView(screenId)`.
+The DataViews spec — fields, default view, default layouts, actions — comes from the dataView primitive at `(root, plugin, <variant|_default>)`. The app's `dataView` block in `app.json` is the baseline; admin.json `settings.dataViews.root.plugin.<variant|_default>` and the `wp_admin_workspaces_data_view_config_root_plugin[_<variant>]` filter override per-field. The hook call is `useDataView(screenId)`.
 
 Field renderers and action callbacks stay in `index.js`, keyed by spec id. `buildFields(dataView.fields, fieldRenderers)` and `buildActions(dataView.actions, { setPluginStatus, deletePlugins })` compile the JSON specs into DataViews shape — unknown spec ids fall through (renderer absent → DataViews built-in renderer; callback absent → action is decorative). The single `RenderModal` is keyed on `spec.id === 'delete'` because the destructive confirm flow needs JSX that JSON can't carry.
 
@@ -46,7 +46,7 @@ The architectural pattern worth preserving: **single-shot read + manual invalida
 - On activate/deactivate/delete, fire the REST call, then **refetch** (not patch the local cache — let the server be the source of truth).
 - During refetch, the table can either show the previous state (optimistic) or a spinner (pessimistic). Shell uses the latter via `isLoading`.
 
-A non-WPDS rebuild needs the standard DataViews equivalents plus an error banner primitive. The dataView primitive is independent of the design system — a non-React rebuild reads the resolved doc from `GET /wp-admin-shell/v1/data-view?kind=root&name=plugin&variant=_default` and consumes the same `fields[]` / `actions[]` arrays.
+A non-WPDS rebuild needs the standard DataViews equivalents plus an error banner primitive. The dataView primitive is independent of the design system — a non-React rebuild reads the resolved doc from `GET /wp-admin-workspaces/v1/data-view?kind=root&name=plugin&variant=_default` and consumes the same `fields[]` / `actions[]` arrays.
 
 ## Known limitations
 

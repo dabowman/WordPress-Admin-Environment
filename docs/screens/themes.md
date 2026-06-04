@@ -113,7 +113,7 @@ The .org browse mode does **not** use `/wp/v2/themes`. It calls the **WordPress.
 - **`POST /wp/v2/themes`** — does not exist. Activation, install, delete, upload all go through admin-ajax. The shell should propose `POST /wp/v2/themes/{stylesheet}/activate`, `POST /wp/v2/themes` (install from .org slug), `POST /wp/v2/themes/upload` (multipart), `DELETE /wp/v2/themes/{stylesheet}` as the v2 surface.
 - **Auto-updates list** — stored in site option `auto_update_themes` (`get_site_option('auto_update_themes')`). Read via `GET /wp/v2/settings` if added to the auto-updates registration; today only the toggle endpoint exists at `wp_ajax_toggle_auto_updates`.
 - **Theme update notices** — `wp_get_update_data()` populates the in-page banner. REST has no per-theme update endpoint; use `GET /wp/v2/themes` extended with an `update_available` field as a gap proposal.
-- **WordPress.org Themes API** — public, unauthenticated, but cross-origin. The shell will need a server-side proxy at `/wp-admin-shell/v1/themes-directory` that wraps `themes_api()`. Document as a v1 gap.
+- **WordPress.org Themes API** — public, unauthenticated, but cross-origin. The shell will need a server-side proxy at `/wp-admin-workspaces/v1/themes-directory` that wraps `themes_api()`. Document as a v1 gap.
 
 ---
 
@@ -410,7 +410,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 
 ### Current shell coverage
 - **Source:** `core:themes` → `src/apps/themes/index.js`, registered in `src/runtime/registry/builtins.js`.
-- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via the custom `POST /wp-admin-shell/v1/activate-theme` endpoint (cap-gated on `switch_themes`); on failure it surfaces an error snackbar and keeps the user in the shell. See `src/apps/themes/app.md`.
+- **What works:** native installed-themes browser — DataViews grid (default) + table layout over the `root/theme` entity, with Activate via the custom `POST /wp-admin-workspaces/v1/activate-theme` endpoint (cap-gated on `switch_themes`); on failure it surfaces an error snackbar and keeps the user in the shell. See `src/apps/themes/app.md`.
 - **What's still iframe-only:** Add-new (.org browse) and ZIP upload (`iframe:theme-install.php`).
 - **Note:** the Gaps table below predates the native app (it still lists "Register `core:themes`" as a gap) and may overstate what's missing; treat `app.md` as canonical.
 
@@ -423,7 +423,7 @@ Plugin compatibility note: third-party plugins relying on the original hooks won
 | Theme detail modal | High | Slideshow + meta + actions |
 | Activate action | High | Needs new REST endpoint `POST /wp/v2/themes/{stylesheet}/activate` (gap) |
 | Delete action | High | Needs new `DELETE /wp/v2/themes/{stylesheet}` (gap) |
-| Add-new mode (.org browse) | High | Needs server-side proxy `/wp-admin-shell/v1/themes-directory` |
+| Add-new mode (.org browse) | High | Needs server-side proxy `/wp-admin-workspaces/v1/themes-directory` |
 | Sort tabs (popular/new/block-themes/favorites) | High | Maps to .org API `browse` param |
 | Feature filter | High | Group of checkboxes; .org `tag` array |
 | Search | High | Live + .org search |

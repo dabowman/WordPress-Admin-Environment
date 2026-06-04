@@ -15,12 +15,12 @@
  * The renderer's script must register the component against the kernel's
  * published surface:
  *
- *     window.wpAdminShell.registerMenuRenderer(
+ *     window.wpAdminWorkspaces.registerMenuRenderer(
  *         'plugin:my/breadcrumb-menu',
  *         MyBreadcrumbMenu
  *     );
  *
- * `registerMenuRenderer` is mirrored onto `window.wpAdminShell` by the
+ * `registerMenuRenderer` is mirrored onto `window.wpAdminWorkspaces` by the
  * kernel boot module. The component receives `{ items, currentPrimary,
  * navConfig }` and returns React.
  *
@@ -40,12 +40,12 @@
  * until the kernel ships a published import surface (tracked in
  * `docs/feedback.md`, kernel-import-surface gap).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Menu_Renderers {
+class WP_Admin_Workspaces_Menu_Renderers {
 
 	/**
 	 * Registry: renderer id → `{ script, style }`.
@@ -66,8 +66,8 @@ class WP_Admin_Shell_Menu_Renderers {
 	 * @param string $renderer_id Renderer id (`plugin:{slug}/{name}`).
 	 * @param array  $args {
 	 *     @type string      $script Registered script handle that calls
-	 *                               `window.wpAdminShell.registerMenuRenderer`.
-	 *                               Should declare `wp-admin-shell` as a
+	 *                               `window.wpAdminWorkspaces.registerMenuRenderer`.
+	 *                               Should declare `wp-admin-workspaces` as a
 	 *                               dependency. Required.
 	 *     @type string|null $style  Optional registered style handle to
 	 *                               enqueue alongside the script.
@@ -79,17 +79,17 @@ class WP_Admin_Shell_Menu_Renderers {
 		if ( ! is_string( $renderer_id ) || ! preg_match( self::ID_PATTERN, $renderer_id ) ) {
 			$msg = "register_menu_renderer: invalid renderer id '$renderer_id' (expected plugin:{slug}/{name})";
 			self::dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_menu_renderer_id', $msg );
+			return new WP_Error( 'wp_admin_workspaces_invalid_menu_renderer_id', $msg );
 		}
 		if ( ! is_array( $args ) || empty( $args['script'] ) || ! is_string( $args['script'] ) ) {
 			$msg = "register_menu_renderer: '$renderer_id' requires a non-empty 'script' handle";
 			self::dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_menu_renderer_args', $msg );
+			return new WP_Error( 'wp_admin_workspaces_invalid_menu_renderer_args', $msg );
 		}
 		if ( isset( self::$registry[ $renderer_id ] ) ) {
 			$msg = "register_menu_renderer: duplicate id '$renderer_id' (first registration wins)";
 			self::dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_duplicate_menu_renderer', $msg );
+			return new WP_Error( 'wp_admin_workspaces_duplicate_menu_renderer', $msg );
 		}
 
 		self::$registry[ $renderer_id ] = array(
@@ -109,10 +109,10 @@ class WP_Admin_Shell_Menu_Renderers {
 	/**
 	 * Enqueue every registered renderer's script (+ optional style) on the
 	 * admin-shell page. Called from the shell's `admin_enqueue_scripts`
-	 * handler after the main `wp-admin-shell` bundle is enqueued, so a
-	 * renderer script that declares `wp-admin-shell` as a dependency loads
+	 * handler after the main `wp-admin-workspaces` bundle is enqueued, so a
+	 * renderer script that declares `wp-admin-workspaces` as a dependency loads
 	 * after the kernel boot module that publishes
-	 * `window.wpAdminShell.registerMenuRenderer`.
+	 * `window.wpAdminWorkspaces.registerMenuRenderer`.
 	 *
 	 * Only already-registered handles enqueue — a plugin is responsible
 	 * for `wp_register_script()`-ing its handle before the shell page
@@ -138,7 +138,7 @@ class WP_Admin_Shell_Menu_Renderers {
 
 	private static function dev_warn( $message ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			_doing_it_wrong( 'wp_admin_shell_register_menu_renderer', esc_html( $message ), '2.0.0' );
+			_doing_it_wrong( 'wp_admin_workspaces_register_menu_renderer', esc_html( $message ), '2.0.0' );
 		}
 	}
 }

@@ -13,7 +13,7 @@
  *     the Custom Background and Custom Header screens. They do NOT expose
  *     the Site Editor.
  *
- * This `wp_admin_shell_data` pass reads `wp_is_block_theme()` +
+ * This `wp_admin_workspaces_data` pass reads `wp_is_block_theme()` +
  * `current_theme_supports()` directly (no REST needed — these are PHP
  * functions available at resolve time) and prunes the resolved doc to match.
  * Pruning a screen removes it from both `screens` (so it stops minting a
@@ -25,20 +25,20 @@
  * the determination without re-deriving it. Issue #120 (native classic
  * Menus) consumes the same signal to decide whether to surface its screen.
  *
- * Sequencing: priority **4** on `wp_admin_shell_data` — BEFORE
- * `WP_Admin_Shell_Menu_Items::bind_screens` (priority 5) so screen-binding
+ * Sequencing: priority **4** on `wp_admin_workspaces_data` — BEFORE
+ * `WP_Admin_Workspaces_Menu_Items::bind_screens` (priority 5) so screen-binding
  * never stamps labels onto a menu node this pass is about to drop, and
- * before `WP_Admin_Shell_Data_View_Config::inject_app_baselines` (priority
+ * before `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` (priority
  * 6) so dataView baselines never attach to a pruned screen.
  *
  * The prune is pure data — no kernel edits. The kernel stays DS-neutral.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Appearance_Menu {
+class WP_Admin_Workspaces_Appearance_Menu {
 
 	/** Maximum menu nesting depth honored when pruning. */
 	const MAX_DEPTH = 10;
@@ -125,7 +125,7 @@ class WP_Admin_Shell_Appearance_Menu {
 	}
 
 	/**
-	 * `wp_admin_shell_data` callback. Stamps the signal + prunes.
+	 * `wp_admin_workspaces_data` callback. Stamps the signal + prunes.
 	 *
 	 * @param array $doc Resolved admin.json doc.
 	 * @return array
@@ -272,7 +272,7 @@ class WP_Admin_Shell_Appearance_Menu {
 	}
 }
 
-// Priority 4 — BEFORE `WP_Admin_Shell_Menu_Items::bind_screens` (5) and
-// `WP_Admin_Shell_Data_View_Config::inject_app_baselines` (6) so neither
+// Priority 4 — BEFORE `WP_Admin_Workspaces_Menu_Items::bind_screens` (5) and
+// `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` (6) so neither
 // stamps onto a screen / menu node this pass drops.
-add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Appearance_Menu', 'prune' ), 4 );
+add_filter( 'wp_admin_workspaces_data', array( 'WP_Admin_Workspaces_Appearance_Menu', 'prune' ), 4 );

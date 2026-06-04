@@ -21,7 +21,7 @@
 			}
 		}
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"slotHints": {
 		"defaultSize": { "w": 1, "h": 1 },
 		"minSize": { "w": 1, "h": 1 },
@@ -32,12 +32,12 @@
 		"data": {
 			"reads": [
 				{
-					"source": "/wp-admin-shell/v1/dashboard-widget/{widgetId}",
+					"source": "/wp-admin-workspaces/v1/dashboard-widget/{widgetId}",
 					"via": "api-fetch",
 					"purpose": "Lazy per-tile fetch of the classic widget's ob_start-captured HTML (admin trust). Non-entity HTML capture — the documented api-fetch exception. The endpoint re-runs wp_dashboard_setup, locates the callback by id, buffers its echoed HTML, and returns { id, title, html }. Permission floor: logged-in + read; the requested id must be a non-core widget the bridge surfaces (404 otherwise)."
 				},
 				{
-					"source": "window.wpAdminShell.adminUrl",
+					"source": "window.wpAdminWorkspaces.adminUrl",
 					"via": "window-global",
 					"purpose": "Base URL for the iframe-fallback src (classic index.php, chromeless)."
 				}

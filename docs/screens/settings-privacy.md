@@ -194,7 +194,7 @@ N/A.
 
 ### Save semantics
 - Two distinct forms, each posting to `options-privacy.php` with its own nonce.
-- For shell rebuild: implement a custom REST endpoint (`/wp-admin-shell/v1/settings/privacy`) wrapping both actions, with `manage_privacy_options` capability check.
+- For shell rebuild: implement a custom REST endpoint (`/wp-admin-workspaces/v1/settings/privacy`) wrapping both actions, with `manage_privacy_options` capability check.
 
 ---
 

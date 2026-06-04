@@ -7,7 +7,7 @@
  * Inputs:
  *   - `screen`    — the active screen doc (typically
  *                   `config.screens[screenId]`).
- *   - `manifests` — `window.wpAdminShell.manifests.apps` (id → app.json).
+ *   - `manifests` — `window.wpAdminWorkspaces.manifests.apps` (id → app.json).
  *
  * Output: ordered array of `{ id, appId, title, defaultSize, minSize, position }`.
  *
@@ -85,7 +85,7 @@ function clampToMin( size, min ) {
 /**
  * @param {Object}                  options
  * @param {Object|null|undefined}   options.screen     The active screen doc (`config.screens[screenId]`).
- * @param {Record<string, Object>}  options.manifests  App-id → manifest doc (typically `window.wpAdminShell.manifests.apps`).
+ * @param {Record<string, Object>}  options.manifests  App-id → manifest doc (typically `window.wpAdminWorkspaces.manifests.apps`).
  * @return {Array<{id:string,appId:string,title:string,defaultSize:{w:number,h:number},minSize:{w:number,h:number},position:'auto'|{row:number,col:number},config:Object|null}>}
  */
 export function composeScreenWidgets( { screen, manifests } ) {

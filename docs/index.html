@@ -359,7 +359,7 @@
       <p class="intro">The plugin ships the <code style="font-family:var(--mono)">wp-admin-default</code> baseline. With no <code style="font-family:var(--mono)">admin.json</code> present, wp-admin stays classic and untouched — the file is both the trigger and the configuration.</p>
       <div class="steps">
         <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the shell uses private APIs only Gutenberg's allowlist exposes).</p></div>
-        <div class="step"><div class="n"></div><p>Install <strong>WP Admin Shell</strong>: upload <code>wp-admin-shell.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
+        <div class="step"><div class="n"></div><p>Install <strong>WP Admin Shell</strong>: upload <code>wp-admin-workspaces.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
         <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/admin.json</code>, e.g. <code>cp shells/single-pane-demo.json wp-content/admin.json</code> — then edit it down to your deltas.</p></div>
         <div class="step"><div class="n"></div><p>Visit <code>/wp-admin/</code>. Press <code>Cmd/Ctrl + K</code> for the command palette. A <strong>Classic wp-admin</strong> escape hatch stays in the admin bar.</p></div>
       </div>

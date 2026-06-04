@@ -1,8 +1,8 @@
-.wp-admin-shell-app-settings-general {
+.wp-admin-workspaces-app-settings-general {
 	max-width: 720px;
 }
 
-.wp-admin-shell-app-settings-general code {
+.wp-admin-workspaces-app-settings-general code {
 	font-size: 12px;
 	background: var(--wpds-color-bg-surface-neutral-weak);
 	padding: 1px 6px;

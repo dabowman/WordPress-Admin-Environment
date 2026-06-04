@@ -19,7 +19,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Cmd+K command palette contributor. The palette UI itself is owned by `@wordpress/commands` — this app contributes a command set and renders nothing. Two v3 sources feed the palette: (1) `config.commands[]` — labelled first-class commands (v3 replacement for v2's `bindings` array); entries with a `label` become palette entries, callback fires `invoke` then `navigate` matching `BindingsConsumer`'s keystroke-handler order. (2) `config.screens[]` — every non-hidden screen with a `path` + `label` becomes a `Go to <label>` entry; hidden / parameterized / wildcarded paths skipped. Two dedup layers stack: dedup-by-path (a command's `navigate` suppresses a screen entry on the same path) + dedup-by-name (the unified `core/admin-shell/palette-<id>` prefix catches id collisions across sources, first-write wins). The branching is unit-testable on a bare Node runtime via the pure-ESM compiler at `compileCommands.mjs`.",
 		"data": {

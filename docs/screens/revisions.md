@@ -366,7 +366,7 @@ The screen surface itself has minimal extension points — the diff fields filte
 | Diff renderer (Title / Content / Excerpt) | Medium | Two paths: (a) call a custom REST endpoint that returns server-rendered diff HTML, or (b) compute diff client-side (e.g. `diff` library — but no external npm allowed; use `@wordpress/rich-text` `getTextContent` + custom diff via simple LCS) |
 | Author + timestamp metadata strip | Low | Reads `revision.author` (embed user) + `revision.date_gmt` |
 | Tick marks on slider with hover tooltip | Medium | Density check for high-revision posts |
-| **Restore via REST** | **High** | Currently only `wp-admin/revision.php?action=restore&_wpnonce=…`. **No REST endpoint exists for restore in core.** Shell should expose a custom endpoint `POST /wp-admin-shell/v1/posts/{id}/restore-revision/{revision_id}` that calls `wp_restore_post_revision()` server-side and returns the new state. Track upstream gap |
+| **Restore via REST** | **High** | Currently only `wp-admin/revision.php?action=restore&_wpnonce=…`. **No REST endpoint exists for restore in core.** Shell should expose a custom endpoint `POST /wp-admin-workspaces/v1/posts/{id}/restore-revision/{revision_id}` that calls `wp_restore_post_revision()` server-side and returns the new state. Track upstream gap |
 | Lock-conflict feedback | Medium | Server blocks restore silently when post is locked. Surface clearly |
 | Revisions list panel embedded inside editor inspector | Medium | "View revisions" should expand inline in inspector for short lists |
 | Per-revision delete (admin-only) | Low | `DELETE /wp/v2/{parent_base}/{parent}/revisions/{id}` — exposed via "Manage revisions" UI, not this screen |

@@ -63,7 +63,7 @@ export function EntityDataForm( {
 
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
@@ -95,7 +95,7 @@ export function EntityDataForm( {
 					disabled={ ! hasEdits || ! isValid || isSaving }
 					loading={ isSaving }
 				>
-					{ saveLabel || __( 'Save Changes', 'wp-admin-shell' ) }
+					{ saveLabel || __( 'Save Changes', 'wp-admin-workspaces' ) }
 				</Button>
 			</Stack>
 		</Stack>
@@ -109,5 +109,5 @@ export function EntityDataForm( {
 		);
 	}
 
-	return <div className="wp-admin-shell-app--inset">{ body }</div>;
+	return <div className="wp-admin-workspaces-app--inset">{ body }</div>;
 }

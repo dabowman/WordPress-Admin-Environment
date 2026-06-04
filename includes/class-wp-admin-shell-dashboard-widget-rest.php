@@ -1,9 +1,9 @@
 <?php
 /**
- * /wp-admin-shell/v1/dashboard-widget/{id} — captured classic-widget HTML.
+ * /wp-admin-workspaces/v1/dashboard-widget/{id} — captured classic-widget HTML.
  *
  * The render half of the classic dashboard-widget bridge (#134). The harvest
- * pass (`WP_Admin_Shell_Dashboard_Bridge`) folds un-ported plugin dashboard
+ * pass (`WP_Admin_Workspaces_Dashboard_Bridge`) folds un-ported plugin dashboard
  * widgets into the dashboard-host grid as tiles; each tile lazily fetches its
  * widget's rendered HTML from this endpoint.
  *
@@ -19,7 +19,7 @@
  *
  * **Permission floor.** `current_user_can( 'read' )` (the classic dashboard's
  * own view floor) AND the requested id must be a non-core widget the bridge
- * actually surfaces — `WP_Admin_Shell_Dashboard_Bridge::is_core_widget()`
+ * actually surfaces — `WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget()`
  * rejects the shell-native ids, and an id absent from the harvested set 404s.
  * This is the real gate: a caller can only render a widget the dashboard
  * already registered for this request, never an arbitrary callback. Logged-out
@@ -32,14 +32,14 @@
  * captured form; the tile offers a per-tile iframe fallback to classic
  * `index.php` for full fidelity.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Dashboard_Widget_REST {
+class WP_Admin_Workspaces_Dashboard_Widget_REST {
 
-	const REST_NAMESPACE = 'wp-admin-shell/v1';
+	const REST_NAMESPACE = 'wp-admin-workspaces/v1';
 
 	/**
 	 * Register the dashboard-widget route.
@@ -74,8 +74,8 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 	public static function permission_check() {
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_unauthorized',
-				__( 'You must be logged in to view dashboard widgets.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_dashboard_widget_unauthorized',
+				__( 'You must be logged in to view dashboard widgets.', 'wp-admin-workspaces' ),
 				array( 'status' => 401 )
 			);
 		}
@@ -87,8 +87,8 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 		// re-evaluates each plugin's registration-time cap gate.
 		if ( ! current_user_can( 'read' ) ) {
 			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_forbidden',
-				__( 'You are not allowed to view dashboard widgets.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_dashboard_widget_forbidden',
+				__( 'You are not allowed to view dashboard widgets.', 'wp-admin-workspaces' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -107,10 +107,10 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 		// A core widget id is shipped native by the shell — never render the
 		// classic version. Treat as not-found so the tile (which only ever
 		// asks for harvested plugin ids) gets a clean 404 if mis-wired.
-		if ( $id === '' || WP_Admin_Shell_Dashboard_Bridge::is_core_widget( $id ) ) {
+		if ( $id === '' || WP_Admin_Workspaces_Dashboard_Bridge::is_core_widget( $id ) ) {
 			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_not_found',
-				__( 'Unknown dashboard widget.', 'wp-admin-shell' ),
+				'wp_admin_workspaces_dashboard_widget_not_found',
+				__( 'Unknown dashboard widget.', 'wp-admin-workspaces' ),
 				array( 'status' => 404 )
 			);
 		}
@@ -127,8 +127,8 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 			$box = self::locate_widget( $id );
 			if ( ! is_array( $box ) || ! isset( $box['callback'] ) || ! is_callable( $box['callback'] ) ) {
 				return new WP_Error(
-					'wp_admin_shell_dashboard_widget_not_found',
-					__( 'Unknown dashboard widget.', 'wp-admin-shell' ),
+					'wp_admin_workspaces_dashboard_widget_not_found',
+					__( 'Unknown dashboard widget.', 'wp-admin-workspaces' ),
 					array( 'status' => 404 )
 				);
 			}
@@ -184,7 +184,7 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 	 *                    or null when not registered.
 	 */
 	private static function locate_widget( $id ) {
-		if ( ! WP_Admin_Shell_Dashboard_Bridge::ensure_dashboard_setup() ) {
+		if ( ! WP_Admin_Workspaces_Dashboard_Bridge::ensure_dashboard_setup() ) {
 			return null;
 		}
 
@@ -211,4 +211,4 @@ class WP_Admin_Shell_Dashboard_Widget_REST {
 	}
 }
 
-add_action( 'rest_api_init', array( 'WP_Admin_Shell_Dashboard_Widget_REST', 'register' ) );
+add_action( 'rest_api_init', array( 'WP_Admin_Workspaces_Dashboard_Widget_REST', 'register' ) );

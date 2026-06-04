@@ -13,7 +13,7 @@ import { store as noticesStore } from '@wordpress/notices';
  *      `wp.data.dispatch('core/notices').createNotice(...)` lands here,
  *      rendered against `Notice.Root` from `@wordpress/ui`.
  *   2. **admin_notices harvest (#128)** — global `admin_notices` HTML
- *      buffered server-side (`window.wpAdminShell.adminNotices`) so an
+ *      buffered server-side (`window.wpAdminWorkspaces.adminNotices`) so an
  *      un-ported plugin's notice still surfaces. The captured markup is
  *      admin-context (same trust as classic wp-admin) and rendered
  *      unchanged. Locally dismissible (the markup is static — there's no
@@ -43,8 +43,8 @@ export default function NoticesBannerApp() {
 	// Harvested admin_notices HTML (#128). Read once at mount — it's a
 	// static server-render snapshot. Locally dismissible.
 	const harvestedHtml =
-		typeof window?.wpAdminShell?.adminNotices === 'string'
-			? window.wpAdminShell.adminNotices
+		typeof window?.wpAdminWorkspaces?.adminNotices === 'string'
+			? window.wpAdminWorkspaces.adminNotices
 			: '';
 	const [ showHarvested, setShowHarvested ] = useState(
 		harvestedHtml !== ''
@@ -56,7 +56,7 @@ export default function NoticesBannerApp() {
 	}
 
 	return (
-		<div className="wp-admin-shell-notices-banner">
+		<div className="wp-admin-workspaces-notices-banner">
 			{ visible.map( ( notice ) => (
 				<Notice.Root
 					key={ notice.id }
@@ -76,7 +76,7 @@ export default function NoticesBannerApp() {
 				<Notice.Root intent="neutral">
 					<Notice.Description>
 						<div
-							className="wp-admin-shell-notices-banner__harvested"
+							className="wp-admin-workspaces-notices-banner__harvested"
 							// eslint-disable-next-line react/no-danger -- admin-context admin_notices HTML; same trust as classic wp-admin (see runtime-harvest-pattern.md).
 							dangerouslySetInnerHTML={ {
 								__html: harvestedHtml,

@@ -9,7 +9,7 @@
  *
  *   - `?classic=1` (cap: `read` — mirrors the hijack floor so every logged-in
  *     user has a way out, not just admins; nonce-protected) → set the
- *     `wp_admin_shell_classic` session cookie, strip the param, redirect. The
+ *     `wp_admin_workspaces_classic` session cookie, strip the param, redirect. The
  *     next request carries the cookie, so the hijack stands down and classic
  *     renders.
  *   - `?classic=0` → clear the cookie, strip the param, redirect. The next
@@ -29,17 +29,17 @@
  * mid-session cap revocation leaves the user in classic until the cookie
  * expires.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Classic_Mode {
+class WP_Admin_Workspaces_Classic_Mode {
 
-	const COOKIE = 'wp_admin_shell_classic';
+	const COOKIE = 'wp_admin_workspaces_classic';
 
 	/** Nonce action protecting the cookie-flip toggle. */
-	const NONCE_ACTION = 'wp_admin_shell_classic';
+	const NONCE_ACTION = 'wp_admin_workspaces_classic';
 
 	public static function init() {
 		add_action( 'admin_init', array( __CLASS__, 'handle_toggle' ), -10 );
@@ -122,7 +122,7 @@ class WP_Admin_Shell_Classic_Mode {
 	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
 	 */
 	public static function admin_bar_node( $wp_admin_bar ) {
-		if ( ! function_exists( 'wp_admin_shell_workspace_active' ) || ! wp_admin_shell_workspace_active() ) {
+		if ( ! function_exists( 'wp_admin_workspaces_workspace_active' ) || ! wp_admin_workspaces_workspace_active() ) {
 			return;
 		}
 		// Match the hijack's exact predicate (`'1' === …`) so a forged/garbage
@@ -132,14 +132,14 @@ class WP_Admin_Shell_Classic_Mode {
 		$in_classic = isset( $_COOKIE[ self::COOKIE ] ) && '1' === $_COOKIE[ self::COOKIE ];
 		if ( $in_classic ) {
 			$wp_admin_bar->add_node( array(
-				'id'    => 'wp-admin-shell-back-to-workspace',
-				'title' => __( '↩ Back to workspace', 'wp-admin-shell' ),
+				'id'    => 'wp-admin-workspaces-back-to-workspace',
+				'title' => __( '↩ Back to workspace', 'wp-admin-workspaces' ),
 				'href'  => self::toggle_url( false ),
 			) );
 		} else {
 			$wp_admin_bar->add_node( array(
-				'id'    => 'wp-admin-shell-classic',
-				'title' => __( 'Classic wp-admin', 'wp-admin-shell' ),
+				'id'    => 'wp-admin-workspaces-classic',
+				'title' => __( 'Classic wp-admin', 'wp-admin-workspaces' ),
 				'href'  => self::toggle_url( true ),
 			) );
 		}

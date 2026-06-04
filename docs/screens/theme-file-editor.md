@@ -101,7 +101,7 @@ The entire screen is a gap:
 - **No `GET /wp/v2/theme-files`** — does not exist.
 - **No `PUT /wp/v2/theme-files/{path}`** — does not exist.
 - **No syntax-check endpoint** — `wp_edit_theme_plugin_file()` is internal only.
-- **Recommendation:** propose a `wp-admin-shell/v1/theme-files` namespace as a v2 surface:
+- **Recommendation:** propose a `wp-admin-workspaces/v1/theme-files` namespace as a v2 surface:
   - `GET /theme-files?theme={stylesheet}` → tree
   - `GET /theme-files/{path}?theme={stylesheet}` → file content + writable + size + mtime
   - `PUT /theme-files/{path}?theme={stylesheet}` → write with safety-net (calls `wp_edit_theme_plugin_file()`)
@@ -244,7 +244,7 @@ N/A.
   - Editing minified stylesheets when an unminified sibling exists.
 
 ### Save semantics
-- Blocking POST (or `PUT /wp-admin-shell/v1/theme-files/{path}` when v2 API exists).
+- Blocking POST (or `PUT /wp-admin-workspaces/v1/theme-files/{path}` when v2 API exists).
 - Server runs safety net (see §4).
 - On success: editor stays on file with success notice; content reflects saved state.
 - On fatal: original content restored; error notice shown.
@@ -355,7 +355,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Propose REST surface `/wp-admin-shell/v1/theme-files` | High | Without it, native rebuild is awkward (form POST only). Specs the endpoint above. |
+| Propose REST surface `/wp-admin-workspaces/v1/theme-files` | High | Without it, native rebuild is awkward (form POST only). Specs the endpoint above. |
 | Register `core:theme-file-editor` app source | Low | Only relevant for `developer-admin`-style shells |
 | Tree component | Medium | `role="tree"` semantic is non-trivial |
 | Code editor integration | Medium | Use any code-editor library; not a `@wordpress/*` package fit. CodeMirror or Monaco; user choice. |

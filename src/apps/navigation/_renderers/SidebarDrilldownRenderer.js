@@ -72,7 +72,7 @@ function CollapsedNavigation( { items, currentPrimary } ) {
 		<Stack
 			direction="column"
 			gap="xs"
-			className="wp-admin-shell-nav__items"
+			className="wp-admin-workspaces-nav__items"
 		>
 			{ flattenLeaves( items ).map( ( item, idx ) =>
 				renderCollapsedItem( item, idx, currentPrimary )
@@ -89,7 +89,7 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
-				className="wp-admin-shell-nav__link"
+				className="wp-admin-workspaces-nav__link"
 				aria-label={ item.label }
 			>
 				{ item.iconSource ? (
@@ -113,7 +113,7 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 			<a
 				key={ item.id || `nav-${ index }` }
 				href={ item.href }
-				className="wp-admin-shell-nav__link"
+				className="wp-admin-workspaces-nav__link"
 				aria-current={ isActive ? 'true' : undefined }
 				aria-label={ item.label || item.id }
 			>
@@ -126,7 +126,7 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 			key={ item.id || `nav-${ index }` }
 			tone="neutral"
 			variant="minimal"
-			className="wp-admin-shell-nav__item"
+			className="wp-admin-workspaces-nav__item"
 			icon={ resolveIcon( item.icon ) }
 			render={
 				<a
@@ -176,7 +176,7 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 					description={ screenDef.description }
 					onBack={ () => navigateScreen( '__root' ) }
 					content={
-						<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
+						<ItemGroup className="wp-admin-workspaces-sidebar-navigation-screen__items">
 							{ children.map( ( child, i ) =>
 								renderLeafItem( child, i, currentPrimary )
 							) }
@@ -190,8 +190,8 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 	const rootTitle =
 		navConfig.title ||
 		decodeEntities( site?.title || '' ) ||
-		window.wpAdminShell?.siteName ||
-		__( 'Admin', 'wp-admin-shell' );
+		window.wpAdminWorkspaces?.siteName ||
+		__( 'Admin', 'wp-admin-workspaces' );
 
 	return (
 		<SidebarContent screenKey="root">
@@ -200,7 +200,7 @@ function ExpandedNavigation( { items, currentPrimary, navConfig } ) {
 				title={ rootTitle }
 				description={ navConfig.description }
 				content={
-					<ItemGroup className="wp-admin-shell-sidebar-navigation-screen__items">
+					<ItemGroup className="wp-admin-workspaces-sidebar-navigation-screen__items">
 						{ items.map( ( item, idx ) =>
 							renderRootItem(
 								item,
@@ -294,7 +294,7 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 		return (
 			<hr
 				key={ `sep-${ item.id || index }` }
-				className="wp-admin-shell-nav__separator"
+				className="wp-admin-workspaces-nav__separator"
 			/>
 		);
 	}
@@ -357,7 +357,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 		return (
 			<hr
 				key={ `sep-${ item.id || index }` }
-				className="wp-admin-shell-nav__separator"
+				className="wp-admin-workspaces-nav__separator"
 			/>
 		);
 	}
@@ -373,7 +373,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 				rel="noopener noreferrer"
 				suffix={
 					<Icon
-						className="wp-admin-shell-sidebar-navigation-item__external-indicator"
+						className="wp-admin-workspaces-sidebar-navigation-item__external-indicator"
 						icon={ resolveIcon( 'external' ) }
 						size={ 20 }
 					/>

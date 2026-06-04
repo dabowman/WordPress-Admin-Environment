@@ -47,7 +47,7 @@ export function resolveRegion( declaration, engineManifest, depth = 0, visitedTe
 		if ( typeof console !== 'undefined' ) {
 			// eslint-disable-next-line no-console
 			console.warn(
-				`[wp-admin-shell] resolveRegion: max depth ${ MAX_REGION_DEPTH } exceeded; returning declaration unresolved (likely a self-referential template chain).`
+				`[wp-admin-workspaces] resolveRegion: max depth ${ MAX_REGION_DEPTH } exceeded; returning declaration unresolved (likely a self-referential template chain).`
 			);
 		}
 		return declaration;
@@ -59,7 +59,7 @@ export function resolveRegion( declaration, engineManifest, depth = 0, visitedTe
 		if ( typeof console !== 'undefined' ) {
 			// eslint-disable-next-line no-console
 			console.warn(
-				`[wp-admin-shell] resolveRegion: template cycle detected on "${ templateId }"; returning declaration unresolved.`
+				`[wp-admin-workspaces] resolveRegion: template cycle detected on "${ templateId }"; returning declaration unresolved.`
 			);
 		}
 		return declaration;

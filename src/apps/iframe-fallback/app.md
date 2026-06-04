@@ -10,7 +10,7 @@ This pattern is documented in CLAUDE.md as "a feature, not a compromise." The al
 
 ## Architecture
 
-`src` resolution: if `rawUrl` matches `https?://`, pass through; otherwise prepend `adminUrl` (from `window.wpAdminShell.adminUrl`, default `/wp-admin/`).
+`src` resolution: if `rawUrl` matches `https?://`, pass through; otherwise prepend `adminUrl` (from `window.wpAdminWorkspaces.adminUrl`, default `/wp-admin/`).
 
 `onIframeLoad` is the chrome-hide hook. It runs on every iframe load (including in-iframe navigation, which is the case when the user clicks a link inside the embedded screen). Wraps document access in try/catch — cross-origin iframes throw on `contentDocument` access. Style injection appends a `<style>` to the iframe's `<head>`; idempotent in practice because each load creates a fresh document.
 

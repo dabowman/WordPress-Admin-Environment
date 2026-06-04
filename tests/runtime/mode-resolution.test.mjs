@@ -2,7 +2,7 @@
 /**
  * resolveMode — v3 mode resolver.
  *
- * Mirrors the PHP `WP_Admin_Shell_Modes::resolve_engine_modes()` + per-
+ * Mirrors the PHP `WP_Admin_Workspaces_Modes::resolve_engine_modes()` + per-
  * screen merge on the JS side. Tests cover:
  *   - no extends chain (passthrough)
  *   - single-level extends

@@ -50,7 +50,7 @@ export default function CommandPaletteApp() {
 			goToLabel: ( target ) =>
 				sprintf(
 					/* translators: %s: screen label or path */
-					__( 'Go to %s', 'wp-admin-shell' ),
+					__( 'Go to %s', 'wp-admin-workspaces' ),
 					target
 				),
 		} );

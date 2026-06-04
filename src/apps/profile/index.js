@@ -27,7 +27,7 @@ const FORM = {
  *
  * Edits the user named by `config.userId` (the route `config` interpolates
  * `{id}` from `/users/{id}/edit`), falling back to the acting user
- * (`window.wpAdminShell.userId`) when the screen supplies no `userId` (e.g. the
+ * (`window.wpAdminWorkspaces.userId`) when the screen supplies no `userId` (e.g. the
  * self-service `/profile` screen). The users-app Edit action + username link
  * route here with `config.userId` set, so editing user #5 mutates user #5 —
  * NOT the acting admin.
@@ -36,13 +36,13 @@ const FORM = {
  * @param {Object} [root0.config] App config — `config.userId` names the user to edit.
  */
 export default function ProfileApp( { config = {} } = {} ) {
-	const userId = Number( config?.userId ) || window.wpAdminShell?.userId;
+	const userId = Number( config?.userId ) || window.wpAdminWorkspaces?.userId;
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
 	const handleSave = useEntitySave( save, {
-		success: __( 'Profile updated.', 'wp-admin-shell' ),
-		error: __( 'Failed to save profile.', 'wp-admin-shell' ),
+		success: __( 'Profile updated.', 'wp-admin-workspaces' ),
+		error: __( 'Failed to save profile.', 'wp-admin-workspaces' ),
 	} );
 
 	// Display-name options derive from the live edited values, so they update
@@ -70,39 +70,39 @@ export default function ProfileApp( { config = {} } = {} ) {
 			{
 				id: 'first_name',
 				type: 'text',
-				label: __( 'First Name', 'wp-admin-shell' ),
+				label: __( 'First Name', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'last_name',
 				type: 'text',
-				label: __( 'Last Name', 'wp-admin-shell' ),
+				label: __( 'Last Name', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'nickname',
 				type: 'text',
-				label: __( 'Nickname', 'wp-admin-shell' ),
+				label: __( 'Nickname', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'name',
 				type: 'text',
-				label: __( 'Display Name', 'wp-admin-shell' ),
+				label: __( 'Display Name', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: options,
 			},
 			{
 				id: 'email',
 				type: 'email',
-				label: __( 'Email', 'wp-admin-shell' ),
+				label: __( 'Email', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'url',
 				type: 'text',
-				label: __( 'Website', 'wp-admin-shell' ),
+				label: __( 'Website', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'description',
 				type: 'text',
-				label: __( 'Biographical Info', 'wp-admin-shell' ),
+				label: __( 'Biographical Info', 'wp-admin-workspaces' ),
 				Edit: { control: 'textarea', rows: 5 },
 			},
 		];
@@ -121,11 +121,11 @@ export default function ProfileApp( { config = {} } = {} ) {
 
 	if ( ! userId ) {
 		return (
-			<div className="wp-admin-shell-app-profile__error">
+			<div className="wp-admin-workspaces-app-profile__error">
 				<Text>
 					{ __(
 						'Profile unavailable: missing user context.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 			</div>
@@ -134,18 +134,18 @@ export default function ProfileApp( { config = {} } = {} ) {
 
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
 	}
 
 	return (
-		<Page title={ __( 'Profile', 'wp-admin-shell' ) } hasPadding>
+		<Page title={ __( 'Profile', 'wp-admin-workspaces' ) } hasPadding>
 			<Stack
 				direction="column"
 				gap="xl"
-				className="wp-admin-shell-app-profile"
+				className="wp-admin-workspaces-app-profile"
 			>
 				<DataForm
 					data={ editedRecord }
@@ -162,7 +162,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 						disabled={ ! hasEdits || isSaving }
 						loading={ isSaving }
 					>
-						{ __( 'Save Changes', 'wp-admin-shell' ) }
+						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

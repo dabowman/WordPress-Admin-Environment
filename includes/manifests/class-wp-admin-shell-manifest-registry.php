@@ -10,8 +10,8 @@
  *      auto-scans on `init` (priority 8, before main shell init).
  *
  *   2. Programmatic registration — calling
- *      `wp_admin_shell_register_app( $manifest_or_path )` or
- *      `wp_admin_shell_register_engine( $manifest_or_path )` from any
+ *      `wp_admin_workspaces_register_app( $manifest_or_path )` or
+ *      `wp_admin_workspaces_register_engine( $manifest_or_path )` from any
  *      hook. Useful for plugins that compute manifests at runtime.
  *
  * Invalid manifests are rejected with a `_doing_it_wrong()` notice in
@@ -19,14 +19,14 @@
  * ids reject the second registration; first-write-wins preserves boot
  * order semantics.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Manifest_Registry {
+class WP_Admin_Workspaces_Manifest_Registry {
 
-	/** @var WP_Admin_Shell_Manifest_Registry|null */
+	/** @var WP_Admin_Workspaces_Manifest_Registry|null */
 	private static $instance = null;
 
 	/** @var array<string, array> */
@@ -70,13 +70,13 @@ class WP_Admin_Shell_Manifest_Registry {
 
 	private function register( $manifest_or_path, $kind ) {
 		if ( is_string( $manifest_or_path ) ) {
-			$result = WP_Admin_Shell_Manifest_Validator::validate_file( $manifest_or_path, $kind );
+			$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( $manifest_or_path, $kind );
 		} elseif ( is_array( $manifest_or_path ) ) {
-			$result             = WP_Admin_Shell_Manifest_Validator::validate( $manifest_or_path, $kind );
+			$result             = WP_Admin_Workspaces_Manifest_Validator::validate( $manifest_or_path, $kind );
 			$result['manifest'] = $manifest_or_path;
 		} else {
 			return new WP_Error(
-				'wp_admin_shell_invalid_manifest',
+				'wp_admin_workspaces_invalid_manifest',
 				'Manifest must be an array or a file path string.'
 			);
 		}
@@ -84,7 +84,7 @@ class WP_Admin_Shell_Manifest_Registry {
 		if ( ! $result['valid'] ) {
 			$msg = "Invalid $kind manifest: " . implode( '; ', $result['errors'] );
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_manifest', $msg, $result['errors'] );
+			return new WP_Error( 'wp_admin_workspaces_invalid_manifest', $msg, $result['errors'] );
 		}
 
 		$manifest = $result['manifest'];
@@ -94,7 +94,7 @@ class WP_Admin_Shell_Manifest_Registry {
 		if ( isset( $this->{$bucket}[ $id ] ) ) {
 			$msg = "Duplicate $kind id rejected: $id (first registration wins)";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_duplicate_manifest', $msg );
+			return new WP_Error( 'wp_admin_workspaces_duplicate_manifest', $msg );
 		}
 
 		$this->{$bucket}[ $id ] = $manifest;
@@ -135,7 +135,7 @@ class WP_Admin_Shell_Manifest_Registry {
 		if ( ! is_string( $engine_id ) || ! isset( $this->engines[ $engine_id ] ) ) {
 			$msg = "register_template: unknown engine '$engine_id'";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_unknown_engine', $msg );
+			return new WP_Error( 'wp_admin_workspaces_unknown_engine', $msg );
 		}
 		if (
 			! is_string( $template_id )
@@ -143,17 +143,17 @@ class WP_Admin_Shell_Manifest_Registry {
 		) {
 			$msg = "register_template: invalid template id '$template_id'";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_template_id', $msg );
+			return new WP_Error( 'wp_admin_workspaces_invalid_template_id', $msg );
 		}
 		if ( ! is_array( $template ) ) {
 			$msg = "register_template: template body must be an array for '$template_id'";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_template_body', $msg );
+			return new WP_Error( 'wp_admin_workspaces_invalid_template_body', $msg );
 		}
 		if ( ! is_string( $template['role'] ?? null ) || $template['role'] === '' ) {
 			$msg = "register_template: template '$template_id' missing required `role`";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_invalid_template_body', $msg );
+			return new WP_Error( 'wp_admin_workspaces_invalid_template_body', $msg );
 		}
 
 		if ( ! isset( $this->engines[ $engine_id ]['templates'] ) ) {
@@ -162,7 +162,7 @@ class WP_Admin_Shell_Manifest_Registry {
 		if ( isset( $this->engines[ $engine_id ]['templates'][ $template_id ] ) ) {
 			$msg = "register_template: duplicate id '$template_id' on engine '$engine_id' (first registration wins)";
 			$this->dev_warn( $msg );
-			return new WP_Error( 'wp_admin_shell_duplicate_template', $msg );
+			return new WP_Error( 'wp_admin_workspaces_duplicate_template', $msg );
 		}
 
 		$this->engines[ $engine_id ]['templates'][ $template_id ] = $template;
@@ -230,7 +230,7 @@ class WP_Admin_Shell_Manifest_Registry {
 
 	private function dev_warn( $message ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			_doing_it_wrong( 'wp_admin_shell_manifest_registry', esc_html( $message ), '2.0.0' );
+			_doing_it_wrong( 'wp_admin_workspaces_manifest_registry', esc_html( $message ), '2.0.0' );
 		}
 	}
 }

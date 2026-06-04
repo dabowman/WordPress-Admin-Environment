@@ -77,22 +77,23 @@ console.log( '\n— compileStyles: chrome surfaces —\n' );
 	} );
 	ok(
 		'dock.background → kebab var',
-		out.top[ '--wp-admin-shell--chrome--dock--background' ] ===
+		out.top[ '--wp-admin-workspaces--chrome--dock--background' ] ===
 			'rgba(10, 10, 20, 0.7)'
 	);
 	ok(
 		'dock.foreground → kebab var',
-		out.top[ '--wp-admin-shell--chrome--dock--foreground' ] === '#fff'
+		out.top[ '--wp-admin-workspaces--chrome--dock--foreground' ] === '#fff'
 	);
 	ok(
 		'window-frame.background → kebab var',
-		out.top[ '--wp-admin-shell--chrome--window-frame--background' ] ===
+		out.top[ '--wp-admin-workspaces--chrome--window-frame--background' ] ===
 			'#222'
 	);
 	ok(
 		'window-frame.body-background preserved kebab',
-		out.top[ '--wp-admin-shell--chrome--window-frame--body-background' ] ===
-			'#111'
+		out.top[
+			'--wp-admin-workspaces--chrome--window-frame--body-background'
+		] === '#111'
 	);
 }
 
@@ -104,7 +105,8 @@ console.log( '\n— compileStyles: theme.color.bg seed —\n' );
 	} );
 	ok(
 		'theme.color.bg → canvas background',
-		out.top[ '--wp-admin-shell--chrome--canvas--background' ] === '#0d0d1a'
+		out.top[ '--wp-admin-workspaces--chrome--canvas--background' ] ===
+			'#0d0d1a'
 	);
 }
 {
@@ -114,7 +116,8 @@ console.log( '\n— compileStyles: theme.color.bg seed —\n' );
 	} );
 	ok(
 		'explicit chrome.canvas wins over seed',
-		out.top[ '--wp-admin-shell--chrome--canvas--background' ] === '#111'
+		out.top[ '--wp-admin-workspaces--chrome--canvas--background' ] ===
+			'#111'
 	);
 }
 
@@ -132,7 +135,7 @@ console.log( '\n— compileStyles: per-region overrides —\n' );
 	ok(
 		'region overrides emit window-frame slot',
 		out.subtrees[ 'region:workspace' ][
-			'--wp-admin-shell--chrome--window-frame--background'
+			'--wp-admin-workspaces--chrome--window-frame--background'
 		] === '#abc'
 	);
 }
@@ -151,7 +154,7 @@ console.log( '\n— compileStyles: per-app overrides —\n' );
 	ok(
 		'app overrides emit dock slot',
 		out.subtrees[ 'app:core:posts' ][
-			'--wp-admin-shell--chrome--dock--background'
+			'--wp-admin-workspaces--chrome--dock--background'
 		] === '#321'
 	);
 }

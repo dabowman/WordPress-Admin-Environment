@@ -1,7 +1,7 @@
 /**
  * core:desktop-iframe — engine-owned iframe app.
  *
- * Renders a wp-admin URL with `?wp_admin_shell_chromeless=1` so the
+ * Renders a wp-admin URL with `?wp_admin_workspaces_chromeless=1` so the
  * PHP-side chromeless bridge (P2.T4) suppresses the parent admin's
  * chrome and exposes observability hooks via postMessage. Until the
  * full bridge ships, the iframe also injects a CSS-hide fallback so
@@ -33,7 +33,7 @@ import { injectChromeHide } from '../_shared/iframe/chromeHide.mjs';
 import './index.css';
 
 /**
- * Append `wp_admin_shell_chromeless=1` to the URL. The PHP bridge hooks
+ * Append `wp_admin_workspaces_chromeless=1` to the URL. The PHP bridge hooks
  * `admin_footer` when this query var is present and emits the
  * postMessage protocol + chrome-hide CSS.
  *
@@ -41,10 +41,10 @@ import './index.css';
  * @return {string} Final src for the iframe.
  */
 function buildChromelessSrc( rawUrl ) {
-	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const base = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 	const join = base.includes( '?' ) ? '&' : '?';
-	return `${ base }${ join }wp_admin_shell_chromeless=1`;
+	return `${ base }${ join }wp_admin_workspaces_chromeless=1`;
 }
 
 /**
@@ -84,7 +84,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 			if ( typeof type !== 'string' ) {
 				return;
 			}
-			if ( ! type.startsWith( 'wp-admin-shell-' ) ) {
+			if ( ! type.startsWith( 'wp-admin-workspaces-' ) ) {
 				return;
 			}
 			// Iframe must originate the message (otherwise drop —
@@ -94,13 +94,13 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 				return;
 			}
 
-			if ( type === 'wp-admin-shell-iframe-ready' ) {
+			if ( type === 'wp-admin-workspaces-iframe-ready' ) {
 				// Handshake hello → ack flow (sub-system 8). Posting
 				// from parent after iframe-ready guarantees the iframe
 				// has its listener attached.
 				try {
 					iframe.contentWindow.postMessage(
-						{ type: 'wp-admin-shell-bridge-hello' },
+						{ type: 'wp-admin-workspaces-bridge-hello' },
 						window.location.origin
 					);
 				} catch ( _err ) {
@@ -109,14 +109,14 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 				return;
 			}
 
-			if ( type === 'wp-admin-shell-focus-request' ) {
+			if ( type === 'wp-admin-workspaces-focus-request' ) {
 				if ( windowId ) {
 					manager.focusWindow( windowId );
 				}
 				return;
 			}
 
-			if ( type === 'wp-admin-shell-admin-link' ) {
+			if ( type === 'wp-admin-workspaces-admin-link' ) {
 				// Open the admin link as a new iframe window inside the
 				// shell so the user stays in the desktop metaphor.
 				const url = typeof data.url === 'string' ? data.url : '';
@@ -136,7 +136,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 				return;
 			}
 
-			if ( type === 'wp-admin-shell-external-link' ) {
+			if ( type === 'wp-admin-workspaces-external-link' ) {
 				// External destinations leave the iframe sandbox — hand
 				// to the browser. Future: spawn a generic-iframe window
 				// so the user stays in-shell. For MVP, native new tab.
@@ -167,9 +167,9 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-desktop-iframe">
+		<div className="wp-admin-workspaces-desktop-iframe">
 			{ isLoading && (
-				<div className="wp-admin-shell-desktop-iframe__loading">
+				<div className="wp-admin-workspaces-desktop-iframe__loading">
 					<Spinner />
 				</div>
 			) }
@@ -177,7 +177,7 @@ export default function DesktopIframeApp( { app, config = {} } ) {
 				ref={ iframeRef }
 				src={ src }
 				title={ app?.title || 'WordPress page' }
-				className="wp-admin-shell-desktop-iframe__frame"
+				className="wp-admin-workspaces-desktop-iframe__frame"
 				onLoad={ onIframeLoad }
 			/>
 		</div>

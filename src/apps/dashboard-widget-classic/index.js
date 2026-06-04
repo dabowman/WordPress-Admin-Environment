@@ -3,10 +3,10 @@
  * dashboard widget (#134).
  *
  * The render half of the classic dashboard-widget bridge. The PHP harvest
- * (`WP_Admin_Shell_Dashboard_Bridge`) folds un-ported plugin dashboard widgets
+ * (`WP_Admin_Workspaces_Dashboard_Bridge`) folds un-ported plugin dashboard widgets
  * into the dashboard-host grid as tiles, each mounting THIS app with per-tile
  * `config.widgetId` + `config.title`. The app lazily fetches the widget's
- * rendered HTML from `GET /wp-admin-shell/v1/dashboard-widget/{id}` and renders
+ * rendered HTML from `GET /wp-admin-workspaces/v1/dashboard-widget/{id}` and renders
  * it at admin trust.
  *
  * **Lazy.** The fetch runs per-tile (on mount), so a slow plugin widget
@@ -56,7 +56,7 @@ import './index.css';
 function CapturedHtml( { html } ) {
 	return (
 		<div
-			className="wp-admin-shell-classic-widget__html"
+			className="wp-admin-workspaces-classic-widget__html"
 			// Admin-context HTML — same trust as classic wp-admin. See the
 			// module docblock + the #128 notices-banner precedent.
 			// eslint-disable-next-line react/no-danger
@@ -91,7 +91,7 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 		let active = true;
 		setStatus( 'loading' );
 		apiFetch( {
-			path: `/wp-admin-shell/v1/dashboard-widget/${ encodeURIComponent(
+			path: `/wp-admin-workspaces/v1/dashboard-widget/${ encodeURIComponent(
 				widgetId
 			) }`,
 		} )
@@ -113,20 +113,20 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 		};
 	}, [ widgetId ] );
 
-	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	// The ENTIRE classic dashboard, chromeless — wp-admin has no single-widget
 	// URL, so this is the whole dashboard, not just this tile's widget. The
 	// widget's own enqueued JS runs natively inside the iframe, so it's the
 	// fidelity fallback for JS-driven widgets.
-	const iframeSrc = `${ adminUrl }index.php?wp_admin_shell_chromeless=1`;
+	const iframeSrc = `${ adminUrl }index.php?wp_admin_workspaces_chromeless=1`;
 
 	const toggleLabel = useIframe
-		? __( 'Show captured view', 'wp-admin-shell' )
-		: __( 'Open classic dashboard', 'wp-admin-shell' );
+		? __( 'Show captured view', 'wp-admin-workspaces' )
+		: __( 'Open classic dashboard', 'wp-admin-workspaces' );
 
 	return (
-		<div className="wp-admin-shell-classic-widget">
-			<div className="wp-admin-shell-classic-widget__toolbar">
+		<div className="wp-admin-workspaces-classic-widget">
+			<div className="wp-admin-workspaces-classic-widget__toolbar">
 				<Button
 					variant="minimal"
 					size="small"
@@ -138,16 +138,17 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 
 			{ useIframe ? (
 				<iframe
-					className="wp-admin-shell-classic-widget__iframe"
+					className="wp-admin-workspaces-classic-widget__iframe"
 					src={ iframeSrc }
 					title={
-						title || __( 'Classic dashboard', 'wp-admin-shell' )
+						title ||
+						__( 'Classic dashboard', 'wp-admin-workspaces' )
 					}
 				/>
 			) : (
-				<div className="wp-admin-shell-classic-widget__body">
+				<div className="wp-admin-workspaces-classic-widget__body">
 					{ status === 'loading' && (
-						<div className="wp-admin-shell-classic-widget__center">
+						<div className="wp-admin-workspaces-classic-widget__center">
 							<Spinner />
 						</div>
 					) }
@@ -155,18 +156,18 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 						<Stack
 							direction="column"
 							gap="xs"
-							className="wp-admin-shell-classic-widget__center"
+							className="wp-admin-workspaces-classic-widget__center"
 						>
 							<Text variant="body-sm">
 								{ __(
 									'This widget could not be loaded.',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 							<Text variant="body-sm">
 								{ __(
 									'Try the classic dashboard above.',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 						</Stack>
@@ -175,11 +176,11 @@ export default function DashboardWidgetClassicApp( { config = {} } = {} ) {
 						( html ? (
 							<CapturedHtml html={ html } />
 						) : (
-							<div className="wp-admin-shell-classic-widget__center">
+							<div className="wp-admin-workspaces-classic-widget__center">
 								<Text variant="body-sm">
 									{ __(
 										'This widget rendered nothing.',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 									) }
 								</Text>
 							</div>

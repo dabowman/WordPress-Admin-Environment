@@ -12,11 +12,11 @@ Fields over `useEntityRecord('root','site')`:
 - **Large size max width / height** — `large_size_w` / `large_size_h` integers.
 - **Organize uploads into month/year folders** — `uploads_use_yearmonth_folders` boolean.
 
-All eight options are non-REST in core 6.9; the plugin re-registers them in the `media` settings group with `show_in_rest` (`wp-admin-shell.php`, issue #117) so the standard `/wp/v2/settings` controller reads + writes them in one PUT. The integer options carry a server-side `minimum: 0` schema floor.
+All eight options are non-REST in core 6.9; the plugin re-registers them in the `media` settings group with `show_in_rest` (`wp-admin-workspaces.php`, issue #117) so the standard `/wp/v2/settings` controller reads + writes them in one PUT. The integer options carry a server-side `minimum: 0` schema floor.
 
 ## Architecture
 
-Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app declares the static `fields` array (the dimensions, the two booleans) and the `form` field order; the shared shell owns the null-guard spinner, `DataForm`, Save button, save handler, and the `wp-admin-shell-app--inset` padding wrapper (so the panel renders identically standalone and inside the `core:settings` host).
+Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app declares the static `fields` array (the dimensions, the two booleans) and the `form` field order; the shared shell owns the null-guard spinner, `DataForm`, Save button, save handler, and the `wp-admin-workspaces-app--inset` padding wrapper (so the panel renders identically standalone and inside the `core:settings` host).
 
 Dimensions clamp to a non-negative integer (floor 0) in `setValue` — 0 means "do not generate this size", and the server schema floor would reject a negative value.
 

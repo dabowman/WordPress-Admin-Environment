@@ -3,7 +3,7 @@
  * Dashboard-widgets registry (v3 reshape — 3c.1).
  *
  * Plugins register a widget app for the dashboard grid via
- * `wp_admin_shell_register_dashboard_widget()`. In v3 the registry
+ * `wp_admin_workspaces_register_dashboard_widget()`. In v3 the registry
  * contributes a screen-app entry under the target screen
  * (`dashboard-widgets` by default) instead of writing into the v2
  * top-level `dashboardWidgets` block. The cascade pipeline then
@@ -30,15 +30,15 @@
  *      (and optional `role`, `title`, `capabilities`, `slotHints`).
  *      The function registers a synthetic app manifest so the host
  *      can mount the widget without a separate
- *      `wp_admin_shell_register_app()` call. The synthetic manifest
+ *      `wp_admin_workspaces_register_app()` call. The synthetic manifest
  *      carries `slotHints` derived from the placement args.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Dashboard_Widgets {
+class WP_Admin_Workspaces_Dashboard_Widgets {
 
 	/**
 	 * Default target screen id when callers don't override via
@@ -66,7 +66,7 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	 * Synthetic manifests queued for forwarding to the manifest
 	 * registry. Drained by `flush_pending_registrations()`, called from
 	 * the `init` priority-7 manifest-discovery pass (after the registry
-	 * class is loaded) + lazily by the `wp_admin_shell_data_plugin`
+	 * class is loaded) + lazily by the `wp_admin_workspaces_data_plugin`
 	 * filter contribution.
 	 *
 	 * @var array<string, array>
@@ -83,8 +83,8 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	public static function register( $id, $args = array() ) {
 		if ( ! is_string( $id ) || $id === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_invalid_id',
-				__( 'Dashboard widget id must be a non-empty string.', 'wp-admin-shell' )
+				'wp_admin_workspaces_dashboard_widget_invalid_id',
+				__( 'Dashboard widget id must be a non-empty string.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! preg_match(
@@ -92,9 +92,9 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			$id
 		) ) {
 			return new WP_Error(
-				'wp_admin_shell_dashboard_widget_invalid_namespace',
+				'wp_admin_workspaces_dashboard_widget_invalid_namespace',
 				/* translators: %s: app id */
-				sprintf( __( 'Dashboard widget id %s must be namespaced (core:* or plugin:slug/name).', 'wp-admin-shell' ), $id )
+				sprintf( __( 'Dashboard widget id %s must be namespaced (core:* or plugin:slug/name).', 'wp-admin-workspaces' ), $id )
 			);
 		}
 		if ( ! is_array( $args ) ) {
@@ -164,7 +164,7 @@ class WP_Admin_Shell_Dashboard_Widgets {
 			// class is guaranteed loaded + the `init` priority-7
 			// manifest-discovery pass has run. Calling synchronously
 			// from a mu-plugin / early `plugins_loaded` would fatal on
-			// `Class "WP_Admin_Shell_Manifest_Registry" not found`.
+			// `Class "WP_Admin_Workspaces_Manifest_Registry" not found`.
 			self::$pending_registrations[ $id ] = $manifest;
 		}
 
@@ -175,16 +175,16 @@ class WP_Admin_Shell_Dashboard_Widgets {
 	 * Flush queued synthetic-manifest registrations into the manifest
 	 * registry. Idempotent — already-registered ids no-op via the
 	 * registry's own duplicate-id rejection. Called from the
-	 * `init` priority-7 hook + lazily by `wp_admin_shell_data_plugin`.
+	 * `init` priority-7 hook + lazily by `wp_admin_workspaces_data_plugin`.
 	 */
 	public static function flush_pending_registrations() {
 		if ( empty( self::$pending_registrations ) ) {
 			return;
 		}
-		if ( ! class_exists( 'WP_Admin_Shell_Manifest_Registry' ) ) {
+		if ( ! class_exists( 'WP_Admin_Workspaces_Manifest_Registry' ) ) {
 			return;
 		}
-		$registry = WP_Admin_Shell_Manifest_Registry::instance();
+		$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 		foreach ( self::$pending_registrations as $id => $manifest ) {
 			$registry->register_app( $manifest );
 		}
@@ -324,8 +324,8 @@ class WP_Admin_Shell_Dashboard_Widgets {
  *                     - `slotHints`    (array)  For standalone flavor — manifest slotHints block (alternative to flat defaultSize/minSize/position).
  * @return string|WP_Error
  */
-function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
-	return WP_Admin_Shell_Dashboard_Widgets::register( $id, $args );
+function wp_admin_workspaces_register_dashboard_widget( $id, $args = array() ) {
+	return WP_Admin_Workspaces_Dashboard_Widgets::register( $id, $args );
 }
 
 /**
@@ -333,7 +333,7 @@ function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
  * the `plugin` origin so site/role/user origins can extend or replace
  * via admin.json's `screens[<target>].apps[]` array. Priority 5 (same
  * as field-collections) so plugin authors using
- * `add_filter('wp_admin_shell_data_plugin', …)` directly win.
+ * `add_filter('wp_admin_workspaces_data_plugin', …)` directly win.
  *
  * Per-entry-id collision rule: an admin.json declaration with the same
  * entry id wins via the cascade's standard id-keyed array merge — the
@@ -341,16 +341,16 @@ function wp_admin_shell_register_dashboard_widget( $id, $args = array() ) {
  *
  * Tombstones: when a record carries `hidden: true`, the contributed
  * entry shape includes `__tombstone: true`, which signals
- * `WP_Admin_Shell_Merge::merge_keyed_arrays` to drop the matching id
+ * `WP_Admin_Workspaces_Merge::merge_keyed_arrays` to drop the matching id
  * from the merged screen.
  */
-add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
+add_filter( 'wp_admin_workspaces_data_plugin', function ( $doc ) {
 	// Lazy flush — if a plugin registered widgets before the `init`
 	// pass below ran, drain the queue now so the manifest registry
 	// reflects them.
-	WP_Admin_Shell_Dashboard_Widgets::flush_pending_registrations();
+	WP_Admin_Workspaces_Dashboard_Widgets::flush_pending_registrations();
 
-	$records = WP_Admin_Shell_Dashboard_Widgets::all();
+	$records = WP_Admin_Workspaces_Dashboard_Widgets::all();
 	if ( empty( $records ) ) {
 		return $doc;
 	}
@@ -390,7 +390,7 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
 			continue;
 		}
 
-		$doc['screens'][ $target ]['apps'][] = WP_Admin_Shell_Dashboard_Widgets::build_screen_app_entry( $record );
+		$doc['screens'][ $target ]['apps'][] = WP_Admin_Workspaces_Dashboard_Widgets::build_screen_app_entry( $record );
 	}
 
 	return $doc;
@@ -403,4 +403,4 @@ add_filter( 'wp_admin_shell_data_plugin', function ( $doc ) {
  * authors hooking earlier than this fire safely because `register()`
  * only stashes the manifest — the registry call happens here.
  */
-add_action( 'init', array( 'WP_Admin_Shell_Dashboard_Widgets', 'flush_pending_registrations' ), 7 );
+add_action( 'init', array( 'WP_Admin_Workspaces_Dashboard_Widgets', 'flush_pending_registrations' ), 7 );

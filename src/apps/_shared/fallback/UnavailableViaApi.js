@@ -86,7 +86,7 @@ export function UnavailableViaApi( {
 					/* translators: 1: option name, 2: option value */
 					__(
 						'Set the WordPress option `%1$s` to `%2$s` using `wp option update`.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					),
 					name,
 					String( value ?? '' )
@@ -136,14 +136,13 @@ export function UnavailableViaApi( {
 	// Using a real anchor (not window.location.assign) is required so the
 	// interceptor sees the click.
 	//
-	// Derive the admin base from `window.wpAdminShell.adminUrl` (the same
+	// Derive the admin base from `window.wpAdminWorkspaces.adminUrl` (the same
 	// global the interceptor reads) so sites running wp-admin under a custom
 	// path still resolve; fall back to `/wp-admin/` only if absent. Join with
 	// a single slash so neither side double-slashes.
-	const adminBase = ( window.wpAdminShell?.adminUrl || '/wp-admin/' ).replace(
-		/\/+$/,
-		''
-	);
+	const adminBase = (
+		window.wpAdminWorkspaces?.adminUrl || '/wp-admin/'
+	).replace( /\/+$/, '' );
 	const classicHref = classicPath
 		? `${ adminBase }/${ classicPath.replace( /^\/+/, '' ) }`
 		: `${ adminBase }/`;
@@ -157,8 +156,8 @@ export function UnavailableViaApi( {
 	const classicLabel =
 		label ||
 		( kind === 'option'
-			? __( 'Open the classic settings screen', 'wp-admin-shell' )
-			: __( 'Open the classic screen', 'wp-admin-shell' ) );
+			? __( 'Open the classic settings screen', 'wp-admin-workspaces' )
+			: __( 'Open the classic screen', 'wp-admin-workspaces' ) );
 
 	// Lead-in explanation, also kind-aware: settings-flavored for kind="option",
 	// neutral for kind="action".
@@ -166,15 +165,15 @@ export function UnavailableViaApi( {
 		kind === 'option'
 			? __(
 					'This setting isn’t writable through the workspace API. Use one of the options below to make the change.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 			  )
 			: __(
 					'This change isn’t available through the workspace API. Use one of the options below to make the change.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 			  );
 
 	return (
-		<div className="wp-admin-shell-unavailable-via-api">
+		<div className="wp-admin-workspaces-unavailable-via-api">
 			{ /* The Notice.Root carries ONLY the short inline explanation
 			     lead-in. With intent="info" the notice renders role="status"
 			     (an aria-live="polite" region), so it must stay free of
@@ -191,7 +190,7 @@ export function UnavailableViaApi( {
 			     WP-CLI command + Copy button, and agent prompt + Copy button
 			     live, so the inner aria-live="polite" status spans are the
 			     ONLY live regions in the tree. */ }
-			<section className="wp-admin-shell-unavailable-via-api__tiers">
+			<section className="wp-admin-workspaces-unavailable-via-api__tiers">
 				<Stack direction="column" gap="md">
 					{ /* Show the entered value when kind="option" so the user
 					     can confirm what they were about to save. */ }
@@ -200,9 +199,9 @@ export function UnavailableViaApi( {
 						value !== '' && (
 							<Text variant="body-sm">
 								<strong>
-									{ __( 'Value:', 'wp-admin-shell' ) }
+									{ __( 'Value:', 'wp-admin-workspaces' ) }
 								</strong>{ ' ' }
-								<code className="wp-admin-shell-unavailable-via-api__code">
+								<code className="wp-admin-workspaces-unavailable-via-api__code">
 									{ String( value ) }
 								</code>
 							</Text>
@@ -212,16 +211,19 @@ export function UnavailableViaApi( {
 					<Stack direction="column" gap="xs">
 						<Text variant="body-sm">
 							<strong>
-								{ __( 'Classic screen', 'wp-admin-shell' ) }
+								{ __(
+									'Classic screen',
+									'wp-admin-workspaces'
+								) }
 							</strong>{ ' ' }
 							{ kind === 'option'
 								? __(
 										'Open the classic settings screen',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 								  )
 								: __(
 										'Open the classic screen',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 								  ) }
 						</Text>
 						{ /* Plain <a href> — the interceptor handles routing.
@@ -241,15 +243,15 @@ export function UnavailableViaApi( {
 						<Stack direction="column" gap="xs">
 							<Text variant="body-sm">
 								<strong>
-									{ __( 'WP-CLI', 'wp-admin-shell' ) }
+									{ __( 'WP-CLI', 'wp-admin-workspaces' ) }
 								</strong>{ ' ' }
 								{ __(
 									'Run this WP-CLI command',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 							<Stack direction="row" gap="sm" align="center">
-								<code className="wp-admin-shell-unavailable-via-api__code">
+								<code className="wp-admin-workspaces-unavailable-via-api__code">
 									{ cliCommand }
 								</code>
 								<Button
@@ -259,20 +261,20 @@ export function UnavailableViaApi( {
 									onClick={ handleCopyCli }
 								>
 									{ copied
-										? __( 'Copied!', 'wp-admin-shell' )
-										: __( 'Copy', 'wp-admin-shell' ) }
+										? __( 'Copied!', 'wp-admin-workspaces' )
+										: __( 'Copy', 'wp-admin-workspaces' ) }
 								</Button>
 								{ /* sr-only live region so assistive tech
 								     hears the copy succeed — the button label
 								     flip is visual-only. */ }
 								<span
-									className="wp-admin-shell-unavailable-via-api__status"
+									className="wp-admin-workspaces-unavailable-via-api__status"
 									aria-live="polite"
 								>
 									{ copied
 										? __(
 												'Command copied to clipboard',
-												'wp-admin-shell'
+												'wp-admin-workspaces'
 										  )
 										: '' }
 								</span>
@@ -285,15 +287,18 @@ export function UnavailableViaApi( {
 						<Stack direction="column" gap="xs">
 							<Text variant="body-sm">
 								<strong>
-									{ __( 'Coding agent', 'wp-admin-shell' ) }
+									{ __(
+										'Coding agent',
+										'wp-admin-workspaces'
+									) }
 								</strong>{ ' ' }
 								{ __(
 									'Paste this prompt into your coding agent',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 							<Stack direction="row" gap="sm" align="center">
-								<span className="wp-admin-shell-unavailable-via-api__agent-prompt">
+								<span className="wp-admin-workspaces-unavailable-via-api__agent-prompt">
 									{ resolvedAgentPrompt }
 								</span>
 								<Button
@@ -303,20 +308,20 @@ export function UnavailableViaApi( {
 									onClick={ handleCopyAgent }
 								>
 									{ agentCopied
-										? __( 'Copied!', 'wp-admin-shell' )
-										: __( 'Copy', 'wp-admin-shell' ) }
+										? __( 'Copied!', 'wp-admin-workspaces' )
+										: __( 'Copy', 'wp-admin-workspaces' ) }
 								</Button>
 								{ /* sr-only live region so assistive tech
 								     hears the copy succeed — the button label
 								     flip is visual-only. */ }
 								<span
-									className="wp-admin-shell-unavailable-via-api__status"
+									className="wp-admin-workspaces-unavailable-via-api__status"
 									aria-live="polite"
 								>
 									{ agentCopied
 										? __(
 												'Prompt copied to clipboard',
-												'wp-admin-shell'
+												'wp-admin-workspaces'
 										  )
 										: '' }
 								</span>

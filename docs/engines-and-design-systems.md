@@ -67,7 +67,7 @@ Each engine ships its own:
   pre-PR-#49 `data-wpds-theme-provider-id` to drop the misleading
   DS-specific prefix).
 - Own token namespace — `core:default` and `core:single-pane` use
-  `--wpds-*`; `core:desktop` uses `--wp-admin-shell--chrome--*` slots
+  `--wpds-*`; `core:desktop` uses `--wp-admin-workspaces--chrome--*` slots
   consumed by inline CSS variable fallbacks. A Material engine would
   ship its own `--md-*` namespace and a token resolver.
 - Own region templates in `engine.json` (default-style block,
@@ -107,7 +107,7 @@ apps inside windows still consume `--wpds-*` tokens via their own
 `@wordpress/ui` / `@wordpress/components` CSS imports — those tokens
 resolve against `@wordpress/ui`'s built-in defaults without engine-
 level seed propagation. The engine's chrome (workspace, dock, window
-frames, snap ghost) runs on its own `--wp-admin-shell--chrome--*` slot
+frames, snap ghost) runs on its own `--wp-admin-workspaces--chrome--*` slot
 vocabulary fed by `compileStyles` + `engine.json#default-styles`.
 Contract #2 (the WPDS→engine token bridge `wpdsBridge.mjs` from the
 original plan) is documented as a follow-up — the chrome-vs-contents
@@ -124,7 +124,7 @@ sibling and gets the full WPDS surface for free.
   JSDoc typedef + `src/runtime/styles/ThemeProviderHost.js` consumer.
 - **Engine `default-styles` Phase C contract** —
   `docs/schemas/admin-engine.json#/$defs/defaultStyles` +
-  `includes/cascade/class-wp-admin-shell-resolver.php` synthetic
+  `includes/cascade/class-wp-admin-workspaces-resolver.php` synthetic
   origin merge.
 - **WPDS-flavored ThemeProvider** —
   `src/runtime/engines/core-default/WpdsThemeProvider.js` (private-API
@@ -194,7 +194,7 @@ non-WPDS engine omits it.
 Two engine-side paths (never kernel):
 
 - **Engine template `default-style`** — `core:default` emits values
-  like `var(--wp-admin-shell--chrome--sidebar--background,
+  like `var(--wp-admin-workspaces--chrome--sidebar--background,
   var(--wpds-color-bg-surface-neutral))` as inline style on each
   region's `<div>`. `resolveRegion.mjs` merges template `default-style`
   into `region.style`; `Region.js`'s `toReactStyle` kebab→camelCases
@@ -202,8 +202,8 @@ Two engine-side paths (never kernel):
   var wins when authored, falls back to the WPDS slot when empty.
 - **Engine `index.css` class rules** — `core:default/index.css` ships
   chrome-anchor/svg/Stack-defensive overrides + engine root paint
-  (`.wp-admin-shell-layout` bg+color via
-  `--wp-admin-shell--chrome--canvas--{background,foreground}`).
+  (`.wp-admin-workspaces-layout` bg+color via
+  `--wp-admin-workspaces--chrome--canvas--{background,foreground}`).
   Single-pane paints its root through the same canvas slot. Non-WPDS
   engines ship none of these.
 
@@ -218,7 +218,7 @@ code, never hardcode hex — use `var(--wpds-*)` so provider seeds flow
 through.
 
 **Token-payload short-circuit.** PHP
-`wp_admin_shell_styles_reference_tokens()` scans the resolved `styles`
+`wp_admin_workspaces_styles_reference_tokens()` scans the resolved `styles`
 tree and skips serializing the whole DTCG `tokens` table to the page
 (emits `{}` via `(object) array()`) when it references zero *foreign*
 aliases — `{path}` not starting `styles.`. Within-doc aliases
@@ -239,7 +239,7 @@ tiers appear in it; they differ in *how* — not *whether* — an author can
 override them:
 
 1. **Named chrome slot + WPDS fallback** —
-   `var(--wp-admin-shell--chrome--<surface>--<slot>, var(--wpds-*))`. The
+   `var(--wp-admin-workspaces--chrome--<surface>--<slot>, var(--wpds-*))`. The
    outer var is a curated, by-name author knob (`background`, `color`,
    `border`, padding, key dimensions like sidebar width). Set it via
    admin.json `styles.chrome.<surface>.<slot>` — the chrome bridge
@@ -269,7 +269,7 @@ engine `default-styles.theme`) shifts the `--wpds-*` tokens, moving both
 Tier 1 fallbacks and Tier 2 values at once — global, not per-region.
 
 To grow the vocabulary, **promote** a property to Tier 1 (wrap it
-`var(--wp-admin-shell--chrome--…, var(--wpds-…))` in the template) when a
+`var(--wp-admin-workspaces--chrome--…, var(--wpds-…))` in the template) when a
 real retune-by-name need surfaces — don't pre-slot every property.
 
 ### Why layout literals live in JSON, not `index.css`
@@ -285,7 +285,7 @@ along in the JSON instead of moving to the stylesheet:
    clear from data (set `display: grid` inline, inherit a stray
    `flex-direction` from CSS).
 2. **A template is a self-contained, registerable unit**
-   (`wp_admin_shell_register_template`). Its layout *is* its definition — a
+   (`wp_admin_workspaces_register_template`). Its layout *is* its definition — a
    template shipped as JSON by a third party must work without also
    shipping engine CSS.
 3. **Per-instance, not per-class.** `default-style` keys to a specific
@@ -331,7 +331,7 @@ Two rules of thumb:
 
 ## Region content padding (flush by default; apps own their inset)
 
-The `core:default` engine mount — the `.wp-admin-shell-region__app`
+The `core:default` engine mount — the `.wp-admin-workspaces-region__app`
 wrapper `Region.js` renders around every mounted app — adds **no
 padding**. Content sits flush to the region card edge by default. This
 is deliberate: the mount is engine-internal and **non-addressable** (no
@@ -344,18 +344,18 @@ coupling smell, now removed.
 The model instead:
 
 - **Flush is the default.** DataViews list apps (they carry
-  `wp-admin-shell-app--fill`) and iframe apps want full-bleed and get it
+  `wp-admin-workspaces-app--fill`) and iframe apps want full-bleed and get it
   for free. The card's own `border-radius` + clipping `overflow` (see
   the `core:main` template) rounds flush children, so iframe apps need
   no corner handling.
 - **Apps opt into breathing room** with the shared
-  `wp-admin-shell-app--inset` utility (`src/apps/_shared/app.css`): add
+  `wp-admin-workspaces-app--inset` utility (`src/apps/_shared/app.css`): add
   the class to the app's root element and `import '../_shared/app.css'`.
-  It pads via `var(--wp-admin-shell--chrome--content--inset,
+  It pads via `var(--wp-admin-workspaces--chrome--content--inset,
   var(--wpds-dimension-padding-2xl))` and sets `box-sizing: border-box`
   (so `height: 100%` roots don't overflow).
 - **Authors retune it** via `styles.chrome.content.inset` in admin.json
-  — the chrome bridge maps it to `--wp-admin-shell--chrome--content--inset`
+  — the chrome bridge maps it to `--wp-admin-workspaces--chrome--content--inset`
   exactly like the other `chrome.*` slots.
 - **Composers own their panels' inset, once.** The `core:settings` host
   doesn't pad `__panel`; each panel component self-pads via the utility,
@@ -381,12 +381,12 @@ theme resets) that stomp `@wordpress/ui` defaults.
   colors per component.** The chrome → WPDS bridge in
   `core-default/compileStyles.mjs` (`CHROME_WPDS_BINDINGS`) maps each
   chrome surface's `chrome.<surface>.<slot>` → a `--wpds-*` interactive
-  token, scoped under the surface container class (`.wp-admin-shell-nav,
-  .wp-admin-shell-site-hub`, …). Buttons/IconButtons/Stacks inside
+  token, scoped under the surface container class (`.wp-admin-workspaces-nav,
+  .wp-admin-workspaces-site-hub`, …). Buttons/IconButtons/Stacks inside
   inherit the chrome palette automatically. **Do not** add
-  `.wp-admin-shell-*-button { color }` rules — extend the bindings
+  `.wp-admin-workspaces-*-button { color }` rules — extend the bindings
   table. Engine-private; a non-WPDS engine ships its own. The `canvas`
-  surface (`.wp-admin-shell-layout`) binds **foreground only** —
+  surface (`.wp-admin-workspaces-layout`) binds **foreground only** —
   binding its background to `--wpds-color-bg-surface-neutral` would
   re-darken the `core:main`/`core:detail` cards that consume that ramp
   as their final fallback. The canvas paints its own background via the
@@ -395,7 +395,7 @@ theme resets) that stomp `@wordpress/ui` defaults.
   Guarded by `tests/runtime/compile-styles-tokens.test.mjs`.
 - **`Stack` stomped to `display: block`** → children flow vertically
   regardless of inline `flex-direction: row`. `core:default/index.css`
-  ships a defensive unlayered `.wp-admin-shell [class*="__stack"]
+  ships a defensive unlayered `.wp-admin-workspaces [class*="__stack"]
   { display: flex }`. Don't remove without verifying the cascade layer
   applies in every shell DOM context (esp. inside `<button>`).
 - Pass explicit `align="center"` to `<Stack direction="row">` with icon
@@ -408,14 +408,14 @@ theme resets) that stomp `@wordpress/ui` defaults.
   WP-admin's `colors/<scheme>/colors.css` ships unlayered
   `a { color: var(--wp-admin-theme-color) }`; `@wordpress/ui` Button's
   color is layered and loses. `core:default/index.css` ships scoped
-  anchor color rules (`.wp-admin-shell-region--{sidebar,toolbar} a,
-  .wp-admin-shell-site-hub a { color: var(--wpds-color-fg-interactive-
+  anchor color rules (`.wp-admin-workspaces-region--{sidebar,toolbar} a,
+  .wp-admin-workspaces-site-hub a { color: var(--wpds-color-fg-interactive-
   neutral) }`) + symmetric `:hover/:focus/:active → -active`.
 - **`@wordpress/icons` SVGs need `fill: currentColor` forced** —
   `@wordpress/icons` Icon sets `width`/`height` but not `fill`
   (`@wordpress/ui`'s Icon does). `core:default/index.css` ships
-  `.wp-admin-shell-region--{sidebar,toolbar} svg,
-  .wp-admin-shell-site-hub svg { fill: currentColor }`.
+  `.wp-admin-workspaces-region--{sidebar,toolbar} svg,
+  .wp-admin-workspaces-site-hub svg { fill: currentColor }`.
 - **Ellipsis-in-flex** — `@wordpress/ui` Button is `inline-flex`. To
   truncate text in a constrained flex parent (site-hub title): wrapper
   div needs `display: flex; min-width: 0;` AND Button needs
@@ -423,7 +423,7 @@ theme resets) that stomp `@wordpress/ui` defaults.
   ellipsis; white-space: nowrap`.
 - Custom CSS targeting `@wordpress/ui` DOM must NOT use
   `.components-button` / `.components-item` (those are
-  `@wordpress/components` classes). Use the `wp-admin-shell-*` class or
+  `@wordpress/components` classes). Use the `wp-admin-workspaces-*` class or
   the `button` element selector inside a chrome wrapper; when render can
   be `<button>` or `<a>`, use `:is(button, a)`.
 - **DataViews paints its own wrapper background** —
@@ -433,8 +433,8 @@ theme resets) that stomp `@wordpress/ui` defaults.
   hard-codes the list panel white over whatever region card background the
   template declared. `core:default/index.css` scopes the package's own
   override knob to the region mount —
-  `.wp-admin-shell-region__app .dataviews-wrapper,
-  .wp-admin-shell-region__app .dataviews-picker-wrapper
+  `.wp-admin-workspaces-region__app .dataviews-wrapper,
+  .wp-admin-workspaces-region__app .dataviews-picker-wrapper
   { --wp-dataviews-color-background: transparent }` — so the region card
   background (Tier 1 `chrome.content.card-background`, see "value tiers"
   above) shows through. Set the *variable*, not `background-color`: the

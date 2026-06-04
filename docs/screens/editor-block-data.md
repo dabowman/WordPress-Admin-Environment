@@ -299,7 +299,7 @@ N/A — data subsystem. UI accessibility documented in companion files.
 | Autosave-newer banner | High | Compare modified_gmt of current post and latest autosave on load |
 | Local-storage autosave (offline backup) | Medium | `editor.localAutosaveSet` / `editor.localAutosaveGet` — sessionStorage |
 | Trash via REST DELETE (no force) | Done | `core-data` `deleteEntityRecord` |
-| Restore from revision via REST | Gap | Currently admin-post action; implement custom `wp-admin-shell/v1/posts/{id}/restore-revision` endpoint |
+| Restore from revision via REST | Gap | Currently admin-post action; implement custom `wp-admin-workspaces/v1/posts/{id}/restore-revision` endpoint |
 | URL details endpoint usage (link picker) | Medium | Not strictly needed — fallback fetches from client |
 | Navigation fallback endpoint | Low | Only relevant when shell hosts a Navigation block in shell-managed content |
 | Batch endpoint for multi-entity saves | Medium | `core-data` does this automatically when multiple dirty entities are saved together; only relevant if shell explicitly bypasses batch |

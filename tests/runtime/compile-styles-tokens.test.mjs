@@ -104,21 +104,21 @@ console.log( '\n— canvas binding does not darken card surface —' );
 	};
 	const compiled = compileStyles( styles, {} );
 	const canvasScope = ( compiled.scoped || [] ).find(
-		( entry ) => entry.selector === '.wp-admin-shell-layout'
+		( entry ) => entry.selector === '.wp-admin-workspaces-layout'
 	);
 	const offending = canvasScope?.vars?.[ '--wpds-color-bg-surface-neutral' ];
 	ok(
 		'canvas.background does not emit --wpds-color-bg-surface-neutral',
 		offending === undefined,
 		offending !== undefined
-			? `surface-neutral scoped to .wp-admin-shell-layout = ${ offending } (darkens cards)`
+			? `surface-neutral scoped to .wp-admin-workspaces-layout = ${ offending } (darkens cards)`
 			: ''
 	);
 	ok(
 		'canvas.foreground still binds (--wpds-color-fg-content-neutral)',
 		canvasScope?.vars?.[ '--wpds-color-fg-content-neutral' ] === '#e0e0e0'
 	);
-	const topBg = compiled.top[ '--wp-admin-shell--chrome--canvas--background' ];
+	const topBg = compiled.top[ '--wp-admin-workspaces--chrome--canvas--background' ];
 	ok(
 		'canvas.background still emits the chrome slot at top scope',
 		topBg === '#1e1e1e'

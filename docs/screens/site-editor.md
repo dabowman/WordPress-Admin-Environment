@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Split across three files due to scope.
 **Source PHP:** `wp-admin/site-editor.php`
-**Current shell coverage:** `core:site-editor` → `src/runtime/apps/SiteEditorApp.js` — iframe-backed adapter (M4). Native `@wordpress/edit-site` mount deferred to v2 (per `wp-admin-shell-v1-plan.md` §M4 risk: four package-collision issues are individually tractable but bundled exceed the v1 calendar).
+**Current shell coverage:** `core:site-editor` → `src/runtime/apps/SiteEditorApp.js` — iframe-backed adapter (M4). Native `@wordpress/edit-site` mount deferred to v2 (per `wp-admin-workspaces-v1-plan.md` §M4 risk: four package-collision issues are individually tractable but bundled exceed the v1 calendar).
 
 This spec describes the **semantic surface** of the Site Editor SPA. It does not prescribe component names, CSS, or specific React APIs.
 

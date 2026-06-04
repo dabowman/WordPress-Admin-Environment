@@ -85,7 +85,7 @@ function emit() {
 			listener();
 		} catch ( e ) {
 			// eslint-disable-next-line no-console
-			console.error( '[wp-admin-shell] dirtyState listener threw', e );
+			console.error( '[wp-admin-workspaces] dirtyState listener threw', e );
 		}
 	}
 }

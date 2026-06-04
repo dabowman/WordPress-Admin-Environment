@@ -2,7 +2,7 @@
 /**
  * Menu-items registry — v3 nested-tree shim.
  *
- * Plugins call `wp_admin_shell_register_menu_item( $id, $args )` to declare
+ * Plugins call `wp_admin_workspaces_register_menu_item( $id, $args )` to declare
  * menu entries at runtime. The registry contributes them to the v3 `menu`
  * tree at the right depth through the `plugin` cascade origin so
  * site/role/user origins can still override per the usual rules.
@@ -21,13 +21,13 @@
  * This class handles two distinct passes:
  *
  *   1. **Plugin-origin contribution.** `contribute()` runs on the
- *      `wp_admin_shell_data_plugin` filter at priority 5. It walks the
+ *      `wp_admin_workspaces_data_plugin` filter at priority 5. It walks the
  *      registry, finds each item's resolved depth (root or under a
  *      `parent`), and merges the new entries into `$doc['menu']`. Items
  *      with a non-existent `parent` land at root with a WP_DEBUG notice.
  *
  *   2. **Screen-binding pass.** `bind_screens()` runs on the final
- *      `wp_admin_shell_data` filter (after all origins have folded in).
+ *      `wp_admin_workspaces_data` filter (after all origins have folded in).
  *      It walks the merged `menu` tree, looks each item id up in
  *      `screens`, and copies the screen's `label` / `icon` /
  *      `description` / `permissions` into the menu item where the item
@@ -36,12 +36,12 @@
  *      render with the Posts label, icon, and capability gate without
  *      any author boilerplate.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Shell_Menu_Items {
+class WP_Admin_Workspaces_Menu_Items {
 
 	/** Maximum drilldown / nesting depth honored when resolving parents. */
 	const MAX_DEPTH = 10;
@@ -89,21 +89,21 @@ class WP_Admin_Shell_Menu_Items {
 	public static function register( $id, $args ) {
 		if ( ! is_string( $id ) || $id === '' ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_invalid_id',
-				__( 'Menu item id must be a non-empty string.', 'wp-admin-shell' )
+				'wp_admin_workspaces_menu_item_invalid_id',
+				__( 'Menu item id must be a non-empty string.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( ! is_array( $args ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_invalid_args',
-				__( 'Menu item args must be an array.', 'wp-admin-shell' )
+				'wp_admin_workspaces_menu_item_invalid_args',
+				__( 'Menu item args must be an array.', 'wp-admin-workspaces' )
 			);
 		}
 		if ( isset( self::$registry[ $id ] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_duplicate_id',
+				'wp_admin_workspaces_menu_item_duplicate_id',
 				/* translators: %s: menu item id */
-				sprintf( __( 'Menu item %s is already registered. Use a different id.', 'wp-admin-shell' ), $id )
+				sprintf( __( 'Menu item %s is already registered. Use a different id.', 'wp-admin-workspaces' ), $id )
 			);
 		}
 
@@ -126,30 +126,30 @@ class WP_Admin_Shell_Menu_Items {
 		// authors who care should declare a label.
 		if ( $args['label'] !== null && ( ! is_string( $args['label'] ) || $args['label'] === '' ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_invalid_label',
-				__( 'Menu item "label" must be a non-empty string when set.', 'wp-admin-shell' )
+				'wp_admin_workspaces_menu_item_invalid_label',
+				__( 'Menu item "label" must be a non-empty string when set.', 'wp-admin-workspaces' )
 			);
 		}
 
 		if ( $args['href'] !== null && ! self::is_safe_href( $args['href'] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_unsafe_scheme',
+				'wp_admin_workspaces_menu_item_unsafe_scheme',
 				/* translators: %s: rejected `href` value */
-				sprintf( __( 'Menu item "href" value %s uses a scheme that is not in the allowlist (http/https/ftp/ftps/mailto/tel/sms or relative `/`/`#`).', 'wp-admin-shell' ), $args['href'] )
+				sprintf( __( 'Menu item "href" value %s uses a scheme that is not in the allowlist (http/https/ftp/ftps/mailto/tel/sms or relative `/`/`#`).', 'wp-admin-workspaces' ), $args['href'] )
 			);
 		}
 
 		if ( $args['parent'] !== null && ( ! is_string( $args['parent'] ) || $args['parent'] === '' ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_invalid_parent',
-				__( 'Menu item "parent" must be a non-empty string id when set.', 'wp-admin-shell' )
+				'wp_admin_workspaces_menu_item_invalid_parent',
+				__( 'Menu item "parent" must be a non-empty string id when set.', 'wp-admin-workspaces' )
 			);
 		}
 
 		if ( $args['position'] !== null && ! is_int( $args['position'] ) ) {
 			return new WP_Error(
-				'wp_admin_shell_menu_item_invalid_position',
-				__( 'Menu item "position" must be an integer or null.', 'wp-admin-shell' )
+				'wp_admin_workspaces_menu_item_invalid_position',
+				__( 'Menu item "position" must be an integer or null.', 'wp-admin-workspaces' )
 			);
 		}
 
@@ -175,7 +175,7 @@ class WP_Admin_Shell_Menu_Items {
 
 	/**
 	 * Cascade contribution. Runs at priority 5 on the
-	 * `wp_admin_shell_data_plugin` filter.
+	 * `wp_admin_workspaces_data_plugin` filter.
 	 *
 	 * Walks the registry, sorts by `position`, and merges each registered
 	 * item into the doc's `menu` tree at the resolved depth (root or
@@ -386,7 +386,7 @@ class WP_Admin_Shell_Menu_Items {
 	 * to the matching menu item unless the menu item itself sets a
 	 * different value.
 	 *
-	 * Runs late on the `wp_admin_shell_data` filter so it sees the
+	 * Runs late on the `wp_admin_workspaces_data` filter so it sees the
 	 * fully-resolved cascade (including site/role/user permissions
 	 * tightening).
 	 *
@@ -642,7 +642,7 @@ class WP_Admin_Shell_Menu_Items {
 		}
 		$message = sprintf(
 			/* translators: 1: menu item id, 2: missing parent id */
-			__( 'Menu item %1$s declared parent %2$s but no such item exists in the menu tree. Falling back to root.', 'wp-admin-shell' ),
+			__( 'Menu item %1$s declared parent %2$s but no such item exists in the menu tree. Falling back to root.', 'wp-admin-workspaces' ),
 			$id,
 			$parent_id
 		);
@@ -651,28 +651,28 @@ class WP_Admin_Shell_Menu_Items {
 }
 
 // Plugin-origin contribution — runs at priority 5 so authors hooking
-// `wp_admin_shell_data_plugin` at default priority 10 win on overlapping
+// `wp_admin_workspaces_data_plugin` at default priority 10 win on overlapping
 // fields.
-add_filter( 'wp_admin_shell_data_plugin', array( 'WP_Admin_Shell_Menu_Items', 'contribute' ), 5 );
+add_filter( 'wp_admin_workspaces_data_plugin', array( 'WP_Admin_Workspaces_Menu_Items', 'contribute' ), 5 );
 
 // Screen-binding resolver pass — runs on the final post-cascade filter
 // so screens/menu fields resolved across all origins (site/role/user
 // overrides included) are visible. Priority 5 keeps room for plugin
-// authors who hook `wp_admin_shell_data` at default 10 to see the bound
+// authors who hook `wp_admin_workspaces_data` at default 10 to see the bound
 // tree, and sequences this pass BEFORE
-// `WP_Admin_Shell_Data_View_Config::inject_app_baselines` (priority 6)
+// `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` (priority 6)
 // so dataView baselines attach to screens already contributed by the
 // menu-item shim. See `docs/upgrade-v2-to-v3.md` filter-ordering
 // section.
-add_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Menu_Items', 'bind_screens' ), 5 );
+add_filter( 'wp_admin_workspaces_data', array( 'WP_Admin_Workspaces_Menu_Items', 'bind_screens' ), 5 );
 
 // Registry state lives in static class memory — invisible to the
 // default cache-signal map. Hook into the cache layer's filter so a
 // menu-item registration delta forces a fresh resolver run cross-request.
 add_filter(
-	'wp_admin_shell_cache_signals',
+	'wp_admin_workspaces_cache_signals',
 	function ( $signals ) {
-		$registry = WP_Admin_Shell_Menu_Items::all();
+		$registry = WP_Admin_Workspaces_Menu_Items::all();
 		if ( ! empty( $registry ) ) {
 			$signals['menu_items'] = md5( wp_json_encode( $registry ) );
 		}

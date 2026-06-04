@@ -49,11 +49,11 @@ export default function DashboardWidgetQuickDraftApp() {
 				invalidateResolution( 'getEntityRecords', [
 					'postType',
 					'post',
-					recentDraftsQuery( window.wpAdminShell?.userId ),
+					recentDraftsQuery( window.wpAdminWorkspaces?.userId ),
 				] );
 			} catch ( err ) {
 				setError(
-					err?.message || __( 'Save failed', 'wp-admin-shell' )
+					err?.message || __( 'Save failed', 'wp-admin-workspaces' )
 				);
 				setSaving( false );
 				return;
@@ -81,17 +81,17 @@ export default function DashboardWidgetQuickDraftApp() {
 				<input
 					type="text"
 					value={ title }
-					placeholder={ __( 'Title', 'wp-admin-shell' ) }
+					placeholder={ __( 'Title', 'wp-admin-workspaces' ) }
 					onChange={ ( e ) => setTitle( e.target.value ) }
-					className="wp-admin-shell-dashboard-quick-draft__title"
-					aria-label={ __( 'Draft title', 'wp-admin-shell' ) }
+					className="wp-admin-workspaces-dashboard-quick-draft__title"
+					aria-label={ __( 'Draft title', 'wp-admin-workspaces' ) }
 				/>
 				<TextareaControl
 					value={ content }
 					rows={ 3 }
 					placeholder={ __(
 						"What's on your mind?",
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 					onChange={ ( value ) => setContent( value ) }
 					__nextHasNoMarginBottom
@@ -105,7 +105,7 @@ export default function DashboardWidgetQuickDraftApp() {
 						loading={ isSaving }
 						disabled={ isSaving || ! title }
 					>
-						{ __( 'Save Draft', 'wp-admin-shell' ) }
+						{ __( 'Save Draft', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

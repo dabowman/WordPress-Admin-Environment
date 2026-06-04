@@ -1,6 +1,6 @@
 /*
  * Iframe app fills its window body region via the engine's
- * `.wp-admin-shell-region__app` flex-fill rule (engine CSS). The
+ * `.wp-admin-workspaces-region__app` flex-fill rule (engine CSS). The
  * wrapper becomes a flex column; this root div inherits `flex: 1 1
  * 0` from the engine's `* > *` rule and the iframe element below
  * fills via its own flex declaration. Background is transparent —
@@ -8,7 +8,7 @@
  * loading state inherits the surrounding chrome color via the
  * parent's painted background.
  */
-.wp-admin-shell-desktop-iframe {
+.wp-admin-workspaces-desktop-iframe {
 	display: flex;
 	flex-direction: column;
 	flex: 1 1 0;
@@ -17,7 +17,7 @@
 	position: relative;
 }
 
-.wp-admin-shell-desktop-iframe__frame {
+.wp-admin-workspaces-desktop-iframe__frame {
 	flex: 1 1 0;
 	min-block-size: 0;
 	inline-size: 100%;
@@ -25,7 +25,7 @@
 	display: block;
 }
 
-.wp-admin-shell-desktop-iframe__loading {
+.wp-admin-workspaces-desktop-iframe__loading {
 	position: absolute;
 	inset: 0;
 	display: flex;

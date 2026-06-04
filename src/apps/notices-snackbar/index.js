@@ -24,7 +24,7 @@ export default function NoticesSnackbarApp() {
 	return (
 		<SnackbarList
 			notices={ visible }
-			className="wp-admin-shell-notices-snackbar"
+			className="wp-admin-workspaces-notices-snackbar"
 			onRemove={ removeNotice }
 		/>
 	);

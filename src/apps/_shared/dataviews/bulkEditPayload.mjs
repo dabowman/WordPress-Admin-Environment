@@ -6,7 +6,7 @@
  */
 
 /** Default per-field "— No change —" sentinel used by `BulkEditModal`. */
-export const NO_CHANGE = '__wp_admin_shell_no_change__';
+export const NO_CHANGE = '__wp_admin_workspaces_no_change__';
 
 /**
  * Reduce a bulk-edit form's live `values` to just the fields the user actually

@@ -21,4 +21,4 @@ Trivial port. Card + grid + button primitives are universal. Keep every Open act
 - **Plugins can't inject tools.** WordPress core has hooks like `update_management_pages` for plugins to add tool entries; the shell doesn't honor any.
 - **Tool paths are coupled to the default shell.** Each card's `path` assumes the default shell's `/tools/*` screen layout. A shell that remounts `core:tools` without those screens would navigate to dead routes (falling back to the default route).
 - **No description-action distinction.** Cards have title + description + Open button; no row-action menu or secondary action.
-- **Hard-coded tool list.** Adding a new tool requires editing this file. A `wp_admin_shell_register_tool` filter would be the natural extension.
+- **Hard-coded tool list.** Adding a new tool requires editing this file. A `wp_admin_workspaces_register_tool` filter would be the natural extension.

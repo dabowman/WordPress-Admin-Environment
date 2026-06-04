@@ -12,10 +12,10 @@ Read shape follows PostsApp: `useEntityRecords('root', 'user', queryArgs)` with 
 
 ## Architecture
 
-UsersApp reads its DataViews spec via `useDataView(screenId)`. The baseline (fields, default view, default layouts, actions) ships in `app.json#dataView` and is injected into the resolved tree post-merge by `WP_Admin_Shell_Data_View_Config::inject_app_baselines`. Override paths, in order:
+UsersApp reads its DataViews spec via `useDataView(screenId)`. The baseline (fields, default view, default layouts, actions) ships in `app.json#dataView` and is injected into the resolved tree post-merge by `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines`. Override paths, in order:
 
 1. **admin.json** — `settings.dataViews.root.user.<variant|_default>` wins as a whole-entry override (no per-field merge; same pattern as `settings.dataFields`). Site / role / user origins extend through the normal cascade.
-2. **Filter** — `apply_filters('wp_admin_shell_data_view_config_root_user', $doc, 'root', 'user', '_default')` runs last; the per-variant `wp_admin_shell_data_view_config_root_user_<variant>` fires additionally when `variant !== '_default'`.
+2. **Filter** — `apply_filters('wp_admin_workspaces_data_view_config_root_user', $doc, 'root', 'user', '_default')` runs last; the per-variant `wp_admin_workspaces_data_view_config_root_user_<variant>` fires additionally when `variant !== '_default'`.
 
 The JSON layer carries only the *shape* — locale-agnostic labels + structural flags. Render callbacks stay in `index.js`, keyed by spec id:
 
@@ -34,18 +34,18 @@ DataView docs ship as locale-agnostic JSON primitives (spec §13 #7) — labels 
 
 ```js
 const FIELD_LABELS = {
-	name: __( 'Name', 'wp-admin-shell' ),
-	username: __( 'Username', 'wp-admin-shell' ),
-	email: __( 'Email', 'wp-admin-shell' ),
-	roles: __( 'Role', 'wp-admin-shell' ),
-	registered_date: __( 'Registered', 'wp-admin-shell' ),
+	name: __( 'Name', 'wp-admin-workspaces' ),
+	username: __( 'Username', 'wp-admin-workspaces' ),
+	email: __( 'Email', 'wp-admin-workspaces' ),
+	roles: __( 'Role', 'wp-admin-workspaces' ),
+	registered_date: __( 'Registered', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	view: __( 'View posts', 'wp-admin-shell' ),
-	'change-role': __( 'Change role to…', 'wp-admin-shell' ),
-	delete: __( 'Delete', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	view: __( 'View posts', 'wp-admin-workspaces' ),
+	'change-role': __( 'Change role to…', 'wp-admin-workspaces' ),
+	delete: __( 'Delete', 'wp-admin-workspaces' ),
 };
 ```
 
@@ -63,7 +63,7 @@ A small `useEffect` re-seeds local `view` state when the underlying triple chang
 
 The destructive modal is rendered via DataViews' `RenderModal` shape so DataViews owns the focus trap + backdrop + dismiss. Inside the modal:
 
-1. `currentUserId` is read from `window.wpAdminShell.userId` (injected by PHP).
+1. `currentUserId` is read from `window.wpAdminWorkspaces.userId` (injected by PHP).
 2. `targets = items.filter((i) => i.id !== currentUserId)` — the acting user is stripped from the target set.
 3. `skipped = items.length - targets.length` — used to surface the "(Your own account will be skipped.)" addendum.
 4. If `targets.length === 0`, the modal renders the cannot-delete-yourself copy and disables the destructive button.
@@ -90,4 +90,4 @@ A non-WPDS rebuild needs the same primitives as PostsApp (table + destructive mo
 - No `send-password-reset` bulk action. wp-admin offers it on the Users screen; the v2 app does not surface a REST equivalent (no `retrieve_password` REST endpoint).
 - **`change-role` bulk action shipped** ("Change role to…", `promote_users`-gated, self-demote-guarded). The role chooser is sourced from the resolved `roles` field `elements`; if a shell ships no elements, the action falls back to the standard WordPress roles. The delete reassignment target remains hard-coded to the acting user (no chooser / no "delete all content" option) — that UI divergence is unchanged.
 - The plugin-contributed row-actions slot (`core:users.row-actions` per M4.5) is documented but not yet wired up.
-- Roles filter `elements` are not declared in the manifest baseline because the available role list is site-dependent. Plugin authors wanting a typed dropdown can override `settings.dataViews.root.user._default.fields[id=roles].elements` in admin.json (whole-entry override semantics — restate the full spec) or hook `wp_admin_shell_data_view_config_root_user` to inject the live role list at filter time.
+- Roles filter `elements` are not declared in the manifest baseline because the available role list is site-dependent. Plugin authors wanting a typed dropdown can override `settings.dataViews.root.user._default.fields[id=roles].elements` in admin.json (whole-entry override semantics — restate the full spec) or hook `wp_admin_workspaces_data_view_config_root_user` to inject the live role list at filter time.

@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/admin.json",
 	"title": "WP Admin Shell — admin.json (v3)",
-	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-shell-design-spec.md` for the runtime spec.",
+	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
 
 	"type": "object",
 	"required": [ "version", "$wpds", "name", "workspace", "screens" ],
@@ -105,7 +105,7 @@
 				"theme-support": {
 					"type": "object",
 					"additionalProperties": true,
-					"description": "READ-ONLY synthetic block stamped by `WP_Admin_Shell_Appearance_Menu` during resolution — authors never declare it. Carries the active-theme determination used to prune the Appearance group: `block-theme` (bool, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → bool, from `current_theme_supports()`). Downstream passes (e.g. native classic Menus) read it instead of re-deriving.",
+					"description": "READ-ONLY synthetic block stamped by `WP_Admin_Workspaces_Appearance_Menu` during resolution — authors never declare it. Carries the active-theme determination used to prune the Appearance group: `block-theme` (bool, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → bool, from `current_theme_supports()`). Downstream passes (e.g. native classic Menus) read it instead of re-deriving.",
 					"properties": {
 						"block-theme": {
 							"type": "boolean",
@@ -154,7 +154,7 @@
 							}
 						}
 					},
-					"description": "Global DataView registry keyed by `kind → name → variant`. Three axes: the kind matches `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.); the name is the specific entity (`post`, `page`, `user`, `comment`, `plugin`, `theme`); the variant id is author-defined kebab-case (`drafts`, `pending`, `trash`, `active`, etc.) with `_default` reserved for the implicit unqualified base. Each leaf is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). Variants resolve independently — there is no implicit `_default` merge; authors who want a `_default`-merge declare `\"extends\": \"_default\"` on the variant entry. Filter `wp_admin_shell_data_view_config_{kind}_{name}` runs on the resolved doc per triple, plus `wp_admin_shell_data_view_config_{kind}_{name}_{variant}` whenever the variant ≠ `_default`. See spec §13 #7."
+					"description": "Global DataView registry keyed by `kind → name → variant`. Three axes: the kind matches `@wordpress/core-data` entity kinds (`postType`, `root`, `taxonomy`, etc.); the name is the specific entity (`post`, `page`, `user`, `comment`, `plugin`, `theme`); the variant id is author-defined kebab-case (`drafts`, `pending`, `trash`, `active`, etc.) with `_default` reserved for the implicit unqualified base. Each leaf is a complete `@wordpress/dataviews` configuration (`fields`, `defaultView`, `defaultLayouts`, `actions`, optional `fieldsRef`). Variants resolve independently — there is no implicit `_default` merge; authors who want a `_default`-merge declare `\"extends\": \"_default\"` on the variant entry. Filter `wp_admin_workspaces_data_view_config_{kind}_{name}` runs on the resolved doc per triple, plus `wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}` whenever the variant ≠ `_default`. See spec §13 #7."
 				},
 				"dataFields": {
 					"type": "object",
@@ -196,7 +196,7 @@
 
 		"styles": {
 			"$ref": "#/$defs/styles",
-			"description": "WPDS-shaped style tree, unchanged from v2 — theme-developer surface intact. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-shell--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
+			"description": "WPDS-shaped style tree, unchanged from v2 — theme-developer surface intact. Authors override WPDS slot values (typically via DTCG token aliases into a sibling `tokens.json`) and shell-only chrome slots. Output is `--wpds-*` (full surface), `--wp-admin-workspaces--chrome--*` (chrome extensions), and a fixed compat bridge for legacy WordPress consumers. Per-region and per-app overrides live under `styles.regions[*]` and `styles.applications[*]`. See spec §9."
 		},
 
 		"preload": {
@@ -239,7 +239,7 @@
 					"uniqueItems": true
 				}
 			],
-			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Shell_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/admin-json-reference.md`."
+			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/admin-json-reference.md`."
 		},
 
 		"namespacedId": {
@@ -389,7 +389,7 @@
 				"mode": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Engine-defined chrome mode name. Common core values: `default` (full chrome), `focus` (strip nav + most toolbar — editor surfaces), `takeover` (all chrome hidden — customizer-style), `modal` (overlay on current screen). Engines declare their mode catalog in `engine.json#modes`; plugins extend via `wp_admin_shell_engine_modes_{engineId}` filter. Default when absent: `default`. See schema-sketch.md §Modes."
+					"description": "Engine-defined chrome mode name. Common core values: `default` (full chrome), `focus` (strip nav + most toolbar — editor surfaces), `takeover` (all chrome hidden — customizer-style), `modal` (overlay on current screen). Engines declare their mode catalog in `engine.json#modes`; plugins extend via `wp_admin_workspaces_engine_modes_{engineId}` filter. Default when absent: `default`. See schema-sketch.md §Modes."
 				},
 				"regions": {
 					"type": "object",

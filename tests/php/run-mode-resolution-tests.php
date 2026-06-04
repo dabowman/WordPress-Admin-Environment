@@ -13,7 +13,7 @@
  *   - `resolve_engine_modes` with mutual cycle (cycle guard).
  *   - `resolve_engine_modes` with depth-limit overrun.
  *   - `resolve_engine_modes` strips `extends` from resolved doc.
- *   - `apply_plugin_filter` runs `wp_admin_shell_engine_modes_{engineId}`.
+ *   - `apply_plugin_filter` runs `wp_admin_workspaces_engine_modes_{engineId}`.
  *   - Plugin-contributed mode with `extends` resolves against the now-full catalog.
  *   - `synthesize_default_catalog` returns a `default`-only doc.
  */
@@ -51,7 +51,7 @@ class WPAS_Mode_Resolution_Test_Runner {
 
 // ---- synthesize_default_catalog --------------------------------------------
 
-$default_only = WP_Admin_Shell_Modes::synthesize_default_catalog();
+$default_only = WP_Admin_Workspaces_Modes::synthesize_default_catalog();
 WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 	'synthesize_default_catalog includes default mode',
 	$default_only,
@@ -65,14 +65,14 @@ WPAS_Mode_Resolution_Test_Runner::assert_eq(
 
 // ---- No modes block — synthesize a default catalog -------------------------
 
-$resolved_empty = WP_Admin_Shell_Modes::resolve_engine_modes( array( 'id' => 'core:test', 'modes' => array() ) );
+$resolved_empty = WP_Admin_Workspaces_Modes::resolve_engine_modes( array( 'id' => 'core:test', 'modes' => array() ) );
 WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 	'engine without modes gets default-only catalog',
 	$resolved_empty,
 	'default'
 );
 
-$resolved_no_block = WP_Admin_Shell_Modes::resolve_engine_modes( array( 'id' => 'core:test' ) );
+$resolved_no_block = WP_Admin_Workspaces_Modes::resolve_engine_modes( array( 'id' => 'core:test' ) );
 WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 	'engine with no modes key gets default-only catalog',
 	$resolved_no_block,
@@ -81,7 +81,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 
 // ---- Missing `default` mode is injected ------------------------------------
 
-$missing_default = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$missing_default = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'focus' => array( 'label' => 'Focus', 'regions' => array( 'sidebar' => array( 'hidden' => true ) ) ),
@@ -100,7 +100,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 
 // ---- Single-level extends --------------------------------------------------
 
-$one_level = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$one_level = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
@@ -124,7 +124,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_not_has_key(
 
 // ---- 3-deep extends chain --------------------------------------------------
 
-$three_deep = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$three_deep = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
@@ -146,7 +146,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_eq(
 
 // ---- Region-state field deep-merge (sibling keys survive) ------------------
 
-$field_layer = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$field_layer = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
@@ -162,7 +162,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_eq(
 
 // ---- Circular extends: self-reference --------------------------------------
 
-$self_ref = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$self_ref = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
@@ -181,7 +181,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 
 // ---- Circular extends: mutual cycle ----------------------------------------
 
-$mutual = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$mutual = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
@@ -208,7 +208,7 @@ for ( $i = 0; $i < 12; $i++ ) {
 		$deep_chain[ 'm' . $i ]['extends'] = 'm' . ( $i - 1 );
 	}
 }
-$deep_resolved = WP_Admin_Shell_Modes::resolve_engine_modes( array( 'id' => 'core:test', 'modes' => $deep_chain ) );
+$deep_resolved = WP_Admin_Workspaces_Modes::resolve_engine_modes( array( 'id' => 'core:test', 'modes' => $deep_chain ) );
 WPAS_Mode_Resolution_Test_Runner::assert_true(
 	'12-deep chain resolves without crash',
 	isset( $deep_resolved['m11'] ) && is_array( $deep_resolved['m11'] )
@@ -216,7 +216,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_true(
 
 // ---- apply_plugin_filter ---------------------------------------------------
 
-add_filter( 'wp_admin_shell_engine_modes_core:demo', function ( $modes ) {
+add_filter( 'wp_admin_workspaces_engine_modes_core:demo', function ( $modes ) {
 	$modes['kiosk'] = array(
 		'label'   => 'Kiosk',
 		'extends' => 'takeover',
@@ -225,7 +225,7 @@ add_filter( 'wp_admin_shell_engine_modes_core:demo', function ( $modes ) {
 	return $modes;
 } );
 
-$with_plugin = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$with_plugin = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:demo',
 	'modes' => array(
 		'default'  => array( 'label' => 'D', 'regions' => array() ),
@@ -255,7 +255,7 @@ WPAS_Mode_Resolution_Test_Runner::assert_eq(
 
 // ---- Engine without `id` skips the filter pass safely ----------------------
 
-$no_id = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$no_id = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'modes' => array(
 		'default' => array( 'label' => 'D', 'regions' => array() ),
 	),
@@ -268,14 +268,14 @@ WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 
 // ---- Garbage input degrades gracefully -------------------------------------
 
-$nul = WP_Admin_Shell_Modes::resolve_engine_modes( null );
+$nul = WP_Admin_Workspaces_Modes::resolve_engine_modes( null );
 WPAS_Mode_Resolution_Test_Runner::assert_array_key(
 	'null manifest produces default-only catalog',
 	$nul,
 	'default'
 );
 
-$garbage = WP_Admin_Shell_Modes::resolve_engine_modes( array(
+$garbage = WP_Admin_Workspaces_Modes::resolve_engine_modes( array(
 	'id'    => 'core:test',
 	'modes' => array(
 		'default'      => array( 'label' => 'D', 'regions' => array() ),
