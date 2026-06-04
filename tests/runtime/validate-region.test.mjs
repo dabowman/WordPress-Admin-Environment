@@ -22,6 +22,10 @@ const { validateRegion, validateRegions, sanitizeRegion, sanitizeRegions } =
 		resolve( projectRoot, 'src/runtime/regions/validateRegion.mjs' )
 	);
 
+const { resolveRegion } = await import(
+	resolve( projectRoot, 'src/runtime/regions/resolveRegion.mjs' )
+);
+
 let pass = 0;
 let fail = 0;
 
@@ -326,6 +330,45 @@ const sanMap = sanitizeRegions( {
 } );
 ok( 'sanitizeRegions: a.app dropped', sanMap.a.app === undefined );
 ok( 'sanitizeRegions: b.app preserved', sanMap.b.app === 'y' );
+
+console.log( '\n— resolveRegion: label inheritance —\n' );
+
+const LABEL_ENGINE = {
+	templates: {
+		palette: { role: 'dialog', label: 'Command palette' },
+		bare: { role: 'region' },
+	},
+};
+
+ok(
+	'label inherits from template when declaration omits it',
+	resolveRegion(
+		{ id: 'command-palette', template: 'palette' },
+		LABEL_ENGINE
+	).label === 'Command palette'
+);
+
+ok(
+	'per-region label overrides the template label',
+	resolveRegion(
+		{ id: 'command-palette', template: 'palette', label: 'Quick actions' },
+		LABEL_ENGINE
+	).label === 'Quick actions'
+);
+
+ok(
+	'no label inherited when the template declares none',
+	resolveRegion( { id: 'main', template: 'bare' }, LABEL_ENGINE ).label ===
+		undefined
+);
+
+ok(
+	'declaration label survives when no template matches',
+	resolveRegion(
+		{ id: 'detail', template: 'missing', label: 'Detail' },
+		LABEL_ENGINE
+	).label === 'Detail'
+);
 
 console.log( `\n— Summary —\nPASS: ${ pass }  FAIL: ${ fail }` );
 process.exit( fail === 0 ? 0 : 1 );

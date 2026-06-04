@@ -908,7 +908,7 @@
 				"label": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Human-readable accessible name for the region's landmark / dialog. The renderer exposes it via `aria-label` (persistent regions) or `aria-labelledby` (modal regions). When omitted, the accessible name falls back to the region id, which reads the raw slug (`editor/inspector`) to assistive tech. Localize before authoring. See spec §5.1."
+					"description": "Human-readable accessible name for the region's landmark / dialog. The renderer exposes it via `aria-label` (persistent regions) or `aria-labelledby` (modal regions). When omitted, a modal region's accessible name falls back to the region id slug (`editor/inspector`) so the dialog still has a name, but a persistent region emits no accessible name at all and relies on its landmark `role` (labeling a landmark with a raw slug reads worse than leaving it unlabeled). Localize before authoring. See spec §5.1."
 				},
 				"layout": {
 					"$ref": "#/$defs/regionLayout",

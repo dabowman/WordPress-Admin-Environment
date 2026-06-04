@@ -355,7 +355,7 @@ function resolveAppInstance( appRef ) {
 		// registration / hand-edited routes can slip one through — and an
 		// un-resolvable ref mounts nothing with no signal. Mirror the
 		// `iconMap` warn-on-miss pattern so the empty mount has a cause.
-		if ( process.env?.NODE_ENV !== 'production' && typeof console !== 'undefined' ) {
+		if ( IS_DEV && typeof console !== 'undefined' ) {
 			// eslint-disable-next-line no-console
 			console.warn(
 				`[wp-admin-workspaces] mountApp: app ref "${ appRef }" is not namespaced ` +

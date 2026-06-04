@@ -291,7 +291,7 @@
 				"label": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Default accessible name for regions instantiated from this template. The renderer exposes it via `aria-label` (persistent) / `aria-labelledby` (modal). A per-region `label` in workspace.json overrides; when neither declares one, the accessible name falls back to the region id slug. Localize before shipping."
+					"description": "Default accessible name for regions instantiated from this template. The renderer exposes it via `aria-label` (persistent) / `aria-labelledby` (modal). A per-region `label` in workspace.json overrides; when neither declares one, a modal region falls back to the region id slug (so the dialog still has a name) while a persistent region emits no accessible name at all and relies on its landmark `role`. Localize before shipping (note: engine-JSON `label` strings currently reach the DOM as raw English — there is no `__()` seam, see CHANGELOG)."
 				},
 
 				"platform": {

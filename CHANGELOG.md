@@ -22,8 +22,11 @@ Five region/runtime review items from the V2.M2 reviews, addressed together:
   both `docs/schemas/workspace.json` and `workspace-engine.json` (region +
   template defs). `resolveRegion` inherits it from the template like `role`;
   `PersistentRegion` exposes it via `aria-label`, `ModalRegion` via its
-  `aria-labelledby` span — both fall back to the region id slug when no label
-  is authored. The three bundled engines label their `command-palette` (and
+  `aria-labelledby` span. When no label is authored, `ModalRegion` falls back
+  to the region id slug (a dialog needs a name), while `PersistentRegion`
+  emits no accessible name at all (a landmark labeled with a raw slug like
+  `editor/inspector` reads worse than relying on the landmark `role` alone).
+  The three bundled engines label their `command-palette` (and
   `core:default`'s `detail`) regions so the accessible name no longer reads a
   raw slug.
 - **`resolveRegion` layout-vs-style split — amended, not implemented.** The

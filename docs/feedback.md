@@ -24,6 +24,8 @@ Types: `bug`, `feat`, `chore`, `doc`, `design`, `perf`, `a11y`, `dx`.
 
 _New items land here. No triage yet._
 
+- **2026-06-04 — [a11y/i18n] engine.json region `label` strings reach the DOM as raw English (no `__()` seam).** Region `label` values declared in `engine.json` (e.g. `"Detail"`, `"Command palette"`) are applied verbatim by the kernel as `aria-label` (persistent) / `aria-labelledby` (modal) text — there is no localization path between the static JSON and the DOM, so the accessible name a non-English VoiceOver user hears is English. The schema's `label` description says "Localize before shipping," but that's currently not achievable for engine-JSON strings. Same locale-agnostic-JSON limitation CLAUDE.md documents for dataView labels (apps work around it with in-app `LABELS = { id: __('…') }` tables); region labels have no equivalent escape hatch yet. Not an alpha blocker; tracking so the schema guidance isn't silently impossible. (source: PR #279 claude-review, issue #71)
+
 - **2026-05-27 — Alpha (0.1.0) deferred work.** Tracked gaps from the
   workspace-as-primary-entry release (`docs/plans/2026-05-27-alpha-release-0.1.0.md`):
   - WP-CLI scaffolder for `wp-content/workspace.json` (`wp admin-workspace scaffold-config`).
