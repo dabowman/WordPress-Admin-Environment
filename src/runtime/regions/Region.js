@@ -37,6 +37,7 @@ import { registerTrigger } from '../bindings/triggerStore.mjs';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
 import { useMode } from '../modes/useMode';
 import { readRegionState } from '../modes/resolveMode.mjs';
+import { mountKey } from './mountKey.mjs';
 
 export function Region( { region } ) {
 	if (
@@ -457,19 +458,11 @@ function renderRegionApp( region, matched ) {
 		return null;
 	}
 	// Explicit key forces React to unmount + remount when the resolved
-	// app identity changes. Without it, navigating between two routes
-	// that share a source (e.g. two `iframe:` refs → `core:iframe-fallback`)
-	// causes React to reuse the existing component and mutate only the
-	// `src` prop. Per the HTML spec, mutating `src` on an already-inserted
-	// iframe pushes a joint session-history entry — pressing Back then
-	// travels inside the iframe while the workspace URL stays on the later
-	// screen, desyncing chrome (mode, nav state) from content. A freshly
-	// inserted iframe's first src load replaces rather than pushes, so a
-	// remount on every route change eliminates the stale entry entirely.
-	const mountKey =
-		ref.source + ':' + JSON.stringify( ref.config ?? null );
+	// app identity changes — see `mountKey.mjs` for the iframe
+	// history-pollution rationale this addresses.
+	const key = mountKey( ref );
 	return (
-		<div key={ mountKey } className="wp-admin-workspaces-region__app">
+		<div key={ key } className="wp-admin-workspaces-region__app">
 			<MountedApp appRef={ ref } regionId={ region.id } />
 		</div>
 	);
