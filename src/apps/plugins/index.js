@@ -51,6 +51,21 @@ const VIEW_DEFAULTS = {
 	layout: {},
 };
 
+/**
+ * Build the REST path id for a plugin. The `wp/v2/plugins` route matches a
+ * LITERAL slash in the plugin id (`folder/file`, see the controller's
+ * `[^.\/]+(?:\/[^.\/]+)?` PATTERN), so encode each path segment instead of
+ * `encodeURIComponent`-ing the whole string — the latter turns the `/` into
+ * `%2F`, which the route (and many web servers) reject with a 404. Folder-based
+ * plugins like Gutenberg (`gutenberg/gutenberg`) hit this; single-file plugins
+ * have no slash and happened to work.
+ *
+ * @param {string} plugin Plugin id from the list endpoint (e.g. `gutenberg/gutenberg`).
+ * @return {string} Path-safe id with literal slashes preserved.
+ */
+const restPluginId = ( plugin ) =>
+	String( plugin ).split( '/' ).map( encodeURIComponent ).join( '/' );
+
 // Install-by-slug DataForm. `slug` is the wordpress.org directory slug the REST
 // `POST /wp/v2/plugins` create endpoint accepts; `activate` maps to the
 // endpoint's `status` (`active` when checked, `inactive` otherwise) in
@@ -152,7 +167,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 				await Promise.all(
 					items.map( ( item ) =>
 						apiFetch( {
-							path: `/wp/v2/plugins/${ encodeURIComponent(
+							path: `/wp/v2/plugins/${ restPluginId(
 								item.plugin
 							) }`,
 							method: 'POST',
@@ -262,9 +277,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
 			mutate: ( item ) =>
 				apiFetch( {
-					path: `/wp/v2/plugins/${ encodeURIComponent(
-						item.plugin
-					) }`,
+					path: `/wp/v2/plugins/${ restPluginId( item.plugin ) }`,
 					method: 'DELETE',
 				} ),
 			onSettled: ( { results, failed } ) => {

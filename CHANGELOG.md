@@ -17,6 +17,10 @@ Verified against the WordPress 7.0 release source: core now bundles `@wordpress/
 - Admin-notice copy + README / readme.txt / CLAUDE.md updated to "WordPress 7.0+ **or** the Gutenberg plugin".
 - Scope note: core 7.0 does **not** externalize `wp-ui` / `wp-admin-ui` / `wp-dataviews` as script handles, so this plugin keeps bundling `@wordpress/ui` and `@wordpress/dataviews` (unchanged). Not yet smoke-tested on a live 7.0 install (Docker egress blocked in CI env); the gate is verified against release source only.
 
+### Plugins screen: fix 404 on activate/deactivate/delete of folder-based plugins
+
+`src/apps/plugins/index.js` built the REST path with `encodeURIComponent( item.plugin )`, turning a folder-based plugin id like `gutenberg/gutenberg` into `gutenberg%2Fgutenberg`. The `wp/v2/plugins` route matches a **literal** slash (`[^.\/]+(?:\/[^.\/]+)?`), so the encoded `%2F` 404s (rejected by the route and by web servers with `AllowEncodedSlashes Off`). Single-file plugins have no slash and worked, masking the bug. New `restPluginId()` helper encodes per path segment, preserving the literal slash; applied to both the status (POST) and delete (DELETE) call sites. Surfaced while deactivating Gutenberg to validate the 7.0 gate.
+
 ---
 
 The **wave-2** integration (PR #243): the DataViews interaction-pattern library, the six entity-CRUD apps rebuilt on top of it, and nav / settings / editor / dashboard / appearance parity. Built as ~25 bot-reviewed sub-PRs squash-merged through the `wave-2` branch.
