@@ -1,7 +1,7 @@
 import { MediaUpload, MediaUploadCheck } from '@wordpress/media-utils';
 import { useInstanceId } from '@wordpress/compose';
 import { useEntityRecord } from '@wordpress/core-data';
-import { Button, Stack, Text } from '@wordpress/ui';
+import { Button, Stack, Text, VisuallyHidden } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import {
@@ -49,17 +49,18 @@ export function MediaPicker( {
 } ) {
 	const id = normalizeMediaId( value );
 
-	// Stable id for the visible label so it can be programmatically tied to the
-	// picker trigger via `aria-labelledby` — without it the control's accessible
-	// name is just the button copy. Rendered onto the `<Text>` only when a label
-	// is shown; the `aria-labelledby` ref is omitted otherwise.
+	// Stable id for the label so it can be programmatically tied to the picker
+	// trigger via `aria-labelledby` — without it the control's accessible name
+	// is just the button copy. When `label` is present the `<Text id={labelId}>`
+	// is ALWAYS rendered (visually-hidden when `hideLabelFromVision`, so it stays
+	// in the a11y tree) and the `aria-labelledby` ref is always set.
 	const instanceId = useInstanceId(
 		MediaPicker,
 		'wp-admin-workspaces-media-picker'
 	);
 	const labelId = `${ instanceId }__label`;
 	const buttonId = `${ instanceId }__button`;
-	const hasVisibleLabel = !! label && ! hideLabelFromVision;
+	const hasLabel = !! label;
 
 	// Resolve the current attachment for its preview URL. Hook runs
 	// unconditionally (rules of hooks); passing `undefined` when nothing is
@@ -74,11 +75,16 @@ export function MediaPicker( {
 			align="flex-start"
 			className="wp-admin-workspaces-media-picker"
 		>
-			{ hasVisibleLabel && (
-				<Text id={ labelId } render={ <span /> }>
-					{ label }
-				</Text>
-			) }
+			{ hasLabel &&
+				( hideLabelFromVision ? (
+					<VisuallyHidden render={ <span id={ labelId } /> }>
+						{ label }
+					</VisuallyHidden>
+				) : (
+					<Text id={ labelId } render={ <span /> }>
+						{ label }
+					</Text>
+				) ) }
 			{ previewUrl && (
 				<img
 					className="wp-admin-workspaces-media-picker__preview"
@@ -101,12 +107,14 @@ export function MediaPicker( {
 								variant="solid"
 								size="compact"
 								onClick={ open }
-								// Tie the control to its visible label so a
-								// screen reader announces the field name AND the
-								// action — "<label> <button copy>" — rather than
-								// just the (possibly terse) button copy alone.
+								// Tie the control to its label so a screen reader
+								// announces the field name AND the action —
+								// "<label> <button copy>" — rather than just the
+								// (possibly terse) button copy alone. The label
+								// element exists in the a11y tree even when
+								// visually hidden, so this resolves on both paths.
 								aria-labelledby={
-									hasVisibleLabel
+									hasLabel
 										? `${ labelId } ${ buttonId }`
 										: undefined
 								}
