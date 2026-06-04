@@ -202,9 +202,9 @@ $saved_shell  = get_option( 'wp_admin_workspaces_active_workspace', null );
 $had_shell    = ( false !== get_option( 'wp_admin_workspaces_active_workspace', false ) );
 delete_option( 'wp_admin_workspaces_active_workspace' );
 
-$saved_enabled = get_option( 'wp_admin_workspaces_workspace_enabled', null );
-$had_enabled   = ( false !== get_option( 'wp_admin_workspaces_workspace_enabled', false ) );
-delete_option( 'wp_admin_workspaces_workspace_enabled' );
+$saved_enabled = get_option( 'wp_admin_workspaces_enabled', null );
+$had_enabled   = ( false !== get_option( 'wp_admin_workspaces_enabled', false ) );
+delete_option( 'wp_admin_workspaces_enabled' );
 
 $T::use_override( 'override-styles-only.json' );
 $T::ok( 'file present → workspace active', wp_admin_workspaces_is_active() === true );
@@ -217,17 +217,17 @@ $T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_is
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.
 $T::use_override( 'override-styles-only.json' );
-update_option( 'wp_admin_workspaces_workspace_enabled', false );
+update_option( 'wp_admin_workspaces_enabled', false );
 $T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_workspaces_is_active() === false );
 delete_option( 'wp_admin_workspaces_active_workspace' );
 $T::ok( 'workspace_enabled=false still false with file only', wp_admin_workspaces_is_active() === false );
-update_option( 'wp_admin_workspaces_workspace_enabled', true );
+update_option( 'wp_admin_workspaces_enabled', true );
 $T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_workspaces_is_active() === true );
 
 // Restore option state.
-delete_option( 'wp_admin_workspaces_workspace_enabled' );
+delete_option( 'wp_admin_workspaces_enabled' );
 if ( $had_enabled ) {
-	update_option( 'wp_admin_workspaces_workspace_enabled', $saved_enabled );
+	update_option( 'wp_admin_workspaces_enabled', $saved_enabled );
 }
 if ( $had_shell && is_string( $saved_shell ) ) {
 	update_option( 'wp_admin_workspaces_active_workspace', $saved_shell );

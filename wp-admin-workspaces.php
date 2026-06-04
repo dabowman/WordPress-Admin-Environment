@@ -103,7 +103,7 @@ add_action( 'admin_notices', function () {
 define( 'WP_ADMIN_WORKSPACES_VERSION', '0.1.0' );
 define( 'WP_ADMIN_WORKSPACES_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_WORKSPACES_URL', plugin_dir_url( __FILE__ ) );
-define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 1 );
+define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 2 );
 
 /**
  * Version-stamped migration. Plan §M2.9 + issue #6.
@@ -114,11 +114,21 @@ define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 1 );
  * cannot re-fire steps that already completed (which would otherwise
  * clobber a user's later choice with the legacy MVP value).
  *
- * Step 1: copy legacy `wp_admin_workspaces_active_config` into v1's
- *         `wp_admin_workspaces_active_workspace` if the new key is empty AND
- *         the legacy key has a non-default value. The legacy key
- *         survives one minor cycle so MVP reads still work; reads in
- *         v1 check the new key first.
+ * Step 1: copy the pre-MVP `wp_admin_shell_active_config` legacy option
+ *         into the MVP `wp_admin_shell_active_shell` key when the latter
+ *         is empty (faithful to the original pre-rebrand chain; reads the
+ *         real on-disk legacy key names, which a code rename can never
+ *         touch).
+ *
+ * Step 2: the 0.1.0 "workspaces" rebrand renamed every persisted option
+ *         from `wp_admin_shell_*` to `wp_admin_workspaces_*`. Stored
+ *         option names are not subject to a code rename, so copy each
+ *         legacy key forward to its new name when the new key is absent
+ *         (idempotent). Without this, an upgraded install silently loses
+ *         its active-workspace selection AND its enable toggle — the
+ *         latter would re-enable a deliberately-disabled admin takeover.
+ *         The legacy `wp_admin_shell_*` rows are left in place (uninstall
+ *         sweeps both namespaces); the bridge only seeds the new keys.
  *
  * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
  * disk), bump WP_ADMIN_WORKSPACES_DB_VERSION and add a step here. Steps
@@ -133,13 +143,50 @@ add_action( 'init', function () {
 	}
 
 	if ( $current_version < 1 ) {
-		// Step 1 — legacy active-config write-copy.
-		if ( get_option( 'wp_admin_workspaces_active_workspace', '' ) === '' ) {
-			$legacy = get_option( 'wp_admin_workspaces_active_config', '' );
+		// Step 1 — pre-MVP active-config → MVP active-shell write-copy.
+		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
+			$legacy = get_option( 'wp_admin_shell_active_config', '' );
 			if ( $legacy !== '' ) {
-				update_option( 'wp_admin_workspaces_active_workspace', $legacy );
+				update_option( 'wp_admin_shell_active_shell', $legacy );
 			}
 		}
+	}
+
+	if ( $current_version < 2 ) {
+		// Step 2 — wp_admin_shell_* → wp_admin_workspaces_* option bridge.
+		$option_map = array(
+			'wp_admin_shell_active_shell'      => 'wp_admin_workspaces_active_workspace',
+			'wp_admin_shell_workspace_enabled' => 'wp_admin_workspaces_enabled',
+			'wp_admin_shell_settings'          => 'wp_admin_workspaces_settings',
+			'wp_admin_shell_site_config'       => 'wp_admin_workspaces_site_config',
+			'wp_admin_shell_role_config'       => 'wp_admin_workspaces_role_config',
+		);
+		$sentinel = '__wpaw_absent__';
+		foreach ( $option_map as $old_key => $new_key ) {
+			$old_val = get_option( $old_key, $sentinel );
+			if ( $sentinel !== $old_val && $sentinel === get_option( $new_key, $sentinel ) ) {
+				update_option( $new_key, $old_val );
+			}
+		}
+
+		// User-prefs meta: rename the meta_key for every user that hasn't
+		// already got the new key (guarded so a partial re-run is safe).
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- one-time keyed migration; no caching applies.
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$wpdb->usermeta} m
+				 SET m.meta_key = %s
+				 WHERE m.meta_key = %s
+				   AND NOT EXISTS (
+				       SELECT 1 FROM ( SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s ) e
+				       WHERE e.user_id = m.user_id
+				   )",
+				'wp_admin_workspaces_user_prefs',
+				'wp_admin_shell_user_prefs',
+				'wp_admin_workspaces_user_prefs'
+			)
+		);
 	}
 
 	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
@@ -322,7 +369,7 @@ function wp_admin_workspaces_register_menu_item( $id, $args ) {
  * @param array  $args Args. See `WP_Admin_Workspaces_Admin_Routes::register`.
  * @return string|WP_Error Path on success, WP_Error on failure.
  */
-function wp_admin_workspaces_register_admin_route( $path, $args ) {
+function wp_admin_workspaces_register_route( $path, $args ) {
 	return WP_Admin_Workspaces_Admin_Routes::register( $path, $args );
 }
 
@@ -417,7 +464,7 @@ function wp_admin_workspaces_render_workspace_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$enabled = (bool) get_option( 'wp_admin_workspaces_workspace_enabled', true );
+	$enabled = (bool) get_option( 'wp_admin_workspaces_enabled', true );
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'WP Admin Shell', 'wp-admin-workspaces' ); ?></h1>
@@ -428,8 +475,8 @@ function wp_admin_workspaces_render_workspace_settings_page() {
 					<th scope="row"><?php esc_html_e( 'Workspace', 'wp-admin-workspaces' ); ?></th>
 					<td>
 						<label>
-							<input type="hidden" name="wp_admin_workspaces_workspace_enabled" value="0" />
-							<input type="checkbox" name="wp_admin_workspaces_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
+							<input type="hidden" name="wp_admin_workspaces_enabled" value="0" />
+							<input type="checkbox" name="wp_admin_workspaces_enabled" value="1" <?php checked( $enabled ); ?> />
 							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-workspaces' ); ?>
 						</label>
 						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/workspace.json. Disable to fall back to classic.', 'wp-admin-workspaces' ); ?></p>
@@ -677,7 +724,7 @@ function wp_admin_workspaces_is_active() {
 	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
 	// checkbox; the option defaults to enabled, so a fresh install with a
 	// file present still flips active true.
-	if ( ! get_option( 'wp_admin_workspaces_workspace_enabled', true ) ) {
+	if ( ! get_option( 'wp_admin_workspaces_enabled', true ) ) {
 		return false;
 	}
 	if ( class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid() ) {
@@ -1111,7 +1158,7 @@ add_action( 'init', function () {
 	// below writes it through the standard options.php submission. When
 	// false, wp_admin_workspaces_is_active() returns false regardless of
 	// file presence — the user sees classic until they re-enable.
-	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_workspace_enabled', array(
+	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_enabled', array(
 		'type'              => 'boolean',
 		'default'           => true,
 		'sanitize_callback' => 'rest_sanitize_boolean',

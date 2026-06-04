@@ -732,7 +732,7 @@ WPAS_Shim_Test_Runner::assert_true(
 
 WP_Admin_Workspaces_Admin_Routes::reset();
 
-$path = wp_admin_workspaces_register_admin_route(
+$path = wp_admin_workspaces_register_route(
 	'/plugin/list',
 	array(
 		'app'    => 'plugin:my-plugin/list',
@@ -741,17 +741,17 @@ $path = wp_admin_workspaces_register_admin_route(
 );
 WPAS_Shim_Test_Runner::assert_eq( 'admin-route: register returns path', $path, '/plugin/list' );
 
-$err = wp_admin_workspaces_register_admin_route( '', array( 'app' => 'plugin:x/y' ) );
+$err = wp_admin_workspaces_register_route( '', array( 'app' => 'plugin:x/y' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects empty path', $err );
 
-$err = wp_admin_workspaces_register_admin_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
+$err = wp_admin_workspaces_register_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects path without leading slash', $err );
 
-$err = wp_admin_workspaces_register_admin_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
+$err = wp_admin_workspaces_register_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects duplicate path', $err );
 
 WP_Admin_Workspaces_Admin_Routes::reset();
-wp_admin_workspaces_register_admin_route(
+wp_admin_workspaces_register_route(
 	'/plugin/list',
 	array(
 		'app'    => 'plugin:my-plugin/list',

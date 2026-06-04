@@ -3,7 +3,7 @@
 	"id": "core:settings-workspace",
 	"version": 1,
 	"title": "Settings — Workspace",
-	"description": "Activate / deactivate the WP Admin Workspace — toggling the `wp_admin_workspaces_workspace_enabled` option over the REST settings surface, with a reload prompt when the value flips.",
+	"description": "Activate / deactivate the WP Admin Workspace — toggling the `wp_admin_workspaces_enabled` option over the REST settings surface, with a reload prompt when the value flips.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "Single-checkbox DataForm over `/wp/v2/settings` — flips `wp_admin_workspaces_workspace_enabled`. Replaces the toolbar's session-scoped 'Classic wp-admin' button with a persistent setting that survives reload. Re-enabling from classic happens through the parallel Settings → WP Admin Workspaces page registered in `wp-admin-workspaces.php`, which writes the same option through the same `wp_admin_workspaces_settings` registration group.",
+		"purpose": "Single-checkbox DataForm over `/wp/v2/settings` — flips `wp_admin_workspaces_enabled`. Replaces the toolbar's session-scoped 'Classic wp-admin' button with a persistent setting that survives reload. Re-enabling from classic happens through the parallel Settings → WP Admin Workspaces page registered in `wp-admin-workspaces.php`, which writes the same option through the same `wp_admin_workspaces_settings` registration group.",
 		"data": {
 			"reads": [
 				{
@@ -23,7 +23,7 @@
 					"via": "core-data",
 					"context": "edit",
 					"purpose": "Current workspace-enabled value.",
-					"fields": [ "wp_admin_workspaces_workspace_enabled" ]
+					"fields": [ "wp_admin_workspaces_enabled" ]
 				}
 			],
 			"writes": [
@@ -43,7 +43,7 @@
 			{ "id": "needs-reload", "when": "pendingReload", "renders": "Notice.Root prompting Reload now after a successful save that flipped the value." }
 		],
 		"interactions": [
-			{ "trigger": "Toggle 'Activate WP Admin Workspace'", "effect": "`edit({ wp_admin_workspaces_workspace_enabled: bool })`." },
+			{ "trigger": "Toggle 'Activate WP Admin Workspace'", "effect": "`edit({ wp_admin_workspaces_enabled: bool })`." },
 			{ "trigger": "Click Save", "effect": "`await save()`; success snackbar via `noticesStore`. If the saved value differs from the loaded one, render a Notice.Root with a Reload now action." },
 			{ "trigger": "Click Reload now", "effect": "`window.location.reload()` — workspace_active() re-evaluates against the new option." }
 		],

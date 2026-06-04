@@ -73,7 +73,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
 ## 4. Escape hatches — persistent toggle + session cookie
 
 The workspace can be left in two ways. The persistent **Settings →
-Workspace** screen flips the `wp_admin_workspaces_workspace_enabled` option;
+Workspace** screen flips the `wp_admin_workspaces_enabled` option;
 the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in

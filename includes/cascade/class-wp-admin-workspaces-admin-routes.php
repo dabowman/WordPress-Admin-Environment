@@ -2,7 +2,7 @@
 /**
  * Admin-routes registry — programmatic URL→app registration.
  *
- * Plugins call `wp_admin_workspaces_register_admin_route( $path, $args )` to
+ * Plugins call `wp_admin_workspaces_register_route( $path, $args )` to
  * declare URL routes at runtime. The registry contributes them to the
  * cascade through the synthetic `plugin` origin so workspace.json can still
  * override per-path.

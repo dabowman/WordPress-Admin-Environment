@@ -136,7 +136,7 @@ The ingested screen's `app` is `iframe:<url>`. That shorthand is rewritten to `c
 |---|---|---|
 | 3 | Register a first-class React app | `wp_admin_workspaces_register_app()` (`wp-admin-workspaces.php:151`) → `WP_Admin_Workspaces_Manifest_Registry` |
 | 10 | Register a nav menu item | `wp_admin_workspaces_register_menu_item($id,$args)` (`wp-admin-workspaces.php:250`) → `WP_Admin_Workspaces_Menu_Items::register` (`class-wp-admin-workspaces-menu-items.php:89`); `to`/`label`/`icon`/`badge`/`parent`/`position`; id matching a screen auto-binds label/icon/permissions via `bind_screens()` (`:396`) |
-| 11 | Register a URL route | `wp_admin_workspaces_register_admin_route($path,$args)` (`wp-admin-workspaces.php:276`) → `WP_Admin_Workspaces_Admin_Routes::register` (`class-wp-admin-workspaces-admin-routes.php:55`); `app`/`config`/`static_data`/`legacy_path` |
+| 11 | Register a URL route | `wp_admin_workspaces_register_route($path,$args)` (`wp-admin-workspaces.php:276`) → `WP_Admin_Workspaces_Admin_Routes::register` (`class-wp-admin-workspaces-admin-routes.php:55`); `app`/`config`/`static_data`/`legacy_path` |
 | 15 | Register a menu renderer | `wp_admin_workspaces_register_menu_renderer()` (`wp-admin-workspaces.php:200`) |
 
 A plugin that wants **native** (non-iframe) workspace UI registers an `app.json` (#3) + a menu item (#10) + a route (#11) pointing the route at its app id. A plugin that does nothing gets **auto-ingested** as an iframe (§2.1). Both paths flow through the same cascade + 4-layer capability gate.
