@@ -59,6 +59,10 @@ Verified against the WordPress 7.0 release source: core now bundles `@wordpress/
 
 `src/apps/plugins/index.js` built the REST path with `encodeURIComponent( item.plugin )`, turning a folder-based plugin id like `gutenberg/gutenberg` into `gutenberg%2Fgutenberg`. The `wp/v2/plugins` route matches a **literal** slash (`[^.\/]+(?:\/[^.\/]+)?`), so the encoded `%2F` 404s (rejected by the route and by web servers with `AllowEncodedSlashes Off`). Single-file plugins have no slash and worked, masking the bug. New `restPluginId()` helper encodes per path segment, preserving the literal slash; applied to both the status (POST) and delete (DELETE) call sites. Surfaced while deactivating Gutenberg to validate the 7.0 gate.
 
+### Posts: lock pinned-status screens against status-filter changes (#209)
+
+The dedicated `core:posts` status screens — **Trash / Drafts / Pending** — pinned a status via `config.status` + the variant's `defaultView.filters` but left the inherited `status` field user-changeable. Switching the filter steered the list to a different status than the screen's label, and because row actions are gated by `eligibleWhen: { status: [...] }`, gated actions (edit / view / trash) reappeared on rows inside a screen labelled e.g. "Trash". Classic wp-admin locks each of these views to its status. Fixed generically: when a screen declares a concrete `config.status`, the status field is made non-filterable (kept as a display column), the status view-tab strip is hidden, and the REST query is **hard-pinned** to the status so a stale/contradicting filter can't override it. `config.status: "any"` / absent (All Posts) is unaffected — it stays freely filterable. Lock helpers are pure + reusable across entity-CRUD list apps in `src/apps/_shared/dataviews/pinnedStatus.mjs` (pinned by `tests/runtime/dataviews-shared.test.mjs`).
+
 ---
 
 The **wave-2** integration (PR #243): the DataViews interaction-pattern library, the six entity-CRUD apps rebuilt on top of it, and nav / settings / editor / dashboard / appearance parity. Built as ~25 bot-reviewed sub-PRs squash-merged through the `wave-2` branch.
