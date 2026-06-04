@@ -50,3 +50,89 @@
 .wp-admin-workspaces-app-media__details-url {
 	word-break: break-all;
 }
+
+/* Inline image editor (#125) — fills the MediaDetails preview slot. */
+.wp-admin-workspaces-app-media__editor {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wpds-dimension-padding-md);
+	flex-shrink: 0;
+	width: 340px;
+	max-width: 100%;
+}
+
+.wp-admin-workspaces-app-media__editor-stage {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+	padding: var(--wpds-dimension-padding-sm);
+	background: var(--wpds-color-bg-surface-neutral);
+	border-radius: var(--wpds-border-radius-md);
+	overflow: hidden;
+}
+
+/* Hugs the canvas (shrink-to-fit) so the percent-based crop overlay + the
+   pointer-drag basis align to the image, not the wider centering stage. */
+.wp-admin-workspaces-app-media__editor-frame {
+	position: relative;
+	display: inline-block;
+	line-height: 0;
+	max-width: 100%;
+}
+
+.wp-admin-workspaces-app-media__editor-canvas {
+	display: block;
+	max-width: 100%;
+	max-height: 340px;
+	width: auto;
+	height: auto;
+}
+
+.wp-admin-workspaces-app-media__editor-tools {
+	min-height: 0;
+}
+
+/* Crop selection box, positioned in percent over the canvas. */
+.wp-admin-workspaces-app-media__crop-box {
+	position: absolute;
+	box-sizing: border-box;
+	border: 1px dashed var(--wpds-color-fg-content-neutral, #fff);
+	box-shadow: 0 0 0 9999px rgba( 0, 0, 0, 0.45 );
+	cursor: move;
+	touch-action: none;
+}
+
+.wp-admin-workspaces-app-media__crop-handle {
+	position: absolute;
+	width: 12px;
+	height: 12px;
+	background: var(--wpds-color-bg-brand, #3858e9);
+	border: 1px solid #fff;
+	border-radius: 2px;
+	touch-action: none;
+}
+
+.wp-admin-workspaces-app-media__crop-handle.is-nw {
+	top: -6px;
+	left: -6px;
+	cursor: nwse-resize;
+}
+
+.wp-admin-workspaces-app-media__crop-handle.is-ne {
+	top: -6px;
+	right: -6px;
+	cursor: nesw-resize;
+}
+
+.wp-admin-workspaces-app-media__crop-handle.is-sw {
+	bottom: -6px;
+	left: -6px;
+	cursor: nesw-resize;
+}
+
+.wp-admin-workspaces-app-media__crop-handle.is-se {
+	bottom: -6px;
+	right: -6px;
+	cursor: nwse-resize;
+}
