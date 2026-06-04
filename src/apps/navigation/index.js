@@ -1,5 +1,7 @@
 import './index.css';
 
+import { useSyncExternalStore } from '@wordpress/element';
+
 import { useKernel } from '../../runtime/kernel-context';
 import { useRoute } from '../../runtime/routing/router';
 import { userCan } from '../../runtime/capabilities/userCan';
@@ -7,6 +9,7 @@ import { orderTree, pruneMenu } from '../../runtime/menu/menuTree.mjs';
 import {
 	registerMenuRenderer,
 	resolveMenuRenderer,
+	subscribeMenuRenderers,
 } from '../../runtime/config/menuRendererRegistry';
 
 import SidebarDrilldownRenderer from './_renderers/SidebarDrilldownRenderer';
@@ -26,6 +29,20 @@ registerMenuRenderer( 'sidebar-tree', SidebarTreeRenderer );
 // engines predating the field). Preserves the historical behavior —
 // core:navigation has always rendered a drilldown sidebar.
 const DEFAULT_RENDERER = 'sidebar-drilldown';
+
+// Monotonic registration epoch for `useSyncExternalStore`. Bumped once
+// per renderer registration by a module-level subscription, so
+// `getRendererEpoch` returns a stable value that only changes when a new
+// renderer arrives. Subscribing here (at module load, before any
+// NavigationApp mounts) guarantees this listener runs before React's, so
+// the epoch is already incremented when React reads the snapshot.
+let rendererEpoch = 0;
+subscribeMenuRenderers( () => {
+	rendererEpoch++;
+} );
+function getRendererEpoch() {
+	return rendererEpoch;
+}
 
 /**
  * core:navigation — menu host + renderer dispatcher.
@@ -56,6 +73,21 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 	const { config: kernelConfig } = useKernel();
 	const route = useRoute();
 	const currentPrimary = route.primary || '';
+
+	// Re-render when a renderer registers late. A loose plugin renderer
+	// script enqueued after the `wp-admin-workspaces` bundle (or injected
+	// async) registers via `window.wpAdminWorkspaces.registerMenuRenderer`
+	// AFTER this component first mounted; subscribing makes the late
+	// registration repaint the nav instead of leaving it on the fallback.
+	// The snapshot is a monotonic registration count — value identity is
+	// irrelevant, it only needs to change on each registration to trigger
+	// the re-render. Bundled engines register before mount and never fire
+	// this; it's purely the out-of-tree-plugin safety net.
+	useSyncExternalStore(
+		subscribeMenuRenderers,
+		getRendererEpoch,
+		getRendererEpoch
+	);
 
 	const rendererId =
 		typeof kernelConfig?.[ 'menu-renderer' ] === 'string'

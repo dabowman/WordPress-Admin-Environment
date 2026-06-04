@@ -30,14 +30,17 @@
  *   const Renderer = resolveMenuRenderer( 'sidebar-drilldown' );
  *
  * Published surface for loose plugin scripts: `src/index.js` mirrors the
- * default-registry `registerMenuRenderer` onto
- * `window.wpAdminWorkspaces.registerMenuRenderer` so a third-party renderer
- * shipped as a standalone script (no bundler access to this module) can
- * still register. NOTE: that loose-script path can race the kernel's
- * synchronous first mount — see the kernel-import-surface gap tracked in
- * `docs/feedback.md`. Renderers that register via a direct ESM import
- * (the bundled engines + any engine the workspace webpack builds) are
- * race-free because they execute before the kernel module runs.
+ * default-registry register/resolve functions onto
+ * `window.wpAdminWorkspaces.kernel` (and keeps the flat
+ * `window.wpAdminWorkspaces.registerMenuRenderer` alias for back-compat) so a
+ * third-party renderer shipped as a standalone script (no bundler access
+ * to this module) can still register. The kernel mount is deferred one
+ * microtask, so a renderer script enqueued synchronously after the bundle
+ * registers before first paint; and this registry is subscribable
+ * (`subscribeMenuRenderers`), so even a truly async registration
+ * re-renders `core:navigation`. Renderers that register via a direct ESM
+ * import (the bundled engines + any engine the workspace webpack builds)
+ * are present before the kernel module runs and never need either path.
  *
  * Tests construct an isolated registry via `createMenuRendererRegistry()`
  * so per-suite state does not bleed across test files.
@@ -55,11 +58,12 @@ const IS_DEV =
  * register/resolve API. The module-level `registerMenuRenderer` /
  * `resolveMenuRenderer` exports are thin facades over a default instance.
  *
- * @return {{registerMenuRenderer: Function, resolveMenuRenderer: Function}} Isolated registry handle.
+ * @return {{registerMenuRenderer: Function, resolveMenuRenderer: Function, subscribeMenuRenderers: Function}} Isolated registry handle.
  */
 export function createMenuRendererRegistry() {
 	const registry = {};
 	const warned = new Set();
+	const listeners = new Set();
 
 	function registerMenuRenderer( id, Component ) {
 		if ( typeof id !== 'string' || id === '' || ! Component ) {
@@ -78,6 +82,29 @@ export function createMenuRendererRegistry() {
 			return;
 		}
 		registry[ id ] = Component;
+		// Notify subscribers so a consumer mounted before this (late /
+		// async) registration re-resolves. This is what lets a loose
+		// plugin renderer script that loaded AFTER the kernel mounted
+		// still paint — see the published-surface note below.
+		for ( const listener of listeners ) {
+			listener();
+		}
+	}
+
+	/**
+	 * Subscribe to renderer registrations. The listener fires after every
+	 * successful (first-wins) `registerMenuRenderer` call. Returns an
+	 * unsubscribe function. Shaped for `useSyncExternalStore`.
+	 *
+	 * @param {Function} listener Called with no args on each registration.
+	 * @return {Function} Unsubscribe.
+	 */
+	function subscribeMenuRenderers( listener ) {
+		if ( typeof listener !== 'function' ) {
+			return () => {};
+		}
+		listeners.add( listener );
+		return () => listeners.delete( listener );
 	}
 
 	function resolveMenuRenderer( id ) {
@@ -102,7 +129,11 @@ export function createMenuRendererRegistry() {
 		return null;
 	}
 
-	return { registerMenuRenderer, resolveMenuRenderer };
+	return {
+		registerMenuRenderer,
+		resolveMenuRenderer,
+		subscribeMenuRenderers,
+	};
 }
 
 const defaultRegistry = createMenuRendererRegistry();
@@ -131,3 +162,19 @@ export const registerMenuRenderer = defaultRegistry.registerMenuRenderer;
  * @return {*} Renderer component, or `null`.
  */
 export const resolveMenuRenderer = defaultRegistry.resolveMenuRenderer;
+
+/**
+ * Subscribe to default-registry renderer registrations.
+ *
+ * `core:navigation` subscribes through this so a renderer registered
+ * AFTER the kernel mounted (a loose plugin script that loaded after the
+ * `wp-admin-workspaces` bundle, or any async-injected script) re-renders
+ * the nav and the renderer paints. Renderers registered before mount —
+ * the bundled engines via direct ESM import, plus anything synchronously
+ * enqueued ahead of the microtask-deferred mount in `src/index.js` — are
+ * already present at first paint and never need the notification.
+ *
+ * @param {Function} listener Called with no args on each registration.
+ * @return {Function} Unsubscribe.
+ */
+export const subscribeMenuRenderers = defaultRegistry.subscribeMenuRenderers;
