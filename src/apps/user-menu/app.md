@@ -4,13 +4,13 @@ Prose accompanying `app.json#documentation` for the user menu.
 
 ## Overview
 
-UserMenuApp is the avatar dropdown that lives in the toolbar or topbar. Three controls: Profile, optional shell switcher, Log out. All data sourced from `window.wpAdminWorkspaces.user` + `window.wpAdminWorkspaces.shells` — both injected PHP-side at page load. No REST round trip; user identity is fixed for the session.
+UserMenuApp is the avatar dropdown that lives in the toolbar or topbar. Three controls: Profile, optional shell switcher, Log out. All data sourced from `window.wpAdminWorkspaces.user` + `window.wpAdminWorkspaces.workspaces` — both injected PHP-side at page load. No REST round trip; user identity is fixed for the session.
 
 The shell switcher is conditional: it surfaces only when more than one `user-switchable` shell is available. Switching shells posts the new active shell to PHP and reloads the page. Full-reload was chosen over SPA-style live switch because the alternative requires unmounting + remounting the entire kernel (preserving in-flight saves, modal state, etc.) and the trade-off didn't pay back.
 
 ## Architecture
 
-Trivial — read user, derive `controls` array, hand to `DropdownMenu`. Each control is `{ title, onClick }`. The shell switcher loops over `user-switchable` shells (reads `window.wpAdminWorkspaces.shells[i]['user-switchable']`). `controls` is memoized but the dependency list (`profileUrl, logoutUrl, showShellSwitcher, switchableShells`) doesn't change often in practice.
+Trivial — read user, derive `controls` array, hand to `DropdownMenu`. Each control is `{ title, onClick }`. The shell switcher loops over `user-switchable` shells (reads `window.wpAdminWorkspaces.workspaces[i]['user-switchable']`). `controls` is memoized but the dependency list (`profileUrl, logoutUrl, showWorkspaceSwitcher, switchableWorkspaces`) doesn't change often in practice.
 
 `DropdownMenu` is legacy (`@wordpress/components`) — WPDS 0.12 has no direct port. The Tabs + Popover primitives could compose one, but `DropdownMenu` is more semantic.
 

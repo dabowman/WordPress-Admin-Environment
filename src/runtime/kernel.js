@@ -6,7 +6,7 @@ import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { ThemeProviderHost } from './styles/ThemeProviderHost';
 import { shouldRenderRegion } from './capabilities/shouldRenderRegion.mjs';
-import { attachShellSwitcherToWindow } from './shell-switching';
+import { attachWorkspaceSwitcherToWindow } from './workspace-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
 import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
@@ -68,12 +68,12 @@ export function kernel( config ) {
 	// scoped overrides (chrome bindings, region/app token overrides)
 	// as a sibling `<style>` block. Engines pluggable here; kernel
 	// agnostic — see `tests/runtime/kernel-no-ds-import.test.mjs`.
-	const shellTokens =
+	const workspaceTokens =
 		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.tokens ) ||
 		{};
 
 	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
-	attachShellSwitcherToWindow();
+	attachWorkspaceSwitcherToWindow();
 
 	const engineId =
 		config.workspace?.engine || config.engine || 'core:default';
@@ -95,7 +95,7 @@ export function kernel( config ) {
 	// bypassing the PHP resolver.
 	const engineDefaults =
 		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
-	const shellStyles = engineDefaults
+	const workspaceStyles = engineDefaults
 		? deepMergeUnder( runtimeConfig.styles || {}, engineDefaults )
 		: runtimeConfig.styles || {};
 
@@ -189,8 +189,8 @@ export function kernel( config ) {
 				<ThemeProviderHost
 					engineSource={ engineSource }
 					isRoot
-					styles={ shellStyles }
-					tokens={ shellTokens }
+					styles={ workspaceStyles }
+					tokens={ workspaceTokens }
 				>
 					<NavigationGuard />
 					<BindingsConsumer />

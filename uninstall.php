@@ -26,7 +26,7 @@ function wp_admin_workspaces_uninstall_cleanup() {
 	// list documents what exists today.
 	$known_options = array(
 		'wp_admin_workspaces_active_config',
-		'wp_admin_workspaces_active_shell',
+		'wp_admin_workspaces_active_workspace',
 		'wp_admin_workspaces_cascade',
 		'wp_admin_workspaces_db_version',
 		'wp_admin_workspaces_role_config',

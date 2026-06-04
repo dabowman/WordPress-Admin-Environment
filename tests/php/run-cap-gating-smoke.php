@@ -430,7 +430,7 @@ $T::assert_true( 'trust-tier: audit entry recorded for role grow attempt', $has_
 // >= subscriber) rather than exact ids — the screen catalog is authoring
 // content, not test fixture.
 
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
 	WP_Admin_Workspaces_Cache::flush();
 }

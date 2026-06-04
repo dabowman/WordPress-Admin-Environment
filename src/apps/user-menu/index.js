@@ -24,12 +24,14 @@ export default function UserMenuApp() {
 	const logoutUrl = user.logoutUrl || '';
 
 	const shells = window.wpAdminWorkspaces?.shells || [];
-	const switchableShells = shells.filter( ( s ) => s[ 'user-switchable' ] );
+	const switchableWorkspaces = shells.filter(
+		( s ) => s[ 'user-switchable' ]
+	);
 	// Hide the switcher when a wp-content/admin.json override is active — it
 	// wins over the active-shell option, so switching would be a no-op.
-	const showShellSwitcher =
-		switchableShells.length > 1 &&
-		! window.wpAdminWorkspaces?.workspaceFileActive;
+	const showWorkspaceSwitcher =
+		switchableWorkspaces.length > 1 &&
+		! window.wpAdminWorkspaces?.fileActive;
 
 	const controls = useMemo( () => {
 		const out = [
@@ -46,16 +48,16 @@ export default function UserMenuApp() {
 		];
 
 		if (
-			showShellSwitcher &&
-			typeof window?.wpAdminWorkspaces?.switchShell === 'function'
+			showWorkspaceSwitcher &&
+			typeof window?.wpAdminWorkspaces?.switchWorkspace === 'function'
 		) {
-			for ( const s of switchableShells ) {
+			for ( const s of switchableWorkspaces ) {
 				out.push( {
 					title: `${ __( 'Switch to', 'wp-admin-workspaces' ) } ${
 						s.title
 					}`,
 					onClick: () =>
-						window.wpAdminWorkspaces.switchShell( s.slug ),
+						window.wpAdminWorkspaces.switchWorkspace( s.slug ),
 				} );
 			}
 		}
@@ -70,7 +72,7 @@ export default function UserMenuApp() {
 		}
 
 		return out;
-	}, [ profileUrl, logoutUrl, showShellSwitcher, switchableShells ] );
+	}, [ profileUrl, logoutUrl, showWorkspaceSwitcher, switchableWorkspaces ] );
 
 	const trigger = avatarUrl ? (
 		<img

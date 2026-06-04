@@ -15,7 +15,7 @@
 	},
 	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminWorkspaces.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminWorkspaces.shells` (for the switcher submenu). Shell switcher only renders when more than one `user-switchable` shell is available; calls `window.wpAdminWorkspaces.switchShell(slug)` which posts the new active shell + reloads.",
+		"purpose": "Acting-user affordance: avatar trigger that opens a DropdownMenu with three controls (Profile, optional Switch shell submenu, Log out). All data sourced from `window.wpAdminWorkspaces.user` (displayName, avatarUrl, profileUrl, logoutUrl) + `window.wpAdminWorkspaces.workspaces` (for the switcher submenu). Shell switcher only renders when more than one `user-switchable` shell is available; calls `window.wpAdminWorkspaces.switchWorkspace(slug)` which posts the new active shell + reloads.",
 		"data": {
 			"reads": [
 				{
@@ -24,7 +24,7 @@
 					"purpose": "Display name, avatar URL, profile URL, logout URL."
 				},
 				{
-					"source": "window.wpAdminWorkspaces.shells",
+					"source": "window.wpAdminWorkspaces.workspaces",
 					"via": "window-global",
 					"purpose": "Available shells (with `user-switchable` flag) for the switcher submenu."
 				}
@@ -37,7 +37,7 @@
 		"interactions": [
 			{ "trigger": "Click avatar", "effect": "Open dropdown." },
 			{ "trigger": "Click Profile", "effect": "`window.location.hash = profileUrl` (or `#/profile`)." },
-			{ "trigger": "Click Switch to {title}", "effect": "Call `window.wpAdminWorkspaces.switchShell(slug)` — PHP saves new active shell + page reloads." },
+			{ "trigger": "Click Switch to {title}", "effect": "Call `window.wpAdminWorkspaces.switchWorkspace(slug)` — PHP saves new active shell + page reloads." },
 			{ "trigger": "Click Log out", "effect": "`window.location.href = logoutUrl`." }
 		],
 		"a11y": {

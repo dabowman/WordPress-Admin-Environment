@@ -14,7 +14,7 @@
  *     (delta wins, baseline screens survive, engine falls back to the
  *     baseline), and a trusted-origin null tombstone removes a baseline
  *     screen.
- *   - wp_admin_workspaces_workspace_active() truth table (file / option / none).
+ *   - wp_admin_workspaces_is_active() truth table (file / option / none).
  *   - the admin.json mtime contributes to the resolver cache key.
  *
  * Class-scoped state because `wp eval-file` wraps the file in `eval()`,
@@ -134,10 +134,10 @@ $T::ok( 'list block (commands: [ … ]) accepted → load non-null', is_array( $
 // Strongest guard: every bundled shell must pass the loader as-is. The shells
 // are exactly what users drop into wp-content/admin.json, so an over-tightened
 // is_valid_partial that rejects any of them strands the user in classic.
-foreach ( glob( $plugin_dir . 'shells/*.json' ) as $shell_path ) {
-	$T::use_override( $shell_path );
+foreach ( glob( $plugin_dir . 'shells/*.json' ) as $workspace_path ) {
+	$T::use_override( $workspace_path );
 	$T::ok(
-		'bundled shell ' . basename( $shell_path ) . ' passes the file loader',
+		'bundled shell ' . basename( $workspace_path ) . ' passes the file loader',
 		WP_Admin_Workspaces_Origin_File::exists_and_valid()
 	);
 }
@@ -194,35 +194,35 @@ $T::eq( 'delta styles win', $merged['styles']['color']['background'] ?? null, '#
 $T::eq( 'baseline styles survive deep-merge', $merged['styles']['color']['text'] ?? null, '#111111' );
 $T::ok( 'baseline screens untouched by styles-only delta', isset( $merged['screens']['home'], $merged['screens']['posts'] ) );
 
-// ── wp_admin_workspaces_workspace_active() truth table ───────────────────
+// ── wp_admin_workspaces_is_active() truth table ───────────────────
 
-echo "\n— wp_admin_workspaces_workspace_active() —\n";
+echo "\n— wp_admin_workspaces_is_active() —\n";
 
-$saved_shell  = get_option( 'wp_admin_workspaces_active_shell', null );
-$had_shell    = ( false !== get_option( 'wp_admin_workspaces_active_shell', false ) );
-delete_option( 'wp_admin_workspaces_active_shell' );
+$saved_shell  = get_option( 'wp_admin_workspaces_active_workspace', null );
+$had_shell    = ( false !== get_option( 'wp_admin_workspaces_active_workspace', false ) );
+delete_option( 'wp_admin_workspaces_active_workspace' );
 
 $saved_enabled = get_option( 'wp_admin_workspaces_workspace_enabled', null );
 $had_enabled   = ( false !== get_option( 'wp_admin_workspaces_workspace_enabled', false ) );
 delete_option( 'wp_admin_workspaces_workspace_enabled' );
 
 $T::use_override( 'override-styles-only.json' );
-$T::ok( 'file present → workspace active', wp_admin_workspaces_workspace_active() === true );
+$T::ok( 'file present → workspace active', wp_admin_workspaces_is_active() === true );
 
 $T::use_override( '' );
-$T::ok( 'no file + no option → workspace inactive', wp_admin_workspaces_workspace_active() === false );
+$T::ok( 'no file + no option → workspace inactive', wp_admin_workspaces_is_active() === false );
 
-update_option( 'wp_admin_workspaces_active_shell', 'single-pane-demo' );
-$T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_workspace_active() === true );
+update_option( 'wp_admin_workspaces_active_workspace', 'single-pane-demo' );
+$T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_is_active() === true );
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.
 $T::use_override( 'override-styles-only.json' );
 update_option( 'wp_admin_workspaces_workspace_enabled', false );
-$T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_workspaces_workspace_active() === false );
-delete_option( 'wp_admin_workspaces_active_shell' );
-$T::ok( 'workspace_enabled=false still false with file only', wp_admin_workspaces_workspace_active() === false );
+$T::ok( 'workspace_enabled=false vetoes a present file', wp_admin_workspaces_is_active() === false );
+delete_option( 'wp_admin_workspaces_active_workspace' );
+$T::ok( 'workspace_enabled=false still false with file only', wp_admin_workspaces_is_active() === false );
 update_option( 'wp_admin_workspaces_workspace_enabled', true );
-$T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_workspaces_workspace_active() === true );
+$T::ok( 'workspace_enabled=true restores the file-trigger path', wp_admin_workspaces_is_active() === true );
 
 // Restore option state.
 delete_option( 'wp_admin_workspaces_workspace_enabled' );
@@ -230,9 +230,9 @@ if ( $had_enabled ) {
 	update_option( 'wp_admin_workspaces_workspace_enabled', $saved_enabled );
 }
 if ( $had_shell && is_string( $saved_shell ) ) {
-	update_option( 'wp_admin_workspaces_active_shell', $saved_shell );
+	update_option( 'wp_admin_workspaces_active_workspace', $saved_shell );
 } else {
-	delete_option( 'wp_admin_workspaces_active_shell' );
+	delete_option( 'wp_admin_workspaces_active_workspace' );
 }
 
 // ── admin.json mtime contributes to the cache key ───────────────────

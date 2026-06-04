@@ -47,7 +47,7 @@ class WP_Admin_Workspaces_Resolver {
 	private static $request_memo = array();
 
 	public static function resolve( $context = array() ) {
-		$context['shell'] = $context['shell'] ?? self::active_shell_slug();
+		$context['workspace'] = $context['workspace'] ?? self::active_workspace_slug();
 
 		$cache_key = class_exists( 'WP_Admin_Workspaces_Cache' )
 			? WP_Admin_Workspaces_Cache::key_for( $context )
@@ -205,13 +205,13 @@ class WP_Admin_Workspaces_Resolver {
 			// `plugin` slot and REPLACES the baseline (unchanged from
 			// pre-0.1.0 behavior). Programmatic registrations win over
 			// file-based shells of the same slug (spec §13 #6).
-			$shell_slug = $context['shell'] ?? self::active_shell_slug();
+			$workspace_slug = $context['workspace'] ?? self::active_workspace_slug();
 
-			if ( class_exists( 'WP_Admin_Workspaces_Shells' ) && WP_Admin_Workspaces_Shells::has( $shell_slug ) ) {
-				$plugin_doc = WP_Admin_Workspaces_Shells::get( $shell_slug );
+			if ( class_exists( 'WP_Admin_Workspaces_Registry' ) && WP_Admin_Workspaces_Registry::has( $workspace_slug ) ) {
+				$plugin_doc = WP_Admin_Workspaces_Registry::get( $workspace_slug );
 			} else {
-				$shell_path = $plugin_dir . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
-				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $shell_path );
+				$workspace_path = $plugin_dir . 'shells/' . sanitize_file_name( $workspace_slug ) . '.json';
+				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $workspace_path );
 			}
 
 			// A full selected shell declaring an engine (v2 root `engine`
@@ -310,16 +310,16 @@ class WP_Admin_Workspaces_Resolver {
 	/**
 	 * Active shell slug — site default with role/user override.
 	 */
-	public static function active_shell_slug() {
-		$slug = get_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+	public static function active_workspace_slug() {
+		$slug = get_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 		// Role override (per-role shell selection).
 		$role_config = get_option( 'wp_admin_workspaces_role_config', array() );
 		$user        = wp_get_current_user();
 		if ( $user && ! empty( $user->roles ) && is_array( $role_config ) ) {
 			foreach ( (array) $user->roles as $role ) {
-				if ( isset( $role_config[ $role ]['shell'] ) ) {
-					$slug = $role_config[ $role ]['shell'];
+				if ( isset( $role_config[ $role ]['workspace'] ) ) {
+					$slug = $role_config[ $role ]['workspace'];
 					break;
 				}
 			}
@@ -329,9 +329,9 @@ class WP_Admin_Workspaces_Resolver {
 		$user_id = get_current_user_id();
 		if ( $user_id ) {
 			$prefs = get_user_meta( $user_id, 'wp_admin_workspaces_user_prefs', true );
-			if ( is_array( $prefs ) && ! empty( $prefs['shell'] ) ) {
-				if ( self::shell_allows_user_switch( $prefs['shell'] ) ) {
-					$slug = $prefs['shell'];
+			if ( is_array( $prefs ) && ! empty( $prefs['workspace'] ) ) {
+				if ( self::workspace_allows_user_switch( $prefs['workspace'] ) ) {
+					$slug = $prefs['workspace'];
 				}
 			}
 		}
@@ -339,8 +339,8 @@ class WP_Admin_Workspaces_Resolver {
 		return sanitize_file_name( $slug );
 	}
 
-	private static function shell_allows_user_switch( $shell_slug ) {
-		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . sanitize_file_name( $shell_slug ) . '.json';
+	private static function workspace_allows_user_switch( $workspace_slug ) {
+		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . sanitize_file_name( $workspace_slug ) . '.json';
 		if ( ! file_exists( $path ) ) {
 			return false;
 		}

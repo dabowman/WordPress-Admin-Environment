@@ -636,24 +636,24 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 				// wp-admin slots them. A core parent the shell doesn't
 				// mirror falls back to the shared `ingested` container.
 				$parent_slug   = isset( $record['parent_slug'] ) ? $record['parent_slug'] : '';
-				$shell_menu_id = ( $parent_slug !== '' && isset( self::$CORE_PARENT_MENU[ $parent_slug ] ) )
+				$workspace_menu_id = ( $parent_slug !== '' && isset( self::$CORE_PARENT_MENU[ $parent_slug ] ) )
 					? self::$CORE_PARENT_MENU[ $parent_slug ]
 					: null;
 
-				if ( $shell_menu_id !== null ) {
+				if ( $workspace_menu_id !== null ) {
 					// Nest children straight under the shell parent's menu
 					// node (e.g. `menu.tools.items[...]`). The shell parent
 					// node already exists in the baseline menu tree; if it
 					// somehow doesn't, create a bare node so the children
 					// still surface (label/icon come from the matching
 					// screen via `bind_screens`).
-					if ( ! isset( $doc['menu'][ $shell_menu_id ] ) || ! is_array( $doc['menu'][ $shell_menu_id ] ) ) {
-						$doc['menu'][ $shell_menu_id ] = array();
+					if ( ! isset( $doc['menu'][ $workspace_menu_id ] ) || ! is_array( $doc['menu'][ $workspace_menu_id ] ) ) {
+						$doc['menu'][ $workspace_menu_id ] = array();
 					}
-					if ( ! isset( $doc['menu'][ $shell_menu_id ]['items'] ) || ! is_array( $doc['menu'][ $shell_menu_id ]['items'] ) ) {
-						$doc['menu'][ $shell_menu_id ]['items'] = array();
+					if ( ! isset( $doc['menu'][ $workspace_menu_id ]['items'] ) || ! is_array( $doc['menu'][ $workspace_menu_id ]['items'] ) ) {
+						$doc['menu'][ $workspace_menu_id ]['items'] = array();
 					}
-					$child_items = &$doc['menu'][ $shell_menu_id ]['items'];
+					$child_items = &$doc['menu'][ $workspace_menu_id ]['items'];
 					foreach ( $record['children'] as $child ) {
 						self::synthesize_child( $doc, $child_items, $child );
 					}

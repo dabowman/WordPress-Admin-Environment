@@ -69,7 +69,7 @@ $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 // Force the shell to wp-admin-default for predictable cap surface.
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 $expectations = array(
 	'subscriber' => array(
@@ -145,7 +145,7 @@ foreach ( $expectations as $role => $caps ) {
 }
 
 $T::cleanup();
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 WP_Admin_Workspaces_Cache::flush();
 
 echo "\n— Summary —\n";

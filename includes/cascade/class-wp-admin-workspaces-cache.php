@@ -87,8 +87,8 @@ class WP_Admin_Workspaces_Cache {
 	 */
 	public static function key_for( $context = array() ) {
 		$signals = array(
-			'shell'       => $context['shell'] ?? '',
-			'core_mtime'  => self::shells_mtime(),
+			'workspace'       => $context['workspace'] ?? '',
+			'core_mtime'  => self::workspaces_mtime(),
 			// wp-content/admin.json override signal (mtime:size) — edits to
 			// the file invalidate the cached tree automatically, including
 			// a same-second malformed→fixed edit (size disambiguates).
@@ -103,7 +103,7 @@ class WP_Admin_Workspaces_Cache {
 		return substr( md5( wp_json_encode( $signals ) ), 0, 16 );
 	}
 
-	private static function shells_mtime() {
+	private static function workspaces_mtime() {
 		$dir = WP_ADMIN_WORKSPACES_PATH . 'shells/';
 		if ( ! is_dir( $dir ) ) {
 			return 0;
@@ -147,7 +147,7 @@ class WP_Admin_Workspaces_Cache {
 }
 
 // Defensive flush hooks — anything that writes a cascade origin invalidates.
-add_action( 'update_option_wp_admin_workspaces_active_shell', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
+add_action( 'update_option_wp_admin_workspaces_active_workspace', array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 add_action( 'update_option_wp_admin_workspaces_site_config',  array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 add_action( 'update_option_wp_admin_workspaces_role_config',   array( 'WP_Admin_Workspaces_Cache', 'flush' ) );
 add_action( 'updated_user_meta', function ( $meta_id, $object_id, $meta_key ) {

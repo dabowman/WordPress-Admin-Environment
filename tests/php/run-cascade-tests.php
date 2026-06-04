@@ -397,8 +397,8 @@ echo "\n— Programmatic shell registration —\n";
 
 require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-shells.php';
 
-WP_Admin_Workspaces_Shells::reset();
-$slug = WP_Admin_Workspaces_Shells::register( 'computed-shell', array(
+WP_Admin_Workspaces_Registry::reset();
+$slug = WP_Admin_Workspaces_Registry::register( 'computed-shell', array(
 	'version' => 1,
 	'engine'  => 'core:default',
 	'title'   => 'Computed',
@@ -406,32 +406,32 @@ $slug = WP_Admin_Workspaces_Shells::register( 'computed-shell', array(
 		'content' => array( 'role' => 'main' ),
 	),
 ) );
-$T::assert_eq( 'register_shell returns slug', $slug, 'computed-shell' );
-$T::assert_true( 'has() finds registered slug', WP_Admin_Workspaces_Shells::has( 'computed-shell' ) );
-$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Workspaces_Shells::all()['computed-shell'] ) );
+$T::assert_eq( 'register_workspace returns slug', $slug, 'computed-shell' );
+$T::assert_true( 'has() finds registered slug', WP_Admin_Workspaces_Registry::has( 'computed-shell' ) );
+$T::assert_true( 'all() includes registered slug', isset( WP_Admin_Workspaces_Registry::all()['computed-shell'] ) );
 
-$bad = WP_Admin_Workspaces_Shells::register( '', array() );
+$bad = WP_Admin_Workspaces_Registry::register( '', array() );
 $T::assert_true( 'empty slug → WP_Error', is_wp_error( $bad ) );
 
-$bad = WP_Admin_Workspaces_Shells::register( 'no-doc', 'not an array' );
+$bad = WP_Admin_Workspaces_Registry::register( 'no-doc', 'not an array' );
 $T::assert_true( 'non-array doc → WP_Error', is_wp_error( $bad ) );
 
 // Registration without a `name` field stamps the slug in.
-WP_Admin_Workspaces_Shells::reset();
-WP_Admin_Workspaces_Shells::register( 'auto-name', array(
+WP_Admin_Workspaces_Registry::reset();
+WP_Admin_Workspaces_Registry::register( 'auto-name', array(
 	'version' => 1,
 	'engine'  => 'core:default',
 	'regions' => array( 'content' => array( 'role' => 'main' ) ),
 ) );
 $T::assert_eq(
 	'register stamps slug into doc when name missing',
-	WP_Admin_Workspaces_Shells::get( 'auto-name' )['name'] ?? null,
+	WP_Admin_Workspaces_Registry::get( 'auto-name' )['name'] ?? null,
 	'auto-name'
 );
 
 // Resolver picks programmatic over file-based when slug exists.
-WP_Admin_Workspaces_Shells::reset();
-WP_Admin_Workspaces_Shells::register( 'wp-admin-default', array(
+WP_Admin_Workspaces_Registry::reset();
+WP_Admin_Workspaces_Registry::register( 'wp-admin-default', array(
 	'version' => 1,
 	'engine'  => 'core:default',
 	'title'   => 'Programmatic Override',
@@ -440,7 +440,7 @@ WP_Admin_Workspaces_Shells::register( 'wp-admin-default', array(
 
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 $resolved = WP_Admin_Workspaces_Resolver::resolve();
 $T::assert_eq(
 	'resolver: programmatic shell wins over file-based same slug',
@@ -449,10 +449,10 @@ $T::assert_eq(
 );
 
 // Cleanup so subsequent tests get a clean slate.
-WP_Admin_Workspaces_Shells::reset();
+WP_Admin_Workspaces_Registry::reset();
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
-delete_option( 'wp_admin_workspaces_active_shell' );
+delete_option( 'wp_admin_workspaces_active_workspace' );
 
 // ── user-switchable: schema-canonical kebab form ─────────────────────
 

@@ -31,8 +31,8 @@ import { useKernel } from '../../runtime/kernel-context';
 export default function PreviewPaneApp( { config = {} } ) {
 	const follow = config.follow || '_self';
 	const route = useRoute();
-	const { config: shellConfig } = useKernel();
-	const routesBlock = shellConfig?.routes || {};
+	const { config: workspaceConfig } = useKernel();
+	const routesBlock = workspaceConfig?.routes || {};
 
 	const slotValue =
 		follow === '_self' ? route.primary : route.params?.[ follow ] || '';

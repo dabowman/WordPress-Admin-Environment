@@ -75,7 +75,7 @@ $T = 'WPAS_Data_View_REST_Test_Runner';
 register_shutdown_function( array( $T, 'cleanup' ) );
 
 // Pin shell + flush caches so the resolver sees the test fixture.
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
 

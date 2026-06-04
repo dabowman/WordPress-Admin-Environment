@@ -115,7 +115,7 @@ define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 1 );
  * clobber a user's later choice with the legacy MVP value).
  *
  * Step 1: copy legacy `wp_admin_workspaces_active_config` into v1's
- *         `wp_admin_workspaces_active_shell` if the new key is empty AND
+ *         `wp_admin_workspaces_active_workspace` if the new key is empty AND
  *         the legacy key has a non-default value. The legacy key
  *         survives one minor cycle so MVP reads still work; reads in
  *         v1 check the new key first.
@@ -134,10 +134,10 @@ add_action( 'init', function () {
 
 	if ( $current_version < 1 ) {
 		// Step 1 — legacy active-config write-copy.
-		if ( get_option( 'wp_admin_workspaces_active_shell', '' ) === '' ) {
+		if ( get_option( 'wp_admin_workspaces_active_workspace', '' ) === '' ) {
 			$legacy = get_option( 'wp_admin_workspaces_active_config', '' );
 			if ( $legacy !== '' ) {
-				update_option( 'wp_admin_workspaces_active_shell', $legacy );
+				update_option( 'wp_admin_workspaces_active_workspace', $legacy );
 			}
 		}
 	}
@@ -177,7 +177,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-works
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-resolver.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-menu-renderers.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/tokens/class-wp-admin-workspaces-tokens.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-shells.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-registry.php';
 
 // Engine-specific PHP — each engine that needs server hooks ships
 // under `includes/engines/<engine-id>/`. Bootstrap files load
@@ -263,8 +263,8 @@ function wp_admin_workspaces_register_menu_renderer( $renderer_id, $args ) {
  *
  * @return string|WP_Error slug on success, WP_Error on failure.
  */
-function wp_admin_workspaces_register_shell( $slug, $admin_json ) {
-	return WP_Admin_Workspaces_Shells::register( $slug, $admin_json );
+function wp_admin_workspaces_register_workspace( $slug, $admin_json ) {
+	return WP_Admin_Workspaces_Registry::register( $slug, $admin_json );
 }
 
 /**
@@ -369,7 +369,7 @@ add_action( 'init', function () {
 }, 8 );
 
 // Workspace-as-primary-entry hijack. When a workspace is active (see
-// wp_admin_workspaces_workspace_active()), the shell takes over the admin
+// wp_admin_workspaces_is_active()), the shell takes over the admin
 // root (`/wp-admin/`, `index.php`, bare `admin.php`) at admin_init
 // priority 0 — there is no longer a `?page=wp-admin-workspaces` menu entry.
 // Classic stays reachable via the allowlist + the classic-mode cookie.
@@ -568,11 +568,11 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
-		'shells'        => wp_admin_workspaces_get_available_shells(),
+		'workspaces'        => wp_admin_workspaces_get_available_workspaces(),
 		// True when a wp-content/admin.json override is active — it wins over
-		// the active-shell option, so the shell switcher hides + switchShell()
+		// the active-shell option, so the shell switcher hides + switchWorkspace()
 		// refuses (writing the option would be a silent no-op).
-		'workspaceFileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
+		'fileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
 		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
 		// production builds. PHP `_deprecated_hook` is gated by
 		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
@@ -663,7 +663,7 @@ function wp_admin_workspaces_get_active_config() {
  * Single source of truth for the workspace-as-primary-entry hijack and
  * the classic-mode escape hatch. True when EITHER:
  *   - a valid `wp-content/admin.json` override file is present, OR
- *   - the legacy `wp_admin_workspaces_active_shell` option was explicitly
+ *   - the legacy `wp_admin_workspaces_active_workspace` option was explicitly
  *     written (back-compat for installs that selected a shell before the
  *     file-based trigger landed).
  *
@@ -672,7 +672,7 @@ function wp_admin_workspaces_get_active_config() {
  *
  * @return bool
  */
-function wp_admin_workspaces_workspace_active() {
+function wp_admin_workspaces_is_active() {
 	// Explicit OFF wins over file/legacy triggers. Settings → Workspace
 	// (workspace) and Settings → WP Admin Shell (classic) surface this as a
 	// checkbox; the option defaults to enabled, so a fresh install with a
@@ -683,8 +683,8 @@ function wp_admin_workspaces_workspace_active() {
 	if ( class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid() ) {
 		return true;
 	}
-	$active_shell = get_option( 'wp_admin_workspaces_active_shell', null );
-	return is_string( $active_shell ) && $active_shell !== '';
+	$active_workspace = get_option( 'wp_admin_workspaces_active_workspace', null );
+	return is_string( $active_workspace ) && $active_workspace !== '';
 }
 
 /**
@@ -699,7 +699,7 @@ function wp_admin_workspaces_is_active_request() {
 }
 
 /**
- * Sanitize + validate the wp_admin_workspaces_active_shell option write.
+ * Sanitize + validate the wp_admin_workspaces_active_workspace option write.
  *
  * Returns the sanitized slug if a matching shell file exists; returns
  * the previous option value (or empty string for the first write)
@@ -707,7 +707,7 @@ function wp_admin_workspaces_is_active_request() {
  * resolver's fallback chain still resolves (legacy active_config →
  * default).
  */
-function wp_admin_workspaces_sanitize_active_shell( $value ) {
+function wp_admin_workspaces_sanitize_active_workspace( $value ) {
 	$sanitized = sanitize_file_name( (string) $value );
 	if ( $sanitized === '' ) {
 		return '';
@@ -716,12 +716,12 @@ function wp_admin_workspaces_sanitize_active_shell( $value ) {
 	if ( file_exists( $path ) ) {
 		return $sanitized;
 	}
-	if ( class_exists( 'WP_Admin_Workspaces_Shells' ) && WP_Admin_Workspaces_Shells::has( $sanitized ) ) {
+	if ( class_exists( 'WP_Admin_Workspaces_Registry' ) && WP_Admin_Workspaces_Registry::has( $sanitized ) ) {
 		return $sanitized;
 	}
 
 	add_settings_error(
-		'wp_admin_workspaces_active_shell',
+		'wp_admin_workspaces_active_workspace',
 		'wp_admin_workspaces_unknown_shell',
 		sprintf(
 			/* translators: %s: shell slug */
@@ -731,7 +731,7 @@ function wp_admin_workspaces_sanitize_active_shell( $value ) {
 		'error'
 	);
 
-	$previous = get_option( 'wp_admin_workspaces_active_shell', '' );
+	$previous = get_option( 'wp_admin_workspaces_active_workspace', '' );
 	return $previous;
 }
 
@@ -1095,13 +1095,13 @@ add_action( 'init', function () {
 	// the previous value, preserving the working state instead of
 	// putting the admin in a "Shell configuration not found" state on
 	// the next load. WP-CLI `wp admin-shell activate <slug>` and the
-	// JS `switchShell()` both pre-validate, but this is the
+	// JS `switchWorkspace()` both pre-validate, but this is the
 	// belt-and-suspenders against direct option writes (e.g. via
 	// `wp option update`).
-	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_active_shell', array(
+	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_active_workspace', array(
 		'type'              => 'string',
 		'default'           => '',
-		'sanitize_callback' => 'wp_admin_workspaces_sanitize_active_shell',
+		'sanitize_callback' => 'wp_admin_workspaces_sanitize_active_workspace',
 		'show_in_rest'      => true,
 	) );
 
@@ -1109,7 +1109,7 @@ add_action( 'init', function () {
 	// (/wp/v2/settings) exposes this to the workspace's DataForm settings
 	// screen (`core:settings-workspace`); the classic-side `add_options_page`
 	// below writes it through the standard options.php submission. When
-	// false, wp_admin_workspaces_workspace_active() returns false regardless of
+	// false, wp_admin_workspaces_is_active() returns false regardless of
 	// file presence — the user sees classic until they re-enable.
 	register_setting( 'wp_admin_workspaces_settings', 'wp_admin_workspaces_workspace_enabled', array(
 		'type'              => 'boolean',
@@ -1576,11 +1576,11 @@ function wp_admin_workspaces_get_settings_general_data() {
 
 /**
  * List available shell configurations from the shells/ directory plus
- * any shells contributed via `wp_admin_workspaces_register_shell()`. When a
+ * any shells contributed via `wp_admin_workspaces_register_workspace()`. When a
  * programmatic registration shares a slug with a file-based shell, the
  * programmatic version wins (mirrors resolver precedence).
  */
-function wp_admin_workspaces_get_available_shells() {
+function wp_admin_workspaces_get_available_workspaces() {
 	$by_slug = array();
 	$dir     = WP_ADMIN_WORKSPACES_PATH . 'shells/';
 
@@ -1598,8 +1598,8 @@ function wp_admin_workspaces_get_available_shells() {
 		);
 	}
 
-	if ( class_exists( 'WP_Admin_Workspaces_Shells' ) ) {
-		foreach ( WP_Admin_Workspaces_Shells::all() as $slug => $data ) {
+	if ( class_exists( 'WP_Admin_Workspaces_Registry' ) ) {
+		foreach ( WP_Admin_Workspaces_Registry::all() as $slug => $data ) {
 			$by_slug[ $slug ] = array(
 				'slug'             => $slug,
 				'title'            => $data['title'] ?? $slug,

@@ -192,9 +192,9 @@ unset( $_COOKIE['wp_admin_workspaces_classic'] );
 // Cookie set but workspace inactive (no file + no option) → no node.
 $GLOBALS['wpas_routing_override'] = '';
 WP_Admin_Workspaces_Origin_File::reset_memo();
-$saved_shell = get_option( 'wp_admin_workspaces_active_shell', null );
-$had_shell   = ( false !== get_option( 'wp_admin_workspaces_active_shell', false ) );
-delete_option( 'wp_admin_workspaces_active_shell' );
+$saved_shell = get_option( 'wp_admin_workspaces_active_workspace', null );
+$had_shell   = ( false !== get_option( 'wp_admin_workspaces_active_workspace', false ) );
+delete_option( 'wp_admin_workspaces_active_workspace' );
 $_COOKIE['wp_admin_workspaces_classic'] = '1';
 $bar = $make_bar();
 WP_Admin_Workspaces_Classic_Mode::admin_bar_node( $bar );
@@ -202,7 +202,7 @@ $T::ok( 'no node when workspace inactive', ! isset( $bar->nodes['wp-admin-worksp
 
 // Restore option + cookie + filter state.
 if ( $had_shell && is_string( $saved_shell ) ) {
-	update_option( 'wp_admin_workspaces_active_shell', $saved_shell );
+	update_option( 'wp_admin_workspaces_active_workspace', $saved_shell );
 }
 unset( $_COOKIE['wp_admin_workspaces_classic'] );
 remove_filter( 'wp_admin_workspaces_admin_json_path', $path_filter );

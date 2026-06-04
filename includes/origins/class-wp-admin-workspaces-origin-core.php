@@ -36,11 +36,11 @@ class WP_Admin_Workspaces_Origin_Core {
 		return self::load( $base . 'shells/' . self::BASELINE_SLUG . '.json' );
 	}
 
-	public static function load( $shell_path ) {
-		if ( ! file_exists( $shell_path ) ) {
+	public static function load( $workspace_path ) {
+		if ( ! file_exists( $workspace_path ) ) {
 			return self::empty_doc();
 		}
-		$json = file_get_contents( $shell_path );
+		$json = file_get_contents( $workspace_path );
 		$raw  = json_decode( $json, true );
 		if ( ! is_array( $raw ) ) {
 			return self::empty_doc();

@@ -99,7 +99,7 @@ function wpas_is_valid_app_ref( $ref ) {
 
 foreach ( $shells as $slug ) {
 	echo "\n— Shell: $slug —\n";
-	update_option( 'wp_admin_workspaces_active_shell', $slug );
+	update_option( 'wp_admin_workspaces_active_workspace', $slug );
 	WP_Admin_Workspaces_Cache::flush();
 	WP_Admin_Workspaces_Resolver::reset_request_memo();
 
@@ -178,7 +178,7 @@ foreach ( $shells as $slug ) {
 }
 
 // Reset.
-update_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
 

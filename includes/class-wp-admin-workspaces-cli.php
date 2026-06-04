@@ -4,7 +4,7 @@
  *
  * Subcommands:
  *   list                          Print registered shells with their origins.
- *   activate <slug>               Set wp_admin_workspaces_active_shell.
+ *   activate <slug>               Set wp_admin_workspaces_active_workspace.
  *   register <name> <path>        Register a programmatic shell from JSON on disk.
  *
  * @package WP_Admin_Workspaces
@@ -28,9 +28,9 @@ class WP_Admin_Workspaces_CLI {
 	 * @when after_wp_load
 	 */
 	public function list( $args, $assoc_args ) {
-		$shells = wp_admin_workspaces_get_available_shells();
+		$shells = wp_admin_workspaces_get_available_workspaces();
 
-		$active = get_option( 'wp_admin_workspaces_active_shell', 'wp-admin-default' );
+		$active = get_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 		$rows = array();
 		foreach ( $shells as $shell ) {
@@ -69,7 +69,7 @@ class WP_Admin_Workspaces_CLI {
 			WP_CLI::error( "Shell not found: $slug (looked in shells/$slug.json)" );
 		}
 
-		update_option( 'wp_admin_workspaces_active_shell', $slug );
+		update_option( 'wp_admin_workspaces_active_workspace', $slug );
 		WP_CLI::success( "Active shell set to: $slug" );
 	}
 

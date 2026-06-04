@@ -2,7 +2,7 @@
 /**
  * Programmatic shell registry (spec §13 #6).
  *
- * Plugins call `wp_admin_workspaces_register_shell( $slug, $admin_json )`
+ * Plugins call `wp_admin_workspaces_register_workspace( $slug, $admin_json )`
  * to contribute a complete shell at runtime — useful for shells whose
  * shape is computed (per role, per site, per feature flag) rather than
  * stored on disk.
@@ -14,7 +14,7 @@
  *      checks the programmatic registry for the active slug *before*
  *      reading `shells/{slug}.json` from disk. Programmatic
  *      registrations override file-based shells of the same slug.
- *   2. `wp_admin_workspaces_get_available_shells()` merges programmatic
+ *   2. `wp_admin_workspaces_get_available_workspaces()` merges programmatic
  *      registrations into the dropdown so authors can switch to them
  *      from the Settings page.
  *
@@ -27,7 +27,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-class WP_Admin_Workspaces_Shells {
+class WP_Admin_Workspaces_Registry {
 
 	/** @var array<string, array> slug => admin.json doc */
 	private static $registered = array();
@@ -44,14 +44,14 @@ class WP_Admin_Workspaces_Shells {
 		$slug = is_string( $slug ) ? sanitize_file_name( $slug ) : '';
 		if ( $slug === '' ) {
 			return new WP_Error(
-				'wp_admin_workspaces_invalid_shell_slug',
-				'register_shell: slug must be a non-empty string'
+				'wp_admin_workspaces_invalid_workspace_slug',
+				'register_workspace: slug must be a non-empty string'
 			);
 		}
 		if ( ! is_array( $admin_json ) ) {
 			return new WP_Error(
 				'wp_admin_workspaces_invalid_shell_doc',
-				"register_shell: admin.json doc for '$slug' must be an array"
+				"register_workspace: admin.json doc for '$slug' must be an array"
 			);
 		}
 

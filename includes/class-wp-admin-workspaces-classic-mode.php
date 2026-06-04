@@ -122,7 +122,7 @@ class WP_Admin_Workspaces_Classic_Mode {
 	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
 	 */
 	public static function admin_bar_node( $wp_admin_bar ) {
-		if ( ! function_exists( 'wp_admin_workspaces_workspace_active' ) || ! wp_admin_workspaces_workspace_active() ) {
+		if ( ! function_exists( 'wp_admin_workspaces_is_active' ) || ! wp_admin_workspaces_is_active() ) {
 			return;
 		}
 		// Match the hijack's exact predicate (`'1' === …`) so a forged/garbage

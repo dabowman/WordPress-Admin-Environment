@@ -2,7 +2,7 @@
 /**
  * Workspace-as-primary-entry hijack.
  *
- * When a workspace is active (see wp_admin_workspaces_workspace_active()), the
+ * When a workspace is active (see wp_admin_workspaces_is_active()), the
  * shell takes over the admin root — `/wp-admin/`, `index.php`, and a bare
  * `admin.php` (no `?page`) — instead of living at a `?page=wp-admin-workspaces`
  * menu entry. The hijack runs at `admin_init` priority 0, before plugin
@@ -131,7 +131,7 @@ class WP_Admin_Workspaces_Hijack {
 			return false;
 		}
 		// Workspace must be active (override file present or explicit option).
-		if ( ! function_exists( 'wp_admin_workspaces_workspace_active' ) || ! wp_admin_workspaces_workspace_active() ) {
+		if ( ! function_exists( 'wp_admin_workspaces_is_active' ) || ! wp_admin_workspaces_is_active() ) {
 			return false;
 		}
 		// Mirror the legacy entry's capability floor.
