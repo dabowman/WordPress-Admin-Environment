@@ -351,6 +351,17 @@ function resolveAppInstance( appRef ) {
 		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
 			return { id: appRef, source: appRef };
 		}
+		// Unprefixed string ref. The schema rejects these, but programmatic
+		// registration / hand-edited routes can slip one through — and an
+		// un-resolvable ref mounts nothing with no signal. Mirror the
+		// `iconMap` warn-on-miss pattern so the empty mount has a cause.
+		if ( process.env?.NODE_ENV !== 'production' && typeof console !== 'undefined' ) {
+			// eslint-disable-next-line no-console
+			console.warn(
+				`[wp-admin-workspaces] mountApp: app ref "${ appRef }" is not namespaced ` +
+					'(expected an `iframe:` / `core:` / `plugin:` prefix). The region will mount nothing.'
+			);
+		}
 		return null;
 	}
 	// Object form. Translate an `iframe:<slug>` source the same way; the

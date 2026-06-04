@@ -6,6 +6,42 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Region/runtime composition hardening (issue #71)
+
+Five region/runtime review items from the V2.M2 reviews, addressed together:
+
+- **`validateRegion` route-key cross-check.** The composition pass now takes
+  the resolved `routes` block and flags a `mirror`-mode region whose
+  `routing.route-key` names no `@<slot>/…` route in the block
+  (`route-key-unknown-slot` rule). A misspelled slot previously produced an
+  empty mount with no signal; it now warns at composition. The check only
+  fires when the workspace declares *some* slot routes, so an engine's unused
+  `mirror` peer region (e.g. `detail` on a single-app workspace) doesn't
+  false-positive. The kernel threads `runtimeConfig.routes` into the call.
+- **Region-level `label` (a11y).** New optional `label` on the region shape in
+  both `docs/schemas/workspace.json` and `workspace-engine.json` (region +
+  template defs). `resolveRegion` inherits it from the template like `role`;
+  `PersistentRegion` exposes it via `aria-label`, `ModalRegion` via its
+  `aria-labelledby` span — both fall back to the region id slug when no label
+  is authored. The three bundled engines label their `command-palette` (and
+  `core:default`'s `detail`) regions so the accessible name no longer reads a
+  raw slug.
+- **`resolveRegion` layout-vs-style split — amended, not implemented.** The
+  `layout`/`style` split is an *authoring* boundary (the schema constrains
+  `layout` to a geometry allowlist); at resolve time both collapse into one
+  inline `style` map on the same DOM node, so a runtime split would be a
+  no-op. Documented the deliberate decision in the `resolveRegion` header and
+  spec §5.2, retiring the stale "task 6 will split this" deferral.
+- **Dropped the unused `triggerShortcut` accessor.** `core:trigger`
+  (`{ shortcut }`) is a declarative hint; the actual key binding lives in
+  workspace.json `bindings` (consumed via the triggerStore). A kernel-side
+  consumer would double-fire alongside `bindings`, so the accessor — read by
+  nothing — was removed from `platformServices.mjs`.
+- **`mountApp.resolveAppInstance` dev-warns on non-namespaced ids.** An app
+  ref string without an `iframe:`/`core:`/`plugin:` prefix still returns
+  `null`, but now logs a `console.warn` (NODE_ENV-gated, mirroring `iconMap`)
+  so the silent empty mount has a traceable cause.
+
 ### Renamed: "WP Admin Shell" → "WP Admin Workspaces" (0.1.0 rebrand)
 
 The product, plugin, and every author/user-facing surface unified under

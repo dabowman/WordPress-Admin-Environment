@@ -905,6 +905,11 @@
 					"$ref": "#/$defs/ariaRole",
 					"description": "ARIA role for the region. Required when no template is specified; optional override when a template is. See spec §5.1."
 				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Human-readable accessible name for the region's landmark / dialog. The renderer exposes it via `aria-label` (persistent regions) or `aria-labelledby` (modal regions). When omitted, the accessible name falls back to the region id, which reads the raw slug (`editor/inspector`) to assistive tech. Localize before authoring. See spec §5.1."
+				},
 				"layout": {
 					"$ref": "#/$defs/regionLayout",
 					"description": "CSS layout properties. Constrained to a layout-relevant subset (sizing, positioning, flexbox participation). Engines own layout context (`display`, grid templates) — the allowlist enforces this boundary. See spec §5.2."

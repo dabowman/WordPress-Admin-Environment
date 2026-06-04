@@ -128,6 +128,89 @@ ok(
 	nestedViolations.some( ( v ) => v.path === 'topbar/end/deep' )
 );
 
+console.log( '\n— validateRegion: route-key slot cross-check —\n' );
+
+const ROUTES = {
+	'/posts': { app: 'core:posts' },
+	'@detail/posts': { app: 'core:editor' },
+};
+
+ok(
+	'mirror route-key matching a declared slot: no violation',
+	validateRegion(
+		{ id: 'detail', routing: { 'route-key': 'detail', mode: 'mirror' } },
+		'detail',
+		ROUTES
+	).length === 0
+);
+
+const misspelled = validateRegion(
+	{ id: 'detail', routing: { 'route-key': 'detial', mode: 'mirror' } },
+	'detail',
+	ROUTES
+);
+ok(
+	'mirror route-key naming no declared slot: one violation',
+	misspelled.length === 1 &&
+		misspelled[ 0 ].rule === 'route-key-unknown-slot'
+);
+ok(
+	'unknown-slot violation: message names the available slot',
+	misspelled.length === 1 && /"detail"/.test( misspelled[ 0 ].message )
+);
+
+ok(
+	'mirror route-key but routes block has NO slot routes: no violation (region simply unused)',
+	validateRegion(
+		{ id: 'detail', routing: { 'route-key': 'detail', mode: 'mirror' } },
+		'detail',
+		{ '/posts': { app: 'core:posts' } }
+	).length === 0
+);
+
+ok(
+	'query-mode route-key never cross-checked (palette reads a query param)',
+	validateRegion(
+		{ id: 'palette', routing: { 'route-key': 'palette' } },
+		'palette',
+		ROUTES
+	).length === 0
+);
+
+ok(
+	'_self route-key never cross-checked',
+	validateRegion(
+		{ id: 'content', routing: { 'route-key': '_self' } },
+		'content',
+		ROUTES
+	).length === 0
+);
+
+ok(
+	'no routes block passed: cross-check skipped',
+	validateRegion( {
+		id: 'detail',
+		routing: { 'route-key': 'detial', mode: 'mirror' },
+	} ).length === 0
+);
+
+const nestedSlotViolation = validateRegion(
+	{
+		id: 'root',
+		regions: {
+			detail: { routing: { 'route-key': 'nope', mode: 'mirror' } },
+		},
+	},
+	'root',
+	ROUTES
+);
+ok(
+	'route-key cross-check recurses into children',
+	nestedSlotViolation.length === 1 &&
+		nestedSlotViolation[ 0 ].path === 'root/detail' &&
+		nestedSlotViolation[ 0 ].rule === 'route-key-unknown-slot'
+);
+
 console.log( '\n— validateRegions: map iteration —\n' );
 
 const mapViolations = validateRegions( {
@@ -137,6 +220,18 @@ const mapViolations = validateRegions( {
 ok(
 	'validateRegions: only flags conflicting region',
 	mapViolations.length === 1 && mapViolations[ 0 ].path === 'detail'
+);
+
+const mapSlotViolations = validateRegions(
+	{
+		detail: { routing: { 'route-key': 'wrong', mode: 'mirror' } },
+	},
+	ROUTES
+);
+ok(
+	'validateRegions: forwards routes block to the slot cross-check',
+	mapSlotViolations.length === 1 &&
+		mapSlotViolations[ 0 ].rule === 'route-key-unknown-slot'
 );
 
 console.log( '\n— sanitizeRegion: drops app keeps route-key —\n' );
