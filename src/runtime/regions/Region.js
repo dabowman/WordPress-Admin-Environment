@@ -456,8 +456,20 @@ function renderRegionApp( region, matched ) {
 	if ( ! ref ) {
 		return null;
 	}
+	// Explicit key forces React to unmount + remount when the resolved
+	// app identity changes. Without it, navigating between two routes
+	// that share a source (e.g. two `iframe:` refs → `core:iframe-fallback`)
+	// causes React to reuse the existing component and mutate only the
+	// `src` prop. Per the HTML spec, mutating `src` on an already-inserted
+	// iframe pushes a joint session-history entry — pressing Back then
+	// travels inside the iframe while the workspace URL stays on the later
+	// screen, desyncing chrome (mode, nav state) from content. A freshly
+	// inserted iframe's first src load replaces rather than pushes, so a
+	// remount on every route change eliminates the stale entry entirely.
+	const mountKey =
+		ref.source + ':' + JSON.stringify( ref.config ?? null );
 	return (
-		<div className="wp-admin-workspaces-region__app">
+		<div key={ mountKey } className="wp-admin-workspaces-region__app">
 			<MountedApp appRef={ ref } regionId={ region.id } />
 		</div>
 	);

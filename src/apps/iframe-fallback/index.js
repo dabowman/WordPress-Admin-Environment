@@ -66,7 +66,17 @@ export default function IframeApp( { app, config = {} } ) {
 			onIframeNavigate: ( href ) => {
 				if ( iframeRef.current ) {
 					setIsReady( false );
-					iframeRef.current.src = href;
+					try {
+						// replace() avoids pushing a stale joint
+						// session-history entry when the bridge redirects
+						// an in-iframe link click to another admin page.
+						iframeRef.current.contentWindow.location.replace(
+							href
+						);
+					} catch ( _e ) {
+						// Cross-origin fallback (rare for wp-admin).
+						iframeRef.current.src = href;
+					}
 				}
 			},
 			getIframeWindow: () =>
@@ -94,11 +104,16 @@ export default function IframeApp( { app, config = {} } ) {
 				const iframe = iframeRef.current;
 				if ( iframe ) {
 					setIsReady( false );
-					// Reset src to itself to force a re-fetch — the iframe
-					// is currently showing the WordPress login form from
-					// the prior unauth'd request.
-					// eslint-disable-next-line no-self-assign
-					iframe.src = iframe.src;
+					// Re-fetch the real admin page now that the session is
+					// restored. Use replace() so the recovery reload does
+					// not push a stale history entry.
+					try {
+						iframe.contentWindow.location.replace( iframe.src );
+					} catch ( _e ) {
+						// Cross-origin fallback.
+						// eslint-disable-next-line no-self-assign
+						iframe.src = iframe.src;
+					}
 				}
 			}
 			wasUnauthed = ! authed;
