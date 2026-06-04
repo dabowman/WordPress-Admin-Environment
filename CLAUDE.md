@@ -187,6 +187,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-chromeless-bridge-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-rest-tests.php      # /data-view screen-scoped permission floor (subscriber 403 on admin-only screens, 404 on unknown screen, 401 logged-out, triple-keyed lookups keep logged-in floor)
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-activate-theme-rest-tests.php # issue #189: /activate-theme switch_themes permission + validation floor (subscriber 403, logged-out 401, empty stylesheet 400 rest_invalid_param, unknown 404 rest_theme_not_found, broken theme 400 rest_theme_broken, incompatible theme 400 rest_theme_requirements, valid 200 {stylesheet,name,active})
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-mode-resolution-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-classic-menu-bridge-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-preload-tests.php
