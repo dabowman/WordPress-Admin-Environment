@@ -141,7 +141,7 @@ console.log( '\n— pruneMenu trims orphaned edge separators —' );
 	);
 }
 
-console.log( '\n— hashPrimary parses in-shell hrefs —' );
+console.log( '\n— hashPrimary parses in-workspace hrefs —' );
 {
 	eq( 'strips query', hashPrimary( '#/posts?screen=x' ), '/posts' );
 	eq( 'adds leading slash', hashPrimary( '#posts' ), '/posts' );

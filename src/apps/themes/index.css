@@ -1,8 +1,8 @@
-.wp-admin-shell-app-themes__details-modal {
+.wp-admin-workspaces-app-themes__details-modal {
 	padding: var( --wpds-dimension-padding-lg );
 }
 
-.wp-admin-shell-app-themes__details-modal img {
+.wp-admin-workspaces-app-themes__details-modal img {
 	max-width: 100%;
 	height: auto;
 }

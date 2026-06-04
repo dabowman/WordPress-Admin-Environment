@@ -10,7 +10,7 @@
 - `wp-admin/network/site-settings.php` (Edit Site → Settings tab)
 - `wp-admin/includes/class-wp-ms-sites-list-table.php`
 
-**Current shell coverage:** None.
+**Current workspace coverage:** None.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_sites`.
 
@@ -30,7 +30,7 @@ This spec describes the **semantic surface** of the Sites list, the Add Site for
 | Parent app | None — top-level network app |
 | Sub-screens | List (default), Add Site, Edit Site (tabs: Info / Users / Themes / Settings) |
 
-A single shell app covers all six PHP files. The four Edit-Site tabs share `network_edit_site_nav()` chrome and a common `?id={blog_id}` parameter.
+A single workspace app covers all six PHP files. The four Edit-Site tabs share `network_edit_site_nav()` chrome and a common `?id={blog_id}` parameter.
 
 ---
 
@@ -70,7 +70,7 @@ Jobs to be done:
 
 **Main-site protections:** the network's main site cannot be deleted, archived, marked spam, flagged for deletion, or have its domain/path changed (`is_main_site($id)` checks throughout). The list table omits the row checkbox for the main site.
 
-**Permission-denied state:** core does `wp_die()` 403 throughout. Shell should render a "no access" empty state.
+**Permission-denied state:** core does `wp_die()` 403 throughout. Workspace should render a "no access" empty state.
 
 ---
 
@@ -154,7 +154,7 @@ Save handler: form post to `site-new.php?action=add-site`, calls `wpmu_create_bl
 
 | Operation | REST | Status |
 |---|---|---|
-| List sites | None | **GAP** — no `/wp/v2/sites` controller. Workaround: custom shell endpoint that wraps `WP_Site_Query`. |
+| List sites | None | **GAP** — no `/wp/v2/sites` controller. Workaround: custom workspace endpoint that wraps `WP_Site_Query`. |
 | Get single site | None | **GAP** — same. |
 | Create site | None | **GAP** — `wpmu_create_blog()` is PHP-only; no REST. |
 | Update site details | None | **GAP** — `update_blog_details()` is PHP-only. |
@@ -166,7 +166,7 @@ Save handler: form post to `site-new.php?action=add-site`, calls `wpmu_create_bl
 | Per-site theme allowlist | None | **GAP** — toggles `allowedthemes` site option, no REST. |
 | Edit a site's `wp_options` | `GET /wp/v2/settings` exposes only registered settings; raw option editor has no REST | **GAP** — by design, raw option editing is unsafe. |
 
-This screen is the single largest REST gap in core. A v1 shell implementation must either ship custom endpoints (`/wp-admin-shell/v1/network/sites/*`) or render the original PHP screens in iframe.
+This screen is the single largest REST gap in core. A v1 workspace implementation must either ship custom endpoints (`/wp-admin-workspaces/v1/network/sites/*`) or render the original PHP screens in iframe.
 
 ---
 
@@ -382,7 +382,7 @@ Original wp-admin URL params:
 - Edit Settings: `/site-settings.php?id={n}`
 - Action confirm: `/sites.php?action=confirm&action2={op}&id={n}`
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-sites?status=spam&s=acme&page=2
 #/network-sites/add
@@ -449,7 +449,7 @@ Destructive actions: no undo. Core uses confirmation interstitials instead.
 ### Keyboard
 | Key | Action |
 |---|---|
-| `/` | Focus search (shell-level) |
+| `/` | Focus search (workspace-level) |
 | `↑` / `↓` | Move row focus in list |
 | `Space` | Toggle selection on focused row |
 | `Enter` | Open Edit Site for focused row |
@@ -473,13 +473,13 @@ Destructive actions: no undo. Core uses confirmation interstitials instead.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `ms_sites_list_table_query_args` (filter) | Modify `get_sites()` args | Replace with shell-level `dataSource.queryArgs` |
-| `wpmu_blogs_columns` (filter) | Add/remove list columns | Replace with shell `fields` API |
-| `restrict_manage_sites` (action) | Inject filter widgets above list | Replace with shell-level filter API |
+| `ms_sites_list_table_query_args` (filter) | Modify `get_sites()` args | Replace with workspace-level `dataSource.queryArgs` |
+| `wpmu_blogs_columns` (filter) | Add/remove list columns | Replace with workspace `fields` API |
+| `restrict_manage_sites` (action) | Inject filter widgets above list | Replace with workspace-level filter API |
 | `manage_sites_extra_tablenav` (action) | After-filter tablenav append | Same |
-| `wpmublogsaction` (action) | Per-row action column | Replace with shell `actions` registry |
-| `network_sites_updated_message_{action}` (filter) | Custom action notices | Replace with shell notice API |
-| `network_site_new_form` (action) | Append fields to Add Site form | Replace with shell form-extension API |
+| `wpmublogsaction` (action) | Per-row action column | Replace with workspace `actions` registry |
+| `network_sites_updated_message_{action}` (filter) | Custom action notices | Replace with workspace notice API |
+| `network_site_new_form` (action) | Append fields to Add Site form | Replace with workspace form-extension API |
 | `network_site_info_form` (action) | Append fields to Edit Info | Same |
 | `network_site_users_after_list_table` (action) | After Users tab list | Slot |
 | `show_network_site_users_add_existing_form` (filter) | Hide Add Existing form | Replace with config flag |
@@ -487,14 +487,14 @@ Destructive actions: no undo. Core uses confirmation interstitials instead.
 | `network_site_users_created_user` (action) | After user-on-site create | Event bus |
 | `wpmu_update_blog_options` (action) | After raw options save | Event bus |
 | `wpmueditblogaction` (action) | Append to Edit Site Settings tab | Slot |
-| `handle_network_bulk_actions-{screen}` (filter) | Custom bulk actions | Replace with shell action registry |
+| `handle_network_bulk_actions-{screen}` (filter) | Custom bulk actions | Replace with workspace action registry |
 | `propagate_network_user_spam_to_blogs` (filter) | Cascade spam status to user's sites | Document; no UI surface needed |
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None.
 
 ### Gaps vs. this spec
@@ -521,7 +521,7 @@ Destructive actions: no undo. Core uses confirmation interstitials instead.
 
 - **Mature site UI** — core hides this in the default list; only confirm-nonce preserved for back-compat.
 - **Auto-create-user-from-domain fallback** in Add Site (when email is new and `username_exists($domain)`) — preserve the error message but don't surface as a flow.
-- **`wp_is_large_network()` truncated mode** — core skips counts and ordering. Shell may render the same way for >10k sites.
+- **`wp_is_large_network()` truncated mode** — core skips counts and ordering. Workspace may render the same way for >10k sites.
 - **`primary_blog` user-meta sync on add-site** — automatic; no UI.
 
 ---

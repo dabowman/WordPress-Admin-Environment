@@ -1,10 +1,10 @@
 # Customizing the `core:default` Workspace
 
-A practical, end-to-end guide to customizing the flagship WP Admin Shell workspace. It covers every primitive the design ships, what each one is for, and **when** and **how** to reach for it.
+A practical, end-to-end guide to customizing the flagship WP Admin Workspaces workspace. It covers every primitive the design ships, what each one is for, and **when** and **how** to reach for it.
 
-`core:default` is the engine you get unless you ask for something else: a **sidebar + topbar + content** layout with an optional **detail** pane and a **command palette**, painted in `@wordpress/ui` (WPDS) chrome. You customize it by authoring a single file — `admin.json` — that picks this engine and declares your screens, menu, commands, branding, theme, and data views. You never edit engine code to customize a workspace.
+`core:default` is the engine you get unless you ask for something else: a **sidebar + topbar + content** layout with an optional **detail** pane and a **command palette**, painted in `@wordpress/ui` (WPDS) chrome. You customize it by authoring a single file — `workspace.json` — that picks this engine and declares your screens, menu, commands, branding, theme, and data views. You never edit engine code to customize a workspace.
 
-> **Scope.** This guide is `core:default`-specific: it names the engine's actual modes, region-state flags, slots, region tree, and chrome variables (sourced from `src/runtime/engines/core-default/engine.json`). For the engine-agnostic schema field tables, see [`admin-json-reference.md`](./admin-json-reference.md). For the design rationale, see [`../schema-sketch.md`](../schema-sketch.md) and [`../core-default-engine.md`](../core-default-engine.md).
+> **Scope.** This guide is `core:default`-specific: it names the engine's actual modes, region-state flags, slots, region tree, and chrome variables (sourced from `src/runtime/engines/core-default/engine.json`). For the engine-agnostic schema field tables, see [`workspace-json-reference.md`](./workspace-json-reference.md). For the design rationale, see [`../schema-sketch.md`](../schema-sketch.md) and [`../core-default-engine.md`](../core-default-engine.md).
 
 ---
 
@@ -14,7 +14,7 @@ A practical, end-to-end guide to customizing the flagship WP Admin Shell workspa
 - [Quick start](#quick-start)
 - [What `core:default` gives you out of the box](#what-coredefault-gives-you-out-of-the-box)
 - [The primitives, block by block](#the-primitives-block-by-block)
-  - [`workspace` — engine, landing, branding, notices, widgets](#workspace--engine-landing-branding-notices-widgets)
+  - [`engine` / `default-screen` / `frame` — engine, landing, branding, notices, widgets](#engine--default-screen--frame--engine-landing-branding-notices-widgets)
   - [`screens` — what mounts and where](#screens--what-mounts-and-where)
   - [`menu` — the navigation tree](#menu--the-navigation-tree)
   - [`commands` — palette entries + shortcuts](#commands--palette-entries--shortcuts)
@@ -36,17 +36,17 @@ A practical, end-to-end guide to customizing the flagship WP Admin Shell workspa
 
 ## The mental model
 
-Three artifacts drive the shell. Know which one owns what, and customization gets simple:
+Three artifacts drive the workspace. Know which one owns what, and customization gets simple:
 
 | Artifact | Owns | You touch it to… |
 |---|---|---|
 | `app.json` | What a single app **is** — its React component, ARIA role, capability floor, config schema, baseline dataView. | Ship a brand-new admin surface. |
 | `engine.json` | How a workspace is **painted** — region layout, chrome modes, slots, menu-renderer, default theme. | Build a new rendering engine (rare). |
-| **`admin.json`** | **Install decisions** — which engine, which screens, the menu, commands, branding, theme overrides. | **Customize a workspace. This is your file.** |
+| **`workspace.json`** | **Install decisions** — which engine, which screens, the menu, commands, branding, theme overrides. | **Customize a workspace. This is your file.** |
 
-Customizing `core:default` is almost entirely an `admin.json` exercise. The engine is already written; you compose the screens and apps it renders and tune its theme.
+Customizing `core:default` is almost entirely an `workspace.json` exercise. The engine is already written; you compose the screens and apps it renders and tune its theme.
 
-**Where the file lives.** Drop a valid `admin.json` at `wp-content/admin.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `shells/` — copy one as a starting point (`shells/canonical-demo.json` is the smallest, `shells/content-author.json` is a focused real example, `shells/wp-admin-default.json` is the exhaustive one).
+**Where the file lives.** Drop a valid `workspace.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `workspaces/` — copy one as a starting point (`workspaces/canonical-demo.json` is the smallest, `workspaces/content-author.json` is a focused real example, `workspaces/wp-admin-default.json` is the exhaustive one).
 
 Always set `"version": 3` and `"$wpds": "6.9"`. Every level is `additionalProperties: false` — a typo'd key is a validation error, not a silent no-op.
 
@@ -58,15 +58,13 @@ The smallest file that customizes the workspace — pins the engine, sets a land
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin.json",
+    "$schema": "https://schemas.wp.org/workspace.json",
     "version": 3,
     "$wpds": "6.9",
     "name": "my-workspace",
     "title": "My Workspace",
-    "workspace": {
-        "engine": "core:default",
-        "default-screen": "dashboard-home"
-    },
+    "engine": "core:default",
+    "default-screen": "dashboard-home",
     "screens": {
         "dashboard-home": {
             "label": "Home",
@@ -90,7 +88,7 @@ The smallest file that customizes the workspace — pins the engine, sets a land
 }
 ```
 
-**Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. Everything else is optional and inherited from the baseline when omitted.
+**Required fields:** `version`, `$wpds`, `name`, `engine`, `screens`. Everything else is optional and inherited from the baseline when omitted.
 
 ---
 
@@ -108,14 +106,14 @@ Before customizing, know what the engine already ships — most of it you simply
 
 ## The primitives, block by block
 
-### `workspace` — engine, landing, branding, notices, widgets
+### `engine` / `default-screen` / `frame` — engine, landing, branding, notices, widgets
 
-Install-level chrome: the engine that renders everything, where the workspace lands, how it's branded, and the persistent apps that survive navigation.
+Install-level intrinsics: the engine that renders everything (top-level, required), where the workspace lands (top-level), and the `frame` — how it's branded plus the persistent apps that survive navigation.
 
 ```json
-"workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
+"engine": "core:default",
+"default-screen": "dashboard-home",
+"frame": {
     "branding": {
         "logo": "./assets/acme-logo.svg",
         "title": "Acme Corp",
@@ -222,7 +220,7 @@ There is **no top-level `dashboardWidgets` block** — widgets are `apps[]` entr
 }
 ```
 
-`iframe:<slug>` is sugar — the compiler expands it to `core:iframe-fallback` + `config.url`, resolved relative to `window.wpAdminShell.adminUrl`. Pair it with `mode: "takeover"` so the shell hides its own chrome and the iframed page owns the viewport. This is a first-class feature, not a compromise — the block editor and Site Editor use it.
+`iframe:<slug>` is sugar — the compiler expands it to `core:iframe-fallback` + `config.url`, resolved relative to `window.wpAdminWorkspaces.adminUrl`. Pair it with `mode: "takeover"` so the workspace hides its own chrome and the iframed page owns the viewport. This is a first-class feature, not a compromise — the block editor and Site Editor use it.
 
 ---
 
@@ -269,7 +267,7 @@ Engine-agnostic information architecture. A nested tree of id-keyed items; items
 
 **Menu rendering on `core:default`.** The engine names `sidebar-tree`: nested items expand in place, and the branch containing the active route auto-expands. Drill-down/expansion ancestry derives from the URL, so deep-links and refresh land correctly. (The engine also bundles `sidebar-drilldown` — slide-in sub-screens with a back link, honoring `config.collapsed` for an icon rail — if you fork the engine to name it.) Renderers cap nesting depth (default 3).
 
-**The classic wp-admin menu bridge.** Every third-party `add_menu_page()` / `add_submenu_page()` registration (Yoast, ACF, WooCommerce, …) is auto-ingested under `menu.ingested.items[]` — no admin.json edit needed for them to appear. To curate:
+**The classic wp-admin menu bridge.** Every third-party `add_menu_page()` / `add_submenu_page()` registration (Yoast, ACF, WooCommerce, …) is auto-ingested under `menu.ingested.items[]` — no workspace.json edit needed for them to appear. To curate:
 
 ```json
 "menu": { "ingested": { "items": {
@@ -385,17 +383,17 @@ WPDS-shaped theme tree. Four customization paths, in increasing escape-hatch ord
 ```
 
 1. **`styles.theme`** — ThemeProvider seeds. The primary path: set `color.primary`, `color.bg`, `density` (`default` / `compact` / `comfortable`), `cursor.control`, and the provider derives the entire WPDS token matrix (color ramps, density-tuned spacing, light/dark by background luminance). `core:default` seeds `primary: #3858E9`, `bg: #ffffff`, `density: default` — override only what you want changed.
-2. **`styles.regions[id].theme` / `styles.applications[id].theme`** — nested provider overrides scoped to one region/app subtree (e.g. a dark `detail` pane over a light shell).
+2. **`styles.regions[id].theme` / `styles.applications[id].theme`** — nested provider overrides scoped to one region/app subtree (e.g. a dark `detail` pane over a light workspace).
 3. **`styles.chrome.<surface>` + direct slot overrides** (`styles.color` / `border` / `dimension` / `elevation` / `font`) — escape hatch for slot values seeds can't express. **`core:default` chrome surfaces:** `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`.
 4. **DTCG `tokens.json` aliases** — a sibling `tokens.json` of design primitives, referenced with curly-brace aliases (`"{color.brand.500}"`). The PHP resolver deep-merges site → theme → plugin → core token files and resolves the aliases.
 
-**Inside WPDS engine/app code, never hardcode hex — use `var(--wpds-*)`.** From `admin.json` you express intent through these four surfaces and the runtime emits the CSS variables for you.
+**Inside WPDS engine/app code, never hardcode hex — use `var(--wpds-*)`.** From `workspace.json` you express intent through these four surfaces and the runtime emits the CSS variables for you.
 
 ---
 
 ### `preload` — warm the REST cache
 
-REST paths hydrated server-side and injected into the `apiFetch` preloading cache before the shell bundle runs — eliminates a first-paint request waterfall.
+REST paths hydrated server-side and injected into the `apiFetch` preloading cache before the workspace bundle runs — eliminates a first-paint request waterfall.
 
 ```json
 "preload": [
@@ -408,13 +406,13 @@ REST paths hydrated server-side and injected into the `apiFetch` preloading cach
 - String → `GET` shorthand; `[ path, method ]` for `OPTIONS` preflight. Methods restricted to `GET` / `OPTIONS`.
 - Additive across origins (union, deduped by exact `path+method`) — no override semantics.
 - Per-screen `screens[id].preload` is additive with this list — prefer it for paths only one screen needs.
-- **Conditional** preloads (depend on the request/user) belong in a `wp_admin_shell_data_{origin}` PHP filter, not here.
+- **Conditional** preloads (depend on the request/user) belong in a `wp_admin_workspaces_data_{origin}` PHP filter, not here.
 
 ---
 
 ### `regions` / `routes` — escape hatches
 
-The kernel synthesizes the runtime region map and route table from your `screens` + the engine's `defaultRegions`. The top-level `regions` / `routes` blocks are **escape hatches** for the rare case the `screens` shape can't express what you need (a wildcard route, a non-screen region composition). Admin.json declarations win on per-region-id / per-pattern collision against the synthesis.
+The kernel synthesizes the runtime region map and route table from your `screens` + the engine's `defaultRegions`. The top-level `regions` / `routes` blocks are **escape hatches** for the rare case the `screens` shape can't express what you need (a wildcard route, a non-screen region composition). workspace.json declarations win on per-region-id / per-pattern collision against the synthesis.
 
 **Avoid these unless you've confirmed `screens` can't do it** — most workspaces never write them. See design spec §5 (regions) and §6.2 (routes) before you do.
 
@@ -456,7 +454,7 @@ Example — a focus screen that *also* keeps the toolbar minimal rather than mer
 }
 ```
 
-> Plugins can extend the catalog via the `wp_admin_shell_engine_modes_core:default` filter (e.g. a `kiosk` mode that `extends` `takeover`). Modes support `extends` inheritance, depth-limited to 10.
+> Plugins can extend the catalog via the `wp_admin_workspaces_engine_modes_core:default` filter (e.g. a `kiosk` mode that `extends` `takeover`). Modes support `extends` inheritance, depth-limited to 10.
 
 ### Slots
 
@@ -487,10 +485,10 @@ What the engine renders without any `regions` block from you (this is why you ra
 
 | `styles.chrome` path | CSS variable |
 |---|---|
-| `sidebar.background` / `.foreground` | `--wp-admin-shell--chrome--sidebar--{background,foreground}` |
-| `sidebar.width` / padding | `--wp-admin-shell--chrome--sidebar--{width,padding-block,padding-inline}` |
-| `toolbar.background` / `.foreground` / `.border` | `--wp-admin-shell--chrome--toolbar--{background,foreground,border}` |
-| `content` card | `--wp-admin-shell--chrome--content--card-background` |
+| `sidebar.background` / `.foreground` | `--wp-admin-workspaces--chrome--sidebar--{background,foreground}` |
+| `sidebar.width` / padding | `--wp-admin-workspaces--chrome--sidebar--{width,padding-block,padding-inline}` |
+| `toolbar.background` / `.foreground` / `.border` | `--wp-admin-workspaces--chrome--toolbar--{background,foreground,border}` |
+| `content` card | `--wp-admin-workspaces--chrome--content--card-background` |
 
 ---
 
@@ -524,14 +522,14 @@ What the engine renders without any `regions` block from you (this is why you ra
 To let `role`/`user` origins edit specific paths, declare a `customizable` allowlist on the entry:
 
 ```json
-"workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
-    "customizable": [ "default-screen", "branding.title" ]
+"engine": "core:default",
+"default-screen": "dashboard-home",
+"frame": {
+    "customizable": [ "branding.title" ]
 }
 ```
 
-`true` = everything writable; `[ "path", … ]` = only those dotted paths; `false`/absent = locked (default-deny). **A hardcoded deny-list always wins** — `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` can never be written by consumer origins, even if listed. These are the security gates.
+`true` = everything writable; `[ "path", … ]` = only those dotted paths; `false`/absent = locked (default-deny). **A hardcoded deny-list always wins** — `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `engine` can never be written by consumer origins, even if listed. These are the security gates.
 
 ---
 
@@ -574,14 +572,14 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 
 **Brand the admin**
 ```json
-"workspace": { "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" } },
+"frame": { "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" } },
 "styles": {
     "theme":  { "color": { "primary": "#cc0000" } },
     "chrome": { "sidebar": { "background": "#1a1a1a", "foreground": "#fafafa" } }
 }
 ```
 
-**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density: see `shells/content-author.json` for the complete file.
+**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density: see `workspaces/content-author.json` for the complete file.
 
 **Restrict Settings to editors + admins** (floor still applies)
 ```json
@@ -591,9 +589,9 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 } } }
 ```
 
-**Mount a sidebar-footer widget** — `"workspace": { "widgets": { "sidebar-footer": [ { "id": "help", "app": "plugin:acme/help-link" } ] } }`
+**Mount a sidebar-footer widget** — `"frame": { "widgets": { "sidebar-footer": [ { "id": "help", "app": "plugin:acme/help-link" } ] } }`
 
-**Swap to the windowed desktop engine** — `"workspace": { "engine": "core:desktop" }` (no other change; screens re-render as windows + dock).
+**Swap to the windowed desktop engine** — `"engine": "core:desktop"` (no other change; screens re-render as windows + dock).
 
 ---
 
@@ -626,7 +624,7 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 - **`role` / `user` origins can only shrink** the permission OR-set — widen from `site`/`plugin`/`core`.
 - **`apps[]` `id` is the merge key**, not the app id — keep it stable and descriptive.
 - **Region apps stay mounted under `hidden`/`compact`** — visibility is paint-only, so don't rely on a mode to *unmount* an app.
-- **Iframe screens want `mode: "takeover"`** so they own the viewport instead of dropping into half-shell chrome.
+- **Iframe screens want `mode: "takeover"`** so they own the viewport instead of dropping into half-workspace chrome.
 - **Reference a non-existent slot and validation fails** — the slot vocabulary is the union of kernel-reserved (`_self`, `palette`), engine-declared (`detail`, `grid`, `toolbar`, `sidebar-footer`), and app-declared slots.
 
 ---
@@ -635,12 +633,12 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 
 | Need | Doc |
 |---|---|
-| Per-field schema tables (engine-agnostic) | [`admin-json-reference.md`](./admin-json-reference.md) |
+| Per-field schema tables (engine-agnostic) | [`workspace-json-reference.md`](./workspace-json-reference.md) |
 | The `core:default` engine contract worked example | [`../core-default-engine.md`](../core-default-engine.md) |
 | dataView semantics, variants, filter hooks, `useDataView` | [`../dataview-config.md`](../dataview-config.md) |
 | Theming mechanics, token→DOM paths, WPDS CSS gotchas | [`../engines-and-design-systems.md`](../engines-and-design-systems.md) |
 | Design rationale, cascade trust tiers, mode catalog | [`../schema-sketch.md`](../schema-sketch.md) |
-| Runtime architecture — regions, routing, gating | [`../wp-admin-shell-design-spec.md`](../wp-admin-shell-design-spec.md) |
-| Starter files to copy | `shells/canonical-demo.json`, `shells/content-author.json`, `shells/wp-admin-default.json` |
+| Runtime architecture — regions, routing, gating | [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md) |
+| Starter files to copy | `workspaces/canonical-demo.json`, `workspaces/content-author.json`, `workspaces/wp-admin-default.json` |
 </content>
 </invoke>

@@ -52,7 +52,7 @@ ok(
 
 ok(
 	'neither field: no violation',
-	validateRegion( { id: 'shell', regions: { foo: { app: 'core:bar' } } } ).length === 0
+	validateRegion( { id: 'workspace', regions: { foo: { app: 'core:bar' } } } ).length === 0
 );
 
 ok(

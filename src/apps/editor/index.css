@@ -1,11 +1,11 @@
-.wp-admin-shell-app-editor {
+.wp-admin-workspaces-app-editor {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
 	position: relative;
 }
 
-.wp-admin-shell-app-editor__toolbar {
+.wp-admin-workspaces-app-editor__toolbar {
 	display: flex;
 	align-items: center;
 	padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-sm);
@@ -15,14 +15,14 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-app-editor__frame {
+.wp-admin-workspaces-app-editor__frame {
 	flex: 1;
 	width: 100%;
 	border: none;
 	display: block;
 }
 
-.wp-admin-shell-app-editor__loading {
+.wp-admin-workspaces-app-editor__loading {
 	position: absolute;
 	inset: 0;
 	display: flex;

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Split across three files due to scope.
 **Source PHP:** `wp-admin/site-editor.php`
-**Current shell coverage:** `core:site-editor` → `src/runtime/apps/SiteEditorApp.js` — iframe-backed adapter (M4). Native `@wordpress/edit-site` mount deferred to v2 (per `wp-admin-shell-v1-plan.md` §M4 risk: four package-collision issues are individually tractable but bundled exceed the v1 calendar).
+**Current workspace coverage:** `core:site-editor` → `src/runtime/apps/SiteEditorApp.js` — iframe-backed adapter (M4). Native `@wordpress/edit-site` mount deferred to v2 (per `wp-admin-workspaces-v1-plan.md` §M4 risk: four package-collision issues are individually tractable but bundled exceed the v1 calendar).
 
 This spec describes the **semantic surface** of the Site Editor SPA. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -26,7 +26,7 @@ This file covers: entry, hub navigation, editor canvas, multi-entity save flow, 
 | Parent app | Appearance group |
 | Sub-screens | Design hub / Templates / Template Parts / Patterns / Navigation / Styles / Pages — each with list and edit modes |
 
-The Site Editor is a **SPA**, not a stack of separate pages. Sub-screens are internal routes, not separate admin pages. The shell wraps the SPA's outer chrome but lets the inner SPA own everything from the second-level navigation inward.
+The Site Editor is a **SPA**, not a stack of separate pages. Sub-screens are internal routes, not separate admin pages. The workspace wraps the SPA's outer chrome but lets the inner SPA own everything from the second-level navigation inward.
 
 **Block-theme requirement:** The Site Editor only works on block themes. Classic themes get redirected to Customizer (out of scope here). Detect with `wp_is_block_theme()` (PHP) or by checking the active theme's `is_block_theme` flag from `/wp/v2/themes?status=active`.
 
@@ -91,7 +91,7 @@ The Site Editor reads and writes many entities. This file lists the top-level se
 | Export ZIP | `/wp-block-editor/v1/export` | n/a | Streams theme ZIP including user changes |
 
 ### Preload (server-side)
-`site-editor.php` uses `block_editor_rest_api_preload()` to warm a fixed set of REST paths into the page (lines 181–238). Replicate this pattern in the shell — the SPA expects these paths to be hot. Notable preloads:
+`site-editor.php` uses `block_editor_rest_api_preload()` to warm a fixed set of REST paths into the page (lines 181–238). Replicate this pattern in the workspace — the SPA expects these paths to be hot. Notable preloads:
 - `/wp/v2/types/wp_template?context=edit`
 - `/wp/v2/types/wp_template_part?context=edit`
 - `/wp/v2/templates?context=edit&per_page=-1`
@@ -117,7 +117,7 @@ Server-computed settings injected via `wp.editSite.initializeEditor( "site-edito
 - All registered block bindings sources
 
 ### Non-REST data (gaps)
-- **Block schema bootstrap** — server pushes block definitions inline. Shell must replicate or the canvas won't recognize server-registered blocks.
+- **Block schema bootstrap** — server pushes block definitions inline. Workspace must replicate or the canvas won't recognize server-registered blocks.
 - **Theme export ZIP** — `POST /wp-block-editor/v1/export` returns a `application/zip` body, not JSON. Handle as a file download.
 - **`/wp/v2/templates/lookup`** — resolves a slug to the matching template (e.g. `?slug=front-page` or `?slug=page-{slug}`). Used to choose which template renders a given URL.
 
@@ -193,7 +193,7 @@ Canvas supports three preview viewports: **Desktop**, **Tablet**, **Mobile**. To
 | Saving | Save clicked | Save button → "Saving…" + progress; canvas locked |
 | Save failed | Network or validation error | Per-entity error inline + "Try again" toolbar action |
 | Conflict | Server returned newer version | Modal: "This was modified elsewhere. Discard or overwrite?" |
-| Theme not block-theme | `is_block_theme === false` | Redirect to Customizer (legacy); shell shows "Block themes only" empty state |
+| Theme not block-theme | `is_block_theme === false` | Redirect to Customizer (legacy); workspace shows "Block themes only" empty state |
 | Permission denied | 403 | "You don't have permission to edit theme options" |
 | Pause / fatal error in editor | Iframe crashes | Error boundary; "Reload editor" button |
 | Read-only template (theme-file-backed) | Editing a non-customized theme template | Banner: "You're viewing a template from your theme. Edits will create a customized version." Save creates a `wp_template` row, "reverting to original" deletes it. |
@@ -305,7 +305,7 @@ The post-6.8 canonical URL pattern is `site-editor.php?p={path}`:
 
 Pre-6.8 params (still redirected): `postType`, `postId`, `path`.
 
-The shell uses hash-based routing under `#/site-editor`. Recommended URL state:
+The workspace uses hash-based routing under `#/site-editor`. Recommended URL state:
 ```
 #/site-editor                              # hub landing
 #/site-editor/templates                    # templates list
@@ -319,7 +319,7 @@ The shell uses hash-based routing under `#/site-editor`. Recommended URL state:
 
 Browser back/forward must restore sub-screen + selection. Refresh must restore. Sharing the URL must reproduce the view.
 
-**Iframe-backed v1:** the shell forwards hash changes into the iframe's `?p=` param via `postMessage` and listens for outbound URL changes to keep the shell hash in sync.
+**Iframe-backed v1:** the workspace forwards hash changes into the iframe's `?p=` param via `postMessage` and listens for outbound URL changes to keep the workspace hash in sync.
 
 ---
 
@@ -398,46 +398,46 @@ Undo for save: not directly — saved entities are the new baseline. Undo within
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `block_editor_settings_all` | Modify editor settings | **Replace** with shell-level editor-settings registry. |
-| `block_editor_rest_api_preload_paths` | Add preloaded REST paths | Replace with shell-level preload registry. |
+| `block_editor_settings_all` | Modify editor settings | **Replace** with workspace-level editor-settings registry. |
+| `block_editor_rest_api_preload_paths` | Add preloaded REST paths | Replace with workspace-level preload registry. |
 | `enqueue_block_editor_assets` | Enqueue editor scripts/styles | Replace with `core:site-editor.assets` slot. |
 | `register_block_type` (server-side) | Add custom block | Preserve — block registration is the canonical extensibility surface. |
 | `register_block_pattern` | Add patterns | Preserve. |
 | `theme.json` filters (`wp_theme_json_data_*`) | Modify theme.json data | Preserve — these are theme-system concerns. |
 | `default_template_types` | Add template type definitions | Preserve. |
 
-Plugin compatibility note: most third-party block / pattern / theme.json extensibility continues to work through Gutenberg's own registries. Shell-specific UI hooks (e.g. additional toolbar items) require migration.
+Plugin compatibility note: most third-party block / pattern / theme.json extensibility continues to work through Gutenberg's own registries. Workspace-specific UI hooks (e.g. additional toolbar items) require migration.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:site-editor` → `src/runtime/apps/SiteEditorApp.js`
 - **Strategy:** iframe-backed adapter. Loads `/wp-admin/site-editor.php` in an iframe with chrome-hiding CSS injected.
 - **What works:** Full Site Editor functionality through iframe — all hub sub-screens, canvas editing, save flows, styles, revisions.
-- **What doesn't:** No selection bridge into the shell's `useSelection`. No native shell command-palette integration. Hash routing is one-way (shell → iframe).
+- **What doesn't:** No selection bridge into the workspace's `useSelection`. No native workspace command-palette integration. Hash routing is one-way (workspace → iframe).
 
 ### Gaps vs. this spec (path to v2 native mount)
 | Gap | Priority | Notes |
 |---|---|---|
-| Native `@wordpress/edit-site` mount | High (v2) | Four package collisions — see plan §M4 risk. Tracked individually as: (a) `wp-edit-site` script registration on shell page, (b) `wp-private-apis` registry isolation, (c) block editor store conflicts with shell's preview-region, (d) command palette double-registration. |
-| Hub navigation surface in shell | Medium | If kept iframed, shell hub menu duplicates iframe hub nav — acceptable for v1, awkward. |
-| Selection bridge | Medium | iframe → shell selection bus via postMessage |
+| Native `@wordpress/edit-site` mount | High (v2) | Four package collisions — see plan §M4 risk. Tracked individually as: (a) `wp-edit-site` script registration on workspace page, (b) `wp-private-apis` registry isolation, (c) block editor store conflicts with workspace's preview-region, (d) command palette double-registration. |
+| Hub navigation surface in workspace | Medium | If kept iframed, workspace hub menu duplicates iframe hub nav — acceptable for v1, awkward. |
+| Selection bridge | Medium | iframe → workspace selection bus via postMessage |
 | Hash sync | Low | Bidirectional hash sync via postMessage |
-| Command palette merge | Medium | Iframe runs its own palette; shell's `core:command-palette` should forward Cmd+K into the iframe when it has focus, otherwise show shell commands. |
-| REST preload via shell | Low | Replicate `block_editor_rest_api_preload()` from shell PHP for performance. |
-| Theme export download | Low | Surface `POST /wp-block-editor/v1/export` as a shell command. |
+| Command palette merge | Medium | Iframe runs its own palette; workspace's `core:command-palette` should forward Cmd+K into the iframe when it has focus, otherwise show workspace commands. |
+| REST preload via workspace | Low | Replicate `block_editor_rest_api_preload()` from workspace PHP for performance. |
+| Theme export download | Low | Surface `POST /wp-block-editor/v1/export` as a workspace command. |
 
 ### Acceptable interim
-v1 ships with the iframe-backed adapter. Native mount is a v2 milestone. See companion specs for what list views inside the iframe look like — the shell may eventually surface those independently while keeping the canvas iframed.
+v1 ships with the iframe-backed adapter. Native mount is a v2 milestone. See companion specs for what list views inside the iframe look like — the workspace may eventually surface those independently while keeping the canvas iframed.
 
 ---
 
 ## 16. Out of scope
 
 - **Customizer** — legacy/classic-theme; deprecated per project rules.
-- **Distraction-free mode toggle** — preserved as iframed toolbar action; not surfaced in shell chrome.
+- **Distraction-free mode toggle** — preserved as iframed toolbar action; not surfaced in workspace chrome.
 - **Block code editor mode** (HTML view) — preserved inside iframe; not surfaced.
 - **Welcome guide modal** — first-run tutorial; not rebuilt.
 - **Theme test drive** (live preview without activation, classic) — Customizer-only.
@@ -460,8 +460,8 @@ v1 ships with the iframe-backed adapter. Native mount is a v2 milestone. See com
 - Post types: `wp-includes/post.php` (`wp_template`, `wp_template_part`, `wp_block`, `wp_navigation`, `wp_global_styles`)
 - Templates registry: `wp-includes/class-wp-block-templates-registry.php`
 - Theme JSON resolver: `wp-includes/class-wp-theme-json-resolver.php`
-- Current shell impl: `src/runtime/apps/SiteEditorApp.js`
-- Shell config example: `shells/developer-admin.json`
+- Current workspace impl: `src/runtime/apps/SiteEditorApp.js`
+- Workspace config example: `workspaces/developer-workspace.json`
 - Companion: [`site-editor-styles.md`](./site-editor-styles.md)
 - Companion: [`site-editor-templates.md`](./site-editor-templates.md)
 - Cross-link: [`themes.md`](./themes.md)

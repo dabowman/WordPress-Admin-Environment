@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:taxonomy",
 	"version": 1,
 	"title": "Taxonomy",
@@ -23,7 +23,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "taxonomy",
 		"name": "category",
@@ -281,7 +281,7 @@
 			},
 			{
 				"import": "@wordpress/notices#store",
-				"purpose": "Success / error notices for create / update / delete flows. The canonical shell notices contract — a non-WPDS rebuild must mirror it."
+				"purpose": "Success / error notices for create / update / delete flows. The canonical workspace notices contract — a non-WPDS rebuild must mirror it."
 			},
 			{
 				"import": "@wordpress/icons#plus",

@@ -4,13 +4,13 @@ Prose accompanying `app.json#documentation` for the settings host.
 
 ## Overview
 
-SettingsApp is a thin composer — it owns the vertical nav and panel-switching state, but every actual settings UI lives in a standalone sibling app (`core:settings-general`, `core:settings-writing`, `core:settings-reading`, `core:settings-discussion`) imported by default export, or in `IframeApp` for the three wp-admin screens without REST coverage. The decomposition matches WordPress's settings page list one-for-one. Each native panel is also registered as its own builtin app, so a shell can mount it directly as a screen (the default `wp-admin-default` shell does exactly this) instead of routing through this host's internal nav.
+SettingsApp is a thin composer — it owns the vertical nav and panel-switching state, but every actual settings UI lives in a standalone sibling app (`core:settings-general`, `core:settings-writing`, `core:settings-reading`, `core:settings-discussion`) imported by default export, or in `IframeApp` for the three wp-admin screens without REST coverage. The decomposition matches WordPress's settings page list one-for-one. Each native panel is also registered as its own builtin app, so a workspace can mount it directly as a screen (the default `wp-admin-default` workspace does exactly this) instead of routing through this host's internal nav.
 
-Native panels (general, writing, reading, discussion) are React components that hit core-data directly. Iframed panels (permalinks, media, privacy) wrap `wp-admin/options-{permalink,media,privacy}.php` with chrome stripped. The decision matrix is documented in `docs/admin-json-api-validation.md#core-settings` — when REST coverage exists for a setting, it's native; when it doesn't, the iframe pattern preserves the right user-visible outcome at the cost of some shell-chrome polish.
+Native panels (general, writing, reading, discussion) are React components that hit core-data directly. Iframed panels (permalinks, media, privacy) wrap `wp-admin/options-{permalink,media,privacy}.php` with chrome stripped. The decision matrix is documented in `docs/admin-json-api-validation.md#core-settings` — when REST coverage exists for a setting, it's native; when it doesn't, the iframe pattern preserves the right user-visible outcome at the cost of some workspace-chrome polish.
 
 ## Architecture
 
-`BUILTIN_PANELS` is a module-level constant — id, label, Component or iframe URL, required capability. Shells narrow via `config.panels[]` allowlist; unknown ids in the allowlist are silently filtered out.
+`BUILTIN_PANELS` is a module-level constant — id, label, Component or iframe URL, required capability. Workspaces narrow via `config.panels[]` allowlist; unknown ids in the allowlist are silently filtered out.
 
 State:
 

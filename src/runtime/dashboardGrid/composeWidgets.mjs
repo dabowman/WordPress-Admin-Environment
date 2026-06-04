@@ -1,11 +1,11 @@
 /**
- * Pure widget composition — turns the manifest registry + admin.json
+ * Pure widget composition — turns the manifest registry + workspace.json
  * `dashboardWidgets` overrides into a flat list of tile descriptors the
  * `core:dashboard-host` app feeds into the kernel's dynamic-children
  * store.
  *
  * Inputs:
- *   - `manifests`      — `window.wpAdminShell.manifests.apps` (id → app.json)
+ *   - `manifests`      — `window.wpAdminWorkspaces.manifests.apps` (id → app.json)
  *   - `overrides`      — resolved-config `dashboardWidgets` block
  *
  * Output: ordered array of `{ id, title, defaultSize, minSize, position }`.
@@ -16,7 +16,7 @@
  *   - `overrides[id].hidden === true` removes a widget regardless of
  *     manifest declaration.
  *   - Other override fields merge per-property over the manifest block:
- *     admin.json wins.
+ *     workspace.json wins.
  *   - Order: explicit `{row, col}` positions render in their fixed
  *     slot via CSS Grid; auto-placed widgets follow in registration
  *     order (the order keys appear in `manifests`).
@@ -55,7 +55,7 @@ function pickPosition( raw ) {
 
 /**
  * Clamp `defaultSize` so it never falls below `minSize`. Authors can
- * lower the default in admin.json without losing the manifest's floor.
+ * lower the default in workspace.json without losing the manifest's floor.
  * @param {{w:number,h:number}} size
  * @param {{w:number,h:number}} min
  */
@@ -68,7 +68,7 @@ function clampToMin( size, min ) {
 
 /**
  * @param {Record<string, Object>} manifests App-id → manifest.
- * @param {Record<string, Object>} overrides admin.json `dashboardWidgets`.
+ * @param {Record<string, Object>} overrides workspace.json `dashboardWidgets`.
  * @return {Array<{id:string,title:string,defaultSize:{w:number,h:number},minSize:{w:number,h:number},position:'auto'|{row:number,col:number}}>}
  */
 export function composeWidgets( manifests, overrides ) {

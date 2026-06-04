@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/tools.php` (Available Tools landing) + `wp-admin/network.php` (Network Setup) + `wp-admin/ms-delete-site.php` (multisite subsite self-delete)
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the original via `iframe:tools.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:tools.php`.
 
 This spec covers three logical sub-screens that all live under the Tools menu in core wp-admin:
 
@@ -24,10 +24,10 @@ Three sections share Section 11 (Inter-app navigation) and Section 14 (Extension
 
 | Field | Value |
 |---|---|
-| Parent app | "Tools" group (when shell config groups them) |
+| Parent app | "Tools" group (when workspace config groups them) |
 | Sub-screens | None (each is leaf) |
 
-The three sub-screens are discrete, low-traffic surfaces. Most shells should hide them entirely (developer-admin only) or use `iframe:` fallback indefinitely — this is administration-grade infrastructure that most users never touch.
+The three sub-screens are discrete, low-traffic surfaces. Most workspaces should hide them entirely (developer-admin only) or use `iframe:` fallback indefinitely — this is administration-grade infrastructure that most users never touch.
 
 ---
 
@@ -69,7 +69,7 @@ Jobs to be done:
 | Delete Site | Submit deletion request | `delete_site` + nonce `delete-blog` | (same) |
 | Delete Site | Confirm deletion (via email link) | hash equality with `delete_blog_hash` option | `ms-delete-site.php` lines 20–32 |
 
-**Permission-denied:** all three use `wp_die()` with screen-specific messages. Shell renders 403 for each.
+**Permission-denied:** all three use `wp_die()` with screen-specific messages. Workspace renders 403 for each.
 
 **Multisite specifics:**
 - Network Setup on multisite redirects single-site URL → network admin URL. On a non-multisite install with `MULTISITE` constant defined, the screen blocks with "Network creation panel is not for WordPress MU networks."
@@ -291,12 +291,12 @@ Validation: server-side only. Unchecked checkbox → form re-rendered without ac
 - `/wp-admin/ms-delete-site.php` — initial form.
 - `/wp-admin/ms-delete-site.php?h={hash}` — confirmation link from email.
 
-Recommended shell URLs:
+Recommended workspace URLs:
 - `#/tools`
 - `#/tools/network-setup`
 - `#/tools/delete-site` (with optional `?h={hash}` for confirmation)
 
-The confirmation hash arriving in the URL must work even when the user is not currently logged in (link is visited from email, possibly in a fresh browser). Shell rebuild must support a "logged-out confirmation" code path or fall back to iframe for this specific URL pattern.
+The confirmation hash arriving in the URL must work even when the user is not currently logged in (link is visited from email, possibly in a fresh browser). Workspace rebuild must support a "logged-out confirmation" code path or fall back to iframe for this specific URL pattern.
 
 ---
 
@@ -366,22 +366,22 @@ The confirmation hash arriving in the URL must work even when the user is not cu
 
 | Hook | Sub-screen | Purpose | Recommendation |
 |---|---|---|---|
-| `tool_box` | Tools | Render plugin tool cards | **Replace** with shell-level slot `core:tools.cards` |
+| `tool_box` | Tools | Render plugin tool cards | **Replace** with workspace-level slot `core:tools.cards` |
 | `delete_site_email_content` | Delete Site | Filter email body | **Preserve** at PHP layer (pure server-side) |
 | `wpmu_drop_tables` | Delete Site | Filter list of dropped tables | Preserve at PHP layer |
 | `delete_blog` (action) | Delete Site | Run before deletion | Preserve |
 | `populate_network` filters | Network Setup | Inject extra options | Preserve |
 | `allow_subdomain_install` | Network Setup | Override subdomain radio visibility | Preserve |
 
-Plugin compatibility note: WooCommerce, ManageWP, and other tooling-heavy plugins use `tool_box` to add cards. The shell rebuild should expose a `tools.cards` slot to keep parity. Cards are simple — title, description, action label, action URL.
+Plugin compatibility note: WooCommerce, ManageWP, and other tooling-heavy plugins use `tool_box` to add cards. The workspace rebuild should expose a `tools.cards` slot to keep parity. Cards are simple — title, description, action label, action URL.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:tools.php` / `iframe:network.php` / `iframe:ms-delete-site.php` work in `developer-admin` shell with chrome hidden.
+- **What works:** `iframe:tools.php` / `iframe:network.php` / `iframe:ms-delete-site.php` work in `developer-admin` workspace with chrome hidden.
 
 ### Gaps vs. this spec
 
@@ -389,14 +389,14 @@ Plugin compatibility note: WooCommerce, ManageWP, and other tooling-heavy plugin
 |---|---|---|
 | Register `core:tools` AppSource | Low | Low-traffic; iframe acceptable indefinitely |
 | Register `core:tools-network` AppSource | Low | Once-per-install action; iframe acceptable |
-| Register `core:tools-delete-site` AppSource | Low | Multisite only; iframe acceptable, but the email-link confirmation requires shell to support `?h=` deep-links to the iframed page — verify the iframe URL passes through query params |
+| Register `core:tools-delete-site` AppSource | Low | Multisite only; iframe acceptable, but the email-link confirmation requires workspace to support `?h=` deep-links to the iframed page — verify the iframe URL passes through query params |
 | Slot API for `tool_box` cards | Medium | Improves plugin compat |
 | REST endpoint for network-setup config snippets | Low | Niche; one-time use |
 | REST endpoint for delete-site request | Low | Same |
-| Confirmation-link logged-out flow | Medium | Email link → `?h={hash}` must work when shell is bypassed (login wall) — confirm fallback to original PHP page or expose a public confirmation URL |
+| Confirmation-link logged-out flow | Medium | Email link → `?h={hash}` must work when workspace is bypassed (login wall) — confirm fallback to original PHP page or expose a public confirmation URL |
 
 ### Acceptable interim
-All three sub-screens via `iframe:` — recommended for v1. Document in shell config that these are infrastructure surfaces and iframe is the canonical implementation.
+All three sub-screens via `iframe:` — recommended for v1. Document in workspace config that these are infrastructure surfaces and iframe is the canonical implementation.
 
 ---
 
@@ -407,7 +407,7 @@ All three sub-screens via `iframe:` — recommended for v1. Document in shell co
 - **Site Health link from Tools menu** — separate `site-health.md`.
 - **Personal data tools (export / erase)** — separate `personal-data.md`.
 - **Network admin "Sites" / "Users" / "Themes" / "Plugins" / "Settings"** — separate network-admin specs (deferred).
-- **Delete Site logged-out confirmation** — handled via PHP fallback; not native shell.
+- **Delete Site logged-out confirmation** — handled via PHP fallback; not native workspace.
 - **Reverting multisite back to single-site** — not provided by core; manual operation.
 
 ---

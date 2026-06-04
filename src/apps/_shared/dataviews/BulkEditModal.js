@@ -14,7 +14,7 @@ import {
 /**
  * The shared host for **Bulk Edit** — apply a chosen subset of fields to the M
  * selected rows (deliverable #2 of the DataViews interaction-pattern library —
- * see `docs/dataviews-interaction-patterns.md`). It is the shell-side substitute
+ * see `docs/dataviews-interaction-patterns.md`). It is the workspace-side substitute
  * for the upstream bulk-edit-form (#165) / editable-cell (#162) primitives:
  * when those land we swap the host, not the logic.
  *
@@ -69,7 +69,8 @@ export function createBulkEditModal( {
 	const mapToRecord =
 		typeof toRecord === 'function' ? toRecord : ( payload ) => payload;
 
-	const applyLabel = messages.applyLabel || __( 'Apply', 'wp-admin-shell' );
+	const applyLabel =
+		messages.applyLabel || __( 'Apply', 'wp-admin-workspaces' );
 
 	/**
 	 * Seed the form: every field starts at the "no change" sentinel.
@@ -136,7 +137,7 @@ export function createBulkEditModal( {
 			if ( ! targets.length ) {
 				createInfoNotice(
 					messages.noTargets ||
-						__( 'No users to update.', 'wp-admin-shell' ),
+						__( 'No users to update.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 				closeModal();
@@ -149,7 +150,7 @@ export function createBulkEditModal( {
 			if ( ! hasChanges ) {
 				createErrorNotice(
 					messages.empty ||
-						__( 'Set a field to apply.', 'wp-admin-shell' ),
+						__( 'Set a field to apply.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 				return;
@@ -182,7 +183,7 @@ export function createBulkEditModal( {
 											messages.error ||
 											__(
 												'Failed to update.',
-												'wp-admin-shell'
+												'wp-admin-workspaces'
 											)
 									);
 								}
@@ -213,7 +214,7 @@ export function createBulkEditModal( {
 											'%d item updated.',
 											'%d items updated.',
 											ok,
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 										),
 										ok
 									),
@@ -228,7 +229,7 @@ export function createBulkEditModal( {
 										/* translators: 1: number updated, 2: number that failed. */
 										__(
 											'%1$d updated, %2$d failed.',
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 										),
 										ok,
 										failed
@@ -264,7 +265,7 @@ export function createBulkEditModal( {
 							'Editing %d item.',
 							'Editing %d items.',
 							count,
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						),
 						count
 					) }
@@ -283,7 +284,7 @@ export function createBulkEditModal( {
 						variant="minimal"
 						onClick={ closeModal }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -322,7 +323,7 @@ export function fieldsWithNoChange(
 	fields,
 	{ ids, sentinel = NO_CHANGE, label } = {}
 ) {
-	const noChangeLabel = label || __( '— No change —', 'wp-admin-shell' );
+	const noChangeLabel = label || __( '— No change —', 'wp-admin-workspaces' );
 	const option = { value: sentinel, label: noChangeLabel };
 	return ( fields ?? [] ).map( ( field ) => {
 		if ( ! field || ! field.id || ! Array.isArray( field.elements ) ) {

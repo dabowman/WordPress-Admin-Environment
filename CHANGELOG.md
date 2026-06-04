@@ -1,10 +1,47 @@
 # Changelog
 
-All notable changes to WP Admin Shell. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
+All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning follows [SemVer](https://semver.org/spec/v2.0.0.html).
 
 > **Status:** Pre-release. Nothing has shipped publicly; there is no installed base. The canonical architecture lives in `CLAUDE.md` + `docs/`. This file records how the codebase reached its current shape — migration history, deprecation windows, and provenance that `CLAUDE.md` deliberately omits to stay canonical.
 
 ## [Unreleased]
+
+### Renamed: "WP Admin Shell" → "WP Admin Workspaces" (0.1.0 rebrand)
+
+The product, plugin, and every author/user-facing surface unified under
+**workspaces**. Vocabulary, the dissolved-block shape, and the prefix map are
+canonical in `docs/vocabulary-spec.md`.
+
+- **BREAKING — public extension surfaces renamed with no back-compat shims**
+  (acceptable for pre-release; no installed base). Third-party integrations
+  must update:
+  - Hooks: `wp_admin_shell_data` / `wp_admin_shell_data_{origin}` /
+    `wp_admin_shell_cache_signals` / … → `wp_admin_workspaces_*`.
+  - Functions: `wp_admin_shell_register_app` / `_engine` / `_template` /
+    `_menu_item` / `_dashboard_widget` / `_menu_renderer` → `wp_admin_workspaces_*`;
+    `register_shell` → `wp_admin_workspaces_register_workspace`;
+    `register_admin_route` → `wp_admin_workspaces_register_route`.
+  - REST namespace `wp-admin-shell/v1` → `wp-admin-workspaces/v1` (old routes
+    404 — bundled JS updated in lockstep).
+  - JS global `window.wpAdminShell` → `window.wpAdminWorkspaces`
+    (incl. `registerMenuRenderer`, `switchShell` → `switchWorkspace`).
+  - CSS prefixes `.wp-admin-shell-*` / `--wp-admin-shell--*`, the
+    `#wp-admin-shell` mount id, PHP classes `WP_Admin_Shell_*`, and the text
+    domain / slug `wp-admin-shell` → `wp-admin-workspaces`.
+- **Config + schema files**: `wp-content/admin.json` → `wp-content/workspace.json`;
+  `docs/schemas/admin{,-app,-engine}.json` → `workspace{,-app,-engine}.json`;
+  bundled `shells/` → `workspaces/`. WP-CLI `wp admin-shell` → `wp admin-workspace`.
+- **Shape**: the inner `workspace` block is dissolved — `engine` /
+  `default-screen` are now top-level fields and `branding` / `notices` /
+  `widgets` move under a new `frame` block (distinct from `styles.chrome`,
+  which paints it). `required` becomes `[version, $wpds, name, engine, screens]`.
+- **Persisted-option migration (on upgrade, idempotent, db_version 2)**:
+  legacy `wp_admin_shell_*` options are copied forward to their
+  `wp_admin_workspaces_*` names — `active_shell` → `active_workspace`,
+  `workspace_enabled` → `enabled`, plus `settings` / `site_config` /
+  `role_config` and the `user_prefs` user-meta key. Without this an upgraded
+  install would silently lose its active-workspace selection and re-enable a
+  deliberately-disabled admin takeover. `uninstall.php` sweeps both namespaces.
 
 ### Gutenberg dependency version-gated (WordPress 7.0)
 

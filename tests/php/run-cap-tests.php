@@ -5,12 +5,12 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php`
  *
  * Coverage:
- *   - `wp_admin_shell_resolve_capabilities()` returns correct booleans
+ *   - `wp_admin_workspaces_resolve_capabilities()` returns correct booleans
  *     per WP role (subscriber / contributor / author / editor /
  *     administrator). This is the map shipped on
- *     `window.wpAdminShell.capabilities` that feeds the JS-side
+ *     `window.wpAdminWorkspaces.capabilities` that feeds the JS-side
  *     userCan() helper.
- *   - `WP_Admin_Shell_Can_REST::check()` returns correct booleans for
+ *   - `WP_Admin_Workspaces_Can_REST::check()` returns correct booleans for
  *     the same roles.
  *
  * Out-of-scope (React, manual verification):
@@ -66,10 +66,10 @@ class WPAS_Cap_Test_Runner {
 $T = 'WPAS_Cap_Test_Runner';
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
-// Force the shell to wp-admin-default for predictable cap surface.
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
+// Force the workspace to wp-admin-default for predictable cap surface.
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 
 $expectations = array(
 	'subscriber' => array(
@@ -116,10 +116,10 @@ echo "\n— Cap-precompute per role —\n";
 foreach ( $expectations as $role => $caps ) {
 	$user = $T::ensure_user( "wpas_test_$role", $role );
 	wp_set_current_user( $user->ID );
-	WP_Admin_Shell_Cache::flush();
+	WP_Admin_Workspaces_Cache::flush();
 
-	$config = wp_admin_shell_get_active_config();
-	$map    = wp_admin_shell_resolve_capabilities( $config );
+	$config = wp_admin_workspaces_get_active_config();
+	$map    = wp_admin_workspaces_resolve_capabilities( $config );
 
 	foreach ( $caps as $cap => $expected ) {
 		$actual = isset( $map[ $cap ] ) ? (bool) $map[ $cap ] : null;
@@ -127,16 +127,16 @@ foreach ( $expectations as $role => $caps ) {
 	}
 }
 
-echo "\n— /wp-admin-shell/v1/can/{cap} per role —\n";
+echo "\n— /wp-admin-workspaces/v1/can/{cap} per role —\n";
 
 foreach ( $expectations as $role => $caps ) {
 	$user = $T::ensure_user( "wpas_test_$role", $role );
 	wp_set_current_user( $user->ID );
 
 	foreach ( $caps as $cap => $expected ) {
-		$req = new WP_REST_Request( 'GET', "/wp-admin-shell/v1/can/$cap" );
+		$req = new WP_REST_Request( 'GET', "/wp-admin-workspaces/v1/can/$cap" );
 		$req->set_url_params( array( 'capability' => $cap ) );
-		$resp   = WP_Admin_Shell_Can_REST::check( $req );
+		$resp   = WP_Admin_Workspaces_Can_REST::check( $req );
 		$actual = $resp instanceof WP_REST_Response
 			? (bool) $resp->get_data()['can']
 			: null;
@@ -145,8 +145,8 @@ foreach ( $expectations as $role => $caps ) {
 }
 
 $T::cleanup();
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
-WP_Admin_Shell_Cache::flush();
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
+WP_Admin_Workspaces_Cache::flush();
 
 echo "\n— Summary —\n";
 echo 'PASS: ' . $T::$pass . '  FAIL: ' . $T::$fail . "\n";

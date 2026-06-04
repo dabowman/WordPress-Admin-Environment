@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:users",
 	"version": 1,
 	"title": "Users",
@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "root",
 		"name": "user",
@@ -110,7 +110,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"context": "edit",
-					"purpose": "Per-role totals for the roles filter elements (\"Editor (3)\"). One lightweight request per role value via `useEntityElementCounts`; role values come from the resolved spec elements, so the count set tracks whatever roles the shell exposes.",
+					"purpose": "Per-role totals for the roles filter elements (\"Editor (3)\"). One lightweight request per role value via `useEntityElementCounts`; role values come from the resolved spec elements, so the count set tracks whatever roles the workspace exposes.",
 					"fields": [ "id" ],
 					"query": {
 						"roles": "{spec.roles.elements[].value}",
@@ -120,7 +120,7 @@
 					}
 				},
 				{
-					"source": "window.wpAdminShell.userId",
+					"source": "window.wpAdminWorkspaces.userId",
 					"via": "window-global",
 					"purpose": "Identify the acting user so self-delete is blocked + content reassignment target is set."
 				}
@@ -196,7 +196,7 @@
 			},
 			{
 				"concern": "self-delete-guard",
-				"note": "Filter out `window.wpAdminShell.userId` before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight."
+				"note": "Filter out `window.wpAdminWorkspaces.userId` before sending REST. Reassign-to-self fails server-side and the bulk request errors silently mid-flight."
 			},
 			{
 				"concern": "no-trash-for-users",
@@ -208,7 +208,7 @@
 			},
 			{
 				"concern": "data-view-overridable",
-				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. admin.json `settings.dataViews.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_shell_data_view_config_root_user[_<variant>]` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
+				"note": "Fields / actions / defaultView / defaultLayouts ship as the manifest baseline. workspace.json `settings.dataViews.root.user._default` wins on whole-entry override; the per-triple filter `wp_admin_workspaces_data_view_config_root_user[_<variant>]` runs last. Render callbacks (name cell, modal body) stay in `index.js` keyed by spec id."
 			}
 		],
 		"design-system-leakage": [

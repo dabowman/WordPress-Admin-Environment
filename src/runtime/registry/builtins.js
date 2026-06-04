@@ -1,10 +1,10 @@
 /**
- * Manifest-driven registration of every shell-bundled app and engine.
+ * Manifest-driven registration of every workspace-bundled app and engine.
  *
  * V2.M4 task 6: imperative `register({ ... configSchema ... })` calls
  * are gone. The single source of truth is each app's `app.json` /
  * engine's `engine.json`, validated PHP-side at boot and shipped to
- * the browser via `window.wpAdminShell.manifests`. This bootstrap
+ * the browser via `window.wpAdminWorkspaces.manifests`. This bootstrap
  * pairs each manifest id with its React component module and folds
  * the manifest's intrinsic fields (`title`, `role`, `capabilities`,
  * `config-schema`, `platform`) onto the registry entry the kernel
@@ -21,14 +21,14 @@
  *     `import()` into its own chunk (`build/app-<id>.js`). The
  *     registry caches the resolved component on first mount.
  *
- * Adding a new shell-bundled app: create `src/apps/{name}/` with
+ * Adding a new workspace-bundled app: create `src/apps/{name}/` with
  * `index.js`, `app.json`, and (optionally) `index.css`. Add an entry
  * to `APP_LOADERS` below — eager when the app is always mounted in
- * every shell, lazy (the default) otherwise. The dynamic import's
+ * every workspace, lazy (the default) otherwise. The dynamic import's
  * `webpackChunkName` magic comment controls the emitted chunk name.
  */
 
-// Always-eager chrome apps. Bundled into the boot chunk so the shell
+// Always-eager chrome apps. Bundled into the boot chunk so the workspace
 // paints chrome immediately without a Suspense flash. Keep this list
 // tight — every entry here defeats code-splitting for that module.
 import NavigationApp from '../../apps/navigation';
@@ -294,7 +294,7 @@ export function registerBuiltins( registry ) {
 	registry.register( coreSinglePane );
 	registry.register( coreDesktop );
 
-	const manifests = window.wpAdminShell?.manifests?.apps || {};
+	const manifests = window.wpAdminWorkspaces?.manifests?.apps || {};
 	const seen = new Set();
 
 	for ( const [ id, manifest ] of Object.entries( manifests ) ) {
@@ -328,7 +328,7 @@ export function registerBuiltins( registry ) {
 	if ( missing.length && process.env.NODE_ENV !== 'production' ) {
 		// eslint-disable-next-line no-console
 		console.warn(
-			'[wp-admin-shell] expected app manifests not found in window.wpAdminShell.manifests:',
+			'[wp-admin-workspaces] expected app manifests not found in window.wpAdminWorkspaces.manifests:',
 			missing
 		);
 	}

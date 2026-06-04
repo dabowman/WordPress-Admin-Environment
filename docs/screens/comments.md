@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/edit-comments.php` (list) + `wp-admin/comment.php` (single edit/moderate confirm) + `wp-admin/edit-form-comment.php` (form partial) + `WP_Comments_List_Table` (`wp-admin/includes/class-wp-comments-list-table.php`)
-**Current shell coverage:** `core:comments` → `src/apps/comments/index.js` (M4) — DataViews list + approve/unapprove/spam/trash actions; full edit and inline reply not yet implemented
+**Current workspace coverage:** `core:comments` → `src/apps/comments/index.js` (M4) — DataViews list + approve/unapprove/spam/trash actions; full edit and inline reply not yet implemented
 
 This spec describes the **semantic surface** of the Comments management screen — list, moderate, edit single, and reply — so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -20,7 +20,7 @@ This spec describes the **semantic surface** of the Comments management screen �
 | Parent app | None |
 | Sub-screens | Edit Comment (single), inline reply form (overlay on list row), Quick Edit (inline on list row) |
 
-The Comments screen is one app with multiple modes: list (default), inline reply, inline quick-edit, and a single-comment edit screen reached via the row's Edit action. The legacy `comment.php` confirm flow (approve/trash/spam/delete with a confirmation page) is replaced by a **modal confirmation** in the shell — the URLs `comment.php?action=trash&c={id}` etc. are not separate screens in v1, just dispatch endpoints.
+The Comments screen is one app with multiple modes: list (default), inline reply, inline quick-edit, and a single-comment edit screen reached via the row's Edit action. The legacy `comment.php` confirm flow (approve/trash/spam/delete with a confirmation page) is replaced by a **modal confirmation** in the workspace — the URLs `comment.php?action=trash&c={id}` etc. are not separate screens in v1, just dispatch endpoints.
 
 `wp-admin/moderation.php` is a back-compat redirect to `edit-comments.php?comment_status=moderated` and is not a separate surface.
 
@@ -206,7 +206,7 @@ Reached via row Edit action or `?action=editcomment&c={id}`. Two-column layout m
 └──────────────────────────────────────┴──────────────────────┘
 ```
 
-The shell's content card hosts the form; the right column is a sticky panel.
+The workspace's content card hosts the form; the right column is a sticky panel.
 
 ---
 
@@ -362,7 +362,7 @@ The reply uses the moderator's user as the author (no name/email needed when log
 - `comment.php?action=editcomment&c={id}` — edit single
 - `comment.php?action={approve|trash|spam|delete}&c={id}` — confirm + act (legacy)
 
-### Recommended shell URL state
+### Recommended workspace URL state
 
 ```
 #/comments                                          — All
@@ -442,7 +442,7 @@ Undo for trash/spam: keep last operation in memory 5s; Undo reissues `PUT` to pr
 | `Cmd/Ctrl+A` | Select all on page |
 | `Shift+Click` | Range select |
 
-These shortcuts mirror core's `enqueue_comment_hotkeys_js()` (`j`/`k` for next/prev, `a/u/r/q/e/s/d`). Loading the keyboard-shortcut layer is opt-in (a user setting in core); v1 shell ships them on by default.
+These shortcuts mirror core's `enqueue_comment_hotkeys_js()` (`j`/`k` for next/prev, `a/u/r/q/e/s/d`). Loading the keyboard-shortcut layer is opt-in (a user setting in core); v1 workspace ships them on by default.
 
 ### ARIA & focus
 
@@ -467,25 +467,25 @@ These shortcuts mirror core's `enqueue_comment_hotkeys_js()` (`j`/`k` for next/p
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `manage_edit-comments_columns` | Add list columns | Replace with shell `fields` extensibility |
+| `manage_edit-comments_columns` | Add list columns | Replace with workspace `fields` extensibility |
 | `manage_comments_custom_column` | Render custom column | Replace with field-render registry |
-| `comment_row_actions` | Per-row actions | Replace with shell `actions` registry (`core:comments.row-actions` slot) |
-| `bulk_actions-edit-comments` | Bulk actions | Replace with shell bulk-action API |
-| `comment_status_links` | Status filter tabs | Replace with shell-level filter-tab API |
-| `restrict_manage_comments` | Filter dropdowns | Replace with shell-level filter API |
-| `admin_comment_types_dropdown` | Type filter options | Replace with shell type registration |
+| `comment_row_actions` | Per-row actions | Replace with workspace `actions` registry (`core:comments.row-actions` slot) |
+| `bulk_actions-edit-comments` | Bulk actions | Replace with workspace bulk-action API |
+| `comment_status_links` | Status filter tabs | Replace with workspace-level filter-tab API |
+| `restrict_manage_comments` | Filter dropdowns | Replace with workspace-level filter API |
+| `admin_comment_types_dropdown` | Type filter options | Replace with workspace type registration |
 | `edit_comment_misc_actions` | Sidebar mod actions on edit screen | Replace with `core:comments.edit-sidebar` slot |
-| `add_meta_boxes_comment` | Edit-screen sidebar meta-boxes | Replace with shell slot fills |
+| `add_meta_boxes_comment` | Edit-screen sidebar meta-boxes | Replace with workspace slot fills |
 | `comment_moderation_recipients` | Mod email recipients | Server-side only |
 | `pre_comment_approved` | Auto-moderation logic | Server-side; settings page surfaces options |
 
-Plugin compatibility note: third-party plugins relying on these hooks won't work in the shell. Plugins that add content to the comment edit screen via meta boxes (e.g. Akismet's spam analysis panel) need migration to a `core:comments.edit-sidebar` slot.
+Plugin compatibility note: third-party plugins relying on these hooks won't work in the workspace. Plugins that add content to the comment edit screen via meta boxes (e.g. Akismet's spam analysis panel) need migration to a `core:comments.edit-sidebar` slot.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
 - **Source:** `core:comments` → `src/apps/comments/index.js`
 - **What works (M4):** DataViews list, single status filter, approve/unapprove/spam/trash/restore actions via partial `saveEntityRecord`, basic search, pagination
@@ -512,12 +512,12 @@ Plugin compatibility note: third-party plugins relying on these hooks won't work
 | Date filter (range) | Low | not in core; nice-to-have |
 | Keyboard shortcuts (`a/u/r/q/e/s/d/j/k`) | Medium | Mirror core `enqueue_comment_hotkeys_js` |
 | ARIA polish | High | Tab counts, live region, focus restoration after action |
-| Block editor for comment content | Low | Core 6.5+ uses TinyMCE; the shell can ship a simple content area |
+| Block editor for comment content | Low | Core 6.5+ uses TinyMCE; the workspace can ship a simple content area |
 | Notes (private comments on posts) | Out of scope | New 6.9 feature; v2 |
 
 ### Acceptable interim
 
-For v1 of any new shell config, `iframe:edit-comments.php` is acceptable as escape hatch. The current `core:comments` is partial but functional — most authors only need to approve/spam/trash. Inline Reply and Quick Edit are the highest-impact remaining gaps.
+For v1 of any new workspace config, `iframe:edit-comments.php` is acceptable as escape hatch. The current `core:comments` is partial but functional — most authors only need to approve/spam/trash. Inline Reply and Quick Edit are the highest-impact remaining gaps.
 
 ---
 
@@ -535,12 +535,12 @@ For v1 of any new shell config, `iframe:edit-comments.php` is acceptable as esca
 ## 17. Reference
 
 - Original PHP: `wp-admin/edit-comments.php` (list), `wp-admin/comment.php` (single edit + confirm-and-act)
-- **Form partial:** `wp-admin/edit-form-comment.php` is the form rendered inside `wp-admin/comment.php` when `action=editcomment`, **not standalone** — it requires `$comment` and is included via `require ABSPATH . 'wp-admin/edit-form-comment.php'`. The shell's Edit Comment screen replaces both files in one component.
+- **Form partial:** `wp-admin/edit-form-comment.php` is the form rendered inside `wp-admin/comment.php` when `action=editcomment`, **not standalone** — it requires `$comment` and is included via `require ABSPATH . 'wp-admin/edit-form-comment.php'`. The workspace's Edit Comment screen replaces both files in one component.
 - Legacy redirect: `wp-admin/moderation.php` 301s to `edit-comments.php?comment_status=moderated`; not a separate surface
 - List table: `wp-admin/includes/class-wp-comments-list-table.php`
 - Reply handler (admin-ajax): `wp-admin/includes/ajax-actions.php::wp_ajax_replyto_comment()` — REST replacement: `POST /wp/v2/comments`
 - Quick Edit handler (admin-ajax): `wp-admin/includes/ajax-actions.php::wp_ajax_edit_comment()` — REST replacement: `PUT /wp/v2/comments/{id}`
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-comments-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/comments/`
-- Current shell impl: `src/apps/comments/index.js`
-- Shell config example: `shells/developer-admin.json`
+- Current workspace impl: `src/apps/comments/index.js`
+- Workspace config example: `workspaces/developer-workspace.json`

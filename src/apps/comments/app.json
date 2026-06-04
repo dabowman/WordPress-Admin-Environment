@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:comments",
 	"version": 1,
 	"title": "Comments",
@@ -19,7 +19,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "root",
 		"name": "comment",

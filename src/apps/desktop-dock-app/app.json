@@ -1,9 +1,9 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:desktop-dock-app",
 	"version": 1,
 	"title": "Desktop dock",
-	"description": "Dock UI for the `core:desktop` engine. Reads the resolved admin.json navigation tree from kernel context and renders dock tiles; clicking a tile dispatches `openWindow` to the desktop compositor via `WindowManagerContext`. Engine-owned. P2.T3 ports the upstream `desktop-mode/src/dock-rail/*` pluggable rail renderer registry here; P2.T1 ships a placeholder so the engine boots.",
+	"description": "Dock UI for the `core:desktop` engine. Reads the resolved workspace.json navigation tree from kernel context and renders dock tiles; clicking a tile dispatches `openWindow` to the desktop compositor via `WindowManagerContext`. Engine-owned. P2.T3 ports the upstream `desktop-mode/src/dock-rail/*` pluggable rail renderer registry here; P2.T1 ships a placeholder so the engine boots.",
 	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"platform": {
@@ -13,5 +13,5 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell"
+	"script": "wp-admin-workspaces"
 }

@@ -21,23 +21,23 @@ import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 import { Page } from '../_shared/Page';
 
 const STATUS_LABELS = {
-	active: __( 'Active', 'wp-admin-shell' ),
-	inactive: __( 'Inactive', 'wp-admin-shell' ),
-	'network-active': __( 'Network active', 'wp-admin-shell' ),
+	active: __( 'Active', 'wp-admin-workspaces' ),
+	inactive: __( 'Inactive', 'wp-admin-workspaces' ),
+	'network-active': __( 'Network active', 'wp-admin-workspaces' ),
 };
 
 const FIELD_LABELS = {
-	name: __( 'Plugin', 'wp-admin-shell' ),
-	status: __( 'Status', 'wp-admin-shell' ),
-	version: __( 'Version', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
+	name: __( 'Plugin', 'wp-admin-workspaces' ),
+	status: __( 'Status', 'wp-admin-workspaces' ),
+	version: __( 'Version', 'wp-admin-workspaces' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	activate: __( 'Activate', 'wp-admin-shell' ),
-	deactivate: __( 'Deactivate', 'wp-admin-shell' ),
-	visit: __( 'Visit plugin site', 'wp-admin-shell' ),
-	delete: __( 'Delete', 'wp-admin-shell' ),
+	activate: __( 'Activate', 'wp-admin-workspaces' ),
+	deactivate: __( 'Deactivate', 'wp-admin-workspaces' ),
+	visit: __( 'Visit plugin site', 'wp-admin-workspaces' ),
+	delete: __( 'Delete', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -74,10 +74,10 @@ const INSTALL_FIELDS = [
 	{
 		id: 'slug',
 		type: 'text',
-		label: __( 'Plugin slug', 'wp-admin-shell' ),
+		label: __( 'Plugin slug', 'wp-admin-workspaces' ),
 		description: __(
 			'The wordpress.org directory slug, e.g. "hello-dolly" or "akismet".',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 		// `required: true` passes any non-empty string, including whitespace-only
 		// input like "   " — `toRecord` then trims it to "" and the POST fires
@@ -88,13 +88,13 @@ const INSTALL_FIELDS = [
 			custom: ( item, field ) =>
 				( field.getValue( { item } ) || '' ).trim()
 					? null
-					: __( 'Plugin slug is required.', 'wp-admin-shell' ),
+					: __( 'Plugin slug is required.', 'wp-admin-workspaces' ),
 		},
 	},
 	{
 		id: 'activate',
 		type: 'boolean',
-		label: __( 'Activate after install', 'wp-admin-shell' ),
+		label: __( 'Activate after install', 'wp-admin-workspaces' ),
 	},
 ];
 
@@ -181,7 +181,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 					err.message ||
 						__(
 							'Failed to update plugin status.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						)
 				);
 			}
@@ -268,13 +268,13 @@ export default function PluginsApp( { config = {} } = {} ) {
 				items.length === 1
 					? __(
 							'Permanently delete this plugin? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  )
 					: __(
 							'Permanently delete these plugins? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				apiFetch( {
 					path: `/wp/v2/plugins/${ restPluginId( item.plugin ) }`,
@@ -288,7 +288,10 @@ export default function PluginsApp( { config = {} } = {} ) {
 					);
 					setError(
 						first?.reason?.message ||
-							__( 'Failed to delete plugin.', 'wp-admin-shell' )
+							__(
+								'Failed to delete plugin.',
+								'wp-admin-workspaces'
+							)
 					);
 				}
 			},
@@ -380,9 +383,12 @@ export default function PluginsApp( { config = {} } = {} ) {
 					status: activate ? 'active' : 'inactive',
 				} ),
 				messages: {
-					saved: __( 'Plugin installed.', 'wp-admin-shell' ),
-					error: __( 'Failed to install plugin.', 'wp-admin-shell' ),
-					createLabel: __( 'Install', 'wp-admin-shell' ),
+					saved: __( 'Plugin installed.', 'wp-admin-workspaces' ),
+					error: __(
+						'Failed to install plugin.',
+						'wp-admin-workspaces'
+					),
+					createLabel: __( 'Install', 'wp-admin-workspaces' ),
 				},
 				// `CreateBody.onSubmit` already calls `closeModal()` on success,
 				// which our host wires to `setIsInstalling( false )` — so the
@@ -394,7 +400,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 
 	if ( error ) {
 		return (
-			<div className="wp-admin-shell-app-plugins__error">
+			<div className="wp-admin-workspaces-app-plugins__error">
 				<Notice.Root intent="error">
 					<Notice.Description>{ error }</Notice.Description>
 				</Notice.Root>
@@ -404,7 +410,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 
 	return (
 		<Page
-			title={ __( 'Plugins', 'wp-admin-shell' ) }
+			title={ __( 'Plugins', 'wp-admin-workspaces' ) }
 			actions={
 				<>
 					<Button
@@ -413,7 +419,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 						size="compact"
 						onClick={ () => setIsUploading( true ) }
 					>
-						{ __( 'Upload plugin (.zip)', 'wp-admin-shell' ) }
+						{ __( 'Upload plugin (.zip)', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -422,13 +428,13 @@ export default function PluginsApp( { config = {} } = {} ) {
 						onClick={ () => setIsInstalling( true ) }
 					>
 						<Icon icon={ plus } size={ 16 } />
-						{ __( 'Add New Plugin', 'wp-admin-shell' ) }
+						{ __( 'Add New Plugin', 'wp-admin-workspaces' ) }
 					</Button>
 				</>
 			}
 		>
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (
@@ -451,7 +457,7 @@ export default function PluginsApp( { config = {} } = {} ) {
 
 			{ isInstalling && (
 				<Modal
-					title={ __( 'Add New Plugin', 'wp-admin-shell' ) }
+					title={ __( 'Add New Plugin', 'wp-admin-workspaces' ) }
 					onRequestClose={ () => setIsInstalling( false ) }
 				>
 					{ /* `createEntityFormModal` create mode ignores `items`; it
@@ -466,7 +472,10 @@ export default function PluginsApp( { config = {} } = {} ) {
 
 			{ isUploading && (
 				<Modal
-					title={ __( 'Upload plugin (.zip)', 'wp-admin-shell' ) }
+					title={ __(
+						'Upload plugin (.zip)',
+						'wp-admin-workspaces'
+					) }
 					onRequestClose={ () => setIsUploading( false ) }
 				>
 					{ /* No REST surface for zip upload — `create_item` accepts a
@@ -477,12 +486,12 @@ export default function PluginsApp( { config = {} } = {} ) {
 						classicPath="plugin-install.php?tab=upload"
 						label={ __(
 							'Open the classic Upload Plugin screen',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 						command="wp plugin install /path/to/plugin.zip --activate"
 						agentPrompt={ __(
 							'Install a WordPress plugin from a local .zip archive using `wp plugin install <path-to-zip>`.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					/>
 				</Modal>

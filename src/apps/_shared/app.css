@@ -9,11 +9,11 @@
 
 /*
  * Fill the mounted region and stretch the DataViews wrapper to full height.
- * Add `wp-admin-shell-app--fill` to a list app's root element. Was duplicated
+ * Add `wp-admin-workspaces-app--fill` to a list app's root element. Was duplicated
  * in posts + themes only; now every entity-CRUD list app uses it for parity.
  */
-.wp-admin-shell-app--fill,
-.wp-admin-shell-app--fill .dataviews-wrapper {
+.wp-admin-workspaces-app--fill,
+.wp-admin-workspaces-app--fill .dataviews-wrapper {
 	height: 100%;
 }
 
@@ -22,12 +22,12 @@
  * card edge. The engine mount is flush by default (DataViews + iframe apps
  * stay full-bleed); form / native screens add this class to their root to
  * opt in. The value flows through the chrome bridge, so an author can retune
- * it via `styles.chrome.content.inset` in admin.json; the WPDS dimension is
+ * it via `styles.chrome.content.inset` in workspace.json; the WPDS dimension is
  * the fallback when unset.
  */
-.wp-admin-shell-app--inset {
+.wp-admin-workspaces-app--inset {
 	padding: var(
-		--wp-admin-shell--chrome--content--inset,
+		--wp-admin-workspaces--chrome--content--inset,
 		var( --wpds-dimension-padding-2xl )
 	);
 	/* Roots that fill the region (`height: 100%` flex columns, e.g. media)
@@ -40,7 +40,7 @@
  * Text 0.12 has no `color` prop, so the muted treatment lives here. Replaces
  * the inert per-app `__muted` classes that were rendered but never styled.
  */
-.wp-admin-shell-app__muted {
+.wp-admin-workspaces-app__muted {
 	color: var( --wpds-color-fg-content-neutral-weak );
 	font-size: var( --wpds-typography-font-size-sm );
 }
@@ -49,7 +49,7 @@
  * Centered loading / empty filler. Replaces the identical
  * `display:flex; …; height:200px` block copy-pasted across the form apps.
  */
-.wp-admin-shell-app__center {
+.wp-admin-workspaces-app__center {
 	display: flex;
 	align-items: center;
 	justify-content: center;

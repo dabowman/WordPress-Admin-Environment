@@ -25,26 +25,26 @@ import { MenuNameModal } from './MenuNameModal';
 import { MenuItemModal } from './MenuItemModal';
 
 // The classic-menu screens this app rebuilds use the shared block-theme signal
-// stamped at `workspace.theme-support` by `WP_Admin_Shell_Appearance_Menu`
+// stamped at `workspace.theme-support` by `WP_Admin_Workspaces_Appearance_Menu`
 // (PHP, priority 4). On a block theme classic menus are superseded by the Site
 // Editor's Navigation block, so the native editor disables itself and offers
 // the iframe fallback link rather than mounting a half-relevant surface.
 function readThemeSupport() {
 	return (
 		( typeof window !== 'undefined' &&
-			window.wpAdminShell?.config?.workspace?.[ 'theme-support' ] ) ||
+			window.wpAdminWorkspaces?.config?.[ 'theme-support' ] ) ||
 		null
 	);
 }
 
 // In-workspace route to the full-fidelity classic Menus iframe screen
-// (`screens['nav-menus']` → `iframe:nav-menus.php` in the shell). We link to
+// (`screens['nav-menus']` → `iframe:nav-menus.php` in the workspace). We link to
 // the workspace route, NOT the raw `/wp-admin/nav-menus.php`: the latter is
 // claimed by the native `menus` screen's `legacy_path`, so the admin-link
 // interceptor would bounce it back to `#/menus` (this same disabled panel on a
 // block theme). The `#/nav-menus` route mounts the iframe deterministically.
 //
-// The `nav-menus` screen is ALSO pinned in the shell's Appearance menu group
+// The `nav-menus` screen is ALSO pinned in the workspace's Appearance menu group
 // (theme-agnostic, surviving the block-theme prune), so it is independently
 // reachable as a real nav entry — this panel link is a convenience, not the
 // sole entry point.
@@ -56,10 +56,10 @@ const NAV_MENUS_FALLBACK = '#/nav-menus';
 // the type label is the fallback when the finer-grained `object` value below is
 // absent or unknown.
 const TYPE_LABELS = {
-	custom: __( 'Link', 'wp-admin-shell' ),
-	post_type: __( 'Page', 'wp-admin-shell' ),
-	post_type_archive: __( 'Archive', 'wp-admin-shell' ),
-	taxonomy: __( 'Category', 'wp-admin-shell' ),
+	custom: __( 'Link', 'wp-admin-workspaces' ),
+	post_type: __( 'Page', 'wp-admin-workspaces' ),
+	post_type_archive: __( 'Archive', 'wp-admin-workspaces' ),
+	taxonomy: __( 'Category', 'wp-admin-workspaces' ),
 };
 
 // Finer-grained labels keyed on the REST `nav_menu_item.object` value (the
@@ -68,10 +68,10 @@ const TYPE_LABELS = {
 // any object a plugin registers that we don't know about, then to the raw
 // `item.type`. Translation tooling sees the `__()` literals at module load.
 const OBJECT_LABELS = {
-	post: __( 'Post', 'wp-admin-shell' ),
-	page: __( 'Page', 'wp-admin-shell' ),
-	category: __( 'Category', 'wp-admin-shell' ),
-	post_tag: __( 'Tag', 'wp-admin-shell' ),
+	post: __( 'Post', 'wp-admin-workspaces' ),
+	page: __( 'Page', 'wp-admin-workspaces' ),
+	category: __( 'Category', 'wp-admin-workspaces' ),
+	post_tag: __( 'Tag', 'wp-admin-workspaces' ),
 };
 
 /**
@@ -93,7 +93,7 @@ export default function MenusApp() {
 	const isBlockTheme = !! themeSupport?.[ 'block-theme' ];
 
 	// All menus (containers) — the selector. context:'edit' is the entity
-	// default but we pass it explicitly per the shell convention.
+	// default but we pass it explicitly per the workspace convention.
 	const { records: menus, isResolving: menusLoading } = useEntityRecords(
 		'root',
 		'menu',
@@ -119,15 +119,15 @@ export default function MenusApp() {
 	// Block theme: short-circuit to the disabled fallback panel.
 	if ( isBlockTheme ) {
 		return (
-			<div className="wp-admin-shell-app--inset wp-admin-shell-app-menus">
+			<div className="wp-admin-workspaces-app--inset wp-admin-workspaces-app-menus">
 				<Stack direction="column" gap="md">
 					<Text variant="heading-md" render={ <h2 /> }>
-						{ __( 'Menus', 'wp-admin-shell' ) }
+						{ __( 'Menus', 'wp-admin-workspaces' ) }
 					</Text>
 					<Text>
 						{ __(
 							'Your active theme is a block theme. Classic menus have been replaced by the Navigation block in the Site Editor.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</Text>
 					<Stack direction="row" gap="sm">
@@ -136,7 +136,10 @@ export default function MenusApp() {
 							variant="solid"
 							render={ <a href="#/site-editor" /> }
 						>
-							{ __( 'Open the Site Editor', 'wp-admin-shell' ) }
+							{ __(
+								'Open the Site Editor',
+								'wp-admin-workspaces'
+							) }
 						</Button>
 						<Button
 							tone="neutral"
@@ -145,7 +148,7 @@ export default function MenusApp() {
 						>
 							{ __(
 								'Open the classic Menus screen',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 						</Button>
 					</Stack>
@@ -156,8 +159,8 @@ export default function MenusApp() {
 
 	if ( menusLoading && ! menus ) {
 		return (
-			<div className="wp-admin-shell-app--inset wp-admin-shell-app-menus">
-				<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app--inset wp-admin-workspaces-app-menus">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			</div>
@@ -261,7 +264,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					saveError?.message ||
 						__(
 							'The menu item could not be saved.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						)
 				);
 			}
@@ -299,7 +302,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
-						__( 'Failed to reorder item.', 'wp-admin-shell' ),
+						__( 'Failed to reorder item.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			} finally {
@@ -332,7 +335,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
-						__( 'Failed to indent item.', 'wp-admin-shell' ),
+						__( 'Failed to indent item.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			} finally {
@@ -384,7 +387,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
-						__( 'Failed to outdent item.', 'wp-admin-shell' ),
+						__( 'Failed to outdent item.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			} finally {
@@ -416,18 +419,21 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 				if ( deleteError ) {
 					throw new Error(
 						deleteError.message ||
-							__( 'Failed to remove item.', 'wp-admin-shell' )
+							__(
+								'Failed to remove item.',
+								'wp-admin-workspaces'
+							)
 					);
 				}
 				refreshItems();
 				createSuccessNotice(
-					__( 'Menu item removed.', 'wp-admin-shell' ),
+					__( 'Menu item removed.', 'wp-admin-workspaces' ),
 					{ type: 'snackbar' }
 				);
 			} catch ( err ) {
 				createErrorNotice(
 					err?.message ||
-						__( 'Failed to remove item.', 'wp-admin-shell' ),
+						__( 'Failed to remove item.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			}
@@ -460,18 +466,18 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 			if ( deleteError ) {
 				throw new Error(
 					deleteError.message ||
-						__( 'Failed to delete menu.', 'wp-admin-shell' )
+						__( 'Failed to delete menu.', 'wp-admin-workspaces' )
 				);
 			}
 			refreshMenus();
 			onSelectMenu( null );
-			createSuccessNotice( __( 'Menu deleted.', 'wp-admin-shell' ), {
+			createSuccessNotice( __( 'Menu deleted.', 'wp-admin-workspaces' ), {
 				type: 'snackbar',
 			} );
 		} catch ( err ) {
 			createErrorNotice(
 				err?.message ||
-					__( 'Failed to delete menu.', 'wp-admin-shell' ),
+					__( 'Failed to delete menu.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		}
@@ -520,7 +526,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 						saveError?.message ||
 							__(
 								'Failed to update menu locations.',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							)
 					);
 				}
@@ -530,7 +536,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					err?.message ||
 						__(
 							'Failed to update menu locations.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						),
 					{ isDismissible: true }
 				);
@@ -556,7 +562,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app--inset wp-admin-shell-app-menus">
+		<div className="wp-admin-workspaces-app--inset wp-admin-workspaces-app-menus">
 			<Stack direction="column" gap="lg">
 				<Stack
 					direction="row"
@@ -572,13 +578,13 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 						wrap="wrap"
 					>
 						<Text variant="heading-md" render={ <h2 /> }>
-							{ __( 'Menus', 'wp-admin-shell' ) }
+							{ __( 'Menus', 'wp-admin-workspaces' ) }
 						</Text>
 						{ menus.length > 0 && (
 							<SelectControl
 								label={ __(
 									'Select a menu to edit',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 								value={
 									activeMenuId !== null
@@ -601,7 +607,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 							onClick={ () => setMenuModal( 'create' ) }
 						>
 							<Icon icon={ plus } size={ 16 } />
-							{ __( 'Create menu', 'wp-admin-shell' ) }
+							{ __( 'Create menu', 'wp-admin-workspaces' ) }
 						</Button>
 						{ activeMenu && (
 							<Button
@@ -610,7 +616,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 								size="compact"
 								onClick={ () => setMenuModal( activeMenu ) }
 							>
-								{ __( 'Rename', 'wp-admin-shell' ) }
+								{ __( 'Rename', 'wp-admin-workspaces' ) }
 							</Button>
 						) }
 					</Stack>
@@ -620,7 +626,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					<Text>
 						{ __(
 							'No menus yet. Create your first menu to get started.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</Text>
 				) }
@@ -629,20 +635,20 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					<>
 						{ /* Theme-location assignment */ }
 						{ locations.length > 0 && (
-							<fieldset className="wp-admin-shell-app-menus__locations">
+							<fieldset className="wp-admin-workspaces-app-menus__locations">
 								<Text
 									variant="heading-sm"
 									render={ <legend /> }
 								>
 									{ __(
 										'Theme locations',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 									) }
 								</Text>
 								<Stack
 									direction="column"
 									gap="xs"
-									className="wp-admin-shell-app-menus__locations-list"
+									className="wp-admin-workspaces-app-menus__locations-list"
 								>
 									{ locations.map( ( loc ) => (
 										<CheckboxControl
@@ -673,7 +679,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 							justify="space-between"
 						>
 							<Text variant="heading-sm" render={ <h3 /> }>
-								{ __( 'Menu items', 'wp-admin-shell' ) }
+								{ __( 'Menu items', 'wp-admin-workspaces' ) }
 							</Text>
 							<Button
 								tone="neutral"
@@ -682,7 +688,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 								onClick={ () => setItemModal( 'create' ) }
 							>
 								<Icon icon={ plus } size={ 16 } />
-								{ __( 'Add item', 'wp-admin-shell' ) }
+								{ __( 'Add item', 'wp-admin-workspaces' ) }
 							</Button>
 						</Stack>
 
@@ -714,14 +720,17 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 							onSelectMenu( record.id );
 						}
 						createSuccessNotice(
-							__( 'Menu saved.', 'wp-admin-shell' ),
+							__( 'Menu saved.', 'wp-admin-workspaces' ),
 							{ type: 'snackbar' }
 						);
 					} }
 					onError={ ( err ) =>
 						createErrorNotice(
 							err?.message ||
-								__( 'Failed to save menu.', 'wp-admin-shell' ),
+								__(
+									'Failed to save menu.',
+									'wp-admin-workspaces'
+								),
 							{ isDismissible: true }
 						)
 					}
@@ -743,7 +752,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 					onSaved={ () => {
 						refreshItems();
 						createSuccessNotice(
-							__( 'Menu item saved.', 'wp-admin-shell' ),
+							__( 'Menu item saved.', 'wp-admin-workspaces' ),
 							{ type: 'snackbar' }
 						);
 					} }
@@ -752,7 +761,7 @@ function MenusEditor( { menus, locations, activeMenuId, onSelectMenu } ) {
 							err?.message ||
 								__(
 									'Failed to save menu item.',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								),
 							{ isDismissible: true }
 						)
@@ -788,7 +797,7 @@ function ItemList( {
 } ) {
 	if ( isLoading ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
@@ -796,12 +805,12 @@ function ItemList( {
 	if ( tree.length === 0 ) {
 		return (
 			<Text>
-				{ __( 'This menu has no items yet.', 'wp-admin-shell' ) }
+				{ __( 'This menu has no items yet.', 'wp-admin-workspaces' ) }
 			</Text>
 		);
 	}
 	return (
-		<ul className="wp-admin-shell-app-menus__items">
+		<ul className="wp-admin-workspaces-app-menus__items">
 			{ tree.map( ( { item, depth } ) => (
 				<MenuItemRow
 					key={ item.id }
@@ -848,7 +857,7 @@ function MenuItemRow( {
 	);
 	return (
 		<li
-			className="wp-admin-shell-app-menus__item"
+			className="wp-admin-workspaces-app-menus__item"
 			style={
 				depth > 0
 					? { marginInlineStart: `${ depth * 1.5 }rem` }
@@ -865,9 +874,9 @@ function MenuItemRow( {
 					<Button
 						variant="minimal"
 						onClick={ onEdit }
-						className="wp-admin-shell-app-menus__item-label"
+						className="wp-admin-workspaces-app-menus__item-label"
 					>
-						{ title || __( '(no label)', 'wp-admin-shell' ) }
+						{ title || __( '(no label)', 'wp-admin-workspaces' ) }
 					</Button>
 					{ item.type && (
 						<Badge intent="neutral">
@@ -878,12 +887,12 @@ function MenuItemRow( {
 				<Stack direction="row" align="center" gap="xs">
 					<IconAction
 						icon="chevronUp"
-						label={ __( 'Move up', 'wp-admin-shell' ) }
+						label={ __( 'Move up', 'wp-admin-workspaces' ) }
 						onClick={ onMoveUp }
 					/>
 					<IconAction
 						icon="chevronDown"
-						label={ __( 'Move down', 'wp-admin-shell' ) }
+						label={ __( 'Move down', 'wp-admin-workspaces' ) }
 						onClick={ onMoveDown }
 					/>
 					{ /* Outdent / Indent: the raw chevron glyphs are LTR-oriented
@@ -893,19 +902,19 @@ function MenuItemRow( {
 					     on `dir="rtl"`. */ }
 					<IconAction
 						icon="chevronLeft"
-						label={ __( 'Outdent', 'wp-admin-shell' ) }
+						label={ __( 'Outdent', 'wp-admin-workspaces' ) }
 						onClick={ onOutdent }
 					/>
 					<IconAction
 						icon="chevronRight"
-						label={ __( 'Indent', 'wp-admin-shell' ) }
+						label={ __( 'Indent', 'wp-admin-workspaces' ) }
 						onClick={ onIndent }
 					/>
 					<Button variant="minimal" size="small" onClick={ onEdit }>
-						{ __( 'Edit', 'wp-admin-shell' ) }
+						{ __( 'Edit', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button variant="minimal" size="small" onClick={ onRemove }>
-						{ __( 'Remove', 'wp-admin-shell' ) }
+						{ __( 'Remove', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>
@@ -952,20 +961,20 @@ function DeleteMenuButton( { onDelete } ) {
 				size="compact"
 				onClick={ () => setConfirming( true ) }
 			>
-				{ __( 'Delete menu', 'wp-admin-shell' ) }
+				{ __( 'Delete menu', 'wp-admin-workspaces' ) }
 			</Button>
 		);
 	}
 	return (
 		<Modal
-			title={ __( 'Delete this menu?', 'wp-admin-shell' ) }
+			title={ __( 'Delete this menu?', 'wp-admin-workspaces' ) }
 			onRequestClose={ () => setConfirming( false ) }
 		>
 			<Stack direction="column" gap="md">
 				<Text>
 					{ __(
 						'This permanently deletes the menu and all of its items.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 				<Stack direction="row" justify="flex-end" gap="sm">
@@ -973,7 +982,7 @@ function DeleteMenuButton( { onDelete } ) {
 						variant="minimal"
 						onClick={ () => setConfirming( false ) }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -983,7 +992,7 @@ function DeleteMenuButton( { onDelete } ) {
 							onDelete();
 						} }
 					>
-						{ __( 'Delete', 'wp-admin-shell' ) }
+						{ __( 'Delete', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

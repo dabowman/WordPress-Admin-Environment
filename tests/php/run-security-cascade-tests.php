@@ -20,7 +20,7 @@
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 class WPAS_Security_Cascade_Test_Runner {
 	public static $pass = 0;
@@ -53,7 +53,7 @@ $T = 'WPAS_Security_Cascade_Test_Runner';
 
 echo "\n— Trust-tier enforcement on screens[].permissions —\n";
 
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 
 // User origin attempts to ADD `manage_options` to a screen whose baseline
 // only declares `read`. Shrink-only rule strips it.
@@ -78,7 +78,7 @@ $user_doc = array(
 	),
 );
 
-$filtered = WP_Admin_Shell_Permissions::enforce_origin_tier( $user_doc, $baseline_doc, 'user' );
+$filtered = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $user_doc, $baseline_doc, 'user' );
 $T::assert_eq(
 	'user-origin: caps shrunk to baseline intersection (drops manage_options)',
 	$filtered['screens']['profile']['permissions']['capabilities'],
@@ -90,14 +90,14 @@ $T::assert_eq(
 	array( 'subscriber' )
 );
 
-$audit = WP_Admin_Shell_Permissions::get_audit();
+$audit = WP_Admin_Workspaces_Permissions::get_audit();
 $T::assert_true(
 	'user-origin: audit recorded ≥2 grow attempts',
 	count( $audit ) >= 2
 );
 
 // User origin REMOVES — kept (shrink-only allows removal).
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 $user_remove = array(
 	'screens' => array(
 		'profile' => array(
@@ -108,7 +108,7 @@ $user_remove = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Permissions::enforce_origin_tier( $user_remove, $baseline_doc, 'user' );
+$filtered = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $user_remove, $baseline_doc, 'user' );
 $T::assert_eq(
 	'user-origin: removing caps from baseline kept',
 	$filtered['screens']['profile']['permissions']['capabilities'],
@@ -116,12 +116,12 @@ $T::assert_eq(
 );
 $T::assert_eq(
 	'user-origin: removing caps generates zero audit entries',
-	count( WP_Admin_Shell_Permissions::get_audit() ),
+	count( WP_Admin_Workspaces_Permissions::get_audit() ),
 	0
 );
 
 // Site origin ADDS — kept (top of trust tier; add+remove allowed).
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 $site_doc = array(
 	'screens' => array(
 		'profile' => array(
@@ -131,7 +131,7 @@ $site_doc = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Permissions::enforce_origin_tier( $site_doc, $baseline_doc, 'site' );
+$filtered = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $site_doc, $baseline_doc, 'site' );
 $T::assert_eq(
 	'site-origin: ADD is allowed (kept verbatim — top of trust tier)',
 	$filtered['screens']['profile']['permissions']['capabilities'],
@@ -139,7 +139,7 @@ $T::assert_eq(
 );
 
 // Role origin behaves like user (consumer tier).
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 $role_grow = array(
 	'screens' => array(
 		'profile' => array(
@@ -149,7 +149,7 @@ $role_grow = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Permissions::enforce_origin_tier( $role_grow, $baseline_doc, 'role' );
+$filtered = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $role_grow, $baseline_doc, 'role' );
 $T::assert_eq(
 	'role-origin: grow attempt stripped',
 	$filtered['screens']['profile']['permissions']['capabilities'],
@@ -161,7 +161,7 @@ $T::assert_eq(
 echo "\n— Null tombstone gating —\n";
 
 // Consumer `merge()` ignores null tombstone.
-$consumer_merge = WP_Admin_Shell_Merge::merge(
+$consumer_merge = WP_Admin_Workspaces_Merge::merge(
 	array( 'screens' => array( 'users' => array( 'label' => 'Users' ) ) ),
 	array( 'screens' => array( 'users' => null ) )
 );
@@ -171,7 +171,7 @@ $T::assert_true(
 );
 
 // `merge_with_tombstones` honors null tombstone — used for site origin.
-$site_merge = WP_Admin_Shell_Merge::merge_with_tombstones(
+$site_merge = WP_Admin_Workspaces_Merge::merge_with_tombstones(
 	array( 'screens' => array( 'users' => array( 'label' => 'Users' ) ) ),
 	array( 'screens' => array( 'users' => null ) )
 );
@@ -181,7 +181,7 @@ $T::assert_false(
 );
 
 // `merge_authoritative` honors null tombstone — used for trusted origins.
-$auth_merge = WP_Admin_Shell_Merge::merge_authoritative(
+$auth_merge = WP_Admin_Workspaces_Merge::merge_authoritative(
 	array( 'screens' => array( 'users' => array( 'label' => 'Users' ) ) ),
 	array( 'screens' => array( 'users' => null ) )
 );
@@ -191,7 +191,7 @@ $T::assert_false(
 );
 
 // `__tombstone: true` in keyed-array entry — consumer merge no-ops.
-$consumer_kt = WP_Admin_Shell_Merge::merge(
+$consumer_kt = WP_Admin_Workspaces_Merge::merge(
 	array( 'menu' => array(
 		array( 'id' => 'posts', 'label' => 'Posts' ),
 		array( 'id' => 'pages', 'label' => 'Pages' ),
@@ -219,7 +219,7 @@ $T::assert_false(
 );
 
 // Same payload through merge_with_tombstones — honored.
-$site_kt = WP_Admin_Shell_Merge::merge_with_tombstones(
+$site_kt = WP_Admin_Workspaces_Merge::merge_with_tombstones(
 	array( 'menu' => array(
 		array( 'id' => 'posts', 'label' => 'Posts' ),
 		array( 'id' => 'pages', 'label' => 'Pages' ),
@@ -239,7 +239,7 @@ $T::assert_true(
 );
 
 // Deep-nested null tombstone via consumer merge — no-op at deep path too.
-$deep_consumer = WP_Admin_Shell_Merge::merge(
+$deep_consumer = WP_Admin_Workspaces_Merge::merge(
 	array( 'styles' => array( 'color' => array( 'primary' => '#000', 'bg' => '#fff' ) ) ),
 	array( 'styles' => array( 'color' => array( 'primary' => null ) ) )
 );
@@ -249,7 +249,7 @@ $T::assert_true(
 );
 
 // Same via site origin — honored.
-$deep_site = WP_Admin_Shell_Merge::merge_with_tombstones(
+$deep_site = WP_Admin_Workspaces_Merge::merge_with_tombstones(
 	array( 'styles' => array( 'color' => array( 'primary' => '#000', 'bg' => '#fff' ) ) ),
 	array( 'styles' => array( 'color' => array( 'primary' => null ) ) )
 );
@@ -283,7 +283,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'consumer user-origin: no customizable declaration → screens block dropped',
 	! isset( $filtered['screens'] )
@@ -307,7 +307,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_eq(
 	'consumer user-origin: allowlisted "label" path survives',
 	$filtered['screens']['users']['label'] ?? null,
@@ -335,7 +335,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'hardcoded deny: screens.*.permissions rejected even with matching allowlist',
 	! isset( $filtered['screens']['users']['permissions'] )
@@ -357,7 +357,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'hardcoded deny: screens.*.app rejected even with matching allowlist',
 	! isset( $filtered['screens']['users']['app'] )
@@ -393,7 +393,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'hardcoded deny: menu.*.permissions rejected (top level)',
 	! isset( $filtered['menu']['tools']['permissions'] )
@@ -421,28 +421,24 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'hardcoded deny: commands[].invoke rejected even with matching allowlist',
 	empty( $filtered['commands'] )
 );
 
-// Hardcoded deny — workspace.engine NEVER writable.
+// Hardcoded deny — the top-level `engine` is NEVER writable.
 $upstream = array(
-	'workspace' => array(
-		'engine'       => 'core:default',
-		'customizable' => array( 'engine' ),
-	),
+	'engine'       => 'core:default',
+	'customizable' => array( 'engine' ),
 );
 $downstream = array(
-	'workspace' => array(
-		'engine' => 'attacker:malicious-engine',
-	),
+	'engine' => 'attacker:malicious-engine',
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
-	'hardcoded deny: workspace.engine rejected even with matching allowlist',
-	! isset( $filtered['workspace']['engine'] )
+	'hardcoded deny: engine rejected even with matching allowlist',
+	! isset( $filtered['engine'] )
 );
 
 // Trust-tier origin (site) — passes through verbatim.
@@ -461,7 +457,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'site' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'site' );
 $T::assert_eq(
 	'trust-tier site: writes pass through verbatim (label changed)',
 	$filtered['screens']['users']['label'] ?? null,
@@ -488,7 +484,7 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_eq(
 	'customizable=true ancestor: descendant write allowed',
 	$filtered['menu']['tools']['label'] ?? null,
@@ -496,7 +492,7 @@ $T::assert_eq(
 );
 
 // Emergency bypass filter restores pre-fix behavior.
-add_filter( 'wp_admin_shell_customizable_bypass', '__return_true' );
+add_filter( 'wp_admin_workspaces_customizable_bypass', '__return_true' );
 $upstream = array(
 	'screens' => array(
 		'users' => array(
@@ -512,13 +508,13 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_eq(
 	'emergency bypass filter: user-origin writes pass through verbatim',
 	$filtered['screens']['users']['label'] ?? null,
 	'BYPASSED'
 );
-remove_filter( 'wp_admin_shell_customizable_bypass', '__return_true' );
+remove_filter( 'wp_admin_workspaces_customizable_bypass', '__return_true' );
 
 // ── 3a. List-shape preservation through filter_v3_block ───────────────
 // Reviewer's finding #1: pre-fix, filter_v3_block flattened list-of-keyed-
@@ -548,10 +544,10 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'list-shape: commands[] survives as a list (NOT assoc map)',
-	is_array( $filtered['commands'] ?? null ) && ! WP_Admin_Shell_Merge::is_assoc( $filtered['commands'] )
+	is_array( $filtered['commands'] ?? null ) && ! WP_Admin_Workspaces_Merge::is_assoc( $filtered['commands'] )
 );
 $T::assert_eq(
 	'list-shape: commands[0].id preserved on the survived entry',
@@ -576,10 +572,10 @@ $base_doc = array(
 		array( 'id' => 'find',   'shortcut' => 'Mod+F',     'invoke' => 'core/find' ),
 	),
 );
-$merged = WP_Admin_Shell_Merge::merge( $base_doc, $filtered );
+$merged = WP_Admin_Workspaces_Merge::merge( $base_doc, $filtered );
 $T::assert_true(
 	'list-shape merge: merged commands stays a list',
-	is_array( $merged['commands'] ) && ! WP_Admin_Shell_Merge::is_assoc( $merged['commands'] )
+	is_array( $merged['commands'] ) && ! WP_Admin_Workspaces_Merge::is_assoc( $merged['commands'] )
 );
 $T::assert_eq(
 	'list-shape merge: all three base entries survive (no list-replacement bug)',
@@ -639,10 +635,10 @@ $downstream = array(
 		),
 	),
 );
-$filtered = WP_Admin_Shell_Customizable::filter_doc( $upstream, $downstream, 'user' );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
 	'nested keyed-list: screens.posts.apps[] stays a list',
-	is_array( $filtered['screens']['posts']['apps'] ?? null ) && ! WP_Admin_Shell_Merge::is_assoc( $filtered['screens']['posts']['apps'] )
+	is_array( $filtered['screens']['posts']['apps'] ?? null ) && ! WP_Admin_Workspaces_Merge::is_assoc( $filtered['screens']['posts']['apps'] )
 );
 $T::assert_eq(
 	'nested keyed-list: every consumer entry survives (with id field intact)',
@@ -661,9 +657,9 @@ $T::assert_eq(
 
 echo "\n— is_safe_href —\n";
 
-// is_safe_href is private — exercise indirectly via wp_admin_shell_register_menu_item.
+// is_safe_href is private — exercise indirectly via wp_admin_workspaces_register_menu_item.
 // Register an item with a known-bad href and assert it's rejected.
-$bypass_evil = wp_admin_shell_register_menu_item( 'wpas-test-evil', array(
+$bypass_evil = wp_admin_workspaces_register_menu_item( 'wpas-test-evil', array(
 	'label' => 'evil',
 	'href'  => '//evil.example.com',
 ) );
@@ -672,7 +668,7 @@ $T::assert_true(
 	is_wp_error( $bypass_evil )
 );
 
-$bypass_evil_long = wp_admin_shell_register_menu_item( 'wpas-test-evil-long', array(
+$bypass_evil_long = wp_admin_workspaces_register_menu_item( 'wpas-test-evil-long', array(
 	'label' => 'evil',
 	'href'  => '//evil.example.com/wp-login.php?redirect=true',
 ) );
@@ -682,7 +678,7 @@ $T::assert_true(
 );
 
 // Affirmative cases — accepted hrefs.
-$root_relative = wp_admin_shell_register_menu_item( 'wpas-test-root', array(
+$root_relative = wp_admin_workspaces_register_menu_item( 'wpas-test-root', array(
 	'label' => 'ok',
 	'href'  => '/wp-admin/foo.php',
 ) );
@@ -691,7 +687,7 @@ $T::assert_true(
 	! is_wp_error( $root_relative )
 );
 
-$hash = wp_admin_shell_register_menu_item( 'wpas-test-hash', array(
+$hash = wp_admin_workspaces_register_menu_item( 'wpas-test-hash', array(
 	'label' => 'ok',
 	'href'  => '#anchor',
 ) );
@@ -700,7 +696,7 @@ $T::assert_true(
 	! is_wp_error( $hash )
 );
 
-$https = wp_admin_shell_register_menu_item( 'wpas-test-https', array(
+$https = wp_admin_workspaces_register_menu_item( 'wpas-test-https', array(
 	'label' => 'ok',
 	'href'  => 'https://wordpress.org/',
 ) );
@@ -709,7 +705,7 @@ $T::assert_true(
 	! is_wp_error( $https )
 );
 
-$mailto = wp_admin_shell_register_menu_item( 'wpas-test-mailto', array(
+$mailto = wp_admin_workspaces_register_menu_item( 'wpas-test-mailto', array(
 	'label' => 'ok',
 	'href'  => 'mailto:user@example.com',
 ) );
@@ -719,7 +715,7 @@ $T::assert_true(
 );
 
 // Other rejected schemes.
-$js = wp_admin_shell_register_menu_item( 'wpas-test-js', array(
+$js = wp_admin_workspaces_register_menu_item( 'wpas-test-js', array(
 	'label' => 'evil',
 	'href'  => 'javascript:alert(1)',
 ) );
@@ -728,7 +724,7 @@ $T::assert_true(
 	is_wp_error( $js )
 );
 
-$data_url = wp_admin_shell_register_menu_item( 'wpas-test-data', array(
+$data_url = wp_admin_workspaces_register_menu_item( 'wpas-test-data', array(
 	'label' => 'evil',
 	'href'  => 'data:text/html,<script>alert(1)</script>',
 ) );
@@ -740,7 +736,7 @@ $T::assert_true(
 // vbscript: is rejected by the fall-through `strpos(':') === false`
 // branch — was claimed in the docblock but never asserted. Add
 // explicit coverage to lock the contract.
-$vbs = wp_admin_shell_register_menu_item( 'wpas-test-vbs', array(
+$vbs = wp_admin_workspaces_register_menu_item( 'wpas-test-vbs', array(
 	'label' => 'evil',
 	'href'  => 'vbscript:msgbox(1)',
 ) );
@@ -752,7 +748,7 @@ $T::assert_true(
 // Whitespace-leading protocol-relative — HTML5 strips before
 // navigation, so the browser would route to `//evil.example.com`.
 // The validator's `trim()` neutralizes the bypass.
-$ws_space = wp_admin_shell_register_menu_item( 'wpas-test-ws-space', array(
+$ws_space = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-space', array(
 	'label' => 'evil',
 	'href'  => ' //evil.example.com',
 ) );
@@ -761,7 +757,7 @@ $T::assert_true(
 	is_wp_error( $ws_space )
 );
 
-$ws_tab = wp_admin_shell_register_menu_item( 'wpas-test-ws-tab', array(
+$ws_tab = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-tab', array(
 	'label' => 'evil',
 	'href'  => "\t//evil.example.com",
 ) );
@@ -770,7 +766,7 @@ $T::assert_true(
 	is_wp_error( $ws_tab )
 );
 
-$ws_newline = wp_admin_shell_register_menu_item( 'wpas-test-ws-newline', array(
+$ws_newline = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-newline', array(
 	'label' => 'evil',
 	'href'  => "\n//evil.example.com",
 ) );
@@ -779,7 +775,7 @@ $T::assert_true(
 	is_wp_error( $ws_newline )
 );
 
-$ws_multi = wp_admin_shell_register_menu_item( 'wpas-test-ws-multi', array(
+$ws_multi = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-multi', array(
 	'label' => 'evil',
 	'href'  => "  \t //evil.example.com",
 ) );
@@ -790,7 +786,7 @@ $T::assert_true(
 
 // Form-feed (`\x0c`) is WHATWG-stripped ASCII whitespace but absent from
 // PHP's default trim() charset — the explicit charlist must catch it.
-$ws_ff = wp_admin_shell_register_menu_item( 'wpas-test-ws-ff', array(
+$ws_ff = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-ff', array(
 	'label' => 'evil',
 	'href'  => "\x0c//evil.example.com",
 ) );
@@ -802,7 +798,7 @@ $T::assert_true(
 // Backslash variants. Browsers sometimes treat `\\host` as
 // protocol-relative; legacy WebViews and IE/Edge historically did.
 // Defense-in-depth reject.
-$bs_double = wp_admin_shell_register_menu_item( 'wpas-test-bs-double', array(
+$bs_double = wp_admin_workspaces_register_menu_item( 'wpas-test-bs-double', array(
 	'label' => 'evil',
 	'href'  => '\\\\evil.example.com',
 ) );
@@ -811,7 +807,7 @@ $T::assert_true(
 	is_wp_error( $bs_double )
 );
 
-$bs_escaped = wp_admin_shell_register_menu_item( 'wpas-test-bs-escaped', array(
+$bs_escaped = wp_admin_workspaces_register_menu_item( 'wpas-test-bs-escaped', array(
 	'label' => 'evil',
 	'href'  => '\\/\\/evil.example.com',
 ) );
@@ -822,7 +818,7 @@ $T::assert_true(
 
 // Whitespace-only href trims to '' and is accepted (no navigation
 // target → nothing harmful to register).
-$ws_only = wp_admin_shell_register_menu_item( 'wpas-test-ws-only', array(
+$ws_only = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-only', array(
 	'label' => 'ok',
 	'href'  => '   ',
 ) );
@@ -833,7 +829,7 @@ $T::assert_true(
 
 // Normal hrefs with leading whitespace still validate to the trimmed
 // inner value — `  /wp-admin/foo.php` → `/wp-admin/foo.php` → accepted.
-$ws_safe = wp_admin_shell_register_menu_item( 'wpas-test-ws-safe', array(
+$ws_safe = wp_admin_workspaces_register_menu_item( 'wpas-test-ws-safe', array(
 	'label' => 'ok',
 	'href'  => '  /wp-admin/foo.php',
 ) );
@@ -842,7 +838,7 @@ $T::assert_true(
 	! is_wp_error( $ws_safe )
 );
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
 echo "\nTOTAL: " . $T::$pass . " passed, " . $T::$fail . " failed of " . ( $T::$pass + $T::$fail ) . "\n";
 exit( $T::$fail > 0 ? 1 : 0 );

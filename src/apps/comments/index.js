@@ -43,32 +43,32 @@ import ViewTabs from '../_shared/dataviews/ViewTabs';
  * has no editable-cell / detail-row primitive), so both ship as modal actions.
  */
 const STATUS_LABELS = {
-	approved: __( 'Approved', 'wp-admin-shell' ),
-	hold: __( 'Pending', 'wp-admin-shell' ),
-	spam: __( 'Spam', 'wp-admin-shell' ),
-	trash: __( 'Trash', 'wp-admin-shell' ),
+	approved: __( 'Approved', 'wp-admin-workspaces' ),
+	hold: __( 'Pending', 'wp-admin-workspaces' ),
+	spam: __( 'Spam', 'wp-admin-workspaces' ),
+	trash: __( 'Trash', 'wp-admin-workspaces' ),
 };
 
 const STATUS_VALUES = Object.keys( STATUS_LABELS );
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	author: __( 'Author', 'wp-admin-shell' ),
-	content: __( 'Comment', 'wp-admin-shell' ),
-	status: __( 'Status', 'wp-admin-shell' ),
-	date: __( 'Date', 'wp-admin-shell' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
+	content: __( 'Comment', 'wp-admin-workspaces' ),
+	status: __( 'Status', 'wp-admin-workspaces' ),
+	date: __( 'Date', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	reply: __( 'Reply', 'wp-admin-shell' ),
-	approve: __( 'Approve', 'wp-admin-shell' ),
-	unapprove: __( 'Unapprove', 'wp-admin-shell' ),
-	spam: __( 'Mark as spam', 'wp-admin-shell' ),
-	unspam: __( 'Not spam', 'wp-admin-shell' ),
-	trash: __( 'Move to trash', 'wp-admin-shell' ),
-	untrash: __( 'Restore', 'wp-admin-shell' ),
-	'delete-permanently': __( 'Delete permanently', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	reply: __( 'Reply', 'wp-admin-workspaces' ),
+	approve: __( 'Approve', 'wp-admin-workspaces' ),
+	unapprove: __( 'Unapprove', 'wp-admin-workspaces' ),
+	spam: __( 'Mark as spam', 'wp-admin-workspaces' ),
+	unspam: __( 'Not spam', 'wp-admin-workspaces' ),
+	trash: __( 'Move to trash', 'wp-admin-workspaces' ),
+	untrash: __( 'Restore', 'wp-admin-workspaces' ),
+	'delete-permanently': __( 'Delete permanently', 'wp-admin-workspaces' ),
 };
 
 /**
@@ -77,11 +77,11 @@ const ACTION_LABELS = {
  * label but loses the success message — the default fallback covers it.
  */
 const STATUS_SUCCESS_LABELS = {
-	approve: __( 'Approved.', 'wp-admin-shell' ),
-	unapprove: __( 'Set to pending.', 'wp-admin-shell' ),
-	spam: __( 'Marked as spam.', 'wp-admin-shell' ),
-	unspam: __( 'No longer marked as spam.', 'wp-admin-shell' ),
-	untrash: __( 'Restored.', 'wp-admin-shell' ),
+	approve: __( 'Approved.', 'wp-admin-workspaces' ),
+	unapprove: __( 'Set to pending.', 'wp-admin-workspaces' ),
+	spam: __( 'Marked as spam.', 'wp-admin-workspaces' ),
+	unspam: __( 'No longer marked as spam.', 'wp-admin-workspaces' ),
+	untrash: __( 'Restored.', 'wp-admin-workspaces' ),
 };
 
 /**
@@ -103,25 +103,25 @@ const STATUS_TARGETS = {
 // counts object is `{ approved, hold, spam, trash }`. "All" carries no count
 // (it's the unfiltered `status: 'any'` base, not a single status value).
 const VIEW_TAB_SEGMENTS = [
-	{ id: 'all', label: __( 'All', 'wp-admin-shell' ), filter: null },
+	{ id: 'all', label: __( 'All', 'wp-admin-workspaces' ), filter: null },
 	{
 		id: 'hold',
-		label: __( 'Pending', 'wp-admin-shell' ),
+		label: __( 'Pending', 'wp-admin-workspaces' ),
 		filter: { field: 'status', value: 'hold' },
 	},
 	{
 		id: 'approved',
-		label: __( 'Approved', 'wp-admin-shell' ),
+		label: __( 'Approved', 'wp-admin-workspaces' ),
 		filter: { field: 'status', value: 'approved' },
 	},
 	{
 		id: 'spam',
-		label: __( 'Spam', 'wp-admin-shell' ),
+		label: __( 'Spam', 'wp-admin-workspaces' ),
 		filter: { field: 'status', value: 'spam' },
 	},
 	{
 		id: 'trash',
-		label: __( 'Trash', 'wp-admin-shell' ),
+		label: __( 'Trash', 'wp-admin-workspaces' ),
 		filter: { field: 'status', value: 'trash' },
 	},
 ];
@@ -183,11 +183,11 @@ function AuthorCell( { item } ) {
 			direction="row"
 			gap="sm"
 			align="flex-start"
-			className="wp-admin-shell-app-comments__author"
+			className="wp-admin-workspaces-app-comments__author"
 		>
 			{ item.avatarUrl ? (
 				<img
-					className="wp-admin-shell-app-comments__avatar"
+					className="wp-admin-workspaces-app-comments__avatar"
 					src={ item.avatarUrl }
 					alt=""
 					width={ 32 }
@@ -197,12 +197,13 @@ function AuthorCell( { item } ) {
 			<Stack direction="column" gap="xs">
 				<Text>
 					<strong>
-						{ item.author || __( 'Anonymous', 'wp-admin-shell' ) }
+						{ item.author ||
+							__( 'Anonymous', 'wp-admin-workspaces' ) }
 					</strong>
 				</Text>
 				{ item.authorEmail ? (
 					<a
-						className="wp-admin-shell-app-comments__author-email"
+						className="wp-admin-workspaces-app-comments__author-email"
 						href={ `mailto:${ item.authorEmail }` }
 					>
 						{ item.authorEmail }
@@ -210,7 +211,7 @@ function AuthorCell( { item } ) {
 				) : null }
 				{ item.authorUrl ? (
 					<a
-						className="wp-admin-shell-app-comments__author-url"
+						className="wp-admin-workspaces-app-comments__author-url"
 						href={ item.authorUrl }
 						target="_blank"
 						rel="noopener noreferrer"
@@ -219,7 +220,7 @@ function AuthorCell( { item } ) {
 					</a>
 				) : null }
 				{ canModerate && item.authorIp ? (
-					<Text className="wp-admin-shell-app__muted">
+					<Text className="wp-admin-workspaces-app__muted">
 						{ item.authorIp }
 					</Text>
 				) : null }
@@ -239,7 +240,7 @@ const FIELD_RENDERERS = {
 	// been sanitized before it reaches the REST response.
 	content: ( { item } ) => (
 		<div
-			className="wp-admin-shell-app-comments__excerpt"
+			className="wp-admin-workspaces-app-comments__excerpt"
 			dangerouslySetInnerHTML={ { __html: item.content } }
 		/>
 	),
@@ -263,35 +264,35 @@ const EDIT_FIELDS = [
 	{
 		id: 'author_name',
 		type: 'text',
-		label: __( 'Name', 'wp-admin-shell' ),
+		label: __( 'Name', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'author_email',
 		type: 'email',
-		label: __( 'Email', 'wp-admin-shell' ),
+		label: __( 'Email', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'author_url',
 		type: 'text',
-		label: __( 'URL', 'wp-admin-shell' ),
+		label: __( 'URL', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'content',
 		type: 'text',
-		label: __( 'Comment', 'wp-admin-shell' ),
+		label: __( 'Comment', 'wp-admin-workspaces' ),
 		Edit: { control: 'textarea', rows: 6 },
 	},
 	{
 		id: 'status',
 		type: 'text',
-		label: __( 'Status', 'wp-admin-shell' ),
+		label: __( 'Status', 'wp-admin-workspaces' ),
 		elements: STATUS_ELEMENTS,
 		Edit: 'select',
 	},
 	{
 		id: 'date',
 		type: 'datetime',
-		label: __( 'Date', 'wp-admin-shell' ),
+		label: __( 'Date', 'wp-admin-workspaces' ),
 	},
 ];
 
@@ -311,7 +312,7 @@ const REPLY_FIELDS = [
 	{
 		id: 'content',
 		type: 'text',
-		label: __( 'Reply', 'wp-admin-shell' ),
+		label: __( 'Reply', 'wp-admin-workspaces' ),
 		Edit: { control: 'textarea', rows: 6 },
 		isValid: { required: true },
 	},
@@ -449,7 +450,7 @@ export default function CommentsApp( { config = {} } ) {
 			).length;
 			if ( failed === 0 ) {
 				createSuccessNotice(
-					label || __( 'Updated.', 'wp-admin-shell' ),
+					label || __( 'Updated.', 'wp-admin-workspaces' ),
 					{ type: 'snackbar' }
 				);
 			} else if ( failed === items.length ) {
@@ -458,7 +459,7 @@ export default function CommentsApp( { config = {} } ) {
 				);
 				createErrorNotice(
 					firstError?.reason?.message ||
-						__( 'Action failed.', 'wp-admin-shell' ),
+						__( 'Action failed.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			} else {
@@ -469,7 +470,7 @@ export default function CommentsApp( { config = {} } ) {
 							'%1$d of %2$d comment failed to update.',
 							'%1$d of %2$d comments failed to update.',
 							failed,
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						),
 						failed,
 						items.length
@@ -521,9 +522,9 @@ export default function CommentsApp( { config = {} } ) {
 						  '',
 			} ),
 			messages: {
-				saved: __( 'Comment updated.', 'wp-admin-shell' ),
-				error: __( 'Failed to update comment.', 'wp-admin-shell' ),
-				saveLabel: __( 'Update', 'wp-admin-shell' ),
+				saved: __( 'Comment updated.', 'wp-admin-workspaces' ),
+				error: __( 'Failed to update comment.', 'wp-admin-workspaces' ),
+				saveLabel: __( 'Update', 'wp-admin-workspaces' ),
 			},
 			onSaved: refreshList,
 		} );
@@ -546,25 +547,26 @@ export default function CommentsApp( { config = {} } ) {
 				<Stack
 					direction="column"
 					gap="xs"
-					className="wp-admin-shell-app-comments__reply-context"
+					className="wp-admin-workspaces-app-comments__reply-context"
 				>
-					<Text className="wp-admin-shell-app__muted">
+					<Text className="wp-admin-workspaces-app__muted">
 						{ sprintf(
 							/* translators: %s: comment author name. */
-							__( 'In reply to %s', 'wp-admin-shell' ),
-							item.author || __( 'Anonymous', 'wp-admin-shell' )
+							__( 'In reply to %s', 'wp-admin-workspaces' ),
+							item.author ||
+								__( 'Anonymous', 'wp-admin-workspaces' )
 						) }
 					</Text>
 					<div
-						className="wp-admin-shell-app-comments__excerpt"
+						className="wp-admin-workspaces-app-comments__excerpt"
 						dangerouslySetInnerHTML={ { __html: item.content } }
 					/>
 				</Stack>
 			),
 			messages: {
-				saved: __( 'Reply posted.', 'wp-admin-shell' ),
-				error: __( 'Failed to post reply.', 'wp-admin-shell' ),
-				createLabel: __( 'Reply', 'wp-admin-shell' ),
+				saved: __( 'Reply posted.', 'wp-admin-workspaces' ),
+				error: __( 'Failed to post reply.', 'wp-admin-workspaces' ),
+				createLabel: __( 'Reply', 'wp-admin-workspaces' ),
 			},
 			onSaved: refreshList,
 		} );
@@ -572,9 +574,12 @@ export default function CommentsApp( { config = {} } ) {
 		const trashModal = createBulkConfirmModal( {
 			getMessage: ( items ) =>
 				items.length === 1
-					? __( 'Move this comment to trash?', 'wp-admin-shell' )
-					: __( 'Move these comments to trash?', 'wp-admin-shell' ),
-			confirmLabel: __( 'Trash', 'wp-admin-shell' ),
+					? __( 'Move this comment to trash?', 'wp-admin-workspaces' )
+					: __(
+							'Move these comments to trash?',
+							'wp-admin-workspaces'
+					  ),
+			confirmLabel: __( 'Trash', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'root', 'comment', item.id ),
 			onSettled: ( { items, failed } ) => {
@@ -587,7 +592,7 @@ export default function CommentsApp( { config = {} } ) {
 								'%1$d of %2$d comment failed to move to trash.',
 								'%1$d of %2$d comments failed to move to trash.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							items.length
@@ -596,7 +601,7 @@ export default function CommentsApp( { config = {} } ) {
 					);
 				} else {
 					createSuccessNotice(
-						__( 'Moved to trash.', 'wp-admin-shell' ),
+						__( 'Moved to trash.', 'wp-admin-workspaces' ),
 						{ type: 'snackbar' }
 					);
 				}
@@ -608,13 +613,13 @@ export default function CommentsApp( { config = {} } ) {
 				items.length === 1
 					? __(
 							'Permanently delete this comment? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  )
 					: __(
 							'Permanently delete these comments? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Delete permanently', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete permanently', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'root', 'comment', item.id, {
 					force: true,
@@ -629,7 +634,7 @@ export default function CommentsApp( { config = {} } ) {
 								'%1$d of %2$d comment failed to delete.',
 								'%1$d of %2$d comments failed to delete.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							items.length
@@ -638,7 +643,7 @@ export default function CommentsApp( { config = {} } ) {
 					);
 				} else {
 					createSuccessNotice(
-						__( 'Permanently deleted.', 'wp-admin-shell' ),
+						__( 'Permanently deleted.', 'wp-admin-workspaces' ),
 						{ type: 'snackbar' }
 					);
 				}
@@ -728,9 +733,9 @@ export default function CommentsApp( { config = {} } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-comments wp-admin-shell-app--fill">
+		<div className="wp-admin-workspaces-app-comments wp-admin-workspaces-app--fill">
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (

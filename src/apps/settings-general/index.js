@@ -19,13 +19,13 @@ import { useEntitySave } from '../_shared/forms/useEntitySave';
 const CUSTOM_RADIO_VALUE = '__custom__';
 
 export default function SettingsGeneralApp() {
-	const data = window.wpAdminShell?.settingsGeneral;
+	const data = window.wpAdminWorkspaces?.settingsGeneral;
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'site' );
 
 	const handleSave = useEntitySave( save, {
-		success: __( 'Settings saved.', 'wp-admin-shell' ),
-		error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+		success: __( 'Settings saved.', 'wp-admin-workspaces' ),
+		error: __( 'Failed to save settings.', 'wp-admin-workspaces' ),
 	} );
 	const [ dateFormatCustom, setDateFormatCustom ] = useState(
 		editedRecord?.date_format || ''
@@ -65,7 +65,7 @@ export default function SettingsGeneralApp() {
 
 	if ( ! record || ! data ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
@@ -92,7 +92,7 @@ export default function SettingsGeneralApp() {
 		} ) ),
 		{
 			value: CUSTOM_RADIO_VALUE,
-			label: __( 'Custom', 'wp-admin-shell' ),
+			label: __( 'Custom', 'wp-admin-workspaces' ),
 		},
 	];
 	const timeFormatOptions = [
@@ -102,28 +102,31 @@ export default function SettingsGeneralApp() {
 		} ) ),
 		{
 			value: CUSTOM_RADIO_VALUE,
-			label: __( 'Custom', 'wp-admin-shell' ),
+			label: __( 'Custom', 'wp-admin-workspaces' ),
 		},
 	];
 
 	return (
-		<Page title={ __( 'General Settings', 'wp-admin-shell' ) } hasPadding>
+		<Page
+			title={ __( 'General Settings', 'wp-admin-workspaces' ) }
+			hasPadding
+		>
 			<Stack
 				direction="column"
 				gap="xl"
-				className="wp-admin-shell-app-settings-general"
+				className="wp-admin-workspaces-app-settings-general"
 			>
 				{ /* Site identity */ }
 				<InputControl
-					label={ __( 'Site Title', 'wp-admin-shell' ) }
+					label={ __( 'Site Title', 'wp-admin-workspaces' ) }
 					value={ editedRecord.title || '' }
 					onChange={ ( e ) => edit( { title: eventValue( e ) } ) }
 				/>
 				<InputControl
-					label={ __( 'Tagline', 'wp-admin-shell' ) }
+					label={ __( 'Tagline', 'wp-admin-workspaces' ) }
 					description={ __(
 						'In a few words, explain what this site is about.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 					value={ editedRecord.description || '' }
 					onChange={ ( e ) =>
@@ -136,7 +139,7 @@ export default function SettingsGeneralApp() {
 						<InputControl
 							label={ __(
 								'WordPress Address (URL)',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 							type="url"
 							value={ editedRecord.url || '' }
@@ -148,7 +151,7 @@ export default function SettingsGeneralApp() {
 								data.siteurlConst
 									? __(
 											'Defined by WP_SITEURL constant.',
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 									  )
 									: undefined
 							}
@@ -156,7 +159,7 @@ export default function SettingsGeneralApp() {
 						<InputControl
 							label={ __(
 								'Site Address (URL)',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 							type="url"
 							value={ editedRecord.home || '' }
@@ -168,11 +171,11 @@ export default function SettingsGeneralApp() {
 								data.homeConst
 									? __(
 											'Defined by WP_HOME constant.',
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 									  )
 									: __(
 											'Enter the same as the WordPress Address unless your home page lives elsewhere.',
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 									  )
 							}
 						/>
@@ -184,7 +187,7 @@ export default function SettingsGeneralApp() {
 						<InputControl
 							label={ __(
 								'Administration Email Address',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 							type="email"
 							value={ editedRecord.email || '' }
@@ -193,7 +196,7 @@ export default function SettingsGeneralApp() {
 							}
 							description={ __(
 								'Used for admin purposes. Note: REST API saves this directly without the email-confirmation step that wp-admin uses.',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 						/>
 						{ data.pendingAdminEmail &&
@@ -202,7 +205,7 @@ export default function SettingsGeneralApp() {
 									<Notice.Description>
 										{ __(
 											'There is a pending admin email change to:',
-											'wp-admin-shell'
+											'wp-admin-workspaces'
 										) }
 										<code>{ data.pendingAdminEmail }</code>
 									</Notice.Description>
@@ -216,12 +219,12 @@ export default function SettingsGeneralApp() {
 					<>
 						<Divider />
 						<Text variant="heading-lg" render={ <h3 /> }>
-							{ __( 'Membership', 'wp-admin-shell' ) }
+							{ __( 'Membership', 'wp-admin-workspaces' ) }
 						</Text>
 						<CheckboxControl
 							label={ __(
 								'Anyone can register',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 							checked={ !! editedRecord.users_can_register }
 							onChange={ ( val ) =>
@@ -232,7 +235,7 @@ export default function SettingsGeneralApp() {
 						<SelectControl
 							label={ __(
 								'New User Default Role',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
 							value={ editedRecord.default_role || 'subscriber' }
 							options={ data.roles }
@@ -248,7 +251,7 @@ export default function SettingsGeneralApp() {
 
 				{ /* Language — keeps SelectControl from @wordpress/components for native optgroup support */ }
 				<SelectControl
-					label={ __( 'Site Language', 'wp-admin-shell' ) }
+					label={ __( 'Site Language', 'wp-admin-workspaces' ) }
 					value={ editedRecord.language || '' }
 					onChange={ ( val ) => edit( { language: val } ) }
 					__nextHasNoMarginBottom
@@ -259,7 +262,9 @@ export default function SettingsGeneralApp() {
 						</option>
 					) ) }
 					{ data.languages.installed.length > 0 && (
-						<optgroup label={ __( 'Installed', 'wp-admin-shell' ) }>
+						<optgroup
+							label={ __( 'Installed', 'wp-admin-workspaces' ) }
+						>
 							{ data.languages.installed.map( ( o ) => (
 								<option key={ o.value } value={ o.value }>
 									{ o.label }
@@ -268,7 +273,9 @@ export default function SettingsGeneralApp() {
 						</optgroup>
 					) }
 					{ data.languages.available.length > 0 && (
-						<optgroup label={ __( 'Available', 'wp-admin-shell' ) }>
+						<optgroup
+							label={ __( 'Available', 'wp-admin-workspaces' ) }
+						>
 							{ data.languages.available.map( ( o ) => (
 								<option key={ o.value } value={ o.value }>
 									{ o.label }
@@ -280,12 +287,12 @@ export default function SettingsGeneralApp() {
 
 				{ /* Timezone */ }
 				<SelectControl
-					label={ __( 'Timezone', 'wp-admin-shell' ) }
+					label={ __( 'Timezone', 'wp-admin-workspaces' ) }
 					value={ editedRecord.timezone || data.timezone.current }
 					onChange={ ( val ) => edit( { timezone: val } ) }
 					help={ __(
 						'Choose either a city in the same timezone as you or a UTC offset.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 					__nextHasNoMarginBottom
 				>
@@ -300,10 +307,10 @@ export default function SettingsGeneralApp() {
 					) ) }
 				</SelectControl>
 				<Text variant="body-sm">
-					{ __( 'Universal time:', 'wp-admin-shell' ) }{ ' ' }
+					{ __( 'Universal time:', 'wp-admin-workspaces' ) }{ ' ' }
 					<code>{ data.timezone.utcNow }</code>
 					{ ' · ' }
-					{ __( 'Local time:', 'wp-admin-shell' ) }{ ' ' }
+					{ __( 'Local time:', 'wp-admin-workspaces' ) }{ ' ' }
 					<code>{ data.timezone.localNow }</code>
 				</Text>
 
@@ -311,7 +318,7 @@ export default function SettingsGeneralApp() {
 
 				{ /* Date format */ }
 				<RadioControl
-					label={ __( 'Date Format', 'wp-admin-shell' ) }
+					label={ __( 'Date Format', 'wp-admin-workspaces' ) }
 					selected={ dateFormatRadioValue }
 					options={ dateFormatOptions }
 					onChange={ ( val ) => {
@@ -326,7 +333,10 @@ export default function SettingsGeneralApp() {
 				/>
 				{ dateFormatRadioValue === CUSTOM_RADIO_VALUE && (
 					<InputControl
-						label={ __( 'Custom date format', 'wp-admin-shell' ) }
+						label={ __(
+							'Custom date format',
+							'wp-admin-workspaces'
+						) }
 						value={ editedRecord.date_format || '' }
 						onChange={ ( e ) => {
 							const v = eventValue( e );
@@ -338,7 +348,7 @@ export default function SettingsGeneralApp() {
 
 				{ /* Time format */ }
 				<RadioControl
-					label={ __( 'Time Format', 'wp-admin-shell' ) }
+					label={ __( 'Time Format', 'wp-admin-workspaces' ) }
 					selected={ timeFormatRadioValue }
 					options={ timeFormatOptions }
 					onChange={ ( val ) => {
@@ -353,7 +363,10 @@ export default function SettingsGeneralApp() {
 				/>
 				{ timeFormatRadioValue === CUSTOM_RADIO_VALUE && (
 					<InputControl
-						label={ __( 'Custom time format', 'wp-admin-shell' ) }
+						label={ __(
+							'Custom time format',
+							'wp-admin-workspaces'
+						) }
 						value={ editedRecord.time_format || '' }
 						onChange={ ( e ) => {
 							const v = eventValue( e );
@@ -365,7 +378,7 @@ export default function SettingsGeneralApp() {
 
 				{ /* Week starts on */ }
 				<SelectControl
-					label={ __( 'Week Starts On', 'wp-admin-shell' ) }
+					label={ __( 'Week Starts On', 'wp-admin-workspaces' ) }
 					value={ String( editedRecord.start_of_week ?? 1 ) }
 					options={ data.weekdays }
 					onChange={ ( val ) =>
@@ -382,7 +395,7 @@ export default function SettingsGeneralApp() {
 						disabled={ ! hasEdits || isSaving }
 						loading={ isSaving }
 					>
-						{ __( 'Save Changes', 'wp-admin-shell' ) }
+						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

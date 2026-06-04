@@ -9,7 +9,7 @@ import { trigger } from '../../runtime/bindings/triggerStore.mjs';
 import { compileCommands } from './compileCommands.mjs';
 
 /**
- * core:command-palette — registers shell-aware commands with
+ * core:command-palette — registers workspace-aware commands with
  * `@wordpress/commands` so the package's portal palette (Mod+K) can
  * surface them. The palette UI itself is owned by the commands
  * package; this app contributes the command set + does not render UI.
@@ -50,7 +50,7 @@ export default function CommandPaletteApp() {
 			goToLabel: ( target ) =>
 				sprintf(
 					/* translators: %s: screen label or path */
-					__( 'Go to %s', 'wp-admin-shell' ),
+					__( 'Go to %s', 'wp-admin-workspaces' ),
 					target
 				),
 		} );
@@ -87,7 +87,7 @@ export default function CommandPaletteApp() {
 	);
 
 	useCommandLoader( {
-		name: 'core/admin-shell/apps',
+		name: 'core/admin-workspace/apps',
 		hook,
 	} );
 

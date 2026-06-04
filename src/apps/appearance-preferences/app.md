@@ -6,9 +6,9 @@ Prose accompanying `app.json#documentation` for the per-user appearance-preferen
 
 ## Overview
 
-AppearancePreferencesApp is a customizability-aware preferences screen. The active shell declares `customizable` — either `true`, `false`, or a string-array allowlist — on its `styles` block; this app reads that declaration and renders only the controls the shell permits. MVP controls cover density (compact / default / comfortable radio), accent color (single-token override), and default-route override (text input).
+AppearancePreferencesApp is a customizability-aware preferences screen. The active workspace declares `customizable` — either `true`, `false`, or a string-array allowlist — on its `styles` block; this app reads that declaration and renders only the controls the workspace permits. MVP controls cover density (compact / default / comfortable radio), accent color (single-token override), and default-route override (text input).
 
-The customizability declaration is **server-authoritative**: the cascade resolver enforces the same `customizable` allowlist on writes. Hiding controls client-side is a UX nicety, not a security boundary. A user who hand-crafts a POST to `/wp-admin-shell/v1/user-prefs` setting a non-customizable field gets a 403 / silent drop.
+The customizability declaration is **server-authoritative**: the cascade resolver enforces the same `customizable` allowlist on writes. Hiding controls client-side is a UX nicety, not a security boundary. A user who hand-crafts a POST to `/wp-admin-workspaces/v1/user-prefs` setting a non-customizable field gets a 403 / silent drop.
 
 ## Architecture
 
@@ -39,5 +39,5 @@ A non-WPDS rebuild needs radio + color picker + text input + button — all stan
 - **No theme preset selector.** Each control is single-axis. A future iteration may add presets (`'Light' / 'Dark' / 'High contrast'`) that compose multiple token overrides.
 - **No live preview.** Changes apply on the next render; there's no "preview before save" affordance.
 - **Color picker is naive.** Plain text input expecting a hex string. A real color picker (with picker chip + swatch palette) is deferred.
-- **Reset is all-or-nothing.** "Reset to shell defaults" wipes every per-user override via `DELETE /wp-admin-shell/v1/user-prefs`. No per-field revert (setting one field back to the resolved value requires manually clearing that field).
+- **Reset is all-or-nothing.** "Reset to workspace defaults" wipes every per-user override via `DELETE /wp-admin-workspaces/v1/user-prefs`. No per-field revert (setting one field back to the resolved value requires manually clearing that field).
 - **Custom typography / font controls are not exposed.** The cascade has tokens for `font.size.*` etc., but the appearance app doesn't surface them.

@@ -3,17 +3,17 @@
  * v3 cap-gating smoke — screen + menu visibility per role.
  *
  * Replaces the v2-shape nav-items capability pruning smoke (Phase 3d.1
- * retired the v2 `shells/wp-admin-default.json`; the v3 equivalent is
+ * retired the v2 `workspaces/wp-admin-default.json`; the v3 equivalent is
  * screen-level + menu-level capability gating).
  *
  * Coverage:
- *   - `WP_Admin_Shell_Permissions::resolve()` produces canonical shape
+ *   - `WP_Admin_Workspaces_Permissions::resolve()` produces canonical shape
  *     when given a screen-permissions block.
- *   - `WP_Admin_Shell_Permissions::user_passes()` evaluates OR-semantic
+ *   - `WP_Admin_Workspaces_Permissions::user_passes()` evaluates OR-semantic
  *     capability lists per role (any one cap passes).
- *   - `WP_Admin_Shell_Permissions::user_passes()` evaluates OR-semantic
+ *   - `WP_Admin_Workspaces_Permissions::user_passes()` evaluates OR-semantic
  *     role membership lists (any one role passes).
- *   - `WP_Admin_Shell_Permissions::user_passes()` combines caps + roles
+ *   - `WP_Admin_Workspaces_Permissions::user_passes()` combines caps + roles
  *     (OR between the two fields too).
  *   - App-floor AND-required caps are the absolute backstop (any missing
  *     floor cap denies regardless of OR-set membership).
@@ -37,9 +37,9 @@
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
-if ( ! class_exists( 'WP_Admin_Shell_Permissions' ) ) {
+if ( ! class_exists( 'WP_Admin_Workspaces_Permissions' ) ) {
 	echo "Plugin classes not loaded after require.\n";
 	exit( 1 );
 }
@@ -125,7 +125,7 @@ function wpas_cap_smoke_user_for_role( $role ) {
 
 // ── 1. resolve() canonical shape ─────────────────────────────────────
 
-$resolved = WP_Admin_Shell_Permissions::resolve(
+$resolved = WP_Admin_Workspaces_Permissions::resolve(
 	array(
 		'capabilities' => array( 'edit_posts', 'edit_posts', '', 0 ),
 		'roles'        => array( 'editor', 'administrator' ),
@@ -149,7 +149,7 @@ $T::assert_eq(
 );
 
 // Empty perms block (null) inflates to default admin-only.
-$default_perms = WP_Admin_Shell_Permissions::resolve( null );
+$default_perms = WP_Admin_Workspaces_Permissions::resolve( null );
 $T::assert_eq(
 	'resolve: null permissions defaults to admin-only roles',
 	$default_perms['roles'],
@@ -162,7 +162,7 @@ $T::assert_eq(
 );
 
 // Empty arrays inflate to admin-only too (fail-closed convention).
-$empty_perms = WP_Admin_Shell_Permissions::resolve(
+$empty_perms = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array() )
 );
 $T::assert_eq(
@@ -186,96 +186,96 @@ if ( $admin_id === null ) {
 	exit( 0 );
 }
 
-$caps_only_resolve = WP_Admin_Shell_Permissions::resolve(
+$caps_only_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array( 'edit_posts' ), 'roles' => array() )
 );
 
 $T::assert_true(
 	'user_passes: admin holds edit_posts → passes caps-only OR-set',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $caps_only_resolve )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $caps_only_resolve )
 );
 
 if ( $subscriber_id !== null ) {
 	$T::assert_false(
 		'user_passes: subscriber lacks edit_posts → denied on caps-only OR-set',
-		WP_Admin_Shell_Permissions::user_passes( $subscriber_id, $caps_only_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $subscriber_id, $caps_only_resolve )
 	);
 }
 
 // Multi-cap OR-set — any one cap suffices.
-$multi_cap_resolve = WP_Admin_Shell_Permissions::resolve(
+$multi_cap_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array( 'manage_options', 'edit_posts' ), 'roles' => array() )
 );
 if ( $contributor_id !== null ) {
 	$T::assert_true(
 		'user_passes: contributor passes via OR (holds edit_posts even without manage_options)',
-		WP_Admin_Shell_Permissions::user_passes( $contributor_id, $multi_cap_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $contributor_id, $multi_cap_resolve )
 	);
 }
 
 // ── 3. user_passes() — OR-set role semantics ─────────────────────────
 
-$roles_only_resolve = WP_Admin_Shell_Permissions::resolve(
+$roles_only_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'editor' ) )
 );
 if ( $editor_id !== null ) {
 	$T::assert_true(
 		'user_passes: editor passes role membership OR-set',
-		WP_Admin_Shell_Permissions::user_passes( $editor_id, $roles_only_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $editor_id, $roles_only_resolve )
 	);
 }
 if ( $author_id !== null ) {
 	$T::assert_false(
 		'user_passes: author denied when role list is editor-only',
-		WP_Admin_Shell_Permissions::user_passes( $author_id, $roles_only_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $author_id, $roles_only_resolve )
 	);
 }
 
 // Multi-role OR-set.
-$multi_role_resolve = WP_Admin_Shell_Permissions::resolve(
+$multi_role_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'editor', 'author' ) )
 );
 if ( $author_id !== null ) {
 	$T::assert_true(
 		'user_passes: author passes when role list includes author',
-		WP_Admin_Shell_Permissions::user_passes( $author_id, $multi_role_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $author_id, $multi_role_resolve )
 	);
 }
 
 // ── 4. user_passes() — cap + role hybrid OR ───────────────────────────
 
 // User holds neither cap nor matching role → denied.
-$hybrid_resolve = WP_Admin_Shell_Permissions::resolve(
+$hybrid_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array( 'manage_options' ), 'roles' => array( 'editor' ) )
 );
 if ( $author_id !== null ) {
 	$T::assert_false(
 		'user_passes: author (no manage_options, not editor) denied by hybrid OR',
-		WP_Admin_Shell_Permissions::user_passes( $author_id, $hybrid_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $author_id, $hybrid_resolve )
 	);
 }
 if ( $editor_id !== null ) {
 	$T::assert_true(
 		'user_passes: editor passes hybrid via role match',
-		WP_Admin_Shell_Permissions::user_passes( $editor_id, $hybrid_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $editor_id, $hybrid_resolve )
 	);
 }
 $T::assert_true(
 	'user_passes: admin passes hybrid via cap match',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $hybrid_resolve )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $hybrid_resolve )
 );
 
 // ── 5. app-floor AND-required backstop ────────────────────────────────
 
 // OR-set permits via role, but app-floor demands a cap the role lacks.
-$floor_resolve = WP_Admin_Shell_Permissions::resolve(
+$floor_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'editor' ) ),
 	array( 'manage_options' )
 );
 if ( $editor_id !== null ) {
 	$T::assert_false(
 		'app-floor: editor OR-set passes but manage_options floor denies',
-		WP_Admin_Shell_Permissions::user_passes( $editor_id, $floor_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $editor_id, $floor_resolve )
 	);
 }
 // Admin matches floor (manage_options) but fails the editor-only OR-set
@@ -283,17 +283,17 @@ if ( $editor_id !== null ) {
 // backstop, not a bypass.
 $T::assert_false(
 	'app-floor: admin matches floor but fails OR-set when admin role excluded',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_resolve )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $floor_resolve )
 );
 
 // Admin passes when admin role IS in the OR-set + floor matches.
-$floor_with_admin = WP_Admin_Shell_Permissions::resolve(
+$floor_with_admin = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'administrator', 'editor' ) ),
 	array( 'manage_options' )
 );
 $T::assert_true(
 	'app-floor: admin passes when OR-set includes admin role + floor matches',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $floor_with_admin )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $floor_with_admin )
 );
 
 // Raw empty OR-set fail-closed (bypassing resolve(), which would inflate).
@@ -302,14 +302,14 @@ $T::assert_true(
 // floor-only resolve (empty OR-set, non-empty floor that passed) still allows.
 $T::assert_false(
 	'user_passes: raw empty OR-set + no floor → denied (fail-closed)',
-	WP_Admin_Shell_Permissions::user_passes(
+	WP_Admin_Workspaces_Permissions::user_passes(
 		$admin_id,
 		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array() )
 	)
 );
 $T::assert_true(
 	'user_passes: empty OR-set but passing floor → floor was the gate, allow',
-	WP_Admin_Shell_Permissions::user_passes(
+	WP_Admin_Workspaces_Permissions::user_passes(
 		$admin_id,
 		array( 'capabilities' => array(), 'roles' => array(), 'appFloor' => array( 'read' ) )
 	)
@@ -317,25 +317,25 @@ $T::assert_true(
 
 // ── 6. unknown slugs fail closed ──────────────────────────────────────
 
-$unknown_cap = WP_Admin_Shell_Permissions::resolve(
+$unknown_cap = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array( 'this_cap_does_not_exist_xyz' ), 'roles' => array() )
 );
 $T::assert_false(
 	'unknown cap: no user can satisfy (fail-closed)',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $unknown_cap )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $unknown_cap )
 );
 
-$unknown_role = WP_Admin_Shell_Permissions::resolve(
+$unknown_role = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'this_role_does_not_exist_xyz' ) )
 );
 $T::assert_false(
 	'unknown role: no user can satisfy (fail-closed)',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $unknown_role )
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $unknown_role )
 );
 
 // ── 7. super-admin magic ──────────────────────────────────────────────
 
-$super_admin_resolve = WP_Admin_Shell_Permissions::resolve(
+$super_admin_resolve = WP_Admin_Workspaces_Permissions::resolve(
 	array( 'capabilities' => array(), 'roles' => array( 'super-admin' ) )
 );
 // On single-site, is_super_admin is a synonym for "user can manage_options".
@@ -344,20 +344,20 @@ $super_admin_resolve = WP_Admin_Shell_Permissions::resolve(
 $expected_super_admin_admin = is_super_admin( $admin_id );
 $T::assert_eq(
 	'super-admin magic: admin user passes iff is_super_admin($admin_id)',
-	WP_Admin_Shell_Permissions::user_passes( $admin_id, $super_admin_resolve ),
+	WP_Admin_Workspaces_Permissions::user_passes( $admin_id, $super_admin_resolve ),
 	$expected_super_admin_admin
 );
 
 if ( $subscriber_id !== null ) {
 	$T::assert_false(
 		'super-admin magic: subscriber never passes is_super_admin',
-		WP_Admin_Shell_Permissions::user_passes( $subscriber_id, $super_admin_resolve )
+		WP_Admin_Workspaces_Permissions::user_passes( $subscriber_id, $super_admin_resolve )
 	);
 }
 
 // ── 8. enforce_trust_tiers — restrict-only consumer origins ───────────
 
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 
 $trust_per_origin = array(
 	'core'   => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'editor', 'author' ) ),
@@ -365,7 +365,7 @@ $trust_per_origin = array(
 	'role'   => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'editor' ) ),
 );
 
-$merged = WP_Admin_Shell_Permissions::enforce_trust_tiers( $trust_per_origin, 'screen.test' );
+$merged = WP_Admin_Workspaces_Permissions::enforce_trust_tiers( $trust_per_origin, 'screen.test' );
 
 $T::assert_eq(
 	'trust-tier: role origin shrinks caps to intersection (drops manage_options)',
@@ -379,19 +379,19 @@ $T::assert_eq(
 );
 $T::assert_eq(
 	'trust-tier: zero audit entries when consumer only removes',
-	count( WP_Admin_Shell_Permissions::get_audit() ),
+	count( WP_Admin_Workspaces_Permissions::get_audit() ),
 	0
 );
 
 // Consumer origin attempts to GROW the OR-set → rejection + audit.
-WP_Admin_Shell_Permissions::reset_audit();
+WP_Admin_Workspaces_Permissions::reset_audit();
 
 $trust_grow = array(
 	'core' => array( 'capabilities' => array( 'edit_posts' ), 'roles' => array( 'administrator' ) ),
 	'user' => array( 'capabilities' => array( 'edit_posts', 'manage_options' ), 'roles' => array( 'administrator', 'editor' ) ),
 );
 
-$merged_grow = WP_Admin_Shell_Permissions::enforce_trust_tiers( $trust_grow, 'screen.tested' );
+$merged_grow = WP_Admin_Workspaces_Permissions::enforce_trust_tiers( $trust_grow, 'screen.tested' );
 
 $T::assert_eq(
 	'trust-tier: user origin grow attempt rejected — caps stay at trusted baseline',
@@ -404,7 +404,7 @@ $T::assert_eq(
 	array( 'administrator' )
 );
 
-$audit = WP_Admin_Shell_Permissions::get_audit();
+$audit = WP_Admin_Workspaces_Permissions::get_audit();
 $T::assert_eq(
 	'trust-tier: 2 audit entries (one for the cap, one for the role)',
 	count( $audit ),
@@ -430,11 +430,11 @@ $T::assert_true( 'trust-tier: audit entry recorded for role grow attempt', $has_
 // >= subscriber) rather than exact ids — the screen catalog is authoring
 // content, not test fixture.
 
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
-if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-	WP_Admin_Shell_Cache::flush();
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
+if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+	WP_Admin_Workspaces_Cache::flush();
 }
-WP_Admin_Shell_Resolver::reset_request_memo();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
 
 $role_visible_counts = array();
 $roles_to_walk       = array( 'subscriber', 'contributor', 'author', 'editor', 'administrator' );
@@ -445,12 +445,12 @@ foreach ( $roles_to_walk as $role ) {
 		continue;
 	}
 	wp_set_current_user( $user_id );
-	if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-		WP_Admin_Shell_Cache::flush();
+	if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+		WP_Admin_Workspaces_Cache::flush();
 	}
-	WP_Admin_Shell_Resolver::reset_request_memo();
+	WP_Admin_Workspaces_Resolver::reset_request_memo();
 
-	$resolved_doc = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+	$resolved_doc = WP_Admin_Workspaces_Resolver::resolve( array( 'workspace' => 'wp-admin-default' ) );
 	$screens      = isset( $resolved_doc['screens'] ) && is_array( $resolved_doc['screens'] )
 		? $resolved_doc['screens']
 		: array();
@@ -461,9 +461,9 @@ foreach ( $roles_to_walk as $role ) {
 			continue;
 		}
 		$perms     = $screen['permissions'] ?? null;
-		$app_floor = WP_Admin_Shell_Permissions::app_floor_for( $screen );
-		$rp        = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
-		if ( WP_Admin_Shell_Permissions::user_passes( $user_id, $rp ) ) {
+		$app_floor = WP_Admin_Workspaces_Permissions::app_floor_for( $screen );
+		$rp        = WP_Admin_Workspaces_Permissions::resolve( $perms, $app_floor );
+		if ( WP_Admin_Workspaces_Permissions::user_passes( $user_id, $rp ) ) {
 			$visible++;
 		}
 	}
@@ -551,9 +551,9 @@ function wpas_cap_smoke_count_menu_items( $menu, $screens, $user_id ) {
 			: null;
 		if ( $bound_screen !== null ) {
 			$perms     = $bound_screen['permissions'] ?? null;
-			$app_floor = WP_Admin_Shell_Permissions::app_floor_for( $bound_screen );
-			$rp        = WP_Admin_Shell_Permissions::resolve( $perms, $app_floor );
-			if ( ! WP_Admin_Shell_Permissions::user_passes( $user_id, $rp ) ) {
+			$app_floor = WP_Admin_Workspaces_Permissions::app_floor_for( $bound_screen );
+			$rp        = WP_Admin_Workspaces_Permissions::resolve( $perms, $app_floor );
+			if ( ! WP_Admin_Workspaces_Permissions::user_passes( $user_id, $rp ) ) {
 				continue;
 			}
 		}
@@ -569,13 +569,13 @@ function wpas_cap_smoke_count_menu_items( $menu, $screens, $user_id ) {
 // per-role using the admin-resolved tree. ASSUMPTION: `wp-admin-default`
 // declares no role/user-origin overrides to its menu shape — its menu is
 // admin-baseline across all roles, and per-role visibility differs only
-// via the inherited screen `permissions`. A future shell that customizes
-// the menu per role (e.g. via `wp_admin_shell_data_role` filter) would
+// via the inherited screen `permissions`. A future workspace that customizes
+// the menu per role (e.g. via `wp_admin_workspaces_data_role` filter) would
 // break this assumption — that case needs the per-role re-resolve pattern
 // used by the screen-visibility walk above.
 wp_set_current_user( $admin_id );
-WP_Admin_Shell_Resolver::reset_request_memo();
-$admin_resolved = WP_Admin_Shell_Resolver::resolve( array( 'shell' => 'wp-admin-default' ) );
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+$admin_resolved = WP_Admin_Workspaces_Resolver::resolve( array( 'workspace' => 'wp-admin-default' ) );
 $menu           = isset( $admin_resolved['menu'] ) && is_array( $admin_resolved['menu'] )
 	? $admin_resolved['menu']
 	: array();
@@ -611,14 +611,14 @@ if ( $editor_id !== null ) {
 	);
 }
 
-// ── Server-side config prune (wp_admin_shell_prune_config_for_user) ────
+// ── Server-side config prune (wp_admin_workspaces_prune_config_for_user) ────
 //
 // Pruning a screen the user can't reach must NOT take a reachable child menu
 // item down with it — the dropped node's surviving children are hoisted. The
 // canonical case: `profile` (read floor) nested only under the admin-only
 // `users` node. A subscriber loses `users` but must keep `profile`.
 
-if ( function_exists( 'wp_admin_shell_prune_config_for_user' ) && $subscriber_id !== null ) {
+if ( function_exists( 'wp_admin_workspaces_prune_config_for_user' ) && $subscriber_id !== null ) {
 	$prune_cfg = array(
 		'workspace' => array( 'default-screen' => 'dashboard' ),
 		'screens'   => array(
@@ -637,7 +637,7 @@ if ( function_exists( 'wp_admin_shell_prune_config_for_user' ) && $subscriber_id
 			),
 		),
 	);
-	$sub_pruned = wp_admin_shell_prune_config_for_user( $prune_cfg, $subscriber_id );
+	$sub_pruned = wp_admin_workspaces_prune_config_for_user( $prune_cfg, $subscriber_id );
 	$T::assert_false(
 		'prune: subscriber loses the admin-only users screen',
 		isset( $sub_pruned['screens']['users'] )
@@ -655,7 +655,7 @@ if ( function_exists( 'wp_admin_shell_prune_config_for_user' ) && $subscriber_id
 		isset( $sub_pruned['menu']['profile'] )
 	);
 
-	$admin_pruned = wp_admin_shell_prune_config_for_user( $prune_cfg, $admin_id );
+	$admin_pruned = wp_admin_workspaces_prune_config_for_user( $prune_cfg, $admin_id );
 	$T::assert_true(
 		'prune: admin keeps the users screen + menu node intact',
 		isset( $admin_pruned['screens']['users'] ) && isset( $admin_pruned['menu']['users']['items']['profile'] )

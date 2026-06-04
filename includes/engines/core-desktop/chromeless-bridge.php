@@ -3,13 +3,13 @@
  * core:desktop chromeless bridge.
  *
  * Emits the JS bridge inside chromeless admin pages. The bridge runs
- * inside the iframe and posts messages to the parent shell window for
+ * inside the iframe and posts messages to the parent workspace window for
  * observability + chrome interception. Parent-side handler stub lives
  * in `src/apps/desktop-iframe/index.js`.
  *
  * Port of `desktop-mode/includes/render/chromeless-bridge.php` with
- * namespace rename `desktop_mode_` → `wp_admin_shell_` and
- * `desktop-mode-*` → `wp-admin-shell-*`. Split across three commits per
+ * namespace rename `desktop_mode_` → `wp_admin_workspaces_` and
+ * `desktop-mode-*` → `wp-admin-workspaces-*`. Split across three commits per
  * the engine port plan:
  *
  *   - P2.T4-A (this file): sub-systems 1–5
@@ -28,7 +28,7 @@
  * must ship a deeper wrapper themselves and own that consent
  * conversation.
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  * @since   2.x
  */
 
@@ -40,13 +40,13 @@ defined( 'ABSPATH' ) || exit;
  * Heredoc'd JS runs once at footer time inside the iframe's document.
  * The IIFE wraps the whole bridge so it leaves no globals behind.
  */
-function wp_admin_shell_chromeless_bridge_script() {
-	if ( ! wp_admin_shell_is_chromeless_request() ) {
+function wp_admin_workspaces_chromeless_bridge_script() {
+	if ( ! wp_admin_workspaces_is_chromeless_request() ) {
 		return;
 	}
 
 	$js = <<<'JS'
-//# sourceURL=wp-admin-shell-chromeless-bridge.js
+//# sourceURL=wp-admin-workspaces-chromeless-bridge.js
 ( function () {
 	'use strict';
 
@@ -62,8 +62,8 @@ function wp_admin_shell_chromeless_bridge_script() {
 	if ( ! window.parent || window.parent === window ) {
 		try {
 			var here = new URL( window.location.href );
-			if ( here.searchParams.has( 'wp_admin_shell_chromeless' ) ) {
-				here.searchParams.delete( 'wp_admin_shell_chromeless' );
+			if ( here.searchParams.has( 'wp_admin_workspaces_chromeless' ) ) {
+				here.searchParams.delete( 'wp_admin_workspaces_chromeless' );
 				window.location.replace( here.toString() );
 			}
 		} catch ( err ) {
@@ -91,7 +91,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * lands on the parent side.
 	 */
 	post( {
-		type: 'wp-admin-shell-iframe-ready',
+		type: 'wp-admin-workspaces-iframe-ready',
 		url: window.location.href,
 		userAgent: navigator.userAgent,
 	} );
@@ -101,13 +101,13 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 *
 	 * Everything admin-interesting (REST failures from Gutenberg,
 	 * admin-ajax 500s, plugin console warnings) fires inside the
-	 * iframe. Relay to the shell so monitor/debug widgets see the
-	 * actual error surface, not just the shell's own errors.
+	 * iframe. Relay to the workspace so monitor/debug widgets see the
+	 * actual error surface, not just the workspace's own errors.
 	 */
 	try {
 		window.addEventListener( 'error', function ( e ) {
 			post( {
-				type: 'wp-admin-shell-iframe-error',
+				type: 'wp-admin-workspaces-iframe-error',
 				kind: 'error',
 				message: e && e.message ? String( e.message ) : '',
 				filename: e && e.filename ? String( e.filename ) : null,
@@ -135,7 +135,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 				}
 			}
 			post( {
-				type: 'wp-admin-shell-iframe-error',
+				type: 'wp-admin-workspaces-iframe-error',
 				kind: 'unhandledrejection',
 				message: message,
 				stack: stack,
@@ -200,7 +200,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 	/*
 	 * Sub-system 3 — fetch() wrap.
 	 *
-	 * Every completed request posts `wp-admin-shell-iframe-network`
+	 * Every completed request posts `wp-admin-workspaces-iframe-network`
 	 * with { method, url, status, duration, failed }. Bodies are
 	 * NEVER captured. Wraps in-place; preserves the original fetch as
 	 * the underlying call so we don't change behavior.
@@ -208,7 +208,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 	try {
 		var origFetch = window.fetch;
 		if ( typeof origFetch === 'function' ) {
-			window.fetch = function wpAdminShellFetchWrap( input, init ) {
+			window.fetch = function wpAdminWorkspacesFetchWrap( input, init ) {
 				var startedAt = ( window.performance && performance.now )
 					? performance.now()
 					: Date.now();
@@ -237,7 +237,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 								? response.status
 								: 0;
 							post( {
-								type: 'wp-admin-shell-iframe-network',
+								type: 'wp-admin-workspaces-iframe-network',
 								transport: 'fetch',
 								method: method,
 								url: url,
@@ -254,7 +254,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 									? performance.now()
 									: Date.now() ) - startedAt;
 							post( {
-								type: 'wp-admin-shell-iframe-network',
+								type: 'wp-admin-workspaces-iframe-network',
 								transport: 'fetch',
 								method: method,
 								url: url,
@@ -290,7 +290,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 			var origSend = proto.send;
 			proto.open = function ( method, url ) {
 				try {
-					this.__wpAdminShellNet = {
+					this.__wpAdminWorkspacesNet = {
 						method: typeof method === 'string'
 							? method.toUpperCase()
 							: 'GET',
@@ -300,7 +300,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 				return origOpen.apply( this, arguments );
 			};
 			proto.send = function () {
-				var info = this.__wpAdminShellNet || {};
+				var info = this.__wpAdminWorkspacesNet || {};
 				var startedAt = ( window.performance && performance.now )
 					? performance.now()
 					: Date.now();
@@ -316,7 +316,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 							: Date.now() ) - startedAt;
 					var status = typeof this.status === 'number' ? this.status : 0;
 					post( {
-						type: 'wp-admin-shell-iframe-network',
+						type: 'wp-admin-workspaces-iframe-network',
 						transport: 'xhr',
 						method: info.method || 'GET',
 						url: info.url || '',
@@ -358,7 +358,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 					ok = origBeacon.apply( navigator, arguments );
 				} catch ( err ) {
 					post( {
-						type: 'wp-admin-shell-iframe-network',
+						type: 'wp-admin-workspaces-iframe-network',
 						transport: 'beacon',
 						method: 'POST',
 						url: typeof url === 'string' ? url : '',
@@ -370,7 +370,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 					throw err;
 				}
 				post( {
-					type: 'wp-admin-shell-iframe-network',
+					type: 'wp-admin-workspaces-iframe-network',
 					transport: 'beacon',
 					method: 'POST',
 					url: typeof url === 'string' ? url : '',
@@ -390,11 +390,11 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 *
 	 * Fires on admin pages whose completion commonly mutates the WP
 	 * menu globals (plugin activate/deactivate, install, theme switch).
-	 * The parent shell uses our admin.json, not WP's $menu, but plugin
-	 * authors who extend the shell via `wp_admin_shell_register_app()`
+	 * The parent workspace uses our workspace.json, not WP's $menu, but plugin
+	 * authors who extend the workspace via `wp_admin_workspaces_register_app()`
 	 * during one of those flows want a hook to refetch state. Payload
 	 * deliberately omits the full $menu serialization upstream ships
-	 * (~140 LOC) — the shell isn't a $menu mirror, so the signal alone
+	 * (~140 LOC) — the workspace isn't a $menu mirror, so the signal alone
 	 * is the contract.
 	 */
 	try {
@@ -418,7 +418,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 		];
 		if ( menuMutatingPages.indexOf( pagenow ) !== -1 ) {
 			post( {
-				type: 'wp-admin-shell-menu-changed',
+				type: 'wp-admin-workspaces-menu-changed',
 				pagenow: pagenow,
 			} );
 		}
@@ -428,8 +428,8 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * Sub-system 8 — bridge handshake (minimal MVP).
 	 *
 	 * Parent ↔ iframe handshake: parent posts
-	 * `wp-admin-shell-bridge-hello` after the iframe-ready signal, and
-	 * the iframe replies with `wp-admin-shell-bridge-ack`. Full
+	 * `wp-admin-workspaces-bridge-hello` after the iframe-ready signal, and
+	 * the iframe replies with `wp-admin-workspaces-bridge-ack`. Full
 	 * topic-based publish / subscribe channel system from upstream
 	 * (~200 LOC) defers to a follow-up — the ack is enough to satisfy
 	 * the "is this iframe reachable" probe parent widgets need.
@@ -443,9 +443,9 @@ function wp_admin_shell_chromeless_bridge_script() {
 			if ( ! data || typeof data !== 'object' ) {
 				return;
 			}
-			if ( data.type === 'wp-admin-shell-bridge-hello' ) {
+			if ( data.type === 'wp-admin-workspaces-bridge-hello' ) {
 				post( {
-					type: 'wp-admin-shell-bridge-ack',
+					type: 'wp-admin-workspaces-bridge-ack',
 					url: window.location.href,
 				} );
 			}
@@ -456,10 +456,10 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * Sub-system 9 — link interception.
 	 *
 	 *   - `<a target="_blank">` / external host → post
-	 *     `wp-admin-shell-external-link`; parent decides whether to
+	 *     `wp-admin-workspaces-external-link`; parent decides whether to
 	 *     open as a closeable sub-tab or hand to the OS.
 	 *   - Same-origin wp-admin links inside the iframe → post
-	 *     `wp-admin-shell-admin-link`; parent decides whether to open
+	 *     `wp-admin-workspaces-admin-link`; parent decides whether to open
 	 *     as a new window, route through the dock, or let the iframe
 	 *     navigate in place. Modifier-key clicks (cmd/ctrl/middle)
 	 *     pass through native so "open in new tab" still works.
@@ -528,7 +528,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 				if ( isExternal ) {
 					e.preventDefault();
 					post( {
-						type: 'wp-admin-shell-external-link',
+						type: 'wp-admin-workspaces-external-link',
 						url: absolute,
 						label: label.slice( 0, 80 ),
 						target: target || '_self',
@@ -545,7 +545,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 				}
 				e.preventDefault();
 				post( {
-					type: 'wp-admin-shell-admin-link',
+					type: 'wp-admin-workspaces-admin-link',
 					url: absolute,
 					label: label.slice( 0, 80 ),
 					target: target || '_self',
@@ -570,7 +570,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 		document.addEventListener(
 			'pointerdown',
 			function () {
-				post( { type: 'wp-admin-shell-focus-request' } );
+				post( { type: 'wp-admin-workspaces-focus-request' } );
 			},
 			true
 		);
@@ -599,12 +599,12 @@ function wp_admin_shell_chromeless_bridge_script() {
 			if (
 				! data ||
 				typeof data !== 'object' ||
-				data.type !== 'wp-admin-shell-commands-subscribe'
+				data.type !== 'wp-admin-workspaces-commands-subscribe'
 			) {
 				return;
 			}
 			post( {
-				type: 'wp-admin-shell-commands-list',
+				type: 'wp-admin-workspaces-commands-list',
 				commands: [],
 				stub: true,
 			} );
@@ -615,10 +615,10 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * Sub-system 12 — screen-meta detection.
 	 *
 	 * Detects whether the current admin page renders Screen Options /
-	 * Help in `#screen-meta-links`. Posts `wp-admin-shell-screen-meta`
+	 * Help in `#screen-meta-links`. Posts `wp-admin-workspaces-screen-meta`
 	 * once with the list of available panels so the parent can show a
 	 * matching control on the window's titlebar. Tracks aria-expanded
-	 * via MutationObserver and posts `wp-admin-shell-screen-meta-state`
+	 * via MutationObserver and posts `wp-admin-workspaces-screen-meta-state`
 	 * with the currently-open panel (or `null`) on every change.
 	 */
 	try {
@@ -637,7 +637,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 			}
 			if ( panels.length > 0 ) {
 				post( {
-					type: 'wp-admin-shell-screen-meta',
+					type: 'wp-admin-workspaces-screen-meta',
 					panels: panels,
 				} );
 				var getOpenPanel = function () {
@@ -658,7 +658,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 				};
 				var reportState = function () {
 					post( {
-						type: 'wp-admin-shell-screen-meta-state',
+						type: 'wp-admin-workspaces-screen-meta-state',
 						open: getOpenPanel(),
 					} );
 				};
@@ -709,7 +709,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 			window
 				.jQuery( document )
 				.on(
-					'heartbeat-tick.wpAdminShellAuthRecover',
+					'heartbeat-tick.wpAdminWorkspacesAuthRecover',
 					function ( ev, data ) {
 						if (
 							! data ||
@@ -727,7 +727,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 							data[ 'wp-auth-check' ] === true
 						) {
 							sawLoggedOut = false;
-							post( { type: 'wp-admin-shell-reauth-detected' } );
+							post( { type: 'wp-admin-workspaces-reauth-detected' } );
 							try {
 								window.location.reload();
 							} catch ( _err ) { /* swallow */ }
@@ -748,9 +748,9 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * Sub-system 14 — instrument-set listener (devtools header
 	 * injection slot).
 	 *
-	 * Maintains a mutable `window.__wpAdminShellInstrument = { headers,
-	 * observe }` slot the parent shell overwrites via
-	 * `wp-admin-shell-instrument-set`. Headers are pre-merged by the
+	 * Maintains a mutable `window.__wpAdminWorkspacesInstrument = { headers,
+	 * observe }` slot the parent workspace overwrites via
+	 * `wp-admin-workspaces-instrument-set`. Headers are pre-merged by the
 	 * parent (RFC 7230 §3.2.2 join applied there). `observe: true`
 	 * opts into deeper observability — request + response headers in
 	 * network reports — when devtools widgets request it.
@@ -758,10 +758,10 @@ function wp_admin_shell_chromeless_bridge_script() {
 	 * Integration of those headers into the fetch / XHR wraps defers
 	 * to a follow-up. The storage + listener alone close sub-system
 	 * 14's contract — a parent-side widget can push headers and read
-	 * them back via the iframe's `__wpAdminShellInstrument` global
+	 * them back via the iframe's `__wpAdminWorkspacesInstrument` global
 	 * even before the wrap consumes them.
 	 */
-	window.__wpAdminShellInstrument = window.__wpAdminShellInstrument || {
+	window.__wpAdminWorkspacesInstrument = window.__wpAdminWorkspacesInstrument || {
 		headers: {},
 		observe: false,
 	};
@@ -777,11 +777,11 @@ function wp_admin_shell_chromeless_bridge_script() {
 			if (
 				! d ||
 				typeof d !== 'object' ||
-				d.type !== 'wp-admin-shell-instrument-set'
+				d.type !== 'wp-admin-workspaces-instrument-set'
 			) {
 				return;
 			}
-			window.__wpAdminShellInstrument = {
+			window.__wpAdminWorkspacesInstrument = {
 				headers:
 					d.headers && typeof d.headers === 'object' ? d.headers : {},
 				observe: !! d.observe,
@@ -792,14 +792,14 @@ function wp_admin_shell_chromeless_bridge_script() {
 	/*
 	 * Sub-system 15 — block-editor dirty-state relay.
 	 *
-	 * The shell's `core:dirty-state` service guards intra-shell
+	 * The workspace's `core:dirty-state` service guards intra-workspace
 	 * navigation (a sidebar click) the way the browser's `beforeunload`
 	 * guards a tab close. A native app reports through `useDirtyState`;
 	 * an iframed editor can't — its unsaved state lives in the iframe's
 	 * own `core/editor` store, invisible to the parent's NavigationGuard.
 	 *
 	 * Bridge it: subscribe to `wp.data` and post
-	 * `wp-admin-shell-dirty-state { dirty }` to the parent on every
+	 * `wp-admin-workspaces-dirty-state { dirty }` to the parent on every
 	 * `isEditedPostDirty()` transition. The parent (`core:editor`'s
 	 * `installIframeBridge( { onDirty } )`) maps it onto `setDirty()`.
 	 *
@@ -833,7 +833,7 @@ function wp_admin_shell_chromeless_bridge_script() {
 					}
 					lastDirty = dirty;
 					post( {
-						type: 'wp-admin-shell-dirty-state',
+						type: 'wp-admin-workspaces-dirty-state',
 						dirty: dirty,
 					} );
 				} catch ( _err ) { /* store gone mid-teardown — swallow */ }

@@ -31,7 +31,7 @@ import ViewTabs from '../_shared/dataviews/ViewTabs';
 
 /**
  * Map a post type id to the URL hash that opens its editor route.
- * Routes are bundled in shells that surface PostsApp + the native
+ * Routes are bundled in workspaces that surface PostsApp + the native
  * editor (e.g. single-pane-demo). The `post` / `page` post types get their own pluralized
  * paths (`/posts/{id}/edit`, `/pages/{id}/edit`) — site-editor post
  * types (`wp_template`, `wp_block`, `wp_navigation`) need their own
@@ -46,12 +46,12 @@ function editHref( postType, id ) {
 }
 
 const STATUS_LABELS = {
-	publish: __( 'Published', 'wp-admin-shell' ),
-	draft: __( 'Draft', 'wp-admin-shell' ),
-	pending: __( 'Pending', 'wp-admin-shell' ),
-	private: __( 'Private', 'wp-admin-shell' ),
-	future: __( 'Scheduled', 'wp-admin-shell' ),
-	trash: __( 'Trash', 'wp-admin-shell' ),
+	publish: __( 'Published', 'wp-admin-workspaces' ),
+	draft: __( 'Draft', 'wp-admin-workspaces' ),
+	pending: __( 'Pending', 'wp-admin-workspaces' ),
+	private: __( 'Private', 'wp-admin-workspaces' ),
+	future: __( 'Scheduled', 'wp-admin-workspaces' ),
+	trash: __( 'Trash', 'wp-admin-workspaces' ),
 };
 
 const STATUS_VALUES = Object.keys( STATUS_LABELS );
@@ -60,44 +60,44 @@ const STATUS_VALUES = Object.keys( STATUS_LABELS );
 // has its own (confirmed) action and `future` is date-driven, so neither is a
 // straight bulk-settable target.
 const BULK_STATUS_LABELS = {
-	publish: __( 'Published', 'wp-admin-shell' ),
-	draft: __( 'Draft', 'wp-admin-shell' ),
-	pending: __( 'Pending', 'wp-admin-shell' ),
-	private: __( 'Private', 'wp-admin-shell' ),
+	publish: __( 'Published', 'wp-admin-workspaces' ),
+	draft: __( 'Draft', 'wp-admin-workspaces' ),
+	pending: __( 'Pending', 'wp-admin-workspaces' ),
+	private: __( 'Private', 'wp-admin-workspaces' ),
 };
 
 // Post formats wp-admin's Bulk Edit exposes. REST writes these via the `format`
 // param; `standard` clears the format.
 const FORMAT_LABELS = {
-	standard: __( 'Standard', 'wp-admin-shell' ),
-	aside: __( 'Aside', 'wp-admin-shell' ),
-	gallery: __( 'Gallery', 'wp-admin-shell' ),
-	link: __( 'Link', 'wp-admin-shell' ),
-	image: __( 'Image', 'wp-admin-shell' ),
-	quote: __( 'Quote', 'wp-admin-shell' ),
-	status: __( 'Status', 'wp-admin-shell' ),
-	video: __( 'Video', 'wp-admin-shell' ),
-	audio: __( 'Audio', 'wp-admin-shell' ),
-	chat: __( 'Chat', 'wp-admin-shell' ),
+	standard: __( 'Standard', 'wp-admin-workspaces' ),
+	aside: __( 'Aside', 'wp-admin-workspaces' ),
+	gallery: __( 'Gallery', 'wp-admin-workspaces' ),
+	link: __( 'Link', 'wp-admin-workspaces' ),
+	image: __( 'Image', 'wp-admin-workspaces' ),
+	quote: __( 'Quote', 'wp-admin-workspaces' ),
+	status: __( 'Status', 'wp-admin-workspaces' ),
+	video: __( 'Video', 'wp-admin-workspaces' ),
+	audio: __( 'Audio', 'wp-admin-workspaces' ),
+	chat: __( 'Chat', 'wp-admin-workspaces' ),
 };
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	title: __( 'Title', 'wp-admin-shell' ),
-	status: __( 'Status', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	categories: __( 'Categories', 'wp-admin-shell' ),
-	format: __( 'Format', 'wp-admin-shell' ),
-	date: __( 'Date', 'wp-admin-shell' ),
+	title: __( 'Title', 'wp-admin-workspaces' ),
+	status: __( 'Status', 'wp-admin-workspaces' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
+	categories: __( 'Categories', 'wp-admin-workspaces' ),
+	format: __( 'Format', 'wp-admin-workspaces' ),
+	date: __( 'Date', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	view: __( 'View', 'wp-admin-shell' ),
-	'bulk-edit': __( 'Edit', 'wp-admin-shell' ),
-	trash: __( 'Move to Trash', 'wp-admin-shell' ),
-	restore: __( 'Restore', 'wp-admin-shell' ),
-	'delete-permanent': __( 'Delete Permanently', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	view: __( 'View', 'wp-admin-workspaces' ),
+	'bulk-edit': __( 'Edit', 'wp-admin-workspaces' ),
+	trash: __( 'Move to Trash', 'wp-admin-workspaces' ),
+	restore: __( 'Restore', 'wp-admin-workspaces' ),
+	'delete-permanent': __( 'Delete Permanently', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -245,58 +245,61 @@ function buildBulkEditFields( postType ) {
 	const base = [
 		{
 			id: 'status',
-			label: __( 'Status', 'wp-admin-shell' ),
+			label: __( 'Status', 'wp-admin-workspaces' ),
 			elements: elementsFromLabels( BULK_STATUS_LABELS ),
 		},
 		{
 			id: 'sticky',
-			label: __( 'Sticky', 'wp-admin-shell' ),
+			label: __( 'Sticky', 'wp-admin-workspaces' ),
 			elements: [
-				{ value: 'true', label: __( 'Sticky', 'wp-admin-shell' ) },
+				{ value: 'true', label: __( 'Sticky', 'wp-admin-workspaces' ) },
 				{
 					value: 'false',
-					label: __( 'Not sticky', 'wp-admin-shell' ),
+					label: __( 'Not sticky', 'wp-admin-workspaces' ),
 				},
 			],
 		},
 		{
 			id: 'format',
-			label: __( 'Format', 'wp-admin-shell' ),
+			label: __( 'Format', 'wp-admin-workspaces' ),
 			elements: elementsFromLabels( FORMAT_LABELS ),
 		},
 		{
 			id: 'comment_status',
-			label: __( 'Comments', 'wp-admin-shell' ),
+			label: __( 'Comments', 'wp-admin-workspaces' ),
 			elements: [
-				{ value: 'open', label: __( 'Allow', 'wp-admin-shell' ) },
+				{ value: 'open', label: __( 'Allow', 'wp-admin-workspaces' ) },
 				{
 					value: 'closed',
-					label: __( 'Do not allow', 'wp-admin-shell' ),
+					label: __( 'Do not allow', 'wp-admin-workspaces' ),
 				},
 			],
 		},
 		{
 			id: 'author',
 			type: 'integer',
-			label: __( 'Author (user ID)', 'wp-admin-shell' ),
+			label: __( 'Author (user ID)', 'wp-admin-workspaces' ),
 			getValue: sentinelToText( 'author' ),
 		},
 		{
 			id: 'parent',
 			type: 'integer',
-			label: __( 'Parent (post ID)', 'wp-admin-shell' ),
+			label: __( 'Parent (post ID)', 'wp-admin-workspaces' ),
 			getValue: sentinelToText( 'parent' ),
 		},
 		{
 			id: 'categories',
 			type: 'text',
-			label: __( 'Categories (comma-separated IDs)', 'wp-admin-shell' ),
+			label: __(
+				'Categories (comma-separated IDs)',
+				'wp-admin-workspaces'
+			),
 			getValue: sentinelToText( 'categories' ),
 		},
 		{
 			id: 'tags',
 			type: 'text',
-			label: __( 'Tags (comma-separated IDs)', 'wp-admin-shell' ),
+			label: __( 'Tags (comma-separated IDs)', 'wp-admin-workspaces' ),
 			getValue: sentinelToText( 'tags' ),
 		},
 	].filter(
@@ -406,7 +409,7 @@ function authorIdFromConfig( raw ) {
 export default function PostsApp( { config } ) {
 	const postType = config.postType || 'post';
 	const screenId = config.screenId || null;
-	const currentUserId = window.wpAdminShell?.userId;
+	const currentUserId = window.wpAdminWorkspaces?.userId;
 
 	// "View posts" (Users screen) scopes the list to one author via the
 	// `?author=N` URL slot. The `posts` screen declares `config.author:
@@ -517,7 +520,7 @@ export default function PostsApp( { config } ) {
 			title: decodeEntities(
 				record.title?.rendered ||
 					record.title?.raw ||
-					__( '(no title)', 'wp-admin-shell' )
+					__( '(no title)', 'wp-admin-workspaces' )
 			),
 			status: record.status,
 			date: record.date,
@@ -586,7 +589,7 @@ export default function PostsApp( { config } ) {
 			form: buildBulkEditForm( postType ),
 			toRecord: bulkToRecord,
 			messages: {
-				applyLabel: __( 'Update', 'wp-admin-shell' ),
+				applyLabel: __( 'Update', 'wp-admin-workspaces' ),
 			},
 			onApplied: refreshAfterMutation,
 		} );
@@ -596,13 +599,13 @@ export default function PostsApp( { config } ) {
 				items.length === 1
 					? __(
 							'Are you sure you want to move this item to the trash?',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  )
 					: __(
 							'Are you sure you want to move these items to the trash?',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Move to Trash', 'wp-admin-shell' ),
+			confirmLabel: __( 'Move to Trash', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'postType', postType, item.id ),
 			onSettled: ( { targets, failed } ) => {
@@ -616,7 +619,7 @@ export default function PostsApp( { config } ) {
 								'%1$d of %2$d item failed to move to trash.',
 								'%1$d of %2$d items failed to move to trash.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							targets.length
@@ -632,7 +635,7 @@ export default function PostsApp( { config } ) {
 								'%d item moved to trash.',
 								'%d items moved to trash.',
 								targets.length,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							targets.length
 						),
@@ -649,13 +652,13 @@ export default function PostsApp( { config } ) {
 				items.length === 1
 					? __(
 							'Are you sure you want to permanently delete this item? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  )
 					: __(
 							'Are you sure you want to permanently delete these items? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Delete Permanently', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete Permanently', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'postType', postType, item.id, {
 					force: true,
@@ -671,7 +674,7 @@ export default function PostsApp( { config } ) {
 								'%1$d of %2$d item failed to delete.',
 								'%1$d of %2$d items failed to delete.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							targets.length
@@ -687,7 +690,7 @@ export default function PostsApp( { config } ) {
 								'%d item permanently deleted.',
 								'%d items permanently deleted.',
 								targets.length,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							targets.length
 						),
@@ -728,7 +731,7 @@ export default function PostsApp( { config } ) {
 								'%1$d of %2$d item failed to restore.',
 								'%1$d of %2$d items failed to restore.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							items.length
@@ -744,7 +747,7 @@ export default function PostsApp( { config } ) {
 								'%d item restored to draft.',
 								'%d items restored to draft.',
 								items.length,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							items.length
 						),
@@ -800,14 +803,14 @@ export default function PostsApp( { config } ) {
 		const segments = [
 			{
 				id: 'all',
-				label: __( 'All', 'wp-admin-shell' ),
+				label: __( 'All', 'wp-admin-workspaces' ),
 				filter: { field: 'status', operator: 'is', value: 'any' },
 			},
 		];
 		if ( currentUserId ) {
 			segments.push( {
 				id: 'mine',
-				label: __( 'Mine', 'wp-admin-shell' ),
+				label: __( 'Mine', 'wp-admin-workspaces' ),
 				filter: {
 					field: 'author',
 					operator: 'is',
@@ -839,7 +842,7 @@ export default function PostsApp( { config } ) {
 		if ( postType === 'post' ) {
 			segments.push( {
 				id: 'sticky',
-				label: __( 'Sticky', 'wp-admin-shell' ),
+				label: __( 'Sticky', 'wp-admin-workspaces' ),
 				filter: { field: 'sticky', operator: 'is', value: true },
 			} );
 		}
@@ -920,9 +923,9 @@ export default function PostsApp( { config } ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-posts wp-admin-shell-app--fill">
+		<div className="wp-admin-workspaces-app-posts wp-admin-workspaces-app--fill">
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (

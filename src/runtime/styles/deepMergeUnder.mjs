@@ -1,6 +1,6 @@
 /**
  * Deep-merge plain-object trees with `over` winning on overlapping keys.
- * Used to fold engine `default-styles` UNDER admin.json `styles` when
+ * Used to fold engine `default-styles` UNDER workspace.json `styles` when
  * the kernel is mounted with raw config (tests, Storybook). The PHP
  * resolver normally does this server-side; the JS path is defensive.
  *

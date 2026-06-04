@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:dashboard-host",
 	"version": 1,
 	"title": "Dashboard",
@@ -16,7 +16,7 @@
 			}
 		}
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"slots": {
 		"grid": {
 			"label": "Dashboard Grid",
@@ -29,7 +29,7 @@
 		"data": {
 			"reads": [
 				{
-					"source": "window.wpAdminShell.userId",
+					"source": "window.wpAdminWorkspaces.userId",
 					"via": "window-global",
 					"purpose": "Acting-user id — used to look up the user record for the greeting header's display name."
 				},
@@ -49,7 +49,7 @@
 					"purpose": "List of screen-app entries; the host filters to `slot === 'grid'` and renders the survivors as tiles."
 				},
 				{
-					"source": "window.wpAdminShell.manifests.apps",
+					"source": "window.wpAdminWorkspaces.manifests.apps",
 					"via": "window-global",
 					"purpose": "Read each widget app's `slotHints` block for default size / position before per-entry overrides apply."
 				}
@@ -74,15 +74,15 @@
 		"constraints": [
 			{
 				"concern": "slot-based-eligibility",
-				"note": "An app participates iff a `screens[id].apps[]` entry references it with `slot: \"grid\"`. Manifest `slotHints` only supplies defaults — it's not an eligibility check. Programmatic registrations via `wp_admin_shell_register_dashboard_widget()` synthesize a screen-app entry under the target screen (`dashboard-widgets` by default)."
+				"note": "An app participates iff a `screens[id].apps[]` entry references it with `slot: \"grid\"`. Manifest `slotHints` only supplies defaults — it's not an eligibility check. Programmatic registrations via `wp_admin_workspaces_register_dashboard_widget()` synthesize a screen-app entry under the target screen (`dashboard-widgets` by default)."
 			},
 			{
 				"concern": "no-runtime-mutation",
-				"note": "The host is config-driven only — widgets are computed from `composeScreenWidgets({ screen, manifests })` once per (screen, manifests) tuple. Drag-to-reorder is out of scope; authors reorder via admin.json `apps[]` ordering and `position` overrides."
+				"note": "The host is config-driven only — widgets are computed from `composeScreenWidgets({ screen, manifests })` once per (screen, manifests) tuple. Drag-to-reorder is out of scope; authors reorder via workspace.json `apps[]` ordering and `position` overrides."
 			},
 			{
 				"concern": "v2-back-compat",
-				"note": "v2 shells with the legacy top-level `dashboardWidgets` block + manifest `dashboardWidget` blocks flow through the v3 compiler's back-compat layer, which folds each entry into the `dashboard-widgets` screen's `apps[]` array with `slot: \"grid\"`. The host never sees v2-shape data directly."
+				"note": "v2 workspaces with the legacy top-level `dashboardWidgets` block + manifest `dashboardWidget` blocks flow through the v3 compiler's back-compat layer, which folds each entry into the `dashboard-widgets` screen's `apps[]` array with `slot: \"grid\"`. The host never sees v2-shape data directly."
 			}
 		],
 		"design-system-leakage": [

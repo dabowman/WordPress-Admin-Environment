@@ -22,7 +22,7 @@ import { STANDARD_ROLE_LABELS, DEFAULT_ROLES } from '../_shared/roles';
  * see `onSubmit` + app.md), so whenever the admin leaves this field at its
  * default the generated value becomes the account's only stored credential. That
  * makes a non-predictable source mandatory — `window.crypto.getRandomValues`,
- * available in every browser the shell targets, replaces `Math.random()` (not a
+ * available in every browser the workspace targets, replaces `Math.random()` (not a
  * CSPRNG). The admin can still override the value before submitting.
  *
  * @return {string} A 16-char password.
@@ -46,7 +46,7 @@ function generatePassword() {
  * On success it navigates to the new user's edit screen.
  *
  * Role options come from the resolved `root/user` dataView spec `roles`
- * elements when available (so admin.json controls the surfaced set + translated
+ * elements when available (so workspace.json controls the surfaced set + translated
  * labels), falling back to the standard WordPress roles.
  *
  * Known gap: the welcome-email toggle (`send_user_notification`) is NOT in the
@@ -132,39 +132,39 @@ export default function UserNewApp() {
 			{
 				id: 'username',
 				type: 'text',
-				label: __( 'Username', 'wp-admin-shell' ),
+				label: __( 'Username', 'wp-admin-workspaces' ),
 				isValid: { required: true },
 			},
 			{
 				id: 'email',
 				type: 'email',
-				label: __( 'Email', 'wp-admin-shell' ),
+				label: __( 'Email', 'wp-admin-workspaces' ),
 				isValid: { required: true },
 			},
 			{
 				id: 'first_name',
 				type: 'text',
-				label: __( 'First Name', 'wp-admin-shell' ),
+				label: __( 'First Name', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'last_name',
 				type: 'text',
-				label: __( 'Last Name', 'wp-admin-shell' ),
+				label: __( 'Last Name', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'url',
 				type: 'text',
-				label: __( 'Website', 'wp-admin-shell' ),
+				label: __( 'Website', 'wp-admin-workspaces' ),
 			},
 			{
 				id: 'password',
 				type: 'text',
-				label: __( 'Password', 'wp-admin-shell' ),
+				label: __( 'Password', 'wp-admin-workspaces' ),
 				isValid: { required: true },
 			},
 			{
 				id: 'roles',
-				label: __( 'Role', 'wp-admin-shell' ),
+				label: __( 'Role', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: roleElements,
 			},
@@ -173,7 +173,7 @@ export default function UserNewApp() {
 				type: 'boolean',
 				label: __(
 					'Send the new user an email about their account.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				),
 				// Disabled, off by default: the REST create path sends no welcome
 				// email (the field is stripped before POST — see `onSubmit` +
@@ -182,7 +182,7 @@ export default function UserNewApp() {
 				readOnly: true,
 				description: __(
 					'The welcome email is not sent when creating a user from the workspace yet.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				),
 			},
 		],
@@ -228,19 +228,19 @@ export default function UserNewApp() {
 				const saveError = getLastEntitySaveError( 'root', 'user' );
 				createErrorNotice(
 					saveError?.message ||
-						__( 'Failed to create user.', 'wp-admin-shell' ),
+						__( 'Failed to create user.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 				return;
 			}
-			createSuccessNotice( __( 'User created.', 'wp-admin-shell' ), {
+			createSuccessNotice( __( 'User created.', 'wp-admin-workspaces' ), {
 				type: 'snackbar',
 			} );
 			navigate( `#/users/${ record.id }/edit` );
 		} catch ( err ) {
 			createErrorNotice(
 				err?.message ||
-					__( 'Failed to create user.', 'wp-admin-shell' ),
+					__( 'Failed to create user.', 'wp-admin-workspaces' ),
 				{ isDismissible: true }
 			);
 		} finally {
@@ -256,15 +256,15 @@ export default function UserNewApp() {
 	] );
 
 	return (
-		<div className="wp-admin-shell-app-user-new wp-admin-shell-app--inset">
+		<div className="wp-admin-workspaces-app-user-new wp-admin-workspaces-app--inset">
 			<Stack direction="column" gap="xl">
 				<Text variant="heading-lg" render={ <h2 /> }>
-					{ __( 'Add New User', 'wp-admin-shell' ) }
+					{ __( 'Add New User', 'wp-admin-workspaces' ) }
 				</Text>
-				<Text className="wp-admin-shell-app__muted">
+				<Text className="wp-admin-workspaces-app__muted">
 					{ __(
 						'Create a brand new user and add them to this site.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					) }
 				</Text>
 
@@ -296,7 +296,7 @@ export default function UserNewApp() {
 						disabled={ ! isValid || isSaving }
 						loading={ isSaving }
 					>
-						{ __( 'Add New User', 'wp-admin-shell' ) }
+						{ __( 'Add New User', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="neutral"
@@ -304,7 +304,7 @@ export default function UserNewApp() {
 						onClick={ () => navigate( '#/users' ) }
 						disabled={ isSaving }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

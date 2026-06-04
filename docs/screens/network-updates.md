@@ -6,7 +6,7 @@
 - `wp-admin/network/upgrade.php` (Upgrade Network — iterates sites, runs `wp_upgrade()` on each)
 - `wp-admin/update.php` (action handlers for run-upgrade flows)
 
-**Current shell coverage:** None.
+**Current workspace coverage:** None.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `update_core` (or one of the granular update caps). The Upgrade Network step requires `upgrade_network`.
 
@@ -60,7 +60,7 @@ Jobs to be done:
 
 Note: `manage_network` allows access to the menu link; `upgrade_network` is required to actually start the sweep. The menu cap is `upgrade_network` per `menu.php` line 51, so users without the cap won't see the menu item.
 
-**Permission-denied state:** `wp_die()` 403. Shell renders no-access state.
+**Permission-denied state:** `wp_die()` 403. Workspace renders no-access state.
 
 ---
 
@@ -249,7 +249,7 @@ Original URL params:
 - Theme update: `/update.php?action=update-selected-themes&themes={t1,t2}&_wpnonce={n}`
 - Network sweep: `/network/upgrade.php?action=upgrade&n={offset}`
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-updates                       (Updates dashboard)
 #/network-updates/upgrade               (Upgrade Network start screen)
@@ -325,7 +325,7 @@ No undo. Updates are forward-only.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None.
 
 ### Gaps vs. this spec

@@ -20,7 +20,7 @@
  *     are never pruned.
  *   - Pruning a screen removes it from BOTH `screens` and the `menu` tree
  *     (nested removal), and is a no-op when the screen isn't declared.
- *   - End-to-end: the pass fires on `wp_admin_shell_data` at priority 4,
+ *   - End-to-end: the pass fires on `wp_admin_workspaces_data` at priority 4,
  *     before `bind_screens` (5) — a dropped node never gets a stamped
  *     label.
  */
@@ -155,20 +155,20 @@ function wpas_signal( $block, $supports = array() ) {
 // Signal stamping
 // -----------------------------------------------------------------------------
 
-$block_doc = WP_Admin_Shell_Appearance_Menu::apply( wpas_appearance_test_doc(), wpas_signal( true ) );
+$block_doc = WP_Admin_Workspaces_Appearance_Menu::apply( wpas_appearance_test_doc(), wpas_signal( true ) );
 
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal stamped: workspace.theme-support present',
-	isset( $block_doc['workspace']['theme-support'] )
+	isset( $block_doc['theme-support'] )
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal: block-theme flag true for block theme',
-	$block_doc['workspace']['theme-support']['block-theme']
+	$block_doc['theme-support']['block-theme']
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal: theme-supports map present',
-	isset( $block_doc['workspace']['theme-support']['theme-supports'] ) &&
-	is_array( $block_doc['workspace']['theme-support']['theme-supports'] )
+	isset( $block_doc['theme-support']['theme-supports'] ) &&
+	is_array( $block_doc['theme-support']['theme-supports'] )
 );
 
 // A "fully-equipped" classic theme: declares widgets + menus support (so the
@@ -176,23 +176,23 @@ WPAS_Appearance_Test_Runner::assert_true(
 // custom-background / custom-header (those are asserted to drop below). Used as
 // the baseline classic doc for the keep/drop assertions that aren't about the
 // add_theme_support() gating itself.
-$classic_doc = WP_Admin_Shell_Appearance_Menu::apply(
+$classic_doc = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
 );
 WPAS_Appearance_Test_Runner::assert_false(
 	'signal: block-theme flag false for classic theme',
-	$classic_doc['workspace']['theme-support']['block-theme']
+	$classic_doc['theme-support']['block-theme']
 );
 
-// Signal is stamped even when the shell declares no screens.
-$bare = WP_Admin_Shell_Appearance_Menu::apply(
+// Signal is stamped even when the workspace declares no screens.
+$bare = WP_Admin_Workspaces_Appearance_Menu::apply(
 	array( 'workspace' => array() ),
 	wpas_signal( true )
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal stamped even with no screens block',
-	! empty( $bare['workspace']['theme-support']['block-theme'] )
+	! empty( $bare['theme-support']['block-theme'] )
 );
 
 // -----------------------------------------------------------------------------
@@ -253,7 +253,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 );
 
 // Custom Background/Header dropped on block themes regardless of support.
-$block_with_support = WP_Admin_Shell_Appearance_Menu::apply(
+$block_with_support = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( true, array( 'custom-header' => true, 'custom-background' => true ) )
 );
@@ -305,7 +305,7 @@ WPAS_Appearance_Test_Runner::assert_false(
 	isset( $classic_doc['screens']['custom-background'] )
 );
 
-$classic_supported = WP_Admin_Shell_Appearance_Menu::apply(
+$classic_supported = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( false, array( 'custom-header' => true, 'custom-background' => true ) )
 );
@@ -335,7 +335,7 @@ $partial = array(
 		),
 	),
 );
-$partial_out = WP_Admin_Shell_Appearance_Menu::apply( $partial, wpas_signal( true ) );
+$partial_out = WP_Admin_Workspaces_Appearance_Menu::apply( $partial, wpas_signal( true ) );
 WPAS_Appearance_Test_Runner::assert_true(
 	'no-op: absent gated screen leaves themes intact',
 	isset( $partial_out['screens']['themes'] ) &&
@@ -346,7 +346,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 // Empty-group collapse — a group whose only child is pruned is itself dropped
 // -----------------------------------------------------------------------------
 
-// Custom shell whose Appearance group's ONLY item is the block-theme-only
+// Custom workspace whose Appearance group's ONLY item is the block-theme-only
 // `site-editor`. On a classic theme that child is pruned → the group would be
 // left empty (a clickable drilldown into nothing) without the collapse guard.
 $only_gated = array(
@@ -370,7 +370,7 @@ $only_gated = array(
 		),
 	),
 );
-$collapsed = WP_Admin_Shell_Appearance_Menu::apply( $only_gated, wpas_signal( false ) );
+$collapsed = WP_Admin_Workspaces_Appearance_Menu::apply( $only_gated, wpas_signal( false ) );
 WPAS_Appearance_Test_Runner::assert_false(
 	'collapse: emptied appearance group dropped after its only child pruned',
 	isset( $collapsed['menu']['appearance'] )
@@ -396,7 +396,7 @@ $keeps_one = array(
 		),
 	),
 );
-$kept = WP_Admin_Shell_Appearance_Menu::apply( $keeps_one, wpas_signal( false ) );
+$kept = WP_Admin_Workspaces_Appearance_Menu::apply( $keeps_one, wpas_signal( false ) );
 WPAS_Appearance_Test_Runner::assert_true(
 	'collapse: group keeps surviving themes child after gated child pruned',
 	isset( $kept['menu']['appearance']['items']['themes'] ) &&
@@ -422,35 +422,35 @@ $preexisting_empty = array(
 		),
 	),
 );
-$pre_out = WP_Admin_Shell_Appearance_Menu::apply( $preexisting_empty, wpas_signal( true ) );
+$pre_out = WP_Admin_Workspaces_Appearance_Menu::apply( $preexisting_empty, wpas_signal( true ) );
 WPAS_Appearance_Test_Runner::assert_true(
 	'collapse: pre-existing empty group is left as-is (lost nothing to prune)',
 	isset( $pre_out['menu']['placeholder'] )
 );
 
 // -----------------------------------------------------------------------------
-// End-to-end — fires on wp_admin_shell_data before bind_screens (priority 4)
+// End-to-end — fires on wp_admin_workspaces_data before bind_screens (priority 4)
 // -----------------------------------------------------------------------------
 
 $has_filter = has_filter(
-	'wp_admin_shell_data',
-	array( 'WP_Admin_Shell_Appearance_Menu', 'prune' )
+	'wp_admin_workspaces_data',
+	array( 'WP_Admin_Workspaces_Appearance_Menu', 'prune' )
 );
 WPAS_Appearance_Test_Runner::assert_eq(
-	'pass registered on wp_admin_shell_data at priority 4',
+	'pass registered on wp_admin_workspaces_data at priority 4',
 	$has_filter,
 	4
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'prune pass runs before bind_screens (4 < 5)',
-	$has_filter < has_filter( 'wp_admin_shell_data', array( 'WP_Admin_Shell_Menu_Items', 'bind_screens' ) )
+	$has_filter < has_filter( 'wp_admin_workspaces_data', array( 'WP_Admin_Workspaces_Menu_Items', 'bind_screens' ) )
 );
 
 // `prune()` (the live entry point) returns the doc with the signal stamped.
-$live = WP_Admin_Shell_Appearance_Menu::prune( wpas_appearance_test_doc() );
+$live = WP_Admin_Workspaces_Appearance_Menu::prune( wpas_appearance_test_doc() );
 WPAS_Appearance_Test_Runner::assert_true(
 	'live prune() stamps the signal from real theme support',
-	isset( $live['workspace']['theme-support']['block-theme'] )
+	isset( $live['theme-support']['block-theme'] )
 );
 
 // -----------------------------------------------------------------------------
@@ -459,7 +459,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 
 // Classic theme that supports neither widgets nor menus → both screens drop,
 // alongside the unsupported background/header. Customize (no `requires`) stays.
-$classic_no_support = WP_Admin_Shell_Appearance_Menu::apply(
+$classic_no_support = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( false ) // every feature false.
 );
@@ -485,7 +485,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 );
 
 // Classic theme that DOES support widgets + menus → both survive.
-$classic_with_nav = WP_Admin_Shell_Appearance_Menu::apply(
+$classic_with_nav = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( false, array( 'widgets' => true, 'menus' => true ) )
 );
@@ -507,7 +507,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 );
 
 // Partial support — menus yes, widgets no — gates independently.
-$classic_menus_only = WP_Admin_Shell_Appearance_Menu::apply(
+$classic_menus_only = WP_Admin_Workspaces_Appearance_Menu::apply(
 	wpas_appearance_test_doc(),
 	wpas_signal( false, array( 'menus' => true ) )
 );
@@ -529,12 +529,12 @@ $doc_with_navmenus['screens']['nav-menus']                         = array(
 	'path'  => '/nav-menus',
 	'app'   => 'iframe:nav-menus.php',
 );
-// The shell pins `nav-menus` in the Appearance menu group (a real entry point,
+// The workspace pins `nav-menus` in the Appearance menu group (a real entry point,
 // not a hand-typed URL). Mirror that placement so the prune is exercised against
 // a menu node, not just a `screens` entry.
 $doc_with_navmenus['menu']['appearance']['items']['nav-menus']     = array( 'position' => 65 );
 
-$navmenus_classic_unsupported = WP_Admin_Shell_Appearance_Menu::apply(
+$navmenus_classic_unsupported = WP_Admin_Workspaces_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( false )
 );
@@ -546,7 +546,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 	'agnostic: nav-menus menu node kept on classic theme without menu support',
 	isset( $navmenus_classic_unsupported['menu']['appearance']['items']['nav-menus'] )
 );
-$navmenus_classic_supported = WP_Admin_Shell_Appearance_Menu::apply(
+$navmenus_classic_supported = WP_Admin_Workspaces_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( false, array( 'menus' => true ) )
 );
@@ -554,7 +554,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 	'agnostic: nav-menus screen kept on classic theme with menu support',
 	isset( $navmenus_classic_supported['screens']['nav-menus'] )
 );
-$navmenus_block = WP_Admin_Shell_Appearance_Menu::apply(
+$navmenus_block = WP_Admin_Workspaces_Appearance_Menu::apply(
 	$doc_with_navmenus,
 	wpas_signal( true )
 );

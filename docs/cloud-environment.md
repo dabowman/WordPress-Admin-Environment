@@ -28,7 +28,7 @@ aborts the session).
      (`No such file or directory`). `find` resolves the script wherever the repo
      was cloned.
    - **No `$(...)`, no double quotes, no backslashes.** The platform re-wraps the
-     setup field in its own shell, where command substitution + quotes fail with
+     setup field in its own workspace, where command substitution + quotes fail with
      `syntax error near unexpected token ')'`. The `find` form avoids all three.
 
    `|| true` guarantees a clean exit so the session always launches; the script

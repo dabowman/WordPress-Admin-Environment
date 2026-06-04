@@ -58,7 +58,7 @@ export function createIconRegistry() {
 			warned.add( name );
 			// eslint-disable-next-line no-console
 			console.warn(
-				`wp-admin-shell iconMap: unknown icon name "${ name }"; falling back to engine default. Known: ${ Object.keys(
+				`wp-admin-workspaces iconMap: unknown icon name "${ name }"; falling back to engine default. Known: ${ Object.keys(
 					registry
 				)
 					.sort()

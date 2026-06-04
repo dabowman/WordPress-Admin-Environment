@@ -6,7 +6,7 @@ import { KernelProvider } from './kernel-context';
 import { RouterProvider } from './routing/router';
 import { ThemeProviderHost } from './styles/ThemeProviderHost';
 import { shouldRenderRegion } from './capabilities/shouldRenderRegion.mjs';
-import { attachShellSwitcherToWindow } from './shell-switching';
+import { attachWorkspaceSwitcherToWindow } from './workspace-switching';
 import { getEngine as getEngineManifest } from './manifests';
 import { resolveRegion } from './regions/resolveRegion.mjs';
 import { validateRegion, sanitizeRegion } from './regions/validateRegion.mjs';
@@ -27,7 +27,7 @@ import { buildRuntimeConfig } from './compile/buildRuntimeConfig.mjs';
  *   3. Wrap the engine output in the kernel/router/slot providers.
  *
  * v0 (MVP flat) → v1 normalization runs server-side in
- * `WP_Admin_Shell_Origin_Core::normalize_v0`. The kernel never sees the
+ * `WP_Admin_Workspaces_Origin_Core::normalize_v0`. The kernel never sees the
  * legacy shape regardless of source. The MVP-era JS-side `normalizeV0`
  * shim retired with this commit; if a future config-delivery path
  * bypasses PHP, restore it.
@@ -39,7 +39,10 @@ export function kernel( config ) {
 	if ( ! config ) {
 		return (
 			<div style={ { padding: 32 } }>
-				{ __( 'Shell configuration not found.', 'wp-admin-shell' ) }
+				{ __(
+					'Workspace configuration not found.',
+					'wp-admin-workspaces'
+				) }
 			</div>
 		);
 	}
@@ -65,14 +68,15 @@ export function kernel( config ) {
 	// scoped overrides (chrome bindings, region/app token overrides)
 	// as a sibling `<style>` block. Engines pluggable here; kernel
 	// agnostic — see `tests/runtime/kernel-no-ds-import.test.mjs`.
-	const shellTokens =
-		( typeof window !== 'undefined' && window.wpAdminShell?.tokens ) || {};
+	const workspaceTokens =
+		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.tokens ) ||
+		{};
 
-	// Shell-switching plumbing (no UI surface in v1; v2 prefs UI).
-	attachShellSwitcherToWindow();
+	// Workspace-switching plumbing (no UI surface in v1; v2 prefs UI).
+	attachWorkspaceSwitcherToWindow();
 
 	const engineId =
-		config.workspace?.engine || config.engine || 'core:default';
+		config.engine || config.workspace?.engine || 'core:default';
 	const engineManifest = getEngineManifest( engineId );
 
 	// Build the runtime config from the resolved v3 author doc + the active
@@ -84,21 +88,21 @@ export function kernel( config ) {
 
 	const engineSource = registry.get( engineId, 'engine' );
 
-	// Engine `default-styles` deep-merged UNDER admin.json `styles`.
-	// PHP resolver already does this in `WP_Admin_Shell_Resolver::engine_origin`,
+	// Engine `default-styles` deep-merged UNDER workspace.json `styles`.
+	// PHP resolver already does this in `WP_Admin_Workspaces_Resolver::engine_origin`,
 	// so the kernel is normally a no-op. Defensive: covers tests and
 	// Storybook stories that mount the kernel with raw fixture config
 	// bypassing the PHP resolver.
 	const engineDefaults =
 		( engineManifest && engineManifest[ 'default-styles' ] ) || null;
-	const shellStyles = engineDefaults
+	const workspaceStyles = engineDefaults
 		? deepMergeUnder( runtimeConfig.styles || {}, engineDefaults )
 		: runtimeConfig.styles || {};
 
 	if ( ! engineSource ) {
 		return (
 			<div style={ { padding: 32 } }>
-				{ __( 'Unknown layout engine:', 'wp-admin-shell' ) }
+				{ __( 'Unknown layout engine:', 'wp-admin-workspaces' ) }
 				{ engineId }
 			</div>
 		);
@@ -120,7 +124,7 @@ export function kernel( config ) {
 	const unhonoredWarned = new Set();
 	const capMap =
 		typeof window !== 'undefined'
-			? window.wpAdminShell?.capabilities
+			? window.wpAdminWorkspaces?.capabilities
 			: null;
 	Object.entries( regionsMap ).forEach( ( [ id, regionInstance ] ) => {
 		// Spec §8 layer 1 — region capability fast-path. A region the
@@ -136,7 +140,7 @@ export function kernel( config ) {
 		if ( violations.length && typeof console !== 'undefined' ) {
 			for ( const v of violations ) {
 				// eslint-disable-next-line no-console
-				console.warn( `[wp-admin-shell] ${ v.message }` );
+				console.warn( `[wp-admin-workspaces] ${ v.message }` );
 			}
 		}
 		// Dev-mode: warn once per service when a region declares a
@@ -157,7 +161,7 @@ export function kernel( config ) {
 					unhonoredWarned.add( serviceName );
 					// eslint-disable-next-line no-console
 					console.warn(
-						`[wp-admin-shell] platform service "${ serviceName }" requested by region "${ id }" but engine "${ engineId }" does not list it in honored-platform. Request is a no-op.`
+						`[wp-admin-workspaces] platform service "${ serviceName }" requested by region "${ id }" but engine "${ engineId }" does not list it in honored-platform. Request is a no-op.`
 					);
 				}
 			}
@@ -185,8 +189,8 @@ export function kernel( config ) {
 				<ThemeProviderHost
 					engineSource={ engineSource }
 					isRoot
-					styles={ shellStyles }
-					tokens={ shellTokens }
+					styles={ workspaceStyles }
+					tokens={ workspaceTokens }
 				>
 					<NavigationGuard />
 					<BindingsConsumer />

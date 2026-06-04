@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-permalink.php` (custom handler — does **not** use `options.php`)
-**Current shell coverage:** Not implemented in v1. Falls back to `iframe:options-permalink.php` when configured.
+**Current workspace coverage:** Not implemented in v1. Falls back to `iframe:options-permalink.php` when configured.
 
 This spec describes the **semantic surface** of the Permalinks screen. Notably, this is the **only** Settings screen in core that handles its own POST instead of routing through `options.php` — because changing permalinks requires `flush_rewrite_rules()` and may need to write to `.htaccess` / `web.config`.
 
@@ -222,7 +222,7 @@ N/A.
 - Custom POST handler at `/wp-admin/options-permalink.php`.
 - Nonce: `update-permalink`.
 - After save, redirect to `options-permalink.php?settings-updated=true`.
-- For shell rebuild: implement a custom REST endpoint (`/wp-admin-shell/v1/settings/permalinks`) that wraps the same logic — set values via `WP_Rewrite` setters, call `flush_rewrite_rules()`, return a structured result with `{ writable: bool, server: 'apache'|'iis7'|'nginx'|'caddy', rules: string|null, message: string }`.
+- For workspace rebuild: implement a custom REST endpoint (`/wp-admin-workspaces/v1/settings/permalinks`) that wraps the same logic — set values via `WP_Rewrite` setters, call `flush_rewrite_rules()`, return a structured result with `{ writable: bool, server: 'apache'|'iis7'|'nginx'|'caddy', rules: string|null, message: string }`.
 
 ---
 
@@ -230,7 +230,7 @@ N/A.
 
 Original URL: `/wp-admin/options-permalink.php`. Query state: `?settings-updated=true`.
 
-Shell hash: `#/settings/permalinks`.
+Workspace hash: `#/settings/permalinks`.
 
 ---
 
@@ -289,13 +289,13 @@ Shell hash: `#/settings/permalinks`.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - Not implemented; reserved as `core:settings-permalinks` source slot.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| Permalink structure radio + custom + tag buttons | High | All non-REST; needs custom shell endpoint |
+| Permalink structure radio + custom + tag buttons | High | All non-REST; needs custom workspace endpoint |
 | Category base / Tag base | High | Non-REST |
 | .htaccess / web.config writability detection + rule echo | High | Server-detection logic must move into custom endpoint response |
 | Multisite blog-prefix handling | Medium | Subdirectory main-site preserves `/blog/` |
@@ -325,4 +325,4 @@ Shell hash: `#/settings/permalinks`.
 - Settings registration: not in `register_initial_settings`. Allowed options not in `options.php` — handled directly by options-permalink.php.
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php` (does NOT cover permalinks)
 - Documentation: `https://wordpress.org/documentation/article/customize-permalinks/`
-- Current shell impl: not yet implemented.
+- Current workspace impl: not yet implemented.

@@ -47,7 +47,7 @@ export default function DashboardWidgetActivityApp() {
 		<Stack direction="column" gap="xl">
 			<Stack direction="column" gap="sm">
 				<Text variant="heading-sm" render={ <h3 /> }>
-					{ __( 'Recently published', 'wp-admin-shell' ) }
+					{ __( 'Recently published', 'wp-admin-workspaces' ) }
 				</Text>
 				{ ( () => {
 					if ( posts.isResolving && ! posts.records ) {
@@ -58,7 +58,7 @@ export default function DashboardWidgetActivityApp() {
 							<Text variant="body-sm">
 								{ __(
 									'Nothing published yet.',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 						);
@@ -79,7 +79,7 @@ export default function DashboardWidgetActivityApp() {
 							>
 								{ post.title?.raw ||
 									post.title?.rendered ||
-									__( '(no title)', 'wp-admin-shell' ) }
+									__( '(no title)', 'wp-admin-workspaces' ) }
 							</Button>
 							<Text variant="body-sm">
 								{ new Date( post.date ).toLocaleDateString() }
@@ -91,7 +91,10 @@ export default function DashboardWidgetActivityApp() {
 
 			<Stack direction="column" gap="sm">
 				<Text variant="heading-sm" render={ <h3 /> }>
-					{ __( 'Comments awaiting moderation', 'wp-admin-shell' ) }
+					{ __(
+						'Comments awaiting moderation',
+						'wp-admin-workspaces'
+					) }
 				</Text>
 				{ ( () => {
 					if ( comments.isResolving && ! comments.records ) {
@@ -102,7 +105,7 @@ export default function DashboardWidgetActivityApp() {
 							<Text variant="body-sm">
 								{ __(
 									'Inbox zero. Nothing pending.',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</Text>
 						);
@@ -128,7 +131,10 @@ export default function DashboardWidgetActivityApp() {
 									size="small"
 									onClick={ () => navigate( '#/comments' ) }
 								>
-									{ __( 'Moderate all', 'wp-admin-shell' ) }
+									{ __(
+										'Moderate all',
+										'wp-admin-workspaces'
+									) }
 								</Button>
 							</Stack>
 						</>

@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:menus",
 	"version": 1,
 	"title": "Menus",
@@ -11,7 +11,7 @@
 		"properties": {},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 960,
@@ -25,7 +25,7 @@
 		"icon": "navigation"
 	},
 	"documentation": {
-		"purpose": "Native editor for WordPress classic navigation menus, rebuilding Appearance → Menus (`nav-menus.php`) over the nav-menu REST entities. It serves site authors on classic themes who still rely on `wp_nav_menu()` locations. Authors pick a menu from a selector (or create / rename / delete one), add items of three kinds — custom links, existing pages/posts, or existing categories/tags via lightweight relational pickers — reorder and nest items with explicit Up / Down / Indent / Outdent buttons plus a numeric Order field (Option B: no drag-and-drop, per issue #120), and assign the menu to theme-declared locations. On a block theme the app short-circuits to a disabled panel that points to the Site Editor's Navigation block and offers the classic `nav-menus.php` iframe fallback, because classic menus are superseded there. It consumes the shared `workspace.theme-support` block-theme signal (stamped PHP-side by `WP_Admin_Shell_Appearance_Menu`) to make that determination.",
+		"purpose": "Native editor for WordPress classic navigation menus, rebuilding Appearance → Menus (`nav-menus.php`) over the nav-menu REST entities. It serves site authors on classic themes who still rely on `wp_nav_menu()` locations. Authors pick a menu from a selector (or create / rename / delete one), add items of three kinds — custom links, existing pages/posts, or existing categories/tags via lightweight relational pickers — reorder and nest items with explicit Up / Down / Indent / Outdent buttons plus a numeric Order field (Option B: no drag-and-drop, per issue #120), and assign the menu to theme-declared locations. On a block theme the app short-circuits to a disabled panel that points to the Site Editor's Navigation block and offers the classic `nav-menus.php` iframe fallback, because classic menus are superseded there. It consumes the shared `workspace.theme-support` block-theme signal (stamped PHP-side by `WP_Admin_Workspaces_Appearance_Menu`) to make that determination.",
 		"rebuilds": "menus",
 		"data": {
 			"reads": [
@@ -86,7 +86,7 @@
 				{
 					"source": "workspace.theme-support",
 					"via": "kernel-config",
-					"purpose": "Block-theme signal (from `window.wpAdminShell.config.workspace['theme-support']`, stamped by `WP_Admin_Shell_Appearance_Menu`). When `block-theme` is true the app disables itself and shows the Site-Editor / iframe fallback.",
+					"purpose": "Block-theme signal (from `window.wpAdminWorkspaces.config.workspace['theme-support']`, stamped by `WP_Admin_Workspaces_Appearance_Menu`). When `block-theme` is true the app disables itself and shows the Site-Editor / iframe fallback.",
 					"fields": [ "block-theme" ]
 				}
 			],

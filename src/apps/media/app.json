@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:media",
 	"version": 1,
 	"title": "Media",
@@ -19,7 +19,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"dataView": {
 		"kind": "root",
 		"name": "media",
@@ -261,7 +261,7 @@
 			},
 			{
 				"concern": "media-field-completeness",
-				"note": "`defaultView.mediaField` (`thumbnail`) + `titleField` (`title`) + `sort` are declared COMPLETELY in this app.json so a shell that redeclares `root/media/_default` and omits them doesn't drop the baseline (the CLAUDE.md redeclaration trap)."
+				"note": "`defaultView.mediaField` (`thumbnail`) + `titleField` (`title`) + `sort` are declared COMPLETELY in this app.json so a workspace that redeclares `root/media/_default` and omits them doesn't drop the baseline (the CLAUDE.md redeclaration trap)."
 			},
 			{
 				"concern": "force-delete",

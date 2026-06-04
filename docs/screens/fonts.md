@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/font-library.php` (entry; delegates to `wp_font_library_wp_admin_render_page()` shipped via Gutenberg build files)
-**Current shell coverage:** None — no `core:fonts` source registered. Reachable today only via `iframe:font-library.php` or by drilling into Site Editor → Styles → Typography.
+**Current workspace coverage:** None — no `core:fonts` source registered. Reachable today only via `iframe:font-library.php` or by drilling into Site Editor → Styles → Typography.
 
 This spec describes the **semantic surface** of the Font Library so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -124,7 +124,7 @@ The default Google Fonts collection ships with WordPress 6.5+. Collections can b
 Theme fonts are not posts. They live in `theme.json` under `settings.typography.fontFamilies`. Read via:
 - `GET /wp/v2/global-styles/themes/{stylesheet}` → `settings.typography.fontFamilies[]`
 
-These fonts cannot be deleted from the Font Library (no DB row) — managing them is the theme's responsibility. The shell should render them in a separate "Theme fonts" section with no destructive actions.
+These fonts cannot be deleted from the Font Library (no DB row) — managing them is the theme's responsibility. The workspace should render them in a separate "Theme fonts" section with no destructive actions.
 
 ### Non-REST data (gaps)
 - **Multipart file upload for face creation** — `POST /wp/v2/font-families/{id}/font-faces` accepts multipart with `file-{N}` fields keyed against `src` references inside `font_face_settings`. No JSON-only path; client must use `FormData`.
@@ -273,7 +273,7 @@ These fonts cannot be deleted from the Font Library (no DB row) — managing the
 | Install | `edit_theme_options` | Mutation | Multipart POST with files |
 
 ### Bulk actions (Library)
-N/A — core surfaces single-family delete only. Shell may add bulk delete as a follow-up.
+N/A — core surfaces single-family delete only. Workspace may add bulk delete as a follow-up.
 
 ### Optimistic vs. blocking
 - **Install** — blocking. May be slow (multiple HTTP downloads server-side for collection installs).
@@ -339,7 +339,7 @@ Library: typically <50 rows; render full list. Install modal: collection has ful
 
 Original wp-admin URL: `/wp-admin/font-library.php` (no params; SPA owns sub-state).
 
-The shell uses hash-based routing under `#/fonts`. Recommended URL state:
+The workspace uses hash-based routing under `#/fonts`. Recommended URL state:
 ```
 #/fonts                                   # library landing
 #/fonts/{family-slug}                     # family detail
@@ -420,13 +420,13 @@ Undo: not supported. Removing a font face deletes the file from disk; reinstall 
 | `wp_font_dir` filter | Change font upload location | Preserve. |
 | `font_face_dir` filter | Change face storage | Preserve. |
 
-Plugin compatibility note: the Font Library's extension model is server-side and unaffected by the shell. Any plugin registering collections continues to work.
+Plugin compatibility note: the Font Library's extension model is server-side and unaffected by the workspace. Any plugin registering collections continues to work.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none registered.
 - **Workaround:** `iframe:font-library.php`. Works but inherits the Gutenberg dependency check; requires Gutenberg active.
 
@@ -451,7 +451,7 @@ Plugin compatibility note: the Font Library's extension model is server-side and
 | ARIA polish | High | Live regions for install progress, dialog roles |
 
 ### Acceptable interim
-For v1 of any new shell config, `iframe:font-library.php` is acceptable as an escape hatch (assuming Gutenberg is active). Mark such configs explicitly so they're tracked for replacement.
+For v1 of any new workspace config, `iframe:font-library.php` is acceptable as an escape hatch (assuming Gutenberg is active). Mark such configs explicitly so they're tracked for replacement.
 
 ---
 

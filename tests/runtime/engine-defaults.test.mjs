@@ -2,7 +2,7 @@
 /**
  * Defensive JS-side merge of engine `default-styles` (Phase C).
  *
- * The PHP resolver applies engine defaults UNDER admin.json server-side
+ * The PHP resolver applies engine defaults UNDER workspace.json server-side
  * before the kernel ever sees the config. The kernel re-runs the same
  * merge defensively for callers that bypass PHP — tests, Storybook
  * stories, alternative SSR pipelines. Imported directly from the runtime
@@ -64,7 +64,7 @@ console.log( '\n— deepMergeUnder: shape contract —' );
 	ok( 'non-overlapping keys both land', out.a === 1 && out.b === 2 );
 }
 
-// 5. Deep merge — admin.json wins selectively.
+// 5. Deep merge — workspace.json wins selectively.
 {
 	const over = {
 		theme: {

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/revision.php` + `wp-admin/includes/revision.php` (server data prep) + `wp-includes/revision.php` (storage)
-**Current shell coverage:** None. Reachable only as `iframe:revision.php?revision={id}` if a shell config wires it.
+**Current workspace coverage:** None. Reachable only as `iframe:revision.php?revision={id}` if a workspace config wires it.
 
 This spec describes the **revision compare** screen — the side-by-side diff view used to review and restore prior versions of a post or autosave.
 
@@ -49,7 +49,7 @@ Additional gating:
 - If revisions are disabled but the revision is an autosave, view/restore still works (autosave path).
 - If the parent post is locked (someone else editing), restore is blocked at the PHP level (`revision.php` line ~58).
 
-**Permission-denied state:** redirects to `edit.php` with no message. The shell should mirror with a 403 inside the revisions screen, with a back link.
+**Permission-denied state:** redirects to `edit.php` with no message. The workspace should mirror with a 403 inside the revisions screen, with a back link.
 
 ---
 
@@ -121,7 +121,7 @@ Note: revisions only snapshot **title, content, excerpt** by default in core. Cu
 }
 ```
 
-The diff is **server-rendered HTML** using PHP `wp_text_diff()` (which uses `Text_Diff` and `Text_Diff_Renderer_inline` from PEAR-style inclusion in core). The shell's REST equivalent must either use a similar server-side diff (custom endpoint) or compute diffs client-side.
+The diff is **server-rendered HTML** using PHP `wp_text_diff()` (which uses `Text_Diff` and `Text_Diff_Renderer_inline` from PEAR-style inclusion in core). The workspace's REST equivalent must either use a similar server-side diff (custom endpoint) or compute diffs client-side.
 
 ### Diff fields
 
@@ -263,7 +263,7 @@ Restore is a one-click action through a nonce-protected URL — no form fields.
 - `?action=view` (default) — view-only
 - `?action=edit` (legacy alias) — same as view
 
-### Recommended shell URL state
+### Recommended workspace URL state
 ```
 #/revisions?type=post&id=123&revision=999
 #/revisions?type=post&id=123&from=998&to=999
@@ -327,7 +327,7 @@ Browser back from a restore must return to the editor (where the restore success
 - Diff content read in field order (Title → Content → Excerpt).
 
 ### Focus
-- After Restore success → focus on editor banner (browser default; shell should ensure).
+- After Restore success → focus on editor banner (browser default; workspace should ensure).
 - After mode toggle → focus stays on toggle (no focus jump).
 
 ### Pain points (rebuild opportunities)
@@ -341,7 +341,7 @@ Browser back from a restore must return to the editor (where the restore success
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `_wp_post_revision_fields` filter | Add fields to diff | Honor — shell's diff list respects the filter output |
+| `_wp_post_revision_fields` filter | Add fields to diff | Honor — workspace's diff list respects the filter output |
 | `wp_post_revision_meta_keys` filter | Specify which meta keys to revision | Honor at storage layer (already in core 6.4+) |
 | `wp_text_diff_renderer_inline` filter | Replace the diff renderer | Honor at presentation layer |
 | `wp_save_post_revision_check_for_changes` filter | Skip revision creation when no changes detected | Honor at storage layer |
@@ -354,19 +354,19 @@ The screen surface itself has minimal extension points — the diff fields filte
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
-- **None.** The shell does not expose a `core:revisions` source. Reachable only via `iframe:revision.php?…` if a shell config wires it.
+### Current workspace coverage
+- **None.** The workspace does not expose a `core:revisions` source. Reachable only via `iframe:revision.php?…` if a workspace config wires it.
 
 ### Gaps (rebuild list)
 
 | Gap | Priority | Notes |
 |---|---|---|
-| Native revisions screen as `core:revisions` source | Medium | Modern shells will want native compare-and-restore |
+| Native revisions screen as `core:revisions` source | Medium | Modern workspaces will want native compare-and-restore |
 | Slider component with single + compare-two modes | Medium | Use `@wordpress/components` `RangeControl` or build custom |
 | Diff renderer (Title / Content / Excerpt) | Medium | Two paths: (a) call a custom REST endpoint that returns server-rendered diff HTML, or (b) compute diff client-side (e.g. `diff` library — but no external npm allowed; use `@wordpress/rich-text` `getTextContent` + custom diff via simple LCS) |
 | Author + timestamp metadata strip | Low | Reads `revision.author` (embed user) + `revision.date_gmt` |
 | Tick marks on slider with hover tooltip | Medium | Density check for high-revision posts |
-| **Restore via REST** | **High** | Currently only `wp-admin/revision.php?action=restore&_wpnonce=…`. **No REST endpoint exists for restore in core.** Shell should expose a custom endpoint `POST /wp-admin-shell/v1/posts/{id}/restore-revision/{revision_id}` that calls `wp_restore_post_revision()` server-side and returns the new state. Track upstream gap |
+| **Restore via REST** | **High** | Currently only `wp-admin/revision.php?action=restore&_wpnonce=…`. **No REST endpoint exists for restore in core.** Workspace should expose a custom endpoint `POST /wp-admin-workspaces/v1/posts/{id}/restore-revision/{revision_id}` that calls `wp_restore_post_revision()` server-side and returns the new state. Track upstream gap |
 | Lock-conflict feedback | Medium | Server blocks restore silently when post is locked. Surface clearly |
 | Revisions list panel embedded inside editor inspector | Medium | "View revisions" should expand inline in inspector for short lists |
 | Per-revision delete (admin-only) | Low | `DELETE /wp/v2/{parent_base}/{parent}/revisions/{id}` — exposed via "Manage revisions" UI, not this screen |
@@ -376,7 +376,7 @@ The screen surface itself has minimal extension points — the diff fields filte
 | Meta-field diffs (registered post-meta with `revisions_enabled`) | Medium | Already supported server-side since 6.4; surface in UI |
 
 ### Acceptable interim
-Use `iframe:revision.php?revision={id}` as the v1 escape hatch when shell needs revisions support. The iframe inherits all server-rendered diff and works correctly for restore (form-post inside iframe survives).
+Use `iframe:revision.php?revision={id}` as the v1 escape hatch when workspace needs revisions support. The iframe inherits all server-rendered diff and works correctly for restore (form-post inside iframe survives).
 
 ---
 
@@ -411,4 +411,4 @@ This screen is unusual because:
 2. The primary write flow (restore) does NOT — it remains an admin-post action behind a nonce.
 3. The diff rendering is server-side HTML, with no REST equivalent.
 
-Any rebuild that wants Restore-via-REST must ship a custom shell-side REST endpoint that wraps `wp_restore_post_revision()`. This is the highest-priority gap.
+Any rebuild that wants Restore-via-REST must ship a custom workspace-side REST endpoint that wraps `wp_restore_post_revision()`. This is the highest-priority gap.

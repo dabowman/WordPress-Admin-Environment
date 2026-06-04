@@ -94,14 +94,14 @@ function wpas_shim_test_v3_doc() {
 	);
 }
 
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Admin_Routes::reset();
 
 // -----------------------------------------------------------------------------
 // Menu items — registration + validation
 // -----------------------------------------------------------------------------
 
-$id = wp_admin_shell_register_menu_item(
+$id = wp_admin_workspaces_register_menu_item(
 	'plugin-foo',
 	array(
 		'label'    => 'Foo',
@@ -112,25 +112,25 @@ $id = wp_admin_shell_register_menu_item(
 );
 WPAS_Shim_Test_Runner::assert_eq( 'register returns id', $id, 'plugin-foo' );
 
-$registry = WP_Admin_Shell_Menu_Items::all();
+$registry = WP_Admin_Workspaces_Menu_Items::all();
 WPAS_Shim_Test_Runner::assert_true(
 	'registry contains registered item',
 	isset( $registry['plugin-foo'] )
 );
 
-$err = wp_admin_shell_register_menu_item( '', array( 'label' => 'X' ) );
+$err = wp_admin_workspaces_register_menu_item( '', array( 'label' => 'X' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty id', $err );
 
-$err = wp_admin_shell_register_menu_item( 'plugin-bar', 'not-an-array' );
+$err = wp_admin_workspaces_register_menu_item( 'plugin-bar', 'not-an-array' );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-array args', $err );
 
-$err = wp_admin_shell_register_menu_item( 'plugin-foo', array( 'label' => 'Again' ) );
+$err = wp_admin_workspaces_register_menu_item( 'plugin-foo', array( 'label' => 'Again' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects duplicate id', $err );
 
-$err = wp_admin_shell_register_menu_item( 'plugin-bad-label', array( 'label' => '' ) );
+$err = wp_admin_workspaces_register_menu_item( 'plugin-bad-label', array( 'label' => '' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty label', $err );
 
-$err = wp_admin_shell_register_menu_item(
+$err = wp_admin_workspaces_register_menu_item(
 	'plugin-bad-parent',
 	array(
 		'label'  => 'X',
@@ -139,7 +139,7 @@ $err = wp_admin_shell_register_menu_item(
 );
 WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects empty parent', $err );
 
-$err = wp_admin_shell_register_menu_item(
+$err = wp_admin_workspaces_register_menu_item(
 	'plugin-bad-position',
 	array(
 		'label'    => 'X',
@@ -153,7 +153,7 @@ WPAS_Shim_Test_Runner::assert_wp_error( 'register rejects non-integer position',
 // plugin code is trusted).
 foreach ( array( 'javascript:alert(1)', 'data:text/html,<script>', 'vbscript:msgbox(1)', 'file:///etc/passwd' ) as $bad ) {
 	$bad_id = 'bad-' . md5( $bad );
-	$err    = wp_admin_shell_register_menu_item(
+	$err    = wp_admin_workspaces_register_menu_item(
 		$bad_id,
 		array(
 			'label' => 'Bad',
@@ -164,7 +164,7 @@ foreach ( array( 'javascript:alert(1)', 'data:text/html,<script>', 'vbscript:msg
 }
 foreach ( array( 'mailto:hello@example.com', 'tel:+15551234', 'https://wordpress.org', '/relative', '#hash', '{site_url}' ) as $ok ) {
 	$ok_id = 'ok-' . md5( $ok );
-	$got   = wp_admin_shell_register_menu_item(
+	$got   = wp_admin_workspaces_register_menu_item(
 		$ok_id,
 		array(
 			'label' => 'OK',
@@ -178,9 +178,9 @@ foreach ( array( 'mailto:hello@example.com', 'tel:+15551234', 'https://wordpress
 // Menu items — root contribution
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-root',
 	array(
 		'label'    => 'Plugin Root',
@@ -190,7 +190,7 @@ wp_admin_shell_register_menu_item(
 	)
 );
 
-$contributed = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
+$contributed = WP_Admin_Workspaces_Menu_Items::contribute( wpas_shim_test_v3_doc() );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'root contribution adds id to menu',
@@ -220,9 +220,9 @@ WPAS_Shim_Test_Runner::assert_true(
 // Menu items — nested contribution via `parent`
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-nested',
 	array(
 		'label'    => 'Nested',
@@ -232,7 +232,7 @@ wp_admin_shell_register_menu_item(
 	)
 );
 
-$nested = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
+$nested = WP_Admin_Workspaces_Menu_Items::contribute( wpas_shim_test_v3_doc() );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'nested contribution lands under parent items map',
@@ -253,7 +253,7 @@ WPAS_Shim_Test_Runner::assert_true(
 );
 
 // Deep nesting — register under a child of `posts`.
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
 $doc_deep                                                    = wpas_shim_test_v3_doc();
 $doc_deep['menu']['posts']['items']['posts-drafts']['items'] = array(
@@ -265,7 +265,7 @@ $doc_deep['screens']['drafts-mine']                          = array(
 	'app'   => 'core:posts',
 );
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-deep',
 	array(
 		'label'  => 'Deep',
@@ -273,7 +273,7 @@ wp_admin_shell_register_menu_item(
 		'parent' => 'posts-drafts',
 	)
 );
-$deep = WP_Admin_Shell_Menu_Items::contribute( $doc_deep );
+$deep = WP_Admin_Workspaces_Menu_Items::contribute( $doc_deep );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'deep contribution lands under 2-level-deep parent',
@@ -286,8 +286,8 @@ WPAS_Shim_Test_Runner::assert_eq(
 );
 
 // Missing parent → falls back to root (with WP_DEBUG notice when on).
-WP_Admin_Shell_Menu_Items::reset();
-wp_admin_shell_register_menu_item(
+WP_Admin_Workspaces_Menu_Items::reset();
+wp_admin_workspaces_register_menu_item(
 	'plugin-orphan',
 	array(
 		'label'  => 'Orphan',
@@ -295,7 +295,7 @@ wp_admin_shell_register_menu_item(
 		'parent' => 'does-not-exist',
 	)
 );
-$orphan_filtered = @WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() ); // suppress potential WP_DEBUG notice
+$orphan_filtered = @WP_Admin_Workspaces_Menu_Items::contribute( wpas_shim_test_v3_doc() ); // suppress potential WP_DEBUG notice
 WPAS_Shim_Test_Runner::assert_true(
 	'missing parent → item lands at root',
 	isset( $orphan_filtered['menu']['plugin-orphan'] )
@@ -305,15 +305,15 @@ WPAS_Shim_Test_Runner::assert_true(
 // Menu items — separator + hidden + external
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
-wp_admin_shell_register_menu_item(
+WP_Admin_Workspaces_Menu_Items::reset();
+wp_admin_workspaces_register_menu_item(
 	'plugin-sep',
 	array(
 		'separator' => true,
 		'position'  => 5,
 	)
 );
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-hidden',
 	array(
 		'label'  => 'Hidden',
@@ -321,14 +321,14 @@ wp_admin_shell_register_menu_item(
 		'hidden' => true,
 	)
 );
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-ext-https',
 	array(
 		'label' => 'WordPress',
 		'href'  => 'https://wordpress.org/',
 	)
 );
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-ext-explicit-false',
 	array(
 		'label'    => 'Internal Despite https',
@@ -337,7 +337,7 @@ wp_admin_shell_register_menu_item(
 	)
 );
 
-$sep_doc = WP_Admin_Shell_Menu_Items::contribute( wpas_shim_test_v3_doc() );
+$sep_doc = WP_Admin_Workspaces_Menu_Items::contribute( wpas_shim_test_v3_doc() );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'separator entry preserved on contribute',
@@ -360,9 +360,9 @@ WPAS_Shim_Test_Runner::assert_true(
 // Menu items — empty registry is a no-op on contribute
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 $untouched = wpas_shim_test_v3_doc();
-$same      = WP_Admin_Shell_Menu_Items::contribute( $untouched );
+$same      = WP_Admin_Workspaces_Menu_Items::contribute( $untouched );
 WPAS_Shim_Test_Runner::assert_eq(
 	'empty registry: contribute is a no-op',
 	$same,
@@ -373,7 +373,7 @@ WPAS_Shim_Test_Runner::assert_eq(
 // Cascade — site origin overrides nested item label two levels deep
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
 $base_origin                                                  = wpas_shim_test_v3_doc();
 $base_origin['menu']['posts']['items']['posts-drafts']['label'] = 'Draft Posts';
@@ -396,7 +396,7 @@ $origins  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved = WP_Admin_Shell_Resolver::resolve_with( $origins );
+$resolved = WP_Admin_Workspaces_Resolver::resolve_with( $origins );
 
 WPAS_Shim_Test_Runner::assert_eq(
 	'cascade: site origin renames nested child label',
@@ -430,7 +430,7 @@ $origins_tombstone  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_tombstone = WP_Admin_Shell_Resolver::resolve_with( $origins_tombstone );
+$resolved_tombstone = WP_Admin_Workspaces_Resolver::resolve_with( $origins_tombstone );
 WPAS_Shim_Test_Runner::assert_true(
 	'cascade: null tombstones a root menu entry',
 	! isset( $resolved_tombstone['menu']['posts'] )
@@ -461,7 +461,7 @@ $origins_deep_tomb  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_deep_tomb = WP_Admin_Shell_Resolver::resolve_with( $origins_deep_tomb );
+$resolved_deep_tomb = WP_Admin_Workspaces_Resolver::resolve_with( $origins_deep_tomb );
 WPAS_Shim_Test_Runner::assert_true(
 	'cascade: nested null tombstone removes deep child only',
 	isset( $resolved_deep_tomb['menu']['posts'] ) &&
@@ -472,10 +472,10 @@ WPAS_Shim_Test_Runner::assert_true(
 // Screen-binding pass — flow label/icon/description/permissions/path
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Resolver::reset_request_memo();
-if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-	WP_Admin_Shell_Cache::flush();
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+	WP_Admin_Workspaces_Cache::flush();
 }
 
 $plugin_doc         = wpas_shim_test_v3_doc();
@@ -500,7 +500,7 @@ $origins_bind  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_bind = WP_Admin_Shell_Resolver::resolve_with( $origins_bind );
+$resolved_bind = WP_Admin_Workspaces_Resolver::resolve_with( $origins_bind );
 
 WPAS_Shim_Test_Runner::assert_eq(
 	'screen-binding: dashboard label flows from screen',
@@ -562,7 +562,7 @@ $origins_hidden                                   = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_hidden                                  = WP_Admin_Shell_Resolver::resolve_with( $origins_hidden );
+$resolved_hidden                                  = WP_Admin_Workspaces_Resolver::resolve_with( $origins_hidden );
 WPAS_Shim_Test_Runner::assert_true(
 	'screen-binding: hidden flag propagates from screen',
 	! empty( $resolved_hidden['menu']['posts']['hidden'] )
@@ -585,7 +585,7 @@ $origins_standalone                  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_standalone                 = WP_Admin_Shell_Resolver::resolve_with( $origins_standalone );
+$resolved_standalone                 = WP_Admin_Workspaces_Resolver::resolve_with( $origins_standalone );
 WPAS_Shim_Test_Runner::assert_eq(
 	'screen-binding: standalone item label preserved',
 	$resolved_standalone['menu']['view-site']['label'],
@@ -597,12 +597,12 @@ WPAS_Shim_Test_Runner::assert_true(
 );
 
 // -----------------------------------------------------------------------------
-// End-to-end — shim contributes through `wp_admin_shell_data_plugin`
+// End-to-end — shim contributes through `wp_admin_workspaces_data_plugin`
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-e2e',
 	array(
 		'label'    => 'E2E',
@@ -613,7 +613,7 @@ wp_admin_shell_register_menu_item(
 );
 
 $bare         = wpas_shim_test_v3_doc();
-$after_plugin = apply_filters( 'wp_admin_shell_data_plugin', $bare );
+$after_plugin = apply_filters( 'wp_admin_workspaces_data_plugin', $bare );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'E2E: registered item appears under named parent',
@@ -627,13 +627,13 @@ WPAS_Shim_Test_Runner::assert_eq(
 
 // Full pipeline — register via plugin, resolve, both shim + screen
 // binding flow through.
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Resolver::reset_request_memo();
-if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-	WP_Admin_Shell_Cache::flush();
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+	WP_Admin_Workspaces_Cache::flush();
 }
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'plugin-bound',
 	array(
 		'parent'   => 'dashboard',
@@ -657,7 +657,7 @@ $origins_e2e  = array(
 	'role'   => array(),
 	'user'   => array(),
 );
-$resolved_e2e = WP_Admin_Shell_Resolver::resolve_with( $origins_e2e );
+$resolved_e2e = WP_Admin_Workspaces_Resolver::resolve_with( $origins_e2e );
 
 WPAS_Shim_Test_Runner::assert_true(
 	'pipeline: shim item appears under parent after full resolve',
@@ -683,43 +683,43 @@ WPAS_Shim_Test_Runner::assert_eq(
 // Cache-fingerprint signal — registry mutations contribute to the cache key
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Admin_Routes::reset();
 
-$baseline_signals = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$baseline_signals = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
 	'cache signals — no menu_items key when registry empty',
 	! isset( $baseline_signals['menu_items'] )
 );
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'cache-fp',
 	array(
 		'label' => 'X',
 		'href'  => '/cache',
 	)
 );
-$after_menu = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$after_menu = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
 	'menu registration adds menu_items fingerprint',
 	isset( $after_menu['menu_items'] )
 );
 
-wp_admin_shell_register_menu_item(
+wp_admin_workspaces_register_menu_item(
 	'cache-fp-2',
 	array(
 		'label' => 'Y',
 		'href'  => '/cache-2',
 	)
 );
-$after_second = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+$after_second = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
 	'second registration changes menu_items fingerprint',
 	$after_menu['menu_items'] !== $after_second['menu_items']
 );
 
-WP_Admin_Shell_Menu_Items::reset();
-$cleared = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WP_Admin_Workspaces_Menu_Items::reset();
+$cleared = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
 	'reset clears menu_items fingerprint',
 	! isset( $cleared['menu_items'] )
@@ -730,9 +730,9 @@ WPAS_Shim_Test_Runner::assert_true(
 // scope status; the shim still validates + contributes correctly).
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Admin_Routes::reset();
+WP_Admin_Workspaces_Admin_Routes::reset();
 
-$path = wp_admin_shell_register_admin_route(
+$path = wp_admin_workspaces_register_route(
 	'/plugin/list',
 	array(
 		'app'    => 'plugin:my-plugin/list',
@@ -741,32 +741,32 @@ $path = wp_admin_shell_register_admin_route(
 );
 WPAS_Shim_Test_Runner::assert_eq( 'admin-route: register returns path', $path, '/plugin/list' );
 
-$err = wp_admin_shell_register_admin_route( '', array( 'app' => 'plugin:x/y' ) );
+$err = wp_admin_workspaces_register_route( '', array( 'app' => 'plugin:x/y' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects empty path', $err );
 
-$err = wp_admin_shell_register_admin_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
+$err = wp_admin_workspaces_register_route( 'no-leading-slash', array( 'app' => 'plugin:x/y' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects path without leading slash', $err );
 
-$err = wp_admin_shell_register_admin_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
+$err = wp_admin_workspaces_register_route( '/plugin/list', array( 'app' => 'plugin:my-plugin/other' ) );
 WPAS_Shim_Test_Runner::assert_wp_error( 'admin-route: rejects duplicate path', $err );
 
-WP_Admin_Shell_Admin_Routes::reset();
-wp_admin_shell_register_admin_route(
+WP_Admin_Workspaces_Admin_Routes::reset();
+wp_admin_workspaces_register_route(
 	'/plugin/list',
 	array(
 		'app'    => 'plugin:my-plugin/list',
 		'config' => array( 'view' => 'table' ),
 	)
 );
-$with_routes = WP_Admin_Shell_Admin_Routes::contribute( wpas_shim_test_v3_doc() );
+$with_routes = WP_Admin_Workspaces_Admin_Routes::contribute( wpas_shim_test_v3_doc() );
 WPAS_Shim_Test_Runner::assert_eq(
 	'admin-route: shim route appended to doc',
 	$with_routes['routes']['/plugin/list']['app'],
 	'plugin:my-plugin/list'
 );
 
-WP_Admin_Shell_Admin_Routes::reset();
-$cleared_routes = apply_filters( 'wp_admin_shell_cache_signals', array(), array() );
+WP_Admin_Workspaces_Admin_Routes::reset();
+$cleared_routes = apply_filters( 'wp_admin_workspaces_cache_signals', array(), array() );
 WPAS_Shim_Test_Runner::assert_true(
 	'admin-route: reset clears admin_routes fingerprint',
 	! isset( $cleared_routes['admin_routes'] )
@@ -776,11 +776,11 @@ WPAS_Shim_Test_Runner::assert_true(
 // Cleanup
 // -----------------------------------------------------------------------------
 
-WP_Admin_Shell_Menu_Items::reset();
-WP_Admin_Shell_Admin_Routes::reset();
-WP_Admin_Shell_Resolver::reset_request_memo();
-if ( class_exists( 'WP_Admin_Shell_Cache' ) ) {
-	WP_Admin_Shell_Cache::flush();
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Admin_Routes::reset();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+	WP_Admin_Workspaces_Cache::flush();
 }
 
 // -----------------------------------------------------------------------------

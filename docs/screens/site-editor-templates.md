@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Companion to [`site-editor.md`](./site-editor.md).
 **Source PHP:** `wp-admin/site-editor.php` (entry); list views inside `@wordpress/edit-site` package.
-**Current shell coverage:** Inherited from `core:site-editor` iframe adapter.
+**Current workspace coverage:** Inherited from `core:site-editor` iframe adapter.
 
 This file covers four **list-view sub-screens** of the Site Editor: Templates, Template Parts, Patterns (user + theme), and Navigation. Each list shares the same DataViews-style surface; differences are entity-driven. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -385,7 +385,7 @@ Original wp-admin URL params (post-6.8):
 - `?p=/wp_navigation/{id}` — edit navigation
 - `?canvas=edit` — open in edit mode
 
-Shell hash routing:
+Workspace hash routing:
 ```
 #/site-editor/templates
 #/site-editor/templates/{id}
@@ -466,13 +466,13 @@ Shell hash routing:
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
-- Inherited from `core:site-editor` iframe; no native shell surface.
+### Current workspace coverage
+- Inherited from `core:site-editor` iframe; no native workspace surface.
 
-### Gaps vs. this spec (paths to v2 native or shell surfaces)
+### Gaps vs. this spec (paths to v2 native or workspace surfaces)
 | Gap | Priority | Notes |
 |---|---|---|
-| Native list views | Medium (v2) | Each could ship as a standalone shell app: `core:templates`, `core:template-parts`, `core:patterns`, `core:navigation`. Reuses DataViews. Doesn't require the canvas mount. |
+| Native list views | Medium (v2) | Each could ship as a standalone workspace app: `core:templates`, `core:template-parts`, `core:patterns`, `core:navigation`. Reuses DataViews. Doesn't require the canvas mount. |
 | `core:patterns` standalone | High | Most-requested; pure REST, no editor canvas needed for the list. |
 | `core:templates` standalone | Medium | List + reset action workable without canvas. |
 | `core:navigation` standalone | Medium | List + rename + delete. Edit punts to canvas. |

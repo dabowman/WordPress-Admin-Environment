@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/upload.php` + `wp-admin/media-new.php` + `wp-admin/media.php` (deprecated redirect) + `wp-admin/media-upload.php` (modal picker iframe) + `WP_Media_List_Table` (`wp-admin/includes/class-wp-media-list-table.php`)
-**Current shell coverage:** `core:media` → `src/apps/media/index.js` (partial — see "Gaps" below)
+**Current workspace coverage:** `core:media` → `src/apps/media/index.js` (partial — see "Gaps" below)
 
 This spec describes the **semantic surface** of the Media Library screen — list, grid, upload, edit (including image-edit canvas), and the embedded media-picker — so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -53,11 +53,11 @@ Jobs to be done:
 | Detach from parent | `edit_post` (per attachment) | `WP_Media_List_Table::column_parent` |
 | Filter to detached/unattached | `upload_files` | list table only |
 
-**Permission-denied state:** if user lacks `upload_files`, the menu entry is hidden. URL-direct access shows "Sorry, you are not allowed to upload files." The shell mirrors this with a "no access" empty state.
+**Permission-denied state:** if user lacks `upload_files`, the menu entry is hidden. URL-direct access shows "Sorry, you are not allowed to upload files." The workspace mirrors this with a "no access" empty state.
 
 **Per-row caps:** the list view checks `edit_post`/`delete_post` per attachment so unauthorized rows render without checkbox or destructive actions but still appear in the list.
 
-**Trash:** media has no trash by default. `MEDIA_TRASH` is an opt-in PHP constant (`define('MEDIA_TRASH', true)` in `wp-config.php`); without it, delete is permanent and immediate. v1 shell assumes default behavior (no trash).
+**Trash:** media has no trash by default. `MEDIA_TRASH` is an opt-in PHP constant (`define('MEDIA_TRASH', true)` in `wp-config.php`); without it, delete is permanent and immediate. v1 workspace assumes default behavior (no trash).
 
 **Multisite:** site-level upload quota enforced server-side via `upload_size_limit` filter; no client logic required.
 
@@ -240,7 +240,7 @@ Reached via "Edit more details" or `?item={id}` route. Same field set as detail 
 
 ### Embedded media-picker (called from editor apps)
 
-This is the modal that `media-upload.php` serves as an iframe in core. In the shell it is a **rendered overlay**, not an iframe — the same component as the Media app rendered in selection mode.
+This is the modal that `media-upload.php` serves as an iframe in core. In the workspace it is a **rendered overlay**, not an iframe — the same component as the Media app rendered in selection mode.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -435,7 +435,7 @@ Single full-text input (`?search=`). Matches title, content, excerpt, **and file
 - `media-new.php` — separate upload screen
 - `media-upload.php?type={image|audio|video|file}&tab={type|library|gallery|...}` — modal picker (iframe, legacy)
 
-### Recommended shell URL state
+### Recommended workspace URL state
 
 ```
 #/media?layout=grid&type=image&author=2&search=banner&page=2&sort=date:desc
@@ -543,27 +543,27 @@ Selection state persists for the modal lifetime only (no URL state).
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `manage_media_columns` | Add list columns | Replace with shell `fields` extensibility |
+| `manage_media_columns` | Add list columns | Replace with workspace `fields` extensibility |
 | `manage_media_custom_column` | Render custom column | Replace with field-render registry |
-| `media_row_actions` | Per-row action links | Replace with shell `actions` registry (`core:media.row-actions` slot) |
+| `media_row_actions` | Per-row action links | Replace with workspace `actions` registry (`core:media.row-actions` slot) |
 | `manage_taxonomies_for_attachment_columns` | Show taxonomy columns | Replace with field registration tied to taxonomy data |
-| `restrict_manage_posts` (with `post_type === 'attachment'`) | Filter dropdowns | Replace with shell-level filter API |
+| `restrict_manage_posts` (with `post_type === 'attachment'`) | Filter dropdowns | Replace with workspace-level filter API |
 | `attachment_fields_to_edit` | Add detail-modal fields | Replace with `core:media.detail-fields` slot |
 | `attachment_fields_to_save` | Process detail-modal saves | n/a — direct REST writes |
 | `media_upload_tabs` | Add picker tabs | Replace with `core:media.picker-tabs` slot |
 | `media_upload_{type}` | Custom picker tab content | Replace with picker-tab slot fill component |
 | `image_edit_thumbnails_separately` | Toggle "Apply to all/thumbnail/except" | n/a — exposed as form choice |
-| `wp_handle_upload_prefilter` | Validate uploads | Server-side, unaffected by shell |
+| `wp_handle_upload_prefilter` | Validate uploads | Server-side, unaffected by workspace |
 | `wp_get_attachment_metadata` | Mutate metadata read | Server-side |
 | `media_meta` | Display extra meta | Replace with detail-modal slot |
 
-Plugin compatibility: third-party media plugins relying on `media_row_actions`, `attachment_fields_to_edit`, or media-popup tab filters will not work. Shell ships its own slot-based extension API.
+Plugin compatibility: third-party media plugins relying on `media_row_actions`, `attachment_fields_to_edit`, or media-popup tab filters will not work. Workspace ships its own slot-based extension API.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 
 - **Source:** `core:media` → `src/apps/media/index.js`
 - **What works:** grid layout, upload via `apiFetch`, detail modal (basic fields), delete with confirm
@@ -593,7 +593,7 @@ Plugin compatibility: third-party media plugins relying on `media_row_actions`, 
 | Download file action | Low | `<a download>` |
 | Embedded media picker (selection mode) | High | Reuse Media app with `mode: 'pick'`, `onSelect`, `allowedTypes`; replaces media-upload.php iframe |
 | Picker tabs (Upload / Library / Insert from URL) | High | Tab UI; URL-tab uses `apiFetch` with `media_sideload_image` PHP equivalent (no REST equivalent — `media-sideload` ships in WP 6.5 admin AJAX only; gap) |
-| Insert-into-post settings (size/align/link) | Medium | These are caller concerns; shell exposes them in picker right-rail |
+| Insert-into-post settings (size/align/link) | Medium | These are caller concerns; workspace exposes them in picker right-rail |
 | Drag-drop full-window upload | Medium | Listen on document for `dragover`/`drop` |
 | Upload progress UI | Medium | Replace ad-hoc with persistent footer |
 | Quota indicator (multisite) | Low | Shows when `upload_size_limit` hit |
@@ -602,7 +602,7 @@ Plugin compatibility: third-party media plugins relying on `media_row_actions`, 
 
 ### Acceptable interim
 
-For v1 of any new shell config, `iframe:upload.php?mode=grid` is acceptable as escape hatch. Mark the config explicitly. The image-edit canvas is the most substantive gap; iframe-fallback to `upload.php?item={id}&action=edit` is acceptable for v1 if the shell's primary user is not an image-heavy editor.
+For v1 of any new workspace config, `iframe:upload.php?mode=grid` is acceptable as escape hatch. Mark the config explicitly. The image-edit canvas is the most substantive gap; iframe-fallback to `upload.php?item={id}&action=edit` is acceptable for v1 if the workspace's primary user is not an image-heavy editor.
 
 ---
 
@@ -617,7 +617,7 @@ For v1 of any new shell config, `iframe:upload.php?mode=grid` is acceptable as e
 - **WebP/AVIF generation strategy** — server-side
 - **Media replace** (replace one file with another while preserving id/url) — not in core; plugin-only (Enable Media Replace)
 - **Bulk metadata edit** — not in core media library; useful but defer
-- **CDN integration** — out of shell concern
+- **CDN integration** — out of workspace concern
 
 ---
 
@@ -625,11 +625,11 @@ For v1 of any new shell config, `iframe:upload.php?mode=grid` is acceptable as e
 
 - Original PHP: `wp-admin/upload.php` (list/grid), `wp-admin/media-new.php` (upload), `wp-admin/media.php` (deprecated 6.3 → redirects to upload.php)
 - Embedded picker: `wp-admin/media-upload.php` is the iframe rendered as the legacy modal; **not a standalone screen** — the v1 picker is a non-iframe overlay component reusing Media app data with `mode: 'pick'`
-- Upload handler: `wp-admin/async-upload.php` is the server-side handler invoked by plupload; **not a screen** — REST `POST /wp/v2/media` replaces it for the shell
+- Upload handler: `wp-admin/async-upload.php` is the server-side handler invoked by plupload; **not a screen** — REST `POST /wp/v2/media` replaces it for the workspace
 - List table: `wp-admin/includes/class-wp-media-list-table.php`
 - Image edit (admin): `wp-admin/includes/image-edit.php` (render + non-REST AJAX endpoints `image-editor` action)
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-attachments-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/media/`
 - Image-edit endpoint added: 5.5.0; `flip` + `modifiers[]` added: 6.9.0
-- Current shell impl: `src/apps/media/index.js`
-- Shell config example: `shells/content-author.json`
+- Current workspace impl: `src/apps/media/index.js`
+- Workspace config example: `workspaces/content-author.json`

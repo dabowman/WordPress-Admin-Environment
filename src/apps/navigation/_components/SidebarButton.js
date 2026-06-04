@@ -4,7 +4,7 @@ import { Button, IconButton } from '@wordpress/ui';
  * Compact button styled for the dark sidebar — matches the site editor's SidebarButton.
  *
  * `tone="neutral"` + `variant="minimal"` produces the borderless, transparent
- * background the dark chrome needs; the `wp-admin-shell-sidebar-button`
+ * background the dark chrome needs; the `wp-admin-workspaces-sidebar-button`
  * className still drives the chrome-token color overrides in index.css.
  *
  * Two call shapes are supported to match the legacy
@@ -43,7 +43,7 @@ export default function SidebarButton( {
 	rel,
 	...props
 } ) {
-	const mergedClass = `wp-admin-shell-sidebar-button ${
+	const mergedClass = `wp-admin-workspaces-sidebar-button ${
 		className || ''
 	}`.trim();
 

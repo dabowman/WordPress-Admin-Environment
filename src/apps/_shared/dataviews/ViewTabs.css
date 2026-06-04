@@ -6,18 +6,18 @@
  * signalled exclusively via `[aria-pressed="true"]` (never a redundant
  * `aria-current`/`aria-selected`/`.is-active` — single source of truth).
  *
- * Scoped to `.wp-admin-shell-view-tabs` so it stays engine-private (app-space,
+ * Scoped to `.wp-admin-workspaces-view-tabs` so it stays engine-private (app-space,
  * not kernel). Never hardcode hex — use `var(--wpds-*)` tokens.
  */
 
-.wp-admin-shell-view-tabs {
+.wp-admin-workspaces-view-tabs {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	padding-inline: var( --wpds-dimension-gap-sm );
 }
 
-.wp-admin-shell-view-tabs__tab {
+.wp-admin-workspaces-view-tabs__tab {
 	/* Flush button chrome — each segment draws its own bottom border, so the
 	 * underline stays consistent even when the group wraps onto multiple rows
 	 * (a single container border-bottom would leave wrapped rows undrawn). */
@@ -32,6 +32,6 @@
  * on its own, so we add one). `[aria-pressed="true"]` is the single authority
  * for active state — CSS does NOT target a redundant class.
  */
-.wp-admin-shell-view-tabs__tab[aria-pressed="true"] {
+.wp-admin-workspaces-view-tabs__tab[aria-pressed="true"] {
 	border-bottom-color: var( --wpds-color-stroke-surface-brand-strong );
 }

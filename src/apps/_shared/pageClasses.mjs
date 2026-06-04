@@ -16,10 +16,10 @@
  */
 export function pageClasses( { className = '', hasPadding = false } = {} ) {
 	return {
-		root: [ 'wp-admin-shell-page', className ]
+		root: [ 'wp-admin-workspaces-page', className ]
 			.filter( Boolean )
 			.join( ' ' ),
-		content: [ 'wp-admin-shell-page__content', hasPadding && 'has-padding' ]
+		content: [ 'wp-admin-workspaces-page__content', hasPadding && 'has-padding' ]
 			.filter( Boolean )
 			.join( ' ' ),
 	};

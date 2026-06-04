@@ -1,6 +1,6 @@
 # WPDS defaults snapshots
 
-Per-WordPress-version snapshots of `@wordpress/theme/src/prebuilt/css/design-tokens.css`. The cascade resolver loads the snapshot keyed by `admin.json.$wpds` as the implicit `core` baseline so author files can override individual slots without re-authoring the whole matrix.
+Per-WordPress-version snapshots of `@wordpress/theme/src/prebuilt/css/design-tokens.css`. The cascade resolver loads the snapshot keyed by `workspace.json.$wpds` as the implicit `core` baseline so author files can override individual slots without re-authoring the whole matrix.
 
 ## Files
 

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/profile.php` (own-profile shim), `wp-admin/user-edit.php` (the real form, shared), `wp-admin/includes/user.php` (`edit_user()` save handler), `wp-includes/user.php` (email-confirm flow + contact-method / display-name helpers)
-**Current shell coverage:** `core:profile` → `src/apps/profile/index.js` (partial — a 7-field self-only `DataForm`; see "Gaps")
+**Current workspace coverage:** `core:profile` → `src/apps/profile/index.js` (partial — a 7-field self-only `DataForm`; see "Gaps")
 
 This spec describes the **semantic surface** of the Profile screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -24,7 +24,7 @@ Profile and its admin-facing twin Edit User are a **single template** (`user-edi
 | Parent app | `core:profile` is standalone (self-only); a future `core:user-edit` would mount under `core:users` |
 | Sub-screens | Application Passwords (a section within the form, not a separate route) |
 
-One template serves two jobs. The branch key in core is `IS_PROFILE_PAGE` (true on `profile.php`) plus `current_user_can( 'edit_users' )` / `current_user_can( 'edit_user', $user_id )`. The shell's `core:profile` only implements the own-profile branch; the edit-another-user branch has no shell home yet (see §15).
+One template serves two jobs. The branch key in core is `IS_PROFILE_PAGE` (true on `profile.php`) plus `current_user_can( 'edit_users' )` / `current_user_can( 'edit_user', $user_id )`. The workspace's `core:profile` only implements the own-profile branch; the edit-another-user branch has no workspace home yet (see §15).
 
 ---
 
@@ -73,11 +73,11 @@ This is where own-vs-other diverges most. The same template renders a different 
 | `show_user_profile` / `personal_options` hooks | fire | do **not** fire (only `edit_user_profile` fires) |
 
 **Permission-denied states:**
-- Lacking `edit_user` for the target id: `wp_die( 'Sorry, you are not allowed to edit this user.' )`. Shell renders a 403 inline.
+- Lacking `edit_user` for the target id: `wp_die( 'Sorry, you are not allowed to edit this user.' )`. Workspace renders a 403 inline.
 - Own profile is always reachable by any logged-in user (`read`).
 - Application Passwords section is hidden entirely when `wp_is_application_passwords_available_for_user( $user )` is false (no HTTPS, or disabled by filter, or Basic-Auth-protected site).
 
-**Shell reality:** `core:profile` is **self-only by construction** — `userId` is always `window.wpAdminShell.userId` (`index.js:25`), so it always targets the acting user (effectively `/wp/v2/users/me`). REST `update_current_item_permissions_check` enforces the floor. The edit-another-user branch (role, capabilities, reset-link, Super Admin) has no shell home.
+**Workspace reality:** `core:profile` is **self-only by construction** — `userId` is always `window.wpAdminWorkspaces.userId` (`index.js:25`), so it always targets the acting user (effectively `/wp/v2/users/me`). REST `update_current_item_permissions_check` enforces the floor. The edit-another-user branch (role, capabilities, reset-link, Super Admin) has no workspace home.
 
 ---
 
@@ -128,7 +128,7 @@ This is the single most security-relevant divergence and the reason Profile warr
 
 **Editing another user (admin):** no confirmation — the admin's save writes `user_email` directly. The confirm flow is own-profile-only.
 
-**REST / shell reality:** `POST /wp/v2/users/me { email }` writes `user_email` **immediately** — `personal_options_update` never fires over REST, there is no `_new_email` staging, no confirmation email, and no Cancel affordance. There is **no REST endpoint** to initiate, confirm, or cancel a staged email change. *Consequence:* in the shell, anyone with an open authenticated session can change the account email instantly, with no second-factor email confirmation — both a parity gap and a security-posture regression versus classic own-profile. This is a hard upstream blocker (the REST users controller would need to route own-email writes through the confirm flow, or expose a dedicated endpoint).
+**REST / workspace reality:** `POST /wp/v2/users/me { email }` writes `user_email` **immediately** — `personal_options_update` never fires over REST, there is no `_new_email` staging, no confirmation email, and no Cancel affordance. There is **no REST endpoint** to initiate, confirm, or cancel a staged email change. *Consequence:* in the workspace, anyone with an open authenticated session can change the account email instantly, with no second-factor email confirmation — both a parity gap and a security-posture regression versus classic own-profile. This is a hard upstream blocker (the REST users controller would need to route own-email writes through the confirm flow, or expose a dedicated endpoint).
 
 ### Application Passwords data model
 
@@ -150,7 +150,7 @@ Nested resource under `users`. Reachable today — **not** blocked.
 Routes: `GET` (list), `POST` (create — response includes `password` once), `GET/PUT/DELETE .../{uuid}` (single read / rename / revoke), `DELETE` (revoke all), `GET .../introspect` (the calling app introspects itself).
 
 ### Aggregate / external data
-- **Available languages:** `wp_get_available_translations()` + `get_available_languages()` (PHP). No REST endpoint — needs a shell preload/custom surface to populate the language select.
+- **Available languages:** `wp_get_available_translations()` + `get_available_languages()` (PHP). No REST endpoint — needs a workspace preload/custom surface to populate the language select.
 - **Admin color schemes:** `$_wp_admin_css_colors` PHP global; no REST surface. The picker row only renders when `count($_wp_admin_css_colors) > 1`.
 - **Session count:** `WP_Session_Tokens::get_all()` — no REST surface.
 
@@ -207,7 +207,7 @@ Routes: `GET` (list), `POST` (create — response includes `password` once), `GE
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The shell `core:profile` renders only: a heading, then a `DataForm` covering **First/Last Name, Nickname, Display Name, Email, Website, Biographical Info**, then a single Save button (`index.js:129-156`). Everything else above is absent.
+The workspace `core:profile` renders only: a heading, then a `DataForm` covering **First/Last Name, Nickname, Display Name, Email, Website, Biographical Info**, then a single Save button (`index.js:129-156`). Everything else above is absent.
 
 ---
 
@@ -215,17 +215,17 @@ The shell `core:profile` renders only: a heading, then a `DataForm` covering **F
 
 | State | Trigger | Display |
 |---|---|---|
-| Loading | First fetch / `!record` | Skeleton form (classic) / centered `<Spinner/>` (shell, `index.js:121-127`) |
-| Idle | Loaded, no edits | Inputs reflect server; Save disabled (shell: `!hasEdits`) |
+| Loading | First fetch / `!record` | Skeleton form (classic) / centered `<Spinner/>` (workspace, `index.js:121-127`) |
+| Idle | Loaded, no edits | Inputs reflect server; Save disabled (workspace: `!hasEdits`) |
 | Editing | Any field changed | Save enabled |
-| Saving | Save in flight | Save busy (shell: `loading` + `disabled`) |
-| Saved (success) | Save resolves | Classic: `?updated` banner "Profile updated."; shell: success snackbar via `useEntitySave` |
-| Save error | REST 4xx/5xx | Classic: per-field `WP_Error` list; shell: single error banner (`err.message`) |
-| **Email change pending (own profile)** | `_new_email` meta set | Inline notice "There is a pending change of your email to {new}." + Cancel link. **Shell: not surfaced** (no REST staging). |
+| Saving | Save in flight | Save busy (workspace: `loading` + `disabled`) |
+| Saved (success) | Save resolves | Classic: `?updated` banner "Profile updated."; workspace: success snackbar via `useEntitySave` |
+| Save error | REST 4xx/5xx | Classic: per-field `WP_Error` list; workspace: single error banner (`err.message`) |
+| **Email change pending (own profile)** | `_new_email` meta set | Inline notice "There is a pending change of your email to {new}." + Cancel link. **Workspace: not surfaced** (no REST staging). |
 | Editing super admin (multisite network) | `is_super_admin( target )` | Top banner: "This user has super admin privileges." |
 | App passwords unsupported | `wp_is_application_passwords_available_for_user()` false | Section hidden + explanatory paragraph (no HTTPS / disabled) |
 | App password just created | After `POST` | One-time reveal with copy button — never re-fetchable |
-| Permission denied | `edit_user` fails (other-user) | Classic `wp_die`; shell guards only missing `userId` global ("Profile unavailable: missing user context", `index.js:108-119`), not a server 403 — which core-data surfaces as a perpetual spinner |
+| Permission denied | `edit_user` fails (other-user) | Classic `wp_die`; workspace guards only missing `userId` global ("Profile unavailable: missing user context", `index.js:108-119`), not a server 403 — which core-data surfaces as a perpetual spinner |
 
 ---
 
@@ -233,10 +233,10 @@ The shell `core:profile` renders only: a heading, then a `DataForm` covering **F
 
 | Action | Cap | Type | Behavior |
 |---|---|---|---|
-| Update Profile / Update User | `edit_user` for target | Mutation (blocking) | `POST /wp/v2/users/{id}` with the changed-field diff. Shell: async `save()`, disabled until `hasEdits`. |
+| Update Profile / Update User | `edit_user` for target | Mutation (blocking) | `POST /wp/v2/users/{id}` with the changed-field diff. Workspace: async `save()`, disabled until `hasEdits`. |
 | Generate password | none (client) | Helper | `wp_generate_password(24)` seed populates the field; user can edit. |
 | Cancel password change | none | Helper | Clears password fields; nothing sent on save. |
-| Send Reset Link (other-user) | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — classic uses admin-ajax `send-password-reset` / `retrieve_password()`. Needs a shell proxy endpoint. |
+| Send Reset Link (other-user) | `edit_user` + `wp_is_password_reset_allowed_for_user` | Mutation | **Gap in REST** — classic uses admin-ajax `send-password-reset` / `retrieve_password()`. Needs a workspace proxy endpoint. |
 | Log Out Everywhere Else (own) | `read` | Mutation | **Gap in REST** — admin-ajax `destroy-sessions` → `WP_Session_Tokens::destroy_others()`. Destroys *other* sessions, keeps current. |
 | Log Out Everywhere (other-user) | `edit_user` | Mutation | Same gap; `destroy_all()` — logs the target out everywhere including their current session. |
 | Add Application Password | `create_app_password` | Mutation | `POST .../application-passwords { name, app_id? }`. Response **once** includes `password` — display + copy immediately, store nothing. |
@@ -264,27 +264,27 @@ The form is the screen. Field shapes (the not-already-covered semantics):
 ### Display name publicly as (the only non-trivial control)
 - Type: `select` constrained to a generated permutation set — there is no free-text entry.
 - **Classic** (`user-edit.php:521-551`) builds options keyed `display_nickname, display_username, [display_firstname], [display_lastname], [display_firstlast], [display_lastfirst]`, then **prepends** the current `display_name` only if not already present, then `array_map('trim')` + `array_unique`. Nickname leads; the current value surfaces first only when distinct.
-- **Shell** (`index.js:37-77`) pushes in order `username, first_name, last_name, first+last, last+first, nickname, name` (current value **last**), deduping by value. *Divergence:* different ordering (username first vs. nickname first) and the current `name` lands at the end rather than the front — so the pre-selected entry can differ between the two UIs for the same record.
+- **Workspace** (`index.js:37-77`) pushes in order `username, first_name, last_name, first+last, last+first, nickname, name` (current value **last**), deduping by value. *Divergence:* different ordering (username first vs. nickname first) and the current `name` lands at the end rather than the front — so the pre-selected entry can differ between the two UIs for the same record.
 - **"Trapped select" caveat:** when the name parts collapse to a single option, the select still renders and offers no other choice (matches classic in spirit). DataForm has no "free-text-or-pick" combo to mirror that display-name is *constrained* to permutations — acceptable.
 
 ### Email (own profile)
-- Type: `email`. Own-profile is **confirmation-gated** — see §4. `aria-describedby="email-description"` links the confirm-by-link explanation. The shell omits this descriptive text and writes directly.
+- Type: `email`. Own-profile is **confirmation-gated** — see §4. `aria-describedby="email-description"` links the confirm-by-link explanation. The workspace omits this descriptive text and writes directly.
 
 ### Website
-- Type: `url` in classic (normalizes bare host → `http://`); the shell uses a plain `text` control and sends whatever is typed. `example.com` saves as `example.com` (no scheme) in the shell vs. `http://example.com` classic — different stored value; can break author-link rendering.
+- Type: `url` in classic (normalizes bare host → `http://`); the workspace uses a plain `text` control and sends whatever is typed. `example.com` saves as `example.com` (no scheme) in the workspace vs. `http://example.com` classic — different stored value; can break author-link rendering.
 
 ### Nickname
-- Required in classic (rejected empty on update, `includes/user.php:156-158`). The shell neither marks it required nor sets `aria-required`, and REST does not enforce non-empty — so a blank nickname can save via the shell where classic blocks it.
+- Required in classic (rejected empty on update, `includes/user.php:156-158`). The workspace neither marks it required nor sets `aria-required`, and REST does not enforce non-empty — so a blank nickname can save via the workspace where classic blocks it.
 
 ### New Password (Account Management)
-- Generate (`wp_generate_password(24)`), show/hide, pass1/pass2 match, weak-password confirm checkbox, and a zxcvbn strength meter — **all client-side in classic**. REST `password` accepts any non-`\` string with no match/strength/confirm gate and no current-password re-auth. A basic password field + client-side confirm/meter is buildable shell-side (B9 is not a hard blocker).
+- Generate (`wp_generate_password(24)`), show/hide, pass1/pass2 match, weak-password confirm checkbox, and a zxcvbn strength meter — **all client-side in classic**. REST `password` accepts any non-`\` string with no match/strength/confirm gate and no current-password re-auth. A basic password field + client-side confirm/meter is buildable workspace-side (B9 is not a hard blocker).
 
 ### Save semantics
-- Single Save (classic: `submit_button('Update Profile')`, full POST + redirect; shell: async `save()`).
+- Single Save (classic: `submit_button('Update Profile')`, full POST + redirect; workspace: async `save()`).
 - Diff-based — only changed fields submitted.
 - Server-side (REST / `edit_user()`) validation is authoritative.
 
-### DataForm note (shell)
+### DataForm note (workspace)
 The app uses `DataForm` from `@wordpress/dataviews/wp` idiomatically (`data={editedRecord}` + `onChange={edit}`). The `fields` array is `useMemo`'d on five specific `editedRecord.*` keys with an `eslint-disable react-hooks/exhaustive-deps` (`index.js:99-106`) — a deliberate perf hedge so rebuilding the field controls doesn't fire on every unrelated keystroke. It does **not** reuse `_shared/forms/EntityDataForm.js` because it needs the dynamic display-name options. Personal Options would be a reasonable DataForm fit **if** the underlying meta were REST-exposed (blockers below); Application Passwords should **not** be a DataForm — it's a list-of-records CRUD with a create-once-reveal flow, closer to the six entity-CRUD apps in `src/apps/_shared/dataviews/`.
 
 ---
@@ -298,13 +298,13 @@ Original wp-admin URLs:
 - `/wp-admin/profile.php?dismiss={id}_new_email&_wpnonce={nonce}` — cancel pending email change
 - `/wp-admin/user-edit.php?user_id={id}&updated=true&wp_http_referer={return}` — edit another user
 
-Recommended shell hash routing:
+Recommended workspace hash routing:
 ```
 #/profile
 #/user-edit?user_id=42         (future core:user-edit)
 ```
 
-The own-profile route carries no state. The email-confirm (`?newuseremail=`) and cancel (`?dismiss=`) deep-links have no shell equivalent (no REST staging flow). Refresh and back/forward must restore the form's loaded state.
+The own-profile route carries no state. The email-confirm (`?newuseremail=`) and cancel (`?dismiss=`) deep-links have no workspace equivalent (no REST staging flow). Refresh and back/forward must restore the form's loaded state.
 
 ---
 
@@ -317,7 +317,7 @@ The own-profile route carries no state. The email-confirm (`?newuseremail=`) and
 | Pending email confirm/cancel link (own) | `profile.php` redirect → returns here | hash + nonce |
 
 ### Inbound
-- Header avatar in the shell toolbar → `core:profile`.
+- Header avatar in the workspace toolbar → `core:profile`.
 - Command palette / user menu → `core:profile`.
 - (Future) per-row "Edit" from `core:users` → `core:user-edit?user_id={id}`.
 - From a "set new password" email link → password-reset screen (auth flow, out of scope).
@@ -328,9 +328,9 @@ The own-profile route carries no state. The email-confirm (`?newuseremail=`) and
 
 | Event | Pattern |
 |---|---|
-| Profile saved | Classic: dismissible banner "Profile updated." Shell: success snackbar (`useEntitySave`). |
-| Save error | Classic: per-field `WP_Error` list. Shell: single dismissible error banner. |
-| Email change pending (own) | Inline notice "There is a pending change of your email to {new}." + Cancel. **Shell: absent.** |
+| Profile saved | Classic: dismissible banner "Profile updated." Workspace: success snackbar (`useEntitySave`). |
+| Save error | Classic: per-field `WP_Error` list. Workspace: single dismissible error banner. |
+| Email change pending (own) | Inline notice "There is a pending change of your email to {new}." + Cancel. **Workspace: absent.** |
 | Email change confirmed | Banner "Email updated." (after the confirm-link redirect) |
 | Email change cancelled | Banner "Email change cancelled." |
 | Application password created | One-time inline reveal + copy button; persistent until dismissed. **Critical — never re-fetchable.** |
@@ -358,13 +358,13 @@ The own-profile route carries no state. The email-confirm (`?newuseremail=`) and
 - Required-field indicators: "(required)" on Nickname + Email should also map to `aria-required="true"`.
 - Gravatar `<img>`: "Avatar of {name}" alt.
 
-**Shell gaps:** DataForm fields are not marked required; no `aria-required` on Nickname/Email; no descriptive text / live region on the email field; no help-tab equivalent (classic ships a 7-paragraph overview help tab at `user-edit.php:60-74`).
+**Workspace gaps:** DataForm fields are not marked required; no `aria-required` on Nickname/Email; no descriptive text / live region on the email field; no help-tab equivalent (classic ships a 7-paragraph overview help tab at `user-edit.php:60-74`).
 
 ---
 
 ## 14. Extension points (core hooks)
 
-Decide for each whether to preserve, replace with a shell slot, or drop.
+Decide for each whether to preserve, replace with a workspace slot, or drop.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
@@ -376,7 +376,7 @@ Decide for each whether to preserve, replace with a shell slot, or drop.
 | `user_contactmethods` (filter) | Add contact-method fields | Preserve via custom REST user-meta registration (B3) |
 | `wp_create_application_password_form` | Inside the create-app-password form | Replace with `core:application-passwords.form` slot |
 | `additional_capabilities_display` | Toggle Additional Capabilities visibility | Preserve as a server-side check |
-| `admin_color_scheme_picker` | Render color-scheme radios | Replace with a shell appearance picker fed by registered schemes |
+| `admin_color_scheme_picker` | Render color-scheme radios | Replace with a workspace appearance picker fed by registered schemes |
 | `user_profile_picture_description` | Filter the Gravatar caption | Drop or preserve |
 | `show_password_fields` | Toggle password fields | Preserve |
 | `wp_is_password_reset_allowed_for_user` | Disable reset for specific users | Preserve |
@@ -386,7 +386,7 @@ Decide for each whether to preserve, replace with a shell slot, or drop.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:profile` → `src/apps/profile/index.js` — a self-only `DataForm` over `useEntityRecord('root','user', userId)` covering **first_name, last_name, nickname, name (display), email, url, description**. Optimistic edits; success snackbar + error banner via `useEntitySave`; declares `core:dirty-state` so the sibling NavigationGuard reads `hasEdits`.
 - **No source for the edit-another-user branch** (role, capabilities, Super Admin, reset-link).
 
@@ -394,23 +394,23 @@ Decide for each whether to preserve, replace with a shell slot, or drop.
 
 | Gap | Priority | Notes |
 |---|---|---|
-| Application Passwords (list / add-with-once-reveal / revoke / revoke-all) | **High** | The single biggest **unbuilt-but-reachable** feature. Full CRUD controller exists. Use `api-fetch` (the one-time `password` needs imperative handling), consider a `DataViews` list. **Shell-side, no upstream change.** |
-| Interface Language (`locale`) field | High | In REST, writable; trivially added to the existing `DataForm`. Needs a language-list preload surface. Language-pack-download-on-save stays wp-admin-only. **Shell-side.** |
-| Basic password-change field (+ client confirm + strength meter) | High | `password` is REST-writable; document no current-password re-auth + no server weak-gate. **Shell-side** (B9 not a hard blocker). |
-| Username (read-only) + avatar/Gravatar (read-only) display | Medium | Cheap parity wins; both REST-readable. **Shell-side.** |
-| Personal Options (color scheme, editor toggles, shortcuts, toolbar) | Medium | Blocked — meta not in REST. **B1–B2:** [upstream] `register_meta(... show_in_rest ...)`, **or** [shell] bridge through `WP_Admin_Shell_Prefs_REST` to `update_user_meta`. |
+| Application Passwords (list / add-with-once-reveal / revoke / revoke-all) | **High** | The single biggest **unbuilt-but-reachable** feature. Full CRUD controller exists. Use `api-fetch` (the one-time `password` needs imperative handling), consider a `DataViews` list. **Workspace-side, no upstream change.** |
+| Interface Language (`locale`) field | High | In REST, writable; trivially added to the existing `DataForm`. Needs a language-list preload surface. Language-pack-download-on-save stays wp-admin-only. **Workspace-side.** |
+| Basic password-change field (+ client confirm + strength meter) | High | `password` is REST-writable; document no current-password re-auth + no server weak-gate. **Workspace-side** (B9 not a hard blocker). |
+| Username (read-only) + avatar/Gravatar (read-only) display | Medium | Cheap parity wins; both REST-readable. **Workspace-side.** |
+| Personal Options (color scheme, editor toggles, shortcuts, toolbar) | Medium | Blocked — meta not in REST. **B1–B2:** [upstream] `register_meta(... show_in_rest ...)`, **or** [workspace] bridge through `WP_Admin_Workspaces_Prefs_REST` to `update_user_meta`. |
 | **Email pending-change confirmation flow + Cancel** | Medium (security) | **B4** — own-email REST writes are immediate, bypassing the confirm-by-link safeguard. Security-relevant. [upstream] to route through the flow; **document loudly now**. |
-| Field-level error mapping | Medium | Map `WP_Error` `data.params` to per-field messages instead of one banner. **Shell-side.** |
-| Nickname-required + URL normalization | Medium | Mark required + normalize bare host on save. **Shell-side.** |
+| Field-level error mapping | Medium | Map `WP_Error` `data.params` to per-field messages instead of one banner. **Workspace-side.** |
+| Nickname-required + URL normalization | Medium | Mark required + normalize bare host on save. **Workspace-side.** |
 | Plugin contact methods → REST | Low | **B3** — core auto-registration is the clean fix. [upstream] preferred. |
 | Session "Log Out Everywhere Else" | Low | **B5** — no REST endpoint over `WP_Session_Tokens`. [upstream] blocked. |
 | Send password-reset link (admin → user) | Low | **B6** — admin-ajax only; also moot until an edit-other flow exists. [upstream]. |
-| Edit-another-user flow (role, capabilities) | — | The entire admin-editing-another-user half of `user-edit.php` has no home. Belongs in a new `core:user-edit` under `core:users` with `edit_user`/`promote_user` gating; `roles` is REST-writable. **Shell-side (large).** |
-| Help tab | Low | No engine help-tab surface; cross-cutting shell gap. |
+| Edit-another-user flow (role, capabilities) | — | The entire admin-editing-another-user half of `user-edit.php` has no home. Belongs in a new `core:user-edit` under `core:users` with `edit_user`/`promote_user` gating; `roles` is REST-writable. **Workspace-side (large).** |
+| Help tab | Low | No engine help-tab surface; cross-cutting workspace gap. |
 
 ### API & platform blockers (summary)
 
-The hard blockers — what classic does that the shell **cannot** do through REST / `@wordpress/core-data` today (full evidence in `docs/parity/profile.md`):
+The hard blockers — what classic does that the workspace **cannot** do through REST / `@wordpress/core-data` today (full evidence in `docs/parity/profile.md`):
 
 - **B1** Admin color scheme — `admin_color` meta has no `show_in_rest`; picker is a pure `do_action` with no data API.
 - **B2** Personal Options prefs (`rich_editing`, `syntax_highlighting`, `comment_shortcuts`, `show_admin_bar_front`) — user meta, none `show_in_rest`.
@@ -420,12 +420,12 @@ The hard blockers — what classic does that the shell **cannot** do through RES
 - **B6** Admin-initiated password reset — admin-ajax `send-password-reset`.
 - **B7** Avatar upload — `avatar_urls` read-only; Gravatar is external.
 - **B8** Super Admin grant + create-time new-user-email toggle — not REST-exposed.
-- **B9** Weak-password confirm + strength meter — client-side-only in classic; REST accepts any string. (Buildable shell-side; flagged for completeness, not a hard blocker.)
+- **B9** Weak-password confirm + strength meter — client-side-only in classic; REST accepts any string. (Buildable workspace-side; flagged for completeness, not a hard blocker.)
 
-**Not blockers (buildable shell-side):** Application Passwords (full CRUD), Interface Language (`locale`), basic password change, role write + capabilities read (for a future edit-other flow), username + avatar display.
+**Not blockers (buildable workspace-side):** Application Passwords (full CRUD), Interface Language (`locale`), basic password change, role write + capabilities read (for a future edit-other flow), username + avatar display.
 
 ### Acceptable interim
-`iframe:profile.php` is an acceptable escape hatch for a shell needing full parity until Personal Options / Application Passwords are built natively.
+`iframe:profile.php` is an acceptable escape hatch for a workspace needing full parity until Personal Options / Application Passwords are built natively.
 
 ---
 
@@ -456,7 +456,7 @@ The hard blockers — what classic does that the shell **cannot** do through RES
 - REST API reference:
   - `https://developer.wordpress.org/rest-api/reference/users/`
   - `https://developer.wordpress.org/rest-api/reference/application-passwords/`
-- Current shell impl: `src/apps/profile/index.js` (+ `app.json` / `app.md`)
+- Current workspace impl: `src/apps/profile/index.js` (+ `app.json` / `app.md`)
 - Parity audit (full evidence, divergences, blockers): `docs/parity/profile.md`
 - Cross-link: `docs/screens/users.md` (list / add / authorize cluster), `docs/screens/settings-general.md` (the analogous admin-email confirm-flow gap), `docs/screens/personal-data.md` (privacy export/erase)
 </content>

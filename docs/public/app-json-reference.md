@@ -1,8 +1,8 @@
 # app.json Reference
 
-`app.json` is the manifest that describes a WP Admin Shell app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a workspace. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_shell_register_app()`.
+`app.json` is the manifest that describes a WP Admin Workspaces app: an admin surface (a posts list, an editor, a command palette, a settings panel) that mounts into a region of a workspace. The manifest ships alongside the app's code (its script and style assets) and is discovered at the convention path `{plugin}/apps/{name}/app.json`, or registered programmatically through `wp_admin_workspaces_register_app()`.
 
-Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `admin.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `admin.json`.
+Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `workspace.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `workspace.json`.
 
 This reference covers the app manifest schema (`admin-app.json`).
 
@@ -34,7 +34,7 @@ This reference covers the app manifest schema (`admin-app.json`).
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-app.json",
+	"$schema": "https://schemas.wp.org/workspace-app.json",
 	"id": "plugin:acme/orders",
 	"version": 3,
 	"title": "Orders",
@@ -43,7 +43,7 @@ This reference covers the app manifest schema (`admin-app.json`).
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -51,11 +51,11 @@ The schema is also available in-repo at [`docs/schemas/admin-app.json`](../schem
 
 ## id
 
-Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Shell plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case.
+Globally unique app identifier. Format: `{namespace}:{name}`. The `core` namespace is reserved for apps shipped with the WP Admin Workspaces plugin; the `plugin` namespace requires `plugin:{slug}/{name}` where `slug` matches the contributing plugin's directory name. Names within a namespace are kebab-case.
 
 Examples: `core:command-palette`, `core:posts`, `plugin:woocommerce/orders`, `plugin:acme/team-dashboard`.
 
-The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have `admin.json` route to their version.
+The runtime registry rejects duplicate ids; plugins extending core apps must use a different id and have `workspace.json` route to their version.
 
 | Property | Description                                                                                                  | Type   | Default |
 |----------|--------------------------------------------------------------------------------------------------------------|--------|---------|
@@ -79,7 +79,7 @@ Human-readable name of the app, shown in command palettes, navigation menus, err
 
 ## description
 
-Optional human-readable description of what the app does. Used in `admin.json` authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph.
+Optional human-readable description of what the app does. Used in `workspace.json` authoring tools, plugin install screens, and ecosystem directories. Translatable. One sentence to a short paragraph.
 
 | Property    | Description                            | Type   | Default |
 |-------------|----------------------------------------|--------|---------|
@@ -125,14 +125,14 @@ Platform service requests. The app declares which engine-provided services it ne
 | core:modal                        | Render with focus trapped, ARIA modal applied, backdrop scrim when the engine supports it. Browser analog: `<dialog>.showModal()`.                                          | boolean | `false` |
 | core:dismiss-on                   | Triggers that unmount the region. Array of `Escape`, `backdrop-click`, `outside-click`, `navigation`.                                                                        | array   | —       |
 | core:autofocus-target             | CSS selector inside the rendered DOM that should receive focus on mount. Browser analog: HTML `autofocus`.                                                                  | string  | —       |
-| core:triggerable                  | App accepts being invoked by an `admin.json#bindings` keystroke. Browser analog: HTML `commandfor`/`command`.                                                                | boolean | `false` |
+| core:triggerable                  | App accepts being invoked by an `workspace.json#bindings` keystroke. Browser analog: HTML `commandfor`/`command`.                                                                | boolean | `false` |
 | core:persists-across-navigation   | Region survives URL-driven changes to other regions. Use for navigation sidebars, status bars, persistent panels.                                                            | boolean | `false` |
 | core:dirty-state                  | App may report unsaved-changes state via the runtime's dirty-state API. Browser analog: `beforeunload`.                                                                      | boolean | `false` |
 | core:block-navigation-on-dirty    | Engines show a confirmation dialog before unmounting while dirty. Requires `core:dirty-state: true`.                                                                         | boolean | `false` |
 
 ## capabilities
 
-WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — `admin.json` cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`).
+WordPress capabilities required to mount this app. The user must have all listed capabilities; missing any one suppresses the app. This is the floor for any consumer — `workspace.json` cannot lower this requirement, only add to it. Capabilities are validated against `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps. Empty array means no capability is required (rare; even the command palette typically requires `read`).
 
 Examples: `[ "edit_posts" ]`, `[ "manage_options", "upload_files" ]`.
 
@@ -142,7 +142,7 @@ Examples: `[ "edit_posts" ]`, `[ "manage_options", "upload_files" ]`.
 
 ## config-schema
 
-JSON Schema document describing the shape of the `config` object that `admin.json` passes to this app at mount time (either via a region's `config` field or via a route's `config` field). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error.
+JSON Schema document describing the shape of the `config` object that `workspace.json` passes to this app at mount time (either via a region's `config` field or via a route's `config` field). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error.
 
 ```json
 {
@@ -214,7 +214,7 @@ Optional window-mount hints for engines that mount this app inside a window-fram
 
 ## dashboardWidget
 
-Optional dashboard-widget hints. When present, the app may be mounted as a tile inside a `core:dashboard-grid` region by `core:dashboard-host`. The block carries default placement + sizing hints; `admin.json`'s top-level `dashboardWidgets[appId]` overrides per-id (admin.json wins per-property).
+Optional dashboard-widget hints. When present, the app may be mounted as a tile inside a `core:dashboard-grid` region by `core:dashboard-host`. The block carries default placement + sizing hints; `workspace.json`'s top-level `dashboardWidgets[appId]` overrides per-id (workspace.json wins per-property).
 
 Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this block.
 
@@ -235,7 +235,7 @@ Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this bloc
 |---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|
 | title         | Tile-header title. Translatable. Falls back to the manifest's top-level `title` when omitted.                                                       | string           | `title`       |
 | defaultSize   | Initial `{ w, h }` size in grid cells. Both `w` and `h` required when set; integers `>= 1`.                                                          | object           | `{ w: 1, h: 1 }` |
-| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `admin.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
+| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `workspace.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
 | position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
 
 ## slots
@@ -258,7 +258,7 @@ A screen mounting `core:dashboard-host` (which declares a `grid` slot) gains the
 
 ## slotHints
 
-Optional. Default size + position hints for grid-style slot hosts. Cascade-overrideable per-entry from admin.json `screens[id].apps[].size` / `position`.
+Optional. Default size + position hints for grid-style slot hosts. Cascade-overrideable per-entry from workspace.json `screens[id].apps[].size` / `position`.
 
 ```json
 {
@@ -275,12 +275,12 @@ Optional. Default size + position hints for grid-style slot hosts. Cascade-overr
 | Property      | Description                                                                                                                                          | Type             | Default       |
 |---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|
 | defaultSize   | Initial `{ w, h }` size in grid cells. Both `w` and `h` required when set; integers `>= 1`.                                                          | object           | `{ w: 1, h: 1 }` |
-| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `admin.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
+| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `workspace.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
 | position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
 
 ## dataView
 
-Optional. The app's baseline `dataView` family — the `(kind, name)` pair it primarily renders, plus a `variants: { <id>: <doc> }` family that ships the complete variant set (`_default` plus drafts / pending / trash / active / inactive / etc.) in a single block. The PHP resolver injects each declared variant into `settings.dataViews[kind][name][variant]` at the `core` origin so admin.json cascade origins (site, role, user) can override per-triple. Apps that don't render an entity list (command palette, dashboard host, simple editor, iframe wrappers) omit this block.
+Optional. The app's baseline `dataView` family — the `(kind, name)` pair it primarily renders, plus a `variants: { <id>: <doc> }` family that ships the complete variant set (`_default` plus drafts / pending / trash / active / inactive / etc.) in a single block. The PHP resolver injects each declared variant into `settings.dataViews[kind][name][variant]` at the `core` origin so workspace.json cascade origins (site, role, user) can override per-triple. Apps that don't render an entity list (command palette, dashboard host, simple editor, iframe wrappers) omit this block.
 
 See [`docs/dataview-config.md`](../dataview-config.md) for the consumer-facing reference: the 3-axis registry, the `extends` chain, filter hooks, REST endpoints, and the `useDataView` React hook.
 
@@ -321,7 +321,7 @@ Each entry under `variants` is a complete dataView document. The shape mirrors `
 | Property        | Description                                                                                                                                                  | Type    | Default |
 |-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
 | extends         | Optional. Variant id to inherit from. Recursive, cycle-safe, max depth 10. Resolution: shallow-merge per-field over the resolved parent doc.                  | string  | —       |
-| fieldsRef       | Reference to a `settings.dataFields` entry id (in admin.json) or a programmatically-registered collection.                                                    | string  | —       |
+| fieldsRef       | Reference to a `settings.dataFields` entry id (in workspace.json) or a programmatically-registered collection.                                                    | string  | —       |
 | fields          | Field descriptors. Each entry requires `id`, `type`, `label`.                                                                                                | array   | —       |
 | titleField      | Field id used as the row title.                                                                                                                              | string  | —       |
 | defaultView     | Initial DataViews `view` object (`type`, `search`, `filters`, `page`, `perPage`, `sort`, `fields`, `titleField`, `layout`).                                  | object  | —       |
@@ -339,7 +339,7 @@ The contract pairs with a sibling `app.md` prose document — structured facts l
 | Property               | Description                                                                                                                                                    | Type   | Default |
 |------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
 | purpose                | One-paragraph plain-English description of what the app does and who it serves. Longer than `description`. Translatable.                                       | string | —       |
-| rebuilds               | Slug of the tier-2 screen specification under `docs/screens/` this app rebuilds (e.g. `dashboard-home`, `posts`). Omitted for shell-only apps.                  | string | —       |
+| rebuilds               | Slug of the tier-2 screen specification under `docs/screens/` this app rebuilds (e.g. `dashboard-home`, `posts`). Omitted for workspace-only apps.                  | string | —       |
 | data                   | Data dependencies. Splits into `reads` and `writes`.                                                                                                            | object | —       |
 | url                    | URL participation contract. Splits into `reads-slots`, `writes-slots`, `navigates`.                                                                             | object | —       |
 | states                 | User-visible runtime states the app cycles through (`loading`, `empty`, `error`, `ready`, `saving`, `saved`, `with-edits`, `permission-denied`).                | array  | —       |
@@ -354,7 +354,7 @@ Each read entry requires `source` and `via`.
 
 | Property   | Description                                                                                                                                                            | Type   | Default |
 |------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| source     | REST endpoint (`/wp/v2/posts`), `core-data` entity path (`postType/post`, `root/site`), external URL, or window-global property (`window.wpAdminShell.user`). Required. | string | —       |
+| source     | REST endpoint (`/wp/v2/posts`), `core-data` entity path (`postType/post`, `root/site`), external URL, or window-global property (`window.wpAdminWorkspaces.user`). Required. | string | —       |
 | via        | One of `core-data`, `api-fetch`, `window-global`, `external`, `commands`, `kernel-config`. Required.                                                                  | string | —       |
 | context    | REST context: `view`, `edit`, or `embed`. `edit` is required for any field whose `raw` value will be edited.                                                          | string | —       |
 | purpose    | What this read is for in the app's flow.                                                                                                                               | string | —       |
@@ -406,7 +406,7 @@ Each interaction entry requires `trigger` and `effect`.
 | Property         | Description                                                                                                          | Type   | Default |
 |------------------|----------------------------------------------------------------------------------------------------------------------|--------|---------|
 | focus-management | How the app manages focus on mount, route changes, modal open/close, and post-action transitions.                    | string | —       |
-| keyboard         | App-owned keyboard shortcuts. Each entry is `{ keys, action }` — both fields required. Shell-level bindings are out of scope. | array  | —       |
+| keyboard         | App-owned keyboard shortcuts. Each entry is `{ keys, action }` — both fields required. Workspace-level bindings are out of scope. | array  | —       |
 | screen-reader    | Live regions, `aria-live` announcements, `aria-current` usage, and other screen-reader-specific affordances.          | string | —       |
 
 ### documentation.constraints (entry shape)

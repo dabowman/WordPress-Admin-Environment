@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/about.php` + `wp-admin/credits.php` + `wp-admin/freedoms.php` + `wp-admin/contribute.php`
-**Current shell coverage:** None. Reachable only via `iframe:about.php` etc. if explicitly wired.
+**Current workspace coverage:** None. Reachable only via `iframe:about.php` etc. if explicitly wired.
 
 This spec covers the four sibling marketing/about screens that share a common header and tab navigation:
 
@@ -203,7 +203,7 @@ N/A — read-only screens with no inputs.
 
 No other URL params honored.
 
-### Recommended shell URL state
+### Recommended workspace URL state
 ```
 #/about
 #/about/credits
@@ -234,7 +234,7 @@ The hash should reflect the active tab so deep-linking works.
 | Themes link (Freedoms) | Themes app or external `wordpress.org/themes` |
 | Any contributor / library / external link | New tab to external URL |
 
-These screens do not receive inbound nav from other shell apps in a meaningful way (no command-palette commands, no row actions point here). The only inbound is from the admin footer / version link / after-update redirect.
+These screens do not receive inbound nav from other workspace apps in a meaningful way (no command-palette commands, no row actions point here). The only inbound is from the admin footer / version link / after-update redirect.
 
 ---
 
@@ -279,13 +279,13 @@ These screens are intentionally **not extensible by plugins** in core. There are
 The single relevant filter:
 - `pre_http_request` / `http_response` — generic HTTP filters can intercept the `wp_credits()` API call. Used by enterprise hosts to mock/proxy the API. Not specific to this screen.
 
-For a shell rebuild, **omitting these screens is a defensible choice**. They're not workflow-critical.
+For a workspace rebuild, **omitting these screens is a defensible choice**. They're not workflow-critical.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **None.** No `core:about` source. Reachable only via `iframe:about.php` etc. if explicitly wired.
 
 ### Gaps (rebuild recommendations)
@@ -294,29 +294,29 @@ These screens have very low ROI on full reimplementation. Three recommended appr
 
 | Approach | Effort | Recommendation |
 |---|---|---|
-| **A. Drop entirely** | 0 | Acceptable for most shells. Users hit `wp-admin/about.php` directly only after upgrades — and upgrades are an admin-only flow that may be cordoned off from the shell anyway. |
-| **B. Minimal banner** | Low | Render a small "WordPress {version}" badge in shell footer or settings panel; link to `wordpress.org` for upgrade context. No tabs, no copy. |
+| **A. Drop entirely** | 0 | Acceptable for most workspaces. Users hit `wp-admin/about.php` directly only after upgrades — and upgrades are an admin-only flow that may be cordoned off from the workspace anyway. |
+| **B. Minimal banner** | Low | Render a small "WordPress {version}" badge in workspace footer or settings panel; link to `wordpress.org` for upgrade context. No tabs, no copy. |
 | **C. Iframe fallback** | Low | `iframe:about.php` with chrome-hide CSS already in `IframeApp.js`. Inherits everything, including hero images and after-update banner. |
-| **D. Native tabbed screen** | High | Reimplement four tabs as a single shell app `core:about`. Body content sourced from upstream `wp-admin/{about,credits,freedoms,contribute}.php` parsed for translatable strings. Re-render in shell with `@wordpress/ui` `Tabs.*` and content blocks. **Significant maintenance burden** — every WP release ships new About copy, screenshots, feature lists; the shell would need to re-pull or re-render that content per release. |
+| **D. Native tabbed screen** | High | Reimplement four tabs as a single workspace app `core:about`. Body content sourced from upstream `wp-admin/{about,credits,freedoms,contribute}.php` parsed for translatable strings. Re-render in workspace with `@wordpress/ui` `Tabs.*` and content blocks. **Significant maintenance burden** — every WP release ships new About copy, screenshots, feature lists; the workspace would need to re-pull or re-render that content per release. |
 
 ### Detailed gap list (for approach D — full reimplementation)
 
 | Gap | Priority | Notes |
 |---|---|---|
-| `core:about` shell source | Low | Tabbed app with four sub-routes |
+| `core:about` workspace source | Low | Tabbed app with four sub-routes |
 | Tab navigation host | Low | `Tabs.Root` + `Tabs.List` + `Tabs.Tab` from `@wordpress/ui` |
-| Per-release content management | High effort | Static copy needs updating each WP release. Either: (a) hard-code per-release in shell PHP, or (b) parse upstream `wp-admin/about.php` at render time, or (c) fetch from `api.wordpress.org` if it ever exposes one |
-| `wp_credits()` REST exposure | Medium | Currently PHP-only. Shell could expose `GET /wp-admin-shell/v1/credits` that calls `wp_credits()` server-side and caches |
-| Asset hosting (s.w.org images, admin SVGs) | Low | Either proxy through shell or load directly from `https://s.w.org/...` (these are CDN-served WordPress.org assets) |
+| Per-release content management | High effort | Static copy needs updating each WP release. Either: (a) hard-code per-release in workspace PHP, or (b) parse upstream `wp-admin/about.php` at render time, or (c) fetch from `api.wordpress.org` if it ever exposes one |
+| `wp_credits()` REST exposure | Medium | Currently PHP-only. Workspace could expose `GET /wp-admin-workspaces/v1/credits` that calls `wp_credits()` server-side and caches |
+| Asset hosting (s.w.org images, admin SVGs) | Low | Either proxy through workspace or load directly from `https://s.w.org/...` (these are CDN-served WordPress.org assets) |
 | After-update arrival flag | Low | Detect `?updated` and surface "Go to Updates" link |
 | Privacy tab integration | Out of scope | Privacy is dynamic; separate spec |
 | Translation strings | Medium | All copy is `__()`-wrapped in core; rebuild must preserve i18n |
 
-### Shell config recommendation
+### Workspace config recommendation
 
-For most shells, omit these screens entirely. The four bundled v1 shells (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`) do not surface these. Only `wp-admin-default` should consider exposing them — and the iframe fallback (approach C) is the path of least resistance.
+For most workspaces, omit these screens entirely. The four bundled v1 workspaces (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`) do not surface these. Only `wp-admin-default` should consider exposing them — and the iframe fallback (approach C) is the path of least resistance.
 
-If a shell wants to surface a "WordPress version" affordance, the recommended pattern is:
+If a workspace wants to surface a "WordPress version" affordance, the recommended pattern is:
 1. A small "v6.9" badge in the site-hub or footer.
 2. Click → opens a popover / modal with version + brief release-link.
 3. No native tabs, no contributor list.

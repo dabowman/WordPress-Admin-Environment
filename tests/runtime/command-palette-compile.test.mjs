@@ -12,7 +12,7 @@
  *   - Path dedup — screen sharing a path with a command's
  *     `navigate` is suppressed.
  *   - Name dedup — same emitted name across sources is suppressed
- *     (first-write wins; the unified `core/admin-shell/palette-<id>`
+ *     (first-write wins; the unified `core/admin-workspace/palette-<id>`
  *     prefix makes this a real safety net).
  *   - Ordering — commands precede screens in the output.
  */
@@ -116,8 +116,8 @@ ok(
 	! r1.some( ( d ) => d.label === 'No id — should skip' )
 );
 ok(
-	'name prefix unified — core/admin-shell/palette-',
-	r1.every( ( d ) => d.name.startsWith( 'core/admin-shell/palette-' ) )
+	'name prefix unified — core/admin-workspace/palette-',
+	r1.every( ( d ) => d.name.startsWith( 'core/admin-workspace/palette-' ) )
 );
 
 // ── 2. Screens path ────────────────────────────────────────────────
@@ -138,7 +138,7 @@ const r2 = compileCommands( {
 } );
 ok(
 	'screens path emits at least one descriptor for valid screen',
-	r2.some( ( d ) => d.name === 'core/admin-shell/palette-posts' )
+	r2.some( ( d ) => d.name === 'core/admin-workspace/palette-posts' )
 );
 ok(
 	'hidden screen excluded',
@@ -154,7 +154,7 @@ ok(
 );
 ok(
 	'no-path screen excluded',
-	! r2.some( ( d ) => d.name === 'core/admin-shell/palette-no-path' )
+	! r2.some( ( d ) => d.name === 'core/admin-workspace/palette-no-path' )
 );
 ok(
 	'no-label screen falls back to path-as-label',
@@ -167,7 +167,7 @@ ok(
 	r2.every( ( d ) => d !== null )
 );
 const postsDesc = r2.find(
-	( d ) => d.name === 'core/admin-shell/palette-posts'
+	( d ) => d.name === 'core/admin-workspace/palette-posts'
 );
 eq( 'screen label wraps with "Go to %s"', postsDesc.label, 'Go to Posts' );
 eq(
@@ -224,7 +224,7 @@ const r4 = compileCommands( {
 	goToLabel,
 } );
 const sharedNames = r4.filter(
-	( d ) => d.name === 'core/admin-shell/palette-sharedid'
+	( d ) => d.name === 'core/admin-workspace/palette-sharedid'
 );
 eq(
 	'name collision suppressed — only one descriptor with shared name',

@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:settings-discussion",
 	"version": 1,
 	"title": "Settings — Discussion",
@@ -13,9 +13,9 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "DataForm over the full standard Discussion Settings option set: comment rules (`default_pingback_flag`, `default_ping_status`, `default_comment_status`, `require_name_email`, `comment_registration`, `close_comments_for_old_posts` + `close_comments_days_old`, `show_comments_cookies_opt_in`), threading (`thread_comments` + `thread_comments_depth`), pagination (`page_comments` + `comments_per_page` / `default_comments_page` / `comment_order`), notifications (`comments_notify`, `moderation_notify`), moderation (`comment_moderation`, `comment_previously_approved`, `comment_max_links`, `moderation_keys`, `disallowed_keys`), and avatars (`show_avatars` + `avatar_rating` / `avatar_default`). Core only REST-registers the two status fields; the plugin's `register_setting('discussion', …, { show_in_rest })` shims expose the rest so the whole panel saves in one PUT. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `discussion` panel; shells mount it directly as a Discussion screen.",
+		"purpose": "DataForm over the full standard Discussion Settings option set: comment rules (`default_pingback_flag`, `default_ping_status`, `default_comment_status`, `require_name_email`, `comment_registration`, `close_comments_for_old_posts` + `close_comments_days_old`, `show_comments_cookies_opt_in`), threading (`thread_comments` + `thread_comments_depth`), pagination (`page_comments` + `comments_per_page` / `default_comments_page` / `comment_order`), notifications (`comments_notify`, `moderation_notify`), moderation (`comment_moderation`, `comment_previously_approved`, `comment_max_links`, `moderation_keys`, `disallowed_keys`), and avatars (`show_avatars` + `avatar_rating` / `avatar_default`). Core only REST-registers the two status fields; the plugin's `register_setting('discussion', …, { show_in_rest })` shims expose the rest so the whole panel saves in one PUT. Reads + writes through `core-data` `useEntityRecord('root','site')` via the shared `EntityDataForm`. Composable host (`core:settings`) mounts this for the `discussion` panel; workspaces mount it directly as a Discussion screen.",
 		"rebuilds": "settings-discussion",
 		"data": {
 			"reads": [

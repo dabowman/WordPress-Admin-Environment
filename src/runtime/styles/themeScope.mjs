@@ -8,7 +8,7 @@
  * selectors to emit, and how to compile the engine's `compileStyles`
  * output into a sibling `<style>` block. None of them depend on a
  * specific design system — engines plug in their own `compileStyles`
- * hook to translate `admin.json.styles` into CSS variables; the kernel
+ * hook to translate `workspace.json.styles` into CSS variables; the kernel
  * just serializes the result.
  *
  * The React-side host (`ThemeProviderHost.js`) re-exports + consumes
@@ -125,7 +125,7 @@ const EMPTY_TOKENS = Object.freeze( {} );
 /**
  * Build the slot-override CSS layered on top of the engine's
  * ThemeProvider. No `:root` writes — the engine's provider already
- * covers that layer. Shell-level + chrome + region/app overrides emit
+ * covers that layer. Workspace-level + chrome + region/app overrides emit
  * scoped to the provider id we attach to the wrapping `<div>`.
  *
  * Delegates the actual styles → CSS-variable compilation to the
@@ -136,7 +136,7 @@ const EMPTY_TOKENS = Object.freeze( {} );
  * @param {Object}      params
  * @param {*}           params.engineSource Engine source object (may be
  *                                          null/undefined).
- * @param {*}           params.styles       Resolved `admin.json.styles`.
+ * @param {*}           params.styles       Resolved `workspace.json.styles`.
  * @param {*}           params.tokens       Flattened DTCG tokens map.
  * @param {string|null} params.providerId   useId() value from the host,
  *                                          baked into the scope selector.

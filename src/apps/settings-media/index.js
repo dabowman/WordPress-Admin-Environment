@@ -37,42 +37,42 @@ const dimensionField = ( id, label ) => ( {
 const FIELDS = [
 	dimensionField(
 		'thumbnail_size_w',
-		__( 'Thumbnail width', 'wp-admin-shell' )
+		__( 'Thumbnail width', 'wp-admin-workspaces' )
 	),
 	dimensionField(
 		'thumbnail_size_h',
-		__( 'Thumbnail height', 'wp-admin-shell' )
+		__( 'Thumbnail height', 'wp-admin-workspaces' )
 	),
 	{
 		id: 'thumbnail_crop',
 		type: 'boolean',
 		label: __(
 			'Crop thumbnail to exact dimensions (normally thumbnails are proportional)',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 	},
 	dimensionField(
 		'medium_size_w',
-		__( 'Medium size max width', 'wp-admin-shell' )
+		__( 'Medium size max width', 'wp-admin-workspaces' )
 	),
 	dimensionField(
 		'medium_size_h',
-		__( 'Medium size max height', 'wp-admin-shell' )
+		__( 'Medium size max height', 'wp-admin-workspaces' )
 	),
 	dimensionField(
 		'large_size_w',
-		__( 'Large size max width', 'wp-admin-shell' )
+		__( 'Large size max width', 'wp-admin-workspaces' )
 	),
 	dimensionField(
 		'large_size_h',
-		__( 'Large size max height', 'wp-admin-shell' )
+		__( 'Large size max height', 'wp-admin-workspaces' )
 	),
 	{
 		id: 'uploads_use_yearmonth_folders',
 		type: 'boolean',
 		label: __(
 			'Organize my uploads into month- and year-based folders',
-			'wp-admin-shell'
+			'wp-admin-workspaces'
 		),
 	},
 ];
@@ -104,14 +104,14 @@ const FORM = {
 export default function SettingsMediaApp() {
 	return (
 		<EntityDataForm
-			className="wp-admin-shell-app-settings-media"
+			className="wp-admin-workspaces-app-settings-media"
 			entity={ [ 'root', 'site' ] }
 			fields={ FIELDS }
 			form={ FORM }
-			title={ __( 'Media', 'wp-admin-shell' ) }
+			title={ __( 'Media', 'wp-admin-workspaces' ) }
 			messages={ {
-				success: __( 'Settings saved.', 'wp-admin-shell' ),
-				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+				success: __( 'Settings saved.', 'wp-admin-workspaces' ),
+				error: __( 'Failed to save settings.', 'wp-admin-workspaces' ),
 			} }
 		/>
 	);

@@ -11,10 +11,10 @@ import { useKernel } from '../../runtime/kernel-context';
  * region's URL slot.
  *
  * Spec §6.4 + V2.M4 task 2: regions coordinate via URL state, not via
- * a shell-level selection bus. PreviewPaneApp reads the routes block
+ * a workspace-level selection bus. PreviewPaneApp reads the routes block
  * + the URL slot value at `config.follow` (default `_self`) and maps
  * the matched route's `config` to a `core-data` entity, then renders
- * a JSON preview. Designed for shells whose `detail` region (or any
+ * a JSON preview. Designed for workspaces whose `detail` region (or any
  * routable region) holds an editor-style app and whose `preview`
  * region wants to mirror what the editor is editing.
  *
@@ -31,8 +31,8 @@ import { useKernel } from '../../runtime/kernel-context';
 export default function PreviewPaneApp( { config = {} } ) {
 	const follow = config.follow || '_self';
 	const route = useRoute();
-	const { config: shellConfig } = useKernel();
-	const routesBlock = shellConfig?.routes || {};
+	const { config: workspaceConfig } = useKernel();
+	const routesBlock = workspaceConfig?.routes || {};
 
 	const slotValue =
 		follow === '_self' ? route.primary : route.params?.[ follow ] || '';
@@ -40,8 +40,8 @@ export default function PreviewPaneApp( { config = {} } ) {
 
 	if ( ! matched ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
-				{ __( 'Select an item to preview.', 'wp-admin-shell' ) }
+			<div className="wp-admin-workspaces-region__empty">
+				{ __( 'Select an item to preview.', 'wp-admin-workspaces' ) }
 			</div>
 		);
 	}
@@ -83,15 +83,15 @@ function PreviewEntity( { kind, name, id } ) {
 
 	if ( isResolving ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
+			<div className="wp-admin-workspaces-region__empty">
 				<Spinner />
 			</div>
 		);
 	}
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
-				{ __( 'Item not found.', 'wp-admin-shell' ) }
+			<div className="wp-admin-workspaces-region__empty">
+				{ __( 'Item not found.', 'wp-admin-workspaces' ) }
 			</div>
 		);
 	}

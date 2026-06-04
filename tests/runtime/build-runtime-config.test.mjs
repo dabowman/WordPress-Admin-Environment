@@ -10,7 +10,7 @@
  *   - synthesizeDefaultRoute — workspace.default-screen → path, with fallback
  *   - compileCommands       — dedupe by id (later wins)
  *   - translateIframeRef    — iframe:<slug> → core:iframe-fallback + config.url
- *   - buildRuntimeConfig    — orchestrator + e2e over every bundled shell
+ *   - buildRuntimeConfig    — orchestrator + e2e over every bundled workspace
  *
  * Run: `node tests/runtime/build-runtime-config.test.mjs` (chained from
  * `npm run test:runtime`).
@@ -380,7 +380,7 @@ console.log( '\n— buildRuntimeConfig —\n' );
 const built = buildRuntimeConfig(
 	{
 		version: 3,
-		workspace: { engine: 'core:default', 'default-screen': 'home' },
+		engine: 'core:default', 'default-screen': 'home',
 		screens: {
 			home: { path: '/dashboard/home', app: 'core:dashboard' },
 			posts: { path: '/posts', app: 'core:posts' },
@@ -391,7 +391,7 @@ const built = buildRuntimeConfig(
 	},
 	engineDefaults && { defaultRegions: engineDefaults }
 );
-eq( 'engine promoted from workspace.engine', built.engine, 'core:default' );
+eq( 'engine promoted to top level', built.engine, 'core:default' );
 ok( 'routes synthesized', !! built.routes[ '/posts' ] );
 eq( 'default-route resolved', built[ 'default-route' ], '/dashboard/home' );
 ok( 'regions present', !! built.regions.content );
@@ -404,7 +404,7 @@ ok(
 
 // menu-renderer stamped from the engine manifest when present.
 const builtWithRenderer = buildRuntimeConfig(
-	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ version: 3, engine: 'core:default', screens: {} },
 	{ defaultRegions: engineDefaults || {}, 'menu-renderer': 'sidebar-tree' }
 );
 eq(
@@ -414,7 +414,7 @@ eq(
 );
 // Non-string manifest value is ignored (key stays off).
 const builtBadRenderer = buildRuntimeConfig(
-	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ version: 3, engine: 'core:default', screens: {} },
 	{ defaultRegions: {}, 'menu-renderer': 42 }
 );
 ok(
@@ -422,8 +422,8 @@ ok(
 	! ( 'menu-renderer' in builtBadRenderer )
 );
 
-// ── e2e — every bundled shell against its engine manifest ───────────
-console.log( '\n— e2e: bundled shells —\n' );
+// ── e2e — every bundled workspace against its engine manifest ───────────
+console.log( '\n— e2e: bundled workspaces —\n' );
 
 function loadEngineManifest( engineId ) {
 	// `core:default` → engines/core-default/engine.json
@@ -437,17 +437,17 @@ function loadEngineManifest( engineId ) {
 	return JSON.parse( readFileSync( path, 'utf8' ) );
 }
 
-const shellDir = resolve( projectRoot, 'shells' );
+const shellDir = resolve( projectRoot, 'workspaces' );
 const shellFiles = readdirSync( shellDir ).filter( ( f ) =>
 	f.endsWith( '.json' )
 );
 for ( const file of shellFiles.sort() ) {
-	const shell = JSON.parse(
+	const workspace = JSON.parse(
 		readFileSync( resolve( shellDir, file ), 'utf8' )
 	);
-	const engineId = shell.workspace?.engine || 'core:default';
+	const engineId = workspace.engine || 'core:default';
 	const manifest = loadEngineManifest( engineId );
-	const rc = buildRuntimeConfig( shell, manifest );
+	const rc = buildRuntimeConfig( workspace, manifest );
 
 	ok( `${ file }: engine resolves`, rc.engine === engineId, rc.engine );
 	ok(

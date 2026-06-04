@@ -3,7 +3,7 @@
  *
  * Bottom-up layering: wallpaper (z=0) → workspace (z=1, fills viewport)
  * → dock (z=2, anchored bottom-center, floating). The engine paints
- * chrome surfaces via `--wp-admin-shell--chrome--*` slot variables with
+ * chrome surfaces via `--wp-admin-workspaces--chrome--*` slot variables with
  * fallback defaults (P2.T5 will wire these through compileStyles).
  *
  * Windows themselves are rendered by the compositor via the kernel's
@@ -11,39 +11,39 @@
  * persistent surfaces.
  */
 
-.wp-admin-shell-layout--desktop {
+.wp-admin-workspaces-layout--desktop {
 	position: fixed;
 	inset: 0;
 	overflow: hidden;
 	background: var(
-		--wp-admin-shell--chrome--canvas--background,
+		--wp-admin-workspaces--chrome--canvas--background,
 		var( --wpds-color-bg-surface-neutral-strong )
 	);
 	color: var(
-		--wp-admin-shell--chrome--canvas--foreground,
+		--wp-admin-workspaces--chrome--canvas--foreground,
 		var( --wpds-color-fg-content-neutral )
 	);
 	font-family: var( --wpds-typography-font-family-body );
 }
 
-.wp-admin-shell-desktop__wallpaper-slot {
+.wp-admin-workspaces-desktop__wallpaper-slot {
 	position: absolute;
 	inset: 0;
 	z-index: 0;
 	pointer-events: none;
 }
 
-.wp-admin-shell-desktop__workspace-slot {
+.wp-admin-workspaces-desktop__workspace-slot {
 	position: absolute;
 	inset: 0;
 	z-index: 1;
 }
 
-.wp-admin-shell-desktop__dock-slot {
+.wp-admin-workspaces-desktop__dock-slot {
 	position: absolute;
 	z-index: 2;
 	inset-block-end: var(
-		--wp-admin-shell--chrome--dock--offset-block-end,
+		--wp-admin-workspaces--chrome--dock--offset-block-end,
 		24px
 	);
 	inset-inline-start: 50%;
@@ -53,38 +53,38 @@
 
 /* ─────────────────────────── Dock ─────────────────────────── */
 
-.wp-admin-shell-desktop-dock {
+.wp-admin-workspaces-desktop-dock {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: var( --wp-admin-shell--chrome--dock--gap, 8px );
+	gap: var( --wp-admin-workspaces--chrome--dock--gap, 8px );
 }
 
-.wp-admin-shell-desktop-dock__group {
+.wp-admin-workspaces-desktop-dock__group {
 	list-style: none;
 	margin: 0;
 	padding: 0;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: var( --wp-admin-shell--chrome--dock--gap, 8px );
+	gap: var( --wp-admin-workspaces--chrome--dock--gap, 8px );
 }
 
-.wp-admin-shell-desktop-dock__separator {
+.wp-admin-workspaces-desktop-dock__separator {
 	inline-size: 1px;
 	block-size: 36px;
 	background: var(
-		--wp-admin-shell--chrome--dock--separator,
+		--wp-admin-workspaces--chrome--dock--separator,
 		rgba( 255, 255, 255, 0.18 )
 	);
 	margin-inline: 4px;
 }
 
-.wp-admin-shell-desktop-dock__item {
+.wp-admin-workspaces-desktop-dock__item {
 	display: flex;
 }
 
-.wp-admin-shell-desktop-dock__tile {
+.wp-admin-workspaces-desktop-dock__tile {
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -99,11 +99,11 @@
 	transition: background 0.12s ease, opacity 0.12s ease;
 }
 
-.wp-admin-shell-desktop-dock__tile--window[ data-state='minimized' ] {
+.wp-admin-workspaces-desktop-dock__tile--window[ data-state='minimized' ] {
 	opacity: 0.55;
 }
 
-.wp-admin-shell-desktop-dock__indicator {
+.wp-admin-workspaces-desktop-dock__indicator {
 	position: absolute;
 	inset-block-end: 2px;
 	inset-inline-start: 50%;
@@ -115,27 +115,27 @@
 	opacity: 0.4;
 }
 
-.wp-admin-shell-desktop-dock__tile--window[ data-active='true' ]
-	.wp-admin-shell-desktop-dock__indicator {
+.wp-admin-workspaces-desktop-dock__tile--window[ data-active='true' ]
+	.wp-admin-workspaces-desktop-dock__indicator {
 	opacity: 1;
 	inline-size: 6px;
 }
 
-.wp-admin-shell-desktop-dock__tile:hover,
-.wp-admin-shell-desktop-dock__tile:focus-visible {
+.wp-admin-workspaces-desktop-dock__tile:hover,
+.wp-admin-workspaces-desktop-dock__tile:focus-visible {
 	background: var(
-		--wp-admin-shell--chrome--dock--tile-hover,
+		--wp-admin-workspaces--chrome--dock--tile-hover,
 		rgba( 255, 255, 255, 0.12 )
 	);
 	outline: none;
 }
 
-.wp-admin-shell-desktop-dock__tile[ disabled ] {
+.wp-admin-workspaces-desktop-dock__tile[ disabled ] {
 	opacity: 0.4;
 	cursor: not-allowed;
 }
 
-.wp-admin-shell-desktop-dock__icon {
+.wp-admin-workspaces-desktop-dock__icon {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -143,31 +143,31 @@
 	height: 32px;
 }
 
-.wp-admin-shell-desktop-dock__icon svg {
+.wp-admin-workspaces-desktop-dock__icon svg {
 	fill: currentColor;
 }
 
-.wp-admin-shell-desktop-dock__label {
+.wp-admin-workspaces-desktop-dock__label {
 	font-size: 11px;
 	line-height: 1;
 }
 
 /* ────────────────────── Window chrome ─────────────────────── */
 
-.wp-admin-shell-desktop-window-frame {
+.wp-admin-workspaces-desktop-window-frame {
 	display: flex;
 	flex-direction: column;
 	background: var(
-		--wp-admin-shell--chrome--window-frame--background,
+		--wp-admin-workspaces--chrome--window-frame--background,
 		var( --wpds-color-bg-surface-neutral-strong )
 	);
 	color: var(
-		--wp-admin-shell--chrome--window-frame--foreground,
+		--wp-admin-workspaces--chrome--window-frame--foreground,
 		var( --wpds-color-fg-content-neutral )
 	);
 	border: 1px solid
 		var(
-			--wp-admin-shell--chrome--window-frame--border,
+			--wp-admin-workspaces--chrome--window-frame--border,
 			var( --wpds-color-stroke-surface-neutral )
 		);
 	border-block-end: 0;
@@ -176,7 +176,7 @@
 	user-select: none;
 }
 
-.wp-admin-shell-desktop-window-frame__titlebar {
+.wp-admin-workspaces-desktop-window-frame__titlebar {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -187,17 +187,17 @@
 	touch-action: none;
 }
 
-.wp-admin-shell-desktop-window-frame__titlebar:active {
+.wp-admin-workspaces-desktop-window-frame__titlebar:active {
 	cursor: grabbing;
 }
 
-.wp-admin-shell-desktop-window-frame__controls {
+.wp-admin-workspaces-desktop-window-frame__controls {
 	display: flex;
 	flex-direction: row;
 	gap: 6px;
 }
 
-.wp-admin-shell-desktop-window-frame__control {
+.wp-admin-workspaces-desktop-window-frame__control {
 	inline-size: 12px;
 	block-size: 12px;
 	border: 0;
@@ -206,23 +206,23 @@
 	cursor: pointer;
 }
 
-.wp-admin-shell-desktop-window-frame__control--close {
+.wp-admin-workspaces-desktop-window-frame__control--close {
 	background: var(
-		--wp-admin-shell--chrome--window-frame--control-close,
+		--wp-admin-workspaces--chrome--window-frame--control-close,
 		#ff5f57
 	);
 }
 
-.wp-admin-shell-desktop-window-frame__control--minimize {
+.wp-admin-workspaces-desktop-window-frame__control--minimize {
 	background: var(
-		--wp-admin-shell--chrome--window-frame--control-minimize,
+		--wp-admin-workspaces--chrome--window-frame--control-minimize,
 		#febc2e
 	);
 }
 
-.wp-admin-shell-desktop-window-frame__control--maximize {
+.wp-admin-workspaces-desktop-window-frame__control--maximize {
 	background: var(
-		--wp-admin-shell--chrome--window-frame--control-maximize,
+		--wp-admin-workspaces--chrome--window-frame--control-maximize,
 		#28c840
 	);
 }
@@ -241,8 +241,8 @@
  * frame without easing. The flag is cleared on pointerup, so the
  * post-commit React re-render animates back to the new style.
  */
-.wp-admin-shell-layout--desktop
-	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+.wp-admin-workspaces-layout--desktop
+	[ class*='wp-admin-workspaces-region--workspace__win-' ]:not(
 		[ class*='__frame' ]
 	):not( [ class*='__body' ] ) {
 	transition: transform 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 ),
@@ -250,18 +250,18 @@
 		block-size 0.18s cubic-bezier( 0.25, 0.1, 0.25, 1 );
 }
 
-.wp-admin-shell-layout--desktop
-	[ class*='wp-admin-shell-region--workspace__win-' ]:not(
+.wp-admin-workspaces-layout--desktop
+	[ class*='wp-admin-workspaces-region--workspace__win-' ]:not(
 		[ class*='__frame' ]
 	):not( [ class*='__body' ] )[ data-dragging='true' ] {
 	transition: none;
 }
 
-.wp-admin-shell-desktop-snap-ghost {
+.wp-admin-workspaces-desktop-snap-ghost {
 	border: 2px solid
-		var( --wp-admin-shell--chrome--snap-ghost--border, rgba( 90, 160, 255, 0.9 ) );
+		var( --wp-admin-workspaces--chrome--snap-ghost--border, rgba( 90, 160, 255, 0.9 ) );
 	background: var(
-		--wp-admin-shell--chrome--snap-ghost--background,
+		--wp-admin-workspaces--chrome--snap-ghost--background,
 		rgba( 90, 160, 255, 0.18 )
 	);
 	border-radius: 8px;
@@ -269,77 +269,77 @@
 	transition: transform 0.08s ease, inline-size 0.08s ease, block-size 0.08s ease;
 }
 
-.wp-admin-shell-desktop-window-frame__resize {
+.wp-admin-workspaces-desktop-window-frame__resize {
 	position: absolute;
 	z-index: 1;
 	touch-action: none;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--n,
-.wp-admin-shell-desktop-window-frame__resize--s {
+.wp-admin-workspaces-desktop-window-frame__resize--n,
+.wp-admin-workspaces-desktop-window-frame__resize--s {
 	inset-inline-start: 8px;
 	inset-inline-end: 8px;
 	block-size: 6px;
 	cursor: ns-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--n {
+.wp-admin-workspaces-desktop-window-frame__resize--n {
 	inset-block-start: -3px;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--s {
+.wp-admin-workspaces-desktop-window-frame__resize--s {
 	inset-block-end: -3px;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--e,
-.wp-admin-shell-desktop-window-frame__resize--w {
+.wp-admin-workspaces-desktop-window-frame__resize--e,
+.wp-admin-workspaces-desktop-window-frame__resize--w {
 	inset-block-start: 8px;
 	inset-block-end: 8px;
 	inline-size: 6px;
 	cursor: ew-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--e {
+.wp-admin-workspaces-desktop-window-frame__resize--e {
 	inset-inline-end: -3px;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--w {
+.wp-admin-workspaces-desktop-window-frame__resize--w {
 	inset-inline-start: -3px;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--ne,
-.wp-admin-shell-desktop-window-frame__resize--nw,
-.wp-admin-shell-desktop-window-frame__resize--se,
-.wp-admin-shell-desktop-window-frame__resize--sw {
+.wp-admin-workspaces-desktop-window-frame__resize--ne,
+.wp-admin-workspaces-desktop-window-frame__resize--nw,
+.wp-admin-workspaces-desktop-window-frame__resize--se,
+.wp-admin-workspaces-desktop-window-frame__resize--sw {
 	inline-size: 14px;
 	block-size: 14px;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--ne {
+.wp-admin-workspaces-desktop-window-frame__resize--ne {
 	inset-block-start: -3px;
 	inset-inline-end: -3px;
 	cursor: nesw-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--nw {
+.wp-admin-workspaces-desktop-window-frame__resize--nw {
 	inset-block-start: -3px;
 	inset-inline-start: -3px;
 	cursor: nwse-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--se {
+.wp-admin-workspaces-desktop-window-frame__resize--se {
 	inset-block-end: -3px;
 	inset-inline-end: -3px;
 	cursor: nwse-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__resize--sw {
+.wp-admin-workspaces-desktop-window-frame__resize--sw {
 	inset-block-end: -3px;
 	inset-inline-start: -3px;
 	cursor: nesw-resize;
 }
 
-.wp-admin-shell-desktop-window-frame__title {
+.wp-admin-workspaces-desktop-window-frame__title {
 	flex: 1 1 0;
 	min-inline-size: 0;
 	text-align: center;
@@ -353,7 +353,7 @@
 /*
  * Window body sizing chain.
  *
- * Region.js wraps every region's mounted app in a `.wp-admin-shell-
+ * Region.js wraps every region's mounted app in a `.wp-admin-workspaces-
  * region__app` div between the region root and the app component. That
  * wrapper is `display: block` by default with no sizing rules, so apps
  * that ask for `block-size: 100%` collapse against the wrapper's
@@ -363,9 +363,9 @@
  * scoped to window body regions only so other regions (frame, modal,
  * widget) keep their block flow.
  */
-.wp-admin-shell-layout--desktop
+.wp-admin-workspaces-layout--desktop
 	[ data-region-id*='/body' ]
-	> .wp-admin-shell-region__app {
+	> .wp-admin-workspaces-region__app {
 	display: flex;
 	flex-direction: column;
 	flex: 1 1 0;
@@ -374,9 +374,9 @@
 	inline-size: 100%;
 }
 
-.wp-admin-shell-layout--desktop
+.wp-admin-workspaces-layout--desktop
 	[ data-region-id*='/body' ]
-	> .wp-admin-shell-region__app
+	> .wp-admin-workspaces-region__app
 	> * {
 	flex: 1 1 0;
 	min-block-size: 0;
@@ -388,26 +388,26 @@
  * neutral surface so apps without their own background paint a sensible
  * window content area.
  */
-.wp-admin-shell-layout--desktop
+.wp-admin-workspaces-layout--desktop
 	[ data-region-id*='/body' ] {
 	background: var(
-		--wp-admin-shell--chrome--window-frame--body-background,
+		--wp-admin-workspaces--chrome--window-frame--body-background,
 		var( --wpds-color-bg-surface-neutral )
 	);
 	color: var(
-		--wp-admin-shell--chrome--window-frame--body-foreground,
+		--wp-admin-workspaces--chrome--window-frame--body-foreground,
 		var( --wpds-color-fg-content-neutral )
 	);
 	border: 1px solid
 		var(
-			--wp-admin-shell--chrome--window-frame--border,
+			--wp-admin-workspaces--chrome--window-frame--border,
 			var( --wpds-color-stroke-surface-neutral )
 		);
 	border-block-start: 0;
 	border-end-start-radius: 8px;
 	border-end-end-radius: 8px;
 	box-shadow: var(
-		--wp-admin-shell--chrome--window-frame--shadow,
+		--wp-admin-workspaces--chrome--window-frame--shadow,
 		0 8px 24px rgba( 0, 0, 0, 0.5 )
 	);
 }
@@ -416,7 +416,7 @@
    v3 mode region state. Paint-only — hidden regions stay mounted.
    ========================================================================== */
 
-.wp-admin-shell-layout--desktop .wp-admin-shell-region {
+.wp-admin-workspaces-layout--desktop .wp-admin-workspaces-region {
 	transition:
 		inline-size 180ms ease,
 		opacity 180ms ease,
@@ -427,8 +427,8 @@
  * `core:desktop-dock`'s inline `display: flex`) as inline style, which
  * beats an unprefixed rule, so a plain `display: none` never hides. Same
  * trap and fix documented in the core:default engine CSS. */
-.wp-admin-shell-layout--desktop
-	.wp-admin-shell-region[data-mode-hidden="true"] {
+.wp-admin-workspaces-layout--desktop
+	.wp-admin-workspaces-region[data-mode-hidden="true"] {
 	display: none !important;
 }
 
@@ -438,22 +438,22 @@
  * not in the dock template's inline `default-style`, so the rule already
  * wins, and the `:hover`/`:focus-within` override below must be able to
  * out-rank it (adding `!important` here would freeze the dock collapsed). */
-.wp-admin-shell-layout--desktop
-	.wp-admin-shell-region--dock[data-mode-compact="true"] {
+.wp-admin-workspaces-layout--desktop
+	.wp-admin-workspaces-region--dock[data-mode-compact="true"] {
 	transform: translateY(calc(100% - 4px));
 	opacity: 0.4;
 }
 
-.wp-admin-shell-layout--desktop
-	.wp-admin-shell-region--dock[data-mode-compact="true"]:hover,
-.wp-admin-shell-layout--desktop
-	.wp-admin-shell-region--dock[data-mode-compact="true"]:focus-within {
+.wp-admin-workspaces-layout--desktop
+	.wp-admin-workspaces-region--dock[data-mode-compact="true"]:hover,
+.wp-admin-workspaces-layout--desktop
+	.wp-admin-workspaces-region--dock[data-mode-compact="true"]:focus-within {
 	transform: translateY(0);
 	opacity: 1;
 }
 
-.wp-admin-shell-layout--desktop
-	.wp-admin-shell-region[data-mode-full-width="true"] {
+.wp-admin-workspaces-layout--desktop
+	.wp-admin-workspaces-region[data-mode-full-width="true"] {
 	inline-size: 100% !important;
 	max-inline-size: 100% !important;
 }

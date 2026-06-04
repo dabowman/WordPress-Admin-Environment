@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/post.php` (router) + `wp-admin/post-new.php` (new entry) + `wp-admin/edit-form-advanced.php` (renderer)
-**Current shell coverage:** None native. Reachable only as `iframe:post.php?post={id}&action=edit` when post-type's `use_block_editor_for_post` returns false.
+**Current workspace coverage:** None native. Reachable only as `iframe:post.php?post={id}&action=edit` when post-type's `use_block_editor_for_post` returns false.
 
 This spec describes the **classic editor screen** — the TinyMCE-based meta-box layout that wp-admin renders when:
 
@@ -323,7 +323,7 @@ URL params:
 - `?message={n}` — success banner key
 - `?revision={id}` — used in success banner when restored from revision
 
-Recommended shell URL state:
+Recommended workspace URL state:
 ```
 #/editor-classic?type=post&id=123
 #/editor-classic?type=attachment&id=456
@@ -408,7 +408,7 @@ The classic editor's extension model is **PHP-side** and dwarfs the block editor
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `add_meta_box( id, title, callback, screen, context, priority, args )` | Register a meta-box | **Critical** — must support; render in shell-rendered card; honor context (normal/side/advanced) and priority |
+| `add_meta_box( id, title, callback, screen, context, priority, args )` | Register a meta-box | **Critical** — must support; render in workspace-rendered card; honor context (normal/side/advanced) and priority |
 | `add_action( 'edit_form_top', ... )` | Inject above title | Honor as slot |
 | `add_action( 'edit_form_after_title', ... )` | Inject between title and content | Honor as slot |
 | `add_action( 'edit_form_after_editor', ... )` | Inject between content and meta-boxes | Honor as slot |
@@ -420,7 +420,7 @@ The classic editor's extension model is **PHP-side** and dwarfs the block editor
 | Filter `post_updated_messages` | Custom save messages | Honor for status banners |
 | Filter `wp_editor_settings` | TinyMCE settings | Honor |
 | Filter `mce_buttons` / `mce_buttons_2` / `mce_external_plugins` | TinyMCE toolbar buttons | Honor — rebuild must integrate TinyMCE or accept feature loss |
-| Filter `default_hidden_meta_boxes` | Default-hidden meta-boxes | Honor (mirror in shell prefs) |
+| Filter `default_hidden_meta_boxes` | Default-hidden meta-boxes | Honor (mirror in workspace prefs) |
 | Filter `is_protected_meta` | Hide meta keys from Custom Fields panel | Honor |
 | Filter `wp_revisions_to_keep` | Per-post revision retention | Honor (server-side concern, not screen) |
 
@@ -431,32 +431,32 @@ The block editor handles meta-boxes by rendering them server-side via `?meta-box
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **None native.** No `core:editor-classic` source exists.
-- Reachable via `iframe:post.php?post={id}&action=edit` if shell config wires it. The shell's iframe-fallback CSS (in `IframeApp.js`) hides `#adminmenu`, `#wpadminbar`, `#wpfooter` to make the iframed editor feel native.
+- Reachable via `iframe:post.php?post={id}&action=edit` if workspace config wires it. The workspace's iframe-fallback CSS (in `IframeApp.js`) hides `#adminmenu`, `#wpadminbar`, `#wpfooter` to make the iframed editor feel native.
 
 ### Gaps (rebuild list)
 
 | Gap | Priority | Notes |
 |---|---|---|
-| Native classic-editor app source | Low | Most modern shells will not expose this. Iframe fallback is the supported v1 approach |
-| TinyMCE integration in shell | Low | Requires bundling TinyMCE assets and wiring `wp_editor()` equivalent. Major lift for marginal value |
-| Meta-box host (rendered as cards in inspector or below editor) | Medium | If shell renders the screen natively, meta-box server-rendered HTML loader is the contract. Use `wp-admin/post.php?meta-box-loader=true` or build dedicated REST endpoint |
+| Native classic-editor app source | Low | Most modern workspaces will not expose this. Iframe fallback is the supported v1 approach |
+| TinyMCE integration in workspace | Low | Requires bundling TinyMCE assets and wiring `wp_editor()` equivalent. Major lift for marginal value |
+| Meta-box host (rendered as cards in inspector or below editor) | Medium | If workspace renders the screen natively, meta-box server-rendered HTML loader is the contract. Use `wp-admin/post.php?meta-box-loader=true` or build dedicated REST endpoint |
 | Form-POST save → REST PUT translation | Medium | Translate "save form" semantics to `useEntityRecord` save. Form-only fields (e.g. `wp-preview`, `deletepost`) translate to specific REST writes |
 | Sample-permalink AJAX → REST | Medium | `admin-ajax.php?action=sample-permalink` has no REST equivalent. Map to `PUT slug` + read `permalink_template` |
-| Heartbeat autosave (PHP autosave revision) | Low | If shell hosts native classic, switch to `/wp/v2/{rest_base}/{id}/autosaves` instead |
-| Per-user "use classic editor" preference | Low | Classic Editor plugin's user-meta toggle. Replicate via shell user-prefs `editor: 'block' \| 'classic'` |
+| Heartbeat autosave (PHP autosave revision) | Low | If workspace hosts native classic, switch to `/wp/v2/{rest_base}/{id}/autosaves` instead |
+| Per-user "use classic editor" preference | Low | Classic Editor plugin's user-meta toggle. Replicate via workspace user-prefs `editor: 'block' \| 'classic'` |
 | Plugin meta-box back-compat slots (`edit_form_top`, `submitpost_box`, etc.) | Medium | When mounting natively, must invoke equivalent server-side action chain |
 | Quick Edit / Bulk Edit hooks (`quick_edit_show_taxonomy`, `quick_edit_custom_box`) | Low | Lives on list screen, not edit. Already covered by `posts.md` |
 
 ### Acceptable interim
-Use `iframe:post.php?post={id}&action=edit` when the shell needs to support classic-editor post types. The iframe inherits all back-compat and most accessibility (modulo iframed focus quirks). Mark such configs explicitly in shell JSON so they're tracked for replacement.
+Use `iframe:post.php?post={id}&action=edit` when the workspace needs to support classic-editor post types. The iframe inherits all back-compat and most accessibility (modulo iframed focus quirks). Mark such configs explicitly in workspace JSON so they're tracked for replacement.
 
 ---
 
 ## 16. Out of scope
 
-- **TinyMCE 5/6 upgrade** — core ships TinyMCE 4. Out of shell scope.
+- **TinyMCE 5/6 upgrade** — core ships TinyMCE 4. Out of workspace scope.
 - **Press This** — deprecated in 4.9, removed.
 - **"Distraction Free Writing" (DFW)** — TinyMCE's old fullscreen mode. Visually subsumed by block-editor distraction-free mode.
 - **Quick Press dashboard widget integration** — handled in dashboard widget code, not this screen.

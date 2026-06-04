@@ -3,7 +3,7 @@
  * `config.url` carrying the slug.
  *
  * The JS runtime's app resolver only knows `core:*` / `plugin:*` ids;
- * `iframe:<slug>` shorthand (authored in shells, manifests, the classic
+ * `iframe:<slug>` shorthand (authored in workspaces, manifests, the classic
  * wp-admin menu bridge) is unified onto the single `core:iframe-fallback`
  * mount path here. Author-supplied `config.url` wins — the rewrite only
  * fills the slot when empty. Idempotent: an already-rewritten entry has no

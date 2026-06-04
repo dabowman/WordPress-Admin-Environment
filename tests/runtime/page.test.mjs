@@ -32,15 +32,15 @@ const check = ( name, fn ) => {
 
 check( 'pageClasses: defaults (no className, full-bleed)', () => {
 	assert.deepEqual( pageClasses(), {
-		root: 'wp-admin-shell-page',
-		content: 'wp-admin-shell-page__content',
+		root: 'wp-admin-workspaces-page',
+		content: 'wp-admin-workspaces-page__content',
 	} );
 } );
 
 check( 'pageClasses: hasPadding adds the has-padding modifier', () => {
 	assert.equal(
 		pageClasses( { hasPadding: true } ).content,
-		'wp-admin-shell-page__content has-padding'
+		'wp-admin-workspaces-page__content has-padding'
 	);
 } );
 
@@ -49,14 +49,14 @@ check( 'pageClasses: className is appended to the root only', () => {
 		className: 'my-app',
 		hasPadding: true,
 	} );
-	assert.equal( root, 'wp-admin-shell-page my-app' );
+	assert.equal( root, 'wp-admin-workspaces-page my-app' );
 	// className must NOT leak onto the content node (so a panel max-width
 	// constrains the form, not the page).
-	assert.equal( content, 'wp-admin-shell-page__content has-padding' );
+	assert.equal( content, 'wp-admin-workspaces-page__content has-padding' );
 } );
 
 check( 'pageClasses: empty className does not add a trailing space', () => {
-	assert.equal( pageClasses( { className: '' } ).root, 'wp-admin-shell-page' );
+	assert.equal( pageClasses( { className: '' } ).root, 'wp-admin-workspaces-page' );
 } );
 
 // --- pageHasHeader -------------------------------------------------------

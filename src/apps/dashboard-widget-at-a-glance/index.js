@@ -72,28 +72,28 @@ export default function DashboardWidgetAtAGlanceApp() {
 	return (
 		<Stack direction="row" gap="xl" wrap="wrap">
 			<Stat
-				label={ __( 'Published posts', 'wp-admin-shell' ) }
+				label={ __( 'Published posts', 'wp-admin-workspaces' ) }
 				value={ posts.totalItems }
 				isLoading={
 					posts.isResolving && posts.totalItems === undefined
 				}
 			/>
 			<Stat
-				label={ __( 'Published pages', 'wp-admin-shell' ) }
+				label={ __( 'Published pages', 'wp-admin-workspaces' ) }
 				value={ pages.totalItems }
 				isLoading={
 					pages.isResolving && pages.totalItems === undefined
 				}
 			/>
 			<Stat
-				label={ __( 'Pending comments', 'wp-admin-shell' ) }
+				label={ __( 'Pending comments', 'wp-admin-workspaces' ) }
 				value={ comments.totalItems }
 				isLoading={
 					comments.isResolving && comments.totalItems === undefined
 				}
 			/>
 			<Stat
-				label={ __( 'Users', 'wp-admin-shell' ) }
+				label={ __( 'Users', 'wp-admin-workspaces' ) }
 				value={ users.totalItems }
 				isLoading={
 					users.isResolving && users.totalItems === undefined

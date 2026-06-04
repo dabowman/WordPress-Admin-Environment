@@ -5,7 +5,7 @@
 - `wp-admin/network/settings.php` (Network Settings)
 - `wp-admin/network/setup.php` (delegates to `wp-admin/network.php` — installer / config snippet generator)
 
-**Current shell coverage:** None.
+**Current workspace coverage:** None.
 
 Multisite-only screen — only accessible when `is_multisite()` is true and the user has `manage_network_options` (Settings) or `setup_network` (Setup).
 
@@ -58,7 +58,7 @@ Jobs to be done:
 | View Setup screen | `setup_network` | `wp-admin/network.php` |
 | Install language pack on save | `install_languages` AND `wp_can_install_language_pack()` | same line 112 |
 
-**Permission-denied state:** core `wp_die()` 403. Shell renders no-access state.
+**Permission-denied state:** core `wp_die()` 403. Workspace renders no-access state.
 
 ---
 
@@ -136,7 +136,7 @@ If `install_languages` cap and writable filesystem, the dropdown can install mis
 | `mu_menu_items` data | None | **GAP**. |
 | Install language pack | None | **GAP** — `wp_download_language_pack()` is PHP-only. |
 
-The settings controller does not expose site options. To rebuild this screen the shell must ship custom endpoints (e.g. `/wp-admin-shell/v1/network/options`), enumerate the option keys above, and apply server-side validation matching the form handler in `network/settings.php`.
+The settings controller does not expose site options. To rebuild this screen the workspace must ship custom endpoints (e.g. `/wp-admin-workspaces/v1/network/options`), enumerate the option keys above, and apply server-side validation matching the form handler in `network/settings.php`.
 
 For the Setup screen, the snippet rendering is purely a function of network state (subdomain vs. subdirectory + domain + path); no mutation. Read-only endpoint suffices.
 
@@ -309,13 +309,13 @@ Original URL params:
 - `?network_admin_hash={hash}` — confirm pending email
 - `?dismiss=new_network_admin_email&_wpnonce={nonce}` — cancel pending
 
-Recommended shell hash:
+Recommended workspace hash:
 ```
 #/network-settings
 #/network-settings/setup
 ```
 
-The confirm-email link comes in via standard URL (server-rendered), not hash; the shell needs to handle the query param at boot.
+The confirm-email link comes in via standard URL (server-rendered), not hash; the workspace needs to handle the query param at boot.
 
 ---
 
@@ -344,7 +344,7 @@ The confirm-email link comes in via standard URL (server-rendered), not hash; th
 | Pending admin email change | Inline warning notice on the email field |
 | Email change confirmed | Success notice on next load |
 | Email change cancelled | Success notice |
-| Invalid input | Inline error per field (server-side enforced; shell can preview) |
+| Invalid input | Inline error per field (server-side enforced; workspace can preview) |
 
 No undo for settings — server overwrites on each save.
 
@@ -356,7 +356,7 @@ No undo for settings — server overwrites on each save.
 | Key | Action |
 |---|---|
 | `Tab` | Move through fields |
-| `Cmd/Ctrl+S` | Save (shell-level shortcut) |
+| `Cmd/Ctrl+S` | Save (workspace-level shortcut) |
 
 ### ARIA
 - Section headers (`Operational Settings`, etc.) are `<h2>`; group their fields with `<section aria-labelledby>` so screen readers announce the section name when entering the group.
@@ -370,7 +370,7 @@ No undo for settings — server overwrites on each save.
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `mu_menu_items` (filter) | Add menu-toggle checkboxes | Replace with shell `network-settings.menu-items` slot |
+| `mu_menu_items` (filter) | Add menu-toggle checkboxes | Replace with workspace `network-settings.menu-items` slot |
 | `wpmu_options` (action) | Append to settings form before submit | Slot |
 | `update_wpmu_options` (action) | After save | Event bus |
 
@@ -378,7 +378,7 @@ No undo for settings — server overwrites on each save.
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - None.
 
 ### Gaps vs. this spec
@@ -401,7 +401,7 @@ No undo for settings — server overwrites on each save.
 - **Per-site language settings** — that lives on Edit Site → Settings or per-site `options-general.php`. The network setting is the **default** seeded on new sites.
 - **Plugin-added settings** — render via `wpmu_options` action slot rather than coding into the spec.
 - **Automatic language pack install** when filesystem is read-only — fail silently per core.
-- **WordPress Setup screen prompt** during initial install — out of scope; the shell only runs after install.
+- **WordPress Setup screen prompt** during initial install — out of scope; the workspace only runs after install.
 
 ---
 

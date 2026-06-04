@@ -84,14 +84,14 @@ export default function CoreSinglePaneLayout( { regions } ) {
 	return (
 		<SlotFillProvider>
 			<div
-				className="wp-admin-shell-layout wp-admin-shell-layout--single-pane"
+				className="wp-admin-workspaces-layout wp-admin-workspaces-layout--single-pane"
 				data-engine="core:single-pane"
 			>
-				<div className="wp-admin-shell-single-pane__appbar">
+				<div className="wp-admin-workspaces-single-pane__appbar">
 					{ hasNav && (
 						<button
 							type="button"
-							className="wp-admin-shell-single-pane__nav-toggle"
+							className="wp-admin-workspaces-single-pane__nav-toggle"
 							aria-label="Toggle navigation"
 							aria-expanded={ navOpen }
 							onClick={ toggleNav }
@@ -104,7 +104,7 @@ export default function CoreSinglePaneLayout( { regions } ) {
 					) ) }
 				</div>
 
-				<div className="wp-admin-shell-single-pane__body">
+				<div className="wp-admin-workspaces-single-pane__body">
 					{ buckets.main && (
 						<Region
 							key={ buckets.main.id }
@@ -115,7 +115,7 @@ export default function CoreSinglePaneLayout( { regions } ) {
 
 				{ hasNav && (
 					<div
-						className={ `wp-admin-shell-single-pane__nav-drawer${
+						className={ `wp-admin-workspaces-single-pane__nav-drawer${
 							navOpen ? ' is-open' : ''
 						}` }
 						aria-hidden={ ! navOpen }
@@ -125,12 +125,12 @@ export default function CoreSinglePaneLayout( { regions } ) {
 							tabIndex={ -1 }
 							aria-label={ __(
 								'Close navigation',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
-							className="wp-admin-shell-single-pane__nav-backdrop"
+							className="wp-admin-workspaces-single-pane__nav-backdrop"
 							onClick={ toggleNav }
 						/>
-						<div className="wp-admin-shell-single-pane__nav-pane">
+						<div className="wp-admin-workspaces-single-pane__nav-pane">
 							{ buckets.navigation.map( ( region ) => (
 								<Region key={ region.id } region={ region } />
 							) ) }

@@ -1,9 +1,9 @@
 {
-	"$schema": "../../../../docs/schemas/admin-engine.json",
+	"$schema": "../../../../docs/schemas/workspace-engine.json",
 	"id": "core:desktop",
 	"version": 3,
 	"title": "Desktop",
-	"description": "Desktop-OS engine. Admin screens open as draggable, resizable windows in a wallpapered workspace, with a dock built from the resolved admin.json navigation. Ports the desktop-mode UX onto the WP Admin Shell kernel via the `core:dynamic-children` platform service (spec §5.5) — windows are runtime-mutated child regions of the workspace region, so per-window routing, dirty-state, triggerStore, and capability gating fall out of region-ID nesting with no engine-specific plumbing.",
+	"description": "Desktop-OS engine. Admin screens open as draggable, resizable windows in a wallpapered workspace, with a dock built from the resolved workspace.json navigation. Ports the desktop-mode UX onto the WP Admin Workspaces kernel via the `core:dynamic-children` platform service (spec §5.5) — windows are runtime-mutated child regions of the workspace region, so per-window routing, dirty-state, triggerStore, and capability gating fall out of region-ID nesting with no engine-specific plumbing.",
 
 	"designSystem": "@wordpress/ui",
 
@@ -87,13 +87,13 @@
 				"flex-direction": "row",
 				"align-items": "center",
 				"justify-content": "center",
-				"gap": "var(--wp-admin-shell--chrome--dock--gap, 8px)",
-				"padding-block": "var(--wp-admin-shell--chrome--dock--padding-block, 8px)",
-				"padding-inline": "var(--wp-admin-shell--chrome--dock--padding-inline, 16px)",
-				"background": "var(--wp-admin-shell--chrome--dock--background, rgba(20, 20, 30, 0.6))",
+				"gap": "var(--wp-admin-workspaces--chrome--dock--gap, 8px)",
+				"padding-block": "var(--wp-admin-workspaces--chrome--dock--padding-block, 8px)",
+				"padding-inline": "var(--wp-admin-workspaces--chrome--dock--padding-inline, 16px)",
+				"background": "var(--wp-admin-workspaces--chrome--dock--background, rgba(20, 20, 30, 0.6))",
 				"backdrop-filter": "blur(16px)",
-				"border-radius": "var(--wp-admin-shell--chrome--dock--radius, 16px)",
-				"color": "var(--wp-admin-shell--chrome--dock--foreground, #fff)"
+				"border-radius": "var(--wp-admin-workspaces--chrome--dock--radius, 16px)",
+				"color": "var(--wp-admin-workspaces--chrome--dock--foreground, #fff)"
 			}
 		},
 
@@ -103,7 +103,7 @@
 				"position": "absolute",
 				"inset": "0",
 				"z-index": "0",
-				"background": "var(--wp-admin-shell--chrome--wallpaper--background, linear-gradient(135deg, #1e3a5f 0%, #2d5985 100%))",
+				"background": "var(--wp-admin-workspaces--chrome--wallpaper--background, linear-gradient(135deg, #1e3a5f 0%, #2d5985 100%))",
 				"pointer-events": "none"
 			}
 		}
@@ -144,7 +144,7 @@
 		}
 	},
 
-	"script": "wp-admin-shell-engine-core-desktop",
+	"script": "wp-admin-workspaces-engine-core-desktop",
 
 	"defaultRegions": {
 		"wallpaper": {

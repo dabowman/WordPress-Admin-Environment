@@ -1,4 +1,4 @@
-=== WP Admin Shell ===
+=== WP Admin Workspaces ===
 Contributors: dabowman
 Tags: admin, dashboard, react, dataviews, admin-ui
 Requires at least: 6.7
@@ -8,17 +8,17 @@ Stable tag: 0.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Replace wp-admin with a configurable, React-based admin environment driven by admin.json configuration files.
+Replace wp-admin with a configurable, React-based admin workspace driven by workspace.json configuration files.
 
 == Description ==
 
-WP Admin Shell replaces the WordPress admin with a configurable, React-based admin
-environment. The shell reads its layout, navigation, branding, and styling from
-`admin.json` configuration files and renders a complete admin UI on top of
+WP Admin Workspaces replaces the WordPress admin with a configurable, React-based admin
+environment. The workspace reads its layout, navigation, branding, and styling from
+`workspace.json` configuration files and renders a complete admin UI on top of
 WordPress's existing REST API and design system.
 
 WordPress has one admin interface — every user sees the same dashboard, menus, and
-screens, and plugins add more. WP Admin Shell makes the admin **configurable**: a
+screens, and plugins add more. WP Admin Workspaces makes the admin **configurable**: a
 JSON file declares which screens are available, how navigation is structured, what
 branding to show, and which keyboard shortcuts do what. Swap the JSON file, swap the
 admin experience. Same WordPress, same data, same plugins — a different admin for
@@ -26,7 +26,7 @@ different people.
 
 **How it works**
 
-* A `wp-content/admin.json` override layers over the bundled `wp-admin-default`
+* A `wp-content/workspace.json` override layers over the bundled `wp-admin-default`
   baseline, like `theme.json` over core defaults — declare only what changes.
 * A six-origin cascade resolver merges core / engine / plugin / site / role / user
   with field-aware, restrict-only semantics and trust tiers.
@@ -41,7 +41,7 @@ different people.
 
 == Important: WordPress 7.0 or the Gutenberg plugin ==
 
-The shell has a **runtime private-API dependency**: `@wordpress/ui` overlay
+The workspace has a **runtime private-API dependency**: `@wordpress/ui` overlay
 components opt into private APIs against an allowlist that the loaded
 `wp-private-apis` script must include.
 
@@ -56,11 +56,11 @@ instead.
 == Installation ==
 
 1. Activate the **Gutenberg** plugin.
-2. Upload `wp-admin-shell.zip` via **Plugins → Add New → Upload Plugin**, or copy the
+2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
-3. Activate **WP Admin Shell**.
-4. To turn the workspace on, drop a valid `admin.json` at `wp-content/admin.json`
-   (copy a starter from the plugin's `shells/` directory and edit it). With no file
+3. Activate **WP Admin Workspaces**.
+4. To turn the workspace on, drop a valid `workspace.json` at `wp-content/workspace.json`
+   (copy a starter from the plugin's `workspaces/` directory and edit it). With no file
    present, wp-admin stays classic and untouched.
 
 Press `Cmd/Ctrl+K` for the command palette. The workspace admin bar shows a
@@ -72,13 +72,13 @@ Press `Cmd/Ctrl+K` for the command palette. The workspace admin bar shows a
 
 No. Every screen reads and writes through the standard WordPress REST API. The plugin
 stores only its own configuration (options + per-user preference meta), and
-`uninstall.php` removes all of it on delete. Your `wp-content/admin.json` is treated
+`uninstall.php` removes all of it on delete. Your `wp-content/workspace.json` is treated
 as your content and is left in place on uninstall.
 
 = How do I get back to classic wp-admin? =
 
 Click the "Classic wp-admin" button in the workspace admin bar (a session-scoped,
-nonce-protected toggle), or disable the workspace under Settings → WP Admin Shell.
+nonce-protected toggle), or disable the workspace under Settings → WP Admin Workspaces.
 
 = What happens if I deactivate Gutenberg? =
 

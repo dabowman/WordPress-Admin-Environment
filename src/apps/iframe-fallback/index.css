@@ -1,16 +1,16 @@
-.wp-admin-shell-app-iframe {
+.wp-admin-workspaces-app-iframe {
 	height: 100%;
 	position: relative;
 }
 
-.wp-admin-shell-app-iframe__frame {
+.wp-admin-workspaces-app-iframe__frame {
 	width: 100%;
 	height: 100%;
 	border: none;
 	display: block;
 }
 
-.wp-admin-shell-app-iframe__loading {
+.wp-admin-workspaces-app-iframe__loading {
 	position: absolute;
 	inset: 0;
 	display: flex;

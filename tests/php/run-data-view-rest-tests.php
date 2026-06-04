@@ -1,10 +1,10 @@
 <?php
 /**
- * /wp-admin-shell/v1/data-view permission floor tests.
+ * /wp-admin-workspaces/v1/data-view permission floor tests.
  *
  * Pre-fix the endpoint gated against `is_user_logged_in()` only — any
  * authenticated user could read any screen's resolved DataView config,
- * even screens the user couldn't visit in the shell. The fix routes
+ * even screens the user couldn't visit in the workspace. The fix routes
  * screen-keyed requests through the per-screen permissions block; triple-
  * keyed lookups (no screen) keep the logged-in floor.
  *
@@ -24,7 +24,7 @@
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 class WPAS_Data_View_REST_Test_Runner {
 	public static $pass = 0;
@@ -74,10 +74,10 @@ class WPAS_Data_View_REST_Test_Runner {
 $T = 'WPAS_Data_View_REST_Test_Runner';
 register_shutdown_function( array( $T, 'cleanup' ) );
 
-// Pin shell + flush caches so the resolver sees the test fixture.
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
-WP_Admin_Shell_Cache::flush();
-WP_Admin_Shell_Resolver::reset_request_memo();
+// Pin workspace + flush caches so the resolver sees the test fixture.
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
+WP_Admin_Workspaces_Cache::flush();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
 
 $admin_id      = $T::ensure_user( 'wpas_data_view_rest_admin', 'administrator' );
 $subscriber_id = $T::ensure_user( 'wpas_data_view_rest_subscriber', 'subscriber' );
@@ -91,9 +91,9 @@ if ( $admin_id === null || $subscriber_id === null ) {
 // ── 1. Logged-out → 401 ───────────────────────────────────────────────
 
 wp_set_current_user( 0 );
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'screen', 'profile' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_true(
 	'logged-out → WP_Error',
@@ -108,10 +108,10 @@ $T::assert_eq(
 // ── 2. Subscriber → admin-only screen (`plugins`) → 403 ───────────────
 
 wp_set_current_user( $subscriber_id );
-WP_Admin_Shell_Resolver::reset_request_memo();
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'screen', 'plugins' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_true(
 	'subscriber → ?screen=plugins is WP_Error',
@@ -126,10 +126,10 @@ $T::assert_eq(
 // ── 3. Admin → same screen → 200 (true) ───────────────────────────────
 
 wp_set_current_user( $admin_id );
-WP_Admin_Shell_Resolver::reset_request_memo();
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'screen', 'plugins' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_eq(
 	'admin → ?screen=plugins → true (200 ok)',
@@ -140,10 +140,10 @@ $T::assert_eq(
 // ── 4. Subscriber → `read`-only screen (`profile`) → 200 ──────────────
 
 wp_set_current_user( $subscriber_id );
-WP_Admin_Shell_Resolver::reset_request_memo();
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'screen', 'profile' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_eq(
 	'subscriber → ?screen=profile (read-only) → true (200 ok)',
@@ -154,10 +154,10 @@ $T::assert_eq(
 // ── 5. Unknown screen → 404 (not 200 with empty doc) ──────────────────
 
 wp_set_current_user( $admin_id );
-WP_Admin_Shell_Resolver::reset_request_memo();
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'screen', 'this-screen-does-not-exist-xyz' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_true(
 	'unknown screen id → WP_Error',
@@ -172,10 +172,10 @@ $T::assert_eq(
 // ── 6. Triple-keyed lookup (no screen) → logged-in floor only ─────────
 
 wp_set_current_user( $subscriber_id );
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'kind', 'root' );
 $req->set_param( 'name', 'user' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 
 $T::assert_eq(
 	'subscriber → ?kind=root&name=user (no screen) → true (logged-in floor only)',
@@ -185,10 +185,10 @@ $T::assert_eq(
 
 // Triple-keyed lookup logged-out → still 401.
 wp_set_current_user( 0 );
-$req = new WP_REST_Request( 'GET', '/wp-admin-shell/v1/data-view' );
+$req = new WP_REST_Request( 'GET', '/wp-admin-workspaces/v1/data-view' );
 $req->set_param( 'kind', 'root' );
 $req->set_param( 'name', 'user' );
-$result = WP_Admin_Shell_Data_View_REST::permission_check( $req );
+$result = WP_Admin_Workspaces_Data_View_REST::permission_check( $req );
 $T::assert_eq(
 	'logged-out triple lookup → 401',
 	is_wp_error( $result ) ? (int) $result->get_error_data()['status'] : null,
@@ -197,8 +197,8 @@ $T::assert_eq(
 
 // Reset to admin for any downstream test harness.
 wp_set_current_user( $admin_id );
-WP_Admin_Shell_Cache::flush();
-WP_Admin_Shell_Resolver::reset_request_memo();
+WP_Admin_Workspaces_Cache::flush();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
 
 echo "\nTOTAL: " . $T::$pass . " passed, " . $T::$fail . " failed of " . ( $T::$pass + $T::$fail ) . "\n";
 exit( $T::$fail > 0 ? 1 : 0 );

@@ -1,7 +1,7 @@
 /* NavigationApp — drill-down + flat sidebar nav.
    Class naming mirrors @wordpress/edit-site sidebar* (sidebar /
    sidebar-navigation-screen / sidebar-navigation-item / sidebar-button)
-   with the top-level prefix swapped from `edit-site` to `wp-admin-shell`.
+   with the top-level prefix swapped from `edit-site` to `wp-admin-workspaces`.
    Color/dimension values come from the chrome→WPDS bridge so the same
    structure themes against any chrome surface. */
 
@@ -9,13 +9,13 @@
    Sidebar Content & Slide Animations (drill-down screen frame)
    ========================================================================== */
 
-.wp-admin-shell-sidebar__content {
+.wp-admin-workspaces-sidebar__content {
 	flex-grow: 1;
 	overflow: auto;
 	contain: content;
 }
 
-@keyframes wp-admin-shell--slide-from-right {
+@keyframes wp-admin-workspaces--slide-from-right {
 	from {
 		transform: translateX(50px);
 		opacity: 0;
@@ -26,7 +26,7 @@
 	}
 }
 
-@keyframes wp-admin-shell--slide-from-left {
+@keyframes wp-admin-workspaces--slide-from-left {
 	from {
 		transform: translateX(-50px);
 		opacity: 0;
@@ -37,7 +37,7 @@
 	}
 }
 
-.wp-admin-shell-sidebar__screen-wrapper {
+.wp-admin-workspaces-sidebar__screen-wrapper {
 	overflow-x: auto;
 	scrollbar-gutter: stable;
 	display: flex;
@@ -56,100 +56,100 @@
    Resting handle is transparent; the chrome border var (with WPDS stroke
    fallback) shows on hover/focus-within so the bar matches whatever chrome
    the sidebar surface paints. */
-.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar {
+.wp-admin-workspaces-sidebar__screen-wrapper::-webkit-scrollbar {
 	width: 12px;
 	height: 12px;
 }
 
-.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar-track {
+.wp-admin-workspaces-sidebar__screen-wrapper::-webkit-scrollbar-track {
 	background-color: transparent;
 }
 
-.wp-admin-shell-sidebar__screen-wrapper::-webkit-scrollbar-thumb {
+.wp-admin-workspaces-sidebar__screen-wrapper::-webkit-scrollbar-thumb {
 	background-color: transparent;
 	border-radius: var(--wpds-border-radius-lg);
 	border: 3px solid transparent;
 	background-clip: padding-box;
 }
 
-.wp-admin-shell-sidebar__screen-wrapper:hover::-webkit-scrollbar-thumb,
-.wp-admin-shell-sidebar__screen-wrapper:focus-within::-webkit-scrollbar-thumb {
-	background-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+.wp-admin-workspaces-sidebar__screen-wrapper:hover::-webkit-scrollbar-thumb,
+.wp-admin-workspaces-sidebar__screen-wrapper:focus-within::-webkit-scrollbar-thumb {
+	background-color: var(--wp-admin-workspaces--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 }
 
-.wp-admin-shell-sidebar__screen-wrapper:hover,
-.wp-admin-shell-sidebar__screen-wrapper:focus-within {
-	scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
+.wp-admin-workspaces-sidebar__screen-wrapper:hover,
+.wp-admin-workspaces-sidebar__screen-wrapper:focus-within {
+	scrollbar-color: var(--wp-admin-workspaces--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
 }
 
 /* Touch devices have no hover — show scrollbar unconditionally. */
 @media (hover: none) {
-	.wp-admin-shell-sidebar__screen-wrapper {
-		scrollbar-color: var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
+	.wp-admin-workspaces-sidebar__screen-wrapper {
+		scrollbar-color: var(--wp-admin-workspaces--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral)) transparent;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.wp-admin-shell-sidebar__screen-wrapper {
+	.wp-admin-workspaces-sidebar__screen-wrapper {
 		animation-duration: 0s;
 	}
 }
 
-.wp-admin-shell-sidebar__screen-wrapper.slide-from-left {
-	animation-name: wp-admin-shell--slide-from-left;
+.wp-admin-workspaces-sidebar__screen-wrapper.slide-from-left {
+	animation-name: wp-admin-workspaces--slide-from-left;
 }
 
-.wp-admin-shell-sidebar__screen-wrapper.slide-from-right {
-	animation-name: wp-admin-shell--slide-from-right;
+.wp-admin-workspaces-sidebar__screen-wrapper.slide-from-right {
+	animation-name: wp-admin-workspaces--slide-from-right;
 }
 
 /* ==========================================================================
    SidebarNavigationScreen (per-screen header + body + sticky footer)
    ========================================================================== */
 
-.wp-admin-shell-sidebar-navigation-screen__main {
+.wp-admin-workspaces-sidebar-navigation-screen__main {
 	flex-grow: 1;
 }
 
-.wp-admin-shell-sidebar-navigation-screen__main.has-footer {
+.wp-admin-workspaces-sidebar-navigation-screen__main.has-footer {
 	margin-bottom: 0;
 }
 
-.wp-admin-shell-sidebar-navigation-screen__title-icon {
+.wp-admin-workspaces-sidebar-navigation-screen__title-icon {
 	position: sticky;
 	top: 0;
-	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	background: var(--wp-admin-workspaces--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
 	z-index: 1;
 }
 
 /* Doubled selector raises specificity to match the site editor's
    &#{&} pattern — keeps the line-height stable when the Heading
    component or descendants override it. */
-.wp-admin-shell-sidebar-navigation-screen__title.wp-admin-shell-sidebar-navigation-screen__title,
-.wp-admin-shell-sidebar-navigation-screen__title.wp-admin-shell-sidebar-navigation-screen__title .wp-admin-shell-sidebar-navigation-screen__title {
+.wp-admin-workspaces-sidebar-navigation-screen__title.wp-admin-workspaces-sidebar-navigation-screen__title,
+.wp-admin-workspaces-sidebar-navigation-screen__title.wp-admin-workspaces-sidebar-navigation-screen__title .wp-admin-workspaces-sidebar-navigation-screen__title {
 	flex-grow: 1;
 	overflow-wrap: break-word;
 	line-height: var(--wpds-typography-line-height-xl);
 }
 
-.wp-admin-shell-sidebar-navigation-screen__description {
-	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
+.wp-admin-workspaces-sidebar-navigation-screen__description {
+	color: var(--wp-admin-workspaces--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
 	font-size: var(--wpds-typography-font-size-md);
 	line-height: var(--wpds-typography-line-height-sm);
 }
 
 /* `!important` overrides the default border ItemGroup paints around its
    children — no other way to drop it without forking the component. */
-.wp-admin-shell-sidebar-navigation-screen__items {
+.wp-admin-workspaces-sidebar-navigation-screen__items {
 	border: none !important;
 }
 
-.wp-admin-shell-sidebar-navigation-screen__footer {
+.wp-admin-workspaces-sidebar-navigation-screen__footer {
 	position: sticky;
 	bottom: 0;
-	background-color: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	background-color: var(--wp-admin-workspaces--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
 	gap: 0;
-	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-workspaces--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 }
 
 /* ==========================================================================
@@ -157,7 +157,7 @@
    Focus / hover behavior is delegated to @wordpress/ui Button.
    ========================================================================== */
 
-.wp-admin-shell-sidebar-button {
+.wp-admin-workspaces-sidebar-button {
 	flex-shrink: 0;
 }
 
@@ -167,46 +167,46 @@
    matching the site editor pattern.
    ========================================================================== */
 
-.wp-admin-shell-sidebar-navigation-item.components-item {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral-weak));
+.wp-admin-workspaces-sidebar-navigation-item.components-item {
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral-weak));
 	border: none;
 	min-height: 40px;
 }
 
-.wp-admin-shell-sidebar-navigation-item.components-item:hover,
-.wp-admin-shell-sidebar-navigation-item.components-item:focus,
-.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-sidebar-navigation-item.components-item:hover,
+.wp-admin-workspaces-sidebar-navigation-item.components-item:focus,
+.wp-admin-workspaces-sidebar-navigation-item.components-item[aria-current="true"] {
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }
 
-.wp-admin-shell-sidebar-navigation-item.components-item:hover .wp-admin-shell-sidebar-navigation-item__drilldown-indicator,
-.wp-admin-shell-sidebar-navigation-item.components-item:focus .wp-admin-shell-sidebar-navigation-item__drilldown-indicator,
-.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] .wp-admin-shell-sidebar-navigation-item__drilldown-indicator {
-	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-sidebar-navigation-item.components-item:hover .wp-admin-workspaces-sidebar-navigation-item__drilldown-indicator,
+.wp-admin-workspaces-sidebar-navigation-item.components-item:focus .wp-admin-workspaces-sidebar-navigation-item__drilldown-indicator,
+.wp-admin-workspaces-sidebar-navigation-item.components-item[aria-current="true"] .wp-admin-workspaces-sidebar-navigation-item__drilldown-indicator {
+	fill: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }
 
-.wp-admin-shell-sidebar-navigation-item.components-item[aria-current="true"] {
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-sidebar-navigation-item.components-item[aria-current="true"] {
+	background: var(--wp-admin-workspaces--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 	font-weight: var(--wpds-typography-font-weight-medium);
 }
 
 /* Keep the focus ring drawn on top of the active background. */
-.wp-admin-shell-sidebar-navigation-item.components-item:focus-visible {
+.wp-admin-workspaces-sidebar-navigation-item.components-item:focus-visible {
 	transform: translateZ(0);
 }
 
-.wp-admin-shell-sidebar-navigation-item__drilldown-indicator {
-	fill: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+.wp-admin-workspaces-sidebar-navigation-item__drilldown-indicator {
+	fill: var(--wp-admin-workspaces--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 }
 
-.wp-admin-shell-sidebar-navigation-item.with-suffix {
+.wp-admin-workspaces-sidebar-navigation-item.with-suffix {
 	padding-right: var(--wpds-dimension-padding-lg);
 }
 
 /* External-link indicator — muted "opens in a new tab" affordance on
-   menu items pointing off-shell (e.g. bridged plugin Support/Docs links). */
-.wp-admin-shell-sidebar-navigation-item__external-indicator {
+   menu items pointing off-workspace (e.g. bridged plugin Support/Docs links). */
+.wp-admin-workspaces-sidebar-navigation-item__external-indicator {
 	flex-shrink: 0;
 	opacity: 0.6;
 	fill: currentcolor;
@@ -216,17 +216,17 @@
    Collapsed Nav (icon-only mode) — no site-editor equivalent.
    ========================================================================== */
 
-.wp-admin-shell-nav__items {
+.wp-admin-workspaces-nav__items {
 	flex: 1;
 	padding: 0 var(--wpds-dimension-padding-md);
 }
 
 /* Nav item buttons (collapsed mode).
  * Default + hover colors come from the chrome → WPDS bridge scoped to
- * .wp-admin-shell-nav. The active/selected state has no clean WPDS slot
- * (current-route is shell semantics, not interactive emphasis) so it
+ * .wp-admin-workspaces-nav. The active/selected state has no clean WPDS slot
+ * (current-route is workspace semantics, not interactive emphasis) so it
  * keeps the chrome accent token directly. */
-.wp-admin-shell-nav__item {
+.wp-admin-workspaces-nav__item {
 	width: 100%;
 	justify-content: center;
 	padding: var(--wpds-dimension-padding-sm);
@@ -236,76 +236,76 @@
 	border: none;
 }
 
-.wp-admin-shell-nav__item[aria-current="true"] {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
+.wp-admin-workspaces-nav__item[aria-current="true"] {
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+	background: var(--wp-admin-workspaces--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-brand-weak-active));
 	font-weight: var(--wpds-typography-font-weight-medium);
 }
 
-.is-collapsed .wp-admin-shell-nav__items {
+.is-collapsed .wp-admin-workspaces-nav__items {
 	padding: 0 6px;
 }
 
-.wp-admin-shell-nav__item:focus-visible {
+.wp-admin-workspaces-nav__item:focus-visible {
 	transform: translateZ(0);
 }
 
 /* Separator */
-.wp-admin-shell-nav__separator {
+.wp-admin-workspaces-nav__separator {
 	border: none;
-	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-shell--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
+	border-top: var(--wpds-border-width-xs) solid var(--wp-admin-workspaces--chrome--sidebar--border, var(--wpds-color-stroke-surface-neutral));
 	margin: var(--wpds-dimension-gap-sm) 0;
 }
 
 /* Group */
-.wp-admin-shell-nav__group {
+.wp-admin-workspaces-nav__group {
 	margin-top: var(--wpds-dimension-gap-xs);
 }
 
-.wp-admin-shell-nav__group-label {
+.wp-admin-workspaces-nav__group-label {
 	display: block;
 	font-size: var(--wpds-typography-font-size-xs);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg) var(--wpds-dimension-padding-xs);
 }
 
 /* External links (collapsed mode) */
-.wp-admin-shell-nav__link {
+.wp-admin-workspaces-nav__link {
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	padding: var(--wpds-dimension-padding-sm) 6px var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 	text-decoration: none;
 	border-radius: var(--wpds-border-radius-md);
 	font-size: var(--wpds-typography-font-size-md);
 	min-height: 40px;
 }
 
-.wp-admin-shell-nav__link:hover {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-nav__link:hover {
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }
 
 /* ---------------------------------------------------------------------
  * sidebar-tree renderer
  *
  * Expandable in-place tree. Branch nodes are <button>s styled like nav
- * items (they carry .wp-admin-shell-sidebar-navigation-item); leaves
+ * items (they carry .wp-admin-workspaces-sidebar-navigation-item); leaves
  * reuse SidebarNavigationItem. Depth indent is applied inline.
  * ------------------------------------------------------------------- */
-.wp-admin-shell-sidebar-navigation-tree {
+.wp-admin-workspaces-sidebar-navigation-tree {
 	padding: var(--wpds-dimension-padding-sm);
 }
 
-.wp-admin-shell-sidebar-navigation-tree__list {
+.wp-admin-workspaces-sidebar-navigation-tree__list {
 	display: flex;
 	flex-direction: column;
 }
 
-.wp-admin-shell-sidebar-navigation-tree__branch {
+.wp-admin-workspaces-sidebar-navigation-tree__branch {
 	width: 100%;
 	cursor: pointer;
 	background: transparent;
@@ -315,7 +315,7 @@
 	color: inherit;
 }
 
-.wp-admin-shell-sidebar-navigation-tree__toggle-indicator {
+.wp-admin-workspaces-sidebar-navigation-tree__toggle-indicator {
 	flex-shrink: 0;
 	opacity: 0.7;
 }

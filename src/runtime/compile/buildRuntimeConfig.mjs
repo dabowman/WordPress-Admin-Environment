@@ -5,7 +5,7 @@ import { compileCommands } from './compileCommands.mjs';
 
 /**
  * Build the runtime config the kernel consumes from the resolved v3
- * admin.json doc + the active engine manifest.
+ * workspace.json doc + the active engine manifest.
  *
  * The cascade resolver hands the kernel the author-shape v3 doc
  * (`workspace` / `screens` / `menu` / `settings` / `commands`). The kernel
@@ -23,7 +23,7 @@ import { compileCommands } from './compileCommands.mjs';
  * runtime consumers (`<Region>`, `<BindingsConsumer>`, `RouterProvider`)
  * read the derived surfaces exactly as before.
  *
- * @param {Object} config         Resolved v3 admin.json doc.
+ * @param {Object} config         Resolved v3 workspace.json doc.
  * @param {Object} engineManifest Active engine manifest (carries
  *                                `defaultRegions`).
  * @return {Object} Runtime config.
@@ -34,7 +34,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 	}
 
 	const engineId =
-		config.workspace?.engine || config.engine || 'core:default';
+		config.engine || config.workspace?.engine || 'core:default';
 	const screens = config.screens || {};
 	const defaultRegions =
 		engineManifest && engineManifest.defaultRegions
@@ -47,7 +47,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 		config[ 'default-route' ] ||
 		synthesizeDefaultRoute(
 			screens,
-			config.workspace?.[ 'default-screen' ] || ''
+			config[ 'default-screen' ] || config.workspace?.[ 'default-screen' ] || ''
 		);
 	const commands = compileCommands( config.commands || [] );
 

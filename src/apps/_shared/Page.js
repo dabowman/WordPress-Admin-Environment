@@ -1,5 +1,5 @@
 /**
- * Shared page layout — a shell-local port of `@wordpress/admin-ui`'s `Page`.
+ * Shared page layout — a workspace-local port of `@wordpress/admin-ui`'s `Page`.
  *
  * Owns the whole app surface: a flex column with an optional header (title /
  * subtitle / right-aligned actions, divided by a bottom border) above a content
@@ -12,7 +12,7 @@
  * Two upstream features are intentionally dropped: the `NavigableRegion`
  * landmark (the kernel's region wrapper already supplies `role`, and apps must
  * not double the landmark) and the `SidebarToggleSlot` (it assumes the
- * admin-ui Layout). `before` is a shell-local addition — a left-of-title slot
+ * admin-ui Layout). `before` is a workspace-local addition — a left-of-title slot
  * for headers that lead with controls instead of a title (e.g. media filters).
  *
  * Content sizing: full-bleed by default (the content area is a flex column so a
@@ -26,7 +26,7 @@
  * @param {*}           [root0.subTitle]     Secondary line beneath the title.
  * @param {*}           [root0.actions]      Right-aligned action node(s) — typically `<Button>`(s).
  * @param {*}           [root0.badges]       Inline node(s) after the title (e.g. a `<Badge>`).
- * @param {*}           [root0.before]       Left-of-title content (e.g. filter controls). Shell-local extension.
+ * @param {*}           [root0.before]       Left-of-title content (e.g. filter controls). Workspace-local extension.
  * @param {*}           root0.children       Content area.
  * @param {string}      [root0.className]    Extra class names for the root element.
  * @param {boolean}     [root0.hasPadding]   Inset + scroll the content area. Default `false` (full-bleed).
@@ -63,12 +63,12 @@ export function Page( {
 	return (
 		<div className={ rootClass }>
 			{ hasHeader ? (
-				<header className="wp-admin-shell-page__header">
-					<div className="wp-admin-shell-page__header-content">
+				<header className="wp-admin-workspaces-page__header">
+					<div className="wp-admin-workspaces-page__header-content">
 						{ before }
 						{ title ? (
 							<Text
-								className="wp-admin-shell-page__title"
+								className="wp-admin-workspaces-page__title"
 								render={ <HeadingTag /> }
 								variant="heading-lg"
 							>
@@ -81,7 +81,7 @@ export function Page( {
 								direction="row"
 								align="center"
 								gap="sm"
-								className="wp-admin-shell-page__actions"
+								className="wp-admin-workspaces-page__actions"
 							>
 								{ actions }
 							</Stack>
@@ -91,7 +91,7 @@ export function Page( {
 						<Text
 							render={ <p /> }
 							variant="body-md"
-							className="wp-admin-shell-page__subtitle"
+							className="wp-admin-workspaces-page__subtitle"
 						>
 							{ subTitle }
 						</Text>

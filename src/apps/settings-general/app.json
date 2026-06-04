@@ -1,9 +1,9 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:settings-general",
 	"version": 1,
 	"title": "Settings — General",
-	"description": "Standalone General-settings panel (legacy entry kept for shells that mount it directly).",
+	"description": "Standalone General-settings panel (legacy entry kept for workspaces that mount it directly).",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
@@ -13,9 +13,9 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
-		"purpose": "Form over WordPress's `general-settings` REST surface (`options.php`'s native equivalent). Covers site identity (title, tagline, URL, home URL, admin email), membership (registration toggle, default role — site-only, hidden on multisite), language (with optgroups for installed + available locales), timezone (city + UTC groups, with current UTC / local time display), date format (preset radio + custom-format input), time format (same), and week-start day. Reads + writes through `core-data` `useEntityRecord('root','site')`. Composable host (`core:settings`) mounts this for the `general` panel; shells can also mount this directly for a minimal settings screen.",
+		"purpose": "Form over WordPress's `general-settings` REST surface (`options.php`'s native equivalent). Covers site identity (title, tagline, URL, home URL, admin email), membership (registration toggle, default role — site-only, hidden on multisite), language (with optgroups for installed + available locales), timezone (city + UTC groups, with current UTC / local time display), date format (preset radio + custom-format input), time format (same), and week-start day. Reads + writes through `core-data` `useEntityRecord('root','site')`. Composable host (`core:settings`) mounts this for the `general` panel; workspaces can also mount this directly for a minimal settings screen.",
 		"rebuilds": "settings-general",
 		"data": {
 			"reads": [
@@ -27,7 +27,7 @@
 					"fields": [ "title", "description", "url", "home", "email", "users_can_register", "default_role", "language", "timezone", "date_format", "time_format", "start_of_week" ]
 				},
 				{
-					"source": "window.wpAdminShell.settingsGeneral",
+					"source": "window.wpAdminWorkspaces.settingsGeneral",
 					"via": "window-global",
 					"purpose": "PHP-injected options that don't live in `root/site` — pending admin-email change, presence of `WP_SITEURL` / `WP_HOME` constants, role list, language list with optgroups, timezone group list, weekday labels, date + time format preset arrays, multisite flag."
 				}

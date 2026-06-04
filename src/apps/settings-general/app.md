@@ -4,7 +4,7 @@ Prose accompanying `app.json#documentation` for the General Settings form.
 
 ## Overview
 
-SettingsGeneralApp is the canonical WordPress `general-settings` screen ported to React + core-data. It's the most form-heavy app in the shell — fifteen-plus fields covering site identity, membership, language, timezone, date/time formatting, and week-start. It lands inside the composable `core:settings` host as the `general` panel; standalone registration is kept for shells that want a minimal "just general settings" experience.
+SettingsGeneralApp is the canonical WordPress `general-settings` screen ported to React + core-data. It's the most form-heavy app in the workspace — fifteen-plus fields covering site identity, membership, language, timezone, date/time formatting, and week-start. It lands inside the composable `core:settings` host as the `general` panel; standalone registration is kept for workspaces that want a minimal "just general settings" experience.
 
 The interesting bits are the **date/time format pickers**: WordPress's wp-admin shows a list of preset radios + a "Custom" radio that reveals a free-text input. Reproducing this pattern requires careful state — the custom-input value must persist across radio toggles so re-selecting Custom doesn't blank the previous custom value.
 
@@ -13,7 +13,7 @@ The interesting bits are the **date/time format pickers**: WordPress's wp-admin 
 Two data sources:
 
 1. **`useEntityRecord('root', 'site')`** — the writable site options. Save flows through `save()`.
-2. **`window.wpAdminShell.settingsGeneral`** — PHP-injected read-only metadata: role list, language optgroups, timezone groups, weekday labels, preset date/time format arrays, multisite flag, pending admin-email target, constant flags. This data is computed PHP-side because it requires reading `WP_LANG_DIR` (installed locales), the active translation set (available locales), timezone identifiers from PHP's `DateTimeZone::listIdentifiers()`, and `defined('WP_SITEURL') / WP_HOME` PHP constants. None of these are REST-exposed.
+2. **`window.wpAdminWorkspaces.settingsGeneral`** — PHP-injected read-only metadata: role list, language optgroups, timezone groups, weekday labels, preset date/time format arrays, multisite flag, pending admin-email target, constant flags. This data is computed PHP-side because it requires reading `WP_LANG_DIR` (installed locales), the active translation set (available locales), timezone identifiers from PHP's `DateTimeZone::listIdentifiers()`, and `defined('WP_SITEURL') / WP_HOME` PHP constants. None of these are REST-exposed.
 
 Date/Time format logic:
 
@@ -41,4 +41,4 @@ A non-WPDS rebuild needs text inputs, email + URL types, select (with optgroup s
 - **Time-format custom field accepts any PHP date format string** — no live preview of what the format produces against the current time.
 - **No "reset to default" affordance** for date/time formats.
 - **Constant-defined URL fields** show "Defined by WP_SITEURL constant" but don't show the value of the constant; user has to look at wp-config.php to see it.
-- **No Site Icon picker.** `docs/screens/settings-general.md` documents a Site Icon control (uploads to media, sets the `site_icon` option, surfaces favicon + Apple touch icon previews). The v2 panel doesn't ship it — covering the field requires a media-picker primitive the shell doesn't yet expose.
+- **No Site Icon picker.** `docs/screens/settings-general.md` documents a Site Icon control (uploads to media, sets the `site_icon` option, surfaces favicon + Apple touch icon previews). The v2 panel doesn't ship it — covering the field requires a media-picker primitive the workspace doesn't yet expose.

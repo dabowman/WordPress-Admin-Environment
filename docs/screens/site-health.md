@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/site-health.php` (Status tab) + `wp-admin/site-health-info.php` (Info tab) + `wp-admin/includes/class-wp-site-health.php` + `wp-admin/includes/class-wp-debug-data.php`
-**Current shell coverage:** None. Bundled `developer-admin.json` exposes the original via `iframe:site-health.php`.
+**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:site-health.php`.
 
 This spec describes the **semantic surface** of the WordPress Site Health screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -53,7 +53,7 @@ Jobs to be done (Info tab):
 
 Default cap: granted to administrators (`single`-site) and super-admins (multisite).
 
-**Permission-denied state:** screen uses `wp_die( 'Sorry, you are not allowed to access site health information.', '', 403 )`. Shell renders 403 view.
+**Permission-denied state:** screen uses `wp_die( 'Sorry, you are not allowed to access site health information.', '', 403 )`. Workspace renders 403 view.
 
 **Multisite:** directory-sizes endpoint is **disabled on multisite** (network admin should aggregate per-site, not implemented in core). Other tests run identically.
 
@@ -150,7 +150,7 @@ Each field has `label` and `value` (string or array); a few are special (`upload
 ### REST gap: bulk debug data
 
 Info tab has **no first-class REST endpoint** for the full debug-data dump. `WP_Debug_Data::debug_data()` is admin-only PHP. Rebuild requires:
-1. Adding a custom shell endpoint (`GET /wp-admin-shell/v1/site-health/info`) wrapping `WP_Debug_Data::debug_data()`, or
+1. Adding a custom workspace endpoint (`GET /wp-admin-workspaces/v1/site-health/info`) wrapping `WP_Debug_Data::debug_data()`, or
 2. Iframing the existing PHP page.
 
 The directory-sizes part is REST-able. The text-format clipboard export is generated server-side via `WP_Debug_Data::format( $info, 'debug' )` and is currently embedded into the page HTML as a `data-clipboard-text` attribute — pure client-side copy.
@@ -275,7 +275,7 @@ Original URL params:
 - `?action=update_https&_wpnonce={…}` — HTTPS migration trigger.
 - `?https_updated=0|1` — post-action result indicator.
 
-Recommended shell URL:
+Recommended workspace URL:
 - `#/site-health` — Status tab.
 - `#/site-health?tab=debug` — Info tab.
 - `#/site-health?tab={plugin-slug}` — plugin-registered tab.
@@ -303,7 +303,7 @@ Browser back/forward should restore tab + accordion-expanded state. Refresh shou
 
 - Tools menu → Site Health.
 - Dashboard "Site Health Status" widget → this screen (Status tab).
-- Plugin nag → may deep-link to specific test (plugins set `?test={id}` and shell expands that accordion).
+- Plugin nag → may deep-link to specific test (plugins set `?test={id}` and workspace expands that accordion).
 - Updates screen "Background updates" recommendation → Site Health.
 - Cross-link: dashboard widget reads same tests.
 
@@ -355,24 +355,24 @@ Browser back/forward should restore tab + accordion-expanded state. Refresh shou
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `site_status_tests` (filter) | Add direct + async tests | **Replace** with shell registry: `core:site-health.tests` |
-| `debug_information` (filter) | Add Info tab sections | **Replace** with shell registry: `core:site-health.info-sections` |
-| `site_health_navigation_tabs` (filter) | Add custom tabs | **Replace** with shell slot `core:site-health.tabs` |
+| `site_status_tests` (filter) | Add direct + async tests | **Replace** with workspace registry: `core:site-health.tests` |
+| `debug_information` (filter) | Add Info tab sections | **Replace** with workspace registry: `core:site-health.info-sections` |
+| `site_health_navigation_tabs` (filter) | Add custom tabs | **Replace** with workspace slot `core:site-health.tabs` |
 | `site_health_tab_content` (action) | Render custom tab content | Replace with slot |
 | `site_status_test_result` (filter, per-test) | Modify a test's result | Preserve at PHP layer for legacy tests |
 | `site_status_test_php_modules` | Customize required PHP modules list | Preserve at PHP layer |
 | `wp_get_default_privacy_policy_content` | Affects related test | Preserve |
 | `site_health_test_rest_capability_{test}` | Override per-test REST cap | Preserve at PHP layer |
 
-Plugin compatibility note: many security and performance plugins (e.g. iThemes Security, Yoast SEO Premium, WP Rocket) inject tests via `site_status_tests`. Preserving the PHP filter is essential — the shell rebuild must invoke `WP_Site_Health::get_tests()` server-side to catch them, not reimplement the test catalog client-side.
+Plugin compatibility note: many security and performance plugins (e.g. iThemes Security, Yoast SEO Premium, WP Rocket) inject tests via `site_status_tests`. Preserving the PHP filter is essential — the workspace rebuild must invoke `WP_Site_Health::get_tests()` server-side to catch them, not reimplement the test catalog client-side.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:site-health.php` works in `developer-admin` shell; chrome hidden.
+- **What works:** `iframe:site-health.php` works in `developer-admin` workspace; chrome hidden.
 
 ### Gaps vs. this spec
 
@@ -380,10 +380,10 @@ Plugin compatibility note: many security and performance plugins (e.g. iThemes S
 |---|---|---|
 | Register `core:site-health` AppSource | High | Composes well with REST; high-value for transparency |
 | Status tab native rendering | High | Direct + async test fan-out via `wp-site-health/v1/tests/*` |
-| Direct-test results endpoint | Medium | No REST endpoint returns the full direct-test set in one call. Either add `GET /wp-admin-shell/v1/site-health/tests` or run them client-side as REST per-test |
+| Direct-test results endpoint | Medium | No REST endpoint returns the full direct-test set in one call. Either add `GET /wp-admin-workspaces/v1/site-health/tests` or run them client-side as REST per-test |
 | Score calculation client-side | Medium | Pure derivation from test results |
 | Score ring SVG | Low | Pure presentation |
-| Info tab native rendering | Medium | Needs custom REST `GET /wp-admin-shell/v1/site-health/info` wrapping `WP_Debug_Data::debug_data()` |
+| Info tab native rendering | Medium | Needs custom REST `GET /wp-admin-workspaces/v1/site-health/info` wrapping `WP_Debug_Data::debug_data()` |
 | Directory sizes async loading | Medium | Existing endpoint; honor multisite skip |
 | Copy-to-clipboard with REST-fetched data | Medium | Format on server; serve via custom endpoint or compose client-side |
 | HTTPS update flow | Medium | Custom REST or fall back to existing PHP page |
@@ -393,7 +393,7 @@ Plugin compatibility note: many security and performance plugins (e.g. iThemes S
 | Live region announcements for arriving tests | Medium | Accessibility win |
 
 ### Acceptable interim
-`iframe:site-health.php` is the v1 implementation. Site Health is information-dense and rarely visited; iframe is acceptable indefinitely. Native rebuild becomes worthwhile only when the shell adds real-time monitoring (e.g. dashboard widget pulling live test status) — at that point composing the REST tests directly is straightforward.
+`iframe:site-health.php` is the v1 implementation. Site Health is information-dense and rarely visited; iframe is acceptable indefinitely. Native rebuild becomes worthwhile only when the workspace adds real-time monitoring (e.g. dashboard widget pulling live test status) — at that point composing the REST tests directly is straightforward.
 
 ---
 

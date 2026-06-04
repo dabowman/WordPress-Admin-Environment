@@ -1,6 +1,6 @@
 # DataView configuration
 
-The `dataView` block configures how an entity list renders — fields, layouts, default sort, filters, actions. It is the WordPress Admin Shell's bridge to [`@wordpress/dataviews`](https://www.npmjs.com/package/@wordpress/dataviews), and it cascades through the same admin.json origins (core → engine → plugin → site → role → user) every other admin.json block uses. This document is the consumer-facing reference for plugin authors, designers, and site admins who want to override DataViews behavior without forking React.
+The `dataView` block configures how an entity list renders — fields, layouts, default sort, filters, actions. It is the WordPress Admin Workspace's bridge to [`@wordpress/dataviews`](https://www.npmjs.com/package/@wordpress/dataviews), and it cascades through the same workspace.json origins (core → engine → plugin → site → role → user) every other workspace.json block uses. This document is the consumer-facing reference for plugin authors, designers, and site admins who want to override DataViews behavior without forking React.
 
 ## What `dataView` is
 
@@ -17,12 +17,12 @@ A `dataView` document can come from three layers. They cascade in this order —
 | Layer | Authored at | Scope | Wins over |
 |---|---|---|---|
 | App manifest baseline | `app.json#dataView` | Ships with the app code; declares the `(kind, name)` it primarily renders and a `variants` family. | — |
-| Registry (admin.json) | `settings.dataViews.<kind>.<name>.<variant>` | One triple at a time; cascades through every admin.json origin. | App manifest |
+| Registry (workspace.json) | `settings.dataViews.<kind>.<name>.<variant>` | One triple at a time; cascades through every workspace.json origin. | App manifest |
 | Screen overlay | `screens[id].dataView` | One screen at a time. Deep-merges on top of whatever the registry resolved. | Registry |
 
-**App manifest baseline.** The app's `app.json` ships a complete `dataView` block — `_default` plus every variant the app supports out of the box. The PHP resolver injects each variant into `settings.dataViews[kind][name][variant]` at the `core` origin, so admin.json cascade origins (site, role, user) can override per-triple. This is authoritative for the app's default behavior across every shell that mounts it.
+**App manifest baseline.** The app's `app.json` ships a complete `dataView` block — `_default` plus every variant the app supports out of the box. The PHP resolver injects each variant into `settings.dataViews[kind][name][variant]` at the `core` origin, so workspace.json cascade origins (site, role, user) can override per-triple. This is authoritative for the app's default behavior across every workspace that mounts it.
 
-**Registry (admin.json).** `settings.dataViews.<kind>.<name>.<variant>` is the shared, cascade-overrideable layer. Adding a `seo-score` column to the Posts `_default` variant at the site origin makes that column appear in every Posts list across every shell that mounts a screen pointing at `postType/post/_default`. The registry is shared by every screen that references it via `dataViewRef`.
+**Registry (workspace.json).** `settings.dataViews.<kind>.<name>.<variant>` is the shared, cascade-overrideable layer. Adding a `seo-score` column to the Posts `_default` variant at the site origin makes that column appear in every Posts list across every workspace that mounts a screen pointing at `postType/post/_default`. The registry is shared by every screen that references it via `dataViewRef`.
 
 **Screen overlay.** `screens[id].dataView` is a per-screen delta — last layer, narrowest scope. It deep-merges over the registry-resolved doc for whichever triple the screen points at. Use this when one specific screen needs a tweak that doesn't belong in the shared registry entry.
 
@@ -32,13 +32,13 @@ A `dataView` document can come from three layers. They cascade in this order —
 A: `settings.dataViews.postType.post._default.fields[].push({...})` at the site, role, or user origin. Every screen consuming `postType/post/_default` picks it up.
 
 **Q: I want to add a column only to the Drafts screen.**
-A: `settings.dataViews.postType.post.drafts.fields[].push({...})`. The `drafts` variant is shared across any shell that mounts a drafts screen, so this is still the registry layer — not the screen overlay.
+A: `settings.dataViews.postType.post.drafts.fields[].push({...})`. The `drafts` variant is shared across any workspace that mounts a drafts screen, so this is still the registry layer — not the screen overlay.
 
 **Q: I want to add a column only to one specific custom drafts-compact screen, not the regular drafts.**
 A: `screens.posts-drafts-compact.dataView.fields[].push({...})`. Screen overlay — narrowest scope.
 
 **Q: I'm a plugin author. I want my CPT to ship a complete DataViews experience.**
-A: `app.json#dataView` with `_default` and any variants you support. Cascade-overrideable per-triple from admin.json.
+A: `app.json#dataView` with `_default` and any variants you support. Cascade-overrideable per-triple from workspace.json.
 
 **Q: I want to hide a column.**
 A: `null` tombstone at any layer. `settings.dataViews.postType.post._default.fields.author: null` removes the author column globally. Same syntax works inside `screens[id].dataView`.
@@ -67,14 +67,14 @@ The resolver caps `extends` chains at depth 10 and detects cycles. `drafts exten
 
 Two filters fire on every resolved `dataView` doc. Both run after the cascade merge and `extends` resolution, before `fieldsRef` expansion is finalized.
 
-1. **`wp_admin_shell_data_view_config_{kind}_{name}`** — always fires, on every variant lookup. Use for changes that should apply across every variant of an entity.
-2. **`wp_admin_shell_data_view_config_{kind}_{name}_{variant}`** — fires when `variant !== '_default'`. Use for variant-targeted changes.
+1. **`wp_admin_workspaces_data_view_config_{kind}_{name}`** — always fires, on every variant lookup. Use for changes that should apply across every variant of an entity.
+2. **`wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}`** — fires when `variant !== '_default'`. Use for variant-targeted changes.
 
 Example PHP adding an SEO-score column to every Posts variant:
 
 ```php
 add_filter(
-    'wp_admin_shell_data_view_config_postType_post',
+    'wp_admin_workspaces_data_view_config_postType_post',
     function ( $doc, $kind, $name, $variant ) {
         $doc['fields'][] = [
             'id'    => 'seo-score',
@@ -88,7 +88,7 @@ add_filter(
 );
 ```
 
-Migrating from CIAB: `s/next_admin_entity_view_config_/wp_admin_shell_data_view_config_/g`. The mechanical rename ports both the base filter and the per-variant filter — CIAB's 3-axis hook naming maps directly.
+Migrating from CIAB: `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`. The mechanical rename ports both the base filter and the per-variant filter — CIAB's 3-axis hook naming maps directly.
 
 ## REST endpoints
 
@@ -96,9 +96,9 @@ Three endpoints expose the resolved registry to JS clients.
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /wp-admin-shell/v1/data-view?screen=<id>` | Resolved per-screen doc — the registry triple plus any inline `screens[id].dataView` overlay. What `useDataView(screenId)` calls for late-registered screens. |
-| `GET /wp-admin-shell/v1/data-view?kind=X&name=Y[&variant=Z]` | Direct registry lookup. `variant` defaults to `_default`. |
-| `GET /wp-admin-shell/v1/data-view/variants?kind=X&name=Y` | Variant discovery. Returns `{ variants: [ "_default", "drafts", ... ] }`. |
+| `GET /wp-admin-workspaces/v1/data-view?screen=<id>` | Resolved per-screen doc — the registry triple plus any inline `screens[id].dataView` overlay. What `useDataView(screenId)` calls for late-registered screens. |
+| `GET /wp-admin-workspaces/v1/data-view?kind=X&name=Y[&variant=Z]` | Direct registry lookup. `variant` defaults to `_default`. |
+| `GET /wp-admin-workspaces/v1/data-view/variants?kind=X&name=Y` | Variant discovery. Returns `{ variants: [ "_default", "drafts", ... ] }`. |
 
 Permission floor is `is_user_logged_in()`. `dataView` blocks are structural metadata, not entity data — column shapes don't require entity capability checks. To gate further, add an `is_user_allowed` check inside the filter callback.
 
@@ -143,10 +143,10 @@ const { config, isLoading } = useDataView( screenId );
 const { config, isLoading } = useDataView( { kind: 'postType', name: 'post', variant: 'drafts' } );
 ```
 
-String argument routes through `/data-view?screen=<id>`; object argument routes through `/data-view?kind=X&name=Y&variant=Z`. Both paths consult the inline `window.wpAdminShell.config` snapshot first and only fall through to REST when the snapshot doesn't carry the requested entry. The hook source lives at `src/runtime/dataView/useDataView.js`.
+String argument routes through `/data-view?screen=<id>`; object argument routes through `/data-view?kind=X&name=Y&variant=Z`. Both paths consult the inline `window.wpAdminWorkspaces.config` snapshot first and only fall through to REST when the snapshot doesn't carry the requested entry. The hook source lives at `src/runtime/dataView/useDataView.js`.
 
 ## See also
 
-- `docs/wp-admin-shell-design-spec.md` §13 #7–#8 — spec-level normative description.
+- `docs/wp-admin-workspaces-design-spec.md` §13 #7–#8 — spec-level normative description.
 - `docs/schema-sketch.md` — design rationale + cascade examples.
 - [`@wordpress/dataviews`](https://www.npmjs.com/package/@wordpress/dataviews) — upstream component reference.

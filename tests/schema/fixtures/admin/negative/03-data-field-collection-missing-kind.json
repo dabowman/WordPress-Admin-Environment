@@ -1,17 +1,19 @@
 {
-	"$schema": "../../../../../../docs/schemas/admin.json",
+	"$schema": "../../../../../../docs/schemas/workspace.json",
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "bad-data-field-collection",
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "posts"
-	},
+	"engine": "core:default",
+	"default-screen": "posts",
 	"settings": {
 		"dataFields": {
 			"core/post-fields": {
 				"fields": [
-					{ "id": "title", "type": "text", "label": "Title" }
+					{
+						"id": "title",
+						"type": "text",
+						"label": "Title"
+					}
 				]
 			}
 		}

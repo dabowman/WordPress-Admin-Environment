@@ -5,18 +5,18 @@
  * only style the hand-rolled item list + reorder controls.
  */
 
-.wp-admin-shell-app-menus__locations {
+.wp-admin-workspaces-app-menus__locations {
 	border: 1px solid var( --wpds-color-stroke-surface-neutral );
 	border-radius: var( --wpds-border-radius-md );
 	padding: var( --wpds-dimension-padding-md );
 	margin: 0;
 }
 
-.wp-admin-shell-app-menus__locations-list {
+.wp-admin-workspaces-app-menus__locations-list {
 	margin-block-start: var( --wpds-dimension-padding-sm );
 }
 
-.wp-admin-shell-app-menus__items {
+.wp-admin-workspaces-app-menus__items {
 	list-style: none;
 	margin: 0;
 	padding: 0;
@@ -25,7 +25,7 @@
 	gap: var( --wpds-dimension-padding-xs );
 }
 
-.wp-admin-shell-app-menus__item {
+.wp-admin-workspaces-app-menus__item {
 	border: 1px solid var( --wpds-color-stroke-surface-neutral );
 	border-radius: var( --wpds-border-radius-md );
 	padding: var( --wpds-dimension-padding-sm )
@@ -33,6 +33,6 @@
 	background: var( --wpds-color-bg-surface-neutral-strong );
 }
 
-.wp-admin-shell-app-menus__item-label {
+.wp-admin-workspaces-app-menus__item-label {
 	font-weight: 600;
 }

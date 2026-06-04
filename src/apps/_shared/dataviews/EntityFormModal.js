@@ -64,9 +64,9 @@ export function createEntityFormModal( {
 	const mapToData =
 		typeof toData === 'function' ? toData : ( record ) => record ?? {};
 
-	const saveLabel = messages.saveLabel || __( 'Save', 'wp-admin-shell' );
+	const saveLabel = messages.saveLabel || __( 'Save', 'wp-admin-workspaces' );
 	const createLabel =
-		messages.createLabel || __( 'Add new', 'wp-admin-shell' );
+		messages.createLabel || __( 'Add new', 'wp-admin-workspaces' );
 	const saveMessages = { success: messages.saved, error: messages.error };
 
 	/**
@@ -117,7 +117,7 @@ export function createEntityFormModal( {
 
 		if ( ! record ) {
 			return (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			);
@@ -138,7 +138,7 @@ export function createEntityFormModal( {
 						variant="minimal"
 						onClick={ closeModal }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -206,13 +206,13 @@ export function createEntityFormModal( {
 					createErrorNotice(
 						saveError?.message ||
 							messages.error ||
-							__( 'Failed to create.', 'wp-admin-shell' ),
+							__( 'Failed to create.', 'wp-admin-workspaces' ),
 						{ isDismissible: true }
 					);
 					return;
 				}
 				createSuccessNotice(
-					messages.saved || __( 'Created.', 'wp-admin-shell' ),
+					messages.saved || __( 'Created.', 'wp-admin-workspaces' ),
 					{ type: 'snackbar' }
 				);
 				onSaved?.( record );
@@ -222,7 +222,7 @@ export function createEntityFormModal( {
 				createErrorNotice(
 					err?.message ||
 						messages.error ||
-						__( 'Failed to create.', 'wp-admin-shell' ),
+						__( 'Failed to create.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
 			} finally {
@@ -253,7 +253,7 @@ export function createEntityFormModal( {
 						variant="minimal"
 						onClick={ closeModal }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -312,7 +312,7 @@ export function createEntityFormModal( {
 		// Edit with no subject row (shouldn't happen via DataViews) — render a
 		// spinner rather than throwing.
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);

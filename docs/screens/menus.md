@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/nav-menus.php` + `wp-admin/includes/nav-menu.php`
-**Current shell coverage:** None. Reachable today only via `iframe:nav-menus.php`.
+**Current workspace coverage:** None. Reachable today only via `iframe:nav-menus.php`.
 
 This spec describes the **semantic surface** of the classic Menus screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -342,7 +342,7 @@ Original wp-admin URL params:
 - `nav-menus.php?action=locations` — Manage Locations tab
 - `nav-menus.php?action=delete&menu={id}` — delete (POST)
 
-Shell hash routing:
+Workspace hash routing:
 ```
 #/menus                        # default (most recent menu)
 #/menus/{id}                   # edit menu
@@ -384,7 +384,7 @@ Browser back/forward must restore selection. Refresh must restore. Sharing URL m
 | Permission error | Inline + sticky banner |
 | Conflict | Modal: "Reload" / "Cancel" |
 
-Undo: not supported by core; structure pane has no Undo stack. Adding an Undo for last-add / last-remove would be a shell-level enhancement.
+Undo: not supported by core; structure pane has no Undo stack. Adding an Undo for last-add / last-remove would be a workspace-level enhancement.
 
 ---
 
@@ -415,20 +415,20 @@ Undo: not supported by core; structure pane has no Undo stack. Adding an Undo fo
 
 | Hook | Purpose | Recommendation |
 |---|---|---|
-| `wp_nav_menu_meta_boxes_to_remove` | Hide adder panels | Replace with shell `core:menus.adders` slot. |
-| `wp_nav_menu_item_post_type_meta_box` / `…taxonomy_meta_box` | Custom adder panels | Replace with shell adder-panel registry. |
+| `wp_nav_menu_meta_boxes_to_remove` | Hide adder panels | Replace with workspace `core:menus.adders` slot. |
+| `wp_nav_menu_item_post_type_meta_box` / `…taxonomy_meta_box` | Custom adder panels | Replace with workspace adder-panel registry. |
 | `wp_setup_nav_menu_item` filter | Modify item attributes | Preserve — runs on read regardless of UI. |
 | `nav_menu_item_args` | Modify per-item display args | Preserve. |
-| `nav_menu_meta_box_object` | Filter post types/taxonomies in adders | Replace with shell registry filter. |
-| `wp_edit_nav_menu_walker` | Customize structure-pane walker | Drop — shell owns the structure pane. |
+| `nav_menu_meta_box_object` | Filter post types/taxonomies in adders | Replace with workspace registry filter. |
+| `wp_edit_nav_menu_walker` | Customize structure-pane walker | Drop — workspace owns the structure pane. |
 
-Plugin compatibility note: many third-party menu plugins extend the adder panels via the meta-box hooks. Migration path: shell exposes an adder-panel registry plugins call instead.
+Plugin compatibility note: many third-party menu plugins extend the adder panels via the meta-box hooks. Migration path: workspace exposes an adder-panel registry plugins call instead.
 
 ---
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** none registered.
 - **Workaround:** `iframe:nav-menus.php`. Works; classic UI inside iframe.
 
@@ -454,7 +454,7 @@ Plugin compatibility note: many third-party menu plugins extend the adder panels
 | Live preview of menu | Out of scope | Customizer-only feature |
 
 ### Acceptable interim
-For v1 of any new shell config, `iframe:nav-menus.php` is acceptable as an escape hatch. Block themes typically don't need this surface — prefer pointing users to `core:site-editor` Navigation list (cross-link).
+For v1 of any new workspace config, `iframe:nav-menus.php` is acceptable as an escape hatch. Block themes typically don't need this surface — prefer pointing users to `core:site-editor` Navigation list (cross-link).
 
 ---
 

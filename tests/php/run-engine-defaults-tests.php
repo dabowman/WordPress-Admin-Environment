@@ -5,11 +5,11 @@
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php`
  *
  * Coverage:
- *   - Engine default-styles applied when admin.json doesn't overlap.
- *   - admin.json wins on overlapping keys.
+ *   - Engine default-styles applied when workspace.json doesn't overlap.
+ *   - workspace.json wins on overlapping keys.
  *   - Switching engine swaps defaults.
  *   - Engine without default-styles is a no-op.
- *   - Engine without `engine` declaration in admin.json contributes nothing.
+ *   - Engine without `engine` declaration in workspace.json contributes nothing.
  *   - The synthetic `engine` origin sits between `core` and `plugin` in
  *     ORIGINS_ORDER + TRUSTED_ORIGINS.
  */
@@ -47,7 +47,7 @@ $T = 'WPAS_Engine_Defaults_Test_Runner';
 
 // ─── Setup ─────────────────────────────────────────────────────
 
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 // Register a synthetic engine with default-styles for these tests.
 // First-registration-wins, so use unique ids that won't collide with
@@ -63,7 +63,7 @@ $registered = $registry->register_engine( array(
 		'plugin:engine-defaults-test/main' => array( 'role' => 'main' ),
 	),
 	'default-arrangement' => 'wp-chrome',
-	'script'              => 'wp-admin-shell',
+	'script'              => 'wp-admin-workspaces',
 	'default-styles'      => array(
 		'theme' => array(
 			'density' => 'compact',
@@ -91,7 +91,7 @@ $registered_noop = $registry->register_engine( array(
 		'plugin:engine-defaults-test/empty-main' => array( 'role' => 'main' ),
 	),
 	'default-arrangement' => 'wp-chrome',
-	'script'              => 'wp-admin-shell',
+	'script'              => 'wp-admin-workspaces',
 ) );
 $T::assert_true( 'synthetic engine without default-styles registers', $registered_noop === $noop_engine_id );
 
@@ -99,21 +99,21 @@ $T::assert_true( 'synthetic engine without default-styles registers', $registere
 
 $T::assert_true(
 	'ORIGINS_ORDER includes engine between core and plugin',
-	WP_Admin_Shell_Resolver::ORIGINS_ORDER === array( 'core', 'engine', 'plugin', 'site', 'role', 'user' )
+	WP_Admin_Workspaces_Resolver::ORIGINS_ORDER === array( 'core', 'engine', 'plugin', 'site', 'role', 'user' )
 );
 $T::assert_true(
 	'TRUSTED_ORIGINS includes engine',
-	in_array( 'engine', WP_Admin_Shell_Resolver::TRUSTED_ORIGINS, true )
+	in_array( 'engine', WP_Admin_Workspaces_Resolver::TRUSTED_ORIGINS, true )
 );
 
-// ─── 1. Engine defaults apply when admin.json omits styles ─────
+// ─── 1. Engine defaults apply when workspace.json omits styles ─────
 
 $plugin_doc = array(
 	'engine'  => $test_engine_id,
 	'regions' => array( 'main' => array( 'role' => 'main' ) ),
 );
-$resolved = WP_Admin_Shell_Resolver::resolve_with(
-	WP_Admin_Shell_Resolver::ORIGINS_ORDER === array( 'core', 'engine', 'plugin', 'site', 'role', 'user' )
+$resolved = WP_Admin_Workspaces_Resolver::resolve_with(
+	WP_Admin_Workspaces_Resolver::ORIGINS_ORDER === array( 'core', 'engine', 'plugin', 'site', 'role', 'user' )
 		? array(
 			'core'   => array(),
 			// load_origins computes 'engine' from $plugin_doc; resolve_with
@@ -159,7 +159,7 @@ $T::assert_eq(
 	$resolved['styles']['chrome']['sidebar']['background'] ?? null
 );
 
-// ─── 2. admin.json wins on overlapping keys ────────────────────
+// ─── 2. workspace.json wins on overlapping keys ────────────────────
 
 $plugin_doc_overlap = array(
 	'engine'  => $test_engine_id,
@@ -170,7 +170,7 @@ $plugin_doc_overlap = array(
 	),
 	'regions' => array( 'main' => array( 'role' => 'main' ) ),
 );
-$resolved2 = WP_Admin_Shell_Resolver::resolve_with( array(
+$resolved2 = WP_Admin_Workspaces_Resolver::resolve_with( array(
 	'core'   => array(),
 	'engine' => array( 'styles' => array(
 		'theme' => array(
@@ -188,7 +188,7 @@ $resolved2 = WP_Admin_Shell_Resolver::resolve_with( array(
 ) );
 
 $T::assert_eq(
-	'admin.json wins for theme.color.bg',
+	'workspace.json wins for theme.color.bg',
 	'#ffffff',
 	$resolved2['styles']['theme']['color']['bg'] ?? null
 );
@@ -210,7 +210,7 @@ $plugin_doc_noop = array(
 	'styles'  => array( 'theme' => array( 'color' => array( 'bg' => '#222' ) ) ),
 	'regions' => array( 'main' => array( 'role' => 'main' ) ),
 );
-$resolved3 = WP_Admin_Shell_Resolver::resolve_with( array(
+$resolved3 = WP_Admin_Workspaces_Resolver::resolve_with( array(
 	'core'   => array(),
 	'engine' => array(), // load_origins returns empty when manifest has no default-styles
 	'plugin' => $plugin_doc_noop,
@@ -220,7 +220,7 @@ $resolved3 = WP_Admin_Shell_Resolver::resolve_with( array(
 ) );
 
 $T::assert_eq(
-	'engine without default-styles preserves admin.json untouched',
+	'engine without default-styles preserves workspace.json untouched',
 	'#222',
 	$resolved3['styles']['theme']['color']['bg'] ?? null
 );
@@ -232,7 +232,7 @@ $T::assert_true(
 // ─── 4. engine_origin() integration via load_origins ───────────
 
 // Use reflection to invoke the private engine_origin method.
-$ref = new ReflectionClass( 'WP_Admin_Shell_Resolver' );
+$ref = new ReflectionClass( 'WP_Admin_Workspaces_Resolver' );
 $method = $ref->getMethod( 'engine_origin' );
 $method->setAccessible( true );
 

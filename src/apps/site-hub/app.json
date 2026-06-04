@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:site-hub",
 	"version": 1,
 	"title": "Site hub",
@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Branded header at the top of the navigation sidebar. Renders site icon (linked to the dashboard URL) + site title (linked to the home URL, opens in new tab) + a command-palette toggle. Site icon resolves in priority order: `styles.branding.*` cascade logo → REST `site_icon_url` (Settings → General) → default WordPress mark. Site title comes from `useEntityRecord('root', 'site').record.title` with HTML-entity decoding and a window-global fallback.",
 		"data": {
@@ -33,20 +33,20 @@
 				{
 					"source": "config.styles.branding",
 					"via": "kernel-config",
-					"purpose": "Branded site icon — branding object read from the resolved admin.json tree via `useKernel()` and passed to SiteIcon helper. Takes precedence over the REST `site_icon_url`."
+					"purpose": "Branded site icon — branding object read from the resolved workspace.json tree via `useKernel()` and passed to SiteIcon helper. Takes precedence over the REST `site_icon_url`."
 				},
 				{
-					"source": "window.wpAdminShell.siteName",
+					"source": "window.wpAdminWorkspaces.siteName",
 					"via": "window-global",
 					"purpose": "Fallback for site title before core-data hydrates."
 				},
 				{
-					"source": "window.wpAdminShell.pluginUrl",
+					"source": "window.wpAdminWorkspaces.pluginUrl",
 					"via": "window-global",
 					"purpose": "Prefix for a plugin-relative `branding.logo` path so the bundled site icon resolves against the plugin's asset URL (SiteIcon helper). Absolute and protocol-relative logos skip this."
 				},
 				{
-					"source": "window.wpAdminShell.homeUrl | siteUrl | dashboardUrl",
+					"source": "window.wpAdminWorkspaces.homeUrl | siteUrl | dashboardUrl",
 					"via": "window-global",
 					"purpose": "Anchor href for the site-icon button (dashboard); fallback href for the site-title button (home, new tab) when `root/__unstableBase.home` has not resolved."
 				}
@@ -58,24 +58,24 @@
 			{ "id": "transparent-icon", "when": "appConfig.isTransparent === true", "renders": "Site-icon container drops its background — useful when the engine's chrome already provides the surface." }
 		],
 		"interactions": [
-			{ "trigger": "Click site icon", "effect": "Navigate to `window.wpAdminShell.dashboardUrl` via native `<a href>`." },
-			{ "trigger": "Click site title", "effect": "Open `window.wpAdminShell.homeUrl` in a new tab via native `<a href target=\"_blank\" rel=\"noopener noreferrer\">`." },
+			{ "trigger": "Click site icon", "effect": "Navigate to `window.wpAdminWorkspaces.dashboardUrl` via native `<a href>`." },
+			{ "trigger": "Click site title", "effect": "Open `window.wpAdminWorkspaces.homeUrl` in a new tab via native `<a href target=\"_blank\" rel=\"noopener noreferrer\">`." },
 			{ "trigger": "Click command-palette icon", "effect": "`dispatch('core/commands').open()` — opens the global command palette." }
 		],
 		"a11y": {
 			"focus-management": "All three controls (icon, title, palette toggle) are native focusable elements.",
 			"keyboard": [
-				{ "keys": "Mod+K", "action": "Surfaced as the keyboard shortcut hint on the palette button (`displayShortcut.primary('k')`). The actual binding is shell-level — declared in admin.json's `bindings` block + wired through `useCommandLoader`." }
+				{ "keys": "Mod+K", "action": "Surfaced as the keyboard shortcut hint on the palette button (`displayShortcut.primary('k')`). The actual binding is workspace-level — declared in workspace.json's `bindings` block + wired through `useCommandLoader`." }
 			],
 			"screen-reader": "Site icon button has `aria-label=\"Go to the Dashboard\"`. Title button includes a visually-hidden `(opens in a new tab)` hint inside the link. Palette button has `aria-label=\"Open command palette\"` + `ariaKeyShortcut=\"Meta+K\"`."
 		},
 		"constraints": [
-			{ "concern": "site-title-source-of-truth", "note": "Read title via `useEntityRecord('root','site').record.title` (with `decodeEntities`). Falls back to `window.wpAdminShell?.siteName` only as last resort. Fixes a prior bug where the toolbar showed a stale title on first paint." },
+			{ "concern": "site-title-source-of-truth", "note": "Read title via `useEntityRecord('root','site').record.title` (with `decodeEntities`). Falls back to `window.wpAdminWorkspaces?.siteName` only as last resort. Fixes a prior bug where the toolbar showed a stale title on first paint." },
 			{ "concern": "memoized-forwardref", "note": "Wrapped in `memo + forwardRef` because engines may attach refs (e.g. for measure-on-mount layout)." },
 			{ "concern": "ellipsis-in-flex", "note": "Title button uses the `display: flex; min-width: 0;` wrapper pattern + button-level `flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap` so long site titles truncate cleanly in a constrained sidebar." },
 			{ "concern": "anchor-rendered-buttons", "note": "Site-icon button + site-title button + palette button all use `render={<a href={...}/>}` so native HTML link behavior works (middle-click new tab, etc.)." },
-			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }`. The bundled `core:default` engine ships an unlayered `.wp-admin-shell-site-hub a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent rule scoped to this app's chrome surface." },
-			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-shell-site-hub svg { fill: currentColor }`. A non-WPDS engine MUST do the same for icons it ships." },
+			{ "concern": "chrome-anchor-color-override", "note": "WP-admin ships an unlayered `a { color: var(--wp-admin-theme-color) }`. The bundled `core:default` engine ships an unlayered `.wp-admin-workspaces-site-hub a { color: var(--wpds-color-fg-interactive-neutral) }` rule (+ `:hover/:focus/:active` variants). A non-WPDS engine MUST emit an equivalent rule scoped to this app's chrome surface." },
+			{ "concern": "chrome-svg-fill-currentcolor", "note": "`@wordpress/icons` SVGs lack `fill`. The bundled `core:default` engine forces `.wp-admin-workspaces-site-hub svg { fill: currentColor }`. A non-WPDS engine MUST do the same for icons it ships." },
 			{ "concern": "stack-flex-defense", "note": "`@wordpress/ui` Stack flex rules live in `@layer wp-ui-components` and lose to unlayered WP-admin CSS. The bundled `core:default` engine ships an unlayered `[class*=\"__stack\"] { display: flex }` defensive rule. A rebuild using Stack-style flex must defeat unlayered host CSS the same way." }
 		],
 		"design-system-leakage": [

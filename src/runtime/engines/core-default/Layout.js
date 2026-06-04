@@ -2,7 +2,7 @@
  * core:default — flagship engine.
  *
  * Arranges regions into the dark-chrome / elevated-card visual pattern the
- * MVP shipped (see `src/shell/ShellLayout.js`):
+ * MVP shipped (see `src/workspace/ShellLayout.js`):
  *
  *   ┌─────────────────────────────────────────────┐
  *   │ toolbar (persistent, top)                   │
@@ -90,19 +90,19 @@ export default function CoreSiteEditorLayout( { regions } ) {
 	return (
 		<SlotFillProvider>
 			<div
-				className="wp-admin-shell-layout"
+				className="wp-admin-workspaces-layout"
 				data-engine="core:default"
 				data-mode={ modeId }
 			>
 				{ toolbar && <Region key={ toolbar.id } region={ toolbar } /> }
 
-				<div className="wp-admin-shell-layout__body">
+				<div className="wp-admin-workspaces-layout__body">
 					{ sidebar && (
 						<Region key={ sidebar.id } region={ sidebar } />
 					) }
 
 					<div
-						className={ `wp-admin-shell-areas${
+						className={ `wp-admin-workspaces-areas${
 							preview ? ' has-preview' : ''
 						}` }
 					>

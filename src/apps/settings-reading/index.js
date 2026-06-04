@@ -54,7 +54,7 @@ export default function SettingsReadingApp() {
 
 	const fields = useMemo( () => {
 		const pageOptions = [
-			{ value: '0', label: __( '— Select —', 'wp-admin-shell' ) },
+			{ value: '0', label: __( '— Select —', 'wp-admin-workspaces' ) },
 			...( pages.records || [] ).map( ( p ) => ( {
 				value: String( p.id ),
 				label: p.title?.rendered || p.title?.raw || `#${ p.id }`,
@@ -64,23 +64,23 @@ export default function SettingsReadingApp() {
 			{
 				id: 'show_on_front',
 				type: 'text',
-				label: __( 'Your homepage displays', 'wp-admin-shell' ),
+				label: __( 'Your homepage displays', 'wp-admin-workspaces' ),
 				Edit: 'radio',
 				elements: [
 					{
 						value: 'posts',
-						label: __( 'Your latest posts', 'wp-admin-shell' ),
+						label: __( 'Your latest posts', 'wp-admin-workspaces' ),
 					},
 					{
 						value: 'page',
-						label: __( 'A static page', 'wp-admin-shell' ),
+						label: __( 'A static page', 'wp-admin-workspaces' ),
 					},
 				],
 			},
 			{
 				id: 'page_on_front',
 				type: 'text',
-				label: __( 'Homepage', 'wp-admin-shell' ),
+				label: __( 'Homepage', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: pageOptions,
 				// Opt out of DataViews' implicit elements-membership validation:
@@ -98,7 +98,7 @@ export default function SettingsReadingApp() {
 			{
 				id: 'page_for_posts',
 				type: 'text',
-				label: __( 'Posts page', 'wp-admin-shell' ),
+				label: __( 'Posts page', 'wp-admin-workspaces' ),
 				Edit: 'select',
 				elements: pageOptions,
 				// Opt out of DataViews' implicit elements-membership validation:
@@ -116,7 +116,7 @@ export default function SettingsReadingApp() {
 			{
 				id: 'posts_per_page',
 				type: 'integer',
-				label: __( 'Blog pages show at most', 'wp-admin-shell' ),
+				label: __( 'Blog pages show at most', 'wp-admin-workspaces' ),
 				getValue: ( { item } ) => item.posts_per_page ?? 10,
 				setValue: ( { value } ) => ( {
 					posts_per_page: clampPerPage( value ),
@@ -127,7 +127,7 @@ export default function SettingsReadingApp() {
 				type: 'integer',
 				label: __(
 					'Syndication feeds show the most recent',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				),
 				getValue: ( { item } ) => item.posts_per_rss ?? 10,
 				setValue: ( { value } ) => ( {
@@ -139,12 +139,18 @@ export default function SettingsReadingApp() {
 				type: 'text',
 				label: __(
 					'For each post in a feed, include',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				),
 				Edit: 'radio',
 				elements: [
-					{ value: '0', label: __( 'Full text', 'wp-admin-shell' ) },
-					{ value: '1', label: __( 'Excerpt', 'wp-admin-shell' ) },
+					{
+						value: '0',
+						label: __( 'Full text', 'wp-admin-workspaces' ),
+					},
+					{
+						value: '1',
+						label: __( 'Excerpt', 'wp-admin-workspaces' ),
+					},
 				],
 				getValue: ( { item } ) => ( item.rss_use_excerpt ? '1' : '0' ),
 				setValue: ( { value } ) => ( {
@@ -156,20 +162,20 @@ export default function SettingsReadingApp() {
 
 	return (
 		<EntityDataForm
-			className="wp-admin-shell-app-settings-reading"
+			className="wp-admin-workspaces-app-settings-reading"
 			entity={ [ 'root', 'site' ] }
 			fields={ fields }
 			form={ FORM }
-			title={ __( 'Reading', 'wp-admin-shell' ) }
+			title={ __( 'Reading', 'wp-admin-workspaces' ) }
 			messages={ {
-				success: __( 'Settings saved.', 'wp-admin-shell' ),
-				error: __( 'Failed to save settings.', 'wp-admin-shell' ),
+				success: __( 'Settings saved.', 'wp-admin-workspaces' ),
+				error: __( 'Failed to save settings.', 'wp-admin-workspaces' ),
 			} }
 		>
 			<Text variant="body-sm">
 				{ __(
 					'Search-engine visibility (the “discourage search engines” toggle) is not exposed by the REST API. Use the legacy Reading Settings screen for that field.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				) }
 			</Text>
 		</EntityDataForm>

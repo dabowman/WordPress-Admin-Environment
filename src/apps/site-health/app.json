@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:site-health",
 	"version": 1,
 	"title": "Site Health",
@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 900,
@@ -94,7 +94,7 @@
 			},
 			{
 				"concern": "static-test-list",
-				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the shell doesn't yet honor this."
+				"note": "Tests are hard-coded module-scope. WordPress site-health is plugin-extensible (`site_status_tests` filter); the workspace doesn't yet honor this."
 			}
 		],
 		"design-system-leakage": [

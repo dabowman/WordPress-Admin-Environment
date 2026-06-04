@@ -1,6 +1,6 @@
 /* SimpleEditorApp — Substack-style minimal writing surface. */
 
-.wp-admin-shell-app-simple-editor {
+.wp-admin-workspaces-app-simple-editor {
 	height: 100%;
 	display: flex;
 	flex-direction: column;
@@ -8,7 +8,7 @@
 	background: var(--wpds-color-bg-surface-neutral-strong);
 }
 
-.wp-admin-shell-app-simple-editor__toolbar {
+.wp-admin-workspaces-app-simple-editor__toolbar {
 	display: flex;
 	align-items: center;
 	gap: var(--wpds-dimension-gap-md);
@@ -19,27 +19,27 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-app-simple-editor__status {
+.wp-admin-workspaces-app-simple-editor__status {
 	font-size: var(--wpds-typography-font-size-sm);
 	color: var(--wpds-color-fg-content-neutral-weak);
 	margin-left: auto;
 }
 
-.wp-admin-shell-app-simple-editor__status--error {
+.wp-admin-workspaces-app-simple-editor__status--error {
 	color: var(--wpds-color-fg-content-error-weak);
 }
 
-.wp-admin-shell-app-simple-editor__status--saved {
+.wp-admin-workspaces-app-simple-editor__status--saved {
 	color: var(--wpds-color-fg-content-success-weak);
 }
 
-.wp-admin-shell-app-simple-editor__main {
+.wp-admin-workspaces-app-simple-editor__main {
 	flex: 1;
 	display: flex;
 	min-height: 0;
 }
 
-.wp-admin-shell-app-simple-editor__sidebar {
+.wp-admin-workspaces-app-simple-editor__sidebar {
 	flex-shrink: 0;
 	width: 280px;
 	overflow: auto;
@@ -48,7 +48,7 @@
 	background: var(--wpds-color-bg-surface-neutral-strong);
 }
 
-.wp-admin-shell-app-simple-editor__body {
+.wp-admin-workspaces-app-simple-editor__body {
 	flex: 1;
 	overflow: auto;
 	padding: 80px 24px 160px;
@@ -56,7 +56,7 @@
 	color: var(--wpds-color-fg-content-neutral);
 }
 
-.wp-admin-shell-app-simple-editor__loading {
+.wp-admin-workspaces-app-simple-editor__loading {
 	position: absolute;
 	inset: 0;
 	display: flex;
@@ -66,12 +66,12 @@
 	z-index: 1;
 }
 
-.wp-admin-shell-app-simple-editor__column {
+.wp-admin-workspaces-app-simple-editor__column {
 	max-width: 680px;
 	margin: 0 auto;
 }
 
-.wp-admin-shell-app-simple-editor__title {
+.wp-admin-workspaces-app-simple-editor__title {
 	width: 100%;
 	border: none;
 	outline: none;
@@ -86,38 +86,38 @@
 	font-family: Charter, "Iowan Old Style", "Source Serif Pro", Georgia, serif;
 }
 
-.wp-admin-shell-app-simple-editor__title::placeholder {
+.wp-admin-workspaces-app-simple-editor__title::placeholder {
 	color: var(--wpds-color-fg-content-neutral-weak);
 }
 
 /* Body block typography. */
-.wp-admin-shell-app-simple-editor__body .block-editor-block-list__block {
+.wp-admin-workspaces-app-simple-editor__body .block-editor-block-list__block {
 	font-size: 19px;
 	line-height: 1.7;
 }
 
-.wp-admin-shell-app-simple-editor__body .wp-block-paragraph {
+.wp-admin-workspaces-app-simple-editor__body .wp-block-paragraph {
 	font-size: 19px;
 	line-height: 1.7;
 	margin: 0 0 1.2em;
 }
 
-.wp-admin-shell-app-simple-editor__body .wp-block-heading {
+.wp-admin-workspaces-app-simple-editor__body .wp-block-heading {
 	font-weight: 600;
 	letter-spacing: -0.015em;
 	margin: 1.6em 0 0.4em;
 	line-height: 1.25;
 }
 
-.wp-admin-shell-app-simple-editor__body h2.wp-block-heading {
+.wp-admin-workspaces-app-simple-editor__body h2.wp-block-heading {
 	font-size: 30px;
 }
 
-.wp-admin-shell-app-simple-editor__body h3.wp-block-heading {
+.wp-admin-workspaces-app-simple-editor__body h3.wp-block-heading {
 	font-size: 24px;
 }
 
-.wp-admin-shell-app-simple-editor__body .wp-block-quote {
+.wp-admin-workspaces-app-simple-editor__body .wp-block-quote {
 	border-left: 3px solid var(--wpds-color-stroke-surface-neutral-strong);
 	padding-left: 20px;
 	font-style: italic;
@@ -126,7 +126,7 @@
 	margin: 1.5em 0;
 }
 
-.wp-admin-shell-app-simple-editor__body .wp-block-code {
+.wp-admin-workspaces-app-simple-editor__body .wp-block-code {
 	font-family: var(--wpds-typography-font-family-mono);
 	font-size: var(--wpds-typography-font-size-lg);
 	background: var(--wpds-color-bg-surface-neutral);
@@ -134,7 +134,7 @@
 	border-radius: var(--wpds-border-radius-md);
 }
 
-.wp-admin-shell-app-simple-editor__body .wp-block-separator {
+.wp-admin-workspaces-app-simple-editor__body .wp-block-separator {
 	border-color: var(--wpds-color-stroke-surface-neutral);
 	max-width: 80px;
 	margin: 2em auto;

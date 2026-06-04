@@ -1,8 +1,8 @@
 /**
- * Source-type contracts for the WP Admin Shell v1 runtime.
+ * Source-type contracts for the WP Admin Workspaces v1 runtime.
  *
  * These are JSDoc typedefs only — pure shape, no runtime. They mirror
- * spec §5 of `docs/wp-admin-shell-design-spec.md`.
+ * spec §5 of `docs/wp-admin-workspaces-design-spec.md`.
  *
  * Three kinds of `Source` exist: `app`, `region`, `engine`. All share
  * a common identity envelope; per-kind props differ in what `Component`
@@ -37,7 +37,7 @@
  *
  * @typedef {Object} AppSourceProps
  * @property {Object}   app         - The application instance from the resolved config.
- * @property {string}   app.id      - The application id from admin.json.
+ * @property {string}   app.id      - The application id from workspace.json.
  * @property {string}   app.source  - The source string (e.g. `core:posts`).
  * @property {string}   [app.title] - Display title.
  * @property {string}   [app.icon]  - Icon name (resolved via iconMap).
@@ -73,14 +73,14 @@
 
 /**
  * Props delivered to an `EngineSource.Component` — the layout engine that
- * arranges all regions for a shell.
+ * arranges all regions for a workspace.
  *
  * `regions` is keyed by region id; each value is a fully-resolved region
  * declaration. Engines render regions by passing them to the generic
  * `<Region>` renderer (see `src/runtime/regions/Region.js`).
  *
  * @typedef {Object} EngineSourceProps
- * @property {Object}                 config  - The full resolved shell config.
+ * @property {Object}                 config  - The full resolved workspace config.
  * @property {Object<string, Object>} regions - Region declarations keyed by region id.
  */
 
@@ -93,7 +93,7 @@
  *
  * Contract:
  *   - Children must be rendered inside a wrapper carrying
- *     `data-theme-scope-id={id}` so shell-level scoped detail CSS can
+ *     `data-theme-scope-id={id}` so workspace-level scoped detail CSS can
  *     target them. (The kernel emits this wrapper around the provider;
  *     engines render their children as siblings of the kernel-supplied
  *     scoped wrapper.)
@@ -107,7 +107,7 @@
  *
  * @typedef {Object} EngineThemeProviderProps
  * @property {boolean} isRoot    True when mounted at the kernel root.
- * @property {Object}  styles    Resolved admin.json `styles` block.
+ * @property {Object}  styles    Resolved workspace.json `styles` block.
  * @property {Object}  tokens    Flattened DTCG tokens from `tokens.json`.
  * @property {string}  [density] Active density preset, if declared.
  * @property {*}       children  Tree to render inside the provider.
@@ -132,7 +132,7 @@
  * `ThemeProvider` must own all token plumbing directly.
  *
  * @callback EngineStyleCompiler
- * @param {Object} styles Resolved admin.json `styles` block (deep-merged
+ * @param {Object} styles Resolved workspace.json `styles` block (deep-merged
  *                        with engine `default-styles`).
  * @param {Object} tokens Flattened DTCG tokens (paths → primitive values).
  * @return {{

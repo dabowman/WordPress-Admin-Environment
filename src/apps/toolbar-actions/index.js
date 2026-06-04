@@ -27,7 +27,7 @@ import ArbitraryIcon, {
  *      core-data), gated on each type's create capability, building
  *      `#/{rest_base}/new` hrefs. Mirrors wp-admin's runtime `+New`.
  *   3. **Admin-bar harvest (#128)** — plugin admin-bar nodes harvested
- *      server-side (`window.wpAdminShell.adminBar`) that the shell
+ *      server-side (`window.wpAdminWorkspaces.adminBar`) that the workspace
  *      doesn't own first-class. Each top-level node renders as a button
  *      (or a dropdown when it has children). Node titles are arbitrary
  *      admin HTML → rendered through the engine-side arbitrary-icon
@@ -162,7 +162,7 @@ function useNewContentItems() {
  * @return {Array<Object>} Harvested admin-bar node records.
  */
 function useAdminBarNodes() {
-	const nodes = window.wpAdminShell?.adminBar;
+	const nodes = window.wpAdminWorkspaces?.adminBar;
 	return Array.isArray( nodes ) ? nodes : [];
 }
 
@@ -175,7 +175,7 @@ function useAdminBarNodes() {
  * @return {*} React element.
  */
 function NewContentMenu( { items } ) {
-	const label = _x( 'New', 'admin bar add-new menu', 'wp-admin-shell' );
+	const label = _x( 'New', 'admin bar add-new menu', 'wp-admin-workspaces' );
 	return (
 		<DropdownMenu
 			icon={ plus }
@@ -220,7 +220,7 @@ function AdminBarNode( { node } ) {
 		// anchor — guarantees the harvested title paints (never blank).
 		return (
 			<a
-				className="wp-admin-shell-toolbar-action"
+				className="wp-admin-workspaces-toolbar-action"
 				href={ node.href }
 				target={ target || undefined }
 				rel={ external ? 'noopener noreferrer' : undefined }
@@ -282,7 +282,7 @@ function renderAction( action, key ) {
 		return (
 			<a
 				key={ key }
-				className="wp-admin-shell-toolbar-action"
+				className="wp-admin-workspaces-toolbar-action"
 				href={ href }
 				target={ isExternal ? '_blank' : undefined }
 				rel={ isExternal ? 'noopener noreferrer' : undefined }

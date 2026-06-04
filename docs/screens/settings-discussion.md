@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/options-discussion.php`, `wp-admin/options.php` (legacy save handler)
-**Current shell coverage:** `core:settings-discussion` → `src/apps/settings-discussion/index.js` (M4 — REST-native, partial; majority of fields are non-REST and require fallback)
+**Current workspace coverage:** `core:settings-discussion` → `src/apps/settings-discussion/index.js` (M4 — REST-native, partial; majority of fields are non-REST and require fallback)
 
 This spec describes the **semantic surface** of the Discussion Settings screen. This panel has the largest non-REST surface area of any Settings screen — only two of ~24 options are REST-exposed.
 
@@ -236,14 +236,14 @@ N/A.
 
 ### Save semantics
 - Single Save button.
-- REST handles 2 fields today; the ~22 remaining are reachable through the same `/wp/v2/settings` POST once each option is re-registered via `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )`. The Settings-API `sanitize_option` path runs server-side regardless, so no custom `/wp-admin-shell/v1/options/discussion` endpoint is required — prefer the `register_setting` shim over a bespoke endpoint or 22 sequential AJAX requests.
+- REST handles 2 fields today; the ~22 remaining are reachable through the same `/wp/v2/settings` POST once each option is re-registered via `register_setting( 'discussion', $option, [ 'show_in_rest' => … ] )`. The Settings-API `sanitize_option` path runs server-side regardless, so no custom `/wp-admin-workspaces/v1/options/discussion` endpoint is required — prefer the `register_setting` shim over a bespoke endpoint or 22 sequential AJAX requests.
 - Validation: server authoritative. Client may pre-validate numeric mins/enum values.
 
 ---
 
 ## 10. Routing & URL state
 
-Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discussion`. No query state.
+Original URL: `/wp-admin/options-discussion.php`. Workspace hash: `#/settings/discussion`. No query state.
 
 ---
 
@@ -302,18 +302,18 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
+### Current workspace coverage
 - **Source:** `core:settings-discussion` → `src/apps/settings-discussion/index.js`
 - **What works:** the two REST-exposed keys (default_ping_status, default_comment_status). Saves via `core/notices`.
 
 ### Gaps vs. this spec
 | Gap | Priority | Notes |
 |---|---|---|
-| All non-REST options (~22 fields) | High | Single biggest gap of any settings panel. Closable shell-side via `register_setting( show_in_rest )` shims (no custom endpoint needed) — see §7 Save semantics. |
+| All non-REST options (~22 fields) | High | Single biggest gap of any settings panel. Closable workspace-side via `register_setting( show_in_rest )` shims (no custom endpoint needed) — see §7 Save semantics. |
 | Threaded comments + depth dependency | Medium | UI conditional logic |
 | Comment pagination dependency group | Medium | UI conditional logic |
 | Avatar Display → toggles avatar groups | Medium | Conditional |
-| `wp_notes_notify` toggle | Medium | New 6.x option, not yet in shell |
+| `wp_notes_notify` toggle | Medium | New 6.x option, not yet in workspace |
 | Avatar previews per default style | Medium | Renders 10 actual `<img>` tags from gravatar with `force_default` |
 | Multisite signup-off note | Low | Conditional inline note |
 | `do_settings_fields` plugin extensions | Low | Slot system available |
@@ -338,4 +338,4 @@ Original URL: `/wp-admin/options-discussion.php`. Shell hash: `#/settings/discus
 - Settings registration: `wp-includes/option.php` lines 2944–2971
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-settings-controller.php`
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
-- Current shell impl: `src/apps/settings-discussion/index.js`
+- Current workspace impl: `src/apps/settings-discussion/index.js`

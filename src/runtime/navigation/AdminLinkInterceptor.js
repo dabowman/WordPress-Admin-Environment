@@ -8,7 +8,7 @@ import { installAdminLinkInterceptor } from './adminLinkInterceptor.mjs';
  * interceptor for the life of the mount (W4). Clicks on classic
  * `/wp-admin/...` links that map to a workspace route (via the admin-
  * route registry's `legacy_path` / `legacy_query`) hash-navigate inside
- * the shell instead of doing a full page load. Unmapped same-origin admin
+ * the workspace instead of doing a full page load. Unmapped same-origin admin
  * links fall through to a normal browser navigation (no in-workspace
  * iframe host is wired for alpha — that's the W6 follow-up).
  *
@@ -19,8 +19,8 @@ import { installAdminLinkInterceptor } from './adminLinkInterceptor.mjs';
  */
 export function AdminLinkInterceptor() {
 	useEffect( () => {
-		const shell =
-			typeof window !== 'undefined' ? window.wpAdminShell : null;
+		const workspace =
+			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
 		// Always pass an ABSOLUTE admin URL — `classifyAdminLink` does
 		// `new URL( adminUrl )` with no base, which throws on a relative
 		// string and would silently disable all interception. `admin_url()`
@@ -29,8 +29,9 @@ export function AdminLinkInterceptor() {
 			typeof window !== 'undefined' && window.location
 				? window.location.origin
 				: '';
-		const adminUrl = ( shell && shell.adminUrl ) || origin + '/wp-admin/';
-		const routes = ( shell && shell.adminRoutes ) || {};
+		const adminUrl =
+			( workspace && workspace.adminUrl ) || origin + '/wp-admin/';
+		const routes = ( workspace && workspace.adminRoutes ) || {};
 		return installAdminLinkInterceptor( adminUrl, { routes, navigate } );
 	}, [] );
 

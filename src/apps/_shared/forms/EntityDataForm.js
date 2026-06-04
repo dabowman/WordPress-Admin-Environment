@@ -8,7 +8,7 @@ import { useEntitySave } from './useEntitySave';
 import { Page } from '../Page';
 
 /**
- * Shared `useEntityRecord` + `DataForm` shell for single-record edit screens
+ * Shared `useEntityRecord` + `DataForm` workspace for single-record edit screens
  * (profile, settings panels). Owns the null-guard spinner, the `DataForm`
  * wiring (`data` = `editedRecord`, `onChange` = `edit`), and the Save button +
  * its notice handling. The caller supplies only the field definitions, the
@@ -34,7 +34,7 @@ import { Page } from '../Page';
  * @param {Object} [root0.messages]       `{ success, error }` for the save notices.
  * @param {string} [root0.className]      Class applied to the form body (e.g. a `max-width` constraint).
  * @param {Node}   [root0.children]       Extra content rendered between the form and the Save button.
- * @return {JSX.Element} The form shell.
+ * @return {JSX.Element} The form workspace.
  */
 export function EntityDataForm( {
 	entity,
@@ -63,7 +63,7 @@ export function EntityDataForm( {
 
 	if ( ! record ) {
 		return (
-			<div className="wp-admin-shell-app__center">
+			<div className="wp-admin-workspaces-app__center">
 				<Spinner />
 			</div>
 		);
@@ -95,7 +95,7 @@ export function EntityDataForm( {
 					disabled={ ! hasEdits || ! isValid || isSaving }
 					loading={ isSaving }
 				>
-					{ saveLabel || __( 'Save Changes', 'wp-admin-shell' ) }
+					{ saveLabel || __( 'Save Changes', 'wp-admin-workspaces' ) }
 				</Button>
 			</Stack>
 		</Stack>
@@ -109,5 +109,5 @@ export function EntityDataForm( {
 		);
 	}
 
-	return <div className="wp-admin-shell-app--inset">{ body }</div>;
+	return <div className="wp-admin-workspaces-app--inset">{ body }</div>;
 }

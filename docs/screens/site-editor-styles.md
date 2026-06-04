@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec. Companion to [`site-editor.md`](./site-editor.md).
 **Source PHP:** `wp-admin/site-editor.php` (entry); rendering inside `@wordpress/edit-site` package.
-**Current shell coverage:** Inherited from `core:site-editor` iframe adapter.
+**Current workspace coverage:** Inherited from `core:site-editor` iframe adapter.
 
 This file covers the **Global Styles** sub-screen of the Site Editor: typography, colors, layout, blocks panel, style variations, section styles, additional CSS, and revisions. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -298,7 +298,7 @@ Original wp-admin URL params:
 - `?p=/styles&section=/css` — Additional CSS
 - `?p=/styles/revisions` — revisions list
 
-The shell hash routing:
+The workspace hash routing:
 ```
 #/site-editor/styles
 #/site-editor/styles/typography
@@ -373,7 +373,7 @@ Undo: per-edit Undo via Cmd+Z within the editor; revisions are the durable histo
 | `wp_theme_json_data_user` | Modify user theme.json on read | Preserve — theme-system concern. |
 | `wp_theme_json_data_theme` | Modify theme.json on read | Preserve. |
 | `wp_theme_json_data_default` | Modify default theme.json | Preserve. |
-| `block_editor_settings_all` | Add custom controls | Replace with shell extension API. |
+| `block_editor_settings_all` | Add custom controls | Replace with workspace extension API. |
 
 Plugin compatibility note: theme.json filters work unchanged because they run in PHP independent of the editor UI.
 
@@ -381,14 +381,14 @@ Plugin compatibility note: theme.json filters work unchanged because they run in
 
 ## 15. Mapping & implementation status
 
-### Current shell coverage
-- Inherited from `core:site-editor` iframe; no native shell surface.
+### Current workspace coverage
+- Inherited from `core:site-editor` iframe; no native workspace surface.
 
-### Gaps vs. this spec (path to v2 native or shell-surface)
+### Gaps vs. this spec (path to v2 native or workspace-surface)
 | Gap | Priority | Notes |
 |---|---|---|
 | Native Styles panel mount | High (v2) | Same package-collision blockers as parent Site Editor. |
-| Variations preview cards | Medium | Could be surfaced as a shell widget independent of the canvas; reads `/wp/v2/global-styles/themes/{stylesheet}/variations`. |
+| Variations preview cards | Medium | Could be surfaced as a workspace widget independent of the canvas; reads `/wp/v2/global-styles/themes/{stylesheet}/variations`. |
 | Revisions list UI | Medium | Could surface as `core:global-styles-revisions` app for power users. |
 | Additional CSS as standalone editor | Low | Reads/writes `styles.css` field; could ship as `core:custom-css` app. |
 | Section styles | Low | Theme-feature-dependent. |
@@ -397,7 +397,7 @@ Plugin compatibility note: theme.json filters work unchanged because they run in
 
 ## 16. Out of scope
 
-- **Per-user style preferences** — global styles are sitewide; per-user theming lives in `core:appearance` (shell-level).
+- **Per-user style preferences** — global styles are sitewide; per-user theming lives in `core:appearance` (workspace-level).
 - **Theme.json schema validation UI** — server enforces; no client surface.
 - **Imports/exports of style snapshots** — covered by theme export ZIP at the parent level.
 - **Customizer "Additional CSS"** — legacy/classic-theme-only; not rebuilt.

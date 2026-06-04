@@ -2,7 +2,7 @@
  * Pure client-side term-tree helpers for hierarchical taxonomies.
  *
  * The REST term list is flat — every term carries a `parent` id (0 = top
- * level). wp-admin's PHP recurses this into an indented tree; the shell rebuilds
+ * level). wp-admin's PHP recurses this into an indented tree; the workspace rebuilds
  * the same depth ordering client-side so the Categories list can render
  * parent-indented rows (each nested row carries a visually-hidden `Level N`
  * announcement — not `role="treeitem"`/`aria-level`, which would be invalid

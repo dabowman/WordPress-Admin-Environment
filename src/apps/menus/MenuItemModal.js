@@ -106,7 +106,7 @@ export function MenuItemModal( {
 	const relationalOptions = useMemo( () => {
 		const placeholder = {
 			value: '',
-			label: __( '— Select —', 'wp-admin-shell' ),
+			label: __( '— Select —', 'wp-admin-workspaces' ),
 		};
 		if ( kind === 'post_type' && posts ) {
 			return [
@@ -159,7 +159,10 @@ export function MenuItemModal( {
 			const record = await onSave( 'root', 'menuItem', payload );
 			if ( ! record ) {
 				throw new Error(
-					__( 'The menu item could not be saved.', 'wp-admin-shell' )
+					__(
+						'The menu item could not be saved.',
+						'wp-admin-workspaces'
+					)
 				);
 			}
 			onSaved?.();
@@ -175,27 +178,30 @@ export function MenuItemModal( {
 		<Modal
 			title={
 				isNew
-					? __( 'Add menu item', 'wp-admin-shell' )
-					: __( 'Edit menu item', 'wp-admin-shell' )
+					? __( 'Add menu item', 'wp-admin-workspaces' )
+					: __( 'Edit menu item', 'wp-admin-workspaces' )
 			}
 			onRequestClose={ onClose }
 		>
 			<Stack direction="column" gap="md">
 				<SelectControl
-					label={ __( 'Item type', 'wp-admin-shell' ) }
+					label={ __( 'Item type', 'wp-admin-workspaces' ) }
 					value={ kind }
 					options={ [
 						{
 							value: 'custom',
-							label: __( 'Custom link', 'wp-admin-shell' ),
+							label: __( 'Custom link', 'wp-admin-workspaces' ),
 						},
 						{
 							value: 'post_type',
-							label: __( 'Page or post', 'wp-admin-shell' ),
+							label: __( 'Page or post', 'wp-admin-workspaces' ),
 						},
 						{
 							value: 'taxonomy',
-							label: __( 'Category or tag', 'wp-admin-shell' ),
+							label: __(
+								'Category or tag',
+								'wp-admin-workspaces'
+							),
 						},
 					] }
 					onChange={ ( value ) => {
@@ -208,16 +214,16 @@ export function MenuItemModal( {
 
 				{ kind === 'post_type' && (
 					<SelectControl
-						label={ __( 'Object', 'wp-admin-shell' ) }
+						label={ __( 'Object', 'wp-admin-workspaces' ) }
 						value={ object }
 						options={ [
 							{
 								value: 'page',
-								label: __( 'Pages', 'wp-admin-shell' ),
+								label: __( 'Pages', 'wp-admin-workspaces' ),
 							},
 							{
 								value: 'post',
-								label: __( 'Posts', 'wp-admin-shell' ),
+								label: __( 'Posts', 'wp-admin-workspaces' ),
 							},
 						] }
 						onChange={ ( value ) => {
@@ -230,16 +236,19 @@ export function MenuItemModal( {
 
 				{ kind === 'taxonomy' && (
 					<SelectControl
-						label={ __( 'Object', 'wp-admin-shell' ) }
+						label={ __( 'Object', 'wp-admin-workspaces' ) }
 						value={ object }
 						options={ [
 							{
 								value: 'category',
-								label: __( 'Categories', 'wp-admin-shell' ),
+								label: __(
+									'Categories',
+									'wp-admin-workspaces'
+								),
 							},
 							{
 								value: 'post_tag',
-								label: __( 'Tags', 'wp-admin-shell' ),
+								label: __( 'Tags', 'wp-admin-workspaces' ),
 							},
 						] }
 						onChange={ ( value ) => {
@@ -252,7 +261,7 @@ export function MenuItemModal( {
 
 				{ kind !== 'custom' && (
 					<SelectControl
-						label={ __( 'Select', 'wp-admin-shell' ) }
+						label={ __( 'Select', 'wp-admin-workspaces' ) }
 						value={ objectId }
 						options={ relationalOptions }
 						onChange={ ( value ) => setObjectId( value ) }
@@ -262,7 +271,7 @@ export function MenuItemModal( {
 
 				{ kind === 'custom' && (
 					<InputControl
-						label={ __( 'URL', 'wp-admin-shell' ) }
+						label={ __( 'URL', 'wp-admin-workspaces' ) }
 						value={ url }
 						onChange={ ( e ) =>
 							setUrl(
@@ -275,7 +284,7 @@ export function MenuItemModal( {
 				) }
 
 				<InputControl
-					label={ __( 'Navigation label', 'wp-admin-shell' ) }
+					label={ __( 'Navigation label', 'wp-admin-workspaces' ) }
 					value={ title }
 					onChange={ ( e ) =>
 						setTitle(
@@ -286,7 +295,7 @@ export function MenuItemModal( {
 
 				<InputControl
 					type="number"
-					label={ __( 'Order', 'wp-admin-shell' ) }
+					label={ __( 'Order', 'wp-admin-workspaces' ) }
 					value={ order }
 					onChange={ ( e ) =>
 						setOrder(
@@ -296,17 +305,17 @@ export function MenuItemModal( {
 				/>
 
 				{ kind !== 'custom' && ! objectId && (
-					<Text className="wp-admin-shell-app__muted">
+					<Text className="wp-admin-workspaces-app__muted">
 						{ __(
 							'Pick an object to link this item to.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						) }
 					</Text>
 				) }
 
 				<Stack direction="row" justify="flex-end" gap="sm">
 					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<Button
 						tone="brand"
@@ -316,8 +325,8 @@ export function MenuItemModal( {
 						disabled={ ! canSave || isSaving }
 					>
 						{ isNew
-							? __( 'Add item', 'wp-admin-shell' )
-							: __( 'Save', 'wp-admin-shell' ) }
+							? __( 'Add item', 'wp-admin-workspaces' )
+							: __( 'Save', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
 			</Stack>

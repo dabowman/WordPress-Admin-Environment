@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../../../../docs/schemas/admin-app.json",
+	"$schema": "../../../../../../docs/schemas/workspace-app.json",
 	"id": "plugin:demo/no-kind",
 	"version": 3,
 	"title": "No kind",

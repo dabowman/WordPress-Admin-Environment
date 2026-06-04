@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:site-editor",
 	"version": 1,
 	"title": "Site editor",
@@ -19,7 +19,7 @@
 		},
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"window": {
 		"defaultSize": {
 			"w": 1280,
@@ -33,12 +33,12 @@
 		"icon": "layout"
 	},
 	"documentation": {
-		"purpose": "Stable identifier for the WordPress Site Editor screen, currently fronted by an iframe pointing at `site-editor.php`. Behind the namespace, the implementation is a one-line delegation to `IframeApp` so authors can target `core:site-editor` in admin.json today and inherit the native `@wordpress/edit-site` mount when it lands in a v2.x release — without touching their config.",
+		"purpose": "Stable identifier for the WordPress Site Editor screen, currently fronted by an iframe pointing at `site-editor.php`. Behind the namespace, the implementation is a one-line delegation to `IframeApp` so authors can target `core:site-editor` in workspace.json today and inherit the native `@wordpress/edit-site` mount when it lands in a v2.x release — without touching their config.",
 		"rebuilds": "site-editor",
 		"data": {
 			"reads": [
 				{
-					"source": "window.wpAdminShell.adminUrl",
+					"source": "window.wpAdminWorkspaces.adminUrl",
 					"via": "window-global",
 					"purpose": "Base URL passed to IframeApp."
 				}
@@ -76,7 +76,7 @@
 			},
 			{
 				"concern": "stable-id-policy",
-				"note": "Authors target `core:site-editor` (not `core:iframe-fallback` with a hand-rolled URL) so the native-mount path can land in a v2.x release without admin.json migrations."
+				"note": "Authors target `core:site-editor` (not `core:iframe-fallback` with a hand-rolled URL) so the native-mount path can land in a v2.x release without workspace.json migrations."
 			}
 		],
 		"design-system-leakage": [

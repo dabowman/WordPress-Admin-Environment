@@ -50,7 +50,7 @@ class WPAS_Manifest_Test_Runner {
 	}
 
 	public static function fixtures_dir() {
-		return WP_ADMIN_SHELL_PATH . 'tests/php/fixtures/manifests';
+		return WP_ADMIN_WORKSPACES_PATH . 'tests/php/fixtures/manifests';
 	}
 }
 
@@ -58,7 +58,7 @@ $dir = WPAS_Manifest_Test_Runner::fixtures_dir();
 
 echo "\n— Validator: valid app fixtures (must accept) —\n";
 foreach ( glob( "$dir/apps/valid/*/app.json" ) as $path ) {
-	$result = WP_Admin_Shell_Manifest_Validator::validate_file( $path, 'app' );
+	$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( $path, 'app' );
 	$label  = 'apps/valid/' . basename( dirname( $path ) );
 	WPAS_Manifest_Test_Runner::assert_true(
 		$label,
@@ -69,7 +69,7 @@ foreach ( glob( "$dir/apps/valid/*/app.json" ) as $path ) {
 
 echo "\n— Validator: invalid app fixtures (must reject) —\n";
 foreach ( glob( "$dir/apps/invalid/*/app.json" ) as $path ) {
-	$result = WP_Admin_Shell_Manifest_Validator::validate_file( $path, 'app' );
+	$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( $path, 'app' );
 	$label  = 'apps/invalid/' . basename( dirname( $path ) );
 	WPAS_Manifest_Test_Runner::assert_true(
 		$label,
@@ -80,7 +80,7 @@ foreach ( glob( "$dir/apps/invalid/*/app.json" ) as $path ) {
 
 echo "\n— Validator: valid engine fixtures (must accept) —\n";
 foreach ( glob( "$dir/engines/valid/*/engine.json" ) as $path ) {
-	$result = WP_Admin_Shell_Manifest_Validator::validate_file( $path, 'engine' );
+	$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( $path, 'engine' );
 	$label  = 'engines/valid/' . basename( dirname( $path ) );
 	WPAS_Manifest_Test_Runner::assert_true(
 		$label,
@@ -91,7 +91,7 @@ foreach ( glob( "$dir/engines/valid/*/engine.json" ) as $path ) {
 
 echo "\n— Validator: invalid engine fixtures (must reject) —\n";
 foreach ( glob( "$dir/engines/invalid/*/engine.json" ) as $path ) {
-	$result = WP_Admin_Shell_Manifest_Validator::validate_file( $path, 'engine' );
+	$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( $path, 'engine' );
 	$label  = 'engines/invalid/' . basename( dirname( $path ) );
 	WPAS_Manifest_Test_Runner::assert_true(
 		$label,
@@ -101,21 +101,21 @@ foreach ( glob( "$dir/engines/invalid/*/engine.json" ) as $path ) {
 }
 
 echo "\n— Validator: malformed inputs —\n";
-$result = WP_Admin_Shell_Manifest_Validator::validate( 'not-an-array', 'app' );
+$result = WP_Admin_Workspaces_Manifest_Validator::validate( 'not-an-array', 'app' );
 WPAS_Manifest_Test_Runner::assert_true( 'rejects non-array manifest', ! $result['valid'] );
 
-$result = WP_Admin_Shell_Manifest_Validator::validate( array(), 'app' );
+$result = WP_Admin_Workspaces_Manifest_Validator::validate( array(), 'app' );
 WPAS_Manifest_Test_Runner::assert_true( 'rejects empty manifest', ! $result['valid'] );
 
-$result = WP_Admin_Shell_Manifest_Validator::validate( array( 'id' => 'core:x', 'version' => 'one', 'title' => 'X', 'role' => 'main', 'script' => 'x' ), 'app' );
+$result = WP_Admin_Workspaces_Manifest_Validator::validate( array( 'id' => 'core:x', 'version' => 'one', 'title' => 'X', 'role' => 'main', 'script' => 'x' ), 'app' );
 WPAS_Manifest_Test_Runner::assert_true( 'rejects non-integer version', ! $result['valid'] );
 
-$result = WP_Admin_Shell_Manifest_Validator::validate_file( '/nonexistent/path/app.json', 'app' );
+$result = WP_Admin_Workspaces_Manifest_Validator::validate_file( '/nonexistent/path/app.json', 'app' );
 WPAS_Manifest_Test_Runner::assert_true( 'rejects unreadable file path', ! $result['valid'] );
 
 echo "\n— Registry: register_app accepts arrays + paths —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 $id = $registry->register_app( array(
 	'id'      => 'core:array-app',
@@ -156,8 +156,8 @@ WPAS_Manifest_Test_Runner::assert_eq(
 );
 
 echo "\n— Registry: register_engine —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 $engine_id = $registry->register_engine( "$dir/engines/valid/01-minimal/engine.json" );
 WPAS_Manifest_Test_Runner::assert_eq( 'register_engine(path) returns id', $engine_id, 'core:test-minimal-engine' );
@@ -174,8 +174,8 @@ $invalid = $registry->register_app( 42 );
 WPAS_Manifest_Test_Runner::assert_true( 'register_app() returns WP_Error on bad input type', is_wp_error( $invalid ) );
 
 echo "\n— Registry: discover() walks apps/ + engines/ —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 
 $count = $registry->discover( "$dir" );
 // fixtures dir layout: apps/valid + apps/invalid + engines/valid + engines/invalid
@@ -194,8 +194,8 @@ symlink( "$dir/apps/valid/01-minimal", "$tmp/apps/01-minimal" );
 symlink( "$dir/apps/valid/02-full",    "$tmp/apps/02-full" );
 symlink( "$dir/engines/valid/01-minimal", "$tmp/engines/01-minimal" );
 
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 $count    = $registry->discover( $tmp );
 WPAS_Manifest_Test_Runner::assert_eq( 'discover() finds 2 apps + 1 engine = 3', $count, 3 );
 WPAS_Manifest_Test_Runner::assert_eq( 'list_apps() after discover()', count( $registry->list_apps() ), 2 );
@@ -209,11 +209,11 @@ rmdir( "$tmp/apps" );
 rmdir( "$tmp/engines" );
 rmdir( $tmp );
 
-echo "\n— Boot-time registration: shell-bundled core engine —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+echo "\n— Boot-time registration: workspace-bundled core engine —\n";
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 $registry->register_engine(
-	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-default/engine.json'
+	WP_ADMIN_WORKSPACES_PATH . 'src/runtime/engines/core-default/engine.json'
 );
 $engine = $registry->get_engine( 'core:default' );
 WPAS_Manifest_Test_Runner::assert_true(
@@ -242,10 +242,10 @@ WPAS_Manifest_Test_Runner::assert_eq(
 );
 
 echo "\n— register_template: plugin extension point (spec §13 #4) —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 $registry->register_engine(
-	WP_ADMIN_SHELL_PATH . 'src/runtime/engines/core-default/engine.json'
+	WP_ADMIN_WORKSPACES_PATH . 'src/runtime/engines/core-default/engine.json'
 );
 
 $ok = $registry->register_template(
@@ -307,12 +307,12 @@ WPAS_Manifest_Test_Runner::assert_true(
 );
 
 echo "\n— Resolver: app + engine + template references —\n";
-WP_Admin_Shell_Manifest_Registry::reset();
-$registry = WP_Admin_Shell_Manifest_Registry::instance();
+WP_Admin_Workspaces_Manifest_Registry::reset();
+$registry = WP_Admin_Workspaces_Manifest_Registry::instance();
 $registry->register_app( "$dir/apps/valid/01-minimal/app.json" );
 $registry->register_engine( "$dir/engines/valid/01-minimal/engine.json" );
 
-$resolver = new WP_Admin_Shell_Manifest_Resolver( $registry );
+$resolver = new WP_Admin_Workspaces_Manifest_Resolver( $registry );
 
 WPAS_Manifest_Test_Runner::assert_eq(
 	'resolve_app() returns manifest for registered id',
@@ -385,38 +385,38 @@ WPAS_Manifest_Test_Runner::assert_eq(
 );
 
 echo "\n— Resolver: route-key shape validation —\n";
-WPAS_Manifest_Test_Runner::assert_true( '_self is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '_self' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'detail is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'detail' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'kebab-case is valid', WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'inspector-pane' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'CamelCase is invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 'Detail' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'leading digit is invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '1detail' ) );
-WPAS_Manifest_Test_Runner::assert_true( '_blank is invalid (no longer a routing concept)', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '_blank' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'empty string invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( '' ) );
-WPAS_Manifest_Test_Runner::assert_true( 'non-string invalid', ! WP_Admin_Shell_Manifest_Resolver::is_valid_route_key( 42 ) );
+WPAS_Manifest_Test_Runner::assert_true( '_self is valid', WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( '_self' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'detail is valid', WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( 'detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'kebab-case is valid', WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( 'inspector-pane' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'CamelCase is invalid', ! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( 'Detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'leading digit is invalid', ! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( '1detail' ) );
+WPAS_Manifest_Test_Runner::assert_true( '_blank is invalid (no longer a routing concept)', ! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( '_blank' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'empty string invalid', ! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( '' ) );
+WPAS_Manifest_Test_Runner::assert_true( 'non-string invalid', ! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_key( 42 ) );
 
 echo "\n— Resolver: route pattern matching —\n";
-$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{id}', '/posts/42' );
+$matched = WP_Admin_Workspaces_Manifest_Resolver::match_route( '/posts/{id}', '/posts/42' );
 WPAS_Manifest_Test_Runner::assert_eq( 'match_route captures id', $matched, array( 'id' => '42' ) );
 
-$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/new', '/posts/new' );
+$matched = WP_Admin_Workspaces_Manifest_Resolver::match_route( '/posts/new', '/posts/new' );
 WPAS_Manifest_Test_Runner::assert_eq( 'static segment matches exactly', $matched, array() );
 
-$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{id}', '/pages/42' );
+$matched = WP_Admin_Workspaces_Manifest_Resolver::match_route( '/posts/{id}', '/pages/42' );
 WPAS_Manifest_Test_Runner::assert_eq( 'mismatched static segment fails', $matched, null );
 
-$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/posts/{type}/{id}', '/posts/page/7' );
+$matched = WP_Admin_Workspaces_Manifest_Resolver::match_route( '/posts/{type}/{id}', '/posts/page/7' );
 WPAS_Manifest_Test_Runner::assert_eq( 'multi-param capture', $matched, array( 'type' => 'page', 'id' => '7' ) );
 
-$matched = WP_Admin_Shell_Manifest_Resolver::match_route( '/media/*', '/media/2025/05/foo.jpg' );
+$matched = WP_Admin_Workspaces_Manifest_Resolver::match_route( '/media/*', '/media/2025/05/foo.jpg' );
 WPAS_Manifest_Test_Runner::assert_eq( 'wildcard captures rest', $matched, array( '*' => '2025/05/foo.jpg' ) );
 
 WPAS_Manifest_Test_Runner::assert_true(
 	'is_valid_route_pattern accepts /posts',
-	WP_Admin_Shell_Manifest_Resolver::is_valid_route_pattern( '/posts' )
+	WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_pattern( '/posts' )
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'is_valid_route_pattern rejects no-leading-slash',
-	! WP_Admin_Shell_Manifest_Resolver::is_valid_route_pattern( 'posts' )
+	! WP_Admin_Workspaces_Manifest_Resolver::is_valid_route_pattern( 'posts' )
 );
 
 echo "\n— Resolver: default-route matching —\n";
@@ -427,32 +427,32 @@ $routes = array(
 );
 WPAS_Manifest_Test_Runner::assert_eq(
 	'default-route matches static pattern',
-	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/posts', $routes ),
+	WP_Admin_Workspaces_Manifest_Resolver::match_default_route( '/posts', $routes ),
 	'/posts'
 );
 WPAS_Manifest_Test_Runner::assert_eq(
 	'default-route matches parameter pattern (most-specific not enforced — first match wins per source order)',
-	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/posts/42', $routes ),
+	WP_Admin_Workspaces_Manifest_Resolver::match_default_route( '/posts/42', $routes ),
 	'/posts/{id}'
 );
 WPAS_Manifest_Test_Runner::assert_eq(
 	'default-route returns null for unknown path',
-	WP_Admin_Shell_Manifest_Resolver::match_default_route( '/nonexistent', $routes ),
+	WP_Admin_Workspaces_Manifest_Resolver::match_default_route( '/nonexistent', $routes ),
 	null
 );
 
 echo "\n— register_menu_renderer: plugin extension point (spec §13 #15) —\n";
-WP_Admin_Shell_Menu_Renderers::reset();
+WP_Admin_Workspaces_Menu_Renderers::reset();
 
 WPAS_Manifest_Test_Runner::assert_eq(
 	'register_menu_renderer returns the id on success',
-	WP_Admin_Shell_Menu_Renderers::register(
+	WP_Admin_Workspaces_Menu_Renderers::register(
 		'plugin:acme/breadcrumb',
 		array( 'script' => 'acme-breadcrumb-menu' )
 	),
 	'plugin:acme/breadcrumb'
 );
-$renderers = WP_Admin_Shell_Menu_Renderers::all();
+$renderers = WP_Admin_Workspaces_Menu_Renderers::all();
 WPAS_Manifest_Test_Runner::assert_eq(
 	'registry stores the script handle',
 	$renderers['plugin:acme/breadcrumb']['script'] ?? null,
@@ -460,45 +460,45 @@ WPAS_Manifest_Test_Runner::assert_eq(
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'register_menu_renderer: core id rejected (reserved) → WP_Error',
-	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+	is_wp_error( WP_Admin_Workspaces_Menu_Renderers::register(
 		'sidebar-drilldown',
 		array( 'script' => 'x' )
 	) )
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'register_menu_renderer: malformed plugin id → WP_Error',
-	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+	is_wp_error( WP_Admin_Workspaces_Menu_Renderers::register(
 		'plugin:Acme/Bad',
 		array( 'script' => 'x' )
 	) )
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'register_menu_renderer: missing script handle → WP_Error',
-	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+	is_wp_error( WP_Admin_Workspaces_Menu_Renderers::register(
 		'plugin:acme/no-script',
 		array()
 	) )
 );
 WPAS_Manifest_Test_Runner::assert_true(
 	'register_menu_renderer: duplicate id → WP_Error (first wins)',
-	is_wp_error( WP_Admin_Shell_Menu_Renderers::register(
+	is_wp_error( WP_Admin_Workspaces_Menu_Renderers::register(
 		'plugin:acme/breadcrumb',
 		array( 'script' => 'other-handle' )
 	) )
 );
 WPAS_Manifest_Test_Runner::assert_eq(
 	'duplicate registration kept the first script handle',
-	WP_Admin_Shell_Menu_Renderers::all()['plugin:acme/breadcrumb']['script'] ?? null,
+	WP_Admin_Workspaces_Menu_Renderers::all()['plugin:acme/breadcrumb']['script'] ?? null,
 	'acme-breadcrumb-menu'
 );
 WPAS_Manifest_Test_Runner::assert_true(
-	'public wrapper wp_admin_shell_register_menu_renderer exists',
-	function_exists( 'wp_admin_shell_register_menu_renderer' )
+	'public wrapper wp_admin_workspaces_register_menu_renderer exists',
+	function_exists( 'wp_admin_workspaces_register_menu_renderer' )
 );
-WP_Admin_Shell_Menu_Renderers::reset();
+WP_Admin_Workspaces_Menu_Renderers::reset();
 WPAS_Manifest_Test_Runner::assert_eq(
 	'reset() drains the registry',
-	count( WP_Admin_Shell_Menu_Renderers::all() ),
+	count( WP_Admin_Workspaces_Menu_Renderers::all() ),
 	0
 );
 

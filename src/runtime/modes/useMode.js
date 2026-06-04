@@ -4,10 +4,10 @@
  * Reads:
  *   - The active screen id from the URL (v3 matches `screens[id].path`
  *     against the parsed URL primary path; if the active config has no
- *     `screens` block — i.e. it's a v2 shell — the hook returns the
+ *     `screens` block — i.e. it's a v2 workspace — the hook returns the
  *     default mode for every region).
- *   - The flattened engine-modes catalog from `window.wpAdminShell.engineModes`
- *     (populated by `WP_Admin_Shell_Modes::resolve_engine_modes()` in PHP).
+ *   - The flattened engine-modes catalog from `window.wpAdminWorkspaces.engineModes`
+ *     (populated by `WP_Admin_Workspaces_Modes::resolve_engine_modes()` in PHP).
  *
  * Returns `{ modal, regions, modeId, screenId }`. `regions` is the resolved
  * region-state map (region id → state object) or `null` when the active
@@ -62,7 +62,7 @@ export function useMode() {
 		typeof config.engineModes === 'object'
 			? config.engineModes
 			: ( typeof window !== 'undefined' &&
-					window.wpAdminShell?.engineModes ) ||
+					window.wpAdminWorkspaces?.engineModes ) ||
 			  null;
 
 	const screens =

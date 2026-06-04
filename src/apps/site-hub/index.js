@@ -22,7 +22,7 @@ import { useKernel } from '../../runtime/kernel-context';
  *
  * Site title source-of-truth: `useEntityRecord('root','site')` (the
  * REST `/wp/v2/settings.title` value via core-data). Falls back to
- * `window.wpAdminShell.siteName` only when core-data has not yet
+ * `window.wpAdminWorkspaces.siteName` only when core-data has not yet
  * hydrated. Fixes the prior bug where the toolbar showed a stale
  * title on first paint.
  */
@@ -43,16 +43,16 @@ const SiteHubApp = memo(
 		const resolvedTitle =
 			! site?.title && !! site?.url
 				? filterURLForDisplay( site.url )
-				: site?.title || window.wpAdminShell?.siteName || '';
+				: site?.title || window.wpAdminWorkspaces?.siteName || '';
 		const siteTitle = decodeEntities( resolvedTitle );
 		const homeUrl =
 			restHomeUrl ||
-			window.wpAdminShell?.homeUrl ||
-			window.wpAdminShell?.siteUrl;
-		const dashboardUrl = window.wpAdminShell?.dashboardUrl;
+			window.wpAdminWorkspaces?.homeUrl ||
+			window.wpAdminWorkspaces?.siteUrl;
+		const dashboardUrl = window.wpAdminWorkspaces?.dashboardUrl;
 
 		return (
-			<div className="wp-admin-shell-site-hub">
+			<div className="wp-admin-workspaces-site-hub">
 				<Stack
 					direction="row"
 					gap="xs"
@@ -62,7 +62,7 @@ const SiteHubApp = memo(
 				>
 					<div
 						className={
-							'wp-admin-shell-site-hub__icon-container' +
+							'wp-admin-workspaces-site-hub__icon-container' +
 							( isTransparent
 								? ' has-transparent-background'
 								: '' )
@@ -75,9 +75,9 @@ const SiteHubApp = memo(
 							render={ <a href={ dashboardUrl } /> }
 							aria-label={ __(
 								'Go to the Dashboard',
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							) }
-							className="wp-admin-shell-site-hub__icon-button"
+							className="wp-admin-workspaces-site-hub__icon-button"
 						>
 							<SiteIcon config={ { branding } } />
 						</Button>
@@ -89,7 +89,7 @@ const SiteHubApp = memo(
 						align="center"
 						style={ { minWidth: 0, flex: 1 } }
 					>
-						<div className="wp-admin-shell-site-hub__title">
+						<div className="wp-admin-workspaces-site-hub__title">
 							<Button
 								tone="neutral"
 								variant="minimal"
@@ -101,13 +101,13 @@ const SiteHubApp = memo(
 									/>
 								}
 							>
-								<span className="wp-admin-shell-site-hub__title-text">
+								<span className="wp-admin-workspaces-site-hub__title-text">
 									{ siteTitle }
 								</span>
 								<VisuallyHidden render={ <span /> }>
 									{ __(
 										'(opens in a new tab)',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 									) }
 								</VisuallyHidden>
 							</Button>
@@ -115,18 +115,18 @@ const SiteHubApp = memo(
 						<Stack
 							direction="row"
 							gap="xs"
-							className="wp-admin-shell-site-hub__actions"
+							className="wp-admin-workspaces-site-hub__actions"
 						>
 							<IconButton
 								tone="neutral"
 								variant="minimal"
 								size="compact"
-								className="wp-admin-shell-site-hub__command-toggle"
+								className="wp-admin-workspaces-site-hub__command-toggle"
 								icon={ search }
 								onClick={ () => openCommandCenter() }
 								label={ __(
 									'Open command palette',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 								shortcut={ {
 									displayShortcut:

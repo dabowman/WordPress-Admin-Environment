@@ -1,5 +1,5 @@
 /* ==========================================================================
-   WP Admin Shell — kernel bootstrap CSS.
+   WP Admin Workspaces — kernel bootstrap CSS.
 
    This file is intentionally tiny and design-system-agnostic. Engine layout
    idioms ship with each engine (`src/runtime/engines/<id>/index.css`);
@@ -24,17 +24,17 @@ body {
    stay DS-neutral. Colors come from the cascade or the active engine
    if one is mounted; the structural padding/text-align is the only
    guaranteed contract. */
-.wp-admin-shell-region__forbidden {
+.wp-admin-workspaces-region__forbidden {
 	padding: 64px 24px;
 	text-align: center;
 }
 
-.wp-admin-shell-region__forbidden h2 {
+.wp-admin-workspaces-region__forbidden h2 {
 	margin: 0 0 8px;
 	font-size: 20px;
 }
 
-.wp-admin-shell-region__forbidden p {
+.wp-admin-workspaces-region__forbidden p {
 	margin: 0;
 }
 
@@ -42,21 +42,21 @@ body {
    while the dynamic chunk is in flight so the layout doesn't shift when
    the real app paints. Kernel-level (predates engine mount); colors
    inherited, no DS tokens. */
-.wp-admin-shell-app-loading {
+.wp-admin-workspaces-app-loading {
 	min-block-size: 48px;
 }
 
 /* Inline error fallback when a lazy app chunk fails to load. Structural
    spacing only — design-system-neutral. */
-.wp-admin-shell-app-error {
+.wp-admin-workspaces-app-error {
 	padding: 16px;
 }
 
-.wp-admin-shell-app-error p {
+.wp-admin-workspaces-app-error p {
 	margin: 0 0 8px;
 }
 
-.wp-admin-shell-app-error__detail {
+.wp-admin-workspaces-app-error__detail {
 	font-family: monospace;
 	font-size: 12px;
 	opacity: 0.75;

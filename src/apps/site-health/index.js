@@ -9,20 +9,20 @@ import { Page } from '../_shared/Page';
 const ASYNC_TESTS = [
 	{
 		id: 'dotorg-communication',
-		label: __( 'WordPress.org communication', 'wp-admin-shell' ),
+		label: __( 'WordPress.org communication', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'background-updates',
-		label: __( 'Background updates', 'wp-admin-shell' ),
+		label: __( 'Background updates', 'wp-admin-workspaces' ),
 	},
 	{
 		id: 'loopback-requests',
-		label: __( 'Loopback requests', 'wp-admin-shell' ),
+		label: __( 'Loopback requests', 'wp-admin-workspaces' ),
 	},
-	{ id: 'https-status', label: __( 'HTTPS status', 'wp-admin-shell' ) },
+	{ id: 'https-status', label: __( 'HTTPS status', 'wp-admin-workspaces' ) },
 	{
 		id: 'authorization-header',
-		label: __( 'Authorization header', 'wp-admin-shell' ),
+		label: __( 'Authorization header', 'wp-admin-workspaces' ),
 	},
 ];
 
@@ -35,9 +35,9 @@ const STATUS_TO_INTENT = {
 function StatusPill( { status } ) {
 	const label =
 		{
-			good: __( 'Good', 'wp-admin-shell' ),
-			recommended: __( 'Recommended', 'wp-admin-shell' ),
-			critical: __( 'Critical', 'wp-admin-shell' ),
+			good: __( 'Good', 'wp-admin-workspaces' ),
+			recommended: __( 'Recommended', 'wp-admin-workspaces' ),
+			critical: __( 'Critical', 'wp-admin-workspaces' ),
 		}[ status ] || status;
 	const intent = STATUS_TO_INTENT[ status ] || 'neutral';
 	return <Badge intent={ intent }>{ label }</Badge>;
@@ -83,13 +83,13 @@ export default function SiteHealthApp() {
 								status: 'recommended',
 								label: __(
 									'A test is unavailable',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								),
 								description: `<p>${ sprintf(
 									// translators: %s: the name of the Site Health test.
 									__(
 										'The “%s” test could not be run.',
-										'wp-admin-shell'
+										'wp-admin-workspaces'
 									),
 									t.label
 								) }</p>`,
@@ -121,13 +121,14 @@ export default function SiteHealthApp() {
 
 	return (
 		<Page
-			title={ __( 'Site Health', 'wp-admin-shell' ) }
+			title={ __( 'Site Health', 'wp-admin-workspaces' ) }
 			subTitle={
 				<>
-					{ counts.good } { __( 'good', 'wp-admin-shell' ) } ·{ ' ' }
+					{ counts.good } { __( 'good', 'wp-admin-workspaces' ) } ·{ ' ' }
 					{ counts.recommended }{ ' ' }
-					{ __( 'recommended', 'wp-admin-shell' ) } ·{ ' ' }
-					{ counts.critical } { __( 'critical', 'wp-admin-shell' ) }
+					{ __( 'recommended', 'wp-admin-workspaces' ) } ·{ ' ' }
+					{ counts.critical }{ ' ' }
+					{ __( 'critical', 'wp-admin-workspaces' ) }
 				</>
 			}
 			actions={
@@ -140,7 +141,7 @@ export default function SiteHealthApp() {
 					size="compact"
 				>
 					<Icon icon={ update } size={ 16 } />
-					{ __( 'Re-run tests', 'wp-admin-shell' ) }
+					{ __( 'Re-run tests', 'wp-admin-workspaces' ) }
 				</Button>
 			}
 			hasPadding

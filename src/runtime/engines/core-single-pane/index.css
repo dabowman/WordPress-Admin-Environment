@@ -2,42 +2,42 @@
  *
  * Region-level styling (background/color/padding/border for the main /
  * detail / dialog regions) lives in engine.json template `default-style`
- * blocks so admin.json regions can override via `regions[id].style`.
+ * blocks so workspace.json regions can override via `regions[id].style`.
  *
  * The `__appbar`, `__body`, `__nav-drawer`, `__nav-pane`, `__nav-toggle`,
  * and `__nav-backdrop` classes are engine wrappers (NOT regions). They
  * render around regions for the appbar / hamburger drawer chrome, so
  * their visual styling stays here — there is no template hook for them.
  * The hamburger row, drawer pane, and backdrop pull their colors from
- * the chrome → WPDS bridge so admin.json `styles.chrome.toolbar.*`
+ * the chrome → WPDS bridge so workspace.json `styles.chrome.toolbar.*`
  * / `styles.chrome.sidebar.*` overrides still flow through.
  */
 
-.wp-admin-shell-layout--single-pane {
+.wp-admin-workspaces-layout--single-pane {
 	display: flex;
 	flex-direction: column;
 	background: var(
-		--wp-admin-shell--chrome--canvas--background,
+		--wp-admin-workspaces--chrome--canvas--background,
 		var(--wpds-color-bg-surface-neutral)
 	);
 	color: var(
-		--wp-admin-shell--chrome--canvas--foreground,
+		--wp-admin-workspaces--chrome--canvas--foreground,
 		var(--wpds-color-fg-content-neutral)
 	);
 }
 
-.wp-admin-shell-single-pane__appbar {
+.wp-admin-workspaces-single-pane__appbar {
 	display: flex;
 	align-items: center;
 	gap: var(--wpds-dimension-gap-sm);
 	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-md);
-	background: var(--wp-admin-shell--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong));
-	color: var(--wp-admin-shell--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
-	border-bottom: 1px solid var(--wp-admin-shell--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
+	background: var(--wp-admin-workspaces--chrome--toolbar--background, var(--wpds-color-bg-surface-neutral-strong));
+	color: var(--wp-admin-workspaces--chrome--toolbar--foreground, var(--wpds-color-fg-content-neutral));
+	border-bottom: 1px solid var(--wp-admin-workspaces--chrome--toolbar--border, var(--wpds-color-stroke-surface-neutral));
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-single-pane__nav-toggle {
+.wp-admin-workspaces-single-pane__nav-toggle {
 	background: transparent;
 	color: inherit;
 	border: 1px solid transparent;
@@ -49,20 +49,20 @@
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-single-pane__nav-toggle:hover,
-.wp-admin-shell-single-pane__nav-toggle:focus-visible {
+.wp-admin-workspaces-single-pane__nav-toggle:hover,
+.wp-admin-workspaces-single-pane__nav-toggle:focus-visible {
 	background: var(--wpds-color-bg-interactive-neutral-weak-active);
 	outline: none;
 }
 
-.wp-admin-shell-single-pane__body {
+.wp-admin-workspaces-single-pane__body {
 	flex: 1;
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
 }
 
-.wp-admin-shell-single-pane__nav-drawer {
+.wp-admin-workspaces-single-pane__nav-drawer {
 	position: fixed;
 	inset: 0;
 	z-index: 100;
@@ -70,38 +70,38 @@
 	visibility: hidden;
 }
 
-.wp-admin-shell-single-pane__nav-drawer.is-open {
+.wp-admin-workspaces-single-pane__nav-drawer.is-open {
 	pointer-events: auto;
 	visibility: visible;
 }
 
-.wp-admin-shell-single-pane__nav-backdrop {
+.wp-admin-workspaces-single-pane__nav-backdrop {
 	position: absolute;
 	inset: 0;
 	background: var(
-		--wp-admin-shell--chrome--nav-backdrop--background,
+		--wp-admin-workspaces--chrome--nav-backdrop--background,
 		rgba(0, 0, 0, 0.4)
 	);
 	opacity: 0;
 	transition: opacity 0.16s ease;
 }
 
-.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-backdrop {
+.wp-admin-workspaces-single-pane__nav-drawer.is-open .wp-admin-workspaces-single-pane__nav-backdrop {
 	opacity: 1;
 }
 
-.wp-admin-shell-single-pane__nav-pane {
+.wp-admin-workspaces-single-pane__nav-pane {
 	position: relative;
 	height: 100%;
 	width: min(320px, 85vw);
-	background: var(--wp-admin-shell--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
-	color: var(--wp-admin-shell--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
+	background: var(--wp-admin-workspaces--chrome--sidebar--background, var(--wpds-color-bg-surface-neutral));
+	color: var(--wp-admin-workspaces--chrome--sidebar--foreground, var(--wpds-color-fg-content-neutral));
 	transform: translateX(-100%);
 	transition: transform 0.16s ease;
 	overflow: auto;
 }
 
-.wp-admin-shell-single-pane__nav-drawer.is-open .wp-admin-shell-single-pane__nav-pane {
+.wp-admin-workspaces-single-pane__nav-drawer.is-open .wp-admin-workspaces-single-pane__nav-pane {
 	transform: translateX(0);
 }
 
@@ -109,7 +109,7 @@
    v3 mode region state. Paint-only — hidden regions stay mounted.
    ========================================================================== */
 
-.wp-admin-shell-layout--single-pane .wp-admin-shell-region {
+.wp-admin-workspaces-layout--single-pane .wp-admin-workspaces-region {
 	transition:
 		inline-size 180ms ease,
 		opacity 180ms ease,
@@ -121,17 +121,17 @@
  * INLINE style — inline `display: flex` / `inline-size` beats an
  * unprefixed rule, so a plain `display: none` never hides. Same trap and
  * fix documented in the core:default engine CSS. */
-.wp-admin-shell-layout--single-pane .wp-admin-shell-region[data-mode-hidden="true"] {
+.wp-admin-workspaces-layout--single-pane .wp-admin-workspaces-region[data-mode-hidden="true"] {
 	display: none !important;
 }
 
-.wp-admin-shell-layout--single-pane
-	.wp-admin-shell-region--appbar[data-mode-compact="true"] {
+.wp-admin-workspaces-layout--single-pane
+	.wp-admin-workspaces-region--appbar[data-mode-compact="true"] {
 	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
-.wp-admin-shell-layout--single-pane
-	.wp-admin-shell-region[data-mode-full-width="true"] {
+.wp-admin-workspaces-layout--single-pane
+	.wp-admin-workspaces-region[data-mode-full-width="true"] {
 	inline-size: 100% !important;
 	max-inline-size: 100% !important;
 }
@@ -143,14 +143,14 @@
  * the sidebar chrome slot with a WPDS fallback, matching the rest of the
  * single-pane drawer chrome.
  * ------------------------------------------------------------------- */
-.wp-admin-shell-drawer-nav {
+.wp-admin-workspaces-drawer-nav {
 	display: flex;
 	flex-direction: column;
 	gap: var(--wpds-dimension-gap-xs);
 	padding: var(--wpds-dimension-padding-sm);
 }
 
-.wp-admin-shell-drawer-nav__section-header {
+.wp-admin-workspaces-drawer-nav__section-header {
 	width: 100%;
 	cursor: pointer;
 	background: transparent;
@@ -161,26 +161,26 @@
 	min-height: 44px;
 }
 
-.wp-admin-shell-drawer-nav__section-items {
+.wp-admin-workspaces-drawer-nav__section-items {
 	padding-inline-start: var(--wpds-dimension-padding-lg);
 }
 
-.wp-admin-shell-drawer-nav__link {
+.wp-admin-workspaces-drawer-nav__link {
 	display: flex;
 	align-items: center;
 	min-height: 44px;
 	padding: var(--wpds-dimension-padding-sm) var(--wpds-dimension-padding-lg);
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground, var(--wpds-color-fg-interactive-neutral));
 	text-decoration: none;
 	border-radius: var(--wpds-border-radius-md);
 	font-size: var(--wpds-typography-font-size-md);
 }
 
-.wp-admin-shell-drawer-nav__link:hover {
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-drawer-nav__link:hover {
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }
 
-.wp-admin-shell-drawer-nav__link[aria-current="true"] {
-	background: var(--wp-admin-shell--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-neutral-weak-active));
-	color: var(--wp-admin-shell--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
+.wp-admin-workspaces-drawer-nav__link[aria-current="true"] {
+	background: var(--wp-admin-workspaces--chrome--sidebar--item--background-active, var(--wpds-color-bg-interactive-neutral-weak-active));
+	color: var(--wp-admin-workspaces--chrome--sidebar--item--foreground-active, var(--wpds-color-fg-interactive-neutral-active));
 }

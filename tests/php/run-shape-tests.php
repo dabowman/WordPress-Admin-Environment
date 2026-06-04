@@ -4,7 +4,7 @@
  *
  * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php`
  *
- * For each bundled shell, runs the full resolver pipeline and asserts the
+ * For each bundled workspace, runs the full resolver pipeline and asserts the
  * resolved AUTHOR-shape doc has the structural invariants the kernel
  * depends on:
  *
@@ -50,16 +50,16 @@ class WPAS_Shape_Test_Runner {
 
 $T          = 'WPAS_Shape_Test_Runner';
 $plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-require_once $plugin_dir . 'wp-admin-shell.php';
+require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 $user = get_user_by( 'login', 'admin' ) ?: get_user_by( 'id', 1 );
 wp_set_current_user( $user->ID );
 
-$shells = array_map(
+$workspaces = array_map(
 	fn( $f ) => basename( $f, '.json' ),
-	glob( $plugin_dir . 'shells/*.json' )
+	glob( $plugin_dir . 'workspaces/*.json' )
 );
-sort( $shells );
+sort( $workspaces );
 
 // Known engine sources.
 $known_engines = array( 'core:default', 'core:single-pane', 'core:desktop' );
@@ -97,35 +97,35 @@ function wpas_is_valid_app_ref( $ref ) {
 	);
 }
 
-foreach ( $shells as $slug ) {
-	echo "\n— Shell: $slug —\n";
-	update_option( 'wp_admin_shell_active_shell', $slug );
-	WP_Admin_Shell_Cache::flush();
-	WP_Admin_Shell_Resolver::reset_request_memo();
+foreach ( $workspaces as $slug ) {
+	echo "\n— Workspace: $slug —\n";
+	update_option( 'wp_admin_workspaces_active_workspace', $slug );
+	WP_Admin_Workspaces_Cache::flush();
+	WP_Admin_Workspaces_Resolver::reset_request_memo();
 
-	$config = wp_admin_shell_get_active_config();
+	$config = wp_admin_workspaces_get_active_config();
 
-	// All bundled shells are v3-shape. The resolver serializes the
+	// All bundled workspaces are v3-shape. The resolver serializes the
 	// author-shape doc (`workspace` / `screens` / `menu` / `settings` /
 	// `commands`); the kernel derives the runtime surfaces JS-side.
 	$T::ok(
-		"$slug: top-level `workspace` block present",
-		isset( $config['workspace'] ) && is_array( $config['workspace'] )
+		"$slug: top-level `engine` field present",
+		isset( $config['engine'] ) && is_string( $config['engine'] )
 	);
 	$T::ok(
 		"$slug: top-level `screens` block present",
 		isset( $config['screens'] ) && is_array( $config['screens'] )
 	);
 
-	// Engine — lives at workspace.engine in v3.
-	$engine = $config['workspace']['engine'] ?? null;
+	// Engine — top-level field in the v3 frame-shape (was workspace.engine).
+	$engine = $config['engine'] ?? null;
 	$T::ok(
-		"$slug: workspace.engine present",
+		"$slug: engine present",
 		$engine !== null,
 		'engine = ' . var_export( $engine, true )
 	);
 	$T::ok(
-		"$slug: workspace.engine is registered ($engine)",
+		"$slug: engine is registered ($engine)",
 		in_array( $engine, $known_engines, true ),
 		'expected one of ' . implode( ',', $known_engines )
 	);
@@ -165,10 +165,10 @@ foreach ( $shells as $slug ) {
 	);
 
 	// default-screen (when declared) names a real screen.
-	$default_screen = $config['workspace']['default-screen'] ?? null;
+	$default_screen = $config['default-screen'] ?? null;
 	if ( $default_screen !== null ) {
 		$T::ok(
-			"$slug: workspace.default-screen '$default_screen' names a real screen",
+			"$slug: default-screen '$default_screen' names a real screen",
 			isset( $screens[ $default_screen ] ),
 			'available: ' . implode( ', ', array_keys( $screens ) )
 		);
@@ -178,9 +178,9 @@ foreach ( $shells as $slug ) {
 }
 
 // Reset.
-update_option( 'wp_admin_shell_active_shell', 'wp-admin-default' );
-WP_Admin_Shell_Cache::flush();
-WP_Admin_Shell_Resolver::reset_request_memo();
+update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
+WP_Admin_Workspaces_Cache::flush();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
 
 echo "\n— Summary —\n";
 echo 'PASS: ' . $T::$pass . '  FAIL: ' . $T::$fail . "\n";

@@ -1,7 +1,7 @@
 /**
  * `core:desktop` engine style compiler.
  *
- * Walks the resolved `admin.json.styles` tree and emits CSS variables
+ * Walks the resolved `workspace.json.styles` tree and emits CSS variables
  * scoped to the engine's ThemeProvider wrapper. The kernel's
  * `ThemeProviderHost` calls this hook and wraps the output in a
  * `[data-theme-scope-id="..."]` selector — that attribute is the
@@ -9,11 +9,11 @@
  *
  * Two seam categories for MVP:
  *
- *   1. `styles.chrome.<surface>.<slot>` → `--wp-admin-shell--chrome--
+ *   1. `styles.chrome.<surface>.<slot>` → `--wp-admin-workspaces--chrome--
  *      <surface>--<slot>` (kebab-cased). The engine's `index.css`
  *      consumes those slot names directly with hardcoded fallbacks, so
  *      authors can override any desktop chrome surface (canvas, dock,
- *      wallpaper, window-frame, snap-ghost) via admin.json without
+ *      wallpaper, window-frame, snap-ghost) via workspace.json without
  *      writing CSS.
  *
  *   2. `styles.theme.color.bg` seed → canvas background fallback. A
@@ -55,7 +55,7 @@ function emitChromeSurface( surface, tree, out ) {
 	if ( ! tree || typeof tree !== 'object' ) {
 		return;
 	}
-	const prefix = `--wp-admin-shell--chrome--${ kebabCase( surface ) }`;
+	const prefix = `--wp-admin-workspaces--chrome--${ kebabCase( surface ) }`;
 	const walk = ( node, parts ) => {
 		for ( const [ key, value ] of Object.entries( node ) ) {
 			const path = [ ...parts, kebabCase( key ) ];
@@ -95,7 +95,7 @@ function emitThemeSeeds( theme ) {
 		// Ergonomic seed — single value flips the desktop background
 		// without touching the canvas slot. Authors who set
 		// chrome.canvas.background directly override this in the cascade.
-		out[ '--wp-admin-shell--chrome--canvas--background' ] = bg;
+		out[ '--wp-admin-workspaces--chrome--canvas--background' ] = bg;
 	}
 	return out;
 }

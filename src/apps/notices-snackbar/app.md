@@ -24,7 +24,7 @@ The contract is: stacked toasts at a screen edge, auto-dismiss with click-to-dis
 
 ## Known limitations
 
-- **Single host per shell.** Two snackbar hosts would render notices twice.
-- **No undo affordance.** `SnackbarList` supports per-snackbar actions; the shell doesn't expose this. A future trash-with-undo flow would need it.
+- **Single host per workspace.** Two snackbar hosts would render notices twice.
+- **No undo affordance.** `SnackbarList` supports per-snackbar actions; the workspace doesn't expose this. A future trash-with-undo flow would need it.
 - **Position is fixed by SnackbarList.** Bottom-center; not configurable.
-- **Auto-dismiss timing is the package default.** Not per-notice customizable through the shell.
+- **Auto-dismiss timing is the package default.** Not per-notice customizable through the workspace.

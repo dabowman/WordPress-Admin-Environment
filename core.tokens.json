@@ -1,6 +1,6 @@
 {
 	"$schema": "./docs/schemas/tokens.json",
-	"$description": "WP Admin Shell core tokens.json baseline. Authors override at theme or site origin (DTCG W3C 2025.10).",
+	"$description": "WP Admin Workspaces core tokens.json baseline. Authors override at theme or site origin (DTCG W3C 2025.10).",
 
 	"color": {
 		"$type": "color",

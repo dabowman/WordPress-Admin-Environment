@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:notices-snackbar",
 	"version": 1,
 	"title": "Notices (snackbar)",
@@ -13,7 +13,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"documentation": {
 		"purpose": "Renders transient snackbar notices (auto-dismiss after a few seconds; user can click-dismiss earlier). Source: `@wordpress/notices` store filtered to `type === 'snackbar'`. Uses legacy `SnackbarList` from `@wordpress/components` because WPDS 0.12 ships no snackbar primitive.",
 		"data": {

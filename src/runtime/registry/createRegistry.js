@@ -21,7 +21,7 @@
  *      reference — no double-loading.
  *
  * Engines always use the eager shape — there's exactly one engine
- * mounted per shell and it's needed before any region renders.
+ * mounted per workspace and it's needed before any region renders.
  *
  * Both shapes cannot be set simultaneously (`Component` + `load`) —
  * that's a contradictory declaration and the registry rejects it. The

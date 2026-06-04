@@ -46,7 +46,7 @@ function warnDsMismatch( engineId, appId, engineDs, appDs ) {
 	dsMismatchWarned.add( key );
 	// eslint-disable-next-line no-console
 	console.warn(
-		`wp-admin-shell DS mismatch: app "${ appId }" declares designSystem="${ appDs }" but active engine "${ engineId }" declares designSystem="${ engineDs }". Visual results will be inconsistent.`
+		`wp-admin-workspaces DS mismatch: app "${ appId }" declares designSystem="${ appDs }" but active engine "${ engineId }" declares designSystem="${ engineDs }". Visual results will be inconsistent.`
 	);
 }
 
@@ -75,7 +75,7 @@ function getLazyComponent( registry, id ) {
 function AppLoading() {
 	return (
 		<div
-			className="wp-admin-shell-app-loading"
+			className="wp-admin-workspaces-app-loading"
 			role="status"
 			aria-live="polite"
 			aria-busy="true"
@@ -88,17 +88,17 @@ function AppLoadError( { appId, error, onRetry } ) {
 	const headline = appId
 		? sprintf(
 				/* translators: %s: app id (e.g. "core:posts") */
-				__( 'Failed to load app "%s".', 'wp-admin-shell' ),
+				__( 'Failed to load app "%s".', 'wp-admin-workspaces' ),
 				appId
 		  )
-		: __( 'Failed to load app.', 'wp-admin-shell' );
+		: __( 'Failed to load app.', 'wp-admin-workspaces' );
 	return (
-		<div className="wp-admin-shell-app-error" role="alert">
+		<div className="wp-admin-workspaces-app-error" role="alert">
 			<p>{ headline }</p>
-			<p className="wp-admin-shell-app-error__detail">{ message }</p>
+			<p className="wp-admin-workspaces-app-error__detail">{ message }</p>
 			{ onRetry ? (
 				<button type="button" onClick={ onRetry }>
-					{ __( 'Retry', 'wp-admin-shell' ) }
+					{ __( 'Retry', 'wp-admin-workspaces' ) }
 				</button>
 			) : null }
 		</div>
@@ -163,7 +163,7 @@ class AppErrorBoundary extends ReactComponent {
 		}
 		// eslint-disable-next-line no-console
 		console.error(
-			`[wp-admin-shell] app "${ this.props.appId }" failed to load:`,
+			`[wp-admin-workspaces] app "${ this.props.appId }" failed to load:`,
 			error
 		);
 	}
@@ -244,14 +244,14 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 	const sourceDef = registry.get( appInstance.source, 'app' );
 	if ( ! sourceDef ) {
 		return (
-			<div className="wp-admin-shell-region__empty">
+			<div className="wp-admin-workspaces-region__empty">
 				Unknown source: { appInstance.source }
 			</div>
 		);
 	}
 
 	// Spec §8 layer 3 — source-declared capability floor. Even if the
-	// shell config omits `capability`, the source's required caps still
+	// workspace config omits `capability`, the source's required caps still
 	// apply.
 	const sourceCaps = Array.isArray( sourceDef.capabilities )
 		? sourceDef.capabilities
@@ -301,7 +301,7 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 		const Lazy = getLazyComponent( registry, appInstance.source );
 		if ( ! Lazy ) {
 			return (
-				<div className="wp-admin-shell-region__empty">
+				<div className="wp-admin-workspaces-region__empty">
 					Unknown source: { appInstance.source }
 				</div>
 			);

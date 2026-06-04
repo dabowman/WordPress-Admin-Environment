@@ -29,8 +29,8 @@ Working draft. Shows how the flagship engine declares its `modes` catalog, along
 
 	"default-arrangement": "wp-chrome",
 
-	"script": "wp-admin-shell-engine-default",
-	"style":  "wp-admin-shell-engine-default-css",
+	"script": "wp-admin-workspaces-engine-default",
+	"style":  "wp-admin-workspaces-engine-default-css",
 
 	"menu-renderer": "sidebar-drilldown",
 
@@ -67,23 +67,23 @@ Names the strategy the engine uses to render the resolved `menu` block. Required
 |-------|----------|-------|
 | `sidebar-drilldown` | Items render in a sidebar nav; `parent` produces a slide-in sub-screen with a back link. Honors `config.collapsed` (icon rail). | `core:navigation` (bundled) |
 | `sidebar-tree`      | Items render in a sidebar nav as an expandable in-place tree; branches seed open when they contain the active route. | `core:navigation` (bundled) |
-| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a shell that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
+| `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a workspace that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
 | `drawer`            | Items render in a collapsible-accordion drawer; `parent` produces a section. | `core:single-pane` — registered from the engine module (`DrawerRenderer.js`) so it travels with the engine on extraction. |
 | `none`              | The engine ignores `menu` entirely; `core:navigation` renders nothing. Authors must use `regions` / `routes` escape hatches. | — |
 | absent              | No field → `core:navigation` falls back to `sidebar-drilldown` (back-compat for engines predating the field). | — |
 
-**Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the shell enqueues it on the admin-shell page:
+**Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the workspace enqueues it on the admin-workspace page:
 
 ```php
 // PHP — declare the renderer + the script that registers its component.
-wp_admin_shell_register_menu_renderer( 'plugin:my/breadcrumb-menu', array(
-    'script' => 'my-breadcrumb-menu', // wp_register_script'd, deps: [ 'wp-admin-shell' ]
+wp_admin_workspaces_register_menu_renderer( 'plugin:my/breadcrumb-menu', array(
+    'script' => 'my-breadcrumb-menu', // wp_register_script'd, deps: [ 'wp-admin-workspaces' ]
 ) );
 ```
 
 ```js
 // JS (in that script) — register the component.
-window.wpAdminShell.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
+window.wpAdminWorkspaces.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
 ```
 
 Every renderer component receives the same props: `{ items, currentPrimary, navConfig }` — the host-pruned + ordered menu tree, the active URL primary path, and the per-region nav config block. It returns React.
@@ -110,7 +110,7 @@ Each mode entry shape:
 Plugins extend an engine's mode catalog via filter:
 
 ```php
-add_filter( 'wp_admin_shell_engine_modes_core:default', function( $modes ) {
+add_filter( 'wp_admin_workspaces_engine_modes_core:default', function( $modes ) {
     $modes['kiosk'] = [
         'label'   => 'Kiosk',
         'extends' => 'takeover',
@@ -215,22 +215,22 @@ function resolveMode( screenId, engineManifest, screens ) {
 - **Document region-state vocabulary in the engine README.** Authors writing screen-level `regions` overrides depend on knowing which keys an engine accepts.
 - **Match the spec's intent across engines.** A `focus` mode should mean "minimize chrome" regardless of engine. A `core:desktop` engine's `focus` could collapse the dock to a hover-revealed strip; a `core:single-pane` `focus` could just hide the drawer toggle. Different paintings, same intent.
 - **`modal` mode is the only one that doesn't change chrome state.** Use it for overlays only; don't recycle the name for other purposes.
-- **Don't bake content padding into the region mount.** `core:default` renders the app mount (`.wp-admin-shell-region__app`) flush — no padding. The mount is non-addressable (no template hook, no `regions[id].style` path), so a default there can't be removed per-app and forces full-bleed apps (DataViews, iframes) to opt out. Apps own their inset via the shared `wp-admin-shell-app--inset` utility (themeable through `styles.chrome.content.inset`); the kernel special-cases no app for layout. See `docs/engines-and-design-systems.md` → "Region content padding."
-- **Put a region's whole flat box model in `default-style`; reserve `index.css` for what inline style can't express.** Template `default-style` is emitted as inline style on the region wrapper and is the *only* surface `regions[id].style` overrides can merge into, so every flat `property: value` (layout literals included) belongs there. `index.css` is for selectors / pseudo-classes / descendant targeting / cascade-layer fixes / queries only. Within `default-style`, give a property a named chrome slot (`var(--wp-admin-shell--chrome--…, var(--wpds-…))`) only when it's worth a stable by-name author knob; leave design-system-tracking values (radius, elevation, rhythm) as bare `--wpds-*`, and layout mechanics as literals. Full value-tier model + the JSON-vs-CSS rationale in `docs/engines-and-design-systems.md` → "`default-style` value tiers + what's themeable."
+- **Don't bake content padding into the region mount.** `core:default` renders the app mount (`.wp-admin-workspaces-region__app`) flush — no padding. The mount is non-addressable (no template hook, no `regions[id].style` path), so a default there can't be removed per-app and forces full-bleed apps (DataViews, iframes) to opt out. Apps own their inset via the shared `wp-admin-workspaces-app--inset` utility (themeable through `styles.chrome.content.inset`); the kernel special-cases no app for layout. See `docs/engines-and-design-systems.md` → "Region content padding."
+- **Put a region's whole flat box model in `default-style`; reserve `index.css` for what inline style can't express.** Template `default-style` is emitted as inline style on the region wrapper and is the *only* surface `regions[id].style` overrides can merge into, so every flat `property: value` (layout literals included) belongs there. `index.css` is for selectors / pseudo-classes / descendant targeting / cascade-layer fixes / queries only. Within `default-style`, give a property a named chrome slot (`var(--wp-admin-workspaces--chrome--…, var(--wpds-…))`) only when it's worth a stable by-name author knob; leave design-system-tracking values (radius, elevation, rhythm) as bare `--wpds-*`, and layout mechanics as literals. Full value-tier model + the JSON-vs-CSS rationale in `docs/engines-and-design-systems.md` → "`default-style` value tiers + what's themeable."
 
 ## Cascade implications
 
 `engine.json#modes` is engine-shipped. Site authors override via `screens[id].mode` (mode selection) + `screens[id].regions` (per-field override on top of the mode).
 
-If a site author wants to override the mode itself (e.g. redefine what `focus` means across all screens), they edit their own engine.json fork — or the engine accepts admin.json-side `engine-modes` overrides at the install layer. Open design question: is per-install mode redefinition load-bearing, or is screen-level override enough? Lean: screen-level is enough for v3; revisit if real authoring need surfaces.
+If a site author wants to override the mode itself (e.g. redefine what `focus` means across all screens), they edit their own engine.json fork — or the engine accepts workspace.json-side `engine-modes` overrides at the install layer. Open design question: is per-install mode redefinition load-bearing, or is screen-level override enough? Lean: screen-level is enough for v3; revisit if real authoring need surfaces.
 
 ## Resolved decisions
 
 The following items were locked during Phase 2 design (see `schema-sketch.md`):
 
 - **Mode inheritance via `extends`** — supported from v3. Inheritance depth limit: 10.
-- **Plugin-contributed modes** — via `wp_admin_shell_engine_modes_{engineId}` filter at plugin origin.
-- **Plugin-contributed menu renderers** — registered via `wp_admin_shell_register_menu_renderer()`. Engine's `menu-renderer` field accepts plugin namespace ids.
+- **Plugin-contributed modes** — via `wp_admin_workspaces_engine_modes_{engineId}` filter at plugin origin.
+- **Plugin-contributed menu renderers** — registered via `wp_admin_workspaces_register_menu_renderer()`. Engine's `menu-renderer` field accepts plugin namespace ids.
 - **Mode transitions** — engine-owned and undocumented. Schema does not declare transition behavior; engines ship their own animation internally.
 - **Modal stacking** — engine-managed LIFO stack. Topmost owns focus + Escape; closing dismisses just topmost. Engines that don't support stacking fall back to "exclusive modal" semantics.
 

@@ -5,7 +5,7 @@
  * for a `draft` / `auto-draft` post the autosave updates the parent record in
  * place (`wp_update_post`), but for any other status — `pending`, `publish`,
  * `private`, scheduled (`future`) — core writes a separate per-user autosave
- * revision and never touches the live record. The shell previously PUT the
+ * revision and never touches the live record. The workspace previously PUT the
  * live record on every 2s debounce regardless of status, clobbering published
  * content (issue #101); this helper restores the core-faithful split.
  *

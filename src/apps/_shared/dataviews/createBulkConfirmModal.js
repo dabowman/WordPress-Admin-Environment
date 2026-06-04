@@ -73,7 +73,7 @@ export function createBulkConfirmModal( {
 						variant="minimal"
 						onClick={ closeModal }
 					>
-						{ __( 'Cancel', 'wp-admin-shell' ) }
+						{ __( 'Cancel', 'wp-admin-workspaces' ) }
 					</Button>
 					<DestructiveButton
 						variant="primary"

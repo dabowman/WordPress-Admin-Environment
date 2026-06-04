@@ -103,7 +103,7 @@ function createSnapGhost( workspaceEl ) {
 		return null;
 	}
 	const el = document.createElement( 'div' );
-	el.className = 'wp-admin-shell-desktop-snap-ghost';
+	el.className = 'wp-admin-workspaces-desktop-snap-ghost';
 	el.style.position = 'absolute';
 	el.style.pointerEvents = 'none';
 	el.style.display = 'none';
@@ -457,43 +457,43 @@ export default function DesktopWindowFrameApp( { config } ) {
 	const resizable = win.state !== 'maximized';
 
 	return (
-		<div className="wp-admin-shell-desktop-window-frame">
+		<div className="wp-admin-workspaces-desktop-window-frame">
 			{ resizable &&
 				RESIZE_HANDLES.map( ( { dir, mutates } ) => (
 					// eslint-disable-next-line jsx-a11y/no-static-element-interactions -- resize handle; not a navigation/control target.
 					<div
 						key={ dir }
-						className={ `wp-admin-shell-desktop-window-frame__resize wp-admin-shell-desktop-window-frame__resize--${ dir }` }
+						className={ `wp-admin-workspaces-desktop-window-frame__resize wp-admin-workspaces-desktop-window-frame__resize--${ dir }` }
 						data-resize={ dir }
 						onPointerDown={ onResizePointerDown( mutates ) }
 					/>
 				) ) }
 			{ /* eslint-disable-next-line jsx-a11y/no-static-element-interactions -- titlebar is a drag handle; controls inside are buttons. */ }
 			<div
-				className="wp-admin-shell-desktop-window-frame__titlebar"
+				className="wp-admin-workspaces-desktop-window-frame__titlebar"
 				onPointerDown={ onTitlebarPointerDown }
 				onDoubleClick={ onMaximize }
 			>
 				<div
-					className="wp-admin-shell-desktop-window-frame__controls"
+					className="wp-admin-workspaces-desktop-window-frame__controls"
 					role="group"
 					aria-label="Window controls"
 				>
 					<button
 						type="button"
-						className="wp-admin-shell-desktop-window-frame__control wp-admin-shell-desktop-window-frame__control--close"
+						className="wp-admin-workspaces-desktop-window-frame__control wp-admin-workspaces-desktop-window-frame__control--close"
 						aria-label="Close window"
 						onClick={ onClose }
 					/>
 					<button
 						type="button"
-						className="wp-admin-shell-desktop-window-frame__control wp-admin-shell-desktop-window-frame__control--minimize"
+						className="wp-admin-workspaces-desktop-window-frame__control wp-admin-workspaces-desktop-window-frame__control--minimize"
 						aria-label="Minimize window"
 						onClick={ onMinimize }
 					/>
 					<button
 						type="button"
-						className="wp-admin-shell-desktop-window-frame__control wp-admin-shell-desktop-window-frame__control--maximize"
+						className="wp-admin-workspaces-desktop-window-frame__control wp-admin-workspaces-desktop-window-frame__control--maximize"
 						aria-label={
 							win.state === 'maximized'
 								? 'Restore window'
@@ -502,7 +502,7 @@ export default function DesktopWindowFrameApp( { config } ) {
 						onClick={ onMaximize }
 					/>
 				</div>
-				<span className="wp-admin-shell-desktop-window-frame__title">
+				<span className="wp-admin-workspaces-desktop-window-frame__title">
 					{ title }
 				</span>
 			</div>

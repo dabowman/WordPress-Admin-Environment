@@ -14,7 +14,7 @@ Fields over `useEntityRecord('root','site')`:
 
 ## Architecture
 
-Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app computes the `fields` array (memoized on `pages.records`) and the `form` field order; the shared shell owns the null-guard spinner, `DataForm`, Save button, and save handler.
+Thin wrapper around the shared `src/apps/_shared/forms/EntityDataForm`. This app computes the `fields` array (memoized on `pages.records`) and the `form` field order; the shared workspace owns the null-guard spinner, `DataForm`, Save button, and save handler.
 
 `posts_per_page` / `posts_per_rss` clamp to a positive integer (floor 1, default 10) in `setValue` — WordPress treats `0` as invalid and breaks front-end pagination.
 

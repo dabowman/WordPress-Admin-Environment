@@ -5,7 +5,7 @@ import { __ } from '@wordpress/i18n';
 
 /**
  * Site icon — resolves the icon in priority order:
- *   1. Author-declared `branding.logo` from the admin.json styles cascade.
+ *   1. Author-declared `branding.logo` from the workspace.json styles cascade.
  *   2. The site's REST `site_icon_url` (from `root/__unstableBase`) — the
  *      Site Icon a user sets in Settings → General, matching the Site
  *      Editor's SiteIcon behavior.
@@ -19,7 +19,7 @@ import { __ } from '@wordpress/i18n';
  *   - URL detection accepts protocol-absolute (`http://…`, `https://…`)
  *     *and* protocol-relative absolute paths (`/wp-content/uploads/…`).
  *     Anything else is treated as plugin-relative and prefixed with
- *     `wpAdminShell.pluginUrl`.
+ *     `wpAdminWorkspaces.pluginUrl`.
  *   - While `__unstableBase` is still resolving and no icon URL is known
  *     yet, an empty sized placeholder renders so the fallback mark doesn't
  *     flash before a configured site icon paints (mirrors edit-site).
@@ -45,34 +45,34 @@ export default function SiteIcon( { config } ) {
 		const isAbsolute = /^(https?:|\/)/.test( branding.logo );
 		const src = isAbsolute
 			? branding.logo
-			: ( window.wpAdminShell?.pluginUrl || '' ) +
+			: ( window.wpAdminWorkspaces?.pluginUrl || '' ) +
 			  branding.logo.replace( /^\.\//, '' );
 
 		return (
 			<img
 				src={ src }
-				alt={ __( 'Site Icon', 'wp-admin-shell' ) }
-				className="wp-admin-shell-site-icon__image"
+				alt={ __( 'Site Icon', 'wp-admin-workspaces' ) }
+				className="wp-admin-workspaces-site-icon__image"
 			/>
 		);
 	}
 
 	if ( isRequestingSite && ! siteIconUrl ) {
-		return <div className="wp-admin-shell-site-icon__image" />;
+		return <div className="wp-admin-workspaces-site-icon__image" />;
 	}
 
 	if ( siteIconUrl ) {
 		return (
 			<img
 				src={ siteIconUrl }
-				alt={ __( 'Site Icon', 'wp-admin-shell' ) }
-				className="wp-admin-shell-site-icon__image"
+				alt={ __( 'Site Icon', 'wp-admin-workspaces' ) }
+				className="wp-admin-workspaces-site-icon__image"
 			/>
 		);
 	}
 
 	return (
-		<div className="wp-admin-shell-site-icon__default">
+		<div className="wp-admin-workspaces-site-icon__default">
 			<Icon icon={ wordpress } size={ 48 } />
 		</div>
 	);

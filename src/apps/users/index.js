@@ -27,18 +27,18 @@ import { DEFAULT_ROLES, roleDisplayName } from '../_shared/roles';
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	name: __( 'Name', 'wp-admin-shell' ),
-	username: __( 'Username', 'wp-admin-shell' ),
-	email: __( 'Email', 'wp-admin-shell' ),
-	roles: __( 'Role', 'wp-admin-shell' ),
-	registered_date: __( 'Registered', 'wp-admin-shell' ),
+	name: __( 'Name', 'wp-admin-workspaces' ),
+	username: __( 'Username', 'wp-admin-workspaces' ),
+	email: __( 'Email', 'wp-admin-workspaces' ),
+	roles: __( 'Role', 'wp-admin-workspaces' ),
+	registered_date: __( 'Registered', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	view: __( 'View posts', 'wp-admin-shell' ),
-	'change-role': __( 'Change role to…', 'wp-admin-shell' ),
-	delete: __( 'Delete', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	view: __( 'View posts', 'wp-admin-workspaces' ),
+	'change-role': __( 'Change role to…', 'wp-admin-workspaces' ),
+	delete: __( 'Delete', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -54,7 +54,7 @@ const VIEW_DEFAULTS = {
 
 /**
  * Workspace route for the Edit User screen (`user-edit` in wp-admin-default).
- * The list has no dedicated Edit User app yet — the shell binds `/users/{id}/edit`
+ * The list has no dedicated Edit User app yet — the workspace binds `/users/{id}/edit`
  * to `core:profile` with `config.userId: "{id}"`, and `core:profile` now edits
  * the user named by `config.userId` (not the acting user) — so "Edit" + the
  * username cell both edit the *target* user. See app.md "Known limitations".
@@ -99,7 +99,7 @@ function buildFieldRenderers( elementLabel ) {
 			<Stack direction="row" gap="sm" align="center">
 				{ item.avatarUrl && (
 					<img
-						className="wp-admin-shell-app-users__avatar"
+						className="wp-admin-workspaces-app-users__avatar"
 						src={ item.avatarUrl }
 						alt=""
 						width={ 32 }
@@ -110,17 +110,17 @@ function buildFieldRenderers( elementLabel ) {
 				<Stack direction="column" gap="xs">
 					<a
 						href={ editHref( item.id ) }
-						className="wp-admin-shell-app-users__name-link"
+						className="wp-admin-workspaces-app-users__name-link"
 					>
 						{ item.name }
 					</a>
-					<Text className="wp-admin-shell-app__muted">
+					<Text className="wp-admin-workspaces-app__muted">
 						{ item.username }
 					</Text>
 					{ item.email && (
 						<a
 							href={ `mailto:${ item.email }` }
-							className="wp-admin-shell-app-users__email"
+							className="wp-admin-workspaces-app-users__email"
 						>
 							{ item.email }
 						</a>
@@ -142,7 +142,7 @@ function buildFieldRenderers( elementLabel ) {
 								roleDisplayName( slug, elementLabel )
 							)
 							.join( ', ' )
-					: __( 'None', 'wp-admin-shell' ) }
+					: __( 'None', 'wp-admin-workspaces' ) }
 			</Text>
 		),
 	};
@@ -218,7 +218,7 @@ export default function UsersApp( { config = {} } = {} ) {
 		queryArgs
 	);
 
-	// Role elements come from the resolved spec (shell-authored `roles`
+	// Role elements come from the resolved spec (workspace-authored `roles`
 	// elements). One source of truth for: the filter dropdown counts, the
 	// "Change role to…" select, and the translated cell display names.
 	const roleElements = useMemo( () => {
@@ -297,7 +297,7 @@ export default function UsersApp( { config = {} } = {} ) {
 	);
 
 	const actions = useMemo( () => {
-		const currentUserId = window.wpAdminShell?.userId;
+		const currentUserId = window.wpAdminWorkspaces?.userId;
 
 		const deleteModal = createBulkConfirmModal( {
 			filterItems: ( items ) =>
@@ -309,17 +309,17 @@ export default function UsersApp( { config = {} } = {} ) {
 				if ( targets.length === 0 ) {
 					body = __(
 						'You cannot delete your own account.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					);
 				} else if ( targets.length === 1 ) {
 					body = __(
 						'Delete this user permanently? Their content will be reassigned to you.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					);
 				} else {
 					body = __(
 						'Delete these users permanently? Their content will be reassigned to you.',
-						'wp-admin-shell'
+						'wp-admin-workspaces'
 					);
 				}
 				return (
@@ -330,14 +330,14 @@ export default function UsersApp( { config = {} } = {} ) {
 								{ ' ' }
 								{ __(
 									'(Your own account will be skipped.)',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								) }
 							</>
 						) }
 					</>
 				);
 			},
-			confirmLabel: __( 'Delete', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete', 'wp-admin-workspaces' ),
 			mutate: ( item ) =>
 				deleteEntityRecord( 'root', 'user', item.id, {
 					force: true,
@@ -363,7 +363,7 @@ export default function UsersApp( { config = {} } = {} ) {
 				}
 				if ( failed === 0 ) {
 					createSuccessNotice(
-						__( 'User(s) deleted.', 'wp-admin-shell' ),
+						__( 'User(s) deleted.', 'wp-admin-workspaces' ),
 						{ type: 'snackbar' }
 					);
 				} else if ( failed < targets.length ) {
@@ -374,7 +374,7 @@ export default function UsersApp( { config = {} } = {} ) {
 								'%1$d of %2$d user failed to delete.',
 								'%1$d of %2$d users failed to delete.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							targets.length
@@ -387,7 +387,10 @@ export default function UsersApp( { config = {} } = {} ) {
 					);
 					createErrorNotice(
 						first?.reason?.message ||
-							__( 'Failed to delete user(s).', 'wp-admin-shell' ),
+							__(
+								'Failed to delete user(s).',
+								'wp-admin-workspaces'
+							),
 						{ isDismissible: true }
 					);
 				}
@@ -401,7 +404,7 @@ export default function UsersApp( { config = {} } = {} ) {
 		// (roles-only update needs only `promote_users`).
 		const roleField = {
 			id: 'role',
-			label: __( 'Role', 'wp-admin-shell' ),
+			label: __( 'Role', 'wp-admin-workspaces' ),
 			Edit: 'select',
 			elements: roleValues.map( ( value ) => ( {
 				value,
@@ -425,7 +428,7 @@ export default function UsersApp( { config = {} } = {} ) {
 			// Map the changed-field payload to the per-item REST body.
 			toRecord: ( payload ) => ( { roles: [ payload.role ] } ),
 			messages: {
-				applyLabel: __( 'Change role', 'wp-admin-shell' ),
+				applyLabel: __( 'Change role', 'wp-admin-workspaces' ),
 				saved: ( ok ) =>
 					sprintf(
 						/* translators: %d: number of users updated. */
@@ -433,21 +436,24 @@ export default function UsersApp( { config = {} } = {} ) {
 							'Role changed for %d user.',
 							'Role changed for %d users.',
 							ok,
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 						),
 						ok
 					),
 				partial: ( ok, failed ) =>
 					sprintf(
 						/* translators: 1: number updated, 2: number that failed. */
-						__( '%1$d updated, %2$d failed.', 'wp-admin-shell' ),
+						__(
+							'%1$d updated, %2$d failed.',
+							'wp-admin-workspaces'
+						),
 						ok,
 						failed
 					),
-				error: __( 'Failed to change role.', 'wp-admin-shell' ),
+				error: __( 'Failed to change role.', 'wp-admin-workspaces' ),
 				noTargets: __(
 					'You cannot change your own role.',
-					'wp-admin-shell'
+					'wp-admin-workspaces'
 				),
 			},
 			onApplied: () => {
@@ -499,9 +505,9 @@ export default function UsersApp( { config = {} } = {} ) {
 	);
 
 	return (
-		<div className="wp-admin-shell-app-users wp-admin-shell-app--fill">
+		<div className="wp-admin-workspaces-app-users wp-admin-workspaces-app--fill">
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (

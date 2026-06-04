@@ -3,7 +3,7 @@
  * core:desktop engine — PHP entry.
  *
  * Loaded unconditionally when the plugin boots; bridge hooks only fire
- * for requests carrying the `wp_admin_shell_chromeless=1` query var. The
+ * for requests carrying the `wp_admin_workspaces_chromeless=1` query var. The
  * engine's React side decides whether to emit the query flag (the
  * `core:desktop-iframe` app appends it on every URL it loads); the PHP
  * side just sees the flag and emits the bridge.
@@ -13,7 +13,7 @@
  * live under `includes/engines/core-default/` (currently empty; the
  * default engine has no server-side hooks).
  *
- * @package WP_Admin_Shell
+ * @package WP_Admin_Workspaces
  * @since   2.x
  */
 
@@ -26,7 +26,7 @@ require_once __DIR__ . '/chromeless-bridge.php';
  *
  * Two signals, either suffices:
  *
- *   1. Explicit `?wp_admin_shell_chromeless=1` query var the shell adds
+ *   1. Explicit `?wp_admin_workspaces_chromeless=1` query var the workspace adds
  *      when opening iframe windows.
  *   2. `Sec-Fetch-Site: same-origin` + `Sec-Fetch-Dest: iframe` —
  *      same-origin iframe load. Catches admin navigations that drop
@@ -36,9 +36,9 @@ require_once __DIR__ . '/chromeless-bridge.php';
  *
  * @return bool
  */
-function wp_admin_shell_is_chromeless_request() {
+function wp_admin_workspaces_is_chromeless_request() {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only request flag, no state change.
-	if ( ! empty( $_GET['wp_admin_shell_chromeless'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['wp_admin_shell_chromeless'] ) ) ) {
+	if ( ! empty( $_GET['wp_admin_workspaces_chromeless'] ) && '1' === sanitize_text_field( wp_unslash( $_GET['wp_admin_workspaces_chromeless'] ) ) ) {
 		return true;
 	}
 
@@ -56,8 +56,8 @@ function wp_admin_shell_is_chromeless_request() {
  * to them. Matches upstream desktop-mode's body-class signal.
  */
 add_filter( 'admin_body_class', function ( $classes ) {
-	if ( wp_admin_shell_is_chromeless_request() ) {
-		$classes .= ' wp-admin-shell-chromeless';
+	if ( wp_admin_workspaces_is_chromeless_request() ) {
+		$classes .= ' wp-admin-workspaces-chromeless';
 	}
 	return $classes;
 } );
@@ -66,4 +66,4 @@ add_filter( 'admin_body_class', function ( $classes ) {
  * Emit the bridge script in chromeless admin pages. Late priority so
  * the iframe sees everything the page is going to load.
  */
-add_action( 'admin_footer', 'wp_admin_shell_chromeless_bridge_script', 1000 );
+add_action( 'admin_footer', 'wp_admin_workspaces_chromeless_bridge_script', 1000 );

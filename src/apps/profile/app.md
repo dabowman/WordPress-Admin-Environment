@@ -4,7 +4,7 @@ Prose accompanying `app.json#documentation` for the profile editor.
 
 ## Overview
 
-ProfileApp is the simplest write-path in the shell: a flat form over `useEntityRecord('root', 'user', userId)`. The edited user is `config.userId` when the screen supplies one (the `/users/{id}/edit` route interpolates `{id}` into `config.userId`, so the `core:users` Edit action + username link edit the *target* user), falling back to the acting user (`window.wpAdminShell.userId`, injected by PHP) for the self-service `/profile` screen. Without either the app renders a permission-denied fallback. The form populates from the entity record on first paint, accumulates edits via `edit({ <field>: value })`, and flushes via `save()` when the user clicks Save Changes.
+ProfileApp is the simplest write-path in the workspace: a flat form over `useEntityRecord('root', 'user', userId)`. The edited user is `config.userId` when the screen supplies one (the `/users/{id}/edit` route interpolates `{id}` into `config.userId`, so the `core:users` Edit action + username link edit the *target* user), falling back to the acting user (`window.wpAdminWorkspaces.userId`, injected by PHP) for the self-service `/profile` screen. Without either the app renders a permission-denied fallback. The form populates from the entity record on first paint, accumulates edits via `edit({ <field>: value })`, and flushes via `save()` when the user clicks Save Changes.
 
 ## Architecture
 

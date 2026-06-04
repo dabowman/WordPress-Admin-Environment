@@ -1,4 +1,4 @@
-.wp-admin-shell-notices-snackbar {
+.wp-admin-workspaces-notices-snackbar {
 	position: fixed;
 	bottom: var(--wpds-dimension-padding-lg);
 	right: var(--wpds-dimension-padding-lg);
@@ -9,6 +9,6 @@
 	pointer-events: none;
 }
 
-.wp-admin-shell-notices-snackbar > * {
+.wp-admin-workspaces-notices-snackbar > * {
 	pointer-events: auto;
 }

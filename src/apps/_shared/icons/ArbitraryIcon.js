@@ -26,7 +26,7 @@ import { resolveIcon } from '../../../runtime/config/iconMap';
  *
  * Trust: a harvested `url` value is admin-context — the same trust level
  * at which classic wp-admin renders the very same `$icon_url`. No new
- * exposure (the shell only renders it inside the already-admin-gated
+ * exposure (the workspace only renders it inside the already-admin-gated
  * workspace).
  *
  * @param {Object}      root0
@@ -47,7 +47,7 @@ export default function ArbitraryIcon( {
 		if ( type === 'url' && typeof value === 'string' && value !== '' ) {
 			return (
 				<img
-					className="wp-admin-shell-arbitrary-icon"
+					className="wp-admin-workspaces-arbitrary-icon"
 					src={ value }
 					alt={ alt }
 					width={ size }
@@ -67,7 +67,7 @@ export default function ArbitraryIcon( {
 		) {
 			return (
 				<span
-					className={ `dashicons dashicons-${ value } wp-admin-shell-arbitrary-icon` }
+					className={ `dashicons dashicons-${ value } wp-admin-workspaces-arbitrary-icon` }
 					aria-hidden="true"
 					style={ { fontSize: size, width: size, height: size } }
 				/>
@@ -96,7 +96,7 @@ export default function ArbitraryIcon( {
  *
  * Trust awareness: this is the same author-trust boundary as classic, but
  * NOT a byte-identical threat surface — an event-handler attribute injected
- * into a node title executes in the shell SPA's document context (`wp.data`,
+ * into a node title executes in the workspace SPA's document context (`wp.data`,
  * REST nonces, the kernel runtime on `window`), not just the classic
  * admin-bar render. Accepted risk (a plugin that can inject here is already
  * admin-trusted); see `docs/runtime-harvest-pattern.md` → "Trust".
@@ -111,7 +111,7 @@ export function TrustedNodeTitle( { html } ) {
 	}
 	return (
 		<span
-			className="wp-admin-shell-arbitrary-node-title"
+			className="wp-admin-workspaces-arbitrary-node-title"
 			// eslint-disable-next-line react/no-danger -- admin-context node title; same trust as classic wp-admin (see runtime-harvest-pattern.md).
 			dangerouslySetInnerHTML={ { __html: html } }
 		/>

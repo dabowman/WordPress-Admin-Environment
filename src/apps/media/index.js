@@ -36,27 +36,27 @@ const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'text', 'application' ];
 // the dataView `type` field elements; the count-augmented filter labels come
 // from buildFields, this is just the table-cell display.
 const FILTER_TYPE_LABELS = {
-	image: __( 'Image', 'wp-admin-shell' ),
-	video: __( 'Video', 'wp-admin-shell' ),
-	audio: __( 'Audio', 'wp-admin-shell' ),
-	text: __( 'Text', 'wp-admin-shell' ),
-	application: __( 'Document', 'wp-admin-shell' ),
-	file: __( 'File', 'wp-admin-shell' ),
+	image: __( 'Image', 'wp-admin-workspaces' ),
+	video: __( 'Video', 'wp-admin-workspaces' ),
+	audio: __( 'Audio', 'wp-admin-workspaces' ),
+	text: __( 'Text', 'wp-admin-workspaces' ),
+	application: __( 'Document', 'wp-admin-workspaces' ),
+	file: __( 'File', 'wp-admin-workspaces' ),
 };
 
 // Locale tables for the ids this app authors — see buildFields/buildActions.
 const FIELD_LABELS = {
-	title: __( 'Title', 'wp-admin-shell' ),
-	thumbnail: __( 'Preview', 'wp-admin-shell' ),
-	type: __( 'Type', 'wp-admin-shell' ),
-	author: __( 'Author', 'wp-admin-shell' ),
-	date: __( 'Date', 'wp-admin-shell' ),
+	title: __( 'Title', 'wp-admin-workspaces' ),
+	thumbnail: __( 'Preview', 'wp-admin-workspaces' ),
+	type: __( 'Type', 'wp-admin-workspaces' ),
+	author: __( 'Author', 'wp-admin-workspaces' ),
+	date: __( 'Date', 'wp-admin-workspaces' ),
 };
 
 const ACTION_LABELS = {
-	edit: __( 'Edit', 'wp-admin-shell' ),
-	'copy-url': __( 'Copy URL', 'wp-admin-shell' ),
-	delete: __( 'Delete Permanently', 'wp-admin-shell' ),
+	edit: __( 'Edit', 'wp-admin-workspaces' ),
+	'copy-url': __( 'Copy URL', 'wp-admin-workspaces' ),
+	delete: __( 'Delete Permanently', 'wp-admin-workspaces' ),
 };
 
 const VIEW_DEFAULTS = {
@@ -173,7 +173,7 @@ function ThumbnailField( { item } ) {
 	if ( item.mediaType === 'image' && item.thumbnail ) {
 		return (
 			<img
-				className="wp-admin-shell-app-media__thumb"
+				className="wp-admin-workspaces-app-media__thumb"
 				src={ item.thumbnail }
 				alt={ item.altText || '' }
 				loading="lazy"
@@ -181,7 +181,7 @@ function ThumbnailField( { item } ) {
 		);
 	}
 	return (
-		<div className="wp-admin-shell-app-media__file-icon">
+		<div className="wp-admin-workspaces-app-media__file-icon">
 			<Text>
 				{ item.mimeType?.split( '/' ).pop()?.toUpperCase() || 'FILE' }
 			</Text>
@@ -198,7 +198,7 @@ const FIELD_RENDERERS = {
 
 export default function MediaApp( { config = {} } ) {
 	const screenId = config.screenId || null;
-	const currentUserId = window.wpAdminShell?.userId;
+	const currentUserId = window.wpAdminWorkspaces?.userId;
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
@@ -354,11 +354,14 @@ export default function MediaApp( { config = {} } ) {
 								/* translators: 1: file name, 2: error message. */
 								__(
 									'Could not upload "%1$s": %2$s',
-									'wp-admin-shell'
+									'wp-admin-workspaces'
 								),
 								file.name,
 								err?.message ||
-									__( 'Upload failed.', 'wp-admin-shell' )
+									__(
+										'Upload failed.',
+										'wp-admin-workspaces'
+									)
 							),
 							{ isDismissible: true }
 						);
@@ -372,7 +375,7 @@ export default function MediaApp( { config = {} } ) {
 								'%d file uploaded.',
 								'%d files uploaded.',
 								uploaded,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							uploaded
 						),
@@ -399,7 +402,7 @@ export default function MediaApp( { config = {} } ) {
 			title:
 				record.title?.raw ||
 				record.title?.rendered ||
-				__( '(no title)', 'wp-admin-shell' ),
+				__( '(no title)', 'wp-admin-workspaces' ),
 			thumbnail:
 				record.media_details?.sizes?.thumbnail?.source_url ||
 				record.source_url,
@@ -437,13 +440,13 @@ export default function MediaApp( { config = {} } ) {
 				items.length === 1
 					? __(
 							'Are you sure you want to permanently delete this attachment? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  )
 					: __(
 							'Are you sure you want to permanently delete these attachments? This cannot be undone.',
-							'wp-admin-shell'
+							'wp-admin-workspaces'
 					  ),
-			confirmLabel: __( 'Delete Permanently', 'wp-admin-shell' ),
+			confirmLabel: __( 'Delete Permanently', 'wp-admin-workspaces' ),
 			// Media has no trash — force: true skips it.
 			mutate: ( item ) =>
 				deleteEntityRecord( 'root', 'media', item.id, { force: true } ),
@@ -458,7 +461,7 @@ export default function MediaApp( { config = {} } ) {
 								'%1$d of %2$d attachment failed to delete.',
 								'%1$d of %2$d attachments failed to delete.',
 								failed,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							failed,
 							targets.length
@@ -474,7 +477,7 @@ export default function MediaApp( { config = {} } ) {
 								'%d attachment permanently deleted.',
 								'%d attachments permanently deleted.',
 								targets.length,
-								'wp-admin-shell'
+								'wp-admin-workspaces'
 							),
 							targets.length
 						),
@@ -494,13 +497,19 @@ export default function MediaApp( { config = {} } ) {
 							items[ 0 ].source_url || ''
 						);
 						createSuccessNotice(
-							__( 'URL copied to clipboard.', 'wp-admin-shell' ),
+							__(
+								'URL copied to clipboard.',
+								'wp-admin-workspaces'
+							),
 							{ type: 'snackbar' }
 						);
 					} catch ( err ) {
 						createErrorNotice(
 							err?.message ||
-								__( 'Failed to copy URL.', 'wp-admin-shell' ),
+								__(
+									'Failed to copy URL.',
+									'wp-admin-workspaces'
+								),
 							{ isDismissible: true }
 						);
 					}
@@ -534,14 +543,14 @@ export default function MediaApp( { config = {} } ) {
 					{ currentUserId ? (
 						<ToggleControl
 							__nextHasNoMarginBottom
-							label={ __( 'Mine', 'wp-admin-shell' ) }
+							label={ __( 'Mine', 'wp-admin-workspaces' ) }
 							checked={ mineChecked }
 							onChange={ handleMineToggle }
 						/>
 					) : null }
 					<ToggleControl
 						__nextHasNoMarginBottom
-						label={ __( 'Unattached', 'wp-admin-shell' ) }
+						label={ __( 'Unattached', 'wp-admin-workspaces' ) }
 						checked={ showUnattached }
 						onChange={ setShowUnattached }
 					/>
@@ -558,7 +567,7 @@ export default function MediaApp( { config = {} } ) {
 						size="compact"
 					>
 						<Icon icon={ upload } size={ 16 } />
-						{ __( 'Upload', 'wp-admin-shell' ) }
+						{ __( 'Upload', 'wp-admin-workspaces' ) }
 					</Button>
 					<input
 						ref={ fileInputRef }
@@ -571,7 +580,7 @@ export default function MediaApp( { config = {} } ) {
 			}
 		>
 			{ ! records ? (
-				<div className="wp-admin-shell-app__center">
+				<div className="wp-admin-workspaces-app__center">
 					<Spinner />
 				</div>
 			) : (
@@ -619,7 +628,7 @@ export default function MediaApp( { config = {} } ) {
 function MediaDetailsModal( { id, onClose, onMutated } ) {
 	return (
 		<Modal
-			title={ __( 'Media Details', 'wp-admin-shell' ) }
+			title={ __( 'Media Details', 'wp-admin-workspaces' ) }
 			onRequestClose={ onClose }
 			size="large"
 		>

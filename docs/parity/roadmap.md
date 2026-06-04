@@ -1,23 +1,23 @@
-# WP Admin Shell — Parity Roadmap
+# WP Admin Workspaces — Parity Roadmap
 
 Prioritized backlog synthesized from the per-app parity audits ([README.md](README.md)), conducted 2026-05-29 against WordPress 7.0 core. Grouped by the kind of work required:
 
-- **(A) Shell-side work we can do now** — no API blocker; pure shell engineering.
+- **(A) Workspace-side work we can do now** — no API blocker; pure workspace engineering.
 - **(B) Upstream WP core / REST API gaps** — file these with the specific missing endpoint/field/option.
 - **(C) `@wordpress/dataviews` + DataForm feature requests** — component-layer asks.
 - **(D) Documentation gaps** — missing/stale `docs/screens` specs and app docs.
 
-Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; `[dataviews]` needs the component package. Within each group, P1 = highest parity value / correctness, P3 = polish.
+Tags: `[workspace]` closeable in this repo; `[upstream]` needs WordPress core/REST; `[dataviews]` needs the component package. Within each group, P1 = highest parity value / correctness, P3 = polish.
 
 ---
 
-## (A) Shell-side work we can do now (no API blocker)
+## (A) Workspace-side work we can do now (no API blocker)
 
 ### P1 — correctness bugs + highest-value missing functionality
 
-1. **Register `POST /wp-admin-shell/v1/activate-theme` (or inject a real `&_wpnonce=`).** *core:themes.* The Activate action POSTs to an endpoint that is **not registered anywhere**, then falls back to a nonce-less wp-admin link that silently fails — theme activation is non-functional on a clean install. Also surface an error Notice on failure instead of silently navigating away. ([themes.md](themes.md))
+1. **Register `POST /wp-admin-workspaces/v1/activate-theme` (or inject a real `&_wpnonce=`).** *core:themes.* The Activate action POSTs to an endpoint that is **not registered anywhere**, then falls back to a nonce-less wp-admin link that silently fails — theme activation is non-functional on a clean install. Also surface an error Notice on failure instead of silently navigating away. ([themes.md](themes.md))
 
-2. **Fix the bundled-shell Comments regression.** *core:comments.* `wp-admin-default.json` redeclares the comment dataView triple and wins outright, **dropping the `unapprove` action and adding an inert callback-less `reply` action** — the shipped default can't un-approve from the list and the Reply button does nothing. Restore `unapprove`, remove/implement `reply`, and add explicit `type:'comment'` to harden against pings leaking. ([comments.md](comments.md))
+2. **Fix the bundled-workspace Comments regression.** *core:comments.* `wp-admin-default.json` redeclares the comment dataView triple and wins outright, **dropping the `unapprove` action and adding an inert callback-less `reply` action** — the shipped default can't un-approve from the list and the Reply button does nothing. Restore `unapprove`, remove/implement `reply`, and add explicit `type:'comment'` to harden against pings leaking. ([comments.md](comments.md))
 
 3. **Fix the empty Tags DataView.** *core:taxonomy.* `wp-admin-default.json` never declares the `taxonomy.post_tag` triple and the app baseline binds only to `category`, so the Tags screen renders **zero columns and zero actions** — a blank, broken table. Declare `post_tag._default` mirroring the category baseline *completely* (partial redeclaration silently drops keys), and/or add a built-in field fallback in the app. A regression, not a gap. ([taxonomy.md](taxonomy.md))
 
@@ -33,7 +33,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 9. **Fix the Site Health correctness bugs.** *core:site-health.* The Authorization-header test doesn't send the `Authorization: Basic` probe header (wrong result), and failed/unavailable tests are scored as *critical* instead of *recommended* like classic — making the (already-incomplete) score actively misleading. ([site-health.md](site-health.md))
 
-10. ✅ **Done — stop rendering silently-broken settings controls (backed with shims).** *core:settings-general / settings-reading.* Controls for `home`, `users_can_register`, `default_role`, manual UTC offset (general) and `posts_per_rss`, `rss_use_excerpt` (reading) rendered, accepted input, showed "Settings saved.", and discarded the value because those options aren't `show_in_rest`. **All six are now backed shell-side** (`wp-admin-shell.php`): `home`/`users_can_register`/`default_role` + `posts_per_rss`/`rss_use_excerpt` get `register_setting(show_in_rest)` shims, and the manual UTC offset is routed to `gmt_offset` via a `rest_pre_update_setting` filter (mirroring `wp-admin/options.php`). `blog_public` / `site_icon` remain separate gaps. ([settings-general.md](settings-general.md), [settings-reading.md](settings-reading.md))
+10. ✅ **Done — stop rendering silently-broken settings controls (backed with shims).** *core:settings-general / settings-reading.* Controls for `home`, `users_can_register`, `default_role`, manual UTC offset (general) and `posts_per_rss`, `rss_use_excerpt` (reading) rendered, accepted input, showed "Settings saved.", and discarded the value because those options aren't `show_in_rest`. **All six are now backed workspace-side** (`wp-admin-workspaces.php`): `home`/`users_can_register`/`default_role` + `posts_per_rss`/`rss_use_excerpt` get `register_setting(show_in_rest)` shims, and the manual UTC offset is routed to `gmt_offset` via a `rest_pre_update_setting` filter (mirroring `wp-admin/options.php`). `blog_public` / `site_icon` remain separate gaps. ([settings-general.md](settings-general.md), [settings-reading.md](settings-reading.md))
 
 11. **Build the Posts Bulk Edit panel.** *core:posts.* The single biggest functional gap; a DataForm-driven panel batching `updateEntityRecord` over changed fields only (status/author/sticky/parent/format/comment_status/categories/tags — all REST-writable). ([posts.md](posts.md))
 
@@ -43,7 +43,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 14. **Add the "Change role to…" bulk action.** *core:users.* `RenderModal` + role SelectControl → per-target `PUT /wp/v2/users {id,roles}` (needs only `promote_user`, enforces self-demote guard). Fully REST-supported; highest-impact missing user action. ([users.md](users.md))
 
-### P2 — meaningful parity, shell-side
+### P2 — meaningful parity, workspace-side
 
 15. **Add the status/Mine/Sticky view-tab strip to Posts; surface comment status views as tabs.** Reuse the existing count engine; sticky is fully REST-exposed (field + query param + cap link). ([posts.md](posts.md), [comments.md](comments.md))
 
@@ -59,27 +59,27 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 21. **Build native `core:settings-media`.** Register the 8 media options with `show_in_rest` (no save side effects) + a DataForm/hand-rolled panel — cheapest missing Settings panel to bring to full native parity, removes one iframe. ([settings-host.md](settings-host.md))
 
-22. **Ship a `manage_options`-gated `/wp-admin-shell/v1` settings shim** replicating `sanitize_option` for the blocked writing/discussion options, then expand the DataForms — the only path to true field parity short of upstream. (Discussion is closable via `register_setting` alone, see B-P1.) ([settings-writing.md](settings-writing.md), [settings-discussion.md](settings-discussion.md))
+22. **Ship a `manage_options`-gated `/wp-admin-workspaces/v1` settings shim** replicating `sanitize_option` for the blocked writing/discussion options, then expand the DataForms — the only path to true field parity short of upstream. (Discussion is closable via `register_setting` alone, see B-P1.) ([settings-writing.md](settings-writing.md), [settings-discussion.md](settings-discussion.md))
 
 23. **Build the document-settings sidebar for simple-editor** via the existing `core:editor.sidebar` Slot (featured image / taxonomy / excerpt / slug / visibility / schedule / author / discussion / page attributes — all REST-reachable), unblocking the Publish/Schedule state machine. ([block-editor.md](block-editor.md))
 
-24. **Build a native `core:menus` app** over `/wp/v2/menus` + `/wp/v2/menu-items` + `/wp/v2/menu-locations` — fully REST-rebuildable, zero shell coverage today, biggest Appearance functional hole. ([appearance.md](appearance.md))
+24. **Build a native `core:menus` app** over `/wp/v2/menus` + `/wp/v2/menu-items` + `/wp/v2/menu-locations` — fully REST-rebuildable, zero workspace coverage today, biggest Appearance functional hole. ([appearance.md](appearance.md))
 
-25. **Add a `wp_admin_shell_data` pass that prunes the Appearance menu by `theme_supports` + `wp_is_block_theme()`** (active-theme `theme_supports` is REST-readable); rename `core:appearance` (the user-prefs panel) to free the "Appearance" name and fix its orphaned-screen wiring. ([appearance.md](appearance.md))
+25. **Add a `wp_admin_workspaces_data` pass that prunes the Appearance menu by `theme_supports` + `wp_is_block_theme()`** (active-theme `theme_supports` is REST-readable); rename `core:appearance` (the user-prefs panel) to free the "Appearance" name and fix its orphaned-screen wiring. ([appearance.md](appearance.md))
 
 26. **Build the single-site Add New User flow** (`POST /wp/v2/users`) into the existing-but-empty `core:users-new` screen; wire row navigation to an Edit User app + "View posts" row action. ([users.md](users.md))
 
 27. **Add Interface Language (locale) + a basic password-change field to Profile** (both REST-writable; document the no-reauth / no-server-weak-gate caveats). ([profile.md](profile.md))
 
-28. **Add a custom `GET /wp-admin-shell/v1/site-health/tests` + `/info` endpoint** wrapping `WP_Site_Health::get_tests()` and `WP_Debug_Data::debug_data()` server-side — unblocks the ~22 missing sync tests, plugin extensibility, the score donut, severity grouping, and the entire Info tab (server-only PHP, but the shell can wrap it). ([site-health.md](site-health.md))
+28. **Add a custom `GET /wp-admin-workspaces/v1/site-health/tests` + `/info` endpoint** wrapping `WP_Site_Health::get_tests()` and `WP_Debug_Data::debug_data()` server-side — unblocks the ~22 missing sync tests, plugin extensibility, the score donut, severity grouping, and the entire Info tab (server-only PHP, but the workspace can wrap it). ([site-health.md](site-health.md))
 
 29. **Build the inline image editor (crop/rotate/flip)** POSTing `modifiers[]` to `/wp/v2/media/{id}/edit` — fully REST-supported (note the response is a *new* attachment). ([media.md](media.md))
 
 30. **Install-by-slug UI + "Add New Plugin" header action.** `POST /wp/v2/plugins {slug,status}` already works — no upstream needed. ([plugins.md](plugins.md))
 
-31. **Carry `$position` from the `$menu` numeric key into ingested plugin items + nest core-parented plugin submenus under the matching shell menu** (Settings/Tools, not a generic "Plugins" bucket) + **harvest `data:`/image-URL menu icons**. ([plugin-menus-and-screens.md](plugin-menus-and-screens.md))
+31. **Carry `$position` from the `$menu` numeric key into ingested plugin items + nest core-parented plugin submenus under the matching workspace menu** (Settings/Tools, not a generic "Plugins" bucket) + **harvest `data:`/image-URL menu icons**. ([plugin-menus-and-screens.md](plugin-menus-and-screens.md))
 
-32. **Bridge `admin_bar_menu` nodes into the shell toolbar** (`$wp_admin_bar->get_nodes()` is introspectable server-side) and **surface plugin `admin_notices`** by buffering the hook output into `core:notices-banner` — both fully closable without upstream; their absence silently breaks the feedback loop for every un-ported plugin. ([system-and-chrome-apps.md](system-and-chrome-apps.md), [plugin-menus-and-screens.md](plugin-menus-and-screens.md))
+32. **Bridge `admin_bar_menu` nodes into the workspace toolbar** (`$wp_admin_bar->get_nodes()` is introspectable server-side) and **surface plugin `admin_notices`** by buffering the hook output into `core:notices-banner` — both fully closable without upstream; their absence silently breaks the feedback loop for every un-ported plugin. ([system-and-chrome-apps.md](system-and-chrome-apps.md), [plugin-menus-and-screens.md](plugin-menus-and-screens.md))
 
 33. **Make `+New` (toolbar-actions) dynamic** from `GET /wp/v2/types?context=edit` + create-cap gating, matching wp-admin's runtime post-type enumeration. ([system-and-chrome-apps.md](system-and-chrome-apps.md))
 
@@ -91,7 +91,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 36. **Wire date/category/format filters** on Posts (operators + REST `before`/`after`/`categories`/`format` all exist — just unwired in the `view→queryArgs` memo); same for Media. ([dataviews-dataforms-limitations.md](dataviews-dataforms-limitations.md), [posts.md](posts.md))
 
-37. **Resolve the two-dashboard confusion + fix the cross-author draft leak.** Either wire `core:dashboard` into a shell or fold it into the host and delete it; add `author:userId` to the Recent Drafts query (a one-liner — currently shows all users' drafts site-wide). Build At a Glance + Activity tiles. ([dashboard.md](dashboard.md))
+37. **Resolve the two-dashboard confusion + fix the cross-author draft leak.** Either wire `core:dashboard` into a workspace or fold it into the host and delete it; add `author:userId` to the Recent Drafts query (a one-liner — currently shows all users' drafts site-wide). Build At a Glance + Activity tiles. ([dashboard.md](dashboard.md))
 
 38. **Build a classic dashboard-widget bridge** mirroring the classic-menu bridge (walk `$GLOBALS['wp_meta_boxes']['dashboard']` → iframe/captured-HTML tiles) to surface plugin dashboard widgets; document the JS-loss limitation. ([dashboard.md](dashboard.md))
 
@@ -101,7 +101,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 41. **Smaller read-side wins:** Plugins author link via `author_uri` + broaden search to author + render PHP/WP-incompat row from existing `requires_*` fields; Themes `enableGlobalSearch` on description/author + child-theme parent from `template` + tags + Live Preview link via `is_block_theme`; Posts state badges + status-aware date label; Comments config.post deep-link + Pings filter; build the Add-New screens (plugins/themes) behind a `themes_api`/`plugins_api` proxy or interim iframe. ([plugins.md](plugins.md), [themes.md](themes.md), [posts.md](posts.md), [comments.md](comments.md))
 
-42. **Route `core:tools` landing cards through `navigate()` instead of `window.location.href`.** *core:tools.* The cards hard-navigate out of the workspace (`index.js:108-115`) even though `wp-admin-default.json` already defines in-shell iframe screens at `/tools/import` etc.; they should `navigate()` to the screen id. Also fixes a CLAUDE-rule violation (no `window.location.href` for workspace links). A small correctness/UX fix despite the P3 placement. ([tools.md](tools.md))
+42. **Route `core:tools` landing cards through `navigate()` instead of `window.location.href`.** *core:tools.* The cards hard-navigate out of the workspace (`index.js:108-115`) even though `wp-admin-default.json` already defines in-workspace iframe screens at `/tools/import` etc.; they should `navigate()` to the screen id. Also fixes a CLAUDE-rule violation (no `window.location.href` for workspace links). A small correctness/UX fix despite the P3 placement. ([tools.md](tools.md))
 
 ---
 
@@ -115,7 +115,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 3. **A plugin-update REST surface** — run `Plugin_Upgrader::bulk_upgrade` over REST + add `update`/`new_version`/`update_available` fields to the plugin item schema. Unblocks inline update-now, bulk update, and the Update-Available indicator (the real upgrade is admin-ajax-only today). *Affected: core:plugins.* ([plugins.md](plugins.md))
 
-4. **A `.org` directory proxy / REST wrapper for `plugins_api()` + `themes_api()`** — the biggest single gap for both Add-New flows (browse/search/cards/ratings/active-installs/compatibility/More-Details). `plugins_api`/`themes_api` issue cross-origin HTTP to api.wordpress.org and are not REST. (Interim: shell-side `/wp-admin-shell/v1/plugins-directory` + `/themes-directory` proxies.) *Affected: core:plugins, core:themes.* ([plugins.md](plugins.md), [themes.md](themes.md))
+4. **A `.org` directory proxy / REST wrapper for `plugins_api()` + `themes_api()`** — the biggest single gap for both Add-New flows (browse/search/cards/ratings/active-installs/compatibility/More-Details). `plugins_api`/`themes_api` issue cross-origin HTTP to api.wordpress.org and are not REST. (Interim: workspace-side `/wp-admin-workspaces/v1/plugins-directory` + `/themes-directory` proxies.) *Affected: core:plugins, core:themes.* ([plugins.md](plugins.md), [themes.md](themes.md))
 
 5. **Writable theme status + DELETE on the themes controller.** `WP_REST_Themes_Controller` is read-only; theme activation (`switch_theme()`) and deletion have no REST route. Add a writable `status` (activate) and `DELETE /wp/v2/themes/{stylesheet}`. *Affected: core:themes (Activate is non-functional today).* ([themes.md](themes.md))
 
@@ -129,7 +129,7 @@ Tags: `[shell]` closeable in this repo; `[upstream]` needs WordPress core/REST; 
 
 9. **Auto-update toggle via REST** — register `auto_update_plugins` / `auto_update_themes` with `show_in_rest` (verified *not* registered today, so `POST /wp/v2/settings` can't reach them) or a dedicated route; the real toggle is admin-ajax `wp_ajax_toggle_auto_updates`. *Affected: core:plugins, core:themes.* ([plugins.md](plugins.md), [themes.md](themes.md))
 
-10. **`login`/`username` in the REST users `orderby` enum + mapping** (`class-wp-rest-users-controller.php:1605-1616`) — `WP_User_Query` can order by login but the controller doesn't expose it, so the shell can't match classic's default sort. *Affected: core:users.* ([users.md](users.md))
+10. **`login`/`username` in the REST users `orderby` enum + mapping** (`class-wp-rest-users-controller.php:1605-1616`) — `WP_User_Query` can order by login but the controller doesn't expose it, so the workspace can't match classic's default sort. *Affected: core:users.* ([users.md](users.md))
 
 11. **Aggregate-count endpoints / fields** — expose `count_users` + `wp_get_users_with_no_role` (role tabs + "No role" bucket), per-user `post_count` (`count_many_users_posts`), and post/comment/attachment status counts (`wp_count_posts`/`wp_count_comments`/`wp_count_attachments`). Replaces the N+1 `X-WP-Total` workaround everywhere. *Affected: core:users, core:posts, core:comments, core:media, core:dashboard.* ([users.md](users.md), [dataviews-dataforms-limitations.md](dataviews-dataforms-limitations.md) §1.2)
 
@@ -195,9 +195,9 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 1. **Fix settings-panel docs that falsely list dead fields as REST-backed.** `docs/screens/settings-reading.md` + the reading app's `app.json`/`app.md` list `posts_per_rss` & `rss_use_excerpt` as REST reads/writes (they're not); `docs/screens/settings-discussion.md` claims `default_pingback_flag` is REST-exposed (only 2 of 25 options are) and `docs/screens/settings-writing.md` lists a non-existent `wp_collaboration_enabled` field. ([settings-reading.md](settings-reading.md), [settings-discussion.md](settings-discussion.md), [settings-writing.md](settings-writing.md))
 
-2. **Fix "Current shell coverage: None" / stale-app-path lines** in `docs/screens/dashboard-home.md`, `docs/screens/themes.md`, `docs/screens/plugins.md`, `docs/screens/taxonomy.md` (says "Not implemented" but the app exists), and the `src/apps/settings-panels/*` → `src/apps/settings-*/index.js` path drift across multiple screen specs + the stale `src/apps/MediaApp.js` references in `docs/screens/media.md`. ([dashboard.md](dashboard.md), [themes.md](themes.md), [plugins.md](plugins.md), [taxonomy.md](taxonomy.md), [media.md](media.md))
+2. **Fix "Current workspace coverage: None" / stale-app-path lines** in `docs/screens/dashboard-home.md`, `docs/screens/themes.md`, `docs/screens/plugins.md`, `docs/screens/taxonomy.md` (says "Not implemented" but the app exists), and the `src/apps/settings-panels/*` → `src/apps/settings-*/index.js` path drift across multiple screen specs + the stale `src/apps/MediaApp.js` references in `docs/screens/media.md`. ([dashboard.md](dashboard.md), [themes.md](themes.md), [plugins.md](plugins.md), [taxonomy.md](taxonomy.md), [media.md](media.md))
 
-3. **Fix app.md claims of non-existent window globals.** ✅ **done (issue #173).** The themes app's `app.json` `data.reads[]` referenced a `window.wpAdminShell.activeTheme` read never emitted by `wp-admin-shell.php`; verified and removed (the app derives active-ness from each record's `status`). ([themes.md](themes.md))
+3. **Fix app.md claims of non-existent window globals.** ✅ **done (issue #173).** The themes app's `app.json` `data.reads[]` referenced a `window.wpAdminWorkspaces.activeTheme` read never emitted by `wp-admin-workspaces.php`; verified and removed (the app derives active-ness from each record's `status`). ([themes.md](themes.md))
 
 ### P2 — screen spec coverage
 
@@ -213,12 +213,12 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 ## Top 5 biggest parity risks
 
-- **Silently-broken settings + settings-API REST gap.** Across four settings panels (and every third-party plugin settings page), controls render, accept input, claim "Settings saved.", and discard the value because the option isn't `show_in_rest`. Discussion alone has 23 dead fields. This is invisible data loss — the worst failure mode — and the largest single blocker. Mitigable shell-side for *core* options via `register_setting` shims (A-P1 #10, A-P2 #21-22, B-P1 #1), but the Settings-API field registry needs upstream (B-P1 #2). ([settings-discussion.md](settings-discussion.md), [settings-writing.md](settings-writing.md), [settings-reading.md](settings-reading.md), [settings-general.md](settings-general.md))
+- **Silently-broken settings + settings-API REST gap.** Across four settings panels (and every third-party plugin settings page), controls render, accept input, claim "Settings saved.", and discard the value because the option isn't `show_in_rest`. Discussion alone has 23 dead fields. This is invisible data loss — the worst failure mode — and the largest single blocker. Mitigable workspace-side for *core* options via `register_setting` shims (A-P1 #10, A-P2 #21-22, B-P1 #1), but the Settings-API field registry needs upstream (B-P1 #2). ([settings-discussion.md](settings-discussion.md), [settings-writing.md](settings-writing.md), [settings-reading.md](settings-reading.md), [settings-general.md](settings-general.md))
 
-- **Two shipped, user-facing regressions/no-ops in the default shell.** Theme **Activate** POSTs to an unregistered endpoint and silently fails to activate; the **Tags** screen renders a blank table (empty DataView); the default-shell **Comments** action set drops Unapprove and ships an inert Reply button. These are *worse than missing features* — they look present and don't work. All shell-side (A-P1 #1-3). ([themes.md](themes.md), [taxonomy.md](taxonomy.md), [comments.md](comments.md))
+- **Two shipped, user-facing regressions/no-ops in the default workspace.** Theme **Activate** POSTs to an unregistered endpoint and silently fails to activate; the **Tags** screen renders a blank table (empty DataView); the default-workspace **Comments** action set drops Unapprove and ships an inert Reply button. These are *worse than missing features* — they look present and don't work. All workspace-side (A-P1 #1-3). ([themes.md](themes.md), [taxonomy.md](taxonomy.md), [comments.md](comments.md))
 
 - **simple-editor writes published posts to the live record.** A debounced auto-save PUTs the live published record where core writes a safe per-user autosave (data-integrity risk; A-P1 #5). `core:editor`'s integration seams — dirty-state, iframeBridge, session-expiry recovery — were fixed in issue #102 (A-P1 #6, DONE). Post-lock + revision-restore + preview-nonce remain upstream backstops (B-P2 #7, #14). ([block-editor.md](block-editor.md))
 
 - **Quick Edit / Bulk Edit / inline Reply are blocked by a missing DataViews primitive.** wp-admin's most-used editing affordances have no editable-cell primitive in `@wordpress/dataviews` — the data is fully REST-writable, but the UX requires either an upstream inline-edit primitive (C-P1 #1) or a hand-rolled `RenderModal`+`DataForm` stand-in. Affects posts, taxonomy, and comments. ([dataviews-dataforms-limitations.md](dataviews-dataforms-limitations.md), [posts.md](posts.md), [comments.md](comments.md))
 
-- **Entire admin-management surfaces are absent and largely upstream-blocked.** Plugin update + auto-update + the whole `.org` Add-New directory flow (browse/search/ratings); theme activate/delete/install; per-user post counts and password reset; the bulk of Site Health diagnostics; classic dashboard widgets and the unbridged admin-bar + `admin_notices`. These need a mix of upstream REST work (B-P1 #3-6, B-P2) and shell proxies/bridges, and represent the largest *volume* of missing functionality. ([plugins.md](plugins.md), [themes.md](themes.md), [users.md](users.md), [site-health.md](site-health.md), [dashboard.md](dashboard.md), [system-and-chrome-apps.md](system-and-chrome-apps.md))
+- **Entire admin-management surfaces are absent and largely upstream-blocked.** Plugin update + auto-update + the whole `.org` Add-New directory flow (browse/search/ratings); theme activate/delete/install; per-user post counts and password reset; the bulk of Site Health diagnostics; classic dashboard widgets and the unbridged admin-bar + `admin_notices`. These need a mix of upstream REST work (B-P1 #3-6, B-P2) and workspace proxies/bridges, and represent the largest *volume* of missing functionality. ([plugins.md](plugins.md), [themes.md](themes.md), [users.md](users.md), [site-health.md](site-health.md), [dashboard.md](dashboard.md), [system-and-chrome-apps.md](system-and-chrome-apps.md))

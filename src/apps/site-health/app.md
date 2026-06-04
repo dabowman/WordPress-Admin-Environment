@@ -36,8 +36,8 @@ A non-WPDS rebuild needs Card, Badge (status pill with intent), Button, Spinner,
 
 ## Known limitations
 
-- **Static test list.** WordPress site-health has plugin-extensible tests via `site_status_tests` filter. The shell ignores plugin-contributed tests; a future iteration could enumerate them via a `/wp-site-health/v1/tests` index endpoint.
+- **Static test list.** WordPress site-health has plugin-extensible tests via `site_status_tests` filter. The workspace ignores plugin-contributed tests; a future iteration could enumerate them via a `/wp-site-health/v1/tests` index endpoint.
 - **No "Run all checks" / "Run only failing" granularity.** Always all-or-nothing.
-- **No direct-test runner.** WordPress has direct tests (synchronous PHP checks) shown alongside async tests; the shell only runs async tests.
+- **No direct-test runner.** WordPress has direct tests (synchronous PHP checks) shown alongside async tests; the workspace only runs async tests.
 - **No history.** Re-running a test discards the previous result; no diff or trend over time.
 - **`view_site_health_checks` cap floor.** Subscribers can't see the screen. This matches wp-admin's behavior.

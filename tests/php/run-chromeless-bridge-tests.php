@@ -4,9 +4,9 @@
  *
  * Pins the most-regressable surface of `includes/engines/core-desktop/chromeless-bridge.php`:
  *
- *   - The bridge function `wp_admin_shell_chromeless_bridge_script()` emits
+ *   - The bridge function `wp_admin_workspaces_chromeless_bridge_script()` emits
  *     output ONLY when the request is chromeless (the gate function
- *     `wp_admin_shell_is_chromeless_request()` returns true).
+ *     `wp_admin_workspaces_is_chromeless_request()` returns true).
  *   - The detection function honours both the explicit query-var signal
  *     and the `Sec-Fetch-Site` / `Sec-Fetch-Dest` iframe headers.
  *   - The bridge source file exists where the bootstrap requires it.
@@ -40,12 +40,12 @@ class WPAS_Chromeless_Bridge_Test_Runner {
 
 $T = 'WPAS_Chromeless_Bridge_Test_Runner';
 
-if ( ! function_exists( 'wp_admin_shell_is_chromeless_request' ) ) {
-	echo "Plugin not loaded — missing wp_admin_shell_is_chromeless_request.\n";
+if ( ! function_exists( 'wp_admin_workspaces_is_chromeless_request' ) ) {
+	echo "Plugin not loaded — missing wp_admin_workspaces_is_chromeless_request.\n";
 	exit( 1 );
 }
-if ( ! function_exists( 'wp_admin_shell_chromeless_bridge_script' ) ) {
-	echo "Plugin not loaded — missing wp_admin_shell_chromeless_bridge_script.\n";
+if ( ! function_exists( 'wp_admin_workspaces_chromeless_bridge_script' ) ) {
+	echo "Plugin not loaded — missing wp_admin_workspaces_chromeless_bridge_script.\n";
 	exit( 1 );
 }
 
@@ -58,26 +58,26 @@ function wpas_bridge_reset_request() {
 	unset( $_SERVER['HTTP_SEC_FETCH_SITE'], $_SERVER['HTTP_SEC_FETCH_DEST'] );
 }
 
-echo "\n— wp_admin_shell_is_chromeless_request: detection signals —\n";
+echo "\n— wp_admin_workspaces_is_chromeless_request: detection signals —\n";
 
 wpas_bridge_reset_request();
 $T::assert_true(
 	'no signal: not chromeless',
-	false === wp_admin_shell_is_chromeless_request()
+	false === wp_admin_workspaces_is_chromeless_request()
 );
 
 wpas_bridge_reset_request();
-$_GET['wp_admin_shell_chromeless'] = '1';
+$_GET['wp_admin_workspaces_chromeless'] = '1';
 $T::assert_true(
 	'query var "=1": chromeless',
-	true === wp_admin_shell_is_chromeless_request()
+	true === wp_admin_workspaces_is_chromeless_request()
 );
 
 wpas_bridge_reset_request();
-$_GET['wp_admin_shell_chromeless'] = '0';
+$_GET['wp_admin_workspaces_chromeless'] = '0';
 $T::assert_true(
 	'query var "=0": not chromeless',
-	false === wp_admin_shell_is_chromeless_request()
+	false === wp_admin_workspaces_is_chromeless_request()
 );
 
 wpas_bridge_reset_request();
@@ -85,7 +85,7 @@ $_SERVER['HTTP_SEC_FETCH_SITE'] = 'same-origin';
 $_SERVER['HTTP_SEC_FETCH_DEST'] = 'iframe';
 $T::assert_true(
 	'Sec-Fetch same-origin + iframe: chromeless',
-	true === wp_admin_shell_is_chromeless_request()
+	true === wp_admin_workspaces_is_chromeless_request()
 );
 
 wpas_bridge_reset_request();
@@ -93,7 +93,7 @@ $_SERVER['HTTP_SEC_FETCH_SITE'] = 'cross-site';
 $_SERVER['HTTP_SEC_FETCH_DEST'] = 'iframe';
 $T::assert_true(
 	'Sec-Fetch cross-site + iframe: not chromeless',
-	false === wp_admin_shell_is_chromeless_request()
+	false === wp_admin_workspaces_is_chromeless_request()
 );
 
 wpas_bridge_reset_request();
@@ -101,14 +101,14 @@ $_SERVER['HTTP_SEC_FETCH_SITE'] = 'same-origin';
 $_SERVER['HTTP_SEC_FETCH_DEST'] = 'document';
 $T::assert_true(
 	'Sec-Fetch same-origin + document: not chromeless',
-	false === wp_admin_shell_is_chromeless_request()
+	false === wp_admin_workspaces_is_chromeless_request()
 );
 
-echo "\n— wp_admin_shell_chromeless_bridge_script: output gate —\n";
+echo "\n— wp_admin_workspaces_chromeless_bridge_script: output gate —\n";
 
 wpas_bridge_reset_request();
 ob_start();
-wp_admin_shell_chromeless_bridge_script();
+wp_admin_workspaces_chromeless_bridge_script();
 $out_when_off = ob_get_clean();
 $T::assert_true(
 	'non-chromeless request: bridge emits nothing',
@@ -117,9 +117,9 @@ $T::assert_true(
 );
 
 wpas_bridge_reset_request();
-$_GET['wp_admin_shell_chromeless'] = '1';
+$_GET['wp_admin_workspaces_chromeless'] = '1';
 ob_start();
-wp_admin_shell_chromeless_bridge_script();
+wp_admin_workspaces_chromeless_bridge_script();
 $out_when_on = ob_get_clean();
 $T::assert_true(
 	'chromeless request: bridge emits a <script> block',
@@ -127,28 +127,28 @@ $T::assert_true(
 );
 $T::assert_true(
 	'chromeless request: bridge emits the source-URL marker',
-	false !== strpos( $out_when_on, 'wp-admin-shell-chromeless-bridge.js' )
+	false !== strpos( $out_when_on, 'wp-admin-workspaces-chromeless-bridge.js' )
 );
 $T::assert_true(
 	'chromeless request: bridge emits the iframe-ready handshake type',
-	false !== strpos( $out_when_on, 'wp-admin-shell-iframe-ready' )
+	false !== strpos( $out_when_on, 'wp-admin-workspaces-iframe-ready' )
 );
 
 echo "\n— admin_body_class filter contributes the chromeless class —\n";
 
 wpas_bridge_reset_request();
-$_GET['wp_admin_shell_chromeless'] = '1';
+$_GET['wp_admin_workspaces_chromeless'] = '1';
 $classes = apply_filters( 'admin_body_class', '' );
 $T::assert_true(
-	'admin_body_class includes wp-admin-shell-chromeless when on',
-	false !== strpos( $classes, 'wp-admin-shell-chromeless' )
+	'admin_body_class includes wp-admin-workspaces-chromeless when on',
+	false !== strpos( $classes, 'wp-admin-workspaces-chromeless' )
 );
 
 wpas_bridge_reset_request();
 $classes = apply_filters( 'admin_body_class', '' );
 $T::assert_true(
-	'admin_body_class omits wp-admin-shell-chromeless when off',
-	false === strpos( $classes, 'wp-admin-shell-chromeless' )
+	'admin_body_class omits wp-admin-workspaces-chromeless when off',
+	false === strpos( $classes, 'wp-admin-workspaces-chromeless' )
 );
 
 echo "\n— bridge source file resolves where bootstrap requires it —\n";

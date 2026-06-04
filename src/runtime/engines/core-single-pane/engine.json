@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../../docs/schemas/admin-engine.json",
+	"$schema": "../../../../docs/schemas/workspace-engine.json",
 	"id": "core:single-pane",
 	"version": 3,
 	"title": "Single pane",
@@ -167,16 +167,16 @@
 
 	"default-arrangement": "single-pane",
 
-	"script": "wp-admin-shell",
-	"style": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
+	"style": "wp-admin-workspaces",
 
 	"styles": [
 		{
-			"handle": "wp-admin-shell-wpds-tokens",
+			"handle": "wp-admin-workspaces-wpds-tokens",
 			"src": "build/wpds-tokens.css"
 		},
 		{
-			"handle": "wp-admin-shell-dataviews",
+			"handle": "wp-admin-workspaces-dataviews",
 			"src": "build/dataviews.css",
 			"deps": [ "wp-components" ]
 		}

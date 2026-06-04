@@ -1,21 +1,21 @@
 ---
 name: app-json-author
-description: Author or edit WP Admin Shell app.json manifests. Use whenever a user wants to create a new admin surface (a React app that mounts inside a WP Admin Shell region), declare its ARIA role and capability floor, write a JSON Schema for its config, register a script handle, ship a baseline dataView family with variants, declare window-mount hints for windowed engines, expose slots for sub-mount points, declare slotHints (grid-cell defaults a host can honor), or write the machine-readable documentation contract a rebuild needs. Triggers on phrases like "ship a new admin app", "build a Stripe customers list inside wp-admin", "register an app called acme/orders", "add a window hint to my app", "expose a grid slot in my dashboard host", "add a dataView variant", "ship a dashboard widget", "app config-schema for postType", "app.json for my plugin", "register_app via wp_admin_shell_register_app". Covers the admin-app.json schema, namespacing (core:* vs plugin:{slug}/{name}), platform service requests, the four-layer capability gating model, and the per-app documentation block + sibling app.md prose contract.
+description: Author or edit WP Admin Workspaces app.json manifests. Use whenever a user wants to create a new admin surface (a React app that mounts inside a WP Admin Workspaces region), declare its ARIA role and capability floor, write a JSON Schema for its config, register a script handle, ship a baseline dataView family with variants, declare window-mount hints for windowed engines, expose slots for sub-mount points, declare slotHints (grid-cell defaults a host can honor), or write the machine-readable documentation contract a rebuild needs. Triggers on phrases like "ship a new admin app", "build a Stripe customers list inside wp-admin", "register an app called acme/orders", "add a window hint to my app", "expose a grid slot in my dashboard host", "add a dataView variant", "ship a dashboard widget", "app config-schema for postType", "app.json for my plugin", "register_app via wp_admin_workspaces_register_app". Covers the admin-app.json schema, namespacing (core:* vs plugin:{slug}/{name}), platform service requests, the four-layer capability gating model, and the per-app documentation block + sibling app.md prose contract.
 ---
 
 # app.json Authoring Skill
 
-`app.json` is the manifest for a WP Admin Shell **app**: an admin surface (a posts list, an editor, a command palette, a settings panel, a dashboard widget) that mounts into a region of a workspace. The manifest ships alongside the app's React code at the convention path `{plugin}/apps/{name}/app.json` (or is registered programmatically via `wp_admin_shell_register_app()`).
+`app.json` is the manifest for a WP Admin Workspaces **app**: an admin surface (a posts list, an editor, a command palette, a settings panel, a dashboard widget) that mounts into a region of a workspace. The manifest ships alongside the app's React code at the convention path `{plugin}/apps/{name}/app.json` (or is registered programmatically via `wp_admin_workspaces_register_app()`).
 
-Manifests carry **intrinsic, install-independent** declarations: ARIA role, platform services, capability floor, config schema, script handle, optional dataView baseline / window hints / slot exposures / slot hints. Manifests deliberately **do not** declare layout, geometry, keystroke bindings, dashboard-widget identity (`title`, `hidden`), or which install they belong to — those are install decisions and live in `admin.json`.
+Manifests carry **intrinsic, install-independent** declarations: ARIA role, platform services, capability floor, config schema, script handle, optional dataView baseline / window hints / slot exposures / slot hints. Manifests deliberately **do not** declare layout, geometry, keystroke bindings, dashboard-widget identity (`title`, `hidden`), or which install they belong to — those are install decisions and live in `workspace.json`.
 
 ## Authoritative references
 
 | Doc | When |
 |---|---|
-| `docs/schemas/admin-app.json` | JSON Schema. Inline `description` fields on every key. |
+| `docs/schemas/workspace-app.json` | JSON Schema. Inline `description` fields on every key. |
 | `docs/public/app-json-reference.md` | Author-facing reference. Per-field tables. |
-| `docs/wp-admin-shell-design-spec.md` | §4.1 (app manifest), §5.3 (platform services), §11 (capabilities + permissions), §13 (extension points). |
+| `docs/wp-admin-workspaces-design-spec.md` | §4.1 (app manifest), §5.3 (platform services), §11 (capabilities + permissions), §13 (extension points). |
 | `docs/dataview-config.md` | dataView 3-axis registry, `extends`, variant resolution. |
 | `docs/admin-json-api-validation.md` | REST API coverage per app source. |
 | `docs/research/app-validation-2026-05-04.md` | WPDS / REST / core-data audit of every bundled `src/apps/*`. |
@@ -28,7 +28,7 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin-app.json",
+    "$schema": "https://schemas.wp.org/workspace-app.json",
     "id":           "plugin:acme/orders",
     "version":      3,
     "title":        "Orders",
@@ -39,7 +39,7 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
     "platform":     { /* core:modal / dismiss-on / autofocus-target / triggerable / persists / dirty-state / block-nav-on-dirty */ },
     "capabilities": [ "edit_shop_orders" ],
 
-    "config-schema":    { /* JSON Schema for the config admin.json passes */ },
+    "config-schema":    { /* JSON Schema for the config workspace.json passes */ },
     "extension-points": { /* documentation only */ },
 
     "script":       "acme-orders",
@@ -67,7 +67,7 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
 | `core` | `core:[a-z][a-z0-9-]*` | `core:posts` |
 | `plugin` | `plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*` | `plugin:acme/orders` |
 
-`core` is reserved for apps shipped with the WP Admin Shell plugin. For plugin apps, the slug before `/` must match the contributing plugin's directory name. Runtime registry rejects duplicate ids — plugins extending a core app use a different id and have admin.json route to their version.
+`core` is reserved for apps shipped with the WP Admin Workspaces plugin. For plugin apps, the slug before `/` must match the contributing plugin's directory name. Runtime registry rejects duplicate ids — plugins extending a core app use a different id and have workspace.json route to their version.
 
 ### `version`
 
@@ -75,7 +75,7 @@ Manifest schema version (currently `3`). Bump only on breaking changes to this a
 
 ### `title` / `description`
 
-Both translatable. `title` is short (2-3 words). `description` is one sentence to a short paragraph — used in admin.json authoring tools, plugin install screens, ecosystem directories.
+Both translatable. `title` is short (2-3 words). `description` is one sentence to a short paragraph — used in workspace.json authoring tools, plugin install screens, ecosystem directories.
 
 ### `designSystem`
 
@@ -111,7 +111,7 @@ Platform service requests. The app declares what it needs; the engine declares w
 | `core:modal` | Focus trap + ARIA modal + backdrop scrim. Pair with `role: "dialog"`. |
 | `core:dismiss-on` | Triggers that unmount the region. Array of `Escape`, `backdrop-click`, `outside-click`, `navigation`. |
 | `core:autofocus-target` | CSS selector to receive focus on mount. |
-| `core:triggerable` | App accepts being invoked by an `admin.json#commands.invoke` keystroke. |
+| `core:triggerable` | App accepts being invoked by an `workspace.json#commands.invoke` keystroke. |
 | `core:persists-across-navigation` | Region survives URL-driven changes to other regions. For sidebars / status bars / persistent panels. |
 | `core:dirty-state` | App reports unsaved-changes state via the runtime's dirty-state API. |
 | `core:block-navigation-on-dirty` | Engines show a confirm dialog before unmount while dirty. **Requires `core:dirty-state: true`** (schema enforces). |
@@ -129,7 +129,7 @@ Platform service requests. The app declares what it needs; the engine declares w
 
 WordPress capabilities **required to mount** this app. User must hold all listed caps; missing any one suppresses the app.
 
-**This is the AND-floor for every consumer.** `admin.json` cannot lower it — only add. Validated via `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps.
+**This is the AND-floor for every consumer.** `workspace.json` cannot lower it — only add. Validated via `core-data`'s `canUser()` for entity caps and a custom REST endpoint for non-entity caps.
 
 ```json
 "capabilities": [ "edit_posts" ]
@@ -139,7 +139,7 @@ Empty array = no capability required (rare — even palette typically needs `rea
 
 ### `config-schema`
 
-JSON Schema (draft 2020-12) describing the shape of the `config` object `admin.json` passes at mount time (via region `config` or screen `apps[i].config`). Runtime validates the merged config against this; validation failure prevents mount.
+JSON Schema (draft 2020-12) describing the shape of the `config` object `workspace.json` passes at mount time (via region `config` or screen `apps[i].config`). Runtime validates the merged config against this; validation failure prevents mount.
 
 ```json
 "config-schema": {
@@ -154,7 +154,7 @@ JSON Schema (draft 2020-12) describing the shape of the `config` object `admin.j
 }
 ```
 
-Use `additionalProperties: false` to catch admin.json typos at mount.
+Use `additionalProperties: false` to catch workspace.json typos at mount.
 
 ### `extension-points`
 
@@ -216,7 +216,7 @@ A screen mounting an app that declares a `grid` slot gains that slot for use by 
 
 ### `slotHints`
 
-Optional. Default size + position the app prefers when mounted into a grid-style host slot (a dashboard-host's `grid`, a tiling pane). **Flat block — NOT keyed by slot id.** `{ defaultSize, minSize, position }`. Generic across slot kinds; hosts that don't understand grid sizing ignore it. Cascade-overrideable per-entry from `admin.json` `screens[id].apps[i].size` / `position`.
+Optional. Default size + position the app prefers when mounted into a grid-style host slot (a dashboard-host's `grid`, a tiling pane). **Flat block — NOT keyed by slot id.** `{ defaultSize, minSize, position }`. Generic across slot kinds; hosts that don't understand grid sizing ignore it. Cascade-overrideable per-entry from `workspace.json` `screens[id].apps[i].size` / `position`.
 
 ```json
 "slotHints": {
@@ -277,7 +277,7 @@ Optional. The app's baseline `dataView` family — the `(kind, name)` pair it pr
 | `variants.<id>.defaultLayouts` | DataViews `defaultLayouts` prop. Layout id → config object. |
 | `variants.<id>.actions` | Action descriptors. Each entry: `id`, `label`. |
 
-The PHP resolver injects each declared variant into `settings.dataViews[kind][name][variant]` at the `core` origin. Admin.json cascade origins (site / role / user) override per-triple.
+The PHP resolver injects each declared variant into `settings.dataViews[kind][name][variant]` at the `core` origin. workspace.json cascade origins (site / role / user) override per-triple.
 
 Apps that don't render an entity list (command palette, dashboard host, simple editor, iframe wrappers) omit this block.
 
@@ -339,12 +339,12 @@ Apps that don't render an entity list (command palette, dashboard host, simple e
 }
 ```
 
-Update both `app.json#documentation` AND `app.md` whenever touching app behavior. `rebuilds` should match a slug under `docs/screens/*.md` when the app rebuilds an existing wp-admin surface; omit for shell-only apps.
+Update both `app.json#documentation` AND `app.md` whenever touching app behavior. `rebuilds` should match a slug under `docs/screens/*.md` when the app rebuilds an existing wp-admin surface; omit for workspace-only apps.
 
 `via:` values:
 - `core-data` — `useEntityRecord` / `useEntityRecords` / `useDispatch( coreStore )`
 - `api-fetch` — `wp.apiFetch()` (non-entity ops: media upload, auto-draft, etc.)
-- `window-global` — reads from `window.wpAdminShell.*` etc.
+- `window-global` — reads from `window.wpAdminWorkspaces.*` etc.
 - `external` — external HTTP API
 - `commands` — invoked via the command palette
 - `kernel-config` — read via `useKernel()` / kernel context
@@ -353,7 +353,7 @@ Update both `app.json#documentation` AND `app.md` whenever touching app behavior
 
 When the user opens a screen mounting your app, the kernel walks four checks in order:
 
-1. **Region fast-path.** If the region declares `capability: "X"` (admin.json install-level), and the user lacks X, the whole subtree skips before mount.
+1. **Region fast-path.** If the region declares `capability: "X"` (workspace.json install-level), and the user lacks X, the whole subtree skips before mount.
 2. **App gate.** `app.json#capabilities[]` AND-floor. User must hold ALL listed caps.
 3. **Source-cap floor.** Built-in apps declare a floor (e.g. `core:users` floors at `list_users`). Workspace can extend it but can't lower it.
 4. **REST observation.** The app's actual REST calls return 403/401 if user lacks the cap on the specific entity. Apps handle gracefully (empty state, permission-denied banner).
@@ -366,7 +366,7 @@ Your app fits at layer 2. Be conservative — over-declaring `capabilities[]` is
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin-app.json",
+    "$schema": "https://schemas.wp.org/workspace-app.json",
     "id":      "plugin:acme/hello",
     "version": 3,
     "title":   "Hello",
@@ -375,7 +375,7 @@ Your app fits at layer 2. Be conservative — over-declaring `capabilities[]` is
 }
 ```
 
-Drop into `wp-content/plugins/acme/apps/hello/app.json`, register `acme-hello` via `wp_register_script`, ship the React module, reference `plugin:acme/hello` from `admin.json#screens.<id>.app`.
+Drop into `wp-content/plugins/acme/apps/hello/app.json`, register `acme-hello` via `wp_register_script`, ship the React module, reference `plugin:acme/hello` from `workspace.json#screens.<id>.app`.
 
 ### App that takes config
 
@@ -399,7 +399,7 @@ Drop into `wp-content/plugins/acme/apps/hello/app.json`, register `acme-hello` v
 }
 ```
 
-`admin.json` references:
+`workspace.json` references:
 
 ```json
 "screens": {
@@ -429,7 +429,7 @@ Drop into `wp-content/plugins/acme/apps/hello/app.json`, register `acme-hello` v
 }
 ```
 
-`admin.json`:
+`workspace.json`:
 
 ```json
 "screens": {
@@ -490,7 +490,7 @@ App calls `useDirtyState(regionId, isDirty, { blocksNavigation: true })` from it
 }
 ```
 
-Mount in admin.json:
+Mount in workspace.json:
 
 ```json
 "screens": {
@@ -600,11 +600,11 @@ If the app is a dashboard widget (mounted via `screens[id].apps[i].slot: "grid"`
 - **`id` not matching the namespace pattern** (e.g. `acme/orders` without `plugin:` prefix) fails schema.
 - **Empty `capabilities: []`** mounts for everyone with `read`. If you have any privileged work, declare at least one cap.
 - **`script` handle not registered with WordPress** = silent mount failure with a console error. Always `wp_register_script` before declaring the handle.
-- **`config-schema` without `additionalProperties: false`** lets admin.json typos slip past mount-time validation.
+- **`config-schema` without `additionalProperties: false`** lets workspace.json typos slip past mount-time validation.
 - **dataView `variants[id].extends`** points at a sibling variant id, NOT an absolute triple. Cycle-safe but limited to one `(kind, name)`.
-- **Don't write region declarations in app.json** — that's an admin.json or engine.json concern. App manifests don't describe layout or geometry.
-- **Don't write keystroke bindings in app.json** — `platform.core:triggerable` declares the app accepts being invoked; the actual binding lives in `admin.json#commands`.
-- **`documentation.rebuilds`** must match a slug under `docs/screens/*.md` when the app rebuilds an existing wp-admin surface — reviewers cross-check parity gaps against that spec. Omit for shell-only apps (palette, dashboard host, notices, etc.).
+- **Don't write region declarations in app.json** — that's an workspace.json or engine.json concern. App manifests don't describe layout or geometry.
+- **Don't write keystroke bindings in app.json** — `platform.core:triggerable` declares the app accepts being invoked; the actual binding lives in `workspace.json#commands`.
+- **`documentation.rebuilds`** must match a slug under `docs/screens/*.md` when the app rebuilds an existing wp-admin surface — reviewers cross-check parity gaps against that spec. Omit for workspace-only apps (palette, dashboard host, notices, etc.).
 - **`window`** is ignored by default engines. Don't author it for an app that never windows. Authoring it costs nothing but doesn't unlock anything until the workspace runs on a windowed engine.
 
 ## When you need more
@@ -615,7 +615,7 @@ If the app is a dashboard widget (mounted via `screens[id].apps[i].slot: "grid"`
 | What does `useDataView` return? | `src/runtime/dataView/useDataView.js`. |
 | How do I dispatch a write via `core-data`? | `dvdbwmn-wordpress:wordpress-core-data` skill. |
 | Which fields work in a dataView config? | `docs/dataview-config.md`. |
-| How does the capability fast-path work? | `docs/wp-admin-shell-design-spec.md` §11. |
+| How does the capability fast-path work? | `docs/wp-admin-workspaces-design-spec.md` §11. |
 | What WPDS components are available? | `dvdbwmn-wordpress:wordpress-design-system` skill + CLAUDE.md "Component-mapping cheat sheet". |
 | Per-screen spec for what my app rebuilds? | `docs/screens/<slug>.md`. |
 | Existing app's documentation block? | `src/apps/<id>/app.json` (`documentation`) + `src/apps/<id>/app.md`. |

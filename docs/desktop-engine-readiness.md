@@ -38,13 +38,13 @@ Combined: **709 assertions**.
 
 ## Manual smoke
 
-Switch the active shell to `desktop-demo` via the shell-picker. Run
+Switch the active workspace to `desktop-demo` via the workspace-picker. Run
 through every section below. Mark blockers in
 [`docs/feedback.md`](feedback.md).
 
 ### Boot
 
-- [ ] Shell paints: wallpaper layer, empty workspace, dock visible.
+- [ ] Workspace paints: wallpaper layer, empty workspace, dock visible.
 - [ ] Dock launchers render with the correct icons (Posts, Media,
       Users, Settings, Site Health, Permalinks).
 - [ ] Console: no errors at boot.
@@ -118,14 +118,14 @@ through every section below. Mark blockers in
 ### Iframe + bridge
 
 - [ ] Click "Permalinks" launcher → iframe window opens loading
-      `/wp-admin/options-permalink.php?wp_admin_shell_chromeless=1`.
+      `/wp-admin/options-permalink.php?wp_admin_workspaces_chromeless=1`.
 - [ ] Parent console shows `[core:desktop-iframe] bridge message
-      wp-admin-shell-iframe-ready …` followed by
-      `wp-admin-shell-iframe-network …` for each REST call.
+      wp-admin-workspaces-iframe-ready …` followed by
+      `wp-admin-workspaces-iframe-network …` for each REST call.
 - [ ] Clicking an external link in the iframe opens a new browser
       tab.
 - [ ] Clicking a same-origin wp-admin link in the iframe spawns a
-      new shell window with that URL.
+      new workspace window with that URL.
 - [ ] Clicking inside the iframe raises its window in the z-stack.
 - [ ] Pages with Screen Options / Help reveal show `screen-meta`
       messages in the parent console.
@@ -134,14 +134,14 @@ through every section below. Mark blockers in
 
 - **Command-palette harvest (bridge sub-system 11) is a stub.** Plan
   §D2 accepts the upstream WP-private-API breakage cost, but the
-  parent shell's `core:command-palette` app isn't wired to consume
+  parent workspace's `core:command-palette` app isn't wired to consume
   iframe commands yet either. Full harvester follows the parent
   consumer wiring.
 - **Instrument-set header integration** is storage-only — the
-  fetch / XHR wraps don't merge `__wpAdminShellInstrument.headers`
+  fetch / XHR wraps don't merge `__wpAdminWorkspacesInstrument.headers`
   into outgoing requests yet, and observed network reports don't
   capture request / response headers. Devtools widgets that push
-  state into `__wpAdminShellInstrument` see their writes round-trip
+  state into `__wpAdminWorkspacesInstrument` see their writes round-trip
   but can't act on the data via the bridge until the wrap
   integration ships.
 

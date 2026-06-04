@@ -18,7 +18,7 @@ import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
  *   - given up because the iframe is cross-origin (rare; reveal anyway), or
  *   - detected that WordPress rendered its login form inside the iframe
  *     (session expired) — in which case the iframe stays hidden and we
- *     force a heartbeat poll so the shell-level wp-auth-check modal
+ *     force a heartbeat poll so the workspace-level wp-auth-check modal
  *     appears immediately instead of after the next ~15s scheduled tick.
  *
  * A `heartbeat-tick` listener watches for a false→true transition on
@@ -26,14 +26,14 @@ import { CHROME_HIDE_CSS } from '../_shared/iframe/chromeHide.mjs';
  * once the user has re-authenticated.
  *
  * Source: `config.url` (the v2-canonical placement). Absolute URLs
- * pass through; relative URLs resolve under `window.wpAdminShell.adminUrl`.
+ * pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`.
  * @param {Object} root0
  * @param {*}      root0.app
  * @param {*}      root0.config
  */
 export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';
-	const adminUrl = window.wpAdminShell?.adminUrl || '/wp-admin/';
+	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
 
 	// `isReady` gates the iframe's visibility. Inverted from the old
@@ -54,10 +54,11 @@ export default function IframeApp( { app, config = {} } ) {
 	// a workspace screen, navigate the iframe itself otherwise, and open
 	// external links in a new tab. Origin- + source-pinned.
 	useEffect( () => {
-		const shell =
-			typeof window !== 'undefined' ? window.wpAdminShell : null;
-		const bridgeAdminUrl = ( shell && shell.adminUrl ) || '/wp-admin/';
-		const routes = ( shell && shell.adminRoutes ) || {};
+		const workspace =
+			typeof window !== 'undefined' ? window.wpAdminWorkspaces : null;
+		const bridgeAdminUrl =
+			( workspace && workspace.adminUrl ) || '/wp-admin/';
+		const routes = ( workspace && workspace.adminRoutes ) || {};
 		return installIframeBridge( {
 			adminUrl: bridgeAdminUrl,
 			routes,
@@ -73,7 +74,7 @@ export default function IframeApp( { app, config = {} } ) {
 		} );
 	}, [] );
 
-	// Re-auth recovery. The shell-level wp-auth-check modal polls
+	// Re-auth recovery. The workspace-level wp-auth-check modal polls
 	// heartbeat; when the user finishes re-authenticating
 	// (`wp-auth-check` flips false→true), reload the iframe so it
 	// re-fetches the real admin page now that the session is restored.
@@ -121,7 +122,7 @@ export default function IframeApp( { app, config = {} } ) {
 			// Session-expiry detection: WordPress renders wp-login.php
 			// inside the iframe when the session is gone. Don't let the
 			// user authenticate inside the iframe — keep it hidden and
-			// force a heartbeat poll so the shell-level wp-auth-check
+			// force a heartbeat poll so the workspace-level wp-auth-check
 			// modal pops at once instead of waiting for the next ~15s tick.
 			const href = iframeWin.location?.href || '';
 			const isLoginPage =
@@ -174,9 +175,9 @@ export default function IframeApp( { app, config = {} } ) {
 	}
 
 	return (
-		<div className="wp-admin-shell-app-iframe">
+		<div className="wp-admin-workspaces-app-iframe">
 			{ ! isReady && (
-				<div className="wp-admin-shell-app-iframe__loading">
+				<div className="wp-admin-workspaces-app-iframe__loading">
 					<Spinner />
 				</div>
 			) }
@@ -184,7 +185,7 @@ export default function IframeApp( { app, config = {} } ) {
 				ref={ iframeRef }
 				src={ src }
 				title={ app?.title }
-				className="wp-admin-shell-app-iframe__frame"
+				className="wp-admin-workspaces-app-iframe__frame"
 				style={ { visibility: isReady ? 'visible' : 'hidden' } }
 				onLoad={ onIframeLoad }
 			/>

@@ -23,7 +23,7 @@ import { navigate } from '../../runtime/routing/router';
 import { recentDraftsQuery } from './query.mjs';
 
 export default function DashboardWidgetRecentPostsApp() {
-	const userId = window.wpAdminShell?.userId;
+	const userId = window.wpAdminWorkspaces?.userId;
 	const query = useMemo( () => recentDraftsQuery( userId ), [ userId ] );
 	const drafts = useEntityRecords( 'postType', 'post', query, {
 		enabled: !! userId,
@@ -35,7 +35,7 @@ export default function DashboardWidgetRecentPostsApp() {
 	if ( ! drafts.records?.length ) {
 		return (
 			<Text variant="body-sm">
-				{ __( 'No drafts yet. Start writing!', 'wp-admin-shell' ) }
+				{ __( 'No drafts yet. Start writing!', 'wp-admin-workspaces' ) }
 			</Text>
 		);
 	}
@@ -58,7 +58,7 @@ export default function DashboardWidgetRecentPostsApp() {
 					>
 						{ draft.title?.raw ||
 							draft.title?.rendered ||
-							__( '(no title)', 'wp-admin-shell' ) }
+							__( '(no title)', 'wp-admin-workspaces' ) }
 					</Button>
 					<Text variant="body-sm">
 						{ new Date( draft.modified ).toLocaleDateString() }

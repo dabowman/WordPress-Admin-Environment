@@ -1,13 +1,13 @@
 /**
  * core:desktop-dock-app — dock host (P2.T3).
  *
- * Thin shell around the dock-rail registry — looks up the active
+ * Thin workspace around the dock-rail registry — looks up the active
  * renderer by name (defaults to `'default'`) and renders it with the
  * shared prop bundle. The bundled `default` renderer paints two
  * groups: launcher tiles + live-window tiles.
  *
  * Plugin authors register alternate renderers via
- * `registerDockRailRenderer( name, Component )` and point a shell's
+ * `registerDockRailRenderer( name, Component )` and point a workspace's
  * `regions.dock.config.renderer` at the registered name. The renderer
  * owns the visual treatment entirely — the host just hands it
  * `{ items, stack, routes, manager }`.
@@ -76,12 +76,12 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 
 	return (
 		<div
-			className="wp-admin-shell-desktop-dock"
+			className="wp-admin-workspaces-desktop-dock"
 			aria-label="Application dock"
 		>
 			{ items.length > 0 && (
 				<ul
-					className="wp-admin-shell-desktop-dock__group wp-admin-shell-desktop-dock__group--launchers"
+					className="wp-admin-workspaces-desktop-dock__group wp-admin-workspaces-desktop-dock__group--launchers"
 					aria-label="Launchers"
 				>
 					{ items.map( ( item, idx ) => {
@@ -115,11 +115,11 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 						return (
 							<li
 								key={ idx }
-								className="wp-admin-shell-desktop-dock__item"
+								className="wp-admin-workspaces-desktop-dock__item"
 							>
 								<button
 									type="button"
-									className="wp-admin-shell-desktop-dock__tile"
+									className="wp-admin-workspaces-desktop-dock__tile"
 									onClick={ onClick }
 									disabled={ ! resolved }
 									aria-label={ label }
@@ -128,7 +128,7 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 									{ iconData && (
 										<span
 											aria-hidden="true"
-											className="wp-admin-shell-desktop-dock__icon"
+											className="wp-admin-workspaces-desktop-dock__icon"
 										>
 											<Icon
 												icon={ iconData }
@@ -136,7 +136,7 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 											/>
 										</span>
 									) }
-									<span className="wp-admin-shell-desktop-dock__label">
+									<span className="wp-admin-workspaces-desktop-dock__label">
 										{ label }
 									</span>
 								</button>
@@ -150,12 +150,12 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 				<>
 					{ items.length > 0 && (
 						<div
-							className="wp-admin-shell-desktop-dock__separator"
+							className="wp-admin-workspaces-desktop-dock__separator"
 							aria-hidden="true"
 						/>
 					) }
 					<ul
-						className="wp-admin-shell-desktop-dock__group wp-admin-shell-desktop-dock__group--windows"
+						className="wp-admin-workspaces-desktop-dock__group wp-admin-workspaces-desktop-dock__group--windows"
 						aria-label="Open windows"
 					>
 						{ stack.map( ( win ) => {
@@ -178,11 +178,11 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 							return (
 								<li
 									key={ win.id }
-									className="wp-admin-shell-desktop-dock__item"
+									className="wp-admin-workspaces-desktop-dock__item"
 								>
 									<button
 										type="button"
-										className="wp-admin-shell-desktop-dock__tile wp-admin-shell-desktop-dock__tile--window"
+										className="wp-admin-workspaces-desktop-dock__tile wp-admin-workspaces-desktop-dock__tile--window"
 										data-state={ win.state }
 										data-active={ isActive }
 										onClick={ onClick }
@@ -193,7 +193,7 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 										{ iconData && (
 											<span
 												aria-hidden="true"
-												className="wp-admin-shell-desktop-dock__icon"
+												className="wp-admin-workspaces-desktop-dock__icon"
 											>
 												<Icon
 													icon={ iconData }
@@ -201,12 +201,12 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 												/>
 											</span>
 										) }
-										<span className="wp-admin-shell-desktop-dock__label">
+										<span className="wp-admin-workspaces-desktop-dock__label">
 											{ win.title }
 										</span>
 										<span
 											aria-hidden="true"
-											className="wp-admin-shell-desktop-dock__indicator"
+											className="wp-admin-workspaces-desktop-dock__indicator"
 										/>
 									</button>
 								</li>
@@ -219,7 +219,7 @@ function DefaultDockRailRenderer( { items, stack, routes, manager } ) {
 	);
 }
 
-// Register the bundled default at module-load so a shell using
+// Register the bundled default at module-load so a workspace using
 // `regions.dock.config.renderer = 'default'` (or omitting the field)
 // resolves the right component.
 registerDockRailRenderer( 'default', DefaultDockRailRenderer );
@@ -246,7 +246,7 @@ export default function DesktopDockApp( { config } ) {
 		// painting if the registry is somehow empty.
 		return (
 			<div
-				className="wp-admin-shell-desktop-dock"
+				className="wp-admin-workspaces-desktop-dock"
 				aria-label="Application dock"
 			/>
 		);

@@ -1,14 +1,14 @@
-.wp-admin-shell-user-menu {
+.wp-admin-workspaces-user-menu {
 	display: flex;
 	align-items: center;
 	flex-shrink: 0;
 }
 
-.wp-admin-shell-user-menu .components-dropdown {
+.wp-admin-workspaces-user-menu .components-dropdown {
 	display: inline-flex;
 }
 
-.wp-admin-shell-user-menu__toggle {
+.wp-admin-workspaces-user-menu__toggle {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -18,13 +18,13 @@
 	color: inherit;
 }
 
-.wp-admin-shell-user-menu__toggle:hover,
-.wp-admin-shell-user-menu__toggle:focus-visible {
+.wp-admin-workspaces-user-menu__toggle:hover,
+.wp-admin-workspaces-user-menu__toggle:focus-visible {
 	background: var(--wpds-color-bg-interactive-neutral-weak-active);
 	outline: none;
 }
 
-.wp-admin-shell-user-menu__avatar {
+.wp-admin-workspaces-user-menu__avatar {
 	display: block;
 	width: 24px;
 	height: 24px;

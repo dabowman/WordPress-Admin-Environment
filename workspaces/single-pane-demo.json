@@ -1,0 +1,155 @@
+{
+	"$schema": "../docs/schemas/workspace.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "single-pane-demo",
+	"title": "Single Pane Demo",
+	"description": "Demo workspace exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
+	"engine": "core:single-pane",
+	"default-screen": "posts",
+	"frame": {
+		"notices": {
+			"banner": {
+				"app": "core:notices-banner"
+			},
+			"snackbar": {
+				"app": "core:notices-snackbar"
+			}
+		}
+	},
+	"screens": {
+		"posts": {
+			"label": "Posts",
+			"icon": "post",
+			"path": "/posts",
+			"app": "core:posts",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			}
+		},
+		"post-new": {
+			"label": "New Post",
+			"path": "/posts/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"post-edit": {
+			"label": "Edit Post",
+			"path": "/posts/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "post",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"mode": "focus"
+		},
+		"pages": {
+			"label": "Pages",
+			"icon": "page",
+			"path": "/pages",
+			"app": "core:posts",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			}
+		},
+		"page-new": {
+			"label": "New Page",
+			"path": "/pages/new",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"page-edit": {
+			"label": "Edit Page",
+			"path": "/pages/{id}/edit",
+			"app": "core:simple-editor",
+			"config": {
+				"postType": "page",
+				"id": "{id}"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"mode": "focus"
+		},
+		"media": {
+			"label": "Media",
+			"icon": "media",
+			"path": "/media",
+			"app": "iframe:upload.php",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
+			}
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot": "palette",
+			"app": "core:command-palette",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			},
+			"mode": "modal"
+		}
+	},
+	"menu": {
+		"posts": {
+			"position": 10
+		},
+		"pages": {
+			"position": 20
+		},
+		"media": {
+			"position": 30
+		}
+	},
+	"commands": [
+		{
+			"id": "core-command-palette",
+			"shortcut": "Mod+K",
+			"invoke": "core:command-palette",
+			"label": "Open Command Palette"
+		},
+		{
+			"id": "navigate-post-new",
+			"shortcut": "Mod+Alt+N",
+			"navigate": "/posts/new",
+			"label": "New Post"
+		}
+	]
+}

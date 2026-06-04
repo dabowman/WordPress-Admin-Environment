@@ -9,7 +9,7 @@ import {
 } from './dataViewPrefs.mjs';
 
 /** User-prefs REST endpoint (read full blob / partial-merge write). */
-const PREFS_PATH = '/wp-admin-shell/v1/user-prefs';
+const PREFS_PATH = '/wp-admin-workspaces/v1/user-prefs';
 
 /** Debounce window before a view change is persisted (ms). */
 const PERSIST_DEBOUNCE_MS = 600;
@@ -21,7 +21,7 @@ const PERSIST_DEBOUNCE_MS = 600;
  *
  * 1. **Seed** — `view` state initialized from `viewDefaults` spread under the
  *    resolved `dataViewConfig.defaultView`, so iterating `view.filters` /
- *    `view.fields` is safe when admin.json omits empty-list keys.
+ *    `view.fields` is safe when workspace.json omits empty-list keys.
  * 2. **Resync** — re-seed when the screen flips on the same hook instance
  *    (e.g. /posts → /posts/drafts both mount PostsApp). The `useState`
  *    initializer runs once, so without this a sibling screen inherits the
@@ -38,7 +38,7 @@ const PERSIST_DEBOUNCE_MS = 600;
  *    bulk action at stale/absent ids.
  * 5. **Prefs persistence (Screen-Options parity)** — the durable view axes
  *    (fields / sort / perPage / layout / type — see `DURABLE_AXES`) are saved
- *    per `screenId` to `wp_admin_shell_user_prefs` via the `/user-prefs` REST
+ *    per `screenId` to `wp_admin_workspaces_user_prefs` via the `/user-prefs` REST
  *    surface (debounced), and rehydrated on mount + on every screen flip.
  *    Saved durable axes WIN over the resolved `defaultView` for the SAME
  *    screen; transient axes (search / filters / page) always come from the

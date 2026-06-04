@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:dashboard-widget-quick-draft",
 	"version": 1,
 	"title": "Quick Draft",
@@ -11,7 +11,7 @@
 		"type": "object",
 		"additionalProperties": false
 	},
-	"script": "wp-admin-shell",
+	"script": "wp-admin-workspaces",
 	"slotHints": {
 		"defaultSize": { "w": 1, "h": 1 },
 		"minSize": { "w": 1, "h": 1 },

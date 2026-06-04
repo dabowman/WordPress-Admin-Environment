@@ -2,22 +2,22 @@
  *
  * Author-overridable region styling (background, color, border, padding,
  * margin, border-radius, box-shadow, decoration) lives in engine.json
- * template `default-style` blocks so admin.json regions can override
+ * template `default-style` blocks so workspace.json regions can override
  * via `regions[id].style`. CSS here is reserved for:
- *   - engine root layout shape (.wp-admin-shell-layout)
- *   - engine-internal helper containers (.wp-admin-shell-areas)
+ *   - engine root layout shape (.wp-admin-workspaces-layout)
+ *   - engine-internal helper containers (.wp-admin-workspaces-areas)
  *   - the `__app` mount-point inside a region (not addressable from
  *     templates — apps mount inside this wrapper, not the region itself).
  *     The mount is flush (no padding); apps own their inset via the
- *     shared `wp-admin-shell-app--inset` utility, DataViews + iframe
+ *     shared `wp-admin-workspaces-app--inset` utility, DataViews + iframe
  *     apps stay full-bleed.
  *
  * Don't add visual properties here. If a property would be overridden
- * by a template default-style or by an admin.json region.style, it
+ * by a template default-style or by an workspace.json region.style, it
  * belongs in the template.
  */
 
-.wp-admin-shell-layout {
+.wp-admin-workspaces-layout {
 	isolation: isolate;
 	display: flex;
 	flex-direction: column;
@@ -26,11 +26,11 @@
 	overflow: hidden;
 	font-family: var(--wpds-typography-font-family-body);
 	background: var(
-		--wp-admin-shell--chrome--canvas--background,
+		--wp-admin-workspaces--chrome--canvas--background,
 		var(--wpds-color-bg-surface-neutral-strong)
 	);
 	color: var(
-		--wp-admin-shell--chrome--canvas--foreground,
+		--wp-admin-workspaces--chrome--canvas--foreground,
 		var(--wpds-color-fg-content-neutral)
 	);
 }
@@ -41,7 +41,7 @@
  * content area — replacing the per-region margin/padding that used to do
  * this. `box-sizing: border-box` keeps the padding inside the flex-stretched
  * width (an unprefixed content-box would overflow, same trap as the toolbar). */
-.wp-admin-shell-layout__body {
+.wp-admin-workspaces-layout__body {
 	display: flex;
 	flex: 1;
 	min-height: 0;
@@ -50,7 +50,7 @@
 	box-sizing: border-box;
 }
 
-.wp-admin-shell-areas {
+.wp-admin-workspaces-areas {
 	flex: 1;
 	min-width: 0;
 	display: flex;
@@ -65,30 +65,30 @@
  *
  * The mount adds NO padding — content sits flush to the card edge by
  * default. Padding is an app concern: form / native screens apply the
- * shared `wp-admin-shell-app--inset` utility (themeable via the
- * `--wp-admin-shell--chrome--content--inset` slot), while DataViews and
+ * shared `wp-admin-workspaces-app--inset` utility (themeable via the
+ * `--wp-admin-workspaces--chrome--content--inset` slot), while DataViews and
  * iframe apps stay full-bleed. The card's own `border-radius` + clipping
  * `overflow` (see the `core:main` template) rounds flush children, so
  * iframe apps need no corner handling here. */
-.wp-admin-shell-layout
-	.wp-admin-shell-region[role="main"]
-	> .wp-admin-shell-region__app,
-.wp-admin-shell-layout
-	.wp-admin-shell-region[role="complementary"]
-	> .wp-admin-shell-region__app {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[role="main"]
+	> .wp-admin-workspaces-region__app,
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[role="complementary"]
+	> .wp-admin-workspaces-region__app {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
 }
 
-.wp-admin-shell-layout
-	.wp-admin-shell-region[role="main"]
-	> .wp-admin-shell-region__app
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[role="main"]
+	> .wp-admin-workspaces-region__app
 	> *,
-.wp-admin-shell-layout
-	.wp-admin-shell-region[role="complementary"]
-	> .wp-admin-shell-region__app
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[role="complementary"]
+	> .wp-admin-workspaces-region__app
 	> * {
 	flex: 1;
 	min-height: 0;
@@ -105,17 +105,17 @@
 /* @wordpress/ui ships its component CSS inside `@layer wp-ui-components`
    (wp-ui-utilities < wp-ui-components < wp-ui-compositions < wp-ui-overrides).
    Per the cascade-layer spec unlayered rules win over any layered rule, so
-   a wide range of unlayered admin / theme / shell CSS can override
+   a wide range of unlayered admin / theme / workspace CSS can override
    @wordpress/ui's defaults — including the Stack's `display: flex`. When
    that happens, Stack falls back to `display: block` and its children
    stack vertically regardless of the inline `flex-direction: row` style.
 
    Force the Stack default unlayered for any Stack rendered inside the
-   shell. Targets the hashed CSS-module class @wordpress/ui assigns
+   workspace. Targets the hashed CSS-module class @wordpress/ui assigns
    to the Stack root. Hash matches the regex pattern `[hash]__stack`
    so a class*= selector tracks the convention without binding to a
    specific build hash. */
-.wp-admin-shell [class*="__stack"] {
+.wp-admin-workspaces [class*="__stack"] {
 	display: flex;
 }
 
@@ -133,27 +133,27 @@
  * applies. `@wordpress/ui`'s Icon does set fill via inline style. To
  * unify, force `fill: currentColor` on any SVG inside a chrome surface —
  * both library variants then inherit the surface text color. */
-.wp-admin-shell-region--sidebar a,
-.wp-admin-shell-region--toolbar a,
-.wp-admin-shell-site-hub a {
+.wp-admin-workspaces-region--sidebar a,
+.wp-admin-workspaces-region--toolbar a,
+.wp-admin-workspaces-site-hub a {
 	color: var(--wpds-color-fg-interactive-neutral);
 }
 
-.wp-admin-shell-region--sidebar a:hover,
-.wp-admin-shell-region--sidebar a:focus,
-.wp-admin-shell-region--sidebar a:active,
-.wp-admin-shell-region--toolbar a:hover,
-.wp-admin-shell-region--toolbar a:focus,
-.wp-admin-shell-region--toolbar a:active,
-.wp-admin-shell-site-hub a:hover,
-.wp-admin-shell-site-hub a:focus,
-.wp-admin-shell-site-hub a:active {
+.wp-admin-workspaces-region--sidebar a:hover,
+.wp-admin-workspaces-region--sidebar a:focus,
+.wp-admin-workspaces-region--sidebar a:active,
+.wp-admin-workspaces-region--toolbar a:hover,
+.wp-admin-workspaces-region--toolbar a:focus,
+.wp-admin-workspaces-region--toolbar a:active,
+.wp-admin-workspaces-site-hub a:hover,
+.wp-admin-workspaces-site-hub a:focus,
+.wp-admin-workspaces-site-hub a:active {
 	color: var(--wpds-color-fg-interactive-neutral-active);
 }
 
-.wp-admin-shell-region--sidebar svg,
-.wp-admin-shell-region--toolbar svg,
-.wp-admin-shell-site-hub svg {
+.wp-admin-workspaces-region--sidebar svg,
+.wp-admin-workspaces-region--toolbar svg,
+.wp-admin-workspaces-site-hub svg {
 	fill: currentColor;
 }
 
@@ -161,10 +161,10 @@
  * padding so the host's own grid container reaches the region edges.
  * Touches engine-owned chrome (`region__app`), so it belongs engine-side.
  * Scoped on `data-region-id$="dashboard-grid"` so the rule fires for any
- * shell-chosen id ending in `dashboard-grid`. Tile chrome lives with the
+ * workspace-chosen id ending in `dashboard-grid`. Tile chrome lives with the
  * host app — `src/apps/dashboard-host/index.css`. */
-.wp-admin-shell-region[data-region-id$="dashboard-grid"]
-	.wp-admin-shell-region__app {
+.wp-admin-workspaces-region[data-region-id$="dashboard-grid"]
+	.wp-admin-workspaces-region__app {
 	padding: 0;
 }
 
@@ -186,21 +186,21 @@
  *
  * DS-specific (the `.dataviews-*` classes presuppose @wordpress/dataviews),
  * so it lives engine-side, not in the DS-neutral kernel. */
-.wp-admin-shell-region__app .dataviews-wrapper,
-.wp-admin-shell-region__app .dataviews-picker-wrapper {
+.wp-admin-workspaces-region__app .dataviews-wrapper,
+.wp-admin-workspaces-region__app .dataviews-picker-wrapper {
 	--wp-dataviews-color-background: var(
-		--wp-admin-shell--chrome--content--card-background,
+		--wp-admin-workspaces--chrome--content--card-background,
 		var(--wpds-color-bg-surface-neutral-strong)
 	);
 }
 
 /* Cap-gated 403 fallback — WPDS color overlay on the kernel's DS-neutral
  * structural rule (`src/index.css` ships padding + text-align only). */
-.wp-admin-shell-region__forbidden {
+.wp-admin-workspaces-region__forbidden {
 	color: var(--wpds-color-fg-content-neutral);
 }
 
-.wp-admin-shell-region__forbidden p {
+.wp-admin-workspaces-region__forbidden p {
 	color: var(--wpds-color-fg-content-neutral-weak);
 }
 
@@ -217,7 +217,7 @@
    ship. core:default's choice: 180ms ease on transform/opacity/size.
    ========================================================================== */
 
-.wp-admin-shell-layout .wp-admin-shell-region {
+.wp-admin-workspaces-layout .wp-admin-workspaces-region {
 	transition:
 		inline-size 180ms ease,
 		flex-basis 180ms ease,
@@ -241,36 +241,36 @@
  * from the flow without unmounting the React subtree (React still keeps
  * state, useState references, refs, and effects across the flip — only
  * the DOM is hidden). */
-.wp-admin-shell-layout .wp-admin-shell-region[data-mode-hidden="true"] {
+.wp-admin-workspaces-layout .wp-admin-workspaces-region[data-mode-hidden="true"] {
 	display: none !important;
 }
 
 /* Compact — toolbar shrinks to back link + save indicator chrome;
  * sidebar collapses to icon-rail width. Engines tune per-region. */
-.wp-admin-shell-layout
-	.wp-admin-shell-region--toolbar[data-mode-compact="true"] {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region--toolbar[data-mode-compact="true"] {
 	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
-.wp-admin-shell-layout
-	.wp-admin-shell-region--sidebar[data-mode-compact="true"] {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region--sidebar[data-mode-compact="true"] {
 	inline-size: var(
-		--wp-admin-shell--chrome--sidebar--compact-width,
+		--wp-admin-workspaces--chrome--sidebar--compact-width,
 		64px
 	) !important;
 }
 
 /* Minimal — stricter than compact. Currently only toolbar consumes it. */
-.wp-admin-shell-layout
-	.wp-admin-shell-region--toolbar[data-mode-minimal="true"] {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region--toolbar[data-mode-minimal="true"] {
 	padding-block: var(--wpds-dimension-padding-xs) !important;
 }
 
 /* Full-width — content / main region expands to claim the space normally
  * occupied by sibling chrome regions. The flex-basis flip works with the
  * default flex-row arrangement; engines using grid layouts override. */
-.wp-admin-shell-layout
-	.wp-admin-shell-region[data-mode-full-width="true"] {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[data-mode-full-width="true"] {
 	flex: 1 1 100% !important;
 	max-inline-size: 100% !important;
 }
@@ -279,15 +279,15 @@
  * viewport, so drop the body gutter + the content card's rounded corners
  * for a true full-bleed surface. `data-mode` is emitted on the layout root
  * by the engine Layout. The body-padding override out-specifies the base
- * `.wp-admin-shell-layout__body` rule (two classes + attr vs one class), so
+ * `.wp-admin-workspaces-layout__body` rule (two classes + attr vs one class), so
  * no `!important` there; `border-radius` is an inline `default-style` value,
  * so it needs `!important`. */
-.wp-admin-shell-layout[data-mode="takeover"] .wp-admin-shell-layout__body {
+.wp-admin-workspaces-layout[data-mode="takeover"] .wp-admin-workspaces-layout__body {
 	padding: 0;
 }
 
-.wp-admin-shell-layout[data-mode="takeover"]
-	.wp-admin-shell-region--content {
+.wp-admin-workspaces-layout[data-mode="takeover"]
+	.wp-admin-workspaces-region--content {
 	border-radius: 0 !important;
 }
 
@@ -307,7 +307,7 @@
  * Authors opt out of collapse via `data-keep-visible-when-empty="true"`
  * on the region declaration (e.g. an `inspector` region with a
  * "select an item" placeholder app-less stub). */
-.wp-admin-shell-layout
-	.wp-admin-shell-region[data-app-mounted="false"]:not([data-keep-visible-when-empty="true"]) {
+.wp-admin-workspaces-layout
+	.wp-admin-workspaces-region[data-app-mounted="false"]:not([data-keep-visible-when-empty="true"]) {
 	display: none !important;
 }

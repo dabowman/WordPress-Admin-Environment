@@ -41,13 +41,13 @@ export default function DrawerRenderer( { items, currentPrimary } ) {
 	// already declares `role="navigation"`, so a nested <nav> would double
 	// the landmark.
 	return (
-		<div className="wp-admin-shell-drawer-nav">
+		<div className="wp-admin-workspaces-drawer-nav">
 			{ items.map( ( item, index ) => {
 				if ( item.separator ) {
 					return (
 						<hr
 							key={ `sep-${ item.id || index }` }
-							className="wp-admin-shell-nav__separator"
+							className="wp-admin-workspaces-nav__separator"
 						/>
 					);
 				}
@@ -79,11 +79,11 @@ function DrawerSection( { item, currentPrimary } ) {
 	const [ open, setOpen ] = useState( containsActive );
 
 	return (
-		<section className="wp-admin-shell-drawer-nav__section">
+		<section className="wp-admin-workspaces-drawer-nav__section">
 			<Item
 				as="button"
 				type="button"
-				className="wp-admin-shell-drawer-nav__section-header"
+				className="wp-admin-workspaces-drawer-nav__section-header"
 				aria-expanded={ open }
 				onClick={ () => setOpen( ( prev ) => ! prev ) }
 			>
@@ -106,7 +106,7 @@ function DrawerSection( { item, currentPrimary } ) {
 			</Item>
 			{ open && (
 				<ItemGroup
-					className="wp-admin-shell-drawer-nav__section-items"
+					className="wp-admin-workspaces-drawer-nav__section-items"
 					role="list"
 				>
 					{ item.items.map( ( child, i ) => {
@@ -114,7 +114,7 @@ function DrawerSection( { item, currentPrimary } ) {
 							return (
 								<hr
 									key={ `sep-${ child.id || i }` }
-									className="wp-admin-shell-nav__separator"
+									className="wp-admin-workspaces-nav__separator"
 								/>
 							);
 						}
@@ -136,7 +136,7 @@ function DrawerLink( { item, currentPrimary } ) {
 	if ( item.external && item.href ) {
 		return (
 			<a
-				className="wp-admin-shell-drawer-nav__link"
+				className="wp-admin-workspaces-drawer-nav__link"
 				href={ item.href }
 				target="_blank"
 				rel="noopener noreferrer"
@@ -161,7 +161,7 @@ function DrawerLink( { item, currentPrimary } ) {
 	const isActive = !! target && currentPrimary === target;
 	return (
 		<a
-			className="wp-admin-shell-drawer-nav__link"
+			className="wp-admin-workspaces-drawer-nav__link"
 			href={ item.href }
 			aria-current={ isActive ? 'true' : undefined }
 		>

@@ -17,7 +17,7 @@ export const LRU_CAP = 64;
  * entry, then insert the new one.
  *
  * By design — re-reading an entry doesn't promote it. dataView triples
- * are read-heavy and short-lived: the working-set churn is on shell-
+ * are read-heavy and short-lived: the working-set churn is on workspace-
  * switching and route navigation, not within-session re-access of stale
  * entries. That makes plain insertion-order the right policy and skips
  * the cost of re-inserting on every read.
