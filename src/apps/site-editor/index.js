@@ -15,9 +15,13 @@ import IframeApp from '../iframe-fallback';
  * stays live. The blockers, with re-validated status:
  *
  *   1. Preferences-store collision with `core:appearance-preferences` — both
- *      write `wp.data.dispatch('core/preferences')` namespaced state and need
- *      a routing rule for which one owns which keys. (Still valid; both apps
- *      touch `core/preferences`.)
+ *      surface appearance/personalization UI. `@wordpress/edit-site` writes
+ *      `wp.data.dispatch('core/preferences')` namespaced state; the workspace
+ *      panel persists to its own `/wp-admin-workspaces/v1/user-prefs` store, so
+ *      a native mount needs a rule for which surface owns which appearance keys.
+ *      (Re-validated; `core:appearance-preferences` uses the custom user-prefs
+ *      endpoint, NOT `core/preferences` — the prior "both write core/preferences"
+ *      framing was inaccurate.)
  *   2. Command-palette double-registration — `@wordpress/edit-site`
  *      ships its own command set that registers against the
  *      `core/commands` store our `core:command-palette` already
