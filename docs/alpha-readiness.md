@@ -25,7 +25,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   file into `plugin`; a delta-only `{ "styles": … }` file merges over the
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
-  omits `workspace.engine`.
+  omits `engine`.
 - [manual] Copy `workspaces/single-pane-demo.json` → `wp-content/workspace.json`, load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
@@ -198,7 +198,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it
   may add+remove baseline screens (null tombstones), grow
-  `screens[].permissions`, and change `workspace.engine` — same authority
+  `screens[].permissions`, and change `engine` — same authority
   as the bundled plugin. Writing `wp-content/workspace.json` requires
   filesystem access, which already implies the ability to run arbitrary
   plugin code, so no privilege boundary is being defended. See spec §19.

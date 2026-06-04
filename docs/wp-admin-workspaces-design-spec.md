@@ -1264,7 +1264,7 @@ TRUSTED origin merged via `merge_authoritative`, bypassing the
 `Customizable` deny-list and `Permissions` shrink-only rules that gate
 the consumer origins (site/role/user). It may add+remove baseline screens
 (null tombstones), grow `screens[].permissions` OR-sets, and change
-`workspace.engine` — the same authority as the bundled plugin. This is
+`engine` — the same authority as the bundled plugin. This is
 correct: writing `wp-content/workspace.json` requires filesystem access,
 which already implies running arbitrary plugin code, so there is no
 privilege boundary to defend at the cascade.

@@ -74,7 +74,7 @@
 				"notices": {
 					"type": "object",
 					"additionalProperties": false,
-					"description": "System-chrome notice slots. Workspace-scope (no path, no menu binding, never navigates). Engines render notices in their declared notice slots (`banner` at top-of-viewport, `snackbar` at bottom). Engines that omit notice slots ignore the block. Swap implementations by overriding `workspace.notices.banner.app` at any origin.",
+					"description": "System-chrome notice slots. Workspace-scope (no path, no menu binding, never navigates). Engines render notices in their declared notice slots (`banner` at top-of-viewport, `snackbar` at bottom). Engines that omit notice slots ignore the block. Swap implementations by overriding `frame.notices.banner.app` at any origin.",
 					"properties": {
 						"banner": {
 							"$ref": "#/$defs/workspaceNotice",
@@ -238,7 +238,7 @@
 					"uniqueItems": true
 				}
 			],
-			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/workspace-json-reference.md`."
+			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/workspace-json-reference.md`."
 		},
 
 		"namespacedId": {
@@ -629,7 +629,7 @@
 		"workspaceNotice": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "A workspace notice slot entry. Holds the app id that renders the notice surface (banner or snackbar). Swappable via cascade — `workspace.notices.banner.app: \"plugin:my/sticky-banner\"` at site origin replaces the default banner host.",
+			"description": "A workspace notice slot entry. Holds the app id that renders the notice surface (banner or snackbar). Swappable via cascade — `frame.notices.banner.app: \"plugin:my/sticky-banner\"` at site origin replaces the default banner host.",
 			"properties": {
 				"app": {
 					"$ref": "#/$defs/namespacedId",

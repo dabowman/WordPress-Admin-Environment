@@ -153,7 +153,7 @@
 					}
 				}
 			},
-			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `workspace.json#workspace.engine` (v3) / `workspace.json#engine` (v2). The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
+			"description": "Optional list of additional CSS bundles the engine wants enqueued whenever it's the active engine. Use for design-system token files (e.g. WPDS baseline), component-library CSS (e.g. DataViews stylesheet), or any other non-bundled CSS the engine depends on. Loaded by the kernel only when this engine matches `workspace.json#engine` (v3) / `workspace.json#engine` (v2). The single `style` field above is the engine's own primary stylesheet handle; this array covers everything else."
 		},
 
 		"default-styles": {
@@ -213,7 +213,7 @@
 				"accepts": {
 					"type": "string",
 					"enum": [ "app", "widget", "any" ],
-					"description": "Optional hint about what kind of contribution the slot accepts. `app` — full screen-like apps (typical for `_self` and engine workspace slots). `widget` — small chrome contributions registered through `workspace.widgets[slot]` (typical for `toolbar`, `sidebar-footer`, `status-bar`). `any` — accepts both. Hint-only; the resolver does not enforce. Defaults to `any` when omitted."
+					"description": "Optional hint about what kind of contribution the slot accepts. `app` — full screen-like apps (typical for `_self` and engine workspace slots). `widget` — small chrome contributions registered through `frame.widgets[slot]` (typical for `toolbar`, `sidebar-footer`, `status-bar`). `any` — accepts both. Hint-only; the resolver does not enforce. Defaults to `any` when omitted."
 				}
 			}
 		},

@@ -63,7 +63,7 @@
 
 		"config-schema": {
 			"type": "object",
-			"description": "JSON Schema document describing the shape of the `config` object that workspace.json passes to this app at mount time (via a screen's `config` field, a `screens[id].apps[i].config` entry, or a `workspace.widgets.<slot>[i].config` entry). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error. The schema is itself a JSON Schema document; recursive validation against the JSON Schema meta-schema is not enforced by the runtime but is recommended via author tooling.",
+			"description": "JSON Schema document describing the shape of the `config` object that workspace.json passes to this app at mount time (via a screen's `config` field, a `screens[id].apps[i].config` entry, or a `frame.widgets.<slot>[i].config` entry). The runtime validates the merged config against this schema before mounting; validation failure prevents mount and surfaces an authoring error. The schema is itself a JSON Schema document; recursive validation against the JSON Schema meta-schema is not enforced by the runtime but is recommended via author tooling.",
 			"examples": [
 				{
 					"type": "object",
@@ -217,7 +217,7 @@
 				"core:persists-across-navigation": {
 					"type": "boolean",
 					"default": false,
-					"description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.route-key`) typically omit this field — they unmount when the URL slot they read from changes. Workspace widgets declared in `workspace.widgets.<slot>` are persistent by default and benefit from this flag."
+					"description": "When true, this app's region survives URL-driven changes to other regions. Browser analog: persistent browser tabs (a tab's content survives when other tabs navigate). Use for navigation sidebars, status bars, and other UI that should remain mounted across content changes. Apps in routable regions (regions with `routing.route-key`) typically omit this field — they unmount when the URL slot they read from changes. Workspace widgets declared in `frame.widgets.<slot>` are persistent by default and benefit from this flag."
 				},
 
 				"core:dirty-state": {
@@ -351,7 +351,7 @@
 					"description": "Explicit `{row, col}` placement. 1-indexed CSS Grid coordinates."
 				}
 			],
-			"description": "Where on the grid this entry renders by default. `auto` (default) yields auto-flow; an explicit `{row, col}` object pins the entry. Each `screens[id].apps[i].position` or `workspace.widgets.<slot>[i].position` override at the install layer wins per install. Renamed conceptually from the v2 `dashboardWidgetPosition` $def; shape identical."
+			"description": "Where on the grid this entry renders by default. `auto` (default) yields auto-flow; an explicit `{row, col}` object pins the entry. Each `screens[id].apps[i].position` or `frame.widgets.<slot>[i].position` override at the install layer wins per install. Renamed conceptually from the v2 `dashboardWidgetPosition` $def; shape identical."
 		},
 
 		"slotHints": {
