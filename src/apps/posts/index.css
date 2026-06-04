@@ -1,0 +1,12 @@
+/* Title cell: keep the title link and its state badges (Sticky / Password
+   protected) on one baseline, wrapping onto a second line on narrow columns. */
+.wp-admin-workspaces-app-posts__title {
+	min-width: 0;
+}
+
+/* Past-due scheduled posts — the "Missed schedule" date label, matching
+   wp-admin's `error-message` red. */
+.wp-admin-workspaces-app-posts__date-missed {
+	color: var( --wpds-color-fg-content-error );
+	font-weight: 600;
+}

@@ -25,6 +25,11 @@ The DataViews spec — fields, default view, default layouts, actions — comes 
 
 Field renderers and action callbacks stay in `index.js`, keyed by spec id. `buildFields(dataView.fields, fieldRenderers)` and `buildActions(dataView.actions, { setPluginStatus, deletePlugins })` compile the JSON specs into DataViews shape — unknown spec ids fall through (renderer absent → DataViews built-in renderer; callback absent → action is decorative). The single `RenderModal` is keyed on `spec.id === 'delete'` because the destructive confirm flow needs JSX that JSON can't carry.
 
+### Read-side parity (issue #137)
+
+- **Author link.** The `author` cell links to the plugin's `author_uri` when present (mirroring wp-admin's "By {author}" link), falling back to plain text. `author_uri` is projected onto each row from the REST record.
+- **PHP/WordPress incompatibility warning.** When a plugin's `requires_php` / `requires_wp` (REST schema fields) exceed the running environment — read from `window.wpAdminWorkspaces.phpVersion` / `wpVersion`, emitted by `wp-admin-workspaces.php` — the name cell renders a `Notice.Root` error ("Requires PHP X — this site runs Y."), the workspace equivalent of wp-admin's "does not work with your version" inline row. Version comparison is the pure, side-effect-free `_shared/versionCompare.mjs` (`meetsMinVersion`); an absent global or an absent `requires_*` never warns (no false positives). Pinned by `tests/runtime/read-side-wins.test.mjs`.
+
 Eligibility is mostly declarative via `eligibleWhen` (`{ status: 'inactive' }` / `{ status: ['active','network-active'] }`). The `visit` action's "has plugin URI" check isn't expressible in equality/membership form, so an `eligibilityOverrides[ 'visit' ]` table in `index.js` shadows the declarative spec for that one id.
 
 The client-side filter compares against the search string in name + stripped description. `stripTags()` runs once at projection time. The status filter accepts both array (`isAny`) and scalar (`is`) operator shapes.

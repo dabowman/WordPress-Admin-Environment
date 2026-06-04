@@ -115,7 +115,7 @@
 		"icon": "post"
 	},
 	"documentation": {
-		"purpose": "DataViews table over any single post type. Defaults to 20 rows per page sorted by date descending, with title / status / author / date columns. Authors filter by status / categories / format / date-range, switch view via the All / Mine / Published / Draft / Pending / Sticky tab strip, search the title field, switch between table and grid layouts, paginate, and run per-row or bulk actions (edit, bulk-edit, view in new tab, move to trash). Used in every bundled workspace for the Posts and Pages screens, and rebindable to custom post types through the `postType` config key.",
+		"purpose": "DataViews table over any single post type. Defaults to 20 rows per page sorted by date descending, with title / status / author / date columns. The title cell carries `_post_states` badges (Sticky / Password protected); the date column is status-aware — \"Published\" / \"Scheduled\" / \"Missed schedule\" (past-due future posts, in red) / \"Last Modified\" — mirroring wp-admin's `column_date()` via the shared `_shared/postDateLabel.mjs`. Authors filter by status / categories / format / date-range, switch view via the All / Mine / Published / Draft / Pending / Sticky tab strip, search the title field, switch between table and grid layouts, paginate, and run per-row or bulk actions (edit, bulk-edit, view in new tab, move to trash). Used in every bundled workspace for the Posts and Pages screens, and rebindable to custom post types through the `postType` config key.",
 		"rebuilds": "posts",
 		"data": {
 			"reads": [
@@ -142,6 +142,9 @@
 						"title.rendered",
 						"status",
 						"date",
+						"modified",
+						"sticky",
+						"password",
 						"link",
 						"_embedded.author.0.name"
 					],

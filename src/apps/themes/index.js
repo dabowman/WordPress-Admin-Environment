@@ -8,7 +8,7 @@ import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
@@ -81,6 +81,29 @@ function screenshotUrl( item ) {
 	return `${ siteUrl }/wp-content/themes/${ encodeURIComponent(
 		item.stylesheet
 	) }/screenshot.png`;
+}
+
+/**
+ * Build the Live Preview / Customize URL for a theme, mirroring core's
+ * server-computed `actions.customize`: block themes preview through the Site
+ * Editor (`site-editor.php?wp_theme_preview={slug}`), classic themes through the
+ * Customizer (`customize.php?theme={slug}`). Rendered as a plain `<a href>` so
+ * the kernel's admin-link interceptor maps/handles it (the Customizer is in the
+ * hijack endpoint allowlist; the Site Editor has a workspace route).
+ *
+ * @param {Object} item Mapped theme row (`stylesheet` + `isBlockTheme`).
+ * @return {string} Absolute admin URL.
+ */
+function livePreviewUrl( item ) {
+	const adminUrl =
+		( typeof window !== 'undefined' &&
+			window.wpAdminWorkspaces?.adminUrl ) ||
+		'/wp-admin/';
+	const slug = encodeURIComponent( item.stylesheet );
+	if ( item.isBlockTheme ) {
+		return `${ adminUrl }site-editor.php?wp_theme_preview=${ slug }`;
+	}
+	return `${ adminUrl }customize.php?theme=${ slug }`;
 }
 
 // Module-scoped — renderers are stateless and capture no props.
@@ -163,6 +186,49 @@ export default function ThemesApp( { config = {} } ) {
 		[ invalidateResolution, themesQuery, createNotice ]
 	);
 
+	const data = useMemo( () => {
+		if ( ! themes ) {
+			return [];
+		}
+		return themes.map( ( record ) => ( {
+			id: record.stylesheet,
+			stylesheet: record.stylesheet,
+			name: decodeEntities(
+				record.name?.rendered ||
+					record.name?.raw ||
+					record.stylesheet ||
+					''
+			),
+			screenshot: record.screenshot || '',
+			status: record.status,
+			description: stripTags( record.description?.rendered || '' ),
+			version: record.version || '',
+			author: stripTags( record.author?.rendered || '' ),
+			theme_uri: record.theme_uri || '',
+			// Parent stylesheet for child themes (`''` for top-level themes).
+			template: record.template || '',
+			// Tags array (`tags.raw`); fall back to splitting the rendered string.
+			tags: Array.isArray( record.tags?.raw )
+				? record.tags.raw
+				: ( record.tags?.rendered || '' )
+						.split( ',' )
+						.map( ( t ) => t.trim() )
+						.filter( Boolean ),
+			isBlockTheme: !! record.is_block_theme,
+			rawRecord: record,
+		} ) );
+	}, [ themes ] );
+
+	// stylesheet → display name, so a child theme's details modal can name its
+	// parent rather than print the raw slug. Built from the loaded library.
+	const themeNames = useMemo( () => {
+		const map = {};
+		for ( const item of data ) {
+			map[ item.stylesheet ] = item.name;
+		}
+		return map;
+	}, [ data ] );
+
 	const renderDetailsModal = useCallback(
 		( { items, closeModal } ) => {
 			const item = items[ 0 ];
@@ -170,6 +236,9 @@ export default function ThemesApp( { config = {} } ) {
 				return null;
 			}
 			const isActive = item.status === 'active';
+			const parentName = item.template
+				? themeNames[ item.template ] || item.template
+				: '';
 			return (
 				<Stack
 					direction="column"
@@ -182,6 +251,21 @@ export default function ThemesApp( { config = {} } ) {
 					<Text variant="heading-md" render={ <h2 /> }>
 						{ item.name }
 					</Text>
+					{ parentName && (
+						<Text
+							variant="body-sm"
+							className="wp-admin-workspaces-app__muted"
+						>
+							{ sprintf(
+								/* translators: %s: parent theme name. */
+								__(
+									'This is a child theme of %s.',
+									'wp-admin-workspaces'
+								),
+								parentName
+							) }
+						</Text>
+					) }
 					<Text>{ item.description }</Text>
 					<Text variant="body-sm">
 						{ __( 'Version', 'wp-admin-workspaces' ) }:{ ' ' }
@@ -193,6 +277,15 @@ export default function ThemesApp( { config = {} } ) {
 							  item.author
 							: '' }
 					</Text>
+					{ item.tags.length > 0 && (
+						<Text
+							variant="body-sm"
+							className="wp-admin-workspaces-app__muted"
+						>
+							{ __( 'Tags', 'wp-admin-workspaces' ) }:{ ' ' }
+							{ item.tags.join( ', ' ) }
+						</Text>
+					) }
 					<Stack direction="row" justify="flex-end" gap="sm">
 						{ item.theme_uri && (
 							<Button
@@ -207,6 +300,17 @@ export default function ThemesApp( { config = {} } ) {
 								}
 							>
 								{ __( 'Theme site', 'wp-admin-workspaces' ) }
+							</Button>
+						) }
+						{ ! isActive && (
+							<Button
+								tone="neutral"
+								variant="outline"
+								render={
+									<a href={ livePreviewUrl( item ) } />
+								}
+							>
+								{ __( 'Live Preview', 'wp-admin-workspaces' ) }
 							</Button>
 						) }
 						<Button variant="minimal" onClick={ closeModal }>
@@ -230,31 +334,8 @@ export default function ThemesApp( { config = {} } ) {
 				</Stack>
 			);
 		},
-		[ activate ]
+		[ activate, themeNames ]
 	);
-
-	const data = useMemo( () => {
-		if ( ! themes ) {
-			return [];
-		}
-		return themes.map( ( record ) => ( {
-			id: record.stylesheet,
-			stylesheet: record.stylesheet,
-			name: decodeEntities(
-				record.name?.rendered ||
-					record.name?.raw ||
-					record.stylesheet ||
-					''
-			),
-			screenshot: record.screenshot || '',
-			status: record.status,
-			description: stripTags( record.description?.rendered || '' ),
-			version: record.version || '',
-			author: stripTags( record.author?.rendered || '' ),
-			theme_uri: record.theme_uri || '',
-			rawRecord: record,
-		} ) );
-	}, [ themes ] );
 
 	const fields = useMemo(
 		() =>
