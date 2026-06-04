@@ -25,6 +25,16 @@
  * (`subscribeIcons`) so a consumer can re-resolve when a late / async
  * engine registration arrives, mirroring `menuRendererRegistry`.
  *
+ * Note: `subscribeIcons` is a published hook with NO current in-tree
+ * consumer — apps call `resolveIcon` at render but nothing re-renders them
+ * on a late icon-table registration (unlike `core:navigation`, which
+ * subscribes to `menuRendererRegistry`). The gap is intentional, not an
+ * oversight: a late-registering engine generally gates the whole app tree
+ * anyway, and the engine-extraction blocker (issue #73) was specifically
+ * the menu renderer. Wire a `useSyncExternalStore` consumer here if a
+ * loose-script engine ever needs already-painted apps to swap off the
+ * fallback icon.
+ *
  * Tests construct an isolated registry via `createIconRegistry()` so
  * per-suite state does not bleed across test files.
  */

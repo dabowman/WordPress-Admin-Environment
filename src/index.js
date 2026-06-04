@@ -23,15 +23,21 @@ import './index.css';
 //
 // Assigning before mount means a plugin script that ran *before* this
 // module (e.g. enqueued ahead of the bundle) can't be lost. A plugin
-// script that runs *after* the bundle is handled two ways: (1) the mount
-// below is deferred one microtask, so any script enqueued synchronously
-// after the bundle has executed its top-level registration before first
-// paint; (2) the kernel registries are subscribable, so even a truly
-// async (dynamically-injected) registration re-renders its consumer
-// (`core:navigation` subscribes via `subscribeMenuRenderers`). Together
-// these close the race documented in the kernel-import-surface item in
-// `docs/feedback.md` (issue #73) and unblock extracting the bundled
+// script that runs *after* the bundle is handled by the subscribable
+// kernel registries: even a truly async (dynamically-injected)
+// registration re-renders its consumer (`core:navigation` subscribes via
+// `subscribeMenuRenderers`). That subscription is the actual load-order
+// fix and closes the race documented in the kernel-import-surface item in
+// `docs/feedback.md` (issue #73), unblocking extraction of the bundled
 // engines to standalone plugins.
+//
+// The microtask-deferred mount below is belt-and-suspenders, NOT the
+// guarantee: a microtask checkpoint already runs between consecutive
+// external `<script>` executions, and React 18's `createRoot().render()`
+// is itself async (reconciliation is scheduled, not synchronous), so a
+// renderer script enqueued synchronously after the bundle registers
+// before `NavigationApp`'s body runs with or without the defer. The
+// subscription is what makes the late/async case correct.
 if ( window.wpAdminWorkspaces ) {
 	const kernelSurface = {
 		registerMenuRenderer,
@@ -50,11 +56,11 @@ if ( window.wpAdminWorkspaces ) {
 const container = document.getElementById( 'wp-admin-workspaces' );
 if ( container ) {
 	const root = createRoot( container );
-	// Defer the first render one microtask so any plugin / engine script
-	// enqueued synchronously after this bundle has registered its menu
-	// renderer / icon table before first paint — no re-render needed in the
-	// common case. Async-injected registrations are still covered by the
-	// subscribable registries. See the kernel-surface note above.
+	// Belt-and-suspenders: defer the first render one microtask. This does
+	// NOT win the load-order race on its own (the HTML spec already drains a
+	// microtask checkpoint between external `<script>` tags, and React 18's
+	// render is async anyway) — the subscribable registries are the real
+	// guarantee. See the kernel-surface note above.
 	queueMicrotask( () => {
 		root.render( kernel( window.wpAdminWorkspaces?.config ) );
 	} );

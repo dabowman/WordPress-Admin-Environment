@@ -34,13 +34,15 @@
  * `window.wpAdminWorkspaces.kernel` (and keeps the flat
  * `window.wpAdminWorkspaces.registerMenuRenderer` alias for back-compat) so a
  * third-party renderer shipped as a standalone script (no bundler access
- * to this module) can still register. The kernel mount is deferred one
- * microtask, so a renderer script enqueued synchronously after the bundle
- * registers before first paint; and this registry is subscribable
- * (`subscribeMenuRenderers`), so even a truly async registration
- * re-renders `core:navigation`. Renderers that register via a direct ESM
- * import (the bundled engines + any engine the workspace webpack builds)
- * are present before the kernel module runs and never need either path.
+ * to this module) can still register. This registry is subscribable
+ * (`subscribeMenuRenderers` + `getMenuRendererEpoch`), so even a truly
+ * async registration re-renders `core:navigation` — that subscription is
+ * the load-order guarantee. (The kernel mount in `src/index.js` is also
+ * deferred one microtask as belt-and-suspenders, but that defer does not
+ * win the race on its own; see the note there.) Renderers that register
+ * via a direct ESM import (the bundled engines + any engine the workspace
+ * webpack builds) are present before the kernel module runs and never need
+ * either path.
  *
  * Tests construct an isolated registry via `createMenuRendererRegistry()`
  * so per-suite state does not bleed across test files.
@@ -58,12 +60,18 @@ const IS_DEV =
  * register/resolve API. The module-level `registerMenuRenderer` /
  * `resolveMenuRenderer` exports are thin facades over a default instance.
  *
- * @return {{registerMenuRenderer: Function, resolveMenuRenderer: Function, subscribeMenuRenderers: Function}} Isolated registry handle.
+ * @return {{registerMenuRenderer: Function, resolveMenuRenderer: Function, subscribeMenuRenderers: Function, getMenuRendererEpoch: Function}} Isolated registry handle.
  */
 export function createMenuRendererRegistry() {
 	const registry = {};
 	const warned = new Set();
 	const listeners = new Set();
+	// Monotonic registration epoch OWNED by the registry. Bumped before the
+	// listener loop on every successful registration, so it's the canonical
+	// `getSnapshot` source for a `useSyncExternalStore` consumer: whichever
+	// listener React schedules reads the already-incremented value, with no
+	// dependence on listener insertion order. See `getMenuRendererEpoch`.
+	let epoch = 0;
 
 	function registerMenuRenderer( id, Component ) {
 		if ( typeof id !== 'string' || id === '' || ! Component ) {
@@ -82,6 +90,11 @@ export function createMenuRendererRegistry() {
 			return;
 		}
 		registry[ id ] = Component;
+		// Bump the epoch BEFORE notifying so any `useSyncExternalStore`
+		// listener (which reads `getMenuRendererEpoch` in its
+		// `getSnapshot`) sees the new value regardless of which listener
+		// fires first — no insertion-order side-channel.
+		epoch++;
 		// Notify subscribers so a consumer mounted before this (late /
 		// async) registration re-resolves. This is what lets a loose
 		// plugin renderer script that loaded AFTER the kernel mounted
@@ -105,6 +118,19 @@ export function createMenuRendererRegistry() {
 		}
 		listeners.add( listener );
 		return () => listeners.delete( listener );
+	}
+
+	/**
+	 * Read the current registration epoch. Shaped for
+	 * `useSyncExternalStore`'s `getSnapshot` — a monotonic count that only
+	 * changes when a new renderer registers. Because the registry bumps it
+	 * before the listener loop, a consumer reads the post-registration value
+	 * no matter which listener React runs first.
+	 *
+	 * @return {number} Current epoch.
+	 */
+	function getMenuRendererEpoch() {
+		return epoch;
 	}
 
 	function resolveMenuRenderer( id ) {
@@ -133,6 +159,7 @@ export function createMenuRendererRegistry() {
 		registerMenuRenderer,
 		resolveMenuRenderer,
 		subscribeMenuRenderers,
+		getMenuRendererEpoch,
 	};
 }
 
@@ -178,3 +205,16 @@ export const resolveMenuRenderer = defaultRegistry.resolveMenuRenderer;
  * @return {Function} Unsubscribe.
  */
 export const subscribeMenuRenderers = defaultRegistry.subscribeMenuRenderers;
+
+/**
+ * Read the default-registry registration epoch.
+ *
+ * `core:navigation` pairs this with `subscribeMenuRenderers` as the
+ * `getSnapshot` source of a `useSyncExternalStore` so a renderer
+ * registered AFTER the kernel mounted repaints the nav. The registry owns
+ * the counter and increments it before notifying, so the value is correct
+ * regardless of listener order — the consumer keeps no local epoch mirror.
+ *
+ * @return {number} Current epoch.
+ */
+export const getMenuRendererEpoch = defaultRegistry.getMenuRendererEpoch;
