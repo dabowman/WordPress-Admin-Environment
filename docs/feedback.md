@@ -26,15 +26,15 @@ _New items land here. No triage yet._
 
 - **2026-05-27 — Alpha (0.1.0) deferred work.** Tracked gaps from the
   workspace-as-primary-entry release (`docs/plans/2026-05-27-alpha-release-0.1.0.md`):
-  - WP-CLI scaffolder for `wp-content/admin.json` (`wp admin-shell scaffold-config`).
+  - WP-CLI scaffolder for `wp-content/workspace.json` (`wp admin-shell scaffold-config`).
   - In-workspace iframe host for unmapped admin links (wire the
     `adminLinkInterceptor` `onUnmatched` seam → an iframe-fallback region
     instead of a full browser navigation).
-  - Settings UI that writes `wp-content/admin.json` (needs filesystem caps +
+  - Settings UI that writes `wp-content/workspace.json` (needs filesystem caps +
     nonce + lock handling).
   - Network admin (multisite) support — currently always classic.
   - Customizer native port — currently allowlist/iframe only.
-  - `.htaccess` / nginx snippet so `wp-content/admin.json` isn't served as
+  - `.htaccess` / nginx snippet so `wp-content/workspace.json` isn't served as
     static JSON (ship with install docs).
   - Cleaner deactivation when neither file nor option is set (today: harmless
     no-op, classic admin).

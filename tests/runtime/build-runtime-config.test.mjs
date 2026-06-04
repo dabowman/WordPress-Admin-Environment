@@ -437,7 +437,7 @@ function loadEngineManifest( engineId ) {
 	return JSON.parse( readFileSync( path, 'utf8' ) );
 }
 
-const shellDir = resolve( projectRoot, 'shells' );
+const shellDir = resolve( projectRoot, 'workspaces' );
 const shellFiles = readdirSync( shellDir ).filter( ( f ) =>
 	f.endsWith( '.json' )
 );

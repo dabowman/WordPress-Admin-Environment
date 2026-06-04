@@ -90,18 +90,18 @@ npx wp-env start
 
 The plugin ships the `wp-admin-default` baseline (the cascade `core` origin).
 To turn the workspace on and customize it, drop an `admin.json` **override**
-at `wp-content/admin.json` — it behaves like `theme.json` over core's
+at `wp-content/workspace.json` — it behaves like `theme.json` over core's
 defaults: you declare only what you want to change, and everything else falls
 through from the baseline.
 
 ```bash
 # Quickstart: copy a starter template, then visit /wp-admin/
 # (any valid admin.json here turns the workspace on)
-cp wp-content/plugins/wp-admin-workspaces/shells/single-pane-demo.json wp-content/admin.json
+cp wp-content/plugins/wp-admin-workspaces/shells/single-pane-demo.json wp-content/workspace.json
 ```
 
 1. Activate the plugin (and Gutenberg).
-2. Place a valid `wp-content/admin.json` (copy one from `shells/` and edit, or
+2. Place a valid `wp-content/workspace.json` (copy one from `shells/` and edit, or
    write a small delta like `{ "$schema": "…", "version": 3, "$wpds": "6.9",
    "name": "mine", "workspace": { … }, "styles": { … } }`).
 3. Visit `/wp-admin/` — the workspace **replaces** classic wp-admin at the URL
@@ -136,7 +136,7 @@ bar shows a reciprocal **Back to workspace** link.
 
 ## `admin.json` schema
 
-The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/admin.json) (workspace), [`admin-app.json`](docs/schemas/admin-app.json) (app manifest), [`admin-engine.json`](docs/schemas/admin-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`admin.json`](docs/schemas/workspace.json) (workspace), [`admin-app.json`](docs/schemas/workspace-app.json) (app manifest), [`admin-engine.json`](docs/schemas/workspace-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (admin.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 

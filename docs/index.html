@@ -296,7 +296,7 @@
         <div>
           <p class="eyebrow">The whole config</p>
           <h2>A workspace is a delta</h2>
-          <p class="intro" style="margin-bottom:0">Drop an <code style="font-family:var(--mono)">admin.json</code> at <code style="font-family:var(--mono)">wp-content/admin.json</code>. Like theme.json over core's defaults, you declare only what changes — everything else falls through from the baseline.</p>
+          <p class="intro" style="margin-bottom:0">Drop an <code style="font-family:var(--mono)">admin.json</code> at <code style="font-family:var(--mono)">wp-content/workspace.json</code>. Like theme.json over core's defaults, you declare only what changes — everything else falls through from the baseline.</p>
           <ul class="checks">
             <li>Pick the <strong>mobile-first engine</strong> with one key.</li>
             <li>Rename <strong>Posts → “Stories”</strong> without touching PHP.</li>
@@ -305,9 +305,9 @@
           </ul>
         </div>
         <div class="codeframe">
-          <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="name">wp-content/admin.json</span></div>
+          <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="name">wp-content/workspace.json</span></div>
 <pre><span class="tok-punc">{</span>
-  <span class="tok-key">"$schema"</span><span class="tok-punc">:</span> <span class="tok-str">"…/docs/schemas/admin.json"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"$schema"</span><span class="tok-punc">:</span> <span class="tok-str">"…/docs/schemas/workspace.json"</span><span class="tok-punc">,</span>
   <span class="tok-key">"version"</span><span class="tok-punc">:</span> <span class="tok-num">3</span><span class="tok-punc">,</span>
   <span class="tok-key">"$wpds"</span><span class="tok-punc">:</span> <span class="tok-str">"6.9"</span><span class="tok-punc">,</span>
   <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"writers-room"</span><span class="tok-punc">,</span>
@@ -360,7 +360,7 @@
       <div class="steps">
         <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the shell uses private APIs only Gutenberg's allowlist exposes).</p></div>
         <div class="step"><div class="n"></div><p>Install <strong>WP Admin Shell</strong>: upload <code>wp-admin-workspaces.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
-        <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/admin.json</code>, e.g. <code>cp shells/single-pane-demo.json wp-content/admin.json</code> — then edit it down to your deltas.</p></div>
+        <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/workspace.json</code>, e.g. <code>cp shells/single-pane-demo.json wp-content/workspace.json</code> — then edit it down to your deltas.</p></div>
         <div class="step"><div class="n"></div><p>Visit <code>/wp-admin/</code>. Press <code>Cmd/Ctrl + K</code> for the command palette. A <strong>Classic wp-admin</strong> escape hatch stays in the admin bar.</p></div>
       </div>
     </div>
@@ -373,7 +373,7 @@
       <h2>Read the references</h2>
       <p class="intro">Author-facing guides and the JSON Schemas that power editor autocomplete and validation.</p>
       <div class="docs-grid">
-        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/admin-json-reference.md">
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/workspace-json-reference.md">
           <h3>admin.json reference</h3>
           <p>The workspace file — every block, every key, with examples.</p>
           <span class="arrow">Open reference →</span>

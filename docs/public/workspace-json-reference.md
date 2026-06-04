@@ -33,7 +33,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin.json",
+	"$schema": "https://schemas.wp.org/workspace.json",
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "my-workspace",
@@ -51,7 +51,7 @@ This reference covers the admin.json workspace schema (`admin.json`).
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin.json`](../schemas/admin.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace.json`](../schemas/admin.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -467,4 +467,4 @@ Two limits always apply regardless of the declaration:
 }
 ```
 
-See [§4.4.2 of the design sketch](../schema-sketch.md) for the full trust-tier rationale and `#/$defs/customizable` in [`docs/schemas/admin.json`](../schemas/admin.json) for the schema definition.
+See [§4.4.2 of the design sketch](../schema-sketch.md) for the full trust-tier rationale and `#/$defs/customizable` in [`docs/schemas/workspace.json`](../schemas/admin.json) for the schema definition.

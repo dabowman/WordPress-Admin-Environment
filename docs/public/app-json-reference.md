@@ -34,7 +34,7 @@ This reference covers the app manifest schema (`admin-app.json`).
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-app.json",
+	"$schema": "https://schemas.wp.org/workspace-app.json",
 	"id": "plugin:acme/orders",
 	"version": 3,
 	"title": "Orders",
@@ -43,7 +43,7 @@ This reference covers the app manifest schema (`admin-app.json`).
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 

@@ -13,8 +13,8 @@
  * begins migrating the existing core apps from imperative registration
  * to manifest-driven discovery.
  *
- * Returns plain manifest objects matching `docs/schemas/admin-app.json`
- * / `docs/schemas/admin-engine.json`. Authoring-time validation runs
+ * Returns plain manifest objects matching `docs/schemas/workspace-app.json`
+ * / `docs/schemas/workspace-engine.json`. Authoring-time validation runs
  * via Ajv against those schemas; PHP-side validation happens at
  * registration. Kernel callers can trust the shape.
  */

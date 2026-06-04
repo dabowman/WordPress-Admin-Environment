@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin.json",
+	"$id": "https://schemas.wp.org/workspace.json",
 	"title": "WP Admin Shell — admin.json (v3)",
 	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
 
@@ -12,7 +12,7 @@
 		"$schema": {
 			"type": "string",
 			"format": "uri-reference",
-			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin.json`. Optional but strongly recommended — IDE tooling uses it for live validation. Relative paths are accepted (e.g., `../docs/schemas/admin.json` for in-repo authoring) — `uri-reference` per RFC 3986, matching the block.json convention."
+			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/workspace.json`. Optional but strongly recommended — IDE tooling uses it for live validation. Relative paths are accepted (e.g., `../docs/schemas/workspace.json` for in-repo authoring) — `uri-reference` per RFC 3986, matching the block.json convention."
 		},
 
 		"version": {
@@ -238,7 +238,7 @@
 					"uniqueItems": true
 				}
 			],
-			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/admin-json-reference.md`."
+			"description": "Per-entry consumer-origin write allowlist (spec §4.4.2). Declares what `role` and `user` origins may write to THIS entry (and its descendants) during the cascade. Three shapes: `true` — every field on this entry is writable downstream; `false` — the entry is locked, no fields writable; `[ \"dotted.path\", ... ]` — only the listed dotted paths (relative to this entry) are writable, everything else is locked. Absence is equivalent to `false` (default-deny — same posture as block supports). Enforcement runs server-side in `WP_Admin_Workspaces_Customizable` BEFORE the merge step, so blocked fields never enter the resolved tree; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors. Trust tiers: `core`/`engine`/`plugin`/`site` origins author the declaration and are exempt from enforcement — this field is THEIR statement about what downstream consumers may touch. The hardcoded deny-list (`screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, `workspace.engine`) is rejected for consumer origins even with a matching allowlist entry. Object / number / other types are treated as locked. See schema-sketch.md §4.4.2 and `docs/public/workspace-json-reference.md`."
 		},
 
 		"namespacedId": {

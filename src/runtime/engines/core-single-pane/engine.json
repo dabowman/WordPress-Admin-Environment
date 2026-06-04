@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../../docs/schemas/admin-engine.json",
+	"$schema": "../../../../docs/schemas/workspace-engine.json",
 	"id": "core:single-pane",
 	"version": 3,
 	"title": "Single pane",

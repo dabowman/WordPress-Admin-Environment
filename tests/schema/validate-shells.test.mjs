@@ -3,9 +3,9 @@
  * Schema validation harness — Ajv 2020-12.
  *
  * Validates against the single schema generation:
- *   - docs/schemas/admin.json         (admin.json workspace)
- *   - docs/schemas/admin-app.json     (app manifest)
- *   - docs/schemas/admin-engine.json  (engine manifest)
+ *   - docs/schemas/workspace.json         (admin.json workspace)
+ *   - docs/schemas/workspace-app.json     (app manifest)
+ *   - docs/schemas/workspace-engine.json  (engine manifest)
  *   - docs/schemas/tokens.json        (DTCG primitives)
  *
  * For each manifest schema, runs:
@@ -25,7 +25,7 @@ import addFormats from 'ajv-formats';
 const __dirname    = dirname( fileURLToPath( import.meta.url ) );
 const projectRoot  = resolve( __dirname, '..', '..' );
 const SCHEMAS_DIR  = resolve( projectRoot, 'docs/schemas' );
-const SHELLS_DIR   = resolve( projectRoot, 'shells' );
+const SHELLS_DIR   = resolve( projectRoot, 'workspaces' );
 const FIXTURES_DIR = resolve( __dirname, 'fixtures' );
 const APP_MANIFEST_DIRS = [
 	resolve( projectRoot, 'src/apps' ),
@@ -110,9 +110,9 @@ function isV3ShellShape( doc ) {
 // `fixtures/<key>/{positive,negative}` exercise edge cases.
 
 const manifestSchemas = [
-	{ key: 'admin',  schemaFile: 'admin.json' },
-	{ key: 'app',    schemaFile: 'admin-app.json' },
-	{ key: 'engine', schemaFile: 'admin-engine.json' },
+	{ key: 'admin',  schemaFile: 'workspace.json' },
+	{ key: 'app',    schemaFile: 'workspace-app.json' },
+	{ key: 'engine', schemaFile: 'workspace-engine.json' },
 ];
 
 for ( const { key, schemaFile } of manifestSchemas ) {

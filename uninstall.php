@@ -6,7 +6,7 @@
  * option, user-meta key, and transient the shell writes so an uninstall — or
  * a clean reset between test runs — leaves no orphaned rows behind.
  *
- * Does NOT touch the site author's `wp-content/admin.json` override file:
+ * Does NOT touch the site author's `wp-content/workspace.json` override file:
  * that's user-authored content (like a theme's files), not plugin state, and
  * deleting a user's config on uninstall would be surprising + destructive.
  *

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin-app.json",
+	"$id": "https://schemas.wp.org/workspace-app.json",
 	"title": "WP Admin Shell — App Manifest (v3)",
 	"description": "Declares what an admin shell app is. Shipped alongside the app's code (script and style assets), discovered at the convention path `{plugin}/apps/{name}/app.json` or registered programmatically. The manifest contains only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when admin.json passes values, the slots it exposes for in-screen sub-mounts, the size/position hints it prefers when slotted into a grid-style container, and a baseline DataView family the app ships for the entity it renders. Manifests deliberately do not declare layout, geometry, keystroke bindings, menu placement, or which install they belong to — those are install decisions and live in admin.json. The `dashboardWidget` placement is expressed via screen-level `apps[]` entries paired with `slotHints` here; the `dataView` block declares a `variants: { <id>: ... }` family. See WP Admin Shell Design Spec §4.1 and `docs/schema-sketch.md`.",
 
@@ -12,7 +12,7 @@
 		"$schema": {
 			"type": "string",
 			"format": "uri-reference",
-			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-app.json`. Optional but strongly recommended — IDE tooling uses it for live validation. Relative paths are accepted (e.g., `../../../docs/schemas/admin-app.json` for in-repo authoring), matching the block.json convention."
+			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/workspace-app.json`. Optional but strongly recommended — IDE tooling uses it for live validation. Relative paths are accepted (e.g., `../../../docs/schemas/workspace-app.json` for in-repo authoring), matching the block.json convention."
 		},
 
 		"id": {

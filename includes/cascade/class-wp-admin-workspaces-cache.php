@@ -89,7 +89,7 @@ class WP_Admin_Workspaces_Cache {
 		$signals = array(
 			'workspace'       => $context['workspace'] ?? '',
 			'core_mtime'  => self::workspaces_mtime(),
-			// wp-content/admin.json override signal (mtime:size) — edits to
+			// wp-content/workspace.json override signal (mtime:size) — edits to
 			// the file invalidate the cached tree automatically, including
 			// a same-second malformed→fixed edit (size disambiguates).
 			'admin_json'  => class_exists( 'WP_Admin_Workspaces_Origin_File' ) ? WP_Admin_Workspaces_Origin_File::signal() : '0:0',
@@ -104,7 +104,7 @@ class WP_Admin_Workspaces_Cache {
 	}
 
 	private static function workspaces_mtime() {
-		$dir = WP_ADMIN_WORKSPACES_PATH . 'shells/';
+		$dir = WP_ADMIN_WORKSPACES_PATH . 'workspaces/';
 		if ( ! is_dir( $dir ) ) {
 			return 0;
 		}

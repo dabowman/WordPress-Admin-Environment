@@ -1,6 +1,6 @@
 <?php
 /**
- * File origin loader — `wp-content/admin.json` override.
+ * File origin loader — `wp-content/workspace.json` override.
  *
  * The canonical workspace override. When a site author drops a valid
  * `admin.json` at `WP_CONTENT_DIR`, it loads into the cascade `plugin`
@@ -29,7 +29,7 @@
  * gate the consumer origins (site/role/user). So the file may add+remove
  * baseline screens (null tombstones), grow `screens[].permissions`, and
  * change `workspace.engine` — the same authority as the bundled plugin.
- * That is correct: writing `wp-content/admin.json` requires filesystem
+ * That is correct: writing `wp-content/workspace.json` requires filesystem
  * access, which already implies running arbitrary plugin code, so there's
  * no privilege boundary to defend here. See spec §19.
  *
@@ -56,14 +56,14 @@ class WP_Admin_Workspaces_Origin_File {
 	 * @return string
 	 */
 	public static function path() {
-		$default = trailingslashit( WP_CONTENT_DIR ) . 'admin.json';
+		$default = trailingslashit( WP_CONTENT_DIR ) . 'workspace.json';
 
 		/**
 		 * Filter the absolute path of the workspace override file.
 		 *
 		 * @param string $default `WP_CONTENT_DIR/admin.json`.
 		 */
-		return (string) apply_filters( 'wp_admin_workspaces_admin_json_path', $default );
+		return (string) apply_filters( 'wp_admin_workspaces_workspace_json_path', $default );
 	}
 
 	/**

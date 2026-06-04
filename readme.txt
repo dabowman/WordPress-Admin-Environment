@@ -26,7 +26,7 @@ different people.
 
 **How it works**
 
-* A `wp-content/admin.json` override layers over the bundled `wp-admin-default`
+* A `wp-content/workspace.json` override layers over the bundled `wp-admin-default`
   baseline, like `theme.json` over core defaults — declare only what changes.
 * A six-origin cascade resolver merges core / engine / plugin / site / role / user
   with field-aware, restrict-only semantics and trust tiers.
@@ -59,7 +59,7 @@ instead.
 2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
 3. Activate **WP Admin Shell**.
-4. To turn the workspace on, drop a valid `admin.json` at `wp-content/admin.json`
+4. To turn the workspace on, drop a valid `admin.json` at `wp-content/workspace.json`
    (copy a starter from the plugin's `shells/` directory and edit it). With no file
    present, wp-admin stays classic and untouched.
 
@@ -72,7 +72,7 @@ Press `Cmd/Ctrl+K` for the command palette. The workspace admin bar shows a
 
 No. Every screen reads and writes through the standard WordPress REST API. The plugin
 stores only its own configuration (options + per-user preference meta), and
-`uninstall.php` removes all of it on delete. Your `wp-content/admin.json` is treated
+`uninstall.php` removes all of it on delete. Your `wp-content/workspace.json` is treated
 as your content and is left in place on uninstall.
 
 = How do I get back to classic wp-admin? =

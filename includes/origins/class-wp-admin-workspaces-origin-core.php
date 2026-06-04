@@ -17,7 +17,7 @@ class WP_Admin_Workspaces_Origin_Core {
 
 	/**
 	 * Slug of the shipped default baseline. This is the admin.json that
-	 * fills the cascade `core` slot when a `wp-content/admin.json`
+	 * fills the cascade `core` slot when a `wp-content/workspace.json`
 	 * override file is present — the file then layers over it as a
 	 * partial delta (theme.json model). The file still lives in `shells/`
 	 * for back-compat (the option-driven selector + the shape-test sweep
@@ -33,7 +33,7 @@ class WP_Admin_Workspaces_Origin_Core {
 	 */
 	public static function load_baseline() {
 		$base = defined( 'WP_ADMIN_WORKSPACES_PATH' ) ? WP_ADMIN_WORKSPACES_PATH : '';
-		return self::load( $base . 'shells/' . self::BASELINE_SLUG . '.json' );
+		return self::load( $base . 'workspaces/' . self::BASELINE_SLUG . '.json' );
 	}
 
 	public static function load( $workspace_path ) {
@@ -56,7 +56,7 @@ class WP_Admin_Workspaces_Origin_Core {
 	 */
 	public static function empty_doc() {
 		return array(
-			'$schema'   => '../docs/schemas/admin.json',
+			'$schema'   => '../docs/schemas/workspace.json',
 			'version'   => 3,
 			'$wpds'     => '6.9',
 			'name'           => 'empty',

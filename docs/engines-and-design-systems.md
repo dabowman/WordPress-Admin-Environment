@@ -123,7 +123,7 @@ sibling and gets the full WPDS surface for free.
 - **Engine `compileStyles` shape** — `src/runtime/registry/source-types.js`
   JSDoc typedef + `src/runtime/styles/ThemeProviderHost.js` consumer.
 - **Engine `default-styles` Phase C contract** —
-  `docs/schemas/admin-engine.json#/$defs/defaultStyles` +
+  `docs/schemas/workspace-engine.json#/$defs/defaultStyles` +
   `includes/cascade/class-wp-admin-workspaces-resolver.php` synthetic
   origin merge.
 - **WPDS-flavored ThemeProvider** —

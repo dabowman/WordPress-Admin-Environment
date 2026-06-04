@@ -35,7 +35,7 @@ This reference covers the engine manifest schema (`admin-engine.json`). Engines 
 
 ```json
 {
-	"$schema": "https://schemas.wp.org/admin-engine.json",
+	"$schema": "https://schemas.wp.org/workspace-engine.json",
 	"id": "plugin:acme/desktop",
 	"version": 3,
 	"title": "Acme Desktop",
@@ -57,7 +57,7 @@ This reference covers the engine manifest schema (`admin-engine.json`). Engines 
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/admin-engine.json`](../schemas/admin-engine.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace-engine.json`](../schemas/admin-engine.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `specializes-roles`, `honored-platform`, `templates` (must contain at least one template), `default-arrangement`, `script`, `modes`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 

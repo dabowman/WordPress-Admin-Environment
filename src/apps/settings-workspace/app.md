@@ -6,7 +6,7 @@ DataForm panel for the **Activate WP Admin Workspace** toggle. Persists the `wp_
 
 The W3 toolbar "Classic wp-admin" button was a session-scoped escape hatch (cookie). For a real preference you want persistence across sessions, devices, and reloads. This screen is that.
 
-The toggle is a **veto** layer over the existing trigger logic, not a sufficient condition: a `wp-content/admin.json` file (or the legacy `wp_admin_workspaces_active_workspace` option) is still required to activate the workspace. The flag's only job is to let the user turn it OFF.
+The toggle is a **veto** layer over the existing trigger logic, not a sufficient condition: a `wp-content/workspace.json` file (or the legacy `wp_admin_workspaces_active_workspace` option) is still required to activate the workspace. The flag's only job is to let the user turn it OFF.
 
 ## Re-enabling from classic
 

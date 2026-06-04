@@ -432,7 +432,7 @@ function wp_admin_workspaces_render_workspace_settings_page() {
 							<input type="checkbox" name="wp_admin_workspaces_workspace_enabled" value="1" <?php checked( $enabled ); ?> />
 							<?php esc_html_e( 'Activate WP Admin Workspace', 'wp-admin-workspaces' ); ?>
 						</label>
-						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic.', 'wp-admin-workspaces' ); ?></p>
+						<p class="description"><?php esc_html_e( 'When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/workspace.json. Disable to fall back to classic.', 'wp-admin-workspaces' ); ?></p>
 					</td>
 				</tr>
 			</table>
@@ -569,7 +569,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
 		'workspaces'        => wp_admin_workspaces_get_available_workspaces(),
-		// True when a wp-content/admin.json override is active — it wins over
+		// True when a wp-content/workspace.json override is active — it wins over
 		// the active-shell option, so the shell switcher hides + switchWorkspace()
 		// refuses (writing the option would be a silent no-op).
 		'fileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
@@ -662,7 +662,7 @@ function wp_admin_workspaces_get_active_config() {
  *
  * Single source of truth for the workspace-as-primary-entry hijack and
  * the classic-mode escape hatch. True when EITHER:
- *   - a valid `wp-content/admin.json` override file is present, OR
+ *   - a valid `wp-content/workspace.json` override file is present, OR
  *   - the legacy `wp_admin_workspaces_active_workspace` option was explicitly
  *     written (back-compat for installs that selected a shell before the
  *     file-based trigger landed).
@@ -712,7 +712,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
 	if ( $sanitized === '' ) {
 		return '';
 	}
-	$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $sanitized . '.json';
+	$path = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . $sanitized . '.json';
 	if ( file_exists( $path ) ) {
 		return $sanitized;
 	}
@@ -1582,7 +1582,7 @@ function wp_admin_workspaces_get_settings_general_data() {
  */
 function wp_admin_workspaces_get_available_workspaces() {
 	$by_slug = array();
-	$dir     = WP_ADMIN_WORKSPACES_PATH . 'shells/';
+	$dir     = WP_ADMIN_WORKSPACES_PATH . 'workspaces/';
 
 	foreach ( glob( $dir . '*.json' ) ?: array() as $file ) {
 		$data = json_decode( file_get_contents( $file ), true );

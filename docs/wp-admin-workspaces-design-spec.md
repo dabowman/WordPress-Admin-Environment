@@ -1,7 +1,7 @@
 # WordPress Admin Shell — Design Spec
 
 > Authoritative source for the WP Admin Shell runtime architecture.
-> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
+> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the admin.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
 >
 > **Version vocabulary note.** This spec uses "v1" / "MVP" to name *product milestones* (MVP → v1 "comprehensive shell", §17 roadmap). That is a different axis from the repo's *architecture* versioning ("v3 shape" in `CLAUDE.md`), which tracks the admin.json schema reshape. The current architecture is **v3** (`workspace` / `settings` / `screens` / `menu` / `commands` + three artifacts), described in the header below; the runtime contracts in this spec are current and survive v2 → v3 unchanged. Read "v1" here as a milestone label, not the current schema shape.
 
@@ -163,7 +163,7 @@ The app manifest declares **what an app is**. It is shipped with the app's code,
 
 ```jsonc
 {
-  "$schema": "https://schemas.wp.org/admin-app.json",
+  "$schema": "https://schemas.wp.org/workspace-app.json",
   "id": "core:command-palette",
   "version": 1,
   "title": "Command Palette",
@@ -209,7 +209,7 @@ Manifest fields:
 
 **The manifest does not enumerate keystrokes.** Bindings are declared in `admin.json` because they are install-level and user-customizable. The app may declare `triggerable: true` to indicate it can be invoked by a binding; *which* binding is decided at the install.
 
-**Schema hosting.** `https://schemas.wp.org/admin-app.json` is the canonical URL. Until the schema is hosted, it lives at `docs/schemas/admin-app.json` in the plugin repo and is referenced via `$schema` for IDE validation. Same applies to the engine and admin.json schemas (§4.2, §4.3).
+**Schema hosting.** `https://schemas.wp.org/workspace-app.json` is the canonical URL. Until the schema is hosted, it lives at `docs/schemas/workspace-app.json` in the plugin repo and is referenced via `$schema` for IDE validation. Same applies to the engine and admin.json schemas (§4.2, §4.3).
 
 **Forward compatibility.** A manifest declaring a higher `version` than the runtime understands triggers a warning and a best-effort load: known fields are honored, unknown fields are preserved on the manifest object but ignored by the runtime. This matches `theme.json`'s policy.
 
@@ -364,11 +364,11 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
 `admin.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
 
-> **Authoring shape.** Authors write admin.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/admin.json`](./schemas/admin.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
+> **Authoring shape.** Authors write admin.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/workspace.json`](./schemas/admin.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
 
 ```jsonc
 {
-  "$schema": "https://schemas.wp.org/admin.json",
+  "$schema": "https://schemas.wp.org/workspace.json",
   "version": 1,
   "$wpds":   "6.9",
 
@@ -1071,7 +1071,7 @@ export default {
 
 **Data compatibility.** All persistence via WordPress core options/user-meta and REST API. No shadow datastore. `uninstall.php` removes shell-specific options.
 
-**Coexistence with wp-admin.** Standard wp-admin remains fully functional. As of 0.1.0 the shell takes over the admin root (`/wp-admin/`, bare `index.php`, bare `admin.php`) when a `wp-content/admin.json` override is present — see §19. Classic stays reachable for every allowlisted endpoint (RPC / install / update / customizer / network admin), via plugin `?page=` pages, and via the cap-gated `?classic=1` cookie escape hatch.
+**Coexistence with wp-admin.** Standard wp-admin remains fully functional. As of 0.1.0 the shell takes over the admin root (`/wp-admin/`, bare `index.php`, bare `admin.php`) when a `wp-content/workspace.json` override is present — see §19. Classic stays reachable for every allowlisted endpoint (RPC / install / update / customizer / network admin), via plugin `?page=` pages, and via the cap-gated `?classic=1` cookie escape hatch.
 
 **No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. admin.json has a single shape (`workspace` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
 
@@ -1108,7 +1108,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
   - `core:settings`, `core:users`, `core:comments`
   - `core:site-editor` (native mount, replacing iframe)
 - [ ] Four-layer capability gating with recursive nav drilldown removal
-- [ ] JSON Schemas published at `schemas.wp.org/admin.json`, `admin-app.json`, `admin-engine.json`
+- [ ] JSON Schemas published at `schemas.wp.org/workspace.json`, `admin-app.json`, `admin-engine.json`
 - [ ] WP-CLI: `wp admin-shell list|activate|register|upgrade-config`
 - [ ] Coordinate `tokens.json` proposal with WordPress core for theme.json v3 alignment
 
@@ -1250,7 +1250,7 @@ active, **the URL determines the renderer**, and classic wp-admin is an
 explicit, cap-gated escape hatch.
 
 **Trigger (theme.json model).** The plugin ships the `wp-admin-default`
-baseline in the cascade `core` slot. A valid `wp-content/admin.json` is a
+baseline in the cascade `core` slot. A valid `wp-content/workspace.json` is a
 **partial override** loaded into the `plugin` slot; the field-aware merge
 folds its keys over the baseline (a delta-only file inherits every baseline
 screen/menu/command). `wp_admin_workspaces_workspace_active()` is the single
@@ -1265,7 +1265,7 @@ TRUSTED origin merged via `merge_authoritative`, bypassing the
 the consumer origins (site/role/user). It may add+remove baseline screens
 (null tombstones), grow `screens[].permissions` OR-sets, and change
 `workspace.engine` — the same authority as the bundled plugin. This is
-correct: writing `wp-content/admin.json` requires filesystem access,
+correct: writing `wp-content/workspace.json` requires filesystem access,
 which already implies running arbitrary plugin code, so there is no
 privilege boundary to defend at the cascade.
 
@@ -1348,7 +1348,7 @@ alone); editing a Page therefore loads the classic editor.
 
 **Non-goals (alpha):** network admin and the customizer stay classic
 (allowlist only); there is no in-workspace iframe host for unmapped links (they
-full-navigate); no settings UI writes `wp-content/admin.json`. See
+full-navigate); no settings UI writes `wp-content/workspace.json`. See
 [`alpha-readiness.md`](./alpha-readiness.md).
 
 ## 20. References
@@ -1359,7 +1359,7 @@ In-repo:
 - [`dataview-config.md`](./dataview-config.md) — author-facing guide for the dataView primitive.
 - [`core-default-engine.md`](./core-default-engine.md) — engine contract worked example.
 - [`schemas/admin.json`](./schemas/admin.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
-- [`public/admin-json-reference.md`](./public/admin-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
+- [`public/workspace-json-reference.md`](./public/workspace-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
 - [`archive/research/admin-customization-prior-art.md`](./archive/research/admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context. (Archived.)
 - [`archive/research/shell-architecture-research.md`](./archive/research/shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design. (Archived.)
 - [`archive/wordpress-design-tokens-catalog.md`](./archive/wordpress-design-tokens-catalog.md) — WPDS surface inventory, three coexisting WP token systems, migration trajectory. (Archived.)

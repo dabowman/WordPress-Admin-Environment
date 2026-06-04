@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../docs/schemas/admin-app.json",
+	"$schema": "../../../docs/schemas/workspace-app.json",
 	"id": "core:dashboard-widget-at-a-glance",
 	"version": 1,
 	"title": "At a Glance",

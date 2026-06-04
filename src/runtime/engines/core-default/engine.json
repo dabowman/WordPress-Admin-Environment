@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../../docs/schemas/admin-engine.json",
+	"$schema": "../../../../docs/schemas/workspace-engine.json",
 	"id": "core:default",
 	"version": 3,
 	"title": "Default",

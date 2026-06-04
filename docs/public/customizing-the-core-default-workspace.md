@@ -4,7 +4,7 @@ A practical, end-to-end guide to customizing the flagship WP Admin Shell workspa
 
 `core:default` is the engine you get unless you ask for something else: a **sidebar + topbar + content** layout with an optional **detail** pane and a **command palette**, painted in `@wordpress/ui` (WPDS) chrome. You customize it by authoring a single file — `admin.json` — that picks this engine and declares your screens, menu, commands, branding, theme, and data views. You never edit engine code to customize a workspace.
 
-> **Scope.** This guide is `core:default`-specific: it names the engine's actual modes, region-state flags, slots, region tree, and chrome variables (sourced from `src/runtime/engines/core-default/engine.json`). For the engine-agnostic schema field tables, see [`admin-json-reference.md`](./admin-json-reference.md). For the design rationale, see [`../schema-sketch.md`](../schema-sketch.md) and [`../core-default-engine.md`](../core-default-engine.md).
+> **Scope.** This guide is `core:default`-specific: it names the engine's actual modes, region-state flags, slots, region tree, and chrome variables (sourced from `src/runtime/engines/core-default/engine.json`). For the engine-agnostic schema field tables, see [`workspace-json-reference.md`](./workspace-json-reference.md). For the design rationale, see [`../schema-sketch.md`](../schema-sketch.md) and [`../core-default-engine.md`](../core-default-engine.md).
 
 ---
 
@@ -46,7 +46,7 @@ Three artifacts drive the shell. Know which one owns what, and customization get
 
 Customizing `core:default` is almost entirely an `admin.json` exercise. The engine is already written; you compose the screens and apps it renders and tune its theme.
 
-**Where the file lives.** Drop a valid `admin.json` at `wp-content/admin.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `shells/` — copy one as a starting point (`shells/canonical-demo.json` is the smallest, `shells/content-author.json` is a focused real example, `shells/wp-admin-default.json` is the exhaustive one).
+**Where the file lives.** Drop a valid `admin.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `shells/` — copy one as a starting point (`shells/canonical-demo.json` is the smallest, `shells/content-author.json` is a focused real example, `shells/wp-admin-default.json` is the exhaustive one).
 
 Always set `"version": 3` and `"$wpds": "6.9"`. Every level is `additionalProperties: false` — a typo'd key is a validation error, not a silent no-op.
 
@@ -58,7 +58,7 @@ The smallest file that customizes the workspace — pins the engine, sets a land
 
 ```json
 {
-    "$schema": "https://schemas.wp.org/admin.json",
+    "$schema": "https://schemas.wp.org/workspace.json",
     "version": 3,
     "$wpds": "6.9",
     "name": "my-workspace",
@@ -635,7 +635,7 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 
 | Need | Doc |
 |---|---|
-| Per-field schema tables (engine-agnostic) | [`admin-json-reference.md`](./admin-json-reference.md) |
+| Per-field schema tables (engine-agnostic) | [`workspace-json-reference.md`](./workspace-json-reference.md) |
 | The `core:default` engine contract worked example | [`../core-default-engine.md`](../core-default-engine.md) |
 | dataView semantics, variants, filter hooks, `useDataView` | [`../dataview-config.md`](../dataview-config.md) |
 | Theming mechanics, token→DOM paths, WPDS CSS gotchas | [`../engines-and-design-systems.md`](../engines-and-design-systems.md) |

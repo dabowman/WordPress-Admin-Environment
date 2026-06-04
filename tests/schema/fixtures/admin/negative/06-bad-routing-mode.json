@@ -1,5 +1,5 @@
 {
-	"$schema": "../../../../../../docs/schemas/admin.json",
+	"$schema": "../../../../../../docs/schemas/workspace.json",
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "bad-routing-mode",

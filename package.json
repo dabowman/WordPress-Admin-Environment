@@ -34,7 +34,7 @@
 		"uninstall.php",
 		"includes",
 		"build",
-		"shells",
+		"workspaces",
 		"assets",
 		"languages",
 		"core.tokens.json",

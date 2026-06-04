@@ -1,7 +1,7 @@
 # Alpha Readiness — 0.1.0
 
 Manual smoke checklist for the first public alpha (workspace as the primary
-admin entry, driven by a `wp-content/admin.json` override on the
+admin entry, driven by a `wp-content/workspace.json` override on the
 `wp-admin-default` baseline). Run against the `single-pane-demo` starter on a
 wp-env machine with the Gutenberg plugin active.
 
@@ -13,7 +13,7 @@ there, and the render/redirect paths `exit`).
 
 ## What ships in 0.1.0
 
-`wp-content/admin.json` is a **partial override** that field-merges over the
+`wp-content/workspace.json` is a **partial override** that field-merges over the
 shipped `wp-admin-default` baseline (theme.json model): the baseline fills
 the cascade `core` slot, the file fills `plugin`. A valid file makes the
 workspace take over the admin root; classic wp-admin stays reachable via the
@@ -26,7 +26,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
   omits `workspace.engine`.
-- [manual] Copy `shells/single-pane-demo.json` → `wp-content/admin.json`, load
+- [manual] Copy `shells/single-pane-demo.json` → `wp-content/workspace.json`, load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
   delta; the baseline's screens/menu stay, only the chrome retints.
@@ -41,7 +41,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   (loader returns null). Validation is intentionally partial-permissive
   (PHP ships no JSON-Schema validator) — it catches gross corruption,
   not per-field completeness; the merged doc is shape-tested separately.
-- [manual] With `WP_DEBUG` on, a malformed `wp-content/admin.json` emits
+- [manual] With `WP_DEBUG` on, a malformed `wp-content/workspace.json` emits
   a `_doing_it_wrong` notice and the admin still loads (degrades to
   baseline) — it does **not** white-screen.
 - [auto] `wp_admin_workspaces_workspace_active()`: true with a valid file OR
@@ -78,7 +78,7 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in
   `run-alpha-trigger-tests.php` covers it: `workspace_enabled=false`
-  vetoes a present `wp-content/admin.json` AND the legacy active-shell
+  vetoes a present `wp-content/workspace.json` AND the legacy active-shell
   option; flipping back to true restores the file-trigger path.
 - [manual] **Workspace → Settings → Workspace.** Uncheck "Activate WP
   Admin Workspace", click Save → snackbar success → an inline "Reload
@@ -187,19 +187,19 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 - **No in-workspace iframe host for unmapped links:** a workspace click on an
   unmapped `/wp-admin/...` link does a full browser navigation to classic
   (the `onUnmatched` iframe-host seam exists but is unwired for alpha).
-- **`wp-content/admin.json` is read-only from PHP:** authors manage it via
+- **`wp-content/workspace.json` is read-only from PHP:** authors manage it via
   SFTP/git/wp-cli. No settings UI writes it (filesystem caps + nonce + locking
   are post-alpha). Ship the `.htaccess` / nginx note so the file isn't served
   as static JSON.
 - **Bundled `shells/*` are starter templates**, not a selectable catalog —
-  copy one to `wp-content/admin.json` and edit. The legacy
+  copy one to `wp-content/workspace.json` and edit. The legacy
   `wp_admin_workspaces_active_shell` option still works as a back-compat
   trigger but is hidden by the switcher when a file override is active.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it
   may add+remove baseline screens (null tombstones), grow
   `screens[].permissions`, and change `workspace.engine` — same authority
-  as the bundled plugin. Writing `wp-content/admin.json` requires
+  as the bundled plugin. Writing `wp-content/workspace.json` requires
   filesystem access, which already implies the ability to run arbitrary
   plugin code, so no privilege boundary is being defended. See spec §19.
 - **Editing a Page edits in classic.** `post.php` carries no `post_type`,

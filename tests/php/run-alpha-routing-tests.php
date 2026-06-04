@@ -160,7 +160,7 @@ $GLOBALS['wpas_routing_override'] = '';
 $path_filter = function () {
 	return $GLOBALS['wpas_routing_override'] ? $GLOBALS['wpas_routing_override'] : '/__no_admin_json__';
 };
-add_filter( 'wp_admin_workspaces_admin_json_path', $path_filter );
+add_filter( 'wp_admin_workspaces_workspace_json_path', $path_filter );
 
 $fix = $plugin_dir . 'tests/php/fixtures/alpha/';
 
@@ -205,7 +205,7 @@ if ( $had_shell && is_string( $saved_shell ) ) {
 	update_option( 'wp_admin_workspaces_active_workspace', $saved_shell );
 }
 unset( $_COOKIE['wp_admin_workspaces_classic'] );
-remove_filter( 'wp_admin_workspaces_admin_json_path', $path_filter );
+remove_filter( 'wp_admin_workspaces_workspace_json_path', $path_filter );
 WP_Admin_Workspaces_Origin_File::reset_memo();
 
 // ── W5: classic→workspace legacy redirect mapping ──────────────────

@@ -86,7 +86,7 @@ if ( $user ) {
 
 // Route the override loader at our fixtures. '' → a path that does not
 // exist, exercising the absent-file branch.
-add_filter( 'wp_admin_workspaces_admin_json_path', function () {
+add_filter( 'wp_admin_workspaces_workspace_json_path', function () {
 	return WPAS_Alpha_Trigger_Runner::$override_path
 		? WPAS_Alpha_Trigger_Runner::$override_path
 		: WPAS_Alpha_Trigger_Runner::$fixture_dir . '__missing__.json';
@@ -126,13 +126,13 @@ $T::ok( 'list-shaped block (screens: [ … ]) → load null', WP_Admin_Workspace
 // Symmetric counterpart to the screens reject above: a list-shaped commands
 // block must NOT trip the object-shape gate. Regression guard for the bug
 // where `commands` was grouped with the object-shaped blocks, which silently
-// rejected every valid shell dropped at wp-content/admin.json.
+// rejected every valid shell dropped at wp-content/workspace.json.
 $T::use_override( 'commands-list-block.json' );
 $doc = WP_Admin_Workspaces_Origin_File::load();
 $T::ok( 'list block (commands: [ … ]) accepted → load non-null', is_array( $doc ) && isset( $doc['commands'] ) );
 
 // Strongest guard: every bundled shell must pass the loader as-is. The shells
-// are exactly what users drop into wp-content/admin.json, so an over-tightened
+// are exactly what users drop into wp-content/workspace.json, so an over-tightened
 // is_valid_partial that rejects any of them strands the user in classic.
 foreach ( glob( $plugin_dir . 'shells/*.json' ) as $workspace_path ) {
 	$T::use_override( $workspace_path );

@@ -6,7 +6,7 @@
  *   user   — wp_admin_workspaces_user_prefs (current user only)
  *   role   — wp_admin_workspaces_role_config[<role>]
  *   site   — wp_admin_workspaces_site_config option
- *   plugin — wp-content/admin.json override (partial delta) when present;
+ *   plugin — wp-content/workspace.json override (partial delta) when present;
  *            otherwise the back-compat selected shell (full, replaces the
  *            baseline)
  *   engine — synthetic: the active engine's default-styles
@@ -184,7 +184,7 @@ class WP_Admin_Workspaces_Resolver {
 		$plugin_dir = trailingslashit( WP_ADMIN_WORKSPACES_PATH );
 
 		// File-override path (theme.json model). A valid
-		// `wp-content/admin.json` is a PARTIAL delta layered on the
+		// `wp-content/workspace.json` is a PARTIAL delta layered on the
 		// `wp-admin-default` baseline: the baseline fills the `core` slot,
 		// the file fills `plugin`, and the field-aware merge folds the
 		// file's keys over the baseline. The file wins over the legacy
@@ -210,7 +210,7 @@ class WP_Admin_Workspaces_Resolver {
 			if ( class_exists( 'WP_Admin_Workspaces_Registry' ) && WP_Admin_Workspaces_Registry::has( $workspace_slug ) ) {
 				$plugin_doc = WP_Admin_Workspaces_Registry::get( $workspace_slug );
 			} else {
-				$workspace_path = $plugin_dir . 'shells/' . sanitize_file_name( $workspace_slug ) . '.json';
+				$workspace_path = $plugin_dir . 'workspaces/' . sanitize_file_name( $workspace_slug ) . '.json';
 				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $workspace_path );
 			}
 
@@ -340,7 +340,7 @@ class WP_Admin_Workspaces_Resolver {
 	}
 
 	private static function workspace_allows_user_switch( $workspace_slug ) {
-		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . sanitize_file_name( $workspace_slug ) . '.json';
+		$path = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . sanitize_file_name( $workspace_slug ) . '.json';
 		if ( ! file_exists( $path ) ) {
 			return false;
 		}

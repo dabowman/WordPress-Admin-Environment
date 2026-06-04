@@ -1256,7 +1256,7 @@ msgid "WP Admin Shell"
 msgstr ""
 
 #: wp-admin-workspaces.php:386
-msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/admin.json. Disable to fall back to classic."
+msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/workspace.json. Disable to fall back to classic."
 msgstr ""
 
 #: wp-admin-workspaces.php:51

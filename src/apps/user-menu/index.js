@@ -27,7 +27,7 @@ export default function UserMenuApp() {
 	const switchableWorkspaces = shells.filter(
 		( s ) => s[ 'user-switchable' ]
 	);
-	// Hide the switcher when a wp-content/admin.json override is active — it
+	// Hide the switcher when a wp-content/workspace.json override is active — it
 	// wins over the active-shell option, so switching would be a no-op.
 	const showWorkspaceSwitcher =
 		switchableWorkspaces.length > 1 &&

@@ -1,6 +1,6 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "https://schemas.wp.org/admin-engine.json",
+	"$id": "https://schemas.wp.org/workspace-engine.json",
 	"title": "WP Admin Shell — Engine Manifest (v3)",
 	"description": "Declares what an admin shell engine provides: which ARIA roles it specializes for, which platform services it implements, the catalog of region templates it ships, the catalog of chrome modes screens may request, the workspace + screen slots it exposes, the strategy it uses to render the workspace menu, and the identifier of its default arrangement algorithm. Engines are the spatial + chrome layer of the shell — they read a region tree (and in v3, a resolved screens + menu tree) assembled by the runtime and render it to DOM. The flagship engine `core:default` ships with the shell plugin; alternative engines (`core:single-pane`, `core:desktop`, plugin-contributed engines) implement the same contract differently. Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically. v3 adds three new top-level blocks — `menu-renderer`, `slots`, `modes` — on top of the v2 surface (templates, default-arrangement, honored-platform, default-styles). See WP Admin Shell Design Spec §4.2 and docs/core-default-engine.md.",
 
@@ -22,7 +22,7 @@
 		"$schema": {
 			"type": "string",
 			"format": "uri-reference",
-			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/admin-engine.json`. Relative paths are accepted (e.g., `../docs/schemas/admin-engine.json` for in-repo authoring), matching the block.json convention."
+			"description": "Reference to this schema document. Conventionally `https://schemas.wp.org/workspace-engine.json`. Relative paths are accepted (e.g., `../docs/schemas/workspace-engine.json` for in-repo authoring), matching the block.json convention."
 		},
 
 		"id": {

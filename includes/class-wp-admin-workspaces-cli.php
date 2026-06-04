@@ -64,7 +64,7 @@ class WP_Admin_Workspaces_CLI {
 		list( $slug ) = $args;
 		$slug = sanitize_file_name( $slug );
 
-		$path = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $slug . '.json';
+		$path = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . $slug . '.json';
 		if ( ! file_exists( $path ) ) {
 			WP_CLI::error( "Shell not found: $slug (looked in shells/$slug.json)" );
 		}
@@ -118,7 +118,7 @@ class WP_Admin_Workspaces_CLI {
 			WP_CLI::error( 'Source file is not valid JSON.' );
 		}
 
-		$dest = WP_ADMIN_WORKSPACES_PATH . 'shells/' . $name . '.json';
+		$dest = WP_ADMIN_WORKSPACES_PATH . 'workspaces/' . $name . '.json';
 		if ( file_exists( $dest ) && empty( $assoc_args['force'] ) ) {
 			WP_CLI::error( "Shell already exists: $name (use --force to overwrite)" );
 		}
