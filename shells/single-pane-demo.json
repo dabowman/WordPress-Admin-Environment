@@ -5,9 +5,9 @@
 	"name": "single-pane-demo",
 	"title": "Single Pane Demo",
 	"description": "Demo shell exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
-	"workspace": {
-		"engine": "core:single-pane",
-		"default-screen": "posts",
+	"engine": "core:single-pane",
+	"default-screen": "posts",
+	"frame": {
 		"notices": {
 			"banner": {
 				"app": "core:notices-banner"

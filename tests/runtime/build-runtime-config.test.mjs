@@ -380,7 +380,7 @@ console.log( '\n— buildRuntimeConfig —\n' );
 const built = buildRuntimeConfig(
 	{
 		version: 3,
-		workspace: { engine: 'core:default', 'default-screen': 'home' },
+		engine: 'core:default', 'default-screen': 'home',
 		screens: {
 			home: { path: '/dashboard/home', app: 'core:dashboard' },
 			posts: { path: '/posts', app: 'core:posts' },
@@ -391,7 +391,7 @@ const built = buildRuntimeConfig(
 	},
 	engineDefaults && { defaultRegions: engineDefaults }
 );
-eq( 'engine promoted from workspace.engine', built.engine, 'core:default' );
+eq( 'engine promoted to top level', built.engine, 'core:default' );
 ok( 'routes synthesized', !! built.routes[ '/posts' ] );
 eq( 'default-route resolved', built[ 'default-route' ], '/dashboard/home' );
 ok( 'regions present', !! built.regions.content );
@@ -404,7 +404,7 @@ ok(
 
 // menu-renderer stamped from the engine manifest when present.
 const builtWithRenderer = buildRuntimeConfig(
-	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ version: 3, engine: 'core:default', screens: {} },
 	{ defaultRegions: engineDefaults || {}, 'menu-renderer': 'sidebar-tree' }
 );
 eq(
@@ -414,7 +414,7 @@ eq(
 );
 // Non-string manifest value is ignored (key stays off).
 const builtBadRenderer = buildRuntimeConfig(
-	{ version: 3, workspace: { engine: 'core:default' }, screens: {} },
+	{ version: 3, engine: 'core:default', screens: {} },
 	{ defaultRegions: {}, 'menu-renderer': 42 }
 );
 ok(
@@ -445,7 +445,7 @@ for ( const file of shellFiles.sort() ) {
 	const shell = JSON.parse(
 		readFileSync( resolve( shellDir, file ), 'utf8' )
 	);
-	const engineId = shell.workspace?.engine || 'core:default';
+	const engineId = shell.engine || 'core:default';
 	const manifest = loadEngineManifest( engineId );
 	const rc = buildRuntimeConfig( shell, manifest );
 

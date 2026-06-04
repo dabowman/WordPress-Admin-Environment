@@ -155,11 +155,8 @@ class WP_Admin_Workspaces_Appearance_Menu {
 			: array();
 
 		// Stamp the reusable signal on the resolved doc (visible to later
-		// passes + the JS runtime). Author-shape `workspace` block.
-		if ( ! isset( $doc['workspace'] ) || ! is_array( $doc['workspace'] ) ) {
-			$doc['workspace'] = array();
-		}
-		$doc['workspace']['theme-support'] = array(
+		// passes + the JS runtime). Top-level synthetic block.
+		$doc['theme-support'] = array(
 			'block-theme'    => $is_block,
 			'theme-supports' => $supports,
 		);

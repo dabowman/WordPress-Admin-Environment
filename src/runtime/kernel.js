@@ -76,7 +76,7 @@ export function kernel( config ) {
 	attachWorkspaceSwitcherToWindow();
 
 	const engineId =
-		config.workspace?.engine || config.engine || 'core:default';
+		config.engine || config.workspace?.engine || 'core:default';
 	const engineManifest = getEngineManifest( engineId );
 
 	// Build the runtime config from the resolved v3 author doc + the active

@@ -5,9 +5,9 @@
 	"name": "wp-admin-default",
 	"title": "WordPress",
 	"description": "The default workspace shipped by WP Admin Shell — a recreation of the wp-admin experience with capability-gated screens, classic-menu bridging, and iframe escape hatches for legacy plugin pages.",
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "dashboard-home",
+	"engine": "core:default",
+	"default-screen": "dashboard-home",
+	"frame": {
 		"branding": {
 			"title": "WordPress",
 			"logo": null
@@ -1771,7 +1771,7 @@
 		"chrome": {
 			"canvas": {
 				"background": "#ffffff"
-			}, 
+			},
 			"content": {
 				"card-background": "var(--wpds-color-bg-surface-neutral-weak)"
 			}

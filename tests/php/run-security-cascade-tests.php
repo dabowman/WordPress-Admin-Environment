@@ -427,22 +427,18 @@ $T::assert_true(
 	empty( $filtered['commands'] )
 );
 
-// Hardcoded deny — workspace.engine NEVER writable.
+// Hardcoded deny — the top-level `engine` is NEVER writable.
 $upstream = array(
-	'workspace' => array(
-		'engine'       => 'core:default',
-		'customizable' => array( 'engine' ),
-	),
+	'engine'       => 'core:default',
+	'customizable' => array( 'engine' ),
 );
 $downstream = array(
-	'workspace' => array(
-		'engine' => 'attacker:malicious-engine',
-	),
+	'engine' => 'attacker:malicious-engine',
 );
 $filtered = WP_Admin_Workspaces_Customizable::filter_doc( $upstream, $downstream, 'user' );
 $T::assert_true(
-	'hardcoded deny: workspace.engine rejected even with matching allowlist',
-	! isset( $filtered['workspace']['engine'] )
+	'hardcoded deny: engine rejected even with matching allowlist',
+	! isset( $filtered['engine'] )
 );
 
 // Trust-tier origin (site) — passes through verbatim.

@@ -352,7 +352,7 @@ echo "\n— Origin loaders + full pipeline —\n";
 // valid (empty) shell.
 $empty = WP_Admin_Workspaces_Origin_Core::empty_doc();
 $T::assert_eq( 'core origin: empty_doc carries workspace.engine',
-	$empty['workspace']['engine'] ?? null,
+	$empty['engine'] ?? null,
 	'core:default'
 );
 $T::assert_true( 'core origin: empty_doc carries a home screen',

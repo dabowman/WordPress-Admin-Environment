@@ -155,7 +155,7 @@ $T::use_override( 'override-styles-only.json' );
 $origins = WP_Admin_Workspaces_Resolver::load_origins();
 $T::eq( 'core slot holds the wp-admin-default baseline', $origins['core']['name'] ?? null, 'wp-admin-default' );
 $T::ok( 'plugin slot holds the override file', is_array( $origins['plugin'] ) && isset( $origins['plugin']['styles'] ) );
-$T::eq( 'baseline engine present in core slot', $origins['core']['workspace']['engine'] ?? null, 'core:default' );
+$T::eq( 'baseline engine present in core slot', $origins['core']['engine'] ?? null, 'core:default' );
 
 // ── end-to-end resolve(): partial merges over baseline ──────────────
 
@@ -166,7 +166,7 @@ $resolved = WP_Admin_Workspaces_Resolver::resolve();
 $T::eq( 'override renames baseline screen', $resolved['screens']['posts']['label'] ?? null, 'Articles' );
 $T::ok( 'overridden screen keeps baseline path', ( $resolved['screens']['posts']['path'] ?? '' ) !== '' );
 $T::ok( 'baseline screens survive partial override', isset( $resolved['screens']['dashboard-home'] ) );
-$T::eq( 'engine falls back to baseline when file omits it', $resolved['workspace']['engine'] ?? null, 'core:default' );
+$T::eq( 'engine falls back to baseline when file omits it', $resolved['engine'] ?? null, 'core:default' );
 
 $T::use_override( 'override-tombstone-screen.json' );
 $resolved = WP_Admin_Workspaces_Resolver::resolve();

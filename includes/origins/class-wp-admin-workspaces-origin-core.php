@@ -59,13 +59,11 @@ class WP_Admin_Workspaces_Origin_Core {
 			'$schema'   => '../docs/schemas/admin.json',
 			'version'   => 3,
 			'$wpds'     => '6.9',
-			'name'      => 'empty',
-			'title'     => 'Empty',
-			'workspace' => array(
-				'engine'         => self::ENGINE_ID,
-				'default-screen' => 'home',
-			),
-			'screens'   => array(
+			'name'           => 'empty',
+			'title'          => 'Empty',
+			'engine'         => self::ENGINE_ID,
+			'default-screen' => 'home',
+			'screens'        => array(
 				'home' => array(
 					'label' => 'Home',
 					'path'  => '/',

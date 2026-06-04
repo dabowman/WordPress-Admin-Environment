@@ -159,16 +159,16 @@ $block_doc = WP_Admin_Workspaces_Appearance_Menu::apply( wpas_appearance_test_do
 
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal stamped: workspace.theme-support present',
-	isset( $block_doc['workspace']['theme-support'] )
+	isset( $block_doc['theme-support'] )
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal: block-theme flag true for block theme',
-	$block_doc['workspace']['theme-support']['block-theme']
+	$block_doc['theme-support']['block-theme']
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal: theme-supports map present',
-	isset( $block_doc['workspace']['theme-support']['theme-supports'] ) &&
-	is_array( $block_doc['workspace']['theme-support']['theme-supports'] )
+	isset( $block_doc['theme-support']['theme-supports'] ) &&
+	is_array( $block_doc['theme-support']['theme-supports'] )
 );
 
 // A "fully-equipped" classic theme: declares widgets + menus support (so the
@@ -182,7 +182,7 @@ $classic_doc = WP_Admin_Workspaces_Appearance_Menu::apply(
 );
 WPAS_Appearance_Test_Runner::assert_false(
 	'signal: block-theme flag false for classic theme',
-	$classic_doc['workspace']['theme-support']['block-theme']
+	$classic_doc['theme-support']['block-theme']
 );
 
 // Signal is stamped even when the shell declares no screens.
@@ -192,7 +192,7 @@ $bare = WP_Admin_Workspaces_Appearance_Menu::apply(
 );
 WPAS_Appearance_Test_Runner::assert_true(
 	'signal stamped even with no screens block',
-	! empty( $bare['workspace']['theme-support']['block-theme'] )
+	! empty( $bare['theme-support']['block-theme'] )
 );
 
 // -----------------------------------------------------------------------------
@@ -450,7 +450,7 @@ WPAS_Appearance_Test_Runner::assert_true(
 $live = WP_Admin_Workspaces_Appearance_Menu::prune( wpas_appearance_test_doc() );
 WPAS_Appearance_Test_Runner::assert_true(
 	'live prune() stamps the signal from real theme support',
-	isset( $live['workspace']['theme-support']['block-theme'] )
+	isset( $live['theme-support']['block-theme'] )
 );
 
 // -----------------------------------------------------------------------------

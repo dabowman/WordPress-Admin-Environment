@@ -109,23 +109,23 @@ foreach ( $shells as $slug ) {
 	// author-shape doc (`workspace` / `screens` / `menu` / `settings` /
 	// `commands`); the kernel derives the runtime surfaces JS-side.
 	$T::ok(
-		"$slug: top-level `workspace` block present",
-		isset( $config['workspace'] ) && is_array( $config['workspace'] )
+		"$slug: top-level `engine` field present",
+		isset( $config['engine'] ) && is_string( $config['engine'] )
 	);
 	$T::ok(
 		"$slug: top-level `screens` block present",
 		isset( $config['screens'] ) && is_array( $config['screens'] )
 	);
 
-	// Engine — lives at workspace.engine in v3.
-	$engine = $config['workspace']['engine'] ?? null;
+	// Engine — top-level field in the v3 frame-shape (was workspace.engine).
+	$engine = $config['engine'] ?? null;
 	$T::ok(
-		"$slug: workspace.engine present",
+		"$slug: engine present",
 		$engine !== null,
 		'engine = ' . var_export( $engine, true )
 	);
 	$T::ok(
-		"$slug: workspace.engine is registered ($engine)",
+		"$slug: engine is registered ($engine)",
 		in_array( $engine, $known_engines, true ),
 		'expected one of ' . implode( ',', $known_engines )
 	);
@@ -165,10 +165,10 @@ foreach ( $shells as $slug ) {
 	);
 
 	// default-screen (when declared) names a real screen.
-	$default_screen = $config['workspace']['default-screen'] ?? null;
+	$default_screen = $config['default-screen'] ?? null;
 	if ( $default_screen !== null ) {
 		$T::ok(
-			"$slug: workspace.default-screen '$default_screen' names a real screen",
+			"$slug: default-screen '$default_screen' names a real screen",
 			isset( $screens[ $default_screen ] ),
 			'available: ' . implode( ', ', array_keys( $screens ) )
 		);

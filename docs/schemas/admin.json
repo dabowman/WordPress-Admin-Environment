@@ -5,7 +5,7 @@
 	"description": "Declares a WP Admin Shell workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
 
 	"type": "object",
-	"required": [ "version", "$wpds", "name", "workspace", "screens" ],
+	"required": [ "version", "$wpds", "name", "engine", "screens" ],
 	"additionalProperties": false,
 
 	"properties": {
@@ -51,22 +51,21 @@
 			"description": "When true, individual users may select this workspace as their personal default via the user prefs UI (overriding the site or role default). When false (default), only site admins and role configuration can select this workspace. Setting this true is forward-compatible — the cascade respects user-origin workspace selection regardless of UI availability."
 		},
 
-		"workspace": {
+		"engine": {
+			"$ref": "#/$defs/namespacedId",
+			"description": "Identifier of the engine that renders this workspace. References an `id` from a registered engine manifest. The engine determines spatial arrangement, region-template catalog, slot vocabulary, mode catalog, and which platform services are honored. Switching engines requires editing this field (and probably reworking advanced compositions in `regions` / `routes`) and reloads the workspace — engines are not live-switchable. Common values: `core:default` (flagship sidebar+content), `core:single-pane` (mobile-first drawer), `core:desktop` (windowed)."
+		},
+		"default-screen": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^[a-z][a-z0-9-]*$",
+			"description": "Screen id (key into `screens`) where the workspace lands when no URL hash is present. Replaces v2's `default-route` — instead of a path, an id resolves to the screen's resolved `path`. On capability denial of the default screen, the workspace falls through to the first permitted screen with a `path`."
+		},
+		"frame": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "Install metadata: engine, default landing screen, branding, system-chrome notices, and persistent widgets (toolbar / sidebar-footer / status-bar slots). Cascades deep-merge per-field; `workspace.widgets.<slot>` arrays merge by entry `id`. See schema-sketch.md §System chrome.",
-			"required": [ "engine" ],
+			"description": "Persistent furniture wired into the workspace — branding, system-chrome notice hosts, and persistent widgets (toolbar / sidebar-footer / status-bar slots). Distinct from `styles.chrome`, which *paints* this furniture. Cascades deep-merge per-field; `frame.widgets.<slot>` arrays merge by entry `id`. See schema-sketch.md §System chrome.",
 			"properties": {
-				"engine": {
-					"$ref": "#/$defs/namespacedId",
-					"description": "Identifier of the engine that renders this workspace. References an `id` from a registered engine manifest. The engine determines spatial arrangement, region-template catalog, slot vocabulary, mode catalog, and which platform services are honored. Switching engines requires editing this field (and probably reworking advanced compositions in `regions` / `routes`) and reloads the workspace — engines are not live-switchable. Common values: `core:default` (flagship sidebar+content), `core:single-pane` (mobile-first drawer), `core:desktop` (windowed)."
-				},
-				"default-screen": {
-					"type": "string",
-					"minLength": 1,
-					"pattern": "^[a-z][a-z0-9-]*$",
-					"description": "Screen id (key into `screens`) where the workspace lands when no URL hash is present. Replaces v2's `default-route` — instead of a path, an id resolves to the screen's resolved `path`. On capability denial of the default screen, the workspace falls through to the first permitted screen with a `path`."
-				},
 				"branding": {
 					"type": "object",
 					"additionalProperties": true,
@@ -100,23 +99,23 @@
 				},
 				"customizable": {
 					"$ref": "#/$defs/customizable",
-					"description": "Consumer-origin write allowlist for the `workspace` block (e.g. `[ \"default-screen\", \"branding.title\" ]`; relative paths cover `branding.*`, `notices.*`, `widgets.*`). Note the hardcoded deny-list still blocks `workspace.engine` from `role`/`user` writes even if listed here. See `#/$defs/customizable`."
+					"description": "Consumer-origin write allowlist for the `frame` block (e.g. `[ \"branding.title\" ]`; relative paths cover `branding.*`, `notices.*`, `widgets.*`). Note the hardcoded deny-list still blocks the top-level `engine` from `role`/`user` writes. See `#/$defs/customizable`."
+				}
+			}
+		},
+		"theme-support": {
+			"type": "object",
+			"additionalProperties": true,
+			"description": "READ-ONLY synthetic block stamped by `WP_Admin_Workspaces_Appearance_Menu` during resolution — authors never declare it. Carries the active-theme determination used to prune the Appearance group: `block-theme` (bool, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → bool, from `current_theme_supports()`). Downstream passes (e.g. native classic Menus) read it instead of re-deriving.",
+			"properties": {
+				"block-theme": {
+					"type": "boolean",
+					"description": "True when the active theme is a block theme (`wp_is_block_theme()`)."
 				},
-				"theme-support": {
+				"theme-supports": {
 					"type": "object",
-					"additionalProperties": true,
-					"description": "READ-ONLY synthetic block stamped by `WP_Admin_Workspaces_Appearance_Menu` during resolution — authors never declare it. Carries the active-theme determination used to prune the Appearance group: `block-theme` (bool, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → bool, from `current_theme_supports()`). Downstream passes (e.g. native classic Menus) read it instead of re-deriving.",
-					"properties": {
-						"block-theme": {
-							"type": "boolean",
-							"description": "True when the active theme is a block theme (`wp_is_block_theme()`)."
-						},
-						"theme-supports": {
-							"type": "object",
-							"additionalProperties": { "type": "boolean" },
-							"description": "Map of `current_theme_supports()` feature → bool (`menus`, `widgets`, `customize`, `custom-background`, `custom-header`)."
-						}
-					}
+					"additionalProperties": { "type": "boolean" },
+					"description": "Map of `current_theme_supports()` feature → bool (`menus`, `widgets`, `customize`, `custom-background`, `custom-header`)."
 				}
 			}
 		},

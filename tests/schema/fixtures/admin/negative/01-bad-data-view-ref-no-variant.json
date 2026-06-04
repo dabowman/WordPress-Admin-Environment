@@ -3,10 +3,8 @@
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "bad-data-view-ref",
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "posts"
-	},
+	"engine": "core:default",
+	"default-screen": "posts",
 	"screens": {
 		"posts": {
 			"label": "Posts",

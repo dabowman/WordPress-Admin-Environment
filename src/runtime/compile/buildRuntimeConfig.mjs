@@ -34,7 +34,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 	}
 
 	const engineId =
-		config.workspace?.engine || config.engine || 'core:default';
+		config.engine || config.workspace?.engine || 'core:default';
 	const screens = config.screens || {};
 	const defaultRegions =
 		engineManifest && engineManifest.defaultRegions
@@ -47,7 +47,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 		config[ 'default-route' ] ||
 		synthesizeDefaultRoute(
 			screens,
-			config.workspace?.[ 'default-screen' ] || ''
+			config[ 'default-screen' ] || config.workspace?.[ 'default-screen' ] || ''
 		);
 	const commands = compileCommands( config.commands || [] );
 

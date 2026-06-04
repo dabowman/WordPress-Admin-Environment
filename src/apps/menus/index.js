@@ -32,9 +32,7 @@ import { MenuItemModal } from './MenuItemModal';
 function readThemeSupport() {
 	return (
 		( typeof window !== 'undefined' &&
-			window.wpAdminWorkspaces?.config?.workspace?.[
-				'theme-support'
-			] ) ||
+			window.wpAdminWorkspaces?.config?.[ 'theme-support' ] ) ||
 		null
 	);
 }

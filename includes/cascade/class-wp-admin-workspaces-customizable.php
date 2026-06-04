@@ -75,7 +75,7 @@ class WP_Admin_Workspaces_Customizable {
 		'menu.**.permissions',
 		'screens.*.app',
 		'commands.*.invoke',
-		'workspace.engine',
+		'engine',
 	);
 
 	/**
