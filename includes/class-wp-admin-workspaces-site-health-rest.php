@@ -170,8 +170,9 @@ class WP_Admin_Workspaces_Site_Health_REST {
 	 *
 	 * Direct-test entries carry a `test` callback that is either a method name
 	 * on `WP_Site_Health` (`'get_test_' . $test`) or an arbitrary callable
-	 * (plugin-contributed). Mirror core's `WP_Site_Health::get_tests()` /
-	 * site-health localization logic.
+	 * (plugin-contributed). Mirror core's `WP_Site_Health::get_tests()`:
+	 * resolve the `get_test_{slug}` method first, then run the callback through
+	 * `perform_test()` so the `site_status_test_result` filter fires.
 	 *
 	 * @param WP_Site_Health $site_health Site Health instance.
 	 * @param array          $test        Test descriptor.
@@ -184,9 +185,13 @@ class WP_Admin_Workspaces_Site_Health_REST {
 
 		$callback = $test['test'];
 
-		// String `test` values name a `get_test_{slug}` method on the
-		// instance (core convention); arbitrary callables are passed through.
-		if ( is_string( $callback ) && ! is_callable( $callback ) ) {
+		// Resolve the callback in core's order (WP_Site_Health::get_tests()):
+		// a string `test` first names a `get_test_{slug}` method on the
+		// instance, and ONLY if that method is absent does the string fall
+		// through as an arbitrary callable. The method-first order matters in
+		// the (unlikely) event a registered slug collides with a same-named
+		// global function — core would run the method, so we must too.
+		if ( is_string( $callback ) ) {
 			$method = 'get_test_' . $callback;
 			if ( is_callable( array( $site_health, $method ) ) ) {
 				$callback = array( $site_health, $method );
@@ -197,7 +202,13 @@ class WP_Admin_Workspaces_Site_Health_REST {
 			return null;
 		}
 
-		$result = call_user_func( $callback );
+		// Route through perform_test() rather than calling the callback bare:
+		// it runs the test AND applies the `site_status_test_result` filter,
+		// the documented extension point plugins use to amend/override any
+		// test's status or label (alongside `site_status_tests`). Calling the
+		// callback directly would silently drop that filter, so workspace
+		// results would diverge from classic Site Health for the same site.
+		$result = $site_health->perform_test( $callback );
 
 		if ( ! is_array( $result ) ) {
 			return null;

@@ -448,27 +448,31 @@ function InfoTab( { runToken } ) {
 					? payload.sections
 					: [];
 
+				// Paint the accordion immediately with every non-size row
+				// ready and the `wp-paths-sizes` directory/database-size rows
+				// showing their "Loading…" placeholder. This mirrors classic
+				// `site-health-info.php`, which renders all sections at once
+				// rather than blocking the whole report on the size walk.
+				setSections( baseSections );
+
 				// The `wp-paths-sizes` directory/database-size rows ship as a
 				// "Loading…" placeholder from `debug_data()`; core fills them
 				// from a SEPARATE async endpoint (the disk walk is too slow to
-				// run inline). Fetch + merge it so those rows aren't stuck on
-				// "Loading…". Resilient: if the endpoint errors or is missing,
-				// fall through with the placeholder rows intact.
-				let merged = baseSections;
+				// run inline — it can take many seconds on a large site).
+				// Fetch + patch the real sizes in AFTER the first paint so the
+				// accordion never blocks on the walk. Resilient: if the
+				// endpoint errors or is missing, the placeholder rows remain.
 				try {
 					const sizes = await apiFetch( {
 						path: '/wp-site-health/v1/directory-sizes',
 					} );
-					if ( cancelled ) {
-						return;
+					if ( ! cancelled ) {
+						setSections(
+							mergeDirectorySizes( baseSections, sizes )
+						);
 					}
-					merged = mergeDirectorySizes( baseSections, sizes );
 				} catch {
 					// Leave the placeholder rows; not fatal to the Info tab.
-				}
-
-				if ( ! cancelled ) {
-					setSections( merged );
 				}
 			} )
 			.catch( ( err ) => {
