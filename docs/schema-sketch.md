@@ -238,6 +238,8 @@ The `detail` slot is engine-declared (a split-view layout). The editor mounts th
 
 Children nested inside a parent menu item do NOT inherit the parent's icon. Each screen renders its own icon; children without an icon render no icon. Authors who want children to look like their parent must declare the icon explicitly.
 
+A menu item that IS bound to a screen inherits the screen's `icon` automatically (folded in by `bind_screens`). To suppress it — render the item with **no icon** while keeping the screen binding — set `icon: null` on the menu item. `bind_screens` checks `array_key_exists` (not `isset`), so an explicit `null` blocks inheritance where an absent key would re-fold the screen icon. Author the `null` in the trust-tier origin where the item is first declared; the cascade treats `null` as a tombstone (key-removal) when it lands over a lower origin's existing item, in which case the key is dropped and the screen icon re-inherits.
+
 ## Modes
 
 Screens declare which engine-defined chrome mode they want. The engine maps each mode to a set of region states (visible / hidden / minimal). This is how an editor screen hides the sidebar and strips the toolbar without each screen having to know which regions exist.

@@ -150,7 +150,11 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 		return (
 			<SidebarNavigationItem
 				uid={ `ext-${ item.id || index }` }
-				icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
+				icon={
+					depth === 0 && item.icon
+						? resolveIcon( item.icon )
+						: undefined
+				}
 				iconSource={ depth === 0 ? item.iconSource : undefined }
 				href={ item.href }
 				target="_blank"
@@ -176,7 +180,11 @@ function TreeLeaf( { item, index, currentPrimary, depth } ) {
 	return (
 		<SidebarNavigationItem
 			uid={ `nav-${ item.id || index }` }
-			icon={ depth === 0 ? resolveIcon( item.icon ) : undefined }
+			icon={
+				depth === 0 && item.icon
+					? resolveIcon( item.icon )
+					: undefined
+			}
 			iconSource={ depth === 0 ? item.iconSource : undefined }
 			isActive={ isActive }
 			href={ item.href }

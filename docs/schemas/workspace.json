@@ -507,9 +507,9 @@
 					"description": "Optional override of the bound screen's label. Required for items not bound to a screen (group containers, external links). When set on an item that is bound to a screen, renames the entry in the menu only — the screen itself is untouched."
 				},
 				"icon": {
-					"type": "string",
+					"type": [ "string", "null" ],
 					"minLength": 1,
-					"description": "Optional override of the bound screen's icon. Required for items not bound to a screen. Children nested inside a parent menu item do NOT inherit the parent's icon — each item renders its own icon, and items without an icon render no icon. See schema-sketch.md §Drill-down icon inheritance."
+					"description": "Optional override of the bound screen's icon. Required for items not bound to a screen. Set to `null` to explicitly suppress the icon on an item that IS bound to a screen — unlike an absent key (which inherits the screen's icon), an explicit `null` renders no icon. (Authored in a trust-tier origin where the item is first declared; setting `null` over a lower origin's existing item tombstones the key, which lets the screen icon re-inherit.) Children nested inside a parent menu item do NOT inherit the parent's icon — each item renders its own icon, and items without an icon render no icon. See schema-sketch.md §Drill-down icon inheritance."
 				},
 				"iconSource": {
 					"$ref": "#/$defs/iconSource",
