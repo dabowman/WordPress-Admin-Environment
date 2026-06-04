@@ -6,6 +6,33 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added: media-library-picker + range/slider DataForm controls (#170)
+
+Two shared custom DataForm `Edit` controls close roadmap group C item 8 (parity
+doc §2.13) — the workspace's escape-hatch answer to `FORM_CONTROLS` lacking a
+media picker and a slider. Both live in `src/apps/_shared/forms/controls/`.
+
+- **`RangeControl.js`** — `makeRangeControl(opts)` (DataForm `Edit` factory) +
+  `rangeField(spec)` (full field-def convenience). Wraps `@wordpress/components`
+  `RangeControl` (no `@wordpress/ui` 0.12 slider exists), giving a slider **with**
+  its adjacent number input, so precise entry survives. `setValue` clamps to
+  `[min, max]` and rounds integer fields. Wired into `settings-media`: the six
+  image-dimension fields are now sliders (was bare number inputs).
+- **`MediaPicker.js`** — `MediaPicker` (standalone value/onChange, for hand-rolled
+  forms) + `makeMediaControl(opts)` / `mediaField(spec)` (DataForm `Edit`). Wraps
+  `@wordpress/media-utils` `MediaUpload`, opens the WordPress media modal, and
+  stores an **attachment id** (the `site_icon` / `site_logo` shape). Shows the
+  chosen attachment's thumbnail + a Remove affordance. Wired into
+  `settings-general` as the **Site Icon** picker (reads/writes the `site_icon`
+  core REST setting), closing the documented gap.
+- **PHP** — `wp_enqueue_media()` added to `wp_admin_workspaces_enqueue_assets()`
+  so the media frame's scripts + footer templates load on the workspace page.
+- Pure value helpers (`rangeControl.mjs` / `mediaControl.mjs`) are pinned by
+  `tests/runtime/form-controls.test.mjs`.
+- **Deferred:** the profile-avatar surface named in the roadmap item — core users
+  expose no settable local-avatar REST field (Gravatar-only), so it needs a user
+  meta / plugin shim before the picker can bind there.
+
 ### Renamed: "WP Admin Shell" → "WP Admin Workspaces" (0.1.0 rebrand)
 
 The product, plugin, and every author/user-facing surface unified under

@@ -537,6 +537,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		WP_ADMIN_WORKSPACES_PATH . 'languages'
 	);
 
+	// Media modal. The shared media-library-picker `Edit` control
+	// (`src/apps/_shared/forms/controls/MediaPicker.js`, via
+	// `@wordpress/media-utils` `MediaUpload`) opens the WordPress media frame,
+	// which needs the `media-editor` scripts + the footer template markup that
+	// `wp_enqueue_media()` registers. Consumers today: settings-general's Site
+	// Icon picker. Safe no-op when no picker is on screen.
+	wp_enqueue_media();
+
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-workspaces` as a dependency loads once the kernel has published
