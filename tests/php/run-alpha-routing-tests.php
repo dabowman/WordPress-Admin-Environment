@@ -272,10 +272,16 @@ $T::ok( 'WP 7.1 included', wp_admin_shell_core_supplies_private_apis( '7.1' ) ==
 // they fall back to the Gutenberg-plugin path (which still works there).
 $T::ok( 'WP 7.0-beta1 falls below 7.0 final (Gutenberg fallback)', wp_admin_shell_core_supplies_private_apis( '7.0-beta1' ) === false );
 
-// dependencies_met() short-circuits true once core supplies the allowlist —
-// the running test container is WP 7.0+ (.wp-env core: null = latest), so the
-// gate is satisfied regardless of whether Gutenberg is active here.
-$T::ok( 'dependencies_met true when core supplies allowlist', wp_admin_shell_core_supplies_private_apis() ? wp_admin_shell_dependencies_met() === true : true );
+// The default dev/CI container runs WP 7.0+ (.wp-env `core: null` = latest
+// stable, and 7.0 is GA). Assert that directly — both that core supplies the
+// allowlist AND that dependencies_met() is therefore satisfied without
+// Gutenberg. This fails LOUDLY if CI ever resolves to < 7.0 (the scenario where
+// removing Gutenberg from .wp-env.json would silently render the shell empty),
+// turning the environment assumption into a guarded invariant rather than a
+// no-op. To exercise the < 7.0 Gutenberg-fallback path, pin an older `core` and
+// add `gutenberg` back per CLAUDE.md — that intentional deviation flips these.
+$T::ok( 'dev/CI container supplies private-apis in core (WP >= 7.0)', wp_admin_shell_core_supplies_private_apis() === true );
+$T::ok( 'dependencies_met true on a 7.0+ container without Gutenberg', wp_admin_shell_dependencies_met() === true );
 
 // ── Summary ────────────────────────────────────────────────────────
 
