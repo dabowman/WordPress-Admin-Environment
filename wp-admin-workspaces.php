@@ -688,6 +688,66 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		html.wp-toolbar { padding-top: 0 !important; }
 		#wp-admin-workspaces { position: fixed; inset: 0; z-index: 99999; }
 	' );
+
+	wp_admin_workspaces_guard_jquery_hash_selectors();
+}
+
+/**
+ * Neutralize the jQuery/Sizzle "unrecognized expression: #/<route>" throw on
+ * the workspace shell page (issue #248).
+ *
+ * The hijack renders through `admin-header.php` / `admin-footer.php`, so the
+ * full classic-admin jQuery ecosystem co-loads on the same page as the React
+ * shell. The shell publishes navigation as slash-containing hash routes
+ * (`<a href="#/site-editor">`, `window.location.hash = '#/posts'`). A leading
+ * `#/` is NOT a valid jQuery/Sizzle selector: jQuery's `rquickExpr`
+ * (`#([\w-]+)$`) rejects it, so `$()` falls through to `Sizzle.tokenize`, which
+ * throws. Any co-loaded handler that feeds the URL hash — or a clicked
+ * anchor's `href` — into `jQuery()` (a screen-meta/help handler hit via an
+ * unexpected DOM path, a third-party plugin's anchor/hashchange handler, …)
+ * therefore throws on every shell navigation, aborting the rest of that
+ * handler.
+ *
+ * Rather than enumerate (and dequeue) every co-loaded thrower — fragile,
+ * version-dependent, and impossible to fully pin without the live stack — we
+ * guard at the throw site: wrap `jQuery.fn.init` so a `#/`-prefixed string
+ * selector resolves to an empty set instead of reaching the tokenizer. On the
+ * shell page `#/…` is always a workspace route and never a real element id
+ * (ids can't carry an unescaped `/`), so an empty match is the semantically
+ * correct, no-op result — identical to what a valid-but-nonmatching selector
+ * would return. The guard is intentionally narrow to the route prefix `#/`,
+ * so genuinely-malformed selectors elsewhere still surface.
+ *
+ * jQuery (always present in wp-admin) loads before this; the shim installs at
+ * script-load time, ahead of the DOM-ready / hashchange / click handlers that
+ * actually call `$( hash )`.
+ */
+function wp_admin_workspaces_guard_jquery_hash_selectors() {
+	wp_enqueue_script( 'jquery-core' );
+	$guard = <<<'JS'
+( function ( $ ) {
+	if ( ! $ || ! $.fn || ! $.fn.init || $.fn.init.__wpAdminWorkspacesHashGuard ) {
+		return;
+	}
+	var origInit = $.fn.init;
+	function GuardedInit( selector, context, root ) {
+		if (
+			typeof selector === 'string' &&
+			selector.charCodeAt( 0 ) === 35 /* # */ &&
+			selector.charCodeAt( 1 ) === 47 /* / */
+		) {
+			// A workspace hash route ("#/…"), never an element id on this
+			// page — resolve to an empty set instead of throwing in Sizzle.
+			return new origInit( [], context, root );
+		}
+		return new origInit( selector, context, root );
+	}
+	GuardedInit.prototype = origInit.prototype;
+	GuardedInit.__wpAdminWorkspacesHashGuard = true;
+	$.fn.init = GuardedInit;
+} )( window.jQuery );
+JS;
+	wp_add_inline_script( 'jquery-core', $guard, 'after' );
 }
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
