@@ -106,8 +106,7 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 	// → first available panel. The path-segment fallback keeps workspaces that
 	// route each panel as its own primary path working.
 	const route = useRoute();
-	const activeId =
-		route.params?.panel || segments[ 0 ] || panels[ 0 ]?.id;
+	const activeId = route.params?.panel || segments[ 0 ] || panels[ 0 ]?.id;
 	const setActive = navigatePanel;
 
 	// Unknown sub-route (e.g. `#/settings/nonexistent`) silently falls

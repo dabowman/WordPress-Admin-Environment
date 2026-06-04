@@ -96,7 +96,11 @@ export function useEntityDataView( {
 		// `pickDurableView` strips page/filters, so the durable baseline below is
 		// unaffected by what the URL carries.
 		return urlSlots
-			? applyViewSlots( base, readViewSlots( routeParams, urlSlots ), urlSlots )
+			? applyViewSlots(
+					base,
+					readViewSlots( routeParams, urlSlots ),
+					urlSlots
+			  )
 			: base;
 	};
 
@@ -309,8 +313,7 @@ export function useEntityDataView( {
 			// NavigationApp's `navigateScreen`.
 			const hash = window.location.hash || '';
 			const queryIdx = hash.indexOf( '?' );
-			const primary =
-				queryIdx === -1 ? hash : hash.slice( 0, queryIdx );
+			const primary = queryIdx === -1 ? hash : hash.slice( 0, queryIdx );
 			const search = queryIdx === -1 ? '' : hash.slice( queryIdx + 1 );
 			const nextSearch = mergeSlotParams(
 				search,
