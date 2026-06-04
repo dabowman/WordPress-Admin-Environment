@@ -1,3 +1,53 @@
 .wp-admin-workspaces-app-profile {
 	max-width: 600px;
 }
+
+.wp-admin-workspaces-app-profile__app-passwords {
+	max-width: 760px;
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-create {
+	margin: 0;
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-reveal {
+	display: flex;
+	flex-direction: column;
+	gap: var( --wpds-dimension-padding-md, 8px );
+	padding: var( --wpds-dimension-padding-lg, 12px );
+	border: 1px solid var( --wpds-color-border-secondary, #ccc );
+	border-radius: var( --wpds-dimension-radius-md, 4px );
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-reveal-value {
+	flex: 1;
+	font-family: monospace;
+	font-size: 1rem;
+	padding: var( --wpds-dimension-padding-sm, 8px );
+	border: 1px solid var( --wpds-color-border-secondary, #ccc );
+	border-radius: var( --wpds-dimension-radius-sm, 2px );
+	background: var( --wpds-color-background-secondary, #f0f0f0 );
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-table th,
+.wp-admin-workspaces-app-profile__app-passwords-table td {
+	padding: var( --wpds-dimension-padding-sm, 8px )
+		var( --wpds-dimension-padding-md, 8px );
+	text-align: left;
+	border-bottom: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+	vertical-align: middle;
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-table th {
+	font-weight: 600;
+}
+
+.wp-admin-workspaces-app-profile__app-passwords-empty,
+.wp-admin-workspaces-app-profile__app-passwords-error {
+	color: var( --wpds-color-content-secondary, #757575 );
+}

@@ -8,6 +8,7 @@ import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
 import { Page } from '../_shared/Page';
+import ApplicationPasswords from './ApplicationPasswords';
 
 const FORM = {
 	layout: { type: 'regular', labelPosition: 'top' },
@@ -142,29 +143,33 @@ export default function ProfileApp( { config = {} } = {} ) {
 
 	return (
 		<Page title={ __( 'Profile', 'wp-admin-workspaces' ) } hasPadding>
-			<Stack
-				direction="column"
-				gap="xl"
-				className="wp-admin-workspaces-app-profile"
-			>
-				<DataForm
-					data={ editedRecord }
-					fields={ fields }
-					form={ FORM }
-					onChange={ edit }
-				/>
+			<Stack direction="column" gap="2xl">
+				<Stack
+					direction="column"
+					gap="xl"
+					className="wp-admin-workspaces-app-profile"
+				>
+					<DataForm
+						data={ editedRecord }
+						fields={ fields }
+						form={ FORM }
+						onChange={ edit }
+					/>
 
-				<Stack direction="row" justify="flex-start">
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						disabled={ ! hasEdits || isSaving }
-						loading={ isSaving }
-					>
-						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
-					</Button>
+					<Stack direction="row" justify="flex-start">
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ handleSave }
+							disabled={ ! hasEdits || isSaving }
+							loading={ isSaving }
+						>
+							{ __( 'Save Changes', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
+
+				<ApplicationPasswords userId={ userId } />
 			</Stack>
 		</Page>
 	);
