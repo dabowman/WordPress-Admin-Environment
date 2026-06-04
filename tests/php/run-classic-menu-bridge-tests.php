@@ -882,6 +882,150 @@ $T::assert_eq(
 wpas_cmb_reset_globals();
 WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
 
+// --- #252: native legacy_path skip — structural fix ----------------------
+// Slugs already claimed by a native workspace screen via `legacy_path` must
+// not be re-ingested by the bridge, even when absent from $CORE_SLUGS.
+// The resolver passes the already-merged core+engine doc as a second arg
+// to the `wp_admin_workspaces_data_plugin` filter; `contribute()` derives
+// the skip set from it.
+
+// theme-editor.php is a submenu of themes.php (Appearance); plugin-editor.php
+// is a submenu of plugins.php (Plugins). Both are absent from $CORE_SLUGS
+// but ARE claimed by native workspace screens via `legacy_path`.
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Appearance', 'switch_themes', 'themes.php', 'Appearance', '', '', 'dashicons-admin-appearance' ),
+	array( 'Plugins', 'activate_plugins', 'plugins.php', 'Plugins', '', '', 'dashicons-admin-plugins' ),
+);
+$GLOBALS['submenu'] = array(
+	'themes.php' => array(
+		array( 'Theme File Editor', 'edit_themes', 'theme-editor.php' ),
+		array( 'Site Editor', 'edit_theme_options', 'site-editor.php' ),
+	),
+	'plugins.php' => array(
+		array( 'Plugin File Editor', 'edit_plugins', 'plugin-editor.php' ),
+	),
+);
+// Simulate the prior-merged doc from the core origin that declares these
+// screens natively with `legacy_path` (mirrors wp-admin-default.json).
+$prior_merged_252 = array(
+	'screens' => array(
+		'theme-editor' => array(
+			'label'       => 'Theme File Editor',
+			'path'        => '/tools/theme-editor',
+			'app'         => 'iframe:theme-editor.php',
+			'legacy_path' => 'theme-editor.php',
+		),
+		'plugin-editor' => array(
+			'label'       => 'Plugin File Editor',
+			'path'        => '/tools/plugin-editor',
+			'app'         => 'iframe:plugin-editor.php',
+			'legacy_path' => 'plugin-editor.php',
+		),
+		'site-editor' => array(
+			'label'       => 'Editor',
+			'path'        => '/site-editor',
+			'app'         => 'core:site-editor',
+			'legacy_path' => 'site-editor.php',
+		),
+	),
+);
+$doc_252 = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute( array(), $prior_merged_252 );
+
+$T::assert_true(
+	'#252: theme-editor.php not ingested when claimed natively via legacy_path',
+	! isset( $doc_252['screens']['ingested-theme-editor-php'] )
+);
+$T::assert_true(
+	'#252: plugin-editor.php not ingested when claimed natively via legacy_path',
+	! isset( $doc_252['screens']['ingested-plugin-editor-php'] )
+);
+$T::assert_true(
+	'#252: site-editor.php not ingested when claimed natively via legacy_path',
+	! isset( $doc_252['screens']['ingested-site-editor-php'] )
+);
+// The ingested containers for themes.php and plugins.php also have no
+// children left (all their relevant children were native) — they should
+// not be emitted at all since `scan_children()` returns empty arrays.
+$themes_php_id  = WP_Admin_Workspaces_Classic_Menu_Bridge::derive_screen_id( 'themes.php' );
+$plugins_php_id = WP_Admin_Workspaces_Classic_Menu_Bridge::derive_screen_id( 'plugins.php' );
+$T::assert_true(
+	'#252: ingested-themes-php container not emitted when all children are native',
+	! isset( $doc_252['menu']['ingested']['items'][ $themes_php_id ] )
+);
+$T::assert_true(
+	'#252: ingested-plugins-php container not emitted when all children are native',
+	! isset( $doc_252['menu']['ingested']['items'][ $plugins_php_id ] )
+);
+
+// Non-native children alongside a native one must still be ingested.
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Plugins', 'activate_plugins', 'plugins.php', 'Plugins', '', '', 'dashicons-admin-plugins' ),
+);
+$GLOBALS['submenu'] = array(
+	'plugins.php' => array(
+		array( 'Plugin File Editor', 'edit_plugins', 'plugin-editor.php' ),
+		array( 'Acme Plugin', 'manage_options', 'acme-plugin-page' ), // Third-party: not native.
+	),
+);
+$prior_merged_252b = array(
+	'screens' => array(
+		'plugin-editor' => array(
+			'legacy_path' => 'plugin-editor.php',
+		),
+	),
+);
+$doc_252b = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute( array(), $prior_merged_252b );
+$T::assert_true(
+	'#252: plugin-editor.php skipped (native) but adjacent third-party child still ingested',
+	! isset( $doc_252b['screens']['ingested-plugin-editor-php'] ) &&
+	isset( $doc_252b['screens']['ingested-acme-plugin-page'] )
+);
+
+// Without $prior_merged the bridge falls back to static-list-only (graceful
+// degradation — direct calls from tests or third-party code still work).
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Plugins', 'activate_plugins', 'plugins.php', 'Plugins', '', '', 'dashicons-admin-plugins' ),
+);
+$GLOBALS['submenu'] = array(
+	'plugins.php' => array(
+		array( 'Acme Plugin', 'manage_options', 'acme-plugin-page' ),
+	),
+);
+$doc_252c = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute( array() ); // No $prior_merged.
+$T::assert_true(
+	'#252: contribute() without $prior_merged still ingests third-party children (static list only)',
+	isset( $doc_252c['screens']['ingested-acme-plugin-page'] )
+);
+
+// scan() with $native_legacy_paths skips a top-level entry whose slug
+// matches a claimed legacy_path.
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'My Editor', 'manage_options', 'theme-editor.php', 'My Editor', '', '', 'dashicons-code-standards' ),
+	array( 'Other Plugin', 'manage_options', 'other-plugin', 'Other Plugin', '', '', 'dashicons-admin-tools' ),
+);
+$scan_252 = WP_Admin_Workspaces_Classic_Menu_Bridge::scan( array( 'theme-editor.php' ) );
+$T::assert_eq(
+	'#252: scan() with $native_legacy_paths skips a top-level slug claimed natively',
+	count( $scan_252 ),
+	1
+);
+$T::assert_eq(
+	'#252: scan() surviving record is the non-native plugin (not the claimed slug)',
+	$scan_252[0]['id'],
+	'ingested-other-plugin'
+);
+
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+
 // --- Restore globals -----------------------------------------------------
 
 $GLOBALS['menu']    = $saved_menu;

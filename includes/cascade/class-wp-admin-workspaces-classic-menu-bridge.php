@@ -219,14 +219,20 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 *                             // core parent slug → real workspace menu id.
 	 *   }
 	 *
+	 * @param string[] $native_legacy_paths Optional set of wp-admin slugs
+	 *                                       already claimed by native workspace
+	 *                                       screens via `legacy_path`. Entries
+	 *                                       matching these slugs are skipped to
+	 *                                       prevent duplicate nav entries (#252).
 	 * @return array<int, array>
 	 */
-	public static function scan() {
+	public static function scan( $native_legacy_paths = array() ) {
 		// Request-scoped memo. `contribute()` and the cache-signal hook
 		// both call scan(); without the memo we'd walk $GLOBALS twice
 		// per request and dispatch the core-slug filter 30+ times.
 		// The signature snapshot guards against late mutations to the
-		// globals (rare; mainly test harnesses).
+		// globals (rare; mainly test harnesses) and against different
+		// $native_legacy_paths inputs (mainly tests calling scan() directly).
 		static $cache_signature = null;
 		static $cache_result    = null;
 		$menu_globals    = isset( $GLOBALS['menu'] ) && is_array( $GLOBALS['menu'] )
@@ -235,7 +241,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 		$submenu_globals = isset( $GLOBALS['submenu'] ) && is_array( $GLOBALS['submenu'] )
 			? $GLOBALS['submenu']
 			: array();
-		$signature = md5( serialize( array( $menu_globals, $submenu_globals ) ) );
+		$signature = md5( serialize( array( $menu_globals, $submenu_globals, $native_legacy_paths ) ) );
 		if ( $cache_signature === $signature && is_array( $cache_result ) ) {
 			return $cache_result;
 		}
@@ -275,7 +281,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 			if ( strpos( $css, 'wp-menu-separator' ) !== false ) {
 				continue;
 			}
-			if ( self::is_core_slug( $slug ) ) {
+			if ( self::is_core_slug( $slug ) || in_array( $slug, $native_legacy_paths, true ) ) {
 				continue;
 			}
 
@@ -298,7 +304,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 			);
 
 			if ( isset( $submenu[ $slug ] ) && is_array( $submenu[ $slug ] ) ) {
-				$record['children'] = self::scan_children( $submenu[ $slug ] );
+				$record['children'] = self::scan_children( $submenu[ $slug ], $native_legacy_paths );
 			}
 
 			$records[] = $record;
@@ -322,7 +328,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 				continue; // Orphan submenu.
 			}
 
-			$ingested_children = self::scan_children( $children_array );
+			$ingested_children = self::scan_children( $children_array, $native_legacy_paths );
 			if ( empty( $ingested_children ) ) {
 				continue;
 			}
@@ -388,12 +394,15 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	/**
 	 * Walk one submenu array (`$GLOBALS['submenu'][<parent>]`) and
 	 * return ingested child records. Skips entries whose slug matches
-	 * `is_core_slug` so we don't double-bridge wp-admin built-ins.
+	 * `is_core_slug` or whose slug is already claimed by a native
+	 * workspace screen via `legacy_path` (the `$native_legacy_paths` set
+	 * built from the prior-merged doc by `contribute()`).
 	 *
-	 * @param array<int, array> $children The submenu rows under one parent.
+	 * @param array<int, array> $children            The submenu rows under one parent.
+	 * @param string[]          $native_legacy_paths  Slugs already claimed natively.
 	 * @return array<int, array>
 	 */
-	private static function scan_children( $children ) {
+	private static function scan_children( $children, $native_legacy_paths = array() ) {
 		$out = array();
 		foreach ( $children as $child ) {
 			if ( ! is_array( $child ) || ! isset( $child[2] ) ) {
@@ -403,7 +412,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 			if ( $slug === '' ) {
 				continue;
 			}
-			if ( self::is_core_slug( $slug ) ) {
+			if ( self::is_core_slug( $slug ) || in_array( $slug, $native_legacy_paths, true ) ) {
 				continue;
 			}
 			$out[] = array(
@@ -595,6 +604,31 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	}
 
 	/**
+	 * Extract every `legacy_path` string declared by screens in a merged doc.
+	 * Used by `contribute()` to build the dynamic skip set for `scan()`: any
+	 * wp-admin slug already claimed via `legacy_path` by a prior-origin
+	 * screen must not be re-ingested by the bridge (#252).
+	 *
+	 * @param array $merged_doc A partially- or fully-merged workspace.json doc.
+	 * @return string[]
+	 */
+	private static function extract_native_legacy_paths( $merged_doc ) {
+		if ( ! isset( $merged_doc['screens'] ) || ! is_array( $merged_doc['screens'] ) ) {
+			return array();
+		}
+		$paths = array();
+		foreach ( $merged_doc['screens'] as $screen ) {
+			if ( ! is_array( $screen ) ) {
+				continue;
+			}
+			if ( isset( $screen['legacy_path'] ) && is_string( $screen['legacy_path'] ) && $screen['legacy_path'] !== '' ) {
+				$paths[] = $screen['legacy_path'];
+			}
+		}
+		return $paths;
+	}
+
+	/**
 	 * Cascade contribution. Walks `scan()` and merges synthesized
 	 * `screens[<id>]` + `menu.ingested.items[<id>]` entries into the
 	 * plugin-origin workspace.json doc. Idempotent: any entry id already
@@ -604,14 +638,30 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 *   - workspace.json declarations at any origin keep authority.
 	 *   - The filter firing twice in one request doesn't duplicate.
 	 *
-	 * @param array $doc Plugin-origin workspace.json doc.
+	 * @param array $doc          Plugin-origin workspace.json doc.
+	 * @param array $prior_merged The merged doc from origins that ran before
+	 *                            plugin (core + engine). Passed as an extra
+	 *                            arg by `resolve_with()` since this fix. Used
+	 *                            to derive the dynamic skip set of legacy_path
+	 *                            slugs already claimed natively, preventing
+	 *                            duplicate nav entries (#252). Defaults to
+	 *                            empty array (graceful degradation in direct
+	 *                            test calls and back-compat callers).
 	 * @return array
 	 */
-	public static function contribute( $doc ) {
+	public static function contribute( $doc, $prior_merged = array() ) {
 		if ( ! is_array( $doc ) ) {
 			$doc = array();
 		}
-		$records = self::scan();
+		// Build the dynamic skip set from screens declared in prior origins.
+		// This catches slugs (e.g. theme-editor.php, plugin-editor.php) that
+		// are absent from the static $CORE_SLUGS list but are already claimed
+		// natively via a screen's `legacy_path` field. Future native screens
+		// with a legacy_path automatically stop regressing into duplicates.
+		$native_legacy_paths = self::extract_native_legacy_paths(
+			is_array( $prior_merged ) ? $prior_merged : array()
+		);
+		$records = self::scan( $native_legacy_paths );
 		if ( empty( $records ) ) {
 			return $doc;
 		}
@@ -940,11 +990,17 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
  * the idempotency guard (first writer wins on entry id) and a plugin
  * author hooking `wp_admin_workspaces_data_plugin` at default priority 10
  * still wins on top.
+ *
+ * Accepts 2 args: the plugin-origin doc (value being filtered) plus the
+ * already-merged core+engine doc passed as an extra arg by `resolve_with()`
+ * since #252. The second arg lets `contribute()` derive which legacy_path
+ * slugs are already claimed natively, preventing duplicate nav entries.
  */
 add_filter(
 	'wp_admin_workspaces_data_plugin',
 	array( 'WP_Admin_Workspaces_Classic_Menu_Bridge', 'contribute' ),
-	6
+	6,
+	2
 );
 
 /**

@@ -105,7 +105,12 @@ class WP_Admin_Workspaces_Resolver {
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
-			$doc    = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc );
+			// Pass $merged as an extra arg so callbacks can inspect which
+			// screens prior origins already declared (e.g. the classic-menu
+			// bridge uses it to skip slugs already claimed via legacy_path).
+			// Extra args are ignored by callbacks that don't declare them,
+			// so this is fully backward-compatible.
+			$doc    = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc, $merged );
 			$tagged = WP_Admin_Workspaces_Merge::tag_origin( $doc, $origin );
 			$merged = WP_Admin_Workspaces_Merge::merge_authoritative( $merged, $tagged );
 		}
