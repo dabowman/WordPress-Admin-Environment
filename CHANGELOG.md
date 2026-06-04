@@ -27,7 +27,8 @@ theme on both background and foreground.
 - Wrapped the shared DataViews `RenderModal`s (`createBulkConfirmModal` /
   `BulkEditModal` / `EntityFormModal`) so all six entity-CRUD list apps
   inherit it, plus the app-owned Modals: taxonomy term, media details,
-  plugin `.zip` upload, and menu name/item/delete.
+  plugin `.zip` upload, themes details (the hand-rolled DataViews
+  `RenderModal`, not a shared factory), and menu name/item/delete.
 - Pure stack-accumulation helper `appendScopedStyles` added to
   `themeScope.mjs` and pinned by `tests/runtime/theme-provider-host.test.mjs`.
 

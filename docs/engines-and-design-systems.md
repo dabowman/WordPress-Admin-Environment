@@ -475,7 +475,8 @@ Root/chrome popovers keep body-portaling (correctly root-themed).
 independent of the Popover slot, so the `RegionThemedSubtree` Popover.Slot
 does NOT cover Modal overlays (DataViews `RenderModal` incl. the
 entity-CRUD bulk-confirm/edit + entity-form modals; the app-owned
-taxonomy-term / media-details / plugin-upload / menu modals). Without a fix
+taxonomy-term / media-details / plugin-upload / themes-details / menu
+modals). Without a fix
 they paint the workspace-*root* theme on both background and foreground.
 
 The fix is kernel-side and DS-neutral. React context propagates through
