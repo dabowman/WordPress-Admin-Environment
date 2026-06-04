@@ -6,7 +6,7 @@
 
 This spec describes the **semantic surface** of the Theme File Editor so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
-**Posture:** core has been deprioritizing this screen for years. Production sites are encouraged to set `define('DISALLOW_FILE_EDIT', true)` in `wp-config.php`, which removes the menu entry entirely. The workspace should surface this screen only when explicitly enabled and only for advanced workspaces (e.g. `developer-admin`). It is not appropriate for `content-author` or `client-portal`.
+**Posture:** core has been deprioritizing this screen for years. Production sites are encouraged to set `define('DISALLOW_FILE_EDIT', true)` in `wp-config.php`, which removes the menu entry entirely. The workspace should surface this screen only when explicitly enabled and only for advanced, developer-focused workspaces. It is not appropriate for content-focused or client-facing workspaces.
 
 This spec covers **theme file editing only**. The plugin file editor (`plugin-editor.php`) is structurally identical and lives in the Plugins screen specs.
 
@@ -356,7 +356,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 | Gap | Priority | Notes |
 |---|---|---|
 | Propose REST surface `/wp-admin-workspaces/v1/theme-files` | High | Without it, native rebuild is awkward (form POST only). Specs the endpoint above. |
-| Register `core:theme-file-editor` app source | Low | Only relevant for `developer-admin`-style workspaces |
+| Register `core:theme-file-editor` app source | Low | Only relevant for developer-focused workspaces |
 | Tree component | Medium | `role="tree"` semantic is non-trivial |
 | Code editor integration | Medium | Use any code-editor library; not a `@wordpress/*` package fit. CodeMirror or Monaco; user choice. |
 | PHP syntax safety net surfacing | High | Critical UX — safety must be visible |
@@ -370,7 +370,7 @@ Plugin compatibility note: theme file edits don't have hookable extensibility ar
 | Diff against last save | Low | Better than current core; gap proposal |
 
 ### Acceptable interim
-For v1 of any workspace config, `iframe:theme-editor.php` is acceptable as an escape hatch and is the recommended approach. Most workspaces will not surface this at all (`content-author`, `client-portal`). Only `developer-admin` should include it, gated on `! defined('DISALLOW_FILE_EDIT')`.
+For v1 of any workspace config, `iframe:theme-editor.php` is acceptable as an escape hatch and is the recommended approach. Most workspaces (content-focused or client-facing) will not surface this at all. Only developer-focused workspaces should include it, gated on `! defined('DISALLOW_FILE_EDIT')`.
 
 ---
 

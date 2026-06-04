@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/site-health.php` (Status tab) + `wp-admin/site-health-info.php` (Info tab) + `wp-admin/includes/class-wp-site-health.php` + `wp-admin/includes/class-wp-debug-data.php`
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:site-health.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the original via `iframe:site-health.php`.
 
 This spec describes the **semantic surface** of the WordPress Site Health screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -372,7 +372,7 @@ Plugin compatibility note: many security and performance plugins (e.g. iThemes S
 
 ### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:site-health.php` works in `developer-admin` workspace; chrome hidden.
+- **What works:** `iframe:site-health.php` works as an `iframe:` escape hatch (e.g. in the `wp-admin-default` baseline).
 
 ### Gaps vs. this spec
 

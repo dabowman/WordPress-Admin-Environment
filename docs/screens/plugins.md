@@ -590,7 +590,7 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 | Network-admin variants | n/a | Separate spec (`network-admin/plugins.md`). |
 
 ### Acceptable interim
-For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor.php` are acceptable escape hatches. The developer-admin workspace already uses these. Track them for native replacement.
+For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor.php` are acceptable escape hatches. The `wp-admin-default` baseline already uses these. Track them for native replacement.
 
 ---
 
@@ -629,5 +629,5 @@ For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor
 - REST schema reference: `https://developer.wordpress.org/rest-api/reference/plugins/`
 - Auto-updates: `wp-admin/includes/update.php` + `auto_update_plugins` site option
 - Capability map: `wp-admin/includes/capabilities.php` (`map_meta_cap` cases for `activate_plugin`, `deactivate_plugin`, `delete_plugin`, `edit_plugin`, `update_plugin`, `resume_plugin`)
-- Current workspace impl: none (iframe fallback in `workspaces/developer-workspace.json`)
+- Current workspace impl: none (iframe fallback in `workspaces/wp-admin-default.json`)
 - Cross-link: `docs/screens/users.md` (analogous list-with-modal-actions pattern)

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/tools.php` (Available Tools landing) + `wp-admin/network.php` (Network Setup) + `wp-admin/ms-delete-site.php` (multisite subsite self-delete)
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:tools.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the original via `iframe:tools.php`.
 
 This spec covers three logical sub-screens that all live under the Tools menu in core wp-admin:
 
@@ -27,7 +27,7 @@ Three sections share Section 11 (Inter-app navigation) and Section 14 (Extension
 | Parent app | "Tools" group (when workspace config groups them) |
 | Sub-screens | None (each is leaf) |
 
-The three sub-screens are discrete, low-traffic surfaces. Most workspaces should hide them entirely (developer-admin only) or use `iframe:` fallback indefinitely — this is administration-grade infrastructure that most users never touch.
+The three sub-screens are discrete, low-traffic surfaces. Most workspaces should hide them entirely (surfacing them only in developer-focused workspaces) or use `iframe:` fallback indefinitely — this is administration-grade infrastructure that most users never touch.
 
 ---
 
@@ -381,7 +381,7 @@ Plugin compatibility note: WooCommerce, ManageWP, and other tooling-heavy plugin
 
 ### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:tools.php` / `iframe:network.php` / `iframe:ms-delete-site.php` work in `developer-admin` workspace with chrome hidden.
+- **What works:** `iframe:tools.php` / `iframe:network.php` / `iframe:ms-delete-site.php` work as `iframe:` escape hatches (e.g. in the `wp-admin-default` baseline).
 
 ### Gaps vs. this spec
 
