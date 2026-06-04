@@ -1,12 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
+import {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
+import { navigate, useRoute } from '../../../runtime/routing/router';
 import {
 	applySavedView,
 	buildSavePatch,
 	pickDurableView,
 	readSavedView,
 } from './dataViewPrefs.mjs';
+import {
+	applyViewSlots,
+	mergeSlotParams,
+	readViewSlots,
+	serializeSlotParams,
+	viewSlotParams,
+} from './viewUrlSlots.mjs';
 
 /** User-prefs REST endpoint (read full blob / partial-merge write). */
 const PREFS_PATH = '/wp-admin-workspaces/v1/user-prefs';
@@ -45,12 +59,21 @@ const PERSIST_DEBOUNCE_MS = 600;
  *    fresh seed so deep-linked filters/search aren't clobbered. Prefs load is
  *    async + non-blocking: the synchronous seed renders first (no flash), then
  *    the saved view overlays once it arrives. See `dataViewPrefs.mjs`.
+ * 6. **URL slots (opt-in, #136)** — when `urlSlots` is passed, the named
+ *    *transient* axes (page + single-value filters) round-trip through URL
+ *    query params, mirroring NavigationApp's `?screen=` slot: the seed reads
+ *    them from the URL (so deep-links render the right page/filter on first
+ *    paint — no flash, no wasted page-1 fetch), `setView` writes them back, and
+ *    a route-reconcile effect tracks browser back/forward. Omitting `urlSlots`
+ *    (the default for five of the six list apps) is a no-op — zero behavior
+ *    change. See `viewUrlSlots.mjs`.
  *
  * @param {Object}      options
  * @param {string|null} options.screenId       Active screen id (resync + prefs key).
  * @param {Object}      options.dataViewConfig Resolved doc from `useDataView`.
  * @param {Object}      options.viewDefaults   Per-app `VIEW_DEFAULTS`.
  * @param {Array}       [options.resyncKeys]   Extra resync deps (e.g. [ postType ]).
+ * @param {Object|null} [options.urlSlots]     Opt-in view⇄URL slot spec (see `viewUrlSlots.mjs`).
  * @return {{ view: Object, setView: Function, selection: Array, setSelection: Function }} DataViews `view` (title-deduped) + `setView`, plus `selection` + `setSelection`.
  */
 export function useEntityDataView( {
@@ -58,14 +81,34 @@ export function useEntityDataView( {
 	dataViewConfig,
 	viewDefaults,
 	resyncKeys = [],
+	urlSlots = null,
 } ) {
-	const seed = () => ( {
-		...viewDefaults,
-		...( dataViewConfig.defaultView || {} ),
-	} );
+	const route = useRoute();
+	const routeParams = route?.params || {};
+
+	const seed = () => {
+		const base = {
+			...viewDefaults,
+			...( dataViewConfig.defaultView || {} ),
+		};
+		// Fold the URL slots over the fresh seed so a deep-link / refresh renders
+		// the right page + filter on first paint. Harmless for the prefs path:
+		// `pickDurableView` strips page/filters, so the durable baseline below is
+		// unaffected by what the URL carries.
+		return urlSlots
+			? applyViewSlots( base, readViewSlots( routeParams, urlSlots ), urlSlots )
+			: base;
+	};
 
 	const [ rawView, setRawView ] = useState( seed );
 	const [ selection, setSelection ] = useState( [] );
+
+	// Latest committed rawView, readable synchronously inside the `setView`
+	// wrapper (which must resolve a functional updater + diff the slot params
+	// without depending on a re-render). Assigned during render — the standard
+	// "ref mirrors state" pattern.
+	const viewRef = useRef( rawView );
+	viewRef.current = rawView;
 
 	// Full user-prefs blob (null until the first GET resolves). Held in a ref
 	// — reading it must not re-run the resync effect, and there's no render
@@ -207,6 +250,81 @@ export function useEntityDataView( {
 		[]
 	);
 
+	// Canonical string of the slotted axes as they appear in the URL right now.
+	// Drives the reconcile effect below (browser back/forward, deep-link).
+	const urlSlotsKey = urlSlots
+		? serializeSlotParams(
+				applyViewSlots(
+					{},
+					readViewSlots( routeParams, urlSlots ),
+					urlSlots
+				),
+				urlSlots
+		  )
+		: '';
+
+	// Reconcile the view to the URL when the slotted params change from OUTSIDE
+	// this hook (back/forward, an external `navigate`). Skips when already in
+	// sync — including the echo from our own `setView` write — so there is no
+	// navigate→reconcile→navigate loop. Never navigates itself.
+	useEffect( () => {
+		if ( ! urlSlots ) {
+			return;
+		}
+		const current = viewRef.current;
+		if ( serializeSlotParams( current, urlSlots ) === urlSlotsKey ) {
+			return;
+		}
+		setRawView(
+			applyViewSlots(
+				current,
+				readViewSlots( routeParams, urlSlots ),
+				urlSlots
+			)
+		);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ urlSlotsKey ] );
+
+	// `setView` wrapper: applies the state change, then mirrors the slotted axes
+	// to the URL when (and only when) they actually changed. Supports DataViews'
+	// object form (`onChangeView`) and the functional-updater form callers use.
+	// Without `urlSlots` it's a thin pass-through to `setRawView`.
+	const setView = useCallback(
+		( updater ) => {
+			if ( ! urlSlots ) {
+				setRawView( updater );
+				return;
+			}
+			const current = viewRef.current;
+			const next =
+				typeof updater === 'function' ? updater( current ) : updater;
+			setRawView( next );
+			const prevKey = serializeSlotParams( current, urlSlots );
+			const nextKey = serializeSlotParams( next, urlSlots );
+			if ( prevKey === nextKey || typeof window === 'undefined' ) {
+				return;
+			}
+			// Merge onto the live hash so the slot write preserves the primary
+			// path + any unrelated slot (`?screen=`, `?detail=`). Mirrors
+			// NavigationApp's `navigateScreen`.
+			const hash = window.location.hash || '';
+			const queryIdx = hash.indexOf( '?' );
+			const primary =
+				queryIdx === -1 ? hash : hash.slice( 0, queryIdx );
+			const search = queryIdx === -1 ? '' : hash.slice( queryIdx + 1 );
+			const nextSearch = mergeSlotParams(
+				search,
+				viewSlotParams( next, urlSlots )
+			);
+			navigate(
+				nextSearch
+					? `${ primary || '#' }?${ nextSearch }`
+					: primary || '#'
+			);
+		},
+		[ urlSlots ]
+	);
+
 	const view = useMemo( () => {
 		const titleField =
 			rawView.titleField || dataViewConfig.defaultView?.titleField;
@@ -220,5 +338,5 @@ export function useEntityDataView( {
 		return { ...rawView, fields };
 	}, [ rawView, dataViewConfig ] );
 
-	return { view, setView: setRawView, selection, setSelection };
+	return { view, setView, selection, setSelection };
 }

@@ -94,7 +94,7 @@ Behaviors present in both that work differently:
 
 4. **Coarse type filter using `media_type` vs. mime groups.** Classic filters on `post_mime_type:` strings and exposes Spreadsheets/Archives sub-buckets derived from `wp_match_mime_types()` (`class-wp-media-list-table.php:161-179`). The workspace filters on the 5-value `media_type` enum (`index.js:26-32`) — "Documents" collapses `application/*` and there is no spreadsheet/archive distinction. Consequence: narrower filtering granularity, though for most users the coarse buckets suffice.
 
-5. **Pagination not URL-addressable.** Classic encodes `?paged=N` (bookmarkable, back/forward works). The workspace holds `page` in `useState` (`index.js:40`); refresh or deep-link always lands on page 1 (app.md "Known limitations" confirms). Consequence: cannot share/bookmark a deep page; browser Back doesn't restore page position.
+5. ✅ **Resolved (#136).** ~~Pagination not URL-addressable.~~ `view.page` now round-trips through `?paged=N` (omitted on page 1) and the single-value `type` filter through `?media_type=<value>`, via the `urlSlots` opt-in on `useEntityDataView`. Bookmark/share a deep page + filter, and browser Back restores position. The author/date filters, search, and the open-detail modal remain local (multi-value/range filters don't round-trip through one query param; the modal is transient).
 
 6. **Thumbnail freshness after upload.** Classic relies on synchronous (or `/post-process`-finalized) subsize generation. The workspace invalidates the list query after upload (`index.js:123-140`) but never reads `missing_image_sizes` nor calls `/post-process`; a large image whose subsizes are deferred can render with `source_url` (full-size) as the tile or a broken/placeholder thumb until a later refetch. Consequence: occasional momentarily-wrong thumbnails on slow servers.
 
@@ -170,7 +170,7 @@ The detail modal hand-rolls form controls (`InputControl` ×2, `TextareaControl`
 8. **Attach / detach to a post.** *(workspace)* `PATCH post:{id}` / `post:0` (controller:1202). Needs a post-picker UI (could reuse a core-data `useEntityRecords('postType','post')` search).
 9. **Autosave the metadata form (or at least migrate to `EntityDataForm`).** *(workspace)* Closes divergence #1 and gives consistent save feedback. Use `_shared/forms/EntityDataForm.js`.
 10. **Delete confirmation dialog.** *(workspace)* Closes divergence #2 — even outside bulk, single delete should confirm (media is trash-less).
-11. **URL-driven pagination + filter state.** *(workspace)* Move `page`/`mediaType` into URL slots per the workspace's URL-as-state principle (CLAUDE.md); fixes divergence #5 and enables deep-links.
+11. ✅ **Done (#136).** **URL-driven pagination + filter state.** *(workspace)* `page` → `?paged` and the `type` filter → `?media_type` move into URL slots via the reusable `urlSlots` opt-in on `useEntityDataView` (pure mapping in `_shared/dataviews/viewUrlSlots.mjs`). Fixed divergence #5; deep-links work.
 12. **Subsize-generation polling.** *(workspace)* After upload, if `missing_image_sizes` is non-empty, poll or call `POST /{id}/post-process` (controller:518); fixes divergence #6.
 
 **P3 — parity polish / upstream asks**

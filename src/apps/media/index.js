@@ -59,6 +59,16 @@ const ACTION_LABELS = {
 	delete: __( 'Delete Permanently', 'wp-admin-workspaces' ),
 };
 
+// URL slot spec (#136): mirror NavigationApp's `?screen=` pattern so refresh /
+// deep-link / browser-back survive. `view.page` ⇄ `?paged=N` (omitted on page 1)
+// and the single-value `type` filter ⇄ `?media_type=<value>`. The author / date
+// filters and the Mine / Unattached toolbar toggles stay in local state — they
+// aren't single-value `is` slots and aren't part of the parity gap.
+const URL_SLOTS = {
+	page: 'paged',
+	filters: [ { field: 'type', param: 'media_type', operator: 'is' } ],
+};
+
 const VIEW_DEFAULTS = {
 	type: 'grid',
 	search: '',
@@ -206,6 +216,7 @@ export default function MediaApp( { config = {} } ) {
 		screenId,
 		dataViewConfig,
 		viewDefaults: VIEW_DEFAULTS,
+		urlSlots: URL_SLOTS,
 	} );
 
 	// Toolbar pseudo-filters (no DataViews filter UI for these): Mine restricts
