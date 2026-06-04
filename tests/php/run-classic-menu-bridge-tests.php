@@ -1023,6 +1023,38 @@ $T::assert_eq(
 	'ingested-other-plugin'
 );
 
+// A `legacy_path` declared in the plugin-origin $doc being filtered (e.g. a
+// `wp-content/workspace.json` partial override) is also honored — the skip
+// set unions $prior_merged AND $doc, closing the same #252 bug class one
+// origin up.
+wpas_cmb_reset_globals();
+WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
+$GLOBALS['menu'] = array(
+	array( 'Plugins', 'activate_plugins', 'plugins.php', 'Plugins', '', '', 'dashicons-admin-plugins' ),
+);
+$GLOBALS['submenu'] = array(
+	'plugins.php' => array(
+		array( 'Plugin File Editor', 'edit_plugins', 'plugin-editor.php' ),
+	),
+);
+$doc_252d = WP_Admin_Workspaces_Classic_Menu_Bridge::contribute(
+	array(
+		'screens' => array(
+			'my-editor' => array(
+				'label'       => 'Plugin File Editor',
+				'path'        => '/my-editor',
+				'app'         => 'iframe:plugin-editor.php',
+				'legacy_path' => 'plugin-editor.php',
+			),
+		),
+	),
+	array() // No prior-merged; the claim lives in the plugin-origin doc itself.
+);
+$T::assert_true(
+	'#252: legacy_path claimed in the plugin-origin $doc itself is also skipped',
+	! isset( $doc_252d['screens']['ingested-plugin-editor-php'] )
+);
+
 wpas_cmb_reset_globals();
 WP_Admin_Workspaces_Classic_Menu_Bridge::reset();
 

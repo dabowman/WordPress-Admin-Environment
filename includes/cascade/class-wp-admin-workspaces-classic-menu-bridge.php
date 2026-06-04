@@ -625,7 +625,11 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 				$paths[] = $screen['legacy_path'];
 			}
 		}
-		return $paths;
+		// Dedup: the baseline repeats slugs (e.g. `edit.php`) across screens.
+		// Harmless for `in_array()` membership, but keeps the set tidy and
+		// stabilizes the `serialize()` in `scan()`'s memo signature regardless
+		// of screen ordering.
+		return array_values( array_unique( $paths ) );
 	}
 
 	/**
@@ -642,25 +646,43 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 * @param array $prior_merged The merged doc from origins that ran before
 	 *                            plugin (core + engine). Passed as an extra
 	 *                            arg by `resolve_with()` since this fix. Used
-	 *                            to derive the dynamic skip set of legacy_path
-	 *                            slugs already claimed natively, preventing
-	 *                            duplicate nav entries (#252). Defaults to
-	 *                            empty array (graceful degradation in direct
-	 *                            test calls and back-compat callers).
+	 *                            (unioned with `$doc` itself) to derive the
+	 *                            dynamic skip set of legacy_path slugs already
+	 *                            claimed natively, preventing duplicate nav
+	 *                            entries (#252). Defaults to empty array
+	 *                            (graceful degradation in direct test calls and
+	 *                            back-compat callers).
 	 * @return array
 	 */
 	public static function contribute( $doc, $prior_merged = array() ) {
 		if ( ! is_array( $doc ) ) {
 			$doc = array();
 		}
-		// Build the dynamic skip set from screens declared in prior origins.
-		// This catches slugs (e.g. theme-editor.php, plugin-editor.php) that
-		// are absent from the static $CORE_SLUGS list but are already claimed
-		// natively via a screen's `legacy_path` field. Future native screens
-		// with a legacy_path automatically stop regressing into duplicates.
-		$native_legacy_paths = self::extract_native_legacy_paths(
-			is_array( $prior_merged ) ? $prior_merged : array()
+		// Build the dynamic skip set from screens declared in prior origins
+		// AND in the plugin-origin doc being filtered. This catches slugs
+		// (e.g. theme-editor.php, plugin-editor.php) that are absent from the
+		// static $CORE_SLUGS list but are already claimed natively via a
+		// screen's `legacy_path` field. Unioning $doc closes the same #252 bug
+		// class one origin up: a `wp-content/workspace.json` partial override
+		// (plugin slot) that declares its own `legacy_path` screen claiming a
+		// third-party slug would otherwise still get a duplicate `ingested-*`
+		// entry. Future native screens with a legacy_path stop regressing
+		// into duplicates automatically.
+		$native_legacy_paths = array_values(
+			array_unique(
+				array_merge(
+					self::extract_native_legacy_paths(
+						is_array( $prior_merged ) ? $prior_merged : array()
+					),
+					self::extract_native_legacy_paths( $doc )
+				)
+			)
 		);
+		// NOTE: `contribute()` calls `scan( $native_legacy_paths )` while the
+		// cache-signal hook calls `scan()` with no skip set — the two callers
+		// now diverge by design (the cache-signal hook can't see the merged
+		// doc, so it can't build the skip set). scan()'s memo keys on the
+		// $native_legacy_paths signature, so each caller gets its own walk.
 		$records = self::scan( $native_legacy_paths );
 		if ( empty( $records ) ) {
 			return $doc;

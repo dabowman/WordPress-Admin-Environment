@@ -128,6 +128,13 @@ class WP_Admin_Workspaces_Resolver {
 			if ( ! is_array( $doc ) ) {
 				continue;
 			}
+			// Single-arg by design — the $merged extra arg passed to the
+			// Phase 1 trusted filters is intentionally NOT passed here.
+			// Consumer origins (site/role/user) are shrink-only and don't need
+			// to inspect the prior-merged doc; the only current consumer of the
+			// extra arg (the classic-menu bridge) hooks the trusted plugin
+			// origin. Passing $merged here too would be harmless and
+			// backward-compatible if a future consumer-origin hook wants it.
 			$doc    = apply_filters( "wp_admin_workspaces_data_{$origin}", $doc );
 			$doc    = WP_Admin_Workspaces_Customizable::filter_doc( $merged, $doc, $origin );
 			$doc    = WP_Admin_Workspaces_Permissions::enforce_origin_tier( $doc, $merged, $origin );
