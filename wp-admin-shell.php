@@ -6,7 +6,6 @@
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
- * Requires Plugins: gutenberg
  * Author: WP Admin Shell Contributors
  * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
  * License: GPL-2.0-or-later
@@ -17,25 +16,56 @@
 
 defined( 'ABSPATH' ) || exit;
 
-// Hard runtime dep: @wordpress/ui transitively imports @wordpress/theme,
-// which calls __dangerousOptInToUnstableAPIsOnlyForCoreModules against
-// wp.privateApis. WP core 6.9's allowlist excludes @wordpress/theme;
-// the Gutenberg plugin overrides wp-private-apis with one that includes
-// it. Without Gutenberg, every @wordpress/ui overlay component throws
-// at module-load and the shell renders empty. Surface a clear notice
-// instead of letting that happen silently.
+// Runtime private-API dependency. `@wordpress/ui` overlay components
+// transitively import `@wordpress/theme`, which calls
+// __dangerousOptInToUnstableAPIsOnlyForCoreModules against the runtime
+// wp.privateApis. That opt-in only succeeds if the module name is on the
+// allowlist baked into the loaded `wp-private-apis` script.
+//
+// - WordPress < 7.0: core's allowlist EXCLUDES @wordpress/theme /
+//   @wordpress/ui / @wordpress/dataviews. Only the Gutenberg plugin's
+//   wp-private-apis override whitelists them, so Gutenberg is required —
+//   without it every overlay component throws at module-load and the
+//   shell renders empty.
+// - WordPress >= 7.0: core bundles @wordpress/theme AND ships a
+//   wp-private-apis allowlist that includes @wordpress/theme,
+//   @wordpress/ui and @wordpress/dataviews (verified against the 7.0
+//   release — wp-includes/js/dist/private-apis.js
+//   CORE_MODULES_USING_PRIVATE_APIS). The opt-in consent string is
+//   unchanged, so the shell's bundled overlay components unlock against
+//   core's own wp.privateApis and Gutenberg is no longer required.
+//
+// Surface a clear notice when neither path is satisfied instead of
+// letting the shell render blank.
 /**
- * Whether the hard runtime dependency (the Gutenberg plugin) is active.
+ * Whether the WordPress version supplies the private-API allowlist the shell
+ * needs in core (i.e. the Gutenberg plugin is no longer required).
  *
- * `@wordpress/ui` overlay components transitively import `@wordpress/theme`,
- * which opts into private APIs only the Gutenberg plugin's `wp-private-apis`
- * override whitelists. Without it those modules throw at module-load and the
- * shell renders blank. Checked at the plugin (option) layer plus the runtime
- * `GUTENBERG_VERSION` constant Gutenberg defines when it loads.
+ * @param string|null $version WordPress version to test. Defaults to the
+ *                             running install's version. Injectable for tests.
+ * @return bool True on WordPress 7.0+.
+ */
+function wp_admin_shell_core_supplies_private_apis( $version = null ) {
+	if ( null === $version ) {
+		$version = get_bloginfo( 'version' );
+	}
+	return version_compare( $version, '7.0', '>=' );
+}
+
+/**
+ * Whether the shell's runtime private-API dependency is satisfied.
+ *
+ * Met when either WordPress core supplies the allowlist (7.0+) or the
+ * Gutenberg plugin is active (its `wp-private-apis` override whitelists the
+ * modules on older WordPress). Gutenberg presence is detected via the runtime
+ * `GUTENBERG_VERSION` constant plus the plugin (option) layer.
  *
  * @return bool
  */
 function wp_admin_shell_dependencies_met() {
+	if ( wp_admin_shell_core_supplies_private_apis() ) {
+		return true;
+	}
 	if ( defined( 'GUTENBERG_VERSION' ) ) {
 		return true;
 	}
@@ -48,7 +78,7 @@ function wp_admin_shell_dependencies_met() {
 add_action( 'admin_notices', function () {
 	if ( ! wp_admin_shell_dependencies_met() ) {
 		echo '<div class="notice notice-error"><p>';
-		echo esc_html__( 'WP Admin Shell requires the Gutenberg plugin to be active. The shell uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated.', 'wp-admin-shell' );
+		echo esc_html__( 'WP Admin Shell requires either WordPress 7.0+ or the Gutenberg plugin. The shell uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available.', 'wp-admin-shell' );
 		echo '</p></div>';
 	}
 } );

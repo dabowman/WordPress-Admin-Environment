@@ -255,6 +255,28 @@ $T::ok( 'baseline maps /pages with post_type=page', ( $lm['/pages']['legacy_quer
 $T::ok( 'baseline maps /media → upload.php', ( $lm['/media']['legacy_path'] ?? '' ) === 'upload.php' );
 $T::ok( 'baseline does NOT map allowlisted plugin-install', ! isset( $lm['/plugins/new'] ) );
 
+// ── Runtime private-API dependency gate (version-gated) ─────────────
+
+echo "\n— private-API dependency gate —\n";
+
+// WordPress 7.0+ ships the wp-private-apis allowlist (and @wordpress/theme)
+// in core, so the Gutenberg plugin is no longer required. < 7.0 still needs
+// it. The boundary is injectable for this assertion.
+$T::ok( 'WP 6.7 does NOT supply private-apis in core', wp_admin_shell_core_supplies_private_apis( '6.7' ) === false );
+$T::ok( 'WP 6.9 does NOT supply private-apis in core', wp_admin_shell_core_supplies_private_apis( '6.9' ) === false );
+$T::ok( 'WP 6.9.2 (patch) still excluded', wp_admin_shell_core_supplies_private_apis( '6.9.2' ) === false );
+$T::ok( 'WP 7.0 supplies private-apis in core', wp_admin_shell_core_supplies_private_apis( '7.0' ) === true );
+$T::ok( 'WP 7.0.1 (patch) included', wp_admin_shell_core_supplies_private_apis( '7.0.1' ) === true );
+$T::ok( 'WP 7.1 included', wp_admin_shell_core_supplies_private_apis( '7.1' ) === true );
+// Conservative on pre-release builds: 7.0 betas/RCs sort below 7.0 final, so
+// they fall back to the Gutenberg-plugin path (which still works there).
+$T::ok( 'WP 7.0-beta1 falls below 7.0 final (Gutenberg fallback)', wp_admin_shell_core_supplies_private_apis( '7.0-beta1' ) === false );
+
+// dependencies_met() short-circuits true once core supplies the allowlist —
+// the running test container is WP 7.0+ (.wp-env core: null = latest), so the
+// gate is satisfied regardless of whether Gutenberg is active here.
+$T::ok( 'dependencies_met true when core supplies allowlist', wp_admin_shell_core_supplies_private_apis() ? wp_admin_shell_dependencies_met() === true : true );
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n────────────────────────────\n";
