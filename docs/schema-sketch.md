@@ -32,9 +32,9 @@ v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline
   "name": "wp-admin-default",
   "title": "WordPress",
 
-  "workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
+  "engine": "core:default",
+  "default-screen": "dashboard-home",
+  "frame": {
     "branding": { "logo": "...", "title": "WordPress" },
     "notices":  { "banner": { "app": "core:notices-banner" }, "snackbar": { "app": "core:notices-snackbar" } },
     "widgets": {
@@ -88,7 +88,9 @@ v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline
 
 | Block | Role | Cascade behavior |
 |-------|------|-----------------|
-| `workspace` | Install metadata: engine, default landing screen, branding, notices, persistent widgets (toolbar / sidebar-footer / status-bar). | Deep-merge per-field. `widgets.<slot>` arrays merge by `id`. |
+| `engine` | Top-level (required) — which engine renders the workspace. | Last writer wins; `role`/`user` can never write it (hardcoded deny). |
+| `default-screen` | Top-level — default landing screen id. | Last writer wins. |
+| `frame` | Persistent furniture: branding, notices, persistent widgets (toolbar / sidebar-footer / status-bar). Distinct from `styles.chrome` (which paints it). | Deep-merge per-field. `frame.widgets.<slot>` arrays merge by `id`. |
 | `settings` | Reusable definition registries referenced from elsewhere by id. Contains `dataViews` (3-axis `@wordpress/dataviews` configuration keyed by `kind → name → variant`) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
@@ -213,7 +215,7 @@ Resolver normalizes the shorthand to `apps: [ { "id": "main", "app": "...", "con
 
 ### The `wp-content/workspace.json` override origin (0.1.0)
 
-The canonical workspace trigger is a `wp-content/workspace.json` file loaded into the `plugin` cascade slot as a **partial delta** over the `wp-admin-default` baseline (now the `core` slot) — the theme.json model. Validation is **partial-permissive**: PHP ships no JSON-Schema validator (schema conformance is the JS-side Ajv `test:schema` sweep), so the runtime gate only requires the file to decode to a JSON object; the schema-`required` top-level keys (`version`/`$wpds`/`name`/`workspace`/`screens`) are NOT required of the override — it's a delta. Completeness of the *merged* doc is enforced post-resolution by `run-shape-tests.php`. A malformed file degrades to the bare baseline (with a `WP_DEBUG` notice). See `docs/wp-admin-workspaces-design-spec.md` §19.
+The canonical workspace trigger is a `wp-content/workspace.json` file loaded into the `plugin` cascade slot as a **partial delta** over the `wp-admin-default` baseline (now the `core` slot) — the theme.json model. Validation is **partial-permissive**: PHP ships no JSON-Schema validator (schema conformance is the JS-side Ajv `test:schema` sweep), so the runtime gate only requires the file to decode to a JSON object; the schema-`required` top-level keys (`version`/`$wpds`/`name`/`engine`/`screens`) are NOT required of the override — it's a delta. Completeness of the *merged* doc is enforced post-resolution by `run-shape-tests.php`. A malformed file degrades to the bare baseline (with a `WP_DEBUG` notice). See `docs/wp-admin-workspaces-design-spec.md` §19.
 
 ### Multi-pane / split-view
 
@@ -726,7 +728,7 @@ Same keyword, different scope. Engine + kernel slots can be used at either scope
 | `palette`         | Kernel (workspace)         | Command palette overlay. Conventional pair with `mode: "modal"`.                              |
 | `detail`          | Engine (workspace + screen)| Detail / inspector pane in a paired-region layout.                                           |
 | `inspector`       | Engine (workspace + screen)| Right-side property inspector (engine-dependent).                                            |
-| `banner`          | Engine (workspace)         | Top-of-viewport notice banner. Conventional pair with `workspace.notices.banner`.            |
+| `banner`          | Engine (workspace)         | Top-of-viewport notice banner. Conventional pair with `frame.notices.banner`.            |
 | `snackbar`        | Engine (workspace)         | Bottom-of-viewport ephemeral notification.                                                   |
 | `window`          | Engine (workspace)         | Windowed-engine mount target (e.g. `core:desktop` windows).                                  |
 | `toolbar`         | Engine (workspace)         | Persistent toolbar slot. Workspace widgets and chrome controls mount here.                   |
@@ -779,13 +781,13 @@ The command palette is `palette`-slotted (a region with `route-key: "palette"` m
 
 ## System chrome
 
-The `workspace` block declares chrome that persists across every screen — notices, persistent widgets (toolbar, sidebar-footer, status-bar entries), branding.
+The `frame` block declares chrome that persists across every screen — notices, persistent widgets (toolbar, sidebar-footer, status-bar entries), branding. (`engine` and `default-screen` are top-level fields.)
 
 ```json
 {
-  "workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
+  "engine": "core:default",
+  "default-screen": "dashboard-home",
+  "frame": {
     "branding": { "logo": "...", "title": "WordPress" },
 
     "notices": {
@@ -808,13 +810,13 @@ The `workspace` block declares chrome that persists across every screen — noti
 
 ### Notices
 
-Notices are workspace-scope system chrome — they have no path, no menu binding, and never navigate. Authors swap implementations by overriding `workspace.notices.banner.app: "plugin:my/sticky-banner"` at any origin.
+Notices are workspace-scope system chrome — they have no path, no menu binding, and never navigate. Authors swap implementations by overriding `frame.notices.banner.app: "plugin:my/sticky-banner"` at any origin.
 
 Engines render notices in their declared notice slots (`banner` and `snackbar` slots from the core vocabulary). Engines that omit notice slots ignore the block.
 
 ### Workspace widgets
 
-The `workspace.widgets.<slot>` map declares apps that mount persistently across every screen, slotted into engine-declared workspace slots. Each entry is `{ id, app, ...slot-specific-fields }`.
+The `frame.widgets.<slot>` map declares apps that mount persistently across every screen, slotted into engine-declared workspace slots. Each entry is `{ id, app, ...slot-specific-fields }`.
 
 - **Persistent.** Mount when the workspace boots; survive screen navigation (subject to active screen's `mode` hiding the parent region).
 - **Slot vocabulary.** Engines declare which workspace slots they accept widgets in (`toolbar`, `sidebar-footer`, `status-bar`, etc.). Each engine documents its slot list.
@@ -895,11 +897,11 @@ Lower-priority items deferred. The items below are the design-level questions:
 | Reorganize / rename sidebar | nested array surgery in `regions.sidebar.nav.config.items[]` | edit nested `menu` tree by id (cascade-friendly at every depth) |
 | Restrict a screen by capability/role | one of four places | `screens.<id>.permissions` (single block, OR-semantic) |
 | Replace built-in screen | route override + nav item override | `screens.<id>.app` (single field) — menu item survives, still bound by id |
-| Set landing screen | `default-route` | `workspace.default-screen` |
+| Set landing screen | `default-route` | `default-screen` |
 | Rename a screen in the menu without changing identity | edit nested nav array | menu item `label` override at the right depth |
 | Hide a screen | tombstone via nav array surgery | `screens.<id>: null` (full removal) OR nested menu-item tombstone (menu-only hide) |
 | Add a dashboard widget | `dashboardWidgets[id]` + manifest registration | `screens.dashboard-home.apps[]` entry with `slot: "grid"` |
-| Add a toolbar widget | not supported in v1/v2 | `workspace.widgets.toolbar[]` entry |
+| Add a toolbar widget | not supported in v1/v2 | `frame.widgets.toolbar[]` entry |
 | Multi-pane composition | regions + routes + per-region styling | `screens[id].apps[]` with `slot` on each entry |
 | Hide editor chrome (focus mode) | not first-class — case-by-case CSS / region surgery | `screens.post-edit.mode: "focus"` |
 | Per-role workspace | separate workspace.json files + role option | unchanged |

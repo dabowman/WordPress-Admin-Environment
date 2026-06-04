@@ -276,7 +276,7 @@ Conventional values: `wp-chrome` (sidebar + topbar + content), `tiling-dwindle` 
 
 ## defaultRegions
 
-Engine-shipped baseline region tree. The v3 compiler merges this with `workspace.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in workspace.json — see [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary).
+Engine-shipped baseline region tree. The v3 compiler merges this with `frame.widgets[]` + per-screen overrides to produce the runtime regions map. Each region declaration follows the same shape as a region instantiated in workspace.json — see [§5 of the design spec](../wp-admin-workspaces-design-spec.md#5-region-vocabulary).
 
 ```json
 {

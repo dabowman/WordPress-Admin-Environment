@@ -37,10 +37,8 @@ This reference covers the workspace.json workspace schema (`workspace.json`).
 	"version": 3,
 	"$wpds": "6.9",
 	"name": "my-workspace",
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "dashboard-home"
-	},
+	"engine": "core:default",
+	"default-screen": "dashboard-home",
 	"screens": {
 		"dashboard-home": {
 			"label": "Home",
@@ -53,13 +51,15 @@ This reference covers the workspace.json workspace schema (`workspace.json`).
 
 The schema is also available in-repo at [`docs/schemas/workspace.json`](../schemas/workspace.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
-**Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
+**Required fields:** `version`, `$wpds`, `name`, `engine`, `screens`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
 ## Top-level shape
 
 | Block | Role | Cascade behavior |
 |-------|------|-----------------|
-| `workspace` | Install metadata: engine, default landing screen, branding, notices, persistent widgets (toolbar / sidebar-footer / status-bar). | Deep-merge per-field. `widgets.<slot>` arrays merge by `id`. |
+| `engine` | Top-level (required) — which engine renders the workspace. | Last writer wins; `role`/`user` origins can never write it (hardcoded deny). |
+| `default-screen` | Top-level — screen id the workspace lands on when no URL hash is present. | Last writer wins. |
+| `frame` | Persistent furniture wired into the workspace: branding, notice hosts, persistent widgets (toolbar / sidebar-footer / status-bar). Distinct from `styles.chrome`, which paints it. | Deep-merge per-field. `frame.widgets.<slot>` arrays merge by `id`. |
 | `settings` | Reusable definition registries referenced from elsewhere by id. Contains `dataViews` (3-axis `@wordpress/dataviews` configuration keyed by `kind → name → variant`) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
@@ -123,15 +123,15 @@ When `true`, individual users may select this workspace as their personal defaul
 |------------------|------------------------------------------------------------|---------|---------|
 | user-switchable  | Allow individual users to opt into this workspace.         | boolean | `false` |
 
-## workspace
+## engine / default-screen / frame
 
-Install-level chrome metadata: the engine, the default landing screen, branding, notices, and persistent widgets that survive screen navigation.
+Install-level intrinsics. `engine` (top-level, required) and `default-screen` (top-level) name the renderer and landing screen; `frame` holds the persistent furniture that survives screen navigation — branding, notices, and persistent widgets. (`frame` is *what furniture exists*; `styles.chrome` is *how it's painted*.)
 
 ```json
 {
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "dashboard-home",
+	"engine": "core:default",
+	"default-screen": "dashboard-home",
+	"frame": {
 		"branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" },
 		"notices":  {
 			"banner":   { "app": "core:notices-banner" },
@@ -147,11 +147,11 @@ Install-level chrome metadata: the engine, the default landing screen, branding,
 
 | Property         | Description                                                                                                                                          | Type    | Default |
 |------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
-| engine           | Identifier of the engine that renders this workspace. Common values: `core:default`, `core:single-pane`, `core:desktop`. Required.                    | string  | —       |
-| default-screen   | Screen id the workspace lands on when no URL hash is present. Optional — falls through to the first permitted screen with a `path` when omitted or denied by capability gating. | string  | —       |
-| branding         | `{ logo, title, icon }` — install-level branding shown by `core:site-hub` and similar chrome.                                                         | object  | —       |
-| notices          | `{ banner, snackbar }` — apps that render workspace-scope system notices.                                                                            | object  | —       |
-| widgets          | Map of `<slot>: [ { id, app, ... } ]` — apps that mount persistently across every screen, into engine-declared workspace slots.                       | object  | —       |
+| engine           | Top-level, **required**. Identifier of the engine that renders this workspace. Common values: `core:default`, `core:single-pane`, `core:desktop`.     | string  | —       |
+| default-screen   | Top-level. Screen id the workspace lands on when no URL hash is present. Optional — falls through to the first permitted screen with a `path` when omitted or denied by capability gating. | string  | —       |
+| frame.branding   | `{ logo, title, icon }` — install-level branding shown by `core:site-hub` and similar chrome.                                                         | object  | —       |
+| frame.notices    | `{ banner, snackbar }` — apps that render workspace-scope system notices.                                                                            | object  | —       |
+| frame.widgets    | Map of `<slot>: [ { id, app, ... } ]` — apps that mount persistently across every screen, into engine-declared workspace slots.                       | object  | —       |
 | styles           | Per-workspace style overrides (alternative location to top-level `styles`).                                                                          | object  | —       |
 
 ## settings
@@ -450,19 +450,19 @@ Three accepted shapes:
 
 The array form requires unique, non-empty strings; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors.
 
-Entry types that honor `customizable`: `workspace`, each `screens[id]`, each `menu` item (and its nested `items`), each `commands` entry, each `workspace.widgets.<slot>[]` entry, `styles`, each `regions[id]` (and nested child regions), and each `routes` entry.
+Entry types that honor `customizable`: `workspace`, each `screens[id]`, each `menu` item (and its nested `items`), each `commands` entry, each `frame.widgets.<slot>[]` entry, `styles`, each `regions[id]` (and nested child regions), and each `routes` entry.
 
 Two limits always apply regardless of the declaration:
 
 - **Consumer origins are shrink-only.** `role` / `user` can REMOVE entries (e.g. drop a capability from `screens[].permissions`) but never grow an OR-set or add new structure beyond what an allowlist permits.
-- **A hardcoded deny-list blocks security-sensitive paths even when listed.** `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` are rejected for consumer origins even with a matching `customizable` allowlist entry.
+- **A hardcoded deny-list blocks security-sensitive paths even when listed.** `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `engine` are rejected for consumer origins even with a matching `customizable` allowlist entry.
 
 ```json
 {
-	"workspace": {
-		"engine": "core:default",
-		"default-screen": "dashboard-home",
-		"customizable": [ "default-screen", "branding.title" ]
+	"engine": "core:default",
+	"default-screen": "dashboard-home",
+	"frame": {
+		"customizable": [ "branding.title" ]
 	}
 }
 ```

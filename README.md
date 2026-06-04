@@ -103,7 +103,7 @@ cp wp-content/plugins/wp-admin-workspaces/shells/single-pane-demo.json wp-conten
 1. Activate the plugin (and Gutenberg).
 2. Place a valid `wp-content/workspace.json` (copy one from `shells/` and edit, or
    write a small delta like `{ "$schema": "…", "version": 3, "$wpds": "6.9",
-   "name": "mine", "workspace": { … }, "styles": { … } }`).
+   "name": "mine", "engine": "core:default", "frame": { … }, "styles": { … } }`).
 3. Visit `/wp-admin/` — the workspace **replaces** classic wp-admin at the URL
    level. With no file present (and no legacy option set), wp-admin stays
    classic and untouched.

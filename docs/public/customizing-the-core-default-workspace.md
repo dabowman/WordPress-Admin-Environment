@@ -14,7 +14,7 @@ A practical, end-to-end guide to customizing the flagship WP Admin Workspaces wo
 - [Quick start](#quick-start)
 - [What `core:default` gives you out of the box](#what-coredefault-gives-you-out-of-the-box)
 - [The primitives, block by block](#the-primitives-block-by-block)
-  - [`workspace` — engine, landing, branding, notices, widgets](#workspace--engine-landing-branding-notices-widgets)
+  - [`engine` / `default-screen` / `frame` — engine, landing, branding, notices, widgets](#engine--default-screen--frame--engine-landing-branding-notices-widgets)
   - [`screens` — what mounts and where](#screens--what-mounts-and-where)
   - [`menu` — the navigation tree](#menu--the-navigation-tree)
   - [`commands` — palette entries + shortcuts](#commands--palette-entries--shortcuts)
@@ -63,10 +63,8 @@ The smallest file that customizes the workspace — pins the engine, sets a land
     "$wpds": "6.9",
     "name": "my-workspace",
     "title": "My Workspace",
-    "workspace": {
-        "engine": "core:default",
-        "default-screen": "dashboard-home"
-    },
+    "engine": "core:default",
+    "default-screen": "dashboard-home",
     "screens": {
         "dashboard-home": {
             "label": "Home",
@@ -90,7 +88,7 @@ The smallest file that customizes the workspace — pins the engine, sets a land
 }
 ```
 
-**Required fields:** `version`, `$wpds`, `name`, `workspace`, `screens`. Everything else is optional and inherited from the baseline when omitted.
+**Required fields:** `version`, `$wpds`, `name`, `engine`, `screens`. Everything else is optional and inherited from the baseline when omitted.
 
 ---
 
@@ -108,14 +106,14 @@ Before customizing, know what the engine already ships — most of it you simply
 
 ## The primitives, block by block
 
-### `workspace` — engine, landing, branding, notices, widgets
+### `engine` / `default-screen` / `frame` — engine, landing, branding, notices, widgets
 
-Install-level chrome: the engine that renders everything, where the workspace lands, how it's branded, and the persistent apps that survive navigation.
+Install-level intrinsics: the engine that renders everything (top-level, required), where the workspace lands (top-level), and the `frame` — how it's branded plus the persistent apps that survive navigation.
 
 ```json
-"workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
+"engine": "core:default",
+"default-screen": "dashboard-home",
+"frame": {
     "branding": {
         "logo": "./assets/acme-logo.svg",
         "title": "Acme Corp",
@@ -524,14 +522,14 @@ What the engine renders without any `regions` block from you (this is why you ra
 To let `role`/`user` origins edit specific paths, declare a `customizable` allowlist on the entry:
 
 ```json
-"workspace": {
-    "engine": "core:default",
-    "default-screen": "dashboard-home",
-    "customizable": [ "default-screen", "branding.title" ]
+"engine": "core:default",
+"default-screen": "dashboard-home",
+"frame": {
+    "customizable": [ "branding.title" ]
 }
 ```
 
-`true` = everything writable; `[ "path", … ]` = only those dotted paths; `false`/absent = locked (default-deny). **A hardcoded deny-list always wins** — `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `workspace.engine` can never be written by consumer origins, even if listed. These are the security gates.
+`true` = everything writable; `[ "path", … ]` = only those dotted paths; `false`/absent = locked (default-deny). **A hardcoded deny-list always wins** — `screens.*.permissions`, `screens.*.app`, `commands.*.invoke`, and `engine` can never be written by consumer origins, even if listed. These are the security gates.
 
 ---
 
@@ -574,7 +572,7 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 
 **Brand the admin**
 ```json
-"workspace": { "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" } },
+"frame": { "branding": { "logo": "./assets/acme-logo.svg", "title": "Acme Corp" } },
 "styles": {
     "theme":  { "color": { "primary": "#cc0000" } },
     "chrome": { "sidebar": { "background": "#1a1a1a", "foreground": "#fafafa" } }
@@ -591,9 +589,9 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 } } }
 ```
 
-**Mount a sidebar-footer widget** — `"workspace": { "widgets": { "sidebar-footer": [ { "id": "help", "app": "plugin:acme/help-link" } ] } }`
+**Mount a sidebar-footer widget** — `"frame": { "widgets": { "sidebar-footer": [ { "id": "help", "app": "plugin:acme/help-link" } ] } }`
 
-**Swap to the windowed desktop engine** — `"workspace": { "engine": "core:desktop" }` (no other change; screens re-render as windows + dock).
+**Swap to the windowed desktop engine** — `"engine": "core:desktop"` (no other change; screens re-render as windows + dock).
 
 ---
 
