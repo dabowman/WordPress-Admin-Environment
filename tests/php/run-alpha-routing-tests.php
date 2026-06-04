@@ -283,6 +283,14 @@ $T::ok( 'WP 7.0-beta1 falls below 7.0 final (Gutenberg fallback)', wp_admin_shel
 $T::ok( 'dev/CI container supplies private-apis in core (WP >= 7.0)', wp_admin_shell_core_supplies_private_apis() === true );
 $T::ok( 'dependencies_met true on a 7.0+ container without Gutenberg', wp_admin_shell_dependencies_met() === true );
 
+// Composition contract, deterministic across all four signal combinations —
+// exercises the Gutenberg-fallback branch a live 7.0 container short-circuits
+// past. Either signal satisfies the gate; neither leaves it unmet.
+$T::ok( 'met: core supplies + Gutenberg present', wp_admin_shell_dependencies_met_from( true, true ) === true );
+$T::ok( 'met: core supplies, no Gutenberg (the 7.0 path)', wp_admin_shell_dependencies_met_from( true, false ) === true );
+$T::ok( 'met: no core allowlist, Gutenberg present (the < 7.0 fallback)', wp_admin_shell_dependencies_met_from( false, true ) === true );
+$T::ok( 'unmet: neither core allowlist nor Gutenberg', wp_admin_shell_dependencies_met_from( false, false ) === false );
+
 // ── Summary ────────────────────────────────────────────────────────
 
 echo "\n────────────────────────────\n";

@@ -63,16 +63,30 @@ function wp_admin_shell_core_supplies_private_apis( $version = null ) {
  * @return bool
  */
 function wp_admin_shell_dependencies_met() {
-	if ( wp_admin_shell_core_supplies_private_apis() ) {
-		return true;
-	}
-	if ( defined( 'GUTENBERG_VERSION' ) ) {
-		return true;
-	}
 	if ( ! function_exists( 'is_plugin_active' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 	}
-	return is_plugin_active( 'gutenberg/gutenberg.php' );
+	$gutenberg_present =
+		defined( 'GUTENBERG_VERSION' ) ||
+		is_plugin_active( 'gutenberg/gutenberg.php' );
+	return wp_admin_shell_dependencies_met_from(
+		wp_admin_shell_core_supplies_private_apis(),
+		$gutenberg_present
+	);
+}
+
+/**
+ * Pure composition of the dependency gate — the OR contract over its two
+ * signals, factored out so every branch (including the Gutenberg fallback,
+ * which a live 7.0 container never reaches) is deterministically testable
+ * without defining `GUTENBERG_VERSION` or depending on the running WP version.
+ *
+ * @param bool $core_supplies     Whether core supplies the private-API allowlist (WP 7.0+).
+ * @param bool $gutenberg_present Whether the Gutenberg plugin is active.
+ * @return bool Whether the dependency is satisfied.
+ */
+function wp_admin_shell_dependencies_met_from( $core_supplies, $gutenberg_present ) {
+	return (bool) ( $core_supplies || $gutenberg_present );
 }
 
 add_action( 'admin_notices', function () {
