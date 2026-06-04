@@ -98,6 +98,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 		config: { screens: { old: {} } },
 		capabilities: { 'manage_options': true },
 		adminRoutes: { '/old': {} },
+		tokens: {},
 		// Workspace-invariant fields that must be left untouched.
 		siteUrl: 'https://site.test',
 		nonce: 'abc123',
@@ -106,6 +107,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 		config: { screens: { fresh: {} } },
 		capabilities: { 'edit_posts': true },
 		adminRoutes: { '/new': {} },
+		tokens: { color: { brand: { 500: '#abc' } } },
 	};
 	const returned = applyWorkspacePayload( target, payload );
 
@@ -113,6 +115,7 @@ console.log( '\n— applyWorkspacePayload —\n' );
 	ok( 'swaps config', eq( target.config, payload.config ) );
 	ok( 'swaps capabilities', eq( target.capabilities, payload.capabilities ) );
 	ok( 'swaps adminRoutes', eq( target.adminRoutes, payload.adminRoutes ) );
+	ok( 'swaps tokens', eq( target.tokens, payload.tokens ) );
 	ok( 'leaves invariant siteUrl', target.siteUrl === 'https://site.test' );
 	ok( 'leaves invariant nonce', target.nonce === 'abc123' );
 }
@@ -124,12 +127,14 @@ ok(
 			config: { a: 1 },
 			capabilities: { keep: true },
 			adminRoutes: { keep: true },
+			tokens: { keep: true },
 		};
 		applyWorkspacePayload( target, { config: { a: 2 } } );
 		return (
 			eq( target.config, { a: 2 } ) &&
 			eq( target.capabilities, { keep: true } ) &&
-			eq( target.adminRoutes, { keep: true } )
+			eq( target.adminRoutes, { keep: true } ) &&
+			eq( target.tokens, { keep: true } )
 		);
 	} )()
 );

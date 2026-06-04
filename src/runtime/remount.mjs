@@ -71,16 +71,20 @@ export function diffWorkspaceScreens( prevScreens, nextScreens ) {
  * Fold a REST `/config` payload into the live `window.wpAdminWorkspaces`
  * global ahead of a re-render.
  *
- * The kernel reads `config`, `capabilities`, and `adminRoutes` off this
- * global at mount time (region cap-gating, the admin-link interceptor, and
- * apps that read `window.wpAdminWorkspaces.config` directly), so they must be
- * swapped to the new workspace's values BEFORE `root.render(kernel(config))`
- * runs. Only keys present on the payload are written — the workspace-invariant
+ * The kernel reads `config`, `capabilities`, `adminRoutes`, and `tokens` off
+ * this global at mount time (region cap-gating, the admin-link interceptor,
+ * `ThemeProviderHost`'s token resolution, and apps that read
+ * `window.wpAdminWorkspaces.config` directly), so they must be swapped to the
+ * new workspace's values BEFORE `root.render(kernel(config))` runs. `tokens`
+ * is config-gated server-side — an alias-free workspace ships `{}`, one whose
+ * styles reference foreign aliases ships the full DTCG tree — so it must be
+ * folded in here too or the new styles resolve against the stale token tree.
+ * Only keys present on the payload are written — the workspace-invariant
  * fields (siteUrl, user, nonce, …) are left untouched.
  *
  * @param {Object} target  The `window.wpAdminWorkspaces` global (mutated).
  * @param {Object} payload REST response: `{ config, capabilities?,
- *                          adminRoutes? }`.
+ *                          adminRoutes?, tokens? }`.
  * @return {Object} The resolved `config` from the payload.
  */
 export function applyWorkspacePayload( target, payload ) {
@@ -99,6 +103,9 @@ export function applyWorkspacePayload( target, payload ) {
 	}
 	if ( payload.adminRoutes !== undefined ) {
 		target.adminRoutes = payload.adminRoutes;
+	}
+	if ( payload.tokens !== undefined ) {
+		target.tokens = payload.tokens;
 	}
 
 	return payload.config;

@@ -12,10 +12,15 @@
  *                      reachable screens/menu (mirrors the inline `config`).
  *   - `capabilities` — the pre-computed cap map for that pruned config.
  *   - `adminRoutes`  — the classic→workspace legacy-route map.
+ *   - `tokens`       — the resolved DTCG tree (or `{}`), config-gated.
  *
- * Workspace-INVARIANT fields (siteUrl, user, nonce, manifests, tokens, …)
- * don't change across a switch, so they stay as injected at page load and
- * are deliberately omitted here.
+ * Workspace-INVARIANT fields (siteUrl, user, nonce, manifests, …) don't
+ * change across a switch, so they stay as injected at page load and are
+ * deliberately omitted here. `tokens` is the exception: its *values* are
+ * site/theme/plugin/core-derived (invariant), but its *presence* is gated
+ * per-config — an alias-free workspace ships `{}`, one whose `styles`
+ * reference foreign token aliases ships the full DTCG tree — so it must be
+ * re-sent on a switch using the same gate as the inline payload.
  *
  * The cascade cache is invalidated server-side by the
  * `update_option_wp_admin_workspaces_active_workspace` hook before this is
@@ -72,11 +77,25 @@ class WP_Admin_Workspaces_Config_REST {
 			get_current_user_id()
 		);
 
+		// This GET has no varying query string (the nonce rides the
+		// X-WP-Nonce header), so two switches in one session hit the
+		// identical URL. Suppress browser/proxy caching so a B→A switch
+		// after an A→B switch never serves B's cached config.
+		nocache_headers();
+
 		return rest_ensure_response(
 			array(
 				'config'       => $client_config,
 				'capabilities' => wp_admin_workspaces_resolve_capabilities( $client_config ),
 				'adminRoutes'  => WP_Admin_Workspaces_Admin_Routes::legacy_map( $client_config ),
+				// Config-gated, NOT workspace-invariant: an alias-free
+				// workspace ships `{}`; switching to one whose `styles`
+				// reference foreign token aliases needs the resolved DTCG
+				// tree or those aliases won't resolve on re-mount. Gate the
+				// unpruned `$config` exactly as the inline payload does.
+				'tokens'       => wp_admin_workspaces_styles_reference_tokens( $config )
+					? WP_Admin_Workspaces_Tokens::resolve()
+					: (object) array(),
 			)
 		);
 	}

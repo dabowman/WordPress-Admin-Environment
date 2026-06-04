@@ -34,6 +34,14 @@ if ( container ) {
 	// `@wordpress/data` + the kernel `triggerStore` are module singletons,
 	// so their state survives regardless. The URL hash is untouched, so the
 	// active route survives too.
+	//
+	// State preservation is per-engine: same engine ⇒ matching-id state
+	// preserved; different engine ⇒ full remount. A cross-engine switch
+	// (`core:default` ↔ `core:single-pane`/`core:desktop`) re-renders
+	// `<Engine>` as a different component type, so React unmounts + remounts
+	// the whole tree and no matching-id benefit applies. (Engine modules
+	// register icons/menu-renderers/ThemeProvider as eager module
+	// side-effects, so the target engine is already imported by then.)
 	if ( window.wpAdminWorkspaces ) {
 		window.wpAdminWorkspaces.remountWorkspace = ( payload ) => {
 			const prevScreens = window.wpAdminWorkspaces.config?.screens;
