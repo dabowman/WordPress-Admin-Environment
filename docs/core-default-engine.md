@@ -233,6 +233,8 @@ Matching order per slot: (1) role + id, (2) role alone (any id), (3) id-only fal
 
 Modal regions (`platform.core:modal` / `role: dialog`, e.g. the command palette) always render in the overlay layer. Of the remaining chrome regions, **dynamic-children hosts render inside the content (`areas`) row** — that is the engine's real mount point for a `core:dashboard-grid` region (`platform.core:dynamic-children: true`). Everything else (the notices banners, which fix-position themselves) renders as a straggler at the layout root.
 
+> **Body-mounted grids must use the `*-dashboard-grid` id convention.** `slotRegions.mjs` routes a body-mounted grid into the content row by **platform service** (`hostsDynamicChildren`), but the engine's padding-reset rule in `index.css` keys off the **id suffix**: `.wp-admin-workspaces-region[data-region-id$="dashboard-grid"] .wp-admin-workspaces-region__app { padding: 0 }`. The two signals only agree when the region id ends in `dashboard-grid`. A custom `core:dynamic-children` host whose id does **not** end in `dashboard-grid` still mounts in the content row, but keeps the default app inset, so its grid won't reach the card edges. Name custom body-grid hosts `<something>-dashboard-grid` to get the flush mount. (The bundled `core:dashboard-grid` template already conforms.)
+
 ## Chrome → WPDS bridge (asymmetric by design)
 
 `compileStyles.mjs` `CHROME_WPDS_BINDINGS` re-themes `@wordpress/ui` components inside a chrome surface by scoping `--wpds-*` overrides to that surface's container selector. The table covers **four** surfaces only:

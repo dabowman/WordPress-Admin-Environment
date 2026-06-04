@@ -95,6 +95,17 @@ export function slotRegions( regions ) {
 	const bodyExtras = [];
 	const stragglers = [];
 	for ( const region of chrome ) {
+		// CSS-scope caveat: this routes ANY `core:dynamic-children` host into
+		// the content row by PLATFORM SERVICE, but the engine's padding-reset
+		// rule in `index.css` keys off the id SUFFIX
+		// (`[data-region-id$="dashboard-grid"] .wp-admin-workspaces-region__app
+		// { padding: 0 }`). The two signals must agree: a body-mounted grid
+		// whose id does NOT end in `dashboard-grid` mounts here but keeps the
+		// default app inset, so its grid won't reach the card edges. Custom
+		// dynamic-children hosts must therefore follow the `*-dashboard-grid`
+		// id convention to get the flush body mount. (The bundled
+		// `core:dashboard-grid` template already conforms.) Documented in
+		// `docs/core-default-engine.md`.
 		( hostsDynamicChildren( region ) ? bodyExtras : stragglers ).push(
 			region
 		);
