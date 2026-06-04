@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WP Admin Shell — a configurable, React-based WordPress admin</title>
+<meta name="description" content="WP Admin Shell replaces wp-admin with a configurable, React-based admin environment driven by a single admin.json file. Same WordPress, same data, same plugins — a different admin for different people." />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="WP Admin Shell" />
+<meta property="og:description" content="Replace wp-admin with a configurable, React-based admin environment driven by a single admin.json file." />
+<meta property="og:url" content="https://dabowman.github.io/WordPress-Admin-Environment/" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='10' fill='%233858e9'/%3E%3Crect x='10' y='12' width='9' height='24' rx='2' fill='%23fff' opacity='.9'/%3E%3Crect x='23' y='12' width='15' height='10' rx='2' fill='%23fff' opacity='.55'/%3E%3Crect x='23' y='26' width='15' height='10' rx='2' fill='%23fff' opacity='.55'/%3E%3C/svg%3E" />
+
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-2: #161922;
+    --panel: #1c2030;
+    --panel-2: #232838;
+    --border: #2b3142;
+    --text: #e7eaf3;
+    --muted: #97a1b6;
+    --accent: #5b7cff;
+    --accent-2: #3858e9;
+    --code-bg: #11141c;
+    --radius: 14px;
+    --max: 1080px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+  /* ---- nav ---- */
+  header.site {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,17,21,.78);
+    backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site .wrap { display: flex; align-items: center; gap: 20px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+  .brand:hover { text-decoration: none; }
+  .brand svg { width: 28px; height: 28px; border-radius: 8px; }
+  nav.links { margin-left: auto; display: flex; gap: 22px; align-items: center; }
+  nav.links a { color: var(--muted); font-size: 14px; font-weight: 500; }
+  nav.links a:hover { color: var(--text); text-decoration: none; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-2); color: #fff; font-weight: 600; font-size: 14px;
+    padding: 9px 16px; border-radius: 10px; border: 1px solid transparent;
+    transition: transform .08s ease, background .15s ease;
+  }
+  .btn:hover { background: #2c49d6; text-decoration: none; transform: translateY(-1px); }
+  .btn.ghost { background: transparent; border-color: var(--border); color: var(--text); }
+  .btn.ghost:hover { background: var(--panel); }
+
+  /* ---- hero ---- */
+  .hero { position: relative; overflow: hidden; padding: 92px 0 64px; }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(640px 320px at 78% -8%, rgba(91,124,255,.20), transparent 60%),
+      radial-gradient(520px 280px at 10% 0%, rgba(56,88,233,.14), transparent 55%);
+    pointer-events: none;
+  }
+  .hero .wrap { position: relative; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--border); background: var(--panel);
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 22px;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: #43d39e; box-shadow: 0 0 0 4px rgba(67,211,158,.15); }
+  h1 { font-size: clamp(34px, 5.4vw, 58px); line-height: 1.05; letter-spacing: -.025em; margin: 0 0 18px; font-weight: 800; }
+  h1 .grad { background: linear-gradient(92deg, #8aa0ff, #5b7cff 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: clamp(17px, 2.1vw, 21px); color: #c2c9da; max-width: 660px; margin: 0 0 14px; }
+  .sub { color: var(--muted); max-width: 640px; margin: 0 0 30px; }
+  .cta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .cta .hint { color: var(--muted); font-size: 13px; }
+
+  /* ---- generic section ---- */
+  section { padding: 64px 0; border-top: 1px solid var(--border); }
+  .eyebrow { color: var(--accent); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 0 0 10px; }
+  h2 { font-size: clamp(26px, 3.4vw, 36px); letter-spacing: -.02em; margin: 0 0 14px; font-weight: 800; }
+  section > .wrap > p.intro { color: var(--muted); max-width: 680px; margin: 0 0 36px; font-size: 17px; }
+
+  /* ---- feature grid ---- */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px; transition: border-color .15s ease, transform .12s ease;
+  }
+  .card:hover { border-color: #3b455f; transform: translateY(-2px); }
+  .card .ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: rgba(91,124,255,.12); margin-bottom: 14px; }
+  .card .ico svg { width: 20px; height: 20px; stroke: var(--accent); }
+  .card h3 { margin: 0 0 7px; font-size: 16.5px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* ---- how it works (3 artifacts) ---- */
+  .artifacts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .artifact { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; }
+  .artifact code.kicker { font-family: var(--mono); font-size: 13px; color: var(--accent); background: rgba(91,124,255,.10); padding: 3px 9px; border-radius: 7px; }
+  .artifact h3 { margin: 14px 0 6px; font-size: 16px; }
+  .artifact p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  /* ---- code sample ---- */
+  .split { display: grid; grid-template-columns: 1fr 1.1fr; gap: 36px; align-items: center; }
+  .codeframe { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 24px 60px -30px rgba(0,0,0,.7); }
+  .codeframe .bar { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  .codeframe .bar .d { width: 11px; height: 11px; border-radius: 50%; }
+  .codeframe .bar .d:nth-child(1){ background:#ff5f57; } .codeframe .bar .d:nth-child(2){ background:#febc2e; } .codeframe .bar .d:nth-child(3){ background:#28c840; }
+  .codeframe .bar .name { margin-left: 8px; font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  pre { margin: 0; padding: 20px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.65; color: #cdd4e6; }
+  .tok-key { color: #8aa0ff; } .tok-str { color: #7ee0a9; } .tok-punc { color: #6b7385; } .tok-num { color: #f0b366; } .tok-com { color: #586079; font-style: italic; }
+
+  ul.checks { list-style: none; padding: 0; margin: 18px 0 0; }
+  ul.checks li { position: relative; padding-left: 28px; margin: 0 0 12px; color: #c2c9da; }
+  ul.checks li::before {
+    content: ""; position: absolute; left: 0; top: 5px; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(67,211,158,.18);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2343d39e' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center;
+  }
+  ul.checks li strong { color: var(--text); }
+
+  /* ---- engines table ---- */
+  .table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .table th, .table td { text-align: left; padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .table th { background: var(--panel); color: var(--muted); font-weight: 600; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase; }
+  .table tr:last-child td { border-bottom: 0; }
+  .table td code, .table th code { font-family: var(--mono); font-size: 13px; color: #8aa0ff; }
+  .table td:first-child { white-space: nowrap; }
+
+  /* ---- install ---- */
+  .steps { counter-reset: step; display: grid; gap: 14px; max-width: 720px; }
+  .step { display: grid; grid-template-columns: 34px 1fr; gap: 16px; align-items: start; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .step .n { counter-increment: step; }
+  .step .n::before { content: counter(step); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--accent-2); color: #fff; font-weight: 700; font-size: 14px; }
+  .step p { margin: 0; font-size: 14.5px; color: #c2c9da; }
+  .step code { font-family: var(--mono); font-size: 13px; background: var(--code-bg); border: 1px solid var(--border); padding: 2px 7px; border-radius: 6px; color: #cdd4e6; }
+
+  /* ---- docs grid ---- */
+  .docs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .doc { display: block; background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; transition: border-color .15s ease, transform .12s ease; }
+  .doc:hover { border-color: #3b455f; transform: translateY(-2px); text-decoration: none; }
+  .doc h3 { margin: 0 0 5px; font-size: 15.5px; color: var(--text); }
+  .doc p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .doc .arrow { color: var(--accent); font-size: 13px; margin-top: 10px; display: inline-block; }
+
+  /* ---- CTA band ---- */
+  .band { text-align: center; background: linear-gradient(180deg, var(--bg-2), var(--bg)); }
+  .band h2 { margin-bottom: 12px; }
+  .band p { color: var(--muted); max-width: 540px; margin: 0 auto 26px; }
+
+  footer.site { border-top: 1px solid var(--border); padding: 36px 0; color: var(--muted); font-size: 13.5px; }
+  footer.site .wrap { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  footer.site a { color: var(--muted); } footer.site a:hover { color: var(--text); }
+  .note { color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 860px) {
+    .grid, .artifacts, .docs-grid { grid-template-columns: 1fr; }
+    .split { grid-template-columns: 1fr; gap: 26px; }
+    nav.links a:not(.btn) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="10" fill="#3858e9"/><rect x="10" y="12" width="9" height="24" rx="2" fill="#fff" opacity=".9"/><rect x="23" y="12" width="15" height="10" rx="2" fill="#fff" opacity=".55"/><rect x="23" y="26" width="15" height="10" rx="2" fill="#fff" opacity=".55"/></svg>
+      WP Admin Shell
+    </a>
+    <nav class="links">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#engines">Engines</a>
+      <a href="#docs">Docs</a>
+      <a class="btn" href="https://github.com/dabowman/WordPress-Admin-Environment">GitHub →</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" style="border-top:0;">
+    <div class="wrap">
+      <span class="pill"><span class="dot"></span> v0.1.0 · first release</span>
+      <h1>One WordPress.<br><span class="grad">A different admin for everyone.</span></h1>
+      <p class="lede">WP Admin Shell replaces <code style="font-family:var(--mono);font-size:.85em">wp-admin</code> with a configurable, React-based admin environment — driven by a single <strong>admin.json</strong> file.</p>
+      <p class="sub">A writer, a developer, a client, and a site manager don't need the same dashboard. Declare which screens exist, how navigation is structured, the branding, and the keyboard shortcuts. Swap the file, swap the experience. Same data, same plugins, same REST API underneath.</p>
+      <div class="cta">
+        <a class="btn" href="#install">Get started</a>
+        <a class="btn ghost" href="https://github.com/dabowman/WordPress-Admin-Environment">View on GitHub</a>
+        <span class="hint">WordPress 6.7+ · requires the Gutenberg plugin</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="wrap">
+      <p class="eyebrow">What it does</p>
+      <h2>The admin, as configuration</h2>
+      <p class="intro">Every surface of the admin is declared in JSON and rendered by a design-system-neutral kernel. No forking wp-admin, no rebuilding screens by hand.</p>
+      <div class="grid">
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+          <h3>Configurable screens & menu</h3>
+          <p>An id-keyed map of screens plus an engine-agnostic menu tree. Add, hide, rename, reorder, or restrict any screen from one file.</p>
+        </div>
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="8" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/></svg></div>
+          <h3>Swappable engines</h3>
+          <p>Three engines ship: a flagship sidebar layout, a mobile-first single pane, and a windowed desktop compositor. The renderer is a manifest choice.</p>
+        </div>
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3"/></svg></div>
+          <h3>Capability-aware</h3>
+          <p>Four-layer capability gating with OR-semantic permissions and trust tiers. Navigation prunes screens a user can't reach — automatically.</p>
+        </div>
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="12" r="8"/><path d="M13 8v4l3 2"/></svg></div>
+          <h3>Cascade resolver</h3>
+          <p>Six origins (core → engine → plugin → site → role → user) merge like theme.json — declare only the deltas. Per-role and per-user workspaces fall out of the same mechanism.</p>
+        </div>
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+          <h3>REST-only, built on WPDS</h3>
+          <p>Every screen reads and writes through the WordPress REST API and renders with the WordPress Design System. Anything the API can't do yet falls back to the native screen in an iframe.</p>
+        </div>
+
+        <div class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l2 2-2 2M12 15h5"/></svg></div>
+          <h3>Branding, theming & commands</h3>
+          <p>DTCG token overrides, theme.json-shaped styling, a Cmd/Ctrl+K command palette, and bindable keyboard shortcuts — all declarative.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2>Three artifacts, three jobs</h2>
+      <p class="intro">Apps and engines ship their own manifests; the install only declares <em>decisions</em>. The runtime reads this shape directly — there's no intermediate build step.</p>
+      <div class="artifacts">
+        <div class="artifact">
+          <code class="kicker">app.json</code>
+          <h3>What an app <em>is</em></h3>
+          <p>ARIA role, requested platform services, capability floor, config schema, slots, and DataView baseline. Ships with the app's code.</p>
+        </div>
+        <div class="artifact">
+          <code class="kicker">engine.json</code>
+          <h3>What an engine <em>provides</em></h3>
+          <p>Region templates, chrome modes, slots, the menu renderer, a default region tree, and default styles. Ships with the engine's code.</p>
+        </div>
+        <div class="artifact">
+          <code class="kicker">admin.json</code>
+          <h3>The install <em>decisions</em></h3>
+          <p>Which engine, which screens, the menu tree, commands, branding, and token overrides. This is the one file you author.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CODE SAMPLE -->
+  <section>
+    <div class="wrap">
+      <div class="split">
+        <div>
+          <p class="eyebrow">The whole config</p>
+          <h2>A workspace is a delta</h2>
+          <p class="intro" style="margin-bottom:0">Drop an <code style="font-family:var(--mono)">admin.json</code> at <code style="font-family:var(--mono)">wp-content/admin.json</code>. Like theme.json over core's defaults, you declare only what changes — everything else falls through from the baseline.</p>
+          <ul class="checks">
+            <li>Pick the <strong>mobile-first engine</strong> with one key.</li>
+            <li>Rename <strong>Posts → “Stories”</strong> without touching PHP.</li>
+            <li>Gate the screen on a <strong>capability</strong>; nav prunes the rest.</li>
+            <li>Visit <code style="font-family:var(--mono);font-size:.85em">/wp-admin/</code> — the workspace replaces classic wp-admin at the URL level.</li>
+          </ul>
+        </div>
+        <div class="codeframe">
+          <div class="bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="name">wp-content/admin.json</span></div>
+<pre><span class="tok-punc">{</span>
+  <span class="tok-key">"$schema"</span><span class="tok-punc">:</span> <span class="tok-str">"…/docs/schemas/admin.json"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"version"</span><span class="tok-punc">:</span> <span class="tok-num">3</span><span class="tok-punc">,</span>
+  <span class="tok-key">"$wpds"</span><span class="tok-punc">:</span> <span class="tok-str">"6.9"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"writers-room"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"workspace"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+    <span class="tok-key">"engine"</span><span class="tok-punc">:</span> <span class="tok-str">"core:single-pane"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"default-screen"</span><span class="tok-punc">:</span> <span class="tok-str">"posts"</span>
+  <span class="tok-punc">},</span>
+  <span class="tok-key">"screens"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+    <span class="tok-key">"posts"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+      <span class="tok-key">"label"</span><span class="tok-punc">:</span> <span class="tok-str">"Stories"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"icon"</span><span class="tok-punc">:</span> <span class="tok-str">"post"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"path"</span><span class="tok-punc">:</span> <span class="tok-str">"/posts"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"app"</span><span class="tok-punc">:</span> <span class="tok-str">"core:posts"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"config"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span> <span class="tok-key">"postType"</span><span class="tok-punc">:</span> <span class="tok-str">"post"</span> <span class="tok-punc">},</span>
+      <span class="tok-key">"permissions"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
+        <span class="tok-key">"capabilities"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span> <span class="tok-str">"edit_posts"</span> <span class="tok-punc">]</span>
+      <span class="tok-punc">}</span>
+    <span class="tok-punc">}</span>
+  <span class="tok-punc">}</span>
+<span class="tok-punc">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENGINES -->
+  <section id="engines">
+    <div class="wrap">
+      <p class="eyebrow">Rendering</p>
+      <h2>Bundled engines</h2>
+      <p class="intro">The engine is the renderer — the chrome, the layout, the navigation idiom. Choosing one is a single line in the workspace. Engines are pluggable; the kernel itself is design-system-neutral.</p>
+      <table class="table">
+        <thead><tr><th>Engine</th><th>Idiom</th></tr></thead>
+        <tbody>
+          <tr><td><code>core:default</code></td><td>Flagship — dark chrome, drilldown sidebar, elevated cards.</td></tr>
+          <tr><td><code>core:single-pane</code></td><td>Mobile-first — appbar plus a collapsible navigation drawer.</td></tr>
+          <tr><td><code>core:desktop</code></td><td>Windowed — compositor, dock, and draggable / resizable window frames.</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:16px">Shipped shells: <code style="font-family:var(--mono)">wp-admin-default</code> (mirrors stock wp-admin), <code style="font-family:var(--mono)">single-pane-demo</code>, and <code style="font-family:var(--mono)">desktop-demo</code>.</p>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section id="install">
+    <div class="wrap">
+      <p class="eyebrow">Get started</p>
+      <h2>Install in a few minutes</h2>
+      <p class="intro">The plugin ships the <code style="font-family:var(--mono)">wp-admin-default</code> baseline. With no <code style="font-family:var(--mono)">admin.json</code> present, wp-admin stays classic and untouched — the file is both the trigger and the configuration.</p>
+      <div class="steps">
+        <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the shell uses private APIs only Gutenberg's allowlist exposes).</p></div>
+        <div class="step"><div class="n"></div><p>Install <strong>WP Admin Shell</strong>: upload <code>wp-admin-shell.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
+        <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/admin.json</code>, e.g. <code>cp shells/single-pane-demo.json wp-content/admin.json</code> — then edit it down to your deltas.</p></div>
+        <div class="step"><div class="n"></div><p>Visit <code>/wp-admin/</code>. Press <code>Cmd/Ctrl + K</code> for the command palette. A <strong>Classic wp-admin</strong> escape hatch stays in the admin bar.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOCS -->
+  <section id="docs">
+    <div class="wrap">
+      <p class="eyebrow">Documentation</p>
+      <h2>Read the references</h2>
+      <p class="intro">Author-facing guides and the JSON Schemas that power editor autocomplete and validation.</p>
+      <div class="docs-grid">
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/admin-json-reference.md">
+          <h3>admin.json reference</h3>
+          <p>The workspace file — every block, every key, with examples.</p>
+          <span class="arrow">Open reference →</span>
+        </a>
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/app-json-reference.md">
+          <h3>app.json reference</h3>
+          <p>Ship a React app that mounts inside a region. Roles, config schema, DataView baselines.</p>
+          <span class="arrow">Open reference →</span>
+        </a>
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/engine-json-reference.md">
+          <h3>engine.json reference</h3>
+          <p>Build a renderer — region templates, modes, slots, menu renderer, default styles.</p>
+          <span class="arrow">Open reference →</span>
+        </a>
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/docs/public/customizing-the-core-default-workspace.md">
+          <h3>Customizing the default workspace</h3>
+          <p>A worked walkthrough of tailoring the flagship <code>core:default</code> shell.</p>
+          <span class="arrow">Open guide →</span>
+        </a>
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/tree/main/docs/schemas">
+          <h3>JSON Schemas</h3>
+          <p>Schema 2020-12 for admin / app / engine / tokens. Point your <code>$schema</code> here.</p>
+          <span class="arrow">Browse schemas →</span>
+        </a>
+        <a class="doc" href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/README.md">
+          <h3>README &amp; architecture</h3>
+          <p>The full picture: cascade, capability gating, theming, project structure.</p>
+          <span class="arrow">Read the README →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA BAND -->
+  <section class="band">
+    <div class="wrap">
+      <h2>Make the admin fit the person using it.</h2>
+      <p>Grab the source, copy a starter shell, and reshape wp-admin with one file.</p>
+      <div class="cta" style="justify-content:center">
+        <a class="btn" href="https://github.com/dabowman/WordPress-Admin-Environment">Get it on GitHub</a>
+        <a class="btn ghost" href="#install">Installation steps</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>WP Admin Shell · v0.1.0 · pre-release. APIs and the schema may still change.</span>
+    <span>
+      <a href="https://github.com/dabowman/WordPress-Admin-Environment">GitHub</a> ·
+      <a href="https://github.com/dabowman/WordPress-Admin-Environment/blob/main/CHANGELOG.md">Changelog</a> ·
+      <a href="#docs">Docs</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
