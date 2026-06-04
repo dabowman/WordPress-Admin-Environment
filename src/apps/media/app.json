@@ -274,7 +274,9 @@
 			}
 		],
 		"a11y": {
-			"focus-management": "DataViews owns focus inside the grid / table + RenderModal. The RenderModal contract restores focus to the action trigger on close. `MediaDetails` is keyed `item.id` so per-item buffer resets between openings."
+			"focus-management": "DataViews owns focus inside the grid / table + RenderModal. The RenderModal contract restores focus to the action trigger on close. `MediaDetails` is keyed `item.id` so per-item buffer resets between openings.",
+			"image-editor-crop-pointer-only": "Known gap: the `ImageEditor` crop selection (box + corner handles) is pointer-only — the elements are `role=\"presentation\"` divs/spans with no keyboard affordance, so keyboard/AT users can move/resize the crop only with a pointer. Rotate / flip remain fully keyboard-operable (focusable buttons). Not a regression vs. classic wp-admin (its crop is also mouse-driven). A future improvement: make the box focusable and nudge crop geometry via arrow keys through the same `moveCrop`/`resizeCrop` helpers.",
+			"image-editor-rotate-not-toggle": "The rotate-left / rotate-right tool buttons are momentary actions and emit NO `aria-pressed` (only the genuine toggles — flip-H, flip-V, crop — do), so a screen reader doesn't announce them as toggle buttons stuck unpressed."
 		},
 		"constraints": [
 			{

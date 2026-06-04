@@ -93,11 +93,14 @@
 	min-height: 0;
 }
 
-/* Crop selection box, positioned in percent over the canvas. */
+/* Crop selection box, positioned in percent over the canvas. The dashed edge
+   reads against the 45%-black scrim below, so it uses a light/inverse
+   foreground token (the "on-strong/on-dark" interactive fg, ~#f0f0f0) rather
+   than the dark content-neutral fg, which would near-vanish on the scrim. */
 .wp-admin-workspaces-app-media__crop-box {
 	position: absolute;
 	box-sizing: border-box;
-	border: 1px dashed var(--wpds-color-fg-content-neutral, #fff);
+	border: 1px dashed var(--wpds-color-fg-interactive-neutral-strong, #fff);
 	box-shadow: 0 0 0 9999px rgba( 0, 0, 0, 0.45 );
 	cursor: move;
 	touch-action: none;
@@ -108,7 +111,8 @@
 	width: 12px;
 	height: 12px;
 	background: var(--wpds-color-bg-brand, #3858e9);
-	border: 1px solid #fff;
+	/* Light/inverse fg token so the handle outline reads over the scrim. */
+	border: 1px solid var(--wpds-color-fg-interactive-neutral-strong, #fff);
 	border-radius: 2px;
 	touch-action: none;
 }

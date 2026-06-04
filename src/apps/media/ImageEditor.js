@@ -22,6 +22,13 @@ import {
 const FULL_CROP = { left: 0, top: 0, width: 100, height: 100 };
 const CORNER_HANDLES = [ 'nw', 'ne', 'sw', 'se' ];
 
+// The `/edit` `modifiers[]` enum only gained `flip` in WP 6.9; on 6.7/6.8 a
+// flip emits `rest_invalid_param` and (per-item validation) fails the whole
+// edit. PHP exposes the version signal so we hide the flip tools below 6.9 —
+// crop / rotate work everywhere. Default to `false` (hide) when the flag is
+// absent, so a stale/partial config never emits an edit the server rejects.
+const SUPPORTS_FLIP = !! window.wpAdminWorkspaces?.supportsImageFlip;
+
 /**
  * Inline image editor (#125) — crop / rotate / flip an attachment image and save
  * the result via `POST /wp/v2/media/{id}/edit`.
@@ -47,9 +54,9 @@ const CORNER_HANDLES = [ 'nw', 'ne', 'sw', 'se' ];
  * controller multiplies its crop percentages against.
  *
  * @param {Object}   root0
- * @param {Object}   root0.record     The image attachment entity record.
- * @param {Function} root0.onCancel   Called to leave the editor without saving.
- * @param {Function} root0.onSaved    Called with the NEW attachment after a save.
+ * @param {Object}   root0.record   The image attachment entity record.
+ * @param {Function} root0.onCancel Called to leave the editor without saving.
+ * @param {Function} root0.onSaved  Called with the NEW attachment after a save.
  * @return {JSX.Element} The editor.
  */
 export default function ImageEditor( { record, onCancel, onSaved } ) {
@@ -81,9 +88,14 @@ export default function ImageEditor( { record, onCancel, onSaved } ) {
 				height: img.naturalHeight,
 			} );
 		};
+		img.onerror = () =>
+			setError(
+				__( 'Could not load the image to edit.', 'wp-admin-workspaces' )
+			);
 		img.src = src;
 		return () => {
 			img.onload = null;
+			img.onerror = null;
 		};
 	}, [ src ] );
 
@@ -195,21 +207,34 @@ export default function ImageEditor( { record, onCancel, onSaved } ) {
 					label={ __( 'Rotate right', 'wp-admin-workspaces' ) }
 					onClick={ () => setRotation( ( r ) => rotateBy( r, 90 ) ) }
 				/>
-				<ToolButton
-					icon={ flipHorizontal }
-					label={ __( 'Flip horizontal', 'wp-admin-workspaces' ) }
-					pressed={ flipH }
-					onClick={ () => setFlipH( ( v ) => ! v ) }
-				/>
-				<ToolButton
-					icon={ flipVertical }
-					label={ __( 'Flip vertical', 'wp-admin-workspaces' ) }
-					pressed={ flipV }
-					onClick={ () => setFlipV( ( v ) => ! v ) }
-				/>
+				{ SUPPORTS_FLIP && (
+					<>
+						<ToolButton
+							icon={ flipHorizontal }
+							label={ __(
+								'Flip horizontal',
+								'wp-admin-workspaces'
+							) }
+							isToggle
+							pressed={ flipH }
+							onClick={ () => setFlipH( ( v ) => ! v ) }
+						/>
+						<ToolButton
+							icon={ flipVertical }
+							label={ __(
+								'Flip vertical',
+								'wp-admin-workspaces'
+							) }
+							isToggle
+							pressed={ flipV }
+							onClick={ () => setFlipV( ( v ) => ! v ) }
+						/>
+					</>
+				) }
 				<ToolButton
 					icon={ cropIcon }
 					label={ __( 'Crop', 'wp-admin-workspaces' ) }
+					isToggle
 					pressed={ cropActive }
 					onClick={ toggleCrop }
 				/>
@@ -221,10 +246,7 @@ export default function ImageEditor( { record, onCancel, onSaved } ) {
 				</Notice.Root>
 			) }
 
-			<Text
-				variant="body-sm"
-				className="wp-admin-workspaces-app__muted"
-			>
+			<Text variant="body-sm" className="wp-admin-workspaces-app__muted">
 				{ __(
 					'Saves a copy — the original attachment is kept.',
 					'wp-admin-workspaces'
@@ -256,26 +278,35 @@ export default function ImageEditor( { record, onCancel, onSaved } ) {
 }
 
 /**
- * A square icon tool button with an accessible label and a pressed (toggled)
- * state. `@wordpress/ui` `Button` has no `icon`/`label` props in 0.12, so the
- * icon is a child and the label rides `aria-label`; `aria-pressed` carries the
- * toggle state for flip / crop.
+ * A square icon tool button with an accessible label and an optional pressed
+ * (toggled) state. `@wordpress/ui` `Button` has no `icon`/`label` props in 0.12,
+ * so the icon is a child and the label rides `aria-label`. `aria-pressed` is
+ * emitted ONLY for genuine toggles (flip / crop) — the momentary rotate buttons
+ * pass `isToggle={ false }` so a screen reader doesn't announce them as toggle
+ * buttons stuck in the "not pressed" state.
  *
  * @param {Object}   root0
- * @param {Object}   root0.icon      Icon element to render.
- * @param {string}   root0.label     Accessible label.
- * @param {Function} root0.onClick   Click handler.
- * @param {boolean}  [root0.pressed] Toggle state.
+ * @param {Object}   root0.icon       Icon element to render.
+ * @param {string}   root0.label      Accessible label.
+ * @param {Function} root0.onClick    Click handler.
+ * @param {boolean}  [root0.isToggle] Whether the button is a toggle (emits `aria-pressed`).
+ * @param {boolean}  [root0.pressed]  Toggle state (only meaningful when `isToggle`).
  * @return {JSX.Element} The button.
  */
-function ToolButton( { icon, label, onClick, pressed = false } ) {
+function ToolButton( {
+	icon,
+	label,
+	onClick,
+	isToggle = false,
+	pressed = false,
+} ) {
 	return (
 		<Button
 			tone="neutral"
 			variant={ pressed ? 'solid' : 'outline' }
 			size="compact"
 			aria-label={ label }
-			aria-pressed={ pressed }
+			aria-pressed={ isToggle ? pressed : undefined }
 			onClick={ onClick }
 		>
 			<Icon icon={ icon } size={ 18 } />
@@ -350,6 +381,10 @@ function CropOverlay( { crop, stageRef, onChange } ) {
 	};
 
 	return (
+		// `onDrag` / `endDrag` live on the box only; a handle drag's
+		// `pointermove` / `pointerup` bubbles up to them (the handles are
+		// children), so wiring them here too would fire each handler twice per
+		// move. `beginDrag` stays per-element to distinguish move vs. resize.
 		<div
 			className="wp-admin-workspaces-app-media__crop-box"
 			style={ boxStyle }
@@ -363,8 +398,6 @@ function CropOverlay( { crop, stageRef, onChange } ) {
 					key={ corner }
 					className={ `wp-admin-workspaces-app-media__crop-handle is-${ corner }` }
 					onPointerDown={ beginDrag( corner ) }
-					onPointerMove={ onDrag }
-					onPointerUp={ endDrag }
 					role="presentation"
 				/>
 			) ) }
