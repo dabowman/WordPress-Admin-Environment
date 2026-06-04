@@ -1,11 +1,12 @@
 import './index.css';
 import '../_shared/app.css';
-import { useMemo } from '@wordpress/element';
+import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecord } from '@wordpress/core-data';
 import { DataForm } from '@wordpress/dataviews/wp';
-import { Button, Stack, Text } from '@wordpress/ui';
+import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { eventValue } from '../_shared/forms/eventValue.mjs';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
 import { Page } from '../_shared/Page';
 
@@ -19,8 +20,18 @@ const FORM = {
 		'email',
 		'url',
 		'description',
+		'locale',
 	],
 };
+
+// Fallback interface-language options when PHP supplied none (e.g. the inline
+// `profileLanguages` payload is absent in a stripped-down test mount). PHP
+// (`wp_admin_workspaces_get_profile_languages`) supplies the real list — Site
+// Default + English + installed locales, the exact set REST `locale` accepts.
+const LANGUAGE_FALLBACK = [
+	{ value: '', label: __( 'Site Default', 'wp-admin-workspaces' ) },
+	{ value: 'en_US', label: 'English (United States)' },
+];
 
 /**
  * core:profile — single-user edit form.
@@ -44,6 +55,47 @@ export default function ProfileApp( { config = {} } = {} ) {
 		success: __( 'Profile updated.', 'wp-admin-workspaces' ),
 		error: __( 'Failed to save profile.', 'wp-admin-workspaces' ),
 	} );
+
+	// Interface-language options come from PHP (installed locales + native
+	// names); static for the page lifetime, so read once.
+	const languageOptions = useMemo(
+		() =>
+			window.wpAdminWorkspaces?.profileLanguages?.length
+				? window.wpAdminWorkspaces.profileLanguages
+				: LANGUAGE_FALLBACK,
+		[]
+	);
+
+	// New-password change is a separate, write-only field: `password` is never
+	// returned by REST, so it lives in local state and is folded into the
+	// entity edits only at save time (see `onSave`). `pwError` surfaces the
+	// client-side confirm mismatch — REST itself has no confirm / strength gate.
+	const [ newPassword, setNewPassword ] = useState( '' );
+	const [ confirmPassword, setConfirmPassword ] = useState( '' );
+	const [ pwError, setPwError ] = useState( '' );
+
+	const onSave = useCallback( async () => {
+		if ( newPassword ) {
+			if ( newPassword !== confirmPassword ) {
+				setPwError(
+					__( 'Passwords do not match.', 'wp-admin-workspaces' )
+				);
+				return;
+			}
+			setPwError( '' );
+			// `edit()` dispatches synchronously to the core-data store, so the
+			// password is present in the edits that `save()` reads on the next
+			// line — same path the form fields take.
+			edit( { password: newPassword } );
+		}
+
+		const ok = await handleSave();
+		if ( ok ) {
+			setNewPassword( '' );
+			setConfirmPassword( '' );
+			setPwError( '' );
+		}
+	}, [ newPassword, confirmPassword, edit, handleSave ] );
 
 	// Display-name options derive from the live edited values, so they update
 	// as the user types first / last name. `editedRecord` is null until the
@@ -105,6 +157,13 @@ export default function ProfileApp( { config = {} } = {} ) {
 				label: __( 'Biographical Info', 'wp-admin-workspaces' ),
 				Edit: { control: 'textarea', rows: 5 },
 			},
+			{
+				id: 'locale',
+				type: 'text',
+				label: __( 'Interface Language', 'wp-admin-workspaces' ),
+				Edit: 'select',
+				elements: languageOptions,
+			},
 		];
 		// Deliberately keyed on the specific name parts, not the whole
 		// `editedRecord` — the display-name options only depend on these, and
@@ -117,6 +176,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 		editedRecord?.last_name,
 		editedRecord?.nickname,
 		editedRecord?.name,
+		languageOptions,
 	] );
 
 	if ( ! userId ) {
@@ -154,12 +214,51 @@ export default function ProfileApp( { config = {} } = {} ) {
 					onChange={ edit }
 				/>
 
+				{ /* Account management — new password. Write-only (`password`
+				   is never returned by REST), so it sits outside the DataForm
+				   in local state and is folded into the save via `onSave`. */ }
+				<Stack
+					direction="column"
+					gap="sm"
+					className="wp-admin-workspaces-app-profile__password"
+				>
+					<Text variant="heading-md" render={ <h3 /> }>
+						{ __( 'New Password', 'wp-admin-workspaces' ) }
+					</Text>
+					<InputControl
+						type="password"
+						label={ __( 'New Password', 'wp-admin-workspaces' ) }
+						value={ newPassword }
+						onChange={ ( e ) => setNewPassword( eventValue( e ) ) }
+						autoComplete="new-password"
+					/>
+					<InputControl
+						type="password"
+						label={ __(
+							'Confirm New Password',
+							'wp-admin-workspaces'
+						) }
+						value={ confirmPassword }
+						onChange={ ( e ) =>
+							setConfirmPassword( eventValue( e ) )
+						}
+						autoComplete="new-password"
+					/>
+					{ pwError && (
+						<Notice.Root intent="error">
+							<Notice.Description>{ pwError }</Notice.Description>
+						</Notice.Root>
+					) }
+				</Stack>
+
 				<Stack direction="row" justify="flex-start">
 					<Button
 						tone="brand"
 						variant="solid"
-						onClick={ handleSave }
-						disabled={ ! hasEdits || isSaving }
+						onClick={ onSave }
+						disabled={
+							( ! hasEdits && ! newPassword ) || isSaving
+						}
 						loading={ isSaving }
 					>
 						{ __( 'Save Changes', 'wp-admin-workspaces' ) }

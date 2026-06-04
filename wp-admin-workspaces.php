@@ -637,6 +637,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_workspaces_get_settings_general_data()
 			: null,
+		// Interface-language options for the profile editor's `locale` field.
+		// Per-user (the profile form is self-service), so it deliberately offers
+		// only Site Default + English + already-installed locales — exactly the
+		// set the REST `locale` field accepts — and skips the translations-API
+		// HTTP call entirely when nothing extra is installed.
+		'profileLanguages' => is_user_logged_in()
+			? wp_admin_workspaces_get_profile_languages()
+			: array(),
 		'capabilities'  => wp_admin_workspaces_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
@@ -1489,6 +1497,51 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
 
 	return true;
 }, 10, 4 );
+
+/**
+ * Build the interface-language options the profile editor offers for the user
+ * `locale` field.
+ *
+ * Unlike the Site Language list (admin-only, includes downloadable
+ * translations), this is per-user and offers only Site Default, English, and
+ * locales already installed — exactly the set the REST `locale` field accepts
+ * (its enum is `en_US` + `get_available_languages()`, plus `''` for the site
+ * default). Installing a new language pack on save is a wp-admin-only
+ * sub-feature, deliberately NOT surfaced here.
+ *
+ * The profile form is self-service (every logged-in user mounts it), so this
+ * avoids the translations-API HTTP fetch entirely in the common case where no
+ * extra languages are installed — only resolving native names when there is
+ * actually an installed locale to label.
+ *
+ * @return array<int, array{value:string,label:string}> Flat select options
+ *                                                       (`{ value, label }`).
+ */
+function wp_admin_workspaces_get_profile_languages() {
+	$installed = get_available_languages();
+
+	$options = array(
+		array( 'value' => '', 'label' => __( 'Site Default', 'wp-admin-workspaces' ) ),
+		array( 'value' => 'en_US', 'label' => 'English (United States)' ),
+	);
+
+	if ( empty( $installed ) ) {
+		return $options;
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+	$translations = wp_get_available_translations();
+	foreach ( $installed as $locale ) {
+		$options[] = array(
+			'value' => $locale,
+			'label' => isset( $translations[ $locale ]['native_name'] )
+				? $translations[ $locale ]['native_name']
+				: $locale,
+		);
+	}
+
+	return $options;
+}
 
 /**
  * Build the data payload that SettingsGeneralApp consumes (timezone groups,

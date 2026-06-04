@@ -3,7 +3,7 @@
 	"id": "core:profile",
 	"version": 1,
 	"title": "Profile",
-	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
+	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`. Edits name fields, email, website, bio, interface language (`locale`), and a basic new-password change.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
@@ -36,7 +36,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and folded into the entity edits at save time with a client-side confirm-match check — there is no current-password re-auth and no server-side weak-password gate (REST accepts any non-backslash password). Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
@@ -53,8 +53,14 @@
 						"name",
 						"email",
 						"url",
-						"description"
+						"description",
+						"locale"
 					]
+				},
+				{
+					"source": "window.wpAdminWorkspaces.profileLanguages",
+					"via": "window-global",
+					"purpose": "Interface-language select options (Site Default + English + installed locales) built by PHP `wp_admin_workspaces_get_profile_languages()`. Falls back to a Site Default + English pair when absent."
 				},
 				{
 					"source": "config.userId",
@@ -72,7 +78,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord."
+					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord — includes `locale` (interface language) and, when entered, `password` (write-only, folded in at save time)."
 				}
 			]
 		},
@@ -89,13 +95,18 @@
 			},
 			{
 				"id": "ready",
-				"when": "record !== null && !hasEdits",
-				"renders": "Form with the seven fields populated; Save button disabled."
+				"when": "record !== null && !hasEdits && !newPassword",
+				"renders": "Form with the eight fields (incl. interface language) populated + empty password section; Save button disabled."
 			},
 			{
 				"id": "with-edits",
-				"when": "hasEdits === true && !isSaving",
-				"renders": "Same form with Save enabled; dirty-state reported to kernel."
+				"when": "(hasEdits || newPassword) && !isSaving",
+				"renders": "Same form with Save enabled; field edits report dirty-state to kernel (a pending password alone does not — it is local state until save)."
+			},
+			{
+				"id": "password-mismatch",
+				"when": "newPassword !== confirmPassword on Save click",
+				"renders": "Inline error Notice under the password fields; save is aborted until the two match."
 			},
 			{
 				"id": "saving",
@@ -113,8 +124,16 @@
 				"effect": "`edit({ name: value })` with options generated from username / first / last / first+last / last+first / nickname / current name."
 			},
 			{
+				"trigger": "Choose Interface Language from select",
+				"effect": "`edit({ locale: value })`; empty value ('') resets to Site Default. Only installed locales + English are offered (REST `locale` enum); installing a new pack on save is wp-admin-only and not surfaced."
+			},
+			{
+				"trigger": "Type a new password (+ confirm)",
+				"effect": "Held in local state. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, `edit({ password })` then `save()`. Cleared on success."
+			},
+			{
 				"trigger": "Click Save Changes",
-				"effect": "`await save()`; on success: success snackbar. On failure: error banner with `err.message`."
+				"effect": "Optionally folds the new password into the edits, then `await save()`; on success: success snackbar + password fields cleared. On failure: error banner with `err.message`."
 			}
 		],
 		"a11y": {
@@ -144,12 +163,20 @@
 			{
 				"concern": "select-fallback",
 				"note": "Uses legacy `SelectControl` from `@wordpress/components` for the display name (WPDS 0.12 SelectControl has no `__nextHasNoMarginBottom` parity)."
+			},
+			{
+				"concern": "password-write-only-no-reauth",
+				"note": "The new-password field has NO current-password re-authentication (REST does not require it) and NO server-side weak-password gate — `WP_REST_Users_Controller` accepts any password except those containing a backslash (`check_user_password`). The app only enforces a client-side confirm-match. The classic wp-admin pass1/pass2 + zxcvbn strength meter + `pw_weak` confirm checkbox are intentionally not reproduced. `password` is never returned by REST, so it lives in local state (not the entity record) and is folded into the edits at save time."
+			},
+			{
+				"concern": "locale-installed-only",
+				"note": "Interface Language offers only Site Default + English + already-installed locales (the REST `locale` enum is `en_US` + `get_available_languages()` plus '' for site default). Installing a downloadable language pack on save is a wp-admin-only sub-feature and is deliberately not offered. REST resolves `locale` via `get_user_locale()`, so a site-default user reads back the resolved site locale (not '') — selecting Site Default ('') writes the reset."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
-				"purpose": "Form layout + text + URL + email inputs + save button."
+				"import": "@wordpress/ui#Button, InputControl, Notice, Stack, Text",
+				"purpose": "Form layout + text / URL / email / password inputs + password-mismatch Notice + save button."
 			},
 			{
 				"import": "@wordpress/components#TextareaControl, SelectControl, Spinner",
