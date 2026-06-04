@@ -92,7 +92,9 @@ export default function ReassignSelect( { targets, value, setValue } ) {
 	return (
 		<SelectControl
 			label={ __( 'Reassign content to', 'wp-admin-workspaces' ) }
-			value={ value != null ? String( value ) : '' }
+			value={
+				value !== null && value !== undefined ? String( value ) : ''
+			}
 			options={ options.map( ( option ) => ( {
 				value: String( option.value ),
 				label: option.label,
