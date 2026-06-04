@@ -229,17 +229,11 @@ export function MenuItemModal( {
 							options={ [
 								{
 									value: 'page',
-									label: __(
-										'Pages',
-										'wp-admin-workspaces'
-									),
+									label: __( 'Pages', 'wp-admin-workspaces' ),
 								},
 								{
 									value: 'post',
-									label: __(
-										'Posts',
-										'wp-admin-workspaces'
-									),
+									label: __( 'Posts', 'wp-admin-workspaces' ),
 								},
 							] }
 							onChange={ ( value ) => {
@@ -264,10 +258,7 @@ export function MenuItemModal( {
 								},
 								{
 									value: 'post_tag',
-									label: __(
-										'Tags',
-										'wp-admin-workspaces'
-									),
+									label: __( 'Tags', 'wp-admin-workspaces' ),
 								},
 							] }
 							onChange={ ( value ) => {
