@@ -56,7 +56,8 @@ ok(
 
 ok(
 	'neither field: no violation',
-	validateRegion( { id: 'workspace', regions: { foo: { app: 'core:bar' } } } ).length === 0
+	validateRegion( { id: 'workspace', regions: { foo: { app: 'core:bar' } } } )
+		.length === 0
 );
 
 ok(
@@ -76,10 +77,7 @@ ok(
 	'top-level xor: one violation',
 	topViolation.length === 1 && topViolation[ 0 ].rule === 'app-xor-route-key'
 );
-ok(
-	'top-level xor: path is region id',
-	topViolation[ 0 ].path === 'detail'
-);
+ok( 'top-level xor: path is region id', topViolation[ 0 ].path === 'detail' );
 
 ok(
 	'empty string app does not trigger',
@@ -117,10 +115,7 @@ const nestedViolations = validateRegion( {
 	},
 } );
 
-ok(
-	'nested xor: detects violations at depth',
-	nestedViolations.length === 2
-);
+ok( 'nested xor: detects violations at depth', nestedViolations.length === 2 );
 
 ok(
 	'nested xor: child path is parent/child',
@@ -148,19 +143,48 @@ ok(
 	).length === 0
 );
 
+// `detaill` is one edit (a trailing insertion) from the declared `detail`
+// slot — a genuine typo signature, distance 1.
 const misspelled = validateRegion(
-	{ id: 'detail', routing: { 'route-key': 'detial', mode: 'mirror' } },
+	{ id: 'detail', routing: { 'route-key': 'detaill', mode: 'mirror' } },
 	'detail',
 	ROUTES
 );
 ok(
-	'mirror route-key naming no declared slot: one violation',
-	misspelled.length === 1 &&
-		misspelled[ 0 ].rule === 'route-key-unknown-slot'
+	'mirror route-key one edit from a declared slot (typo): one violation',
+	misspelled.length === 1 && misspelled[ 0 ].rule === 'route-key-unknown-slot'
 );
 ok(
-	'unknown-slot violation: message names the available slot',
+	'unknown-slot violation: message names the near-miss slot',
 	misspelled.length === 1 && /"detail"/.test( misspelled[ 0 ].message )
+);
+
+// The flagship-config false-positive: an engine's `mirror` peer region whose
+// route-key is unrelated to any declared slot is *unused*, not misspelled —
+// e.g. `core:default`'s `detail` region on `wp-admin-default`, which declares
+// only `@grid/…` + `@palette/…` slot routes. `detail` is not within one edit
+// of `grid` or `palette`, so the near-miss heuristic stays silent.
+ok(
+	'mirror route-key unrelated to every declared slot (unused peer): no violation',
+	validateRegion(
+		{ id: 'detail', routing: { 'route-key': 'detail', mode: 'mirror' } },
+		'detail',
+		{
+			'@grid/dashboard': { app: 'core:widget' },
+			'@palette/dashboard': { app: 'core:command-palette' },
+		}
+	).length === 0
+);
+
+// A two-edit difference (e.g. an `ai`↔`ia` transposition = distance 2) is
+// outside the one-edit window, so it reads as unrelated/unused, not a typo.
+ok(
+	'mirror route-key two edits from a declared slot: no violation',
+	validateRegion(
+		{ id: 'detail', routing: { 'route-key': 'detial', mode: 'mirror' } },
+		'detail',
+		ROUTES
+	).length === 0
 );
 
 ok(
@@ -202,7 +226,8 @@ const nestedSlotViolation = validateRegion(
 	{
 		id: 'root',
 		regions: {
-			detail: { routing: { 'route-key': 'nope', mode: 'mirror' } },
+			// `detai` is one edit (insertion) from the declared `detail` slot.
+			detail: { routing: { 'route-key': 'detai', mode: 'mirror' } },
 		},
 	},
 	'root',
@@ -228,7 +253,8 @@ ok(
 
 const mapSlotViolations = validateRegions(
 	{
-		detail: { routing: { 'route-key': 'wrong', mode: 'mirror' } },
+		// `detai` is one edit (a deletion) from the declared `detail` slot.
+		detail: { routing: { 'route-key': 'detai', mode: 'mirror' } },
 	},
 	ROUTES
 );
@@ -251,7 +277,10 @@ ok(
 	'sanitize: route-key preserved',
 	cleaned.routing[ 'route-key' ] === 'detail'
 );
-ok( 'sanitize: other fields preserved', cleaned.style[ 'inline-size' ] === '320px' );
+ok(
+	'sanitize: other fields preserved',
+	cleaned.style[ 'inline-size' ] === '320px'
+);
 
 ok(
 	'sanitize: clean region returns equivalent shape',

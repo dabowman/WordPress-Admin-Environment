@@ -12,12 +12,19 @@ Five region/runtime review items from the V2.M2 reviews, addressed together:
 
 - **`validateRegion` route-key cross-check.** The composition pass now takes
   the resolved `routes` block and flags a `mirror`-mode region whose
-  `routing.route-key` names no `@<slot>/…` route in the block
+  `routing.route-key` looks like a misspelled slot name
   (`route-key-unknown-slot` rule). A misspelled slot previously produced an
-  empty mount with no signal; it now warns at composition. The check only
-  fires when the workspace declares *some* slot routes, so an engine's unused
-  `mirror` peer region (e.g. `detail` on a single-app workspace) doesn't
-  false-positive. The kernel threads `runtimeConfig.routes` into the call.
+  empty mount with no signal; it now warns at composition. To avoid crying
+  wolf on engines that ship `mirror` peer regions a given workspace simply
+  doesn't route into, the warning is scoped to a genuine *near-miss*: it fires
+  only when the route-key is within one edit (a tiny inline edit-distance ≤ 1
+  check — insertion / deletion / substitution) of some declared slot name
+  (e.g. `detial` → `detail`). A route-key unrelated to every declared slot is
+  treated as a legitimately-unused peer and stays silent — so `core:default`'s
+  `detail` region on `wp-admin-default` (which declares only `@grid/…` +
+  `@palette/…` routes) no longer false-positives at boot. The `size > 0` gate
+  still skips a workspace with no slot routes at all. The kernel threads
+  `runtimeConfig.routes` into the call.
 - **Region-level `label` (a11y).** New optional `label` on the region shape in
   both `docs/schemas/workspace.json` and `workspace-engine.json` (region +
   template defs). `resolveRegion` inherits it from the template like `role`;
