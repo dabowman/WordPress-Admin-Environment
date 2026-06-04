@@ -31,8 +31,16 @@ import { useMode } from '../../modes/useMode';
 import { slotRegions } from './slotRegions.mjs';
 
 export default function CoreSiteEditorLayout( { regions } ) {
-	const { toolbar, sidebar, content, detail, preview, bodyExtras, overlay, stragglers } =
-		slotRegions( regions );
+	const {
+		toolbar,
+		sidebar,
+		content,
+		detail,
+		preview,
+		bodyExtras,
+		overlay,
+		stragglers,
+	} = slotRegions( regions );
 
 	// Surface the active screen's mode on the layout root so engine CSS can
 	// style the whole layout per-mode (not just per-region). E.g. takeover
