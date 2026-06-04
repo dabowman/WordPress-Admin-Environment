@@ -13,10 +13,10 @@
  * for the image-dimension fields this backs, where a missing value means "do
  * not generate this size" (0).
  *
- * @param {*}      value             Raw control value.
- * @param {Object} [bounds]          Range bounds.
- * @param {number} [bounds.min=0]    Lower bound (also the invalid-input fallback).
- * @param {number} [bounds.max]      Upper bound (defaults to +Infinity).
+ * @param {*}      value          Raw control value.
+ * @param {Object} [bounds]       Range bounds.
+ * @param {number} [bounds.min=0] Lower bound (also the invalid-input fallback).
+ * @param {number} [bounds.max]   Upper bound (defaults to +Infinity).
  * @return {number} The clamped, finite number.
  */
 export function clampRange(
@@ -39,6 +39,16 @@ export function clampRange(
  * @return {number|undefined} Finite number, or `undefined`.
  */
 export function rangeDisplayValue( value ) {
+	// `Number('')`, `Number(null)` and `Number('   ')` all coerce to a finite
+	// `0`, which would snap the slider to its floor for an *unset* field. Treat
+	// an empty / whitespace-only string and `null` as "no value" so the control
+	// renders unset, matching the JSDoc contract.
+	if (
+		value === null ||
+		( typeof value === 'string' && value.trim() === '' )
+	) {
+		return undefined;
+	}
 	const n = Number( value );
 	return Number.isFinite( n ) ? n : undefined;
 }

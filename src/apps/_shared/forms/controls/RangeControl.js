@@ -16,12 +16,12 @@ import { clampRange, rangeDisplayValue } from './rangeControl.mjs';
  * rather than read off the field def, because DataViews' field normalization
  * does not guarantee arbitrary extra keys survive onto the `Edit`-passed field.
  *
- * @param {Object}   opts                 Range bounds + presentation.
- * @param {number}   [opts.min=0]         Lower bound.
- * @param {number}   [opts.max=100]       Upper bound.
- * @param {number}   [opts.step=1]        Step increment.
- * @param {Array}    [opts.marks]         `RangeControl` marks.
- * @param {boolean}  [opts.allowReset=true] Show the reset affordance.
+ * @param {Object}  opts                   Range bounds + presentation.
+ * @param {number}  [opts.min=0]           Lower bound.
+ * @param {number}  [opts.max=100]         Upper bound.
+ * @param {number}  [opts.step=1]          Step increment.
+ * @param {Array}   [opts.marks]           `RangeControl` marks.
+ * @param {boolean} [opts.allowReset=true] Show the reset affordance.
  * @return {Function} A DataForm `Edit` component.
  */
 export function makeRangeControl( {
@@ -32,11 +32,11 @@ export function makeRangeControl( {
 	allowReset = true,
 } = {} ) {
 	/**
-	 * @param {Object}  root0                     DataForm control props.
-	 * @param {Object}  root0.data                The form's working record.
-	 * @param {Object}  root0.field               The normalized field def.
-	 * @param {Function} root0.onChange           Commit a partial-record change.
-	 * @param {boolean} [root0.hideLabelFromVision] Visually hide the label.
+	 * @param {Object}   root0                       DataForm control props.
+	 * @param {Object}   root0.data                  The form's working record.
+	 * @param {Object}   root0.field                 The normalized field def.
+	 * @param {Function} root0.onChange              Commit a partial-record change.
+	 * @param {boolean}  [root0.hideLabelFromVision] Visually hide the label.
 	 * @return {JSX.Element} The slider control.
 	 */
 	function RangeFormControl( {
@@ -86,13 +86,13 @@ export function makeRangeControl( {
  * `setValue` clamps into `[min, max]` (and rounds for integer fields) so a value
  * driven past the bounds — or cleared via reset — can never write out of range.
  *
- * @param {Object}  spec               Field spec.
- * @param {string}  spec.id            Field / option id.
- * @param {string}  spec.label         Visible label.
- * @param {number}  [spec.min=0]       Lower bound.
- * @param {number}  [spec.max=100]     Upper bound.
- * @param {number}  [spec.step=1]      Step increment.
- * @param {Array}   [spec.marks]       `RangeControl` marks.
+ * @param {Object}  spec                Field spec.
+ * @param {string}  spec.id             Field / option id.
+ * @param {string}  spec.label          Visible label.
+ * @param {number}  [spec.min=0]        Lower bound.
+ * @param {number}  [spec.max=100]      Upper bound.
+ * @param {number}  [spec.step=1]       Step increment.
+ * @param {Array}   [spec.marks]        `RangeControl` marks.
  * @param {boolean} [spec.integer=true] Coerce the stored value to an integer.
  * @return {Object} A DataForm field definition.
  */

@@ -22,7 +22,18 @@ const DIMENSION_MAX = 2048;
  * @return {Object} DataForm field definition.
  */
 const dimensionField = ( id, label, max = DIMENSION_MAX ) =>
-	rangeField( { id, label, min: 0, max, step: 1 } );
+	rangeField( {
+		id,
+		label,
+		min: 0,
+		max,
+		step: 1,
+		// A missing/undefined option renders as `0` rather than unset —
+		// preserving the old bare-numeric-input behavior. `rangeField` spreads
+		// `...rest`, so this rides onto the field def; the slider reads it via
+		// `field.getValue`.
+		getValue: ( { item } ) => item[ id ] ?? 0,
+	} );
 
 const FIELDS = [
 	dimensionField(

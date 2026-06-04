@@ -1,4 +1,5 @@
-import { MediaUpload } from '@wordpress/media-utils';
+import { MediaUpload, MediaUploadCheck } from '@wordpress/media-utils';
+import { useInstanceId } from '@wordpress/compose';
 import { useEntityRecord } from '@wordpress/core-data';
 import { Button, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton } from '@wordpress/components';
@@ -48,6 +49,18 @@ export function MediaPicker( {
 } ) {
 	const id = normalizeMediaId( value );
 
+	// Stable id for the visible label so it can be programmatically tied to the
+	// picker trigger via `aria-labelledby` — without it the control's accessible
+	// name is just the button copy. Rendered onto the `<Text>` only when a label
+	// is shown; the `aria-labelledby` ref is omitted otherwise.
+	const instanceId = useInstanceId(
+		MediaPicker,
+		'wp-admin-workspaces-media-picker'
+	);
+	const labelId = `${ instanceId }__label`;
+	const buttonId = `${ instanceId }__button`;
+	const hasVisibleLabel = !! label && ! hideLabelFromVision;
+
 	// Resolve the current attachment for its preview URL. Hook runs
 	// unconditionally (rules of hooks); passing `undefined` when nothing is
 	// selected keeps core-data from issuing a doomed GET /media/0.
@@ -61,8 +74,10 @@ export function MediaPicker( {
 			align="flex-start"
 			className="wp-admin-workspaces-media-picker"
 		>
-			{ label && ! hideLabelFromVision && (
-				<Text render={ <span /> }>{ label }</Text>
+			{ hasVisibleLabel && (
+				<Text id={ labelId } render={ <span /> }>
+					{ label }
+				</Text>
 			) }
 			{ previewUrl && (
 				<img
@@ -71,42 +86,57 @@ export function MediaPicker( {
 					alt=""
 				/>
 			) }
-			<MediaUpload
-				onSelect={ ( selection ) =>
-					onChange( mediaIdFromSelection( selection ) )
-				}
-				allowedTypes={ allowedTypes }
-				value={ id || undefined }
-				render={ ( { open } ) => (
-					<Stack direction="row" gap="sm" align="center">
-						<Button
-							tone="neutral"
-							variant="solid"
-							size="compact"
-							onClick={ open }
-						>
-							{ id
-								? __( 'Change', 'wp-admin-workspaces' )
-								: buttonLabel ||
-								  __(
-										'Select image',
-										'wp-admin-workspaces'
-								  ) }
-						</Button>
-						{ !! id && (
-							<DestructiveButton
-								isDestructive
-								variant="tertiary"
-								onClick={ () => onChange( 0 ) }
+			<MediaUploadCheck>
+				<MediaUpload
+					onSelect={ ( selection ) =>
+						onChange( mediaIdFromSelection( selection ) )
+					}
+					allowedTypes={ allowedTypes }
+					value={ id || undefined }
+					render={ ( { open } ) => (
+						<Stack direction="row" gap="sm" align="center">
+							<Button
+								id={ buttonId }
+								tone="neutral"
+								variant="solid"
+								size="compact"
+								onClick={ open }
+								// Tie the control to its visible label so a
+								// screen reader announces the field name AND the
+								// action — "<label> <button copy>" — rather than
+								// just the (possibly terse) button copy alone.
+								aria-labelledby={
+									hasVisibleLabel
+										? `${ labelId } ${ buttonId }`
+										: undefined
+								}
 							>
-								{ __( 'Remove', 'wp-admin-workspaces' ) }
-							</DestructiveButton>
-						) }
-					</Stack>
-				) }
-			/>
+								{ id
+									? __( 'Change', 'wp-admin-workspaces' )
+									: buttonLabel ||
+									  __(
+											'Select image',
+											'wp-admin-workspaces'
+									  ) }
+							</Button>
+							{ !! id && (
+								<DestructiveButton
+									isDestructive
+									variant="tertiary"
+									onClick={ () => onChange( 0 ) }
+								>
+									{ __( 'Remove', 'wp-admin-workspaces' ) }
+								</DestructiveButton>
+							) }
+						</Stack>
+					) }
+				/>
+			</MediaUploadCheck>
 			{ help && (
-				<Text variant="body-sm" className="wp-admin-workspaces-app__muted">
+				<Text
+					variant="body-sm"
+					className="wp-admin-workspaces-app__muted"
+				>
 					{ help }
 				</Text>
 			) }
@@ -162,13 +192,13 @@ export function makeMediaControl( opts = {} ) {
 /**
  * Convenience: build a complete DataForm field def backed by the media picker.
  *
- * @param {Object}   spec               Field spec.
- * @param {string}   spec.id            Field / option id.
- * @param {string}   spec.label         Visible label.
+ * @param {Object}   spec                Field spec.
+ * @param {string}   spec.id             Field / option id.
+ * @param {string}   spec.label          Visible label.
  * @param {string[]} [spec.allowedTypes] `MediaUpload` allowed MIME groups.
- * @param {string}   [spec.buttonLabel] Choose-button label when empty.
- * @param {string}   [spec.previewSize] Preferred preview image size.
- * @param {string}   [spec.help]        Helper text.
+ * @param {string}   [spec.buttonLabel]  Choose-button label when empty.
+ * @param {string}   [spec.previewSize]  Preferred preview image size.
+ * @param {string}   [spec.help]         Helper text.
  * @return {Object} A DataForm field definition.
  */
 export function mediaField( {

@@ -542,7 +542,15 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 	// `@wordpress/media-utils` `MediaUpload`) opens the WordPress media frame,
 	// which needs the `media-editor` scripts + the footer template markup that
 	// `wp_enqueue_media()` registers. Consumers today: settings-general's Site
-	// Icon picker. Safe no-op when no picker is on screen.
+	// Icon picker.
+	//
+	// PERF NOTE: this is NOT a no-op when no picker is on screen — it enqueues
+	// the media-frame scripts (media-editor/media-views/media-models/plupload)
+	// and prints the backbone media-modal templates on the footer of EVERY
+	// workspace render, a per-page cost paid even on Dashboard/Posts where no
+	// picker exists. Acceptable for alpha; if cold-mount perf
+	// (`docs/perf-baseline.md`) becomes a concern, gate this on whether the
+	// active screen can host a picker rather than enqueuing unconditionally.
 	wp_enqueue_media();
 
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
