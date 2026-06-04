@@ -29,6 +29,7 @@ import {
 } from '../_shared/dataviews/useEntityElementCounts';
 import MediaDetails from './MediaDetails';
 import { Page } from '../_shared/Page';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 
 const MEDIA_TYPE_VALUES = [ 'image', 'video', 'audio', 'text', 'application' ];
 
@@ -632,12 +633,14 @@ function MediaDetailsModal( { id, onClose, onMutated } ) {
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<MediaDetails
-				key={ id }
-				id={ id }
-				onClose={ onClose }
-				onMutated={ onMutated }
-			/>
+			<PortalThemeScope>
+				<MediaDetails
+					key={ id }
+					id={ id }
+					onClose={ onClose }
+					onMutated={ onMutated }
+				/>
+			</PortalThemeScope>
 		</Modal>
 	);
 }

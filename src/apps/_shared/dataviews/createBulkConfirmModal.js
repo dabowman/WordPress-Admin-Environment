@@ -3,6 +3,8 @@ import { Button as DestructiveButton } from '@wordpress/components';
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
+import { PortalThemeScope } from '../../../runtime/styles/ThemeProviderHost';
+
 /**
  * Build a DataViews `RenderModal` for a destructive bulk action — the
  * confirm-dialog scaffold every entity-CRUD app hand-rolled (Cancel +
@@ -61,75 +63,80 @@ export function createBulkConfirmModal( {
 				: confirmLabel;
 
 		return (
-			<Stack
-				direction="column"
-				gap="md"
-				style={ { padding: 'var(--wpds-dimension-padding-lg)' } }
-			>
-				<Text>{ getMessage( items, targets ) }</Text>
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button
-						tone="neutral"
-						variant="minimal"
-						onClick={ closeModal }
-					>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<DestructiveButton
-						variant="primary"
-						isDestructive
-						disabled={ disabled || isBusy }
-						isBusy={ isBusy }
-						onClick={ async () => {
-							if ( isBusy ) {
-								return;
-							}
-							setIsBusy( true );
-							// `finally` clears the busy flag even if an
-							// app-supplied `onSettled`/`onActionPerformed`
-							// callback throws after the batch — otherwise the
-							// modal stays open with the confirm button stuck
-							// disabled. (`Promise.allSettled` itself never
-							// rejects.)
-							try {
-								let results = [];
-								let failed = 0;
-								let succeeded = targets;
-								if ( targets.length ) {
-									results = await Promise.allSettled(
-										targets.map( ( item ) =>
-											mutate( item )
-										)
-									);
-									failed = results.filter(
-										( r ) => r.status === 'rejected'
-									).length;
-									// Only the items that actually mutated are
-									// "performed"; reporting the failures here
-									// would deselect rows the user likely wants
-									// to retry.
-									succeeded = targets.filter(
-										( _item, i ) =>
-											results[ i ]?.status === 'fulfilled'
-									);
+			<PortalThemeScope>
+				<Stack
+					direction="column"
+					gap="md"
+					style={ {
+						padding: 'var(--wpds-dimension-padding-lg)',
+					} }
+				>
+					<Text>{ getMessage( items, targets ) }</Text>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button
+							tone="neutral"
+							variant="minimal"
+							onClick={ closeModal }
+						>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<DestructiveButton
+							variant="primary"
+							isDestructive
+							disabled={ disabled || isBusy }
+							isBusy={ isBusy }
+							onClick={ async () => {
+								if ( isBusy ) {
+									return;
 								}
-								onSettled?.( {
-									items,
-									targets,
-									results,
-									failed,
-								} );
-								onActionPerformed?.( succeeded );
-								closeModal();
-							} finally {
-								setIsBusy( false );
-							}
-						} }
-					>
-						{ label }
-					</DestructiveButton>
+								setIsBusy( true );
+								// `finally` clears the busy flag even if an
+								// app-supplied `onSettled`/`onActionPerformed`
+								// callback throws after the batch — otherwise
+								// the modal stays open with the confirm button
+								// stuck disabled. (`Promise.allSettled` itself
+								// never rejects.)
+								try {
+									let results = [];
+									let failed = 0;
+									let succeeded = targets;
+									if ( targets.length ) {
+										results = await Promise.allSettled(
+											targets.map( ( item ) =>
+												mutate( item )
+											)
+										);
+										failed = results.filter(
+											( r ) => r.status === 'rejected'
+										).length;
+										// Only the items that actually mutated
+										// are "performed"; reporting failures
+										// here would deselect rows the user
+										// likely wants to retry.
+										succeeded = targets.filter(
+											( _item, i ) =>
+												results[ i ]?.status ===
+												'fulfilled'
+										);
+									}
+									onSettled?.( {
+										items,
+										targets,
+										results,
+										failed,
+									} );
+									onActionPerformed?.( succeeded );
+									closeModal();
+								} finally {
+									setIsBusy( false );
+								}
+							} }
+						>
+							{ label }
+						</DestructiveButton>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		);
 	};
 }
