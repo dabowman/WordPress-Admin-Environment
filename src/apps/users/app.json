@@ -3,7 +3,7 @@
 	"id": "core:users",
 	"version": 1,
 	"title": "Users",
-	"description": "DataViews user list with bulk delete-and-reassign and self-delete guard.",
+	"description": "DataViews user list with bulk delete-and-reassign (choosable reassign target) and self-delete guard.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"capabilities": [
@@ -67,7 +67,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "DataViews table of WordPress users with permanent bulk delete (content reassigned to the acting user). Lists name + username, email, roles, and registered date. Search hits name + email. Filter by role. The DataViews `RenderModal` for the destructive action ships a self-delete guard that strips the acting user from the target set before issuing the REST call.",
+		"purpose": "DataViews table of WordPress users with permanent bulk delete (content reassigned to a choosable target user, defaulting to the acting user). Lists name + username, email, roles, and registered date. Search hits name + email. Filter by role. The DataViews `RenderModal` for the destructive action ships a self-delete guard that strips the acting user from the target set before issuing the REST call, plus a reassign-target `<select>` (`ReassignSelect`) used on both single-row and bulk delete.",
 		"rebuilds": "users",
 		"data": {
 			"reads": [
@@ -122,7 +122,19 @@
 				{
 					"source": "window.wpAdminWorkspaces.userId",
 					"via": "window-global",
-					"purpose": "Identify the acting user so self-delete is blocked + content reassignment target is set."
+					"purpose": "Identify the acting user so self-delete is blocked + the content-reassignment target defaults to them (overridable via the in-modal ReassignSelect)."
+				},
+				{
+					"source": "window.wpAdminWorkspaces.user.displayName",
+					"via": "window-global",
+					"purpose": "Label the acting user in ReassignSelect when they fall outside the first page of candidate reassign targets."
+				},
+				{
+					"source": "root/user",
+					"via": "core-data",
+					"context": "view",
+					"purpose": "Candidate reassign targets for the delete modal's ReassignSelect (id + name, up to 100, users being deleted excluded). Separate query because the list query is paginated.",
+					"fields": [ "id", "name" ]
 				}
 			],
 			"writes": [
@@ -130,7 +142,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"operation": "delete",
-					"purpose": "Bulk-delete users permanently with content reassigned to the acting user (`force: true, reassign: currentUserId`).",
+					"purpose": "Bulk- or single-delete users permanently with content reassigned to the modal's chosen target, defaulting to the acting user (`force: true, reassign: <selected|currentUserId>`).",
 					"invalidates": [
 						"root/user"
 					]
@@ -156,7 +168,7 @@
 			{
 				"id": "delete-confirm",
 				"when": "User triggered Delete action",
-				"renders": "Confirm modal. Copy varies by target count and whether the acting user is in the selection."
+				"renders": "Confirm modal. Copy varies by target count and whether the acting user is in the selection; includes a reassign-target select (defaulting to the acting user) shown whenever there is at least one valid target."
 			},
 			{
 				"id": "delete-self-only",
@@ -171,7 +183,7 @@
 			},
 			{
 				"trigger": "Confirm delete",
-				"effect": "Filter out the acting user, dispatch `deleteEntityRecord` per target with `{ force: true, reassign: currentUserId }` via `Promise.allSettled`, `invalidateResolution` on the user query, success snackbar on full success; partial-failure error notice surfaces the failed/total counts.",
+				"effect": "Filter out the acting user, dispatch `deleteEntityRecord` per target with `{ force: true, reassign: <selected target, defaulting to currentUserId> }` via `Promise.allSettled`, `invalidateResolution` on the user query, success snackbar on full success; partial-failure error notice surfaces the failed/total counts.",
 				"guards": [
 					"targets.length > 0",
 					"currentUserId !== item.id"
@@ -200,7 +212,7 @@
 			},
 			{
 				"concern": "no-trash-for-users",
-				"note": "WordPress has no user trash. Delete is permanent; the `reassign` parameter is mandatory or content with `post_author = id` is orphaned."
+				"note": "WordPress has no user trash. Delete is permanent; the `reassign` parameter is mandatory or content with `post_author = id` is orphaned. The reassign target is choosable in the modal (ReassignSelect) and defaults to the acting user; users in the delete set are excluded as targets so content is not re-orphaned."
 			},
 			{
 				"concern": "invalidate-after-delete",
@@ -223,6 +235,10 @@
 			{
 				"import": "@wordpress/components#Button (as DestructiveButton)",
 				"purpose": "Destructive primary action — WPDS 0.12 has no `tone=\"critical\"`."
+			},
+			{
+				"import": "@wordpress/components#SelectControl, Spinner",
+				"purpose": "Reassign-target picker (ReassignSelect) in the delete modal — `@wordpress/ui` 0.12 has no SelectControl port; Spinner covers its candidate-loading state."
 			},
 			{
 				"import": "@wordpress/icons#trash",
