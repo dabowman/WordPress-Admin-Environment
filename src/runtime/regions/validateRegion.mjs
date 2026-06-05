@@ -27,6 +27,7 @@
  */
 
 const RULE_APP_XOR_ROUTE_KEY = 'app-xor-route-key';
+const RULE_ROUTE_KEY_UNKNOWN_SLOT = 'route-key-unknown-slot';
 
 function regionPath( parentPath, key ) {
 	if ( ! parentPath ) {
@@ -44,16 +45,107 @@ function hasRouteKey( region ) {
 	);
 }
 
+/**
+ * Collect the slot namespaces declared in the routes block. The v3
+ * compiler keys non-primary `apps[]` entries at `@<slot>/<primary>`
+ * (see `compile/synthesizeRoutes.mjs`), so each route pattern of the
+ * form `@<slot>/…` contributes its `<slot>` to the available set. Routes
+ * keyed at a bare primary path (`/posts`) carry no slot namespace and
+ * are ignored — they're read by `_self` / `query` regions, not `mirror`.
+ *
+ * @param {Object|null} routesBlock workspace.json resolved `routes` map.
+ * @return {Set<string>} declared slot names (possibly empty).
+ */
+function slotNamesFromRoutes( routesBlock ) {
+	const slots = new Set();
+	if ( ! routesBlock || typeof routesBlock !== 'object' ) {
+		return slots;
+	}
+	for ( const pattern of Object.keys( routesBlock ) ) {
+		const m = /^@([a-z][a-z0-9-]*)\//.exec( pattern );
+		if ( m ) {
+			slots.add( m[ 1 ] );
+		}
+	}
+	return slots;
+}
+
 function hasApp( region ) {
 	return region && typeof region.app === 'string' && region.app.length > 0;
 }
 
-export function validateRegion( region, path = '' ) {
+/**
+ * Cheap "edit distance ≤ 1" test: true when `a` can become `b` via at most
+ * one single-character insertion, deletion, or substitution (and the trivial
+ * equal case). Avoids a full Levenshtein matrix — for the near-miss slot-name
+ * check we only care whether two short strings are within one edit, so a
+ * length-difference gate plus a single linear scan suffices.
+ *
+ * @param {string} a First string.
+ * @param {string} b Second string.
+ * @return {boolean} Whether `a` and `b` are within one edit.
+ */
+function withinOneEdit( a, b ) {
+	if ( a === b ) {
+		return true;
+	}
+	const la = a.length;
+	const lb = b.length;
+	const diff = la - lb;
+	if ( diff > 1 || diff < -1 ) {
+		return false;
+	}
+	// Walk both strings; on the first mismatch, account for the single allowed
+	// edit by advancing the longer string (insert/delete) or both (substitute),
+	// then require the remainders to match exactly.
+	let i = 0;
+	let j = 0;
+	let edited = false;
+	while ( i < la && j < lb ) {
+		if ( a[ i ] === b[ j ] ) {
+			i++;
+			j++;
+			continue;
+		}
+		if ( edited ) {
+			return false;
+		}
+		edited = true;
+		if ( la > lb ) {
+			i++; // deletion from `a`
+		} else if ( lb > la ) {
+			j++; // insertion into `a`
+		} else {
+			i++; // substitution
+			j++;
+		}
+	}
+	// Any unconsumed trailing char counts as the one allowed edit.
+	return true;
+}
+
+/**
+ * @param {Object}          region   Resolved region declaration.
+ * @param {string}          [path]   Slash-joined path for messages.
+ * @param {Object|Set|null} [routes] Resolved `routes` block (or a
+ *                                   pre-computed slot-name `Set`).
+ *                                   When supplied, a `mirror`-mode
+ *                                   region whose `route-key` names
+ *                                   no declared slot is flagged.
+ *                                   Omit to skip the cross-check
+ *                                   (e.g. runtime dynamic children
+ *                                   validated before routes exist).
+ */
+export function validateRegion( region, path = '', routes = null ) {
 	const violations = [];
 	if ( ! region || typeof region !== 'object' ) {
 		return violations;
 	}
 	const here = path || region.id || '<root>';
+	// Accept either a raw routes block or a pre-built slot-name Set so the
+	// recursion doesn't re-scan the block at every depth.
+	const slotNames =
+		routes instanceof Set ? routes : slotNamesFromRoutes( routes );
 
 	if ( hasApp( region ) && hasRouteKey( region ) ) {
 		violations.push( {
@@ -65,23 +157,66 @@ export function validateRegion( region, path = '' ) {
 		} );
 	}
 
+	// Slot cross-check (spec §5.4 / §6.4). A `mirror`-mode region reads
+	// `@<route-key>/<primary>` routes; if the route-key is misspelled
+	// relative to the slot the compiler emitted, the region silently
+	// mounts no app. We can't distinguish "misspelled slot" from
+	// "legitimately-unused engine peer region" by absence alone — an engine
+	// routinely ships `mirror` peer regions (e.g. `detail`) that a given
+	// workspace never routes into, and `wp-admin-default` uses other slots
+	// (`grid`/`palette`) while leaving `detail` unrouted. So only flag a
+	// genuine *near-miss*: a route-key that's within one edit (insertion /
+	// deletion / substitution) of some declared slot name (e.g. `detai` or
+	// `detaill` → `detail`), which signals a typo rather than an
+	// intentionally-unused peer. An exact match is fine; a
+	// route-key unrelated to every declared slot is treated as unused, not
+	// misspelled, and stays silent. The `size > 0` gate still skips a
+	// workspace with no slot routes at all.
+	if (
+		hasRouteKey( region ) &&
+		region.routing?.mode === 'mirror' &&
+		slotNames.size > 0
+	) {
+		const routeKey = region.routing[ 'route-key' ];
+		if ( ! slotNames.has( routeKey ) ) {
+			const nearMiss = [ ...slotNames ].find( ( slot ) =>
+				withinOneEdit( routeKey, slot )
+			);
+			if ( nearMiss ) {
+				violations.push( {
+					path: here,
+					rule: RULE_ROUTE_KEY_UNKNOWN_SLOT,
+					message:
+						`Region "${ here }" declares \`routing.route-key: "${ routeKey }"\` in \`mirror\` mode, ` +
+						`but the routes block names no \`@${ routeKey }/…\` slot — ` +
+						`did you mean \`"${ nearMiss }"\`? ` +
+						`(available: ${ [ ...slotNames ]
+							.map( ( s ) => `"${ s }"` )
+							.join( ', ' ) }). ` +
+						'The region will mount no app — check for a misspelled slot name.',
+				} );
+			}
+		}
+	}
+
 	if ( region.regions && typeof region.regions === 'object' ) {
 		for ( const [ key, child ] of Object.entries( region.regions ) ) {
 			const childPath = regionPath( here, key );
-			violations.push( ...validateRegion( child, childPath ) );
+			violations.push( ...validateRegion( child, childPath, slotNames ) );
 		}
 	}
 
 	return violations;
 }
 
-export function validateRegions( regionsMap ) {
+export function validateRegions( regionsMap, routes = null ) {
 	const violations = [];
 	if ( ! regionsMap || typeof regionsMap !== 'object' ) {
 		return violations;
 	}
+	const slotNames = slotNamesFromRoutes( routes );
 	for ( const [ id, region ] of Object.entries( regionsMap ) ) {
-		violations.push( ...validateRegion( region, id ) );
+		violations.push( ...validateRegion( region, id, slotNames ) );
 	}
 	return violations;
 }

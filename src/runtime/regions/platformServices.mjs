@@ -72,14 +72,14 @@ export function isTriggerable( region ) {
 	return !! ( platform && platform[ 'core:triggerable' ] === true );
 }
 
-export function triggerShortcut( region ) {
-	const platform = platformBlock( region );
-	const trigger = platform && platform[ 'core:trigger' ];
-	if ( trigger && typeof trigger === 'object' && typeof trigger.shortcut === 'string' ) {
-		return trigger.shortcut;
-	}
-	return null;
-}
+// NOTE: `core:trigger` (e.g. `{ shortcut: "Mod+K" }`) is a declarative
+// hint only — per spec §5.3 the actual key binding lives in
+// workspace.json's `bindings` block, consumed by `<BindingsConsumer>`
+// through the triggerStore. There is intentionally no `triggerShortcut`
+// accessor here: a kernel-side consumer would double-fire alongside
+// `bindings` (the bundled workspaces wire Mod+K → palette that way). The
+// region renderer registers only the `core:triggerable` open handler;
+// the shortcut that flips it open comes from `bindings`. See issue #71.
 
 export function wantsDirtyState( region ) {
 	const platform = platformBlock( region );
@@ -135,7 +135,6 @@ export function getPlatformServices( region ) {
 		autofocusSelector: autofocusSelector( region ),
 		persistsAcrossNavigation: persistsAcrossNavigation( region ),
 		isTriggerable: isTriggerable( region ),
-		triggerShortcut: triggerShortcut( region ),
 		wantsDirtyState: wantsDirtyState( region ),
 		blocksNavigationOnDirty: blocksNavigationOnDirty( region ),
 		hostsDynamicChildren: hostsDynamicChildren( region ),
