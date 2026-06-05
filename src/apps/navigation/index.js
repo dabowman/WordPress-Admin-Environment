@@ -1,5 +1,7 @@
 import './index.css';
 
+import { useSyncExternalStore } from '@wordpress/element';
+
 import { useKernel } from '../../runtime/kernel-context';
 import { useRoute } from '../../runtime/routing/router';
 import { userCan } from '../../runtime/capabilities/userCan';
@@ -7,6 +9,8 @@ import { orderTree, pruneMenu } from '../../runtime/menu/menuTree.mjs';
 import {
 	registerMenuRenderer,
 	resolveMenuRenderer,
+	subscribeMenuRenderers,
+	getMenuRendererEpoch,
 } from '../../runtime/config/menuRendererRegistry';
 
 import SidebarDrilldownRenderer from './_renderers/SidebarDrilldownRenderer';
@@ -56,6 +60,22 @@ export default function NavigationApp( { config: navConfig = {} } ) {
 	const { config: kernelConfig } = useKernel();
 	const route = useRoute();
 	const currentPrimary = route.primary || '';
+
+	// Re-render when a renderer registers late. A loose plugin renderer
+	// script enqueued after the `wp-admin-workspaces` bundle (or injected
+	// async) registers via `window.wpAdminWorkspaces.kernel.registerMenuRenderer`
+	// AFTER this component first mounted; subscribing makes the late
+	// registration repaint the nav instead of leaving it on the fallback.
+	// The snapshot is the registry-owned monotonic epoch — the registry
+	// bumps it before notifying, so React reads the new value regardless of
+	// listener order (no insertion-order side-channel). Bundled engines
+	// register before mount and never fire this; it's purely the
+	// out-of-tree-plugin safety net.
+	useSyncExternalStore(
+		subscribeMenuRenderers,
+		getMenuRendererEpoch,
+		getMenuRendererEpoch
+	);
 
 	const rendererId =
 		typeof kernelConfig?.[ 'menu-renderer' ] === 'string'

@@ -44,6 +44,88 @@ draft input) survives a switch.
 - Pure diff/payload-apply helpers in `src/runtime/remount.mjs`, pinned by
   `tests/runtime/remount.test.mjs`.
 
+### Modal overlays inherit the originating region theme (#74)
+
+Region-scoped theming previously stopped at `document.body` portals. The
+`RegionThemedSubtree` seam (`WpdsThemeProvider`) had already fixed the
+inherited-foreground leak and Popover-portaled overlays (per-instance
+`Popover.Slot`), but `@wordpress/components` `Modal` uses its own body
+portal — so a Modal opened from a region themed away from root (e.g. light
+content over a dark developer-admin shell) still painted the shell-root
+theme on both background and foreground.
+
+- New kernel seam `<PortalThemeScope>` (`src/runtime/styles/ThemeProviderHost.js`):
+  `<ScopedThemeProvider>` now publishes the active region/app `styles` seeds
+  onto a `ScopedStylesContext` (React context propagates through portals);
+  `PortalThemeScope` replays those scoped providers inside a modal portal,
+  re-establishing the region's `--wpds-*` tokens + foreground. DS-neutral
+  (the context carries opaque `styles` objects; WPDS re-emission happens via
+  the replayed engine provider). No `regionId` threading; no-op when no
+  region themes away from root.
+- Wrapped the shared DataViews `RenderModal`s (`createBulkConfirmModal` /
+  `BulkEditModal` / `EntityFormModal`) so all six entity-CRUD list apps
+  inherit it, plus the app-owned Modals: taxonomy term, media details,
+  plugin `.zip` upload, themes details (the hand-rolled DataViews
+  `RenderModal`, not a shared factory), and menu name/item/delete.
+- Pure stack-accumulation helper `appendScopedStyles` added to
+  `themeScope.mjs` and pinned by `tests/runtime/theme-provider-host.test.mjs`.
+
+### Region/runtime composition hardening (issue #71)
+
+Five region/runtime review items from the V2.M2 reviews, addressed together:
+
+- **`validateRegion` route-key cross-check.** The composition pass now takes
+  the resolved `routes` block and flags a `mirror`-mode region whose
+  `routing.route-key` looks like a misspelled slot name
+  (`route-key-unknown-slot` rule). A misspelled slot previously produced an
+  empty mount with no signal; it now warns at composition. To avoid crying
+  wolf on engines that ship `mirror` peer regions a given workspace simply
+  doesn't route into, the warning is scoped to a genuine *near-miss*: it fires
+  only when the route-key is within one edit (a tiny inline edit-distance ≤ 1
+  check — insertion / deletion / substitution) of some declared slot name
+  (e.g. `detial` → `detail`). A route-key unrelated to every declared slot is
+  treated as a legitimately-unused peer and stays silent — so `core:default`'s
+  `detail` region on `wp-admin-default` (which declares only `@grid/…` +
+  `@palette/…` routes) no longer false-positives at boot. The `size > 0` gate
+  still skips a workspace with no slot routes at all. The kernel threads
+  `runtimeConfig.routes` into the call.
+- **Region-level `label` (a11y).** New optional `label` on the region shape in
+  both `docs/schemas/workspace.json` and `workspace-engine.json` (region +
+  template defs). `resolveRegion` inherits it from the template like `role`;
+  `PersistentRegion` exposes it via `aria-label`, `ModalRegion` via its
+  `aria-labelledby` span. When no label is authored, `ModalRegion` falls back
+  to the region id slug (a dialog needs a name), while `PersistentRegion`
+  emits no accessible name at all (a landmark labeled with a raw slug like
+  `editor/inspector` reads worse than relying on the landmark `role` alone).
+  The three bundled engines label their `command-palette` (and
+  `core:default`'s `detail`) regions so the accessible name no longer reads a
+  raw slug.
+- **`resolveRegion` layout-vs-style split — amended, not implemented.** The
+  `layout`/`style` split is an *authoring* boundary (the schema constrains
+  `layout` to a geometry allowlist); at resolve time both collapse into one
+  inline `style` map on the same DOM node, so a runtime split would be a
+  no-op. Documented the deliberate decision in the `resolveRegion` header and
+  spec §5.2, retiring the stale "task 6 will split this" deferral.
+- **Dropped the unused `triggerShortcut` accessor.** `core:trigger`
+  (`{ shortcut }`) is a declarative hint; the actual key binding lives in
+  workspace.json `bindings` (consumed via the triggerStore). A kernel-side
+  consumer would double-fire alongside `bindings`, so the accessor — read by
+  nothing — was removed from `platformServices.mjs`.
+- **`mountApp.resolveAppInstance` dev-warns on non-namespaced ids.** An app
+  ref string without an `iframe:`/`core:`/`plugin:` prefix still returns
+  `null`, but now logs a `console.warn` (NODE_ENV-gated, mirroring `iconMap`)
+  so the silent empty mount has a traceable cause.
+
+### core:default engine hygiene (issue #69 items 2/3/4/6)
+
+Follow-up to the 2026-05-27 engine review (items 1 + 5 resolved earlier). Class names below use the current `wp-admin-workspaces-*` prefix.
+
+- **Role-based region slotting (item 4).** `engines/core-default/Layout.js` no longer slots well-known regions by literal id. The pure `slotRegions.mjs` helper now dispatches by **role** with the id as a tiebreaker (toolbar←`banner`, sidebar←`navigation`, content←`main`, detail←`complementary`; `preview` stays id-only since the engine ships no `core:preview` template), honoring the engine's `specializes-roles`. A workspace that names its main region something other than `content` (role `main`) now lands in the content slot instead of the straggler bucket. Side effect: the `detail` region — whose `core:detail` template carries `core:dismiss-on`, so the old `getRegionKind` path bucketed it as a bottom-of-layout "drawer" — is now correctly placed in the content (`areas`) row next to content (still collapsed via `data-app-mounted="false"` when no mirror app is mounted).
+- **Real `core:dashboard-grid` mount point (item 2).** A region templated `core:dashboard-grid` (`platform.core:dynamic-children: true`) now renders **inside the content row** rather than falling to stragglers after `__body`. Other non-slotted chrome regions (the notices banners) still render as layout-root stragglers.
+- **Removed dead `data-mode-minimal` CSS (item 3).** No mode in the `core:default` catalog (`default`/`focus`/`takeover`/`modal`) emits `minimal: true`, so the `.wp-admin-workspaces-region--toolbar[data-mode-minimal]` rule in `index.css` had no producer. Rule removed; the `minimal` row dropped from the region-state vocabulary table in `docs/core-default-engine.md`.
+- **Documented the chrome→WPDS bridge asymmetry (item 6).** `docs/core-default-engine.md` now spells out that `CHROME_WPDS_BINDINGS` covers `canvas`/`sidebar`/`toolbar`/`site-hub` only — `chrome.content.*` is consumed by templates/CSS (card background/radius/inset) but is intentionally **not** WPDS-bridged (content = neutral card surface), so authoring it won't re-theme `@wordpress/ui` inside the content card.
+- **Test.** `tests/runtime/core-default-slot-regions.test.mjs` pins role+id dispatch, the modal→overlay split, the dashboard-grid→body-row mount, the preview id-only fallback, and malformed-input safety. Chained into `npm run test:runtime`.
+
 ### Renamed: "WP Admin Shell" → "WP Admin Workspaces" (0.1.0 rebrand)
 
 The product, plugin, and every author/user-facing surface unified under
@@ -80,6 +162,13 @@ canonical in `docs/vocabulary-spec.md`.
   `role_config` and the `user_prefs` user-meta key. Without this an upgraded
   install would silently lose its active-workspace selection and re-enable a
   deliberately-disabled admin takeover. `uninstall.php` sweeps both namespaces.
+
+### Per-item menu icon suppression via `icon: null` (#72)
+
+A menu item bound to a screen can now render with **no icon** while keeping the screen binding, by declaring `icon: null` on the item. `bind_screens` switched from `isset` to `array_key_exists` for the `icon` re-fold, so an explicit `null` blocks inheritance where an absent key still inherits the screen's icon. Origin-sensitive: `null` authored over a lower origin's existing item is a tombstone (key-removal) → the screen icon re-inherits; suppression works only in the origin that first declares the item. See `docs/schema-sketch.md` §Drill-down icon inheritance for the worked before/after.
+
+- **Latent-bug fix / visual diff:** the renderer guard also changed from `icon={ resolveIcon( item.icon ) }` to `icon={ item.icon ? resolveIcon( item.icon ) : undefined }` (`SidebarDrilldownRenderer`). `resolveIcon` returns the engine **fallback** icon for any falsy name, so previously a screen-bound item whose screen had **no** icon rendered the generic fallback glyph; it now renders nothing — matching the documented "items without an icon render no icon" contract. Any item that was silently showing the fallback icon will now show no icon (expected, not a regression).
+- **Known limitation:** `icon: null` suppresses only the named `icon`; a screen that also carries an `iconSource` (the #127 arbitrary-icon escape hatch) still folds that in independently, and renderers prefer `iconSource` over `icon`, so such an item keeps an icon. The two are mutually exclusive in practice. Documented in the schema `icon` description + schema-sketch.
 
 ### Gutenberg dependency version-gated (WordPress 7.0)
 
@@ -215,7 +304,7 @@ Provenance of notable subsystems (for archaeology only — not load-bearing):
 ### Known gaps
 
 - `core:desktop-iframe` command-palette harvest (chromeless-bridge sub-system 11) ships as a stub — the parent palette consumer isn't wired yet.
-- No JSDOM mount test for the React kernel (`<Region>` / `<ThemeProviderHost>`); full component render is a manual browser pass. Tracked in issue #30.
+- JSDOM mount test for the React kernel (`<Region>` / `<ThemeProviderHost>`) is **partially** closed (issue #30). `tests/runtime/kernel-smoke.test.mjs` now pins the reader-level decisions the bug class targets — landing-screen → mounted app (`matchRoute( routes, default-route )`), nav prune ≥ 1, command-palette "Go to <screen>" entries, and the JS-side capability role matrix (mirrors `run-cap-gating-smoke.php`) — using the same pure modules the kernel + apps import. Still open: a literal React-DOM mount asserting `kernel(config)` renders without throwing + token emission reaching the DOM through the engine's `ThemeProvider` (token→CSS-string already pinned by `theme-provider-host.test.mjs`). That half needs `react`/`jsdom` devDeps + an importer-rewrite loader for the `@wordpress/*` externals, neither present in the plain-`node` CI today.
 - `@wordpress/components` `Modal` overlays (DataViews `RenderModal`, bulk-confirm) inherit root theme on bg + color — not covered by the `RegionThemedSubtree` seam. Logged in `docs/feedback.md`.
 
 ## [1.0.0-beta.1] — 2026-04-30

@@ -49,6 +49,7 @@ $T = 'WPAS_Tokens_Test_Runner';
 function wpas_tokens_reset() {
 	delete_option( 'wp_admin_workspaces_site_tokens' );
 	remove_all_filters( 'wp_admin_workspaces_plugin_tokens' );
+	remove_all_filters( 'wp_admin_workspaces_tokens' );
 	WP_Admin_Workspaces_Tokens::flush();
 }
 
@@ -122,6 +123,31 @@ echo "\n— deep merge keeps unrelated branches —\n";
 		'core size tree preserved (unrelated branch)',
 		isset( $tokens['size']['$type'] )
 	);
+}
+
+echo "\n— final wp_admin_workspaces_tokens filter —\n";
+{
+	wpas_tokens_reset();
+	add_filter( 'wp_admin_workspaces_tokens', function ( $merged ) {
+		$merged['computed'] = array( '$value' => 'injected' );
+		unset( $merged['size'] ); // strip a private namespace
+		return $merged;
+	} );
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
+	$T::assert_true( 'final filter injected computed value', isset( $tokens['computed']['$value'] ) );
+	$T::assert_eq( 'computed value passed through', 'injected', $tokens['computed']['$value'] );
+	$T::assert_true( 'final filter stripped namespace', ! isset( $tokens['size'] ) );
+	$T::assert_true( 'core color tree survives (only size stripped)', isset( $tokens['color'] ) );
+}
+
+{
+	wpas_tokens_reset();
+	// A filter returning a non-array must not corrupt the cache/runtime.
+	add_filter( 'wp_admin_workspaces_tokens', function () {
+		return 'not-an-array';
+	} );
+	$tokens = WP_Admin_Workspaces_Tokens::resolve();
+	$T::assert_true( 'non-array filter return coerced to array', is_array( $tokens ) );
 }
 
 echo "\n— cache —\n";

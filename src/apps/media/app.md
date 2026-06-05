@@ -37,13 +37,26 @@ Multipart upload via raw `apiFetch` — the documented exception to the core-dat
 `MediaDetails.js` owns, in one presentation-agnostic unit:
 
 1. **Entity binding** — `useEntityRecord('root','media', id)` with the buffered `edit()` / `save()` / `hasEdits`, threaded through the shared `useEntitySave` so a server-reported error keeps the host open.
-2. **Preview slot** — a `<MediaPreview>` sibling sub-component (image thumbnail, `<audio>`/`<video>` player, or a file-type tile), composed *next to* the form, never fused into it. This is the seam where the #125 image-edit canvas lands.
+2. **Preview slot** — a `<MediaPreview>` sibling sub-component (image thumbnail, `<audio>`/`<video>` player, or a file-type tile), composed *next to* the form, never fused into it. For image attachments it carries an **Edit Image** button that swaps in the inline `ImageEditor` (#125) — see below.
 3. **Metadata `DataForm`** — title, alt-text (images only, via `form` `isVisible`), caption, description. The `fields` / `form` split lets a future host vary only the `form` layout (compact panel here; expanded sections in a pane) while reusing the same field set + validation.
 4. **Actions** — Copy URL, Delete (permanent, `force: true`), and an explicit Save.
 
 The HOST (`MediaDetailsModal` in `index.js`) supplies only chrome — the `@wordpress/components` Modal frame + `onClose` + an `onMutated` invalidation callback. Swapping that host for a region / inspector / side-pane must not touch `MediaDetails.js`.
 
 **Commit strategy.** The data flow is autosave-ready: `edit()` buffers every keystroke and the entity exposes `save()` / `hasEdits`, so a future autosaving host (a side-pane, the #119 document-settings sidebar) can wire a debounced/on-blur `save()` without touching the component. Today's modal host renders an explicit Save button (the reassurance superset). Choosing the buffered-edit data flow now is what avoids a rewrite when the pane lands. A shared `useEntityAutosave` should be promoted only when a second autosaving consumer actually needs it — not before (per #109's `_shared/forms` boundary note).
+
+### Inline image editor (#125)
+
+`ImageEditor.js` fills the `MediaDetails` preview slot when the user clicks **Edit Image** on an image attachment (host-agnostic, exactly like `MediaDetails` itself — it renders in the details modal today and could render in a region / inspector pane later, per `docs/dataviews-interaction-patterns.md`). It does crop / rotate / flip and saves via `POST /wp/v2/media/{id}/edit`.
+
+- **REST contract is factored out.** The pure mapping from editor state (clockwise rotation, horizontal/vertical flip, crop rectangle) to the `modifiers[]` array is in `imageEditorModel.mjs` — `buildModifiers`, `normalizeCrop` / `isMeaningfulCrop`, `rotateBy`, `displayDimensions`, and the crop-drag math (`moveCrop` / `resizeCrop`). It's a side-effect-free `.mjs` so the node harness pins it (`tests/runtime/image-editor-model.test.mjs`) without a webpack/jest pass.
+- **Modifier order = REST-apply order.** `buildModifiers` emits `rotate → flip → crop`, the exact order the controller applies them, and drops every no-op (no rotation, no flip, full-frame crop) so the array is empty precisely when there's nothing to save. The clockwise rotation passes straight through as the REST `angle` (the controller negates it internally before GD's counter-clockwise rotate, so a clockwise UI value saves clockwise).
+- **Preview fidelity.** The `<canvas>` composes the same rotate → flip → crop order (rotate inner, flip outer so a point rotates first and mirrors second). Its intrinsic size is the post-rotation bounding box (`displayDimensions` swaps W/H at 90°/270°), so the crop overlay's percentages — read against the canvas — are exactly the basis the controller multiplies its crop percentages against. What the user sees is what the server produces.
+- **Crop UI.** A draggable selection box with four corner resize handles, all geometry in percent of the stage (so it stays aligned regardless of how the canvas is display-scaled). Pointer capture keeps a drag tracking when the cursor leaves the handle; `moveCrop` / `resizeCrop` clamp to the frame and enforce a minimum size.
+- **Saves as a NEW attachment.** The `/edit` route always inserts a new attachment (no in-place REST mode — `docs/parity/media.md` blocker #1). The editor says so ("Saves a copy — the original is kept") and hands the new attachment up via `onSaved(newAttachment)`. `MediaDetails` fires a snackbar, invalidates the host list, and bubbles the new id through `onReplaced` so `MediaDetailsModal` re-keys to the new attachment. Callers must not assume the attachment id survives an edit.
+- **Why `apiFetch`.** The `/edit` route is an action that returns a new attachment, not a standard entity update — the same documented exception as multipart upload. The canvas only *draws* the source (never reads pixels back via `toDataURL`/`getImageData`), so a tainted cross-origin (CDN) image still previews.
+
+Only crop / rotate / flip are wired, because the `/edit` `modifiers[]` enum supports nothing else — scale, per-size targeting, restore-original, and in-place save are admin-ajax-only (`docs/parity/media.md` blockers #1–#4) and remain known gaps.
 
 ### Delete
 
@@ -53,13 +66,13 @@ Media has no trash, so single + bulk delete both go through `createBulkConfirmMo
 
 These are intentional, documented seams — do **not** build them in this app:
 
-- **#125 image editor** — fills the `MediaDetails` `<MediaPreview>` preview slot as its own sibling sub-component (crop / rotate / flip via `POST /wp/v2/media/{id}/edit`). The preview is already isolated so the canvas composes next to the form.
+- **#125 image editor** — *done.* `ImageEditor.js` fills the `MediaDetails` preview slot (crop / rotate / flip via `POST /wp/v2/media/{id}/edit`, saving a new attachment). See the *Inline image editor* section above. Scale / per-size target / restore / in-place save stay out (REST blockers).
 - **#136 URL slots** — filter / pagination / the open-detail item move to URL state (`?layout=`, `?type=`, `?search=`, `?page=`, `/{id}`). Today `view` + `editingId` are local `useState`; `useEntityDataView` is already the swap point.
 - **#132 fuller filters** — *done.* Date (`after`/`before`) + a functional author picker land here alongside `type` / Mine / Unattached. `QUERY_MAPPING.filters.author` maps the `author` filter to REST `author`; `applyDateFilters` supplements `buildQueryArgs` for the `before`/`after` date operators; author options resolve lazily via the `getAuthorElements` `getElements` provider. A category filter is not applicable (attachments have no category taxonomy).
 
 ## Rebuild guide (non-WPDS / non-React)
 
-A non-WPDS rebuild needs: a DataViews-equivalent grid+table host (search / sort / filter / pagination / selection / per-row + bulk actions / action modal); a media-field renderer that branches image-thumbnail vs. file-type tile; an upload toolbar above the list (multipart POST per file, per-file error surfacing); a host-agnostic details unit binding a single attachment with buffered edit + explicit/auto save, a separable preview slot, a metadata form (title / alt — images only / caption / description), and Copy URL + permanent Delete; and clipboard API access.
+A non-WPDS rebuild needs: a DataViews-equivalent grid+table host (search / sort / filter / pagination / selection / per-row + bulk actions / action modal); a media-field renderer that branches image-thumbnail vs. file-type tile; an upload toolbar above the list (multipart POST per file, per-file error surfacing); a host-agnostic details unit binding a single attachment with buffered edit + explicit/auto save, a separable preview slot, a metadata form (title / alt — images only / caption / description), and Copy URL + permanent Delete; an inline image editor in the preview slot (canvas preview composing rotate → flip → crop in that order, a percent-based crop selection, and a `POST /wp/v2/media/{id}/edit` save that re-points to the new attachment it returns — the pure `modifiers[]` mapping is reusable from `imageEditorModel.mjs`); and clipboard API access.
 
 Preserve two patterns:
 
@@ -68,7 +81,8 @@ Preserve two patterns:
 
 ## Known limitations / parity gaps vs. `docs/screens/media.md`
 
-- **No image-edit canvas** (crop / rotate / flip / scale). Deferred to #125; the preview slot is the landing seam.
+- **Image-edit canvas** (crop / rotate / flip) lands here (#125) in `ImageEditor.js`. **Scale, per-size targeting, restore-original, and in-place save are NOT available** — the REST `/edit` `modifiers[]` enum only supports crop/rotate/flip and always saves a new attachment (`docs/parity/media.md` blockers #1–#4). wp-admin's editor does all of those; the workspace diverges here until those REST surfaces exist.
+- **Flip requires WordPress 6.9+.** The `flip` modifier was added to the `/wp/v2/media/{id}/edit` `modifiers[]` `oneOf` schema in WP 6.9. The plugin's floor is `Requires at least: 6.7` (6.7/6.8 are supported via the Gutenberg private-API fallback), and on those versions a `flip` edit returns `rest_invalid_param` (400) — and because the route validates `modifiers[]` per-item, a flip would fail the *entire* rotate+flip+crop edit, not just the flip. So **the flip-horizontal / flip-vertical tool buttons are hidden below 6.9** (gated on `window.wpAdminWorkspaces.supportsImageFlip`, set PHP-side via `version_compare( get_bloginfo('version'), '6.9', '>=' )`); crop and rotate work on every supported version. When a save does error, the editor surfaces the REST body's `err?.message` in an error Notice (falling back to a generic string only when the body has none).
 - **Filters.** Type / Mine / Unattached / author / date-range land here (#132). The author filter is a DataViews single-select (`is`) over content authors rather than wp-admin's month dropdown for dates — the date filter is a one-sided `before`/`after` bound instead. Attachments have no category taxonomy, so there is no category filter.
 - **No URL state.** Filters / pagination / open-detail are local; deep-linking + back/forward restoration deferred to #136.
 - **No embedded media picker** (selection mode, `media-upload.php` insert-into-post). Out of scope (separate / iframe).

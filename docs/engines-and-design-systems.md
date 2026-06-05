@@ -469,7 +469,32 @@ children in `RegionThemedSubtree`:
    a matching named Slot over its body portal.
 
 Root/chrome popovers keep body-portaling (correctly root-themed).
-**Known gap:** `@wordpress/components` `Modal` uses its own body portal
-independent of the Popover slot — Modal overlays (DataViews
-`RenderModal`, bulk-confirm) inherit root theme on bg + color; NOT
-covered. Engine-private — a non-WPDS engine ships its own strategy.
+
+**Modal overlays — the `PortalThemeScope` replay (issue #74).**
+`@wordpress/components` `Modal` uses its own `document.body` portal,
+independent of the Popover slot, so the `RegionThemedSubtree` Popover.Slot
+does NOT cover Modal overlays (DataViews `RenderModal` incl. the
+entity-CRUD bulk-confirm/edit + entity-form modals; the app-owned
+taxonomy-term / media-details / plugin-upload / themes-details / menu
+modals). Without a fix
+they paint the workspace-*root* theme on both background and foreground.
+
+The fix is kernel-side and DS-neutral. React context propagates through
+portals even though the DOM does not, so `<ScopedThemeProvider>` publishes
+the active region/app `styles` seeds onto a `ScopedStylesContext` (outermost
+first), and `<PortalThemeScope>` (`src/runtime/styles/ThemeProviderHost.js`)
+reads that stack inside the modal portal and **replays** the same scoped
+providers — re-emitting the region's `--wpds-*` tokens + foreground at the
+portal's DOM location. No `regionId` threading; no-op when no region themes
+away from root. Modal consumers wrap the content *inside* the overlay:
+
+- App-owned `<Modal>`: `<Modal><PortalThemeScope>…</PortalThemeScope></Modal>`.
+- DataViews `RenderModal` (DataViews supplies the `<Modal>`): return
+  `<PortalThemeScope>…</PortalThemeScope>` as the bare body.
+
+The context + replay live in the kernel (DS-neutral — opaque `styles`
+objects only); the WPDS token re-emission happens because the replayed
+`<ScopedThemeProvider>` mounts the active engine's provider. A non-WPDS
+engine reuses the same seam with its own provider. The pure
+stack-accumulation helper `appendScopedStyles` is pinned by
+`tests/runtime/theme-provider-host.test.mjs`.
