@@ -132,5 +132,107 @@ console.log( '\n— registries are isolated —' );
 	);
 }
 
+console.log( '\n— subscribers fire on a (late) registration —' );
+{
+	const { registerMenuRenderer, subscribeMenuRenderers } =
+		createMenuRendererRegistry();
+	let calls = 0;
+	const unsubscribe = subscribeMenuRenderers( () => {
+		calls++;
+	} );
+	registerMenuRenderer( 'plugin:acme/menu', RendererA );
+	ok( 'listener fires on registration', calls === 1 );
+
+	// Duplicate (ignored) registration must NOT notify — nothing changed.
+	withSilentWarn( () => {
+		registerMenuRenderer( 'plugin:acme/menu', RendererB );
+	} );
+	ok( 'duplicate registration does not notify', calls === 1 );
+
+	// Invalid registration must NOT notify either.
+	registerMenuRenderer( '', RendererA );
+	registerMenuRenderer( 'plugin:acme/other', null );
+	ok( 'invalid registration does not notify', calls === 1 );
+
+	// A second valid id notifies again.
+	registerMenuRenderer( 'plugin:acme/two', RendererB );
+	ok( 'second valid registration notifies', calls === 2 );
+
+	// After unsubscribe, no more notifications.
+	unsubscribe();
+	registerMenuRenderer( 'plugin:acme/three', RendererA );
+	ok( 'unsubscribed listener stops firing', calls === 2 );
+}
+
+console.log( '\n— registry owns a monotonic registration epoch —' );
+{
+	const { registerMenuRenderer, getMenuRendererEpoch } =
+		createMenuRendererRegistry();
+	ok( 'epoch starts at 0', getMenuRendererEpoch() === 0 );
+
+	registerMenuRenderer( 'plugin:acme/menu', RendererA );
+	ok(
+		'epoch bumps on a valid registration',
+		getMenuRendererEpoch() === 1,
+		`got ${ getMenuRendererEpoch() }`
+	);
+
+	// Duplicate (ignored) registration must NOT bump.
+	withSilentWarn( () => {
+		registerMenuRenderer( 'plugin:acme/menu', RendererB );
+	} );
+	ok(
+		'epoch does not bump on a duplicate registration',
+		getMenuRendererEpoch() === 1
+	);
+
+	// Invalid registrations must NOT bump.
+	registerMenuRenderer( '', RendererA );
+	registerMenuRenderer( 'plugin:acme/null', null );
+	ok( 'epoch does not bump on invalid args', getMenuRendererEpoch() === 1 );
+
+	registerMenuRenderer( 'plugin:acme/two', RendererB );
+	ok( 'epoch bumps again on a second valid id', getMenuRendererEpoch() === 2 );
+}
+
+console.log(
+	'\n— epoch is incremented BEFORE listeners fire (no insertion-order dependence) —'
+);
+{
+	const { registerMenuRenderer, subscribeMenuRenderers, getMenuRendererEpoch } =
+		createMenuRendererRegistry();
+	let observed = -1;
+	// Subscribe a listener that reads the snapshot when notified — mirrors
+	// React's `useSyncExternalStore` reading `getSnapshot` on a store change.
+	subscribeMenuRenderers( () => {
+		observed = getMenuRendererEpoch();
+	} );
+	registerMenuRenderer( 'plugin:acme/menu', RendererA );
+	ok(
+		'listener observes the post-increment epoch',
+		observed === 1,
+		`got ${ observed }`
+	);
+}
+
+console.log( '\n— subscribe ignores a non-function listener —' );
+{
+	const { registerMenuRenderer, subscribeMenuRenderers } =
+		createMenuRendererRegistry();
+	const unsubscribe = subscribeMenuRenderers( null );
+	ok(
+		'non-function listener returns a no-op unsubscribe',
+		typeof unsubscribe === 'function'
+	);
+	// Must not throw when a registration happens with a bogus listener.
+	let threw = false;
+	try {
+		registerMenuRenderer( 'plugin:acme/safe', RendererA );
+	} catch ( e ) {
+		threw = true;
+	}
+	ok( 'registration with no real listener does not throw', ! threw );
+}
+
 console.log( `\n${ pass } passed, ${ fail } failed` );
 process.exit( fail === 0 ? 0 : 1 );
