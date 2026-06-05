@@ -544,6 +544,8 @@ Authors can use any valid ARIA role. Engines specialize for a subset; everything
 
 The `style` field accepts the broader set of CSS properties used for decoration (background, color, border, padding, etc.) and is applied to the region's container element. `layout` and `style` are emitted as CSS in the region's stylesheet at mount time.
 
+**The split is an authoring boundary, not a runtime one.** It exists so the workspace.json schema can constrain `layout` to the geometry allowlist above while leaving `style` open to free decoration — the boundary is enforced at validation time. At resolve time `resolveRegion` merges the template's `default-style`, the declaration's `style`, and the declaration's `layout` into a *single* applied style map (per-key, in that precedence order), which the renderer applies as one inline `style` on the region element. There is intentionally no separate geometry-vs-decoration application step in the kernel: both are inline CSS on the same node, so a runtime split would be a no-op. Engines that need geometry and decoration on *different* DOM nodes do so in their own `Layout.js`, reading the region declaration directly.
+
 Authors use logical properties (`inline-size`, `block-size`) rather than physical (`width`, `height`) so layouts work in vertical writing modes without modification.
 
 ### 5.3 `platform` — platform service requests

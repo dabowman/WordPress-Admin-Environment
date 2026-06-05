@@ -6,6 +6,52 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Region/runtime composition hardening (issue #71)
+
+Five region/runtime review items from the V2.M2 reviews, addressed together:
+
+- **`validateRegion` route-key cross-check.** The composition pass now takes
+  the resolved `routes` block and flags a `mirror`-mode region whose
+  `routing.route-key` looks like a misspelled slot name
+  (`route-key-unknown-slot` rule). A misspelled slot previously produced an
+  empty mount with no signal; it now warns at composition. To avoid crying
+  wolf on engines that ship `mirror` peer regions a given workspace simply
+  doesn't route into, the warning is scoped to a genuine *near-miss*: it fires
+  only when the route-key is within one edit (a tiny inline edit-distance ≤ 1
+  check — insertion / deletion / substitution) of some declared slot name
+  (e.g. `detial` → `detail`). A route-key unrelated to every declared slot is
+  treated as a legitimately-unused peer and stays silent — so `core:default`'s
+  `detail` region on `wp-admin-default` (which declares only `@grid/…` +
+  `@palette/…` routes) no longer false-positives at boot. The `size > 0` gate
+  still skips a workspace with no slot routes at all. The kernel threads
+  `runtimeConfig.routes` into the call.
+- **Region-level `label` (a11y).** New optional `label` on the region shape in
+  both `docs/schemas/workspace.json` and `workspace-engine.json` (region +
+  template defs). `resolveRegion` inherits it from the template like `role`;
+  `PersistentRegion` exposes it via `aria-label`, `ModalRegion` via its
+  `aria-labelledby` span. When no label is authored, `ModalRegion` falls back
+  to the region id slug (a dialog needs a name), while `PersistentRegion`
+  emits no accessible name at all (a landmark labeled with a raw slug like
+  `editor/inspector` reads worse than relying on the landmark `role` alone).
+  The three bundled engines label their `command-palette` (and
+  `core:default`'s `detail`) regions so the accessible name no longer reads a
+  raw slug.
+- **`resolveRegion` layout-vs-style split — amended, not implemented.** The
+  `layout`/`style` split is an *authoring* boundary (the schema constrains
+  `layout` to a geometry allowlist); at resolve time both collapse into one
+  inline `style` map on the same DOM node, so a runtime split would be a
+  no-op. Documented the deliberate decision in the `resolveRegion` header and
+  spec §5.2, retiring the stale "task 6 will split this" deferral.
+- **Dropped the unused `triggerShortcut` accessor.** `core:trigger`
+  (`{ shortcut }`) is a declarative hint; the actual key binding lives in
+  workspace.json `bindings` (consumed via the triggerStore). A kernel-side
+  consumer would double-fire alongside `bindings`, so the accessor — read by
+  nothing — was removed from `platformServices.mjs`.
+- **`mountApp.resolveAppInstance` dev-warns on non-namespaced ids.** An app
+  ref string without an `iframe:`/`core:`/`plugin:` prefix still returns
+  `null`, but now logs a `console.warn` (NODE_ENV-gated, mirroring `iconMap`)
+  so the silent empty mount has a traceable cause.
+
 ### core:default engine hygiene (issue #69 items 2/3/4/6)
 
 Follow-up to the 2026-05-27 engine review (items 1 + 5 resolved earlier). Class names below use the current `wp-admin-workspaces-*` prefix.

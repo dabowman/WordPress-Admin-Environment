@@ -288,6 +288,12 @@
 					"description": "The ARIA role the resulting region carries when instantiated. Drives engine specialization in the active engine. A template with `role: \"navigation\"` produces a region that behaves like a sidebar nav. Required."
 				},
 
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Default accessible name for regions instantiated from this template. The renderer exposes it via `aria-label` (persistent) / `aria-labelledby` (modal). A per-region `label` in workspace.json overrides; when neither declares one, a modal region falls back to the region id slug (so the dialog still has a name) while a persistent region emits no accessible name at all and relies on its landmark `role`. Localize before shipping (note: engine-JSON `label` strings currently reach the DOM as raw English — there is no `__()` seam, see CHANGELOG)."
+				},
+
 				"platform": {
 					"$ref": "#/$defs/regionPlatform",
 					"description": "Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating. The engine honors only services in its top-level `honored-platform` list; other entries are no-ops."
@@ -370,6 +376,7 @@
 			"properties": {
 				"template": { "type": "string", "minLength": 1 },
 				"role":     { "$ref": "#/$defs/ariaRole" },
+				"label":    { "type": "string", "minLength": 1 },
 				"app":      { "type": "string", "minLength": 1 },
 				"config":   { "type": "object" },
 				"routing": {

@@ -115,6 +115,7 @@ export function kernel( config ) {
 	// `routing.route-key` is enforced post-merge: violations log a
 	// `console.warn`; sanitization drops `app` so URL routing wins.
 	const regionsMap = runtimeConfig.regions || {};
+	const routesBlock = runtimeConfig.routes || null;
 	const regions = {};
 	const honoredServices = new Set(
 		Array.isArray( engineManifest?.[ 'honored-platform' ] )
@@ -136,7 +137,7 @@ export function kernel( config ) {
 		}
 		const resolved = resolveRegion( regionInstance, engineManifest );
 		const decorated = { id, ...resolved };
-		const violations = validateRegion( decorated, id );
+		const violations = validateRegion( decorated, id, routesBlock );
 		if ( violations.length && typeof console !== 'undefined' ) {
 			for ( const v of violations ) {
 				// eslint-disable-next-line no-console
