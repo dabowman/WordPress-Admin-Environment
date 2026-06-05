@@ -71,7 +71,7 @@ Tags: `[workspace]` closeable in this repo; `[upstream]` needs WordPress core/RE
 
 27. **Add Interface Language (locale) + a basic password-change field to Profile** (both REST-writable; document the no-reauth / no-server-weak-gate caveats). ([profile.md](profile.md))
 
-28. **Add a custom `GET /wp-admin-workspaces/v1/site-health/tests` + `/info` endpoint** wrapping `WP_Site_Health::get_tests()` and `WP_Debug_Data::debug_data()` server-side — unblocks the ~22 missing sync tests, plugin extensibility, the score donut, severity grouping, and the entire Info tab (server-only PHP, but the workspace can wrap it). ([site-health.md](site-health.md))
+28. ~~**Add a custom `GET /wp-admin-workspaces/v1/site-health/tests` + `/info` endpoint** wrapping `WP_Site_Health::get_tests()` and `WP_Debug_Data::debug_data()` server-side — unblocks the ~22 missing sync tests, plugin extensibility, the score donut, severity grouping, and the entire Info tab (server-only PHP, but the workspace can wrap it).~~ **SHIPPED (issue #124).** `includes/class-wp-admin-workspaces-site-health-rest.php` adds both routes (gated on `view_site_health_checks`); the app runs the direct tests, enumerates async tests dynamically (no hardcoded list), and adds an Info tab (accordion + private-omitting copy). Still open downstream: the score donut, severity grouping, per-test actions, and the category badge. ([site-health.md](site-health.md))
 
 29. **Build the inline image editor (crop/rotate/flip)** POSTing `modifiers[]` to `/wp/v2/media/{id}/edit` — fully REST-supported (note the response is a *new* attachment). ([media.md](media.md))
 
@@ -185,7 +185,7 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 7. **Expandable / inline detail-row API** (substituted by a `RenderModal` "Details" action today). *Affected: themes, multiple.*
 
-8. **A media-library-picker `Edit` control + a range/slider control in `FORM_CONTROLS`** (the `media` type is display-only today). *Affected: settings-media, settings-general (Site Icon), profile (avatar).*
+8. ~~**A media-library-picker `Edit` control + a range/slider control in `FORM_CONTROLS`** (the `media` type is display-only today). *Affected: settings-media, settings-general (Site Icon), profile (avatar).*~~ — **DONE (#170):** shared custom `Edit` controls in `src/apps/_shared/forms/controls/` (`MediaPicker` + `RangeControl`); wired into `settings-media` (range sliders for image dimensions) and `settings-general` Site Icon (media picker). The profile-avatar surface is deferred — core users expose no settable local-avatar REST field (Gravatar-only), so it needs a meta/plugin shim first.
 
 ---
 

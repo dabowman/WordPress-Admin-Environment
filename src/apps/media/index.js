@@ -18,6 +18,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { upload } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
@@ -615,6 +616,7 @@ export default function MediaApp( { config = {} } ) {
 					id={ editingId }
 					onClose={ () => setEditingId( null ) }
 					onMutated={ refreshAfterMutation }
+					onReplaced={ ( newId ) => setEditingId( newId ) }
 				/>
 			) }
 		</Page>
@@ -631,24 +633,30 @@ export default function MediaApp( { config = {} } ) {
  * this composite (preview + DataForm + action row).
  *
  * @param {Object}   root0
- * @param {number}   root0.id        Attachment id.
- * @param {Function} root0.onClose   Close callback.
- * @param {Function} root0.onMutated Post-save / delete invalidation callback.
+ * @param {number}   root0.id         Attachment id.
+ * @param {Function} root0.onClose    Close callback.
+ * @param {Function} root0.onMutated  Post-save / delete invalidation callback.
+ * @param {Function} root0.onReplaced Re-point callback after an inline image
+ *                                    edit (the edit returns a NEW attachment id);
+ *                                    switches the modal to the new attachment.
  * @return {JSX.Element} The modal.
  */
-function MediaDetailsModal( { id, onClose, onMutated } ) {
+function MediaDetailsModal( { id, onClose, onMutated, onReplaced } ) {
 	return (
 		<Modal
 			title={ __( 'Media Details', 'wp-admin-workspaces' ) }
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<MediaDetails
-				key={ id }
-				id={ id }
-				onClose={ onClose }
-				onMutated={ onMutated }
-			/>
+			<PortalThemeScope>
+				<MediaDetails
+					key={ id }
+					id={ id }
+					onClose={ onClose }
+					onMutated={ onMutated }
+					onReplaced={ onReplaced }
+				/>
+			</PortalThemeScope>
 		</Modal>
 	);
 }

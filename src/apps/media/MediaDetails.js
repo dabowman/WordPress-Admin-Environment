@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from '@wordpress/element';
+import { useCallback, useMemo, useState } from '@wordpress/element';
 import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
@@ -6,8 +6,9 @@ import { DataForm } from '@wordpress/dataviews/wp';
 import { Button, Icon, Stack, Text } from '@wordpress/ui';
 import { Button as DestructiveButton, Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { copy, trash } from '@wordpress/icons';
+import { copy, trash, crop } from '@wordpress/icons';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
+import ImageEditor from './ImageEditor';
 
 /**
  * MediaDetails — a presentation-agnostic attachment metadata editor.
@@ -43,15 +44,21 @@ import { useEntitySave } from '../_shared/forms/useEntitySave';
  * must not touch this file.
  *
  * @param {Object}   root0
- * @param {number}   root0.id          Attachment id to edit (the host keys on this).
- * @param {Function} [root0.onClose]   Called after a successful save or delete.
- * @param {Function} [root0.onMutated] Called after save / delete so the host can
- *                                     invalidate its list query + counts.
+ * @param {number}   root0.id           Attachment id to edit (the host keys on this).
+ * @param {Function} [root0.onClose]    Called after a successful save or delete.
+ * @param {Function} [root0.onMutated]  Called after save / delete / image-edit so
+ *                                      the host can invalidate its list + counts.
+ * @param {Function} [root0.onReplaced] Called with the NEW attachment id after an
+ *                                      inline image edit (which always creates a
+ *                                      new attachment); lets the host re-point to
+ *                                      it. Falls back to `onClose` when absent.
  * @return {JSX.Element} The details editor.
  */
-export default function MediaDetails( { id, onClose, onMutated } ) {
+export default function MediaDetails( { id, onClose, onMutated, onReplaced } ) {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'media', id );
+
+	const [ isEditingImage, setIsEditingImage ] = useState( false );
 
 	const { deleteEntityRecord } = useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
@@ -148,6 +155,29 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 		onClose?.();
 	}, [ handleSave, onMutated, onClose ] );
 
+	// The `/edit` route always returns a NEW attachment (no in-place REST mode —
+	// see docs/parity/media.md blocker #1). Surface that, refresh the host list,
+	// and re-point to the new id (or just close if the host can't re-point).
+	const onImageSaved = useCallback(
+		( newAttachment ) => {
+			setIsEditingImage( false );
+			createSuccessNotice(
+				__(
+					'Edited image saved as a new attachment.',
+					'wp-admin-workspaces'
+				),
+				{ type: 'snackbar' }
+			);
+			onMutated?.();
+			if ( newAttachment?.id && onReplaced ) {
+				onReplaced( newAttachment.id );
+			} else {
+				onClose?.();
+			}
+		},
+		[ createSuccessNotice, onMutated, onReplaced, onClose ]
+	);
+
 	const onDelete = useCallback( async () => {
 		try {
 			await deleteEntityRecord( 'root', 'media', id, { force: true } );
@@ -188,8 +218,24 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 			gap="xl"
 			className="wp-admin-workspaces-app-media__details"
 		>
-			{ /* Preview slot — own sibling sub-component. #125 image editor lands here. */ }
-			<MediaPreview record={ record } />
+			{ /* Preview slot — own sibling sub-component. The #125 image editor
+			     replaces the static preview here while editing. */ }
+			{ isEditingImage ? (
+				<ImageEditor
+					record={ record }
+					onCancel={ () => setIsEditingImage( false ) }
+					onSaved={ onImageSaved }
+				/>
+			) : (
+				<MediaPreview
+					record={ record }
+					onEditImage={
+						record.media_type === 'image'
+							? () => setIsEditingImage( true )
+							: null
+					}
+				/>
+			) }
 
 			<Stack direction="column" gap="md" style={ { flex: 1 } }>
 				<DataForm
@@ -245,21 +291,37 @@ export default function MediaDetails( { id, onClose, onMutated } ) {
 /**
  * Attachment preview — image thumbnail, audio / video player, or a labeled
  * file-type tile. Its own sub-component so the #125 image-edit canvas can
- * replace / wrap it without touching the metadata form.
+ * replace / wrap it without touching the metadata form. For images, an
+ * "Edit Image" affordance (when `onEditImage` is supplied) swaps in the editor.
  *
- * @param {Object} root0
- * @param {Object} root0.record The attachment entity record.
+ * @param {Object}    root0
+ * @param {Object}    root0.record        The attachment entity record.
+ * @param {?Function} [root0.onEditImage] Enters the inline image editor; only
+ *                                        passed for image attachments.
  * @return {JSX.Element} The preview.
  */
-function MediaPreview( { record } ) {
+function MediaPreview( { record, onEditImage } ) {
 	const src =
 		record.media_details?.sizes?.medium?.source_url || record.source_url;
 
 	if ( record.media_type === 'image' ) {
 		return (
-			<div className="wp-admin-workspaces-app-media__preview">
-				<img src={ src } alt={ record.alt_text || '' } />
-			</div>
+			<Stack direction="column" gap="sm" align="flex-start">
+				<div className="wp-admin-workspaces-app-media__preview">
+					<img src={ src } alt={ record.alt_text || '' } />
+				</div>
+				{ onEditImage && (
+					<Button
+						tone="neutral"
+						variant="outline"
+						size="compact"
+						onClick={ onEditImage }
+					>
+						<Icon icon={ crop } size={ 16 } />
+						{ __( 'Edit Image', 'wp-admin-workspaces' ) }
+					</Button>
+				) }
+			</Stack>
 		);
 	}
 	if ( record.media_type === 'audio' ) {

@@ -11,6 +11,7 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -171,63 +172,68 @@ export default function ThemesApp( { config = {} } ) {
 			}
 			const isActive = item.status === 'active';
 			return (
-				<Stack
-					direction="column"
-					gap="md"
-					className="wp-admin-workspaces-app-themes__details-modal"
-				>
-					{ screenshotUrl( item ) && (
-						<img src={ screenshotUrl( item ) } alt="" />
-					) }
-					<Text variant="heading-md" render={ <h2 /> }>
-						{ item.name }
-					</Text>
-					<Text>{ item.description }</Text>
-					<Text variant="body-sm">
-						{ __( 'Version', 'wp-admin-workspaces' ) }:{ ' ' }
-						{ item.version }
-						{ item.author
-							? ' · ' +
-							  __( 'Author', 'wp-admin-workspaces' ) +
-							  ': ' +
-							  item.author
-							: '' }
-					</Text>
-					<Stack direction="row" justify="flex-end" gap="sm">
-						{ item.theme_uri && (
-							<Button
-								tone="neutral"
-								variant="outline"
-								render={
-									<a
-										href={ item.theme_uri }
-										target="_blank"
-										rel="noopener noreferrer"
-									/>
-								}
-							>
-								{ __( 'Theme site', 'wp-admin-workspaces' ) }
-							</Button>
+				<PortalThemeScope>
+					<Stack
+						direction="column"
+						gap="md"
+						className="wp-admin-workspaces-app-themes__details-modal"
+					>
+						{ screenshotUrl( item ) && (
+							<img src={ screenshotUrl( item ) } alt="" />
 						) }
-						<Button variant="minimal" onClick={ closeModal }>
-							{ __( 'Close', 'wp-admin-workspaces' ) }
-						</Button>
-						{ ! isActive && (
-							<Button
-								tone="brand"
-								variant="solid"
-								onClick={ async () => {
-									const ok = await activate( item );
-									if ( ok ) {
-										closeModal();
+						<Text variant="heading-md" render={ <h2 /> }>
+							{ item.name }
+						</Text>
+						<Text>{ item.description }</Text>
+						<Text variant="body-sm">
+							{ __( 'Version', 'wp-admin-workspaces' ) }:{ ' ' }
+							{ item.version }
+							{ item.author
+								? ' · ' +
+								  __( 'Author', 'wp-admin-workspaces' ) +
+								  ': ' +
+								  item.author
+								: '' }
+						</Text>
+						<Stack direction="row" justify="flex-end" gap="sm">
+							{ item.theme_uri && (
+								<Button
+									tone="neutral"
+									variant="outline"
+									render={
+										<a
+											href={ item.theme_uri }
+											target="_blank"
+											rel="noopener noreferrer"
+										/>
 									}
-								} }
-							>
-								{ __( 'Activate', 'wp-admin-workspaces' ) }
+								>
+									{ __(
+										'Theme site',
+										'wp-admin-workspaces'
+									) }
+								</Button>
+							) }
+							<Button variant="minimal" onClick={ closeModal }>
+								{ __( 'Close', 'wp-admin-workspaces' ) }
 							</Button>
-						) }
+							{ ! isActive && (
+								<Button
+									tone="brand"
+									variant="solid"
+									onClick={ async () => {
+										const ok = await activate( item );
+										if ( ok ) {
+											closeModal();
+										}
+									} }
+								>
+									{ __( 'Activate', 'wp-admin-workspaces' ) }
+								</Button>
+							) }
+						</Stack>
 					</Stack>
-				</Stack>
+				</PortalThemeScope>
 			);
 		},
 		[ activate ]

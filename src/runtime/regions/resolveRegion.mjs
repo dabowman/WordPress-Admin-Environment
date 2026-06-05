@@ -14,13 +14,19 @@
  *   - platform: shallow merge {...template, ...declaration}.
  *   - layout:   template's `default-style` flows in as `layout`/`style`-
  *               adjacent defaults; declaration's `layout` and `style`
- *               override per key. Spec §5.2 splits `layout` (geometry)
- *               from `style` (decoration); v1 templates ship a single
- *               `default-style` that blends both — task 6 will split
- *               them at the dispatch layer once platform-service routing
- *               replaces kind-based dispatch. For now, emit `style` with
- *               the merged token-aliased defaults so consumers continue
- *               reading one map.
+ *               override per key, merged into a single applied `style`
+ *               map. Spec §5.2 splits `layout` (geometry) from `style`
+ *               (decoration) at the AUTHORING layer — the workspace.json
+ *               schema constrains `layout` to a geometry allowlist while
+ *               `style` is free decoration — but both ultimately become
+ *               inline CSS on the same region element. The runtime
+ *               therefore deliberately collapses them into one `style`
+ *               map here (template `default-style` < decl `style` < decl
+ *               `layout`, per-key); `Region.js` applies that one map via
+ *               `toReactStyle`. There is no runtime geometry/decoration
+ *               split to perform — the split lives in the schema, not the
+ *               renderer. (Amends the prior "task 6 will split this"
+ *               deferral; see issue #71.)
  *   - regions:  child regions merge by name; declaration's child wins
  *               whole-child (no nested merge — children that want
  *               template inheritance instantiate a template themselves
@@ -77,6 +83,14 @@ export function resolveRegion( declaration, engineManifest, depth = 0, visitedTe
 	if ( template ) {
 		if ( declaration.role === undefined && template.role !== undefined ) {
 			resolved.role = template.role;
+		}
+
+		// `label` (accessible name) inherits from the template like `role`;
+		// a per-region declaration overrides. Lets an engine ship a sensible
+		// default name (e.g. "Command palette") so the region isn't named by
+		// its raw id slug. See spec §5.1.
+		if ( declaration.label === undefined && template.label !== undefined ) {
+			resolved.label = template.label;
 		}
 
 		if ( template.platform || declaration.platform ) {

@@ -18,6 +18,23 @@
  *   import { resolveIcon } from '../../runtime/config/iconMap';
  *   const Icon = resolveIcon( 'post' );
  *
+ * Published surface for out-of-tree engines: `src/index.js` mirrors
+ * `registerIcons` + `resolveIcon` onto `window.wpAdminWorkspaces.kernel`
+ * so an engine shipped as a standalone script (no bundler access to this
+ * module) can populate the registry. The registry is subscribable
+ * (`subscribeIcons`) so a consumer can re-resolve when a late / async
+ * engine registration arrives, mirroring `menuRendererRegistry`.
+ *
+ * Note: `subscribeIcons` is a published hook with NO current in-tree
+ * consumer — apps call `resolveIcon` at render but nothing re-renders them
+ * on a late icon-table registration (unlike `core:navigation`, which
+ * subscribes to `menuRendererRegistry`). The gap is intentional, not an
+ * oversight: a late-registering engine generally gates the whole app tree
+ * anyway, and the engine-extraction blocker (issue #73) was specifically
+ * the menu renderer. Wire a `useSyncExternalStore` consumer here if a
+ * loose-script engine ever needs already-painted apps to swap off the
+ * fallback icon.
+ *
  * Tests construct an isolated registry via `createIconRegistry()` so
  * per-suite state does not bleed across test files.
  */
@@ -30,20 +47,48 @@ const IS_DEV =
  * The module-level `registerIcons` / `resolveIcon` exports are thin
  * facades over a default instance.
  *
- * @return {{registerIcons: Function, resolveIcon: Function}} Isolated registry handle.
+ * @return {{registerIcons: Function, resolveIcon: Function, subscribeIcons: Function}} Isolated registry handle.
  */
 export function createIconRegistry() {
 	const registry = {};
 	let fallbackIcon = null;
 	const warned = new Set();
+	const listeners = new Set();
 
 	function registerIcons( table, options = {} ) {
-		if ( table && typeof table === 'object' ) {
+		const hadTable = table && typeof table === 'object';
+		if ( hadTable ) {
 			Object.assign( registry, table );
 		}
 		if ( options.fallback ) {
 			fallbackIcon = options.fallback;
 		}
+		// Notify subscribers so a consumer rendered before this (late /
+		// async) icon registration re-resolves. Mirrors the menu-renderer
+		// registry — engines normally register at module load before the
+		// kernel mounts, but an out-of-tree engine loaded as a loose
+		// script can arrive afterward.
+		if ( hadTable || options.fallback ) {
+			for ( const listener of listeners ) {
+				listener();
+			}
+		}
+	}
+
+	/**
+	 * Subscribe to icon registrations. The listener fires after every
+	 * `registerIcons` call that added a table or a fallback. Returns an
+	 * unsubscribe function. Shaped for `useSyncExternalStore`.
+	 *
+	 * @param {Function} listener Called with no args on each registration.
+	 * @return {Function} Unsubscribe.
+	 */
+	function subscribeIcons( listener ) {
+		if ( typeof listener !== 'function' ) {
+			return () => {};
+		}
+		listeners.add( listener );
+		return () => listeners.delete( listener );
 	}
 
 	function resolveIcon( name ) {
@@ -68,7 +113,7 @@ export function createIconRegistry() {
 		return fallbackIcon;
 	}
 
-	return { registerIcons, resolveIcon };
+	return { registerIcons, resolveIcon, subscribeIcons };
 }
 
 const defaultRegistry = createIconRegistry();
@@ -98,3 +143,17 @@ export const registerIcons = defaultRegistry.registerIcons;
  * @return {*} Icon component (or `null` when no fallback registered).
  */
 export const resolveIcon = defaultRegistry.resolveIcon;
+
+/**
+ * Subscribe to default-registry icon registrations.
+ *
+ * Mirrors `subscribeMenuRenderers`. A consumer that wants to re-resolve
+ * its icons when an out-of-tree engine registers its table after the
+ * kernel mounted (loose-script load order) subscribes through this.
+ * Engines registering before mount — the bundled engines via direct ESM
+ * import — are already present at first paint.
+ *
+ * @param {Function} listener Called with no args on each registration.
+ * @return {Function} Unsubscribe.
+ */
+export const subscribeIcons = defaultRegistry.subscribeIcons;

@@ -34,6 +34,7 @@ import { getApp, getEngine } from '../manifests';
 const IS_DEV =
 	typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
 const dsMismatchWarned = new Set();
+const unprefixedRefWarned = new Set();
 
 function warnDsMismatch( engineId, appId, engineDs, appDs ) {
 	if ( ! IS_DEV ) {
@@ -350,6 +351,24 @@ function resolveAppInstance( appRef ) {
 		// is the source.
 		if ( appRef.startsWith( 'core:' ) || appRef.startsWith( 'plugin:' ) ) {
 			return { id: appRef, source: appRef };
+		}
+		// Unprefixed string ref. The schema rejects these, but programmatic
+		// registration / hand-edited routes can slip one through — and an
+		// un-resolvable ref mounts nothing with no signal. Mirror the
+		// `iconMap` warn-on-miss pattern so the empty mount has a cause.
+		// `resolveAppInstance` runs in the `MountedApp` body, so dedup per
+		// ref (like the sibling `warnDsMismatch`) to avoid per-render spam.
+		if (
+			IS_DEV &&
+			typeof console !== 'undefined' &&
+			! unprefixedRefWarned.has( appRef )
+		) {
+			unprefixedRefWarned.add( appRef );
+			// eslint-disable-next-line no-console
+			console.warn(
+				`[wp-admin-workspaces] mountApp: app ref "${ appRef }" is not namespaced ` +
+					'(expected an `iframe:` / `core:` / `plugin:` prefix). The region will mount nothing.'
+			);
 		}
 		return null;
 	}
