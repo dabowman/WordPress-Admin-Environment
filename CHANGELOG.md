@@ -99,6 +99,13 @@ canonical in `docs/vocabulary-spec.md`.
   install would silently lose its active-workspace selection and re-enable a
   deliberately-disabled admin takeover. `uninstall.php` sweeps both namespaces.
 
+### Per-item menu icon suppression via `icon: null` (#72)
+
+A menu item bound to a screen can now render with **no icon** while keeping the screen binding, by declaring `icon: null` on the item. `bind_screens` switched from `isset` to `array_key_exists` for the `icon` re-fold, so an explicit `null` blocks inheritance where an absent key still inherits the screen's icon. Origin-sensitive: `null` authored over a lower origin's existing item is a tombstone (key-removal) → the screen icon re-inherits; suppression works only in the origin that first declares the item. See `docs/schema-sketch.md` §Drill-down icon inheritance for the worked before/after.
+
+- **Latent-bug fix / visual diff:** the renderer guard also changed from `icon={ resolveIcon( item.icon ) }` to `icon={ item.icon ? resolveIcon( item.icon ) : undefined }` (`SidebarDrilldownRenderer`). `resolveIcon` returns the engine **fallback** icon for any falsy name, so previously a screen-bound item whose screen had **no** icon rendered the generic fallback glyph; it now renders nothing — matching the documented "items without an icon render no icon" contract. Any item that was silently showing the fallback icon will now show no icon (expected, not a regression).
+- **Known limitation:** `icon: null` suppresses only the named `icon`; a screen that also carries an `iconSource` (the #127 arbitrary-icon escape hatch) still folds that in independently, and renderers prefer `iconSource` over `icon`, so such an item keeps an icon. The two are mutually exclusive in practice. Documented in the schema `icon` description + schema-sketch.
+
 ### Gutenberg dependency version-gated (WordPress 7.0)
 
 The hard Gutenberg requirement is now conditional on the WordPress version. The dependency was never about Gutenberg features — it was about the `wp-private-apis` allowlist: `@wordpress/ui` overlay components transitively opt into private APIs via `__dangerousOptInToUnstableAPIsOnlyForCoreModules`, and WordPress 6.7–6.9 core's allowlist excludes `@wordpress/theme` / `@wordpress/ui` / `@wordpress/dataviews`, so only the Gutenberg plugin's override unlocked them.
