@@ -4,6 +4,7 @@ import { Button, InputControl, Stack, Text } from '@wordpress/ui';
 import { SelectControl, Modal } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 
 /**
  * Add or edit a single menu item (`root/menuItem`).
@@ -183,153 +184,170 @@ export function MenuItemModal( {
 			}
 			onRequestClose={ onClose }
 		>
-			<Stack direction="column" gap="md">
-				<SelectControl
-					label={ __( 'Item type', 'wp-admin-workspaces' ) }
-					value={ kind }
-					options={ [
-						{
-							value: 'custom',
-							label: __( 'Custom link', 'wp-admin-workspaces' ),
-						},
-						{
-							value: 'post_type',
-							label: __( 'Page or post', 'wp-admin-workspaces' ),
-						},
-						{
-							value: 'taxonomy',
-							label: __(
-								'Category or tag',
-								'wp-admin-workspaces'
-							),
-						},
-					] }
-					onChange={ ( value ) => {
-						setKind( value );
-						setObjectId( '' );
-						setObject( value === 'taxonomy' ? 'category' : 'page' );
-					} }
-					__nextHasNoMarginBottom
-				/>
-
-				{ kind === 'post_type' && (
+			<PortalThemeScope>
+				<Stack direction="column" gap="md">
 					<SelectControl
-						label={ __( 'Object', 'wp-admin-workspaces' ) }
-						value={ object }
+						label={ __( 'Item type', 'wp-admin-workspaces' ) }
+						value={ kind }
 						options={ [
 							{
-								value: 'page',
-								label: __( 'Pages', 'wp-admin-workspaces' ),
-							},
-							{
-								value: 'post',
-								label: __( 'Posts', 'wp-admin-workspaces' ),
-							},
-						] }
-						onChange={ ( value ) => {
-							setObject( value );
-							setObjectId( '' );
-						} }
-						__nextHasNoMarginBottom
-					/>
-				) }
-
-				{ kind === 'taxonomy' && (
-					<SelectControl
-						label={ __( 'Object', 'wp-admin-workspaces' ) }
-						value={ object }
-						options={ [
-							{
-								value: 'category',
+								value: 'custom',
 								label: __(
-									'Categories',
+									'Custom link',
 									'wp-admin-workspaces'
 								),
 							},
 							{
-								value: 'post_tag',
-								label: __( 'Tags', 'wp-admin-workspaces' ),
+								value: 'post_type',
+								label: __(
+									'Page or post',
+									'wp-admin-workspaces'
+								),
+							},
+							{
+								value: 'taxonomy',
+								label: __(
+									'Category or tag',
+									'wp-admin-workspaces'
+								),
 							},
 						] }
 						onChange={ ( value ) => {
-							setObject( value );
+							setKind( value );
 							setObjectId( '' );
+							setObject(
+								value === 'taxonomy' ? 'category' : 'page'
+							);
 						} }
 						__nextHasNoMarginBottom
 					/>
-				) }
 
-				{ kind !== 'custom' && (
-					<SelectControl
-						label={ __( 'Select', 'wp-admin-workspaces' ) }
-						value={ objectId }
-						options={ relationalOptions }
-						onChange={ ( value ) => setObjectId( value ) }
-						__nextHasNoMarginBottom
-					/>
-				) }
+					{ kind === 'post_type' && (
+						<SelectControl
+							label={ __( 'Object', 'wp-admin-workspaces' ) }
+							value={ object }
+							options={ [
+								{
+									value: 'page',
+									label: __( 'Pages', 'wp-admin-workspaces' ),
+								},
+								{
+									value: 'post',
+									label: __( 'Posts', 'wp-admin-workspaces' ),
+								},
+							] }
+							onChange={ ( value ) => {
+								setObject( value );
+								setObjectId( '' );
+							} }
+							__nextHasNoMarginBottom
+						/>
+					) }
 
-				{ kind === 'custom' && (
+					{ kind === 'taxonomy' && (
+						<SelectControl
+							label={ __( 'Object', 'wp-admin-workspaces' ) }
+							value={ object }
+							options={ [
+								{
+									value: 'category',
+									label: __(
+										'Categories',
+										'wp-admin-workspaces'
+									),
+								},
+								{
+									value: 'post_tag',
+									label: __( 'Tags', 'wp-admin-workspaces' ),
+								},
+							] }
+							onChange={ ( value ) => {
+								setObject( value );
+								setObjectId( '' );
+							} }
+							__nextHasNoMarginBottom
+						/>
+					) }
+
+					{ kind !== 'custom' && (
+						<SelectControl
+							label={ __( 'Select', 'wp-admin-workspaces' ) }
+							value={ objectId }
+							options={ relationalOptions }
+							onChange={ ( value ) => setObjectId( value ) }
+							__nextHasNoMarginBottom
+						/>
+					) }
+
+					{ kind === 'custom' && (
+						<InputControl
+							label={ __( 'URL', 'wp-admin-workspaces' ) }
+							value={ url }
+							onChange={ ( e ) =>
+								setUrl(
+									typeof e === 'string'
+										? e
+										: e?.target?.value || ''
+								)
+							}
+						/>
+					) }
+
 					<InputControl
-						label={ __( 'URL', 'wp-admin-workspaces' ) }
-						value={ url }
+						label={ __(
+							'Navigation label',
+							'wp-admin-workspaces'
+						) }
+						value={ title }
 						onChange={ ( e ) =>
-							setUrl(
+							setTitle(
 								typeof e === 'string'
 									? e
 									: e?.target?.value || ''
 							)
 						}
 					/>
-				) }
 
-				<InputControl
-					label={ __( 'Navigation label', 'wp-admin-workspaces' ) }
-					value={ title }
-					onChange={ ( e ) =>
-						setTitle(
-							typeof e === 'string' ? e : e?.target?.value || ''
-						)
-					}
-				/>
+					<InputControl
+						type="number"
+						label={ __( 'Order', 'wp-admin-workspaces' ) }
+						value={ order }
+						onChange={ ( e ) =>
+							setOrder(
+								typeof e === 'string'
+									? e
+									: e?.target?.value || ''
+							)
+						}
+					/>
 
-				<InputControl
-					type="number"
-					label={ __( 'Order', 'wp-admin-workspaces' ) }
-					value={ order }
-					onChange={ ( e ) =>
-						setOrder(
-							typeof e === 'string' ? e : e?.target?.value || ''
-						)
-					}
-				/>
+					{ kind !== 'custom' && ! objectId && (
+						<Text className="wp-admin-workspaces-app__muted">
+							{ __(
+								'Pick an object to link this item to.',
+								'wp-admin-workspaces'
+							) }
+						</Text>
+					) }
 
-				{ kind !== 'custom' && ! objectId && (
-					<Text className="wp-admin-workspaces-app__muted">
-						{ __(
-							'Pick an object to link this item to.',
-							'wp-admin-workspaces'
-						) }
-					</Text>
-				) }
-
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						loading={ isSaving }
-						disabled={ ! canSave || isSaving }
-					>
-						{ isNew
-							? __( 'Add item', 'wp-admin-workspaces' )
-							: __( 'Save', 'wp-admin-workspaces' ) }
-					</Button>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button variant="minimal" onClick={ onClose }>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ handleSave }
+							loading={ isSaving }
+							disabled={ ! canSave || isSaving }
+						>
+							{ isNew
+								? __( 'Add item', 'wp-admin-workspaces' )
+								: __( 'Save', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		</Modal>
 	);
 }

@@ -6,6 +6,32 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Modal overlays inherit the originating region theme (#74)
+
+Region-scoped theming previously stopped at `document.body` portals. The
+`RegionThemedSubtree` seam (`WpdsThemeProvider`) had already fixed the
+inherited-foreground leak and Popover-portaled overlays (per-instance
+`Popover.Slot`), but `@wordpress/components` `Modal` uses its own body
+portal — so a Modal opened from a region themed away from root (e.g. light
+content over a dark developer-admin shell) still painted the shell-root
+theme on both background and foreground.
+
+- New kernel seam `<PortalThemeScope>` (`src/runtime/styles/ThemeProviderHost.js`):
+  `<ScopedThemeProvider>` now publishes the active region/app `styles` seeds
+  onto a `ScopedStylesContext` (React context propagates through portals);
+  `PortalThemeScope` replays those scoped providers inside a modal portal,
+  re-establishing the region's `--wpds-*` tokens + foreground. DS-neutral
+  (the context carries opaque `styles` objects; WPDS re-emission happens via
+  the replayed engine provider). No `regionId` threading; no-op when no
+  region themes away from root.
+- Wrapped the shared DataViews `RenderModal`s (`createBulkConfirmModal` /
+  `BulkEditModal` / `EntityFormModal`) so all six entity-CRUD list apps
+  inherit it, plus the app-owned Modals: taxonomy term, media details,
+  plugin `.zip` upload, themes details (the hand-rolled DataViews
+  `RenderModal`, not a shared factory), and menu name/item/delete.
+- Pure stack-accumulation helper `appendScopedStyles` added to
+  `themeScope.mjs` and pinned by `tests/runtime/theme-provider-host.test.mjs`.
+
 ### Region/runtime composition hardening (issue #71)
 
 Five region/runtime review items from the V2.M2 reviews, addressed together:

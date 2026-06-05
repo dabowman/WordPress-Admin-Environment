@@ -18,6 +18,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { upload } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
@@ -636,13 +637,15 @@ function MediaDetailsModal( { id, onClose, onMutated, onReplaced } ) {
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<MediaDetails
-				key={ id }
-				id={ id }
-				onClose={ onClose }
-				onMutated={ onMutated }
-				onReplaced={ onReplaced }
-			/>
+			<PortalThemeScope>
+				<MediaDetails
+					key={ id }
+					id={ id }
+					onClose={ onClose }
+					onMutated={ onMutated }
+					onReplaced={ onReplaced }
+				/>
+			</PortalThemeScope>
 		</Modal>
 	);
 }
