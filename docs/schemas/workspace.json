@@ -507,9 +507,9 @@
 					"description": "Optional override of the bound screen's label. Required for items not bound to a screen (group containers, external links). When set on an item that is bound to a screen, renames the entry in the menu only — the screen itself is untouched."
 				},
 				"icon": {
-					"type": "string",
+					"type": [ "string", "null" ],
 					"minLength": 1,
-					"description": "Optional override of the bound screen's icon. Required for items not bound to a screen. Children nested inside a parent menu item do NOT inherit the parent's icon — each item renders its own icon, and items without an icon render no icon. See schema-sketch.md §Drill-down icon inheritance."
+					"description": "Optional override of the bound screen's icon. Required for items not bound to a screen. Set to `null` to explicitly suppress the icon on an item that IS bound to a screen — unlike an absent key (which inherits the screen's icon), an explicit `null` renders no icon. (Authored in a trust-tier origin where the item is first declared; setting `null` over a lower origin's existing item tombstones the key, which lets the screen icon re-inherit.) NOTE: `icon: null` suppresses only the named `icon`; if the bound screen ALSO carries an `iconSource` (the arbitrary-icon escape hatch), that still folds in independently and renderers prefer it over `icon`, so the item keeps an icon — to fully suppress, also clear `iconSource`. Children nested inside a parent menu item do NOT inherit the parent's icon — each item renders its own icon, and items without an icon render no icon. See schema-sketch.md §Drill-down icon inheritance."
 				},
 				"iconSource": {
 					"$ref": "#/$defs/iconSource",
@@ -904,6 +904,11 @@
 				"role": {
 					"$ref": "#/$defs/ariaRole",
 					"description": "ARIA role for the region. Required when no template is specified; optional override when a template is. See spec §5.1."
+				},
+				"label": {
+					"type": "string",
+					"minLength": 1,
+					"description": "Human-readable accessible name for the region's landmark / dialog. The renderer exposes it via `aria-label` (persistent regions) or `aria-labelledby` (modal regions). When omitted, a modal region's accessible name falls back to the region id slug (`editor/inspector`) so the dialog still has a name, but a persistent region emits no accessible name at all and relies on its landmark `role` (labeling a landmark with a raw slug reads worse than leaving it unlabeled). Localize before authoring. See spec §5.1."
 				},
 				"layout": {
 					"$ref": "#/$defs/regionLayout",

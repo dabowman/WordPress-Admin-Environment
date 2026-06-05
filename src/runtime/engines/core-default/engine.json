@@ -265,10 +265,12 @@
 		},
 		"detail": {
 			"template": "core:detail",
+			"label": "Detail",
 			"routing": { "route-key": "detail", "mode": "mirror" }
 		},
 		"command-palette": {
 			"template": "core:overlay",
+			"label": "Command palette",
 			"routing": { "route-key": "palette" },
 			"platform": {
 				"core:triggerable": true,

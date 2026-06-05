@@ -160,6 +160,7 @@
 		},
 		"command-palette": {
 			"role": "dialog",
+			"label": "Command palette",
 			"routing": { "route-key": "palette" },
 			"platform": {
 				"core:modal": true,

@@ -19,6 +19,7 @@ import {
 	invalidateEntityElementCounts,
 } from '../_shared/dataviews/useEntityElementCounts';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
+import ReassignSelect from './ReassignSelect';
 import {
 	createBulkEditModal,
 	fieldsWithNoChange,
@@ -313,12 +314,12 @@ export default function UsersApp( { config = {} } = {} ) {
 					);
 				} else if ( targets.length === 1 ) {
 					body = __(
-						'Delete this user permanently? Their content will be reassigned to you.',
+						'Delete this user permanently? Choose who to reassign their content to below.',
 						'wp-admin-workspaces'
 					);
 				} else {
 					body = __(
-						'Delete these users permanently? Their content will be reassigned to you.',
+						'Delete these users permanently? Choose who to reassign their content to below.',
 						'wp-admin-workspaces'
 					);
 				}
@@ -338,10 +339,22 @@ export default function UsersApp( { config = {} } = {} ) {
 				);
 			},
 			confirmLabel: __( 'Delete', 'wp-admin-workspaces' ),
-			mutate: ( item ) =>
+			// Reassign target defaults to the acting user (the historic
+			// behavior); the in-modal `ReassignSelect` lets an admin pick a
+			// different account. The chosen id is threaded back as the second
+			// arg to `mutate`.
+			initialControlState: () => currentUserId,
+			renderControls: ( { targets, value, setValue } ) => (
+				<ReassignSelect
+					targets={ targets }
+					value={ value }
+					setValue={ setValue }
+				/>
+			),
+			mutate: ( item, reassignTo ) =>
 				deleteEntityRecord( 'root', 'user', item.id, {
 					force: true,
-					reassign: currentUserId,
+					reassign: reassignTo ?? currentUserId,
 				} ),
 			onSettled: ( { targets, results, failed } ) => {
 				invalidateResolution( 'getEntityRecords', [
