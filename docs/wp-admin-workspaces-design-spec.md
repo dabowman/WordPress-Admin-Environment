@@ -800,7 +800,14 @@ Authors bring any DTCG-conformant primitive token system in `tokens.json`. WordP
 
 One brand token in tokens.json fans out to three destinations: WPDS surface (admin), legacy admin/components (compat bridge), frontend (`--wp--preset--*`). Re-branding edits one token.
 
-`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge via the same cascade as `workspace.json` (§10).
+`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge with the same *mechanics* as `workspace.json` (§10) — scalar replace, object deep-merge — but over a **different, intentionally shorter, origin set**.
+
+**Tokens cascade order (and why it deviates from §10).** The token cascade is `core → plugin → theme → site` (loaded low→high, deep-merged), against the workspace.json cascade's `core → engine → plugin → site → role → user`. Two deliberate differences:
+
+- **Tokens insert a `theme` origin between `plugin` and `site`.** Tokens are a design-system primitive the active block theme legitimately owns — a theme's `tokens.json` rebrands the admin to match its front end — so the theme sits above the plugin baseline but below explicit site choices. The workspace.json cascade has no theme origin because workspace *structure* (screens / menu / permissions) is not the theme's concern.
+- **Tokens drop the `engine`, `role`, and `user` origins.** Tokens are pure visual primitives with no security surface and no per-role / per-user authoring path today, so there is nothing to gate or personalize at those tiers. (Per-region / per-app visual overrides live in `workspace.json.styles` — §9.2 — not in `tokens.json`.) These origins can be added later without disturbing the lower ones.
+
+Tokens are **additive, not restrict-only**: a higher origin overrides a value but cannot tombstone a key the baseline ships. The resolved tree is exposed to extensions via the final `wp_admin_workspaces_tokens` filter (symmetric with `workspace.json`'s `wp_admin_workspaces_data`; the per-origin loader hook is `wp_admin_workspaces_plugin_tokens`). Implementation: `WP_Admin_Workspaces_Tokens::resolve()` + `src/runtime/tokens/tokensResolver.mjs`.
 
 ### 9.2 WPDS-native styles
 

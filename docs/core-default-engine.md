@@ -179,7 +179,6 @@ For `core:default`, region-state objects accept:
 |-------------|---------|-------------------------|-----------------------------------------------------------------------------------------------|
 | `hidden`    | boolean | every region            | Hide via CSS (`display: none` or transform-offscreen). Mount tree unchanged.                  |
 | `compact`   | boolean | toolbar, sidebar        | Reduced height/width chrome. Sidebar collapses to icons; toolbar shrinks to back + save only. |
-| `minimal`   | boolean | toolbar                 | Same as `compact` but stricter — only essential affordances.                                   |
 | `fullWidth` | boolean | content                 | Allow content to expand into the space normally occupied by hidden regions.                    |
 
 Other engines define their own vocabulary. `core:desktop` adds `pinned`, `floating`, `tiled` for dock + window-frame regions. `core:single-pane` adds `drawerOpen`.
@@ -217,6 +216,38 @@ function resolveMode( screenId, engineManifest, screens ) {
 - **`modal` mode is the only one that doesn't change chrome state.** Use it for overlays only; don't recycle the name for other purposes.
 - **Don't bake content padding into the region mount.** `core:default` renders the app mount (`.wp-admin-workspaces-region__app`) flush — no padding. The mount is non-addressable (no template hook, no `regions[id].style` path), so a default there can't be removed per-app and forces full-bleed apps (DataViews, iframes) to opt out. Apps own their inset via the shared `wp-admin-workspaces-app--inset` utility (themeable through `styles.chrome.content.inset`); the kernel special-cases no app for layout. See `docs/engines-and-design-systems.md` → "Region content padding."
 - **Put a region's whole flat box model in `default-style`; reserve `index.css` for what inline style can't express.** Template `default-style` is emitted as inline style on the region wrapper and is the *only* surface `regions[id].style` overrides can merge into, so every flat `property: value` (layout literals included) belongs there. `index.css` is for selectors / pseudo-classes / descendant targeting / cascade-layer fixes / queries only. Within `default-style`, give a property a named chrome slot (`var(--wp-admin-workspaces--chrome--…, var(--wpds-…))`) only when it's worth a stable by-name author knob; leave design-system-tracking values (radius, elevation, rhythm) as bare `--wpds-*`, and layout mechanics as literals. Full value-tier model + the JSON-vs-CSS rationale in `docs/engines-and-design-systems.md` → "`default-style` value tiers + what's themeable."
+
+## Region slotting
+
+`Layout.js` dispatches the resolved top-level regions into the chrome shape via the pure `slotRegions.mjs` helper (node-tested by `tests/runtime/core-default-slot-regions.test.mjs`). Slot assignment is by **role**, with the region id as a tiebreaker — not by literal id — so the engine's `specializes-roles` declaration actually pays off:
+
+| Slot      | Claimed by role | id tiebreaker |
+|-----------|-----------------|---------------|
+| `toolbar` | `banner`        | `toolbar`     |
+| `sidebar` | `navigation`    | `sidebar`     |
+| `content` | `main`          | `content`     |
+| `detail`  | `complementary` | `detail`      |
+| `preview` | *(no role)*     | `preview` (id-only — there is no `core:preview` template) |
+
+Matching order per slot: (1) role + id, (2) role alone (any id), (3) id-only fallback. A workspace that names its main region `dashboard` (role `main`) lands in the content slot instead of falling through to the straggler bucket.
+
+Modal regions (`platform.core:modal` / `role: dialog`, e.g. the command palette) always render in the overlay layer. Of the remaining chrome regions, **dynamic-children hosts render inside the content (`areas`) row** — that is the engine's real mount point for a `core:dashboard-grid` region (`platform.core:dynamic-children: true`). Everything else (the notices banners, which fix-position themselves) renders as a straggler at the layout root.
+
+> **Body-mounted grids must use the `*-dashboard-grid` id convention.** `slotRegions.mjs` routes a body-mounted grid into the content row by **platform service** (`hostsDynamicChildren`), but the engine's padding-reset rule in `index.css` keys off the **id suffix**: `.wp-admin-workspaces-region[data-region-id$="dashboard-grid"] .wp-admin-workspaces-region__app { padding: 0 }`. The two signals only agree when the region id ends in `dashboard-grid`. A custom `core:dynamic-children` host whose id does **not** end in `dashboard-grid` still mounts in the content row, but keeps the default app inset, so its grid won't reach the card edges. Name custom body-grid hosts `<something>-dashboard-grid` to get the flush mount. (The bundled `core:dashboard-grid` template already conforms.)
+
+## Chrome → WPDS bridge (asymmetric by design)
+
+`compileStyles.mjs` `CHROME_WPDS_BINDINGS` re-themes `@wordpress/ui` components inside a chrome surface by scoping `--wpds-*` overrides to that surface's container selector. The table covers **four** surfaces only:
+
+| `chrome.<surface>` | Bound? | Why |
+|--------------------|--------|-----|
+| `canvas`           | ✅ (`foreground`) | `@wordpress/ui` content rendered directly under the layout root. `canvas.background` is intentionally *not* bound — it would darken the elevated `core:main` / `core:detail` cards (see the inline note in `compileStyles.mjs`). |
+| `sidebar`          | ✅ (`foreground`, `item.*`) | Nav + site-hub interactive chrome. |
+| `toolbar`          | ✅ (`foreground`, `foreground-active`) | Topbar interactive chrome. |
+| `site-hub`         | ✅ (`foreground`) | Site-hub foreground. |
+| `content`          | ❌ **unbound** | The content region is the elevated **card** — its surface is WPDS-default (`--wpds-color-bg-surface-neutral`) on purpose. App content inside it should read the standard WPDS palette, not a re-themed chrome palette. Authoring `chrome.content.*` slots still feeds the engine `index.css` / template `default-style` (e.g. `content.inset`, `content.card-*`), but it does **not** retheme `@wordpress/ui` inside the content region. |
+
+So `chrome.content.*` is consumed by templates and CSS (card background/radius/shadow/inset) but is **not** in the WPDS-bridge table — authoring it won't shift `@wordpress/ui` token values inside the content card. This asymmetry is deliberate (content = neutral card surface); it is noted here so authors don't expect content-scoped `@wordpress/ui` re-theming.
 
 ## Cascade implications
 
