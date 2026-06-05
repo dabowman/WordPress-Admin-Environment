@@ -2,6 +2,8 @@
 
 > Audited 2026-05-29 against WordPress 7.0 core. Workspace app: `src/apps/site-health/`. Classic counterpart: `wp-admin/site-health.php` + `wp-admin/site-health-info.php` + `wp-admin/includes/class-wp-site-health.php` + `wp-admin/includes/class-wp-debug-data.php` + `wp-admin/js/site-health.js`.
 
+> **Update (issue #124, 2026-06-04):** The workspace REST wrappers B1/B2/B3/B7 are now SHIPPED. `includes/class-wp-admin-workspaces-site-health-rest.php` adds `GET /wp-admin-workspaces/v1/site-health/tests` (runs the direct tests + returns the async registry, honoring `site_status_tests` so plugin tests flow through) and `GET /wp-admin-workspaces/v1/site-health/info` (the full `WP_Debug_Data::debug_data()` report with `private` flags preserved), both gated on `view_site_health_checks`. The app now runs the **direct tests**, **enumerates async tests dynamically** (no hardcoded list), and adds an **Info tab** (accordion + private-omitting copy button). Roadmap A-P2 #28 ([roadmap.md](roadmap.md)) is done. The matrix rows below are pre-#124 and partly superseded — health-score donut / severity grouping / per-test actions / category badge remain open (see Recommendations P1 #4, P2 #6-7).
+
 ## Verdict
 
 **Major gaps** — with a structural component that is **Blocked by API**.
