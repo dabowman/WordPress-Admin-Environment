@@ -26,7 +26,6 @@ const {
 	autofocusSelector,
 	persistsAcrossNavigation,
 	isTriggerable,
-	triggerShortcut,
 	wantsDirtyState,
 	blocksNavigationOnDirty,
 	hostsDynamicChildren,
@@ -82,13 +81,6 @@ ok(
 ok(
 	'isTriggerable: from platform',
 	isTriggerable( { platform: { 'core:triggerable': true } } ) === true
-);
-
-ok(
-	"triggerShortcut: from platform['core:trigger'].shortcut",
-	triggerShortcut( {
-		platform: { 'core:trigger': { shortcut: 'Mod+K' } },
-	} ) === 'Mod+K'
 );
 
 ok(
@@ -163,14 +155,12 @@ const services = getPlatformServices( {
 		'core:persists-across-navigation': false,
 		'core:dirty-state': true,
 		'core:block-navigation-on-dirty': true,
-		'core:trigger': { shortcut: 'Mod+S' },
 	},
 } );
 ok( 'aggregate: isModal', services.isModal === true );
 ok( 'aggregate: dismissTriggers', eq( services.dismissTriggers, [ 'Escape' ] ) );
 ok( 'aggregate: autofocusSelector', services.autofocusSelector === '#x' );
 ok( 'aggregate: triggerable', services.isTriggerable === true );
-ok( 'aggregate: shortcut', services.triggerShortcut === 'Mod+S' );
 ok( 'aggregate: dirty-state', services.wantsDirtyState === true );
 ok( 'aggregate: block-on-dirty', services.blocksNavigationOnDirty === true );
 ok( 'aggregate: placement overlay', services.placement === 'overlay' );

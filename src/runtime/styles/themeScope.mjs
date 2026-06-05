@@ -88,6 +88,30 @@ export function hasThemeContent( styles ) {
 }
 
 /**
+ * Append a subtree's `styles` seed to the inherited scoped-styles stack,
+ * but only when the seed actually carries theme content. Used by
+ * `<ScopedThemeProvider>` to publish the active region/app seeds onto a
+ * React context that `<PortalThemeScope>` later replays inside a
+ * body-portaled overlay (Modal) — which escapes the region's `--wpds-*`
+ * DOM scope and would otherwise paint with the workspace *root* theme.
+ *
+ * Returns the inherited stack unchanged when the seed is empty (the
+ * common "this region doesn't theme away from root" case) so no extra
+ * array identity is created and the no-op path stays allocation-free.
+ *
+ * @param {Array} inherited Current scoped-styles stack (outermost first).
+ * @param {*}     styles    Subtree styles seed.
+ * @return {Array} The next stack (a new array only when `styles` has content).
+ */
+export function appendScopedStyles( inherited, styles ) {
+	const base = Array.isArray( inherited ) ? inherited : [];
+	if ( ! hasThemeContent( styles ) ) {
+		return base;
+	}
+	return [ ...base, styles ];
+}
+
+/**
  * Translate a `subtrees` map key into a CSS selector that walks under
  * the kernel's scope wrapper. Two key shapes supported today:
  *   - `region:<id>` → `[data-region-id="<id>"]`

@@ -548,6 +548,42 @@ WPAS_Shim_Test_Runner::assert_eq(
 	'#/posts/drafts'
 );
 
+// Explicit `icon: null` on a screen-bound menu item suppresses the
+// inherited screen icon (#72). `bind_screens` uses `array_key_exists`,
+// not `isset`, so a present-but-null key blocks the re-fold. The item is
+// first declared in this (plugin) origin, so the null survives the
+// cascade rather than being tombstone-removed.
+WP_Admin_Workspaces_Menu_Items::reset();
+WP_Admin_Workspaces_Resolver::reset_request_memo();
+if ( class_exists( 'WP_Admin_Workspaces_Cache' ) ) {
+	WP_Admin_Workspaces_Cache::flush();
+}
+$plugin_doc_noicon                          = wpas_shim_test_v3_doc();
+$plugin_doc_noicon['menu']['posts']['icon'] = null;
+$origins_noicon                             = array(
+	'core'   => array(),
+	'engine' => array(),
+	'plugin' => $plugin_doc_noicon,
+	'site'   => array(),
+	'role'   => array(),
+	'user'   => array(),
+);
+$resolved_noicon                            = WP_Admin_Workspaces_Resolver::resolve_with( $origins_noicon );
+WPAS_Shim_Test_Runner::assert_true(
+	'screen-binding: explicit null icon survives the cascade',
+	array_key_exists( 'icon', $resolved_noicon['menu']['posts'] )
+);
+WPAS_Shim_Test_Runner::assert_true(
+	'screen-binding: explicit null icon suppresses screen-icon re-fold',
+	$resolved_noicon['menu']['posts']['icon'] === null
+);
+// Control: a sibling item with no icon key still inherits the screen icon.
+WPAS_Shim_Test_Runner::assert_eq(
+	'screen-binding: absent icon key still inherits screen icon',
+	$resolved_noicon['menu']['dashboard']['icon'],
+	'dashboard'
+);
+
 // `hidden: true` on screen propagates to menu item.
 $plugin_doc_hidden                                = wpas_shim_test_v3_doc();
 $plugin_doc_hidden['screens']['posts']['hidden']  = true;

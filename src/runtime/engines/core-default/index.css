@@ -260,12 +260,6 @@
 	) !important;
 }
 
-/* Minimal — stricter than compact. Currently only toolbar consumes it. */
-.wp-admin-workspaces-layout
-	.wp-admin-workspaces-region--toolbar[data-mode-minimal="true"] {
-	padding-block: var(--wpds-dimension-padding-xs) !important;
-}
-
 /* Full-width — content / main region expands to claim the space normally
  * occupied by sibling chrome regions. The flex-basis flip works with the
  * default flex-row arrangement; engines using grid layouts override. */
