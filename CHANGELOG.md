@@ -187,7 +187,7 @@ Provenance of notable subsystems (for archaeology only — not load-bearing):
 ### Known gaps
 
 - `core:desktop-iframe` command-palette harvest (chromeless-bridge sub-system 11) ships as a stub — the parent palette consumer isn't wired yet.
-- No JSDOM mount test for the React kernel (`<Region>` / `<ThemeProviderHost>`); full component render is a manual browser pass. Tracked in issue #30.
+- JSDOM mount test for the React kernel (`<Region>` / `<ThemeProviderHost>`) is **partially** closed (issue #30). `tests/runtime/kernel-smoke.test.mjs` now pins the reader-level decisions the bug class targets — landing-screen → mounted app (`matchRoute( routes, default-route )`), nav prune ≥ 1, command-palette "Go to <screen>" entries, and the JS-side capability role matrix (mirrors `run-cap-gating-smoke.php`) — using the same pure modules the kernel + apps import. Still open: a literal React-DOM mount asserting `kernel(config)` renders without throwing + token emission reaching the DOM through the engine's `ThemeProvider` (token→CSS-string already pinned by `theme-provider-host.test.mjs`). That half needs `react`/`jsdom` devDeps + an importer-rewrite loader for the `@wordpress/*` externals, neither present in the plain-`node` CI today.
 - `@wordpress/components` `Modal` overlays (DataViews `RenderModal`, bulk-confirm) inherit root theme on bg + color — not covered by the `RegionThemedSubtree` seam. Logged in `docs/feedback.md`.
 
 ## [1.0.0-beta.1] — 2026-04-30
