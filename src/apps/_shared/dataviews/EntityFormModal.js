@@ -9,6 +9,7 @@ import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { useEntitySave } from '../forms/useEntitySave';
 import { buildSubmitPayload, firstItem } from './entityFormPayload.mjs';
+import { PortalThemeScope } from '../../../runtime/styles/ThemeProviderHost';
 
 /**
  * The shared host for **Modal Edit** and **Modal Create** of a single entity
@@ -292,29 +293,35 @@ export function createEntityFormModal( {
 
 		if ( mode === 'create' ) {
 			return (
-				<CreateBody
-					item={ item }
-					closeModal={ closeModal }
-					onActionPerformed={ onActionPerformed }
-				/>
+				<PortalThemeScope>
+					<CreateBody
+						item={ item }
+						closeModal={ closeModal }
+						onActionPerformed={ onActionPerformed }
+					/>
+				</PortalThemeScope>
 			);
 		}
 		if ( item ) {
 			return (
-				<EditBody
-					key={ item.id }
-					item={ item }
-					closeModal={ closeModal }
-					onActionPerformed={ onActionPerformed }
-				/>
+				<PortalThemeScope>
+					<EditBody
+						key={ item.id }
+						item={ item }
+						closeModal={ closeModal }
+						onActionPerformed={ onActionPerformed }
+					/>
+				</PortalThemeScope>
 			);
 		}
 		// Edit with no subject row (shouldn't happen via DataViews) — render a
 		// spinner rather than throwing.
 		return (
-			<div className="wp-admin-workspaces-app__center">
-				<Spinner />
-			</div>
+			<PortalThemeScope>
+				<div className="wp-admin-workspaces-app__center">
+					<Spinner />
+				</div>
+			</PortalThemeScope>
 		);
 	};
 }
