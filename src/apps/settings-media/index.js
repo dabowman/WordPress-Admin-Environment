@@ -1,38 +1,39 @@
 import './index.css';
 import { __ } from '@wordpress/i18n';
 import { EntityDataForm } from '../_shared/forms/EntityDataForm';
+import { rangeField } from '../_shared/forms/controls/RangeControl';
+
+// Upper bounds for the slider per dimension class — generous enough to cover
+// the realistic range of registered image sizes while keeping the slider
+// usable. The number input rides alongside the slider (`RangeControl`'s
+// `withInputField` is on by default), so a value can still be typed exactly.
+const DIMENSION_MAX = 2048;
 
 /**
- * Coerce an image-dimension value to a non-negative integer.
- *
- * The DataForm `integer` control can emit an empty string or a negative number
- * when the field is cleared. WordPress treats a dimension of 0 as "do not
- * generate this size", but a negative value is meaningless and the REST schema
- * floor (registered server-side at `minimum: 0`) would 400 it. Clamp client-side
- * to a floor of 0 so Save can never push a negative dimension.
- *
- * @param {*} value Raw control value (number or string).
- * @return {number} Non-negative integer (>= 0), or 0 when empty/invalid.
- */
-const clampDimension = ( value ) => {
-	const n = parseInt( value, 10 );
-	return Number.isInteger( n ) && n > 0 ? n : 0;
-};
-
-/**
- * Build an integer dimension field def with the non-negative clamp.
+ * Build a slider-backed image-dimension field. The shared `rangeField` clamps
+ * to `[0, max]` and rounds to an integer in its `setValue`, so a cleared /
+ * out-of-range value can never push a negative dimension (the REST schema floor
+ * is `minimum: 0`; 0 means "do not generate this size"). The slider replaces the
+ * bare numeric input while keeping exact entry via the adjacent number field.
  *
  * @param {string} id    Option name / field id.
  * @param {string} label Visible label.
+ * @param {number} [max] Slider upper bound.
  * @return {Object} DataForm field definition.
  */
-const dimensionField = ( id, label ) => ( {
-	id,
-	type: 'integer',
-	label,
-	getValue: ( { item } ) => item[ id ] ?? 0,
-	setValue: ( { value } ) => ( { [ id ]: clampDimension( value ) } ),
-} );
+const dimensionField = ( id, label, max = DIMENSION_MAX ) =>
+	rangeField( {
+		id,
+		label,
+		min: 0,
+		max,
+		step: 1,
+		// A missing/undefined option renders as `0` rather than unset —
+		// preserving the old bare-numeric-input behavior. `rangeField` spreads
+		// `...rest`, so this rides onto the field def; the slider reads it via
+		// `field.getValue`.
+		getValue: ( { item } ) => item[ id ] ?? 0,
+	} );
 
 const FIELDS = [
 	dimensionField(

@@ -185,7 +185,7 @@ All against `@wordpress/dataviews@14.0.0`. The harness is idiomatic; these are c
 
 7. **Expandable / inline detail-row API** (substituted by a `RenderModal` "Details" action today). *Affected: themes, multiple.*
 
-8. **A media-library-picker `Edit` control + a range/slider control in `FORM_CONTROLS`** (the `media` type is display-only today). *Affected: settings-media, settings-general (Site Icon), profile (avatar).*
+8. ~~**A media-library-picker `Edit` control + a range/slider control in `FORM_CONTROLS`** (the `media` type is display-only today). *Affected: settings-media, settings-general (Site Icon), profile (avatar).*~~ — **DONE (#170):** shared custom `Edit` controls in `src/apps/_shared/forms/controls/` (`MediaPicker` + `RangeControl`); wired into `settings-media` (range sliders for image dimensions) and `settings-general` Site Icon (media picker). The profile-avatar surface is deferred — core users expose no settable local-avatar REST field (Gravatar-only), so it needs a meta/plugin shim first.
 
 ---
 
