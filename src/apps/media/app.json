@@ -196,6 +196,10 @@
 				}
 			]
 		},
+		"url": {
+			"reads-slots": [ "paged", "media_type" ],
+			"writes-slots": [ "paged", "media_type" ]
+		},
 		"states": [
 			{
 				"id": "loading-initial",
@@ -235,6 +239,10 @@
 			{
 				"trigger": "Change the Date filter (DataViews)",
 				"effect": "`view.filters` updates → a supplemental `applyDateFilters` pass maps the `before`/`after` operators to the attachments controller's REST `before`/`after` ISO params (`buildQueryArgs` only speaks `is`/`isAny`) → records refetch. One-sided date bound (`before X` OR `after Y`, not a two-ended range — DataViews holds one filter per field)."
+			},
+			{
+				"trigger": "Page through results / change the Type filter",
+				"effect": "`view.page` and the single-value `type` filter mirror to the URL (`?paged=N`, `?media_type=<value>`) via the `urlSlots` opt-in on `useEntityDataView` — refresh / deep-link / browser-back restore the page + filter. `?paged` is omitted on page 1; the slots merge onto the live hash so an unrelated slot (`?screen=`) is preserved."
 			},
 			{
 				"trigger": "Type in the DataViews search box",

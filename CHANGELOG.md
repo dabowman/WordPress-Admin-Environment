@@ -190,6 +190,15 @@ canonical in `docs/vocabulary-spec.md`.
   install would silently lose its active-workspace selection and re-enable a
   deliberately-disabled admin takeover. `uninstall.php` sweeps both namespaces.
 
+### URL-as-state: Settings host active-panel + Media page/filter (#136)
+
+Two more transient UI states moved into URL query slots, mirroring NavigationApp's `?screen=` pattern, so refresh / deep-link / browser-back survive (parity roadmap group A, item 40).
+
+- **`core:settings` active panel → `?panel=<id>`.** The host previously kept the active panel in `useState` seeded from `segments[0]` only on first mount, so refresh/bookmark/back lost your place. It now derives the active id from the URL: `?panel=<id>` slot → path segment (`#/settings/privacy`) → first available panel. A `navigatePanel` helper (a near-copy of `SidebarDrilldownRenderer`'s `navigateScreen`) merges the slot onto the live hash, preserving the primary path + any unrelated slot.
+- **`core:media` page + type filter → `?paged` / `?media_type`.** `useEntityDataView` gained an opt-in `urlSlots` param: named *transient* axes (page + single-value `is` filters) round-trip through URL query params. The seed reads them (deep-link renders the right page/filter on first paint — no flash, no wasted page-1 fetch), `setView` writes them on change, and a route-reconcile effect tracks back/forward. Media declares `{ page: 'paged', filters: [{ field: 'type', param: 'media_type', operator: 'is' }] }`; the author/date filters and Mine/Unattached toggles stay local (not single-value `is` slots). Omitting `urlSlots` is a no-op — the other five list apps are unchanged.
+- **New pure helper `src/apps/_shared/dataviews/viewUrlSlots.mjs`** (`readViewSlots` / `applyViewSlots` / `viewSlotParams` / `mergeSlotParams` / `serializeSlotParams`), node-importable + unit-tested in `tests/runtime/dataviews-shared.test.mjs`.
+- **Privacy capability OR-set.** `wp-admin-default.json`'s `settings-privacy` screen now lists `manage_privacy_options` (the cap classic `options-privacy.php` actually checks) ahead of `manage_options`, so a dedicated Privacy-Officer role granted only the meta-cap can reach the panel. The kernel's OR-semantic cap eval already supported this; it was just unlisted.
+
 ### Per-item menu icon suppression via `icon: null` (#72)
 
 A menu item bound to a screen can now render with **no icon** while keeping the screen binding, by declaring `icon: null` on the item. `bind_screens` switched from `isset` to `array_key_exists` for the `icon` re-fold, so an explicit `null` blocks inheritance where an absent key still inherits the screen's icon. Origin-sensitive: `null` authored over a lower origin's existing item is a tombstone (key-removal) → the screen icon re-inherits; suppression works only in the origin that first declares the item. See `docs/schema-sketch.md` §Drill-down icon inheritance for the worked before/after.
