@@ -192,9 +192,11 @@ add_action( 'init', function () {
 	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
 }, 5 );
 
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-util.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-prefs-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-themes-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-site-health-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-merge.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-customizable.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-cache.php';
@@ -679,6 +681,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// workspace's own page load are captured (per-screen notices keyed on
 		// `$pagenow` don't fire) — see the harvest class docblock.
 		'adminNotices'  => WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices(),
+		// #125 — the `flip` modifier on the `/wp/v2/media/{id}/edit` route's
+		// `modifiers[]` enum is WP 6.9+. On 6.7/6.8 (supported targets via the
+		// Gutenberg private-API fallback) a `flip` edit returns
+		// `rest_invalid_param` and — because validation is per-item — fails the
+		// whole rotate+flip+crop edit. The media app's `ImageEditor` hides the
+		// flip tools when this is false so flip is never emitted below 6.9.
+		// Crop / rotate work everywhere.
+		'supportsImageFlip' => version_compare( get_bloginfo( 'version' ), '6.9', '>=' ),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-workspaces', '
