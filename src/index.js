@@ -5,6 +5,10 @@ import {
 	resolveMenuRenderer,
 } from './runtime/config/menuRendererRegistry';
 import { registerIcons, resolveIcon } from './runtime/config/iconMap';
+import {
+	applyWorkspacePayload,
+	diffWorkspaceScreens,
+} from './runtime/remount.mjs';
 import './index.css';
 
 // Published kernel surface for out-of-tree plugin / engine code.
@@ -56,6 +60,46 @@ if ( window.wpAdminWorkspaces ) {
 const container = document.getElementById( 'wp-admin-workspaces' );
 if ( container ) {
 	const root = createRoot( container );
+	// In-process workspace re-mount (issue #28). `switchWorkspace()` writes
+	// the active-workspace option, re-fetches the freshly resolved config
+	// from REST, then calls this to re-render the kernel into the SAME root
+	// — no hard reload. React reconciliation diffs the region tree: regions
+	// with matching ids (and engine/app types) keep their mounted component
+	// instances + local state (DataViews sort/filter/selection, scroll,
+	// command-palette state, draft input); the rest unmount/mount.
+	// `@wordpress/data` + the kernel `triggerStore` are module singletons,
+	// so their state survives regardless. The URL hash is untouched, so the
+	// active route survives too.
+	//
+	// State preservation is per-engine: same engine ⇒ matching-id state
+	// preserved; different engine ⇒ full remount. A cross-engine switch
+	// (`core:default` ↔ `core:single-pane`/`core:desktop`) re-renders
+	// `<Engine>` as a different component type, so React unmounts + remounts
+	// the whole tree and no matching-id benefit applies. (Engine modules
+	// register icons/menu-renderers/ThemeProvider as eager module
+	// side-effects, so the target engine is already imported by then.)
+	if ( window.wpAdminWorkspaces ) {
+		window.wpAdminWorkspaces.remountWorkspace = ( payload ) => {
+			const prevScreens = window.wpAdminWorkspaces.config?.screens;
+			const nextConfig = applyWorkspacePayload(
+				window.wpAdminWorkspaces,
+				payload
+			);
+			const diff = diffWorkspaceScreens(
+				prevScreens,
+				nextConfig?.screens
+			);
+			root.render( kernel( nextConfig ) );
+			// Let a switcher UI / telemetry observe what changed.
+			window.dispatchEvent(
+				new CustomEvent( 'wp-admin-workspaces:remounted', {
+					detail: diff,
+				} )
+			);
+			return diff;
+		};
+	}
+
 	// Belt-and-suspenders: defer the first render one microtask. This does
 	// NOT win the load-order race on its own (the HTML spec already drains a
 	// microtask checkpoint between external `<script>` tags, and React 18's
