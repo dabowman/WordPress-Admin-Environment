@@ -14,7 +14,7 @@ Native panels (general, writing, reading, discussion) are React components that 
 
 State:
 
-- `activeId` (`useState`) — currently selected panel id. Initial value comes from URL segment (`segments[0]`) when present, falling back to `panels[0]?.id`.
+- `activeId` — currently selected panel id, derived from the URL (#136), NOT `useState`. Resolution order: explicit `?panel=<id>` slot → path segment (`segments[0]`, e.g. `#/settings/privacy`) → `panels[0]?.id`.
 - `activePanel` — the matched object, with safety fallback to `panels[0]` for unknown ids.
 
 The right-column renderer:
@@ -23,7 +23,7 @@ The right-column renderer:
 - `iframeUrl` defined → render `<IframeApp app={app} config={{ url }} />`.
 - Neither → `null` (unreachable in practice).
 
-The active state lives in `useState`, not the URL. This is a deliberate v1 compromise — refreshing the page lands on the first panel, not the one you were on. A future iteration should move this to a query slot (analogous to NavigationApp's `?screen=`).
+The active state lives in the URL `?panel=<id>` query slot (#136), written by a `navigatePanel` helper that mirrors NavigationApp's `navigateScreen` — it merges onto the live hash so the primary path and any unrelated slot are preserved. Refresh / deep-link / browser-back all restore the previously-active panel.
 
 ## Rebuild guide
 
@@ -36,7 +36,6 @@ A non-WPDS rebuild needs a Tab / SegmentedControl / vertical-nav primitive, and 
 
 ## Known limitations
 
-- **Active panel id not in URL.** Refreshing the page returns to the first panel.
 - **No plugin-panel registry.** The slot/fill extension was retired in V2.M4; plugins can ship their own apps but can't slot panels into `core:settings`. v2.x may reintroduce a registry once the surface stabilizes.
 - **Capability gating is uniform** — every built-in panel requires `manage_options`. Per-panel capability differentiation (e.g. a future site-health-related panel needing `view_site_health_checks`) isn't wired up.
 - **Empty-allowlist edge case** — if `config.panels = []` or filters out every built-in, the empty-state copy renders. Authoring tools should warn.
