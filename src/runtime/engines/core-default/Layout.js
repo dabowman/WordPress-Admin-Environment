@@ -15,71 +15,37 @@
  *   └──────────┴──────────────────────────────────┘
  *
  *   overlay regions  → floating layer over body
- *   drawer regions   → slide in from left/right
+ *   dashboard-grid   → mounts inside the content (areas) row
  *
- * Region kind drives bucket placement; well-known region ids drive slot
- * assignment within the persistent bucket. V2.M2 rewrote region rendering
- * onto the generic `<Region>` renderer; bucketing now uses `getRegionKind`
- * (legacy source-id mapping plus per-region override). V2.M6 will swap
- * kind-based dispatch for platform-service dispatch.
+ * Slot assignment dispatches on region ROLE (id as tiebreaker), honoring the
+ * engine's `specializes-roles`, so a workspace that names its main region
+ * something other than `content` still lands in the content slot. The pure
+ * dispatch logic lives in `slotRegions.mjs` (node-testable); this component
+ * just renders the slotted refs through the generic `<Region>` renderer.
  */
 
 import { SlotFillProvider } from '@wordpress/components';
 
 import { Region } from '../../regions/Region';
-import { getRegionKind } from '../../regions/regionKind';
 import { useMode } from '../../modes/useMode';
-
-const SLOT_IDS = {
-	toolbar: 'toolbar',
-	sidebar: 'sidebar',
-	content: 'content',
-	detail: 'detail',
-	preview: 'preview',
-};
-
-function classifyRegions( regions ) {
-	const buckets = {
-		persistent: [],
-		overlay: [],
-		drawer: [],
-	};
-	Object.values( regions ).forEach( ( region ) => {
-		const kind = getRegionKind( region );
-		if ( ! buckets[ kind ] ) {
-			return;
-		}
-		buckets[ kind ].push( region );
-	} );
-	return buckets;
-}
-
-function findById( bucket, id ) {
-	return bucket.find( ( region ) => region.id === id );
-}
+import { slotRegions } from './slotRegions.mjs';
 
 export default function CoreSiteEditorLayout( { regions } ) {
-	const buckets = classifyRegions( regions );
+	const {
+		toolbar,
+		sidebar,
+		content,
+		detail,
+		preview,
+		bodyExtras,
+		overlay,
+		stragglers,
+	} = slotRegions( regions );
 
 	// Surface the active screen's mode on the layout root so engine CSS can
 	// style the whole layout per-mode (not just per-region). E.g. takeover
 	// drops the body gutter + content card radius for a full-bleed surface.
 	const { modeId } = useMode();
-
-	const toolbar = findById( buckets.persistent, SLOT_IDS.toolbar );
-	const sidebar = findById( buckets.persistent, SLOT_IDS.sidebar );
-	const content = findById( buckets.persistent, SLOT_IDS.content );
-	const detail = findById( buckets.persistent, SLOT_IDS.detail );
-	const preview = findById( buckets.persistent, SLOT_IDS.preview );
-
-	const claimed = new Set(
-		[ toolbar, sidebar, content, detail, preview ]
-			.filter( Boolean )
-			.map( ( region ) => region.id )
-	);
-	const stragglers = buckets.persistent.filter(
-		( region ) => ! claimed.has( region.id )
-	);
 
 	// `<SlotFillProvider>` lives in the engine layout (not the kernel)
 	// to keep the kernel DS-neutral. Bundled apps using
@@ -109,6 +75,9 @@ export default function CoreSiteEditorLayout( { regions } ) {
 						{ content && (
 							<Region key={ content.id } region={ content } />
 						) }
+						{ bodyExtras.map( ( region ) => (
+							<Region key={ region.id } region={ region } />
+						) ) }
 						{ detail && (
 							<Region key={ detail.id } region={ detail } />
 						) }
@@ -122,10 +91,7 @@ export default function CoreSiteEditorLayout( { regions } ) {
 					<Region key={ region.id } region={ region } />
 				) ) }
 
-				{ buckets.drawer.map( ( region ) => (
-					<Region key={ region.id } region={ region } />
-				) ) }
-				{ buckets.overlay.map( ( region ) => (
+				{ overlay.map( ( region ) => (
 					<Region key={ region.id } region={ region } />
 				) ) }
 			</div>
