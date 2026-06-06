@@ -291,64 +291,74 @@ export default function ProfileApp( { config = {} } = {} ) {
 						onChange={ edit }
 					/>
 
-				{ /* Account management — new password. Write-only (`password`
+					{ /* Account management — new password. Write-only (`password`
 				   is never returned by REST), so it sits outside the DataForm
 				   in local state and is saved via a direct one-shot
 				   saveEntityRecord call in `onSave` — never via edit(). */ }
-				<Stack
-					direction="column"
-					gap="sm"
-					className="wp-admin-workspaces-app-profile__password"
-				>
-					<Text variant="heading-md" render={ <h3 /> }>
-						{ __( 'Account Management', 'wp-admin-workspaces' ) }
-					</Text>
-					<InputControl
-						type="password"
-						label={ __( 'New Password', 'wp-admin-workspaces' ) }
-						value={ newPassword }
-						onChange={ ( e ) => {
-							setNewPassword( eventValue( e ) );
-							if ( pwError ) {
-								setPwError( '' );
-							}
-						} }
-						autoComplete="new-password"
-					/>
-					<InputControl
-						type="password"
-						label={ __(
-							'Confirm New Password',
-							'wp-admin-workspaces'
-						) }
-						value={ confirmPassword }
-						onChange={ ( e ) => {
-							setConfirmPassword( eventValue( e ) );
-							if ( pwError ) {
-								setPwError( '' );
-							}
-						} }
-						autoComplete="new-password"
-					/>
-					{ pwError && (
-						<Notice.Root intent="error">
-							<Notice.Description>{ pwError }</Notice.Description>
-						</Notice.Root>
-					) }
-				</Stack>
-
-				<Stack direction="row" justify="flex-start">
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ onSave }
-						disabled={ ( ! hasEdits && ! newPassword ) || isSaving }
-						loading={ isSaving }
+					<Stack
+						direction="column"
+						gap="sm"
+						className="wp-admin-workspaces-app-profile__password"
 					>
-						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
-					</Button>
+						<Text variant="heading-md" render={ <h3 /> }>
+							{ __(
+								'Account Management',
+								'wp-admin-workspaces'
+							) }
+						</Text>
+						<InputControl
+							type="password"
+							label={ __(
+								'New Password',
+								'wp-admin-workspaces'
+							) }
+							value={ newPassword }
+							onChange={ ( e ) => {
+								setNewPassword( eventValue( e ) );
+								if ( pwError ) {
+									setPwError( '' );
+								}
+							} }
+							autoComplete="new-password"
+						/>
+						<InputControl
+							type="password"
+							label={ __(
+								'Confirm New Password',
+								'wp-admin-workspaces'
+							) }
+							value={ confirmPassword }
+							onChange={ ( e ) => {
+								setConfirmPassword( eventValue( e ) );
+								if ( pwError ) {
+									setPwError( '' );
+								}
+							} }
+							autoComplete="new-password"
+						/>
+						{ pwError && (
+							<Notice.Root intent="error">
+								<Notice.Description>
+									{ pwError }
+								</Notice.Description>
+							</Notice.Root>
+						) }
+					</Stack>
+
+					<Stack direction="row" justify="flex-start">
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ onSave }
+							disabled={
+								( ! hasEdits && ! newPassword ) || isSaving
+							}
+							loading={ isSaving }
+						>
+							{ __( 'Save Changes', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
 
 				<ApplicationPasswords key={ userId } userId={ userId } />
 			</Stack>
