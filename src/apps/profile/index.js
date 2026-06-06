@@ -2,7 +2,7 @@ import './index.css';
 import '../_shared/app.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
 import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataForm } from '@wordpress/dataviews/wp';
 import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
@@ -56,6 +56,14 @@ export default function ProfileApp( { config = {} } = {} ) {
 	const { saveEntityRecord } = useDispatch( coreStore );
 	const { createSuccessNotice, createErrorNotice } =
 		useDispatch( noticesStore );
+	// `saveEntityRecord` resolves `undefined` on a REST failure (it does NOT
+	// throw). `getLastEntitySaveError` is how we detect server-side rejection
+	// (e.g. a password containing a backslash that `check_user_password` rejects).
+	// Pattern matches user-new/index.js and useEntitySave.js.
+	const getLastEntitySaveError = useSelect(
+		( select ) => select( coreStore ).getLastEntitySaveError,
+		[]
+	);
 
 	const handleSave = useEntitySave(
 		save,
@@ -111,31 +119,41 @@ export default function ProfileApp( { config = {} } = {} ) {
 			return;
 		}
 
-		// Step 2 — password-only save: direct REST call that never touches the
-		// shared edits. Failed or abandoned password saves cannot pollute a
-		// later profile save. `saveEntityRecord` rejects on network / REST
-		// errors, so a try/catch gives us the same error-notice path.
+		// Step 2 — password-only save: a direct one-shot `saveEntityRecord` call
+		// that never touches the shared edits. The record object MUST carry `id`
+		// so core-data issues a PATCH /wp/v2/users/{id} update (not a POST
+		// create). `saveEntityRecord` RESOLVES `undefined` on a REST failure (it
+		// does NOT throw) — check the return value AND `getLastEntitySaveError`
+		// to detect server-side rejection (e.g. a backslash in the password
+		// that `check_user_password` rejects). On failure: show the error notice
+		// and leave the password fields filled so the user can retry.
 		if ( newPassword ) {
-			try {
-				await saveEntityRecord( 'root', 'user', userId, {
-					password: newPassword,
-				} );
-			} catch ( err ) {
+			const saved = await saveEntityRecord( 'root', 'user', {
+				id: userId,
+				password: newPassword,
+			} );
+			if ( ! saved ) {
+				const saveError = getLastEntitySaveError(
+					'root',
+					'user',
+					userId
+				);
 				createErrorNotice(
-					err.message ||
+					saveError?.message ||
 						__( 'Failed to save password.', 'wp-admin-workspaces' ),
 					{ isDismissible: true }
 				);
+				// Leave password fields filled so the user can correct and retry.
 				return;
 			}
 		}
 
-		// Show the single success snackbar (handleSave already shows it when
-		// profile edits were present; do it manually when password was the only
-		// action taken).
+		// Show the single success snackbar. handleSave already shows "Profile
+		// updated." when profile edits were present; when only the password
+		// changed, show "Password updated." instead.
 		if ( ! hasEdits ) {
 			createSuccessNotice(
-				__( 'Profile updated.', 'wp-admin-workspaces' ),
+				__( 'Password updated.', 'wp-admin-workspaces' ),
 				{ type: 'snackbar' }
 			);
 		}
@@ -148,6 +166,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 		hasEdits,
 		handleSave,
 		saveEntityRecord,
+		getLastEntitySaveError,
 		userId,
 		createSuccessNotice,
 		createErrorNotice,

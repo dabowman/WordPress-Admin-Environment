@@ -78,7 +78,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Step 1: saves accumulated `edit()` calls via `save()` from useEntityRecord (all profile fields including `locale`). Step 2 (when a new password was entered): a separate one-shot `saveEntityRecord('root','user',userId,{password})` call. The password never enters the shared entity edits — failed or abandoned password saves cannot pollute a later profile save."
+					"purpose": "Step 1: saves accumulated `edit()` calls via `save()` from useEntityRecord (all profile fields including `locale`). Step 2 (when a new password was entered): a separate one-shot `saveEntityRecord('root','user',{ id: userId, password })` call — the record object carries `id` so core-data issues a PATCH update, not a POST create. Failure is detected by the `undefined` return value + `getLastEntitySaveError('root','user',userId)` (saveEntityRecord does NOT throw on REST error); on failure an error notice is shown and password fields are left filled for retry. The password never enters the shared entity edits — failed or abandoned password saves cannot pollute a later profile save."
 				}
 			]
 		},
@@ -133,7 +133,7 @@
 			},
 			{
 				"trigger": "Click Save Changes",
-				"effect": "Step 1: if `hasEdits`, calls `save()` via `handleSave` (profile fields); on failure returns early. Step 2: if a new password was entered, calls `saveEntityRecord('root','user',userId,{password})` directly; on failure shows error banner + leaves password fields filled for retry. On full success: success snackbar + password fields cleared."
+				"effect": "Step 1: if `hasEdits`, calls `save()` via `handleSave` (profile fields); on failure returns early. Step 2: if a new password was entered, calls `saveEntityRecord('root','user',{ id: userId, password })` directly (record carries `id` so core-data issues PATCH, not POST); `saveEntityRecord` RESOLVES `undefined` on REST failure (does NOT throw) — detected via falsy return + `getLastEntitySaveError('root','user',userId)`; on failure shows error banner + leaves password fields filled for retry. On full success: snackbar ('Profile updated.' when profile edits were present; 'Password updated.' when only password changed) + password fields cleared."
 			}
 		],
 		"a11y": {
