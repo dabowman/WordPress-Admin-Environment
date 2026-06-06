@@ -276,8 +276,7 @@ function ResponseCell( { item } ) {
 		return <Text className="wp-admin-workspaces-app__muted">—</Text>;
 	}
 	const editHref = postEditHref( item.postType, item.post );
-	const title =
-		item.postTitle || __( '(no title)', 'wp-admin-workspaces' );
+	const title = item.postTitle || __( '(no title)', 'wp-admin-workspaces' );
 	return (
 		<Stack direction="column" gap="xs">
 			{ editHref ? (

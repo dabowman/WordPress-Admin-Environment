@@ -330,7 +330,10 @@ export default function ThemesApp( { config = {} } ) {
 										/>
 									}
 								>
-									{ __( 'Theme site', 'wp-admin-workspaces' ) }
+									{ __(
+										'Theme site',
+										'wp-admin-workspaces'
+									) }
 								</Button>
 							) }
 							{ ! isActive && (
@@ -341,7 +344,10 @@ export default function ThemesApp( { config = {} } ) {
 										<a href={ livePreviewUrl( item ) } />
 									}
 								>
-									{ __( 'Live Preview', 'wp-admin-workspaces' ) }
+									{ __(
+										'Live Preview',
+										'wp-admin-workspaces'
+									) }
 								</Button>
 							) }
 							<Button variant="minimal" onClick={ closeModal }>
