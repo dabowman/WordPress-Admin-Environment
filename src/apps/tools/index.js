@@ -4,6 +4,7 @@ import { Button, Card, Stack, Text } from '@wordpress/ui';
 import { __experimentalGrid as Grid } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { navigate } from '../../runtime/routing/router';
+import { filterReachableTools } from './filterReachableTools.mjs';
 
 // Each card routes to its in-workspace screen via the router (`navigate`),
 // keeping the user inside the workspace chrome. `path` is the screen's
@@ -61,6 +62,17 @@ const TOOLS = [
 ];
 
 export default function ToolsApp() {
+	// Only surface a card when its target screen survived the server's
+	// per-user prune (`wp_admin_workspaces_prune_config_for_user`) — i.e.
+	// when `navigate( tool.path )` will actually resolve. Without this, a
+	// user who reaches the (loosely-gated) Tools landing but lacks a tool's
+	// capability would click a card that routes to a pruned screen and
+	// falls through to the default route — a silent dead route (issue #207).
+	const tools = filterReachableTools(
+		TOOLS,
+		window.wpAdminWorkspaces?.config?.screens
+	);
+
 	return (
 		<div className="wp-admin-workspaces-app-tools wp-admin-workspaces-app--inset">
 			<Stack direction="column" gap="xl">
@@ -76,36 +88,50 @@ export default function ToolsApp() {
 					</Text>
 				</Stack>
 
-				<Grid columns={ 2 } gap={ 4 }>
-					{ TOOLS.map( ( tool ) => (
-						<Card.Root key={ tool.id }>
-							<Card.Header>
-								<Card.Title>
-									<Text
-										variant="heading-md"
-										render={ <h2 /> }
-									>
-										{ tool.title }
-									</Text>
-								</Card.Title>
-							</Card.Header>
-							<Card.Content>
-								<Stack direction="column" gap="md">
-									<Text variant="body-sm">
-										{ tool.description }
-									</Text>
-									<Button
-										tone="neutral"
-										variant="outline"
-										onClick={ () => navigate( tool.path ) }
-									>
-										{ __( 'Open', 'wp-admin-workspaces' ) }
-									</Button>
-								</Stack>
-							</Card.Content>
-						</Card.Root>
-					) ) }
-				</Grid>
+				{ tools.length === 0 ? (
+					<Text variant="body-md">
+						{ __(
+							'You don’t have permission to use any of these tools.',
+							'wp-admin-workspaces'
+						) }
+					</Text>
+				) : (
+					<Grid columns={ 2 } gap={ 4 }>
+						{ tools.map( ( tool ) => (
+							<Card.Root key={ tool.id }>
+								<Card.Header>
+									<Card.Title>
+										<Text
+											variant="heading-md"
+											render={ <h2 /> }
+										>
+											{ tool.title }
+										</Text>
+									</Card.Title>
+								</Card.Header>
+								<Card.Content>
+									<Stack direction="column" gap="md">
+										<Text variant="body-sm">
+											{ tool.description }
+										</Text>
+										<Button
+											tone="neutral"
+											variant="outline"
+											onClick={ () =>
+												navigate( tool.path )
+											}
+										>
+											{ __(
+												'Open',
+												'wp-admin-workspaces'
+											) }
+										</Button>
+									</Stack>
+								</Card.Content>
+							</Card.Root>
+						) ) }
+					</Grid>
+				) }
 			</Stack>
 		</div>
 	);
