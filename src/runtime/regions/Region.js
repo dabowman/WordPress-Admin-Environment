@@ -37,6 +37,7 @@ import { registerTrigger } from '../bindings/triggerStore.mjs';
 import { ScopedThemeProvider } from '../styles/ThemeProviderHost';
 import { useMode } from '../modes/useMode';
 import { readRegionState } from '../modes/resolveMode.mjs';
+import { mountKey } from './mountKey.mjs';
 
 export function Region( { region } ) {
 	if (
@@ -462,8 +463,12 @@ function renderRegionApp( region, matched ) {
 	if ( ! ref ) {
 		return null;
 	}
+	// Explicit key forces React to unmount + remount when the resolved
+	// app identity changes — see `mountKey.mjs` for the iframe
+	// history-pollution rationale this addresses.
+	const key = mountKey( ref );
 	return (
-		<div className="wp-admin-workspaces-region__app">
+		<div key={ key } className="wp-admin-workspaces-region__app">
 			<MountedApp appRef={ ref } regionId={ region.id } />
 		</div>
 	);
