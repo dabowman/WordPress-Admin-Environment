@@ -1,7 +1,9 @@
 import './index.css';
 import '../_shared/app.css';
 import { useMemo, useState, useCallback } from '@wordpress/element';
-import { useEntityRecord } from '@wordpress/core-data';
+import { useEntityRecord, store as coreStore } from '@wordpress/core-data';
+import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
 import { DataForm } from '@wordpress/dataviews/wp';
 import { Button, InputControl, Notice, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
@@ -51,6 +53,10 @@ export default function ProfileApp( { config = {} } = {} ) {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
+	const { saveEntityRecord } = useDispatch( coreStore );
+	const { createSuccessNotice, createErrorNotice } =
+		useDispatch( noticesStore );
+
 	const handleSave = useEntitySave(
 		save,
 		{
@@ -71,35 +77,81 @@ export default function ProfileApp( { config = {} } = {} ) {
 	);
 
 	// New-password change is a separate, write-only field: `password` is never
-	// returned by REST, so it lives in local state and is folded into the
-	// entity edits only at save time (see `onSave`). `pwError` surfaces the
-	// client-side confirm mismatch — REST itself has no confirm / strength gate.
+	// returned by REST so it cannot live in the entity record's edits —
+	// a failed save would leave it lingering and it could be silently committed
+	// on a later, unrelated click of Save Changes. It stays in local state and
+	// is saved via a direct one-shot `saveEntityRecord` call that bypasses
+	// `edit()` entirely (see `onSave`). `pwError` surfaces the client-side
+	// confirm mismatch — REST itself has no confirm / strength gate.
 	const [ newPassword, setNewPassword ] = useState( '' );
 	const [ confirmPassword, setConfirmPassword ] = useState( '' );
 	const [ pwError, setPwError ] = useState( '' );
 
 	const onSave = useCallback( async () => {
+		// Validate confirm match before touching the network.
+		if ( newPassword && newPassword !== confirmPassword ) {
+			setPwError(
+				__( 'Passwords do not match.', 'wp-admin-workspaces' )
+			);
+			return;
+		}
+		setPwError( '' );
+
+		// Step 1 — save profile field edits via the entity's normal save()
+		// path. Password is deliberately NOT folded in here: it goes through a
+		// separate one-shot saveEntityRecord call below so it never enters the
+		// shared entity edits (where a failed save would leave it lingering for
+		// a later, unrelated commit).
+		let profileOk = true;
+		if ( hasEdits ) {
+			profileOk = await handleSave();
+		}
+		if ( ! profileOk ) {
+			// Error notice already surfaced by handleSave; abort.
+			return;
+		}
+
+		// Step 2 — password-only save: direct REST call that never touches the
+		// shared edits. Failed or abandoned password saves cannot pollute a
+		// later profile save. `saveEntityRecord` rejects on network / REST
+		// errors, so a try/catch gives us the same error-notice path.
 		if ( newPassword ) {
-			if ( newPassword !== confirmPassword ) {
-				setPwError(
-					__( 'Passwords do not match.', 'wp-admin-workspaces' )
+			try {
+				await saveEntityRecord( 'root', 'user', userId, {
+					password: newPassword,
+				} );
+			} catch ( err ) {
+				createErrorNotice(
+					err.message ||
+						__( 'Failed to save password.', 'wp-admin-workspaces' ),
+					{ isDismissible: true }
 				);
 				return;
 			}
-			setPwError( '' );
-			// `edit()` dispatches synchronously to the core-data store, so the
-			// password is present in the edits that `save()` reads on the next
-			// line — same path the form fields take.
-			edit( { password: newPassword } );
 		}
 
-		const ok = await handleSave();
-		if ( ok ) {
-			setNewPassword( '' );
-			setConfirmPassword( '' );
-			setPwError( '' );
+		// Show the single success snackbar (handleSave already shows it when
+		// profile edits were present; do it manually when password was the only
+		// action taken).
+		if ( ! hasEdits ) {
+			createSuccessNotice(
+				__( 'Profile updated.', 'wp-admin-workspaces' ),
+				{ type: 'snackbar' }
+			);
 		}
-	}, [ newPassword, confirmPassword, edit, handleSave ] );
+
+		setNewPassword( '' );
+		setConfirmPassword( '' );
+	}, [
+		newPassword,
+		confirmPassword,
+		hasEdits,
+		handleSave,
+		saveEntityRecord,
+		userId,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
 
 	// Display-name options derive from the live edited values, so they update
 	// as the user types first / last name. `editedRecord` is null until the
@@ -220,7 +272,8 @@ export default function ProfileApp( { config = {} } = {} ) {
 
 				{ /* Account management — new password. Write-only (`password`
 				   is never returned by REST), so it sits outside the DataForm
-				   in local state and is folded into the save via `onSave`. */ }
+				   in local state and is saved via a direct one-shot
+				   saveEntityRecord call in `onSave` — never via edit(). */ }
 				<Stack
 					direction="column"
 					gap="sm"
@@ -233,7 +286,12 @@ export default function ProfileApp( { config = {} } = {} ) {
 						type="password"
 						label={ __( 'New Password', 'wp-admin-workspaces' ) }
 						value={ newPassword }
-						onChange={ ( e ) => setNewPassword( eventValue( e ) ) }
+						onChange={ ( e ) => {
+							setNewPassword( eventValue( e ) );
+							if ( pwError ) {
+								setPwError( '' );
+							}
+						} }
 						autoComplete="new-password"
 					/>
 					<InputControl

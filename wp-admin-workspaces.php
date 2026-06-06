@@ -1505,14 +1505,20 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
  * so both `wp_admin_workspaces_get_profile_languages()` and
  * `wp_admin_workspaces_get_settings_general_data()` share a single code path.
  *
- * @param string[] $locales List of locale strings to label (e.g. `get_available_languages()`).
+ * @param string[]         $locales       List of locale strings to label (e.g. `get_available_languages()`).
+ * @param array|null       $translations  Pre-fetched result of `wp_get_available_translations()`, or
+ *                                        null to fetch it here. Pass a pre-fetched value when the
+ *                                        caller already holds the translations array to avoid a
+ *                                        redundant HTTP round-trip.
  * @return array<string,string> Map of `locale => native_name` (falls back to the locale
  *                               string itself when no native name is known).
  */
-function wp_admin_workspaces_locale_labels( array $locales ) {
+function wp_admin_workspaces_locale_labels( array $locales, $translations = null ) {
 	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-	$translations = wp_get_available_translations();
-	$labels       = array();
+	if ( null === $translations ) {
+		$translations = wp_get_available_translations();
+	}
+	$labels = array();
 	foreach ( $locales as $locale ) {
 		$labels[ $locale ] = isset( $translations[ $locale ]['native_name'] )
 			? $translations[ $locale ]['native_name']
@@ -1567,13 +1573,14 @@ function wp_admin_workspaces_get_profile_languages() {
  */
 function wp_admin_workspaces_get_settings_general_data() {
 	// Languages (locales installed + downloadable translations).
+	// Fetch the translations array once and pass it into locale_labels() so
+	// the HTTP round-trip to the translations API happens at most once per
+	// request (the earlier refactor accidentally called wp_get_available_translations()
+	// twice — once inside locale_labels() and once here for the downloadable group).
 	$installed_languages = get_available_languages();
-	$locale_labels       = wp_admin_workspaces_locale_labels( $installed_languages );
-
-	// The full translations list is still needed for the downloadable group
-	// (available but not yet installed). Re-use the same require_once path that
-	// wp_admin_workspaces_locale_labels() already loaded.
-	$translations = wp_get_available_translations();
+	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+	$translations  = wp_get_available_translations();
+	$locale_labels = wp_admin_workspaces_locale_labels( $installed_languages, $translations );
 
 	$language_options = array(
 		array( 'value' => '', 'label' => 'English (United States)' ),

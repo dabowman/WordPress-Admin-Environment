@@ -14,18 +14,16 @@ The display name field is the only non-trivial bit. WordPress's user UI lets you
 
 **Interface language.** The `locale` field is a plain `select` whose options come from PHP (`wp_admin_workspaces_get_profile_languages()`, exposed at `window.wpAdminWorkspaces.profileLanguages`). The list is intentionally limited to **Site Default + English + already-installed locales** — exactly the set the REST `locale` enum accepts (`en_US` + `get_available_languages()`, plus `''` for site default). Because the profile form is self-service (every user mounts it), the PHP helper skips the translations-API HTTP fetch entirely unless a non-English locale is actually installed.
 
-**New password.** `password` is *write-only* — REST never returns it — so it cannot live in the entity record. It is held in component `useState` (new + confirm) and, only at save time, validated for a match and folded into the edits via `edit({ password })` immediately before `save()` reads them (the `edit()` dispatch is synchronous against the core-data store, the same path the form fields take). A pending password alone does **not** report dirty-state to the kernel — it is local state until save. On success the fields are cleared. A confirm-mismatch `Notice` is cleared immediately when the user retypes the confirm field (onChange), so it does not linger after the user fixes the mismatch.
+**New password.** `password` is *write-only* — REST never returns it — so it cannot live in the entity record's pending edits. It is held in component `useState` (new + confirm) and saved via a direct one-shot `saveEntityRecord('root','user',userId,{password})` call that **never touches `edit()`** (the shared entity edits). This isolation ensures a failed or abandoned password save cannot linger in the edits and be silently committed on a later, unrelated click of Save Changes. A pending password alone does **not** report dirty-state to the kernel — it is local state until save. A confirm-mismatch `Notice` is cleared immediately when the user retypes **either** password field (onChange on both fields), so it does not linger after the user fixes the mismatch.
 
-`useEntitySave` is called with entity coords (`{ kind: 'root', name: 'user', recordId: userId }`). This means a REST 4xx/5xx (e.g. a password containing a backslash, which `WP_REST_Users_Controller::check_user_password()` rejects) is caught via `getLastEntitySaveError` and surfaces as an error banner — the form does **not** show a false-positive success snackbar or clear the password fields on a server-rejected save.
+`useEntitySave` is called with entity coords (`{ kind: 'root', name: 'user', recordId: userId }`). This means a REST 4xx/5xx on the profile fields (e.g. invalid email) is caught via `getLastEntitySaveError` and surfaces as an error banner. Password-save failures are caught via a `try/catch` around `saveEntityRecord` and also surface as an error banner — the form does **not** clear the password fields on a server-rejected save so the user can retry.
 
 Save flow (`onSave`):
 
 1. If a new password is present and the confirm does not match → show an inline error `Notice` and abort.
-2. If it matches → `edit({ password: newPassword })`.
-3. `await save()` from `useEntityRecord` (wrapped by `useEntitySave` with entity coords).
-4. `useEntitySave` checks `getLastEntitySaveError('root', 'user', userId)` after `save()` resolves; a server error surfaces as an error notice and returns `false`.
-5. On success (`ok === true`): `createSuccessNotice('Profile updated.', { type: 'snackbar' })` + password fields cleared.
-6. On error: `createErrorNotice(err.message || saveError.message, { isDismissible: true })`.
+2. **Step 1 — Profile field edits:** if `hasEdits`, call `await save()` from `useEntityRecord` (wrapped by `useEntitySave` with entity coords). `useEntitySave` checks `getLastEntitySaveError('root', 'user', userId)` after resolving; a server error surfaces as an error notice and returns `false` → `onSave` returns early.
+3. **Step 2 — Password (when entered):** call `await saveEntityRecord('root','user',userId,{ password: newPassword })` directly. This is a separate REST call and the password never entered the entity's pending edit queue. On failure: `createErrorNotice(err.message || 'Failed to save password.', { isDismissible: true })` + return (password fields remain filled for retry).
+4. On full success: if profile edits were saved (Step 1 ran), `useEntitySave` already showed the success snackbar. If only a password was saved (Step 1 skipped), `createSuccessNotice('Profile updated.', { type: 'snackbar' })` is called manually. Password fields are cleared.
 
 Notice routing: success → snackbar (auto-dismiss), failure → dismissible banner (sticky until the user clears).
 

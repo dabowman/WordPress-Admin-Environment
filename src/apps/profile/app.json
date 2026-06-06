@@ -36,7 +36,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change under an 'Account Management' section. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and folded into the entity edits at save time with a client-side confirm-match check (the confirm-mismatch Notice clears as soon as the user retypes the confirm field) — there is no current-password re-auth and no server-side weak-password gate (REST accepts any non-backslash password). `useEntitySave` is called with entity coords (`{ kind:'root', name:'user', recordId:userId }`) so REST 4xx/5xx failures are caught via `getLastEntitySaveError` and surfaced as error banners rather than false-positive success snackbars. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change under an 'Account Management' section. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and saved via a direct one-shot `saveEntityRecord('root','user',userId,{password})` call that NEVER enters the shared entity edits — a failed or abandoned password save cannot linger in the edits and be silently committed on a later unrelated save. Profile field edits go through the normal `save()` path (Step 1); the password goes through a separate `saveEntityRecord` call after the profile save succeeds (Step 2). The confirm-mismatch Notice clears as soon as the user retypes either the new password or confirm field. `useEntitySave` is called with entity coords (`{ kind:'root', name:'user', recordId:userId }`) so REST 4xx/5xx failures are caught via `getLastEntitySaveError` and surfaced as error banners rather than false-positive success snackbars. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
@@ -78,7 +78,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord — includes `locale` (interface language) and, when entered, `password` (write-only, folded in at save time)."
+					"purpose": "Step 1: saves accumulated `edit()` calls via `save()` from useEntityRecord (all profile fields including `locale`). Step 2 (when a new password was entered): a separate one-shot `saveEntityRecord('root','user',userId,{password})` call. The password never enters the shared entity edits — failed or abandoned password saves cannot pollute a later profile save."
 				}
 			]
 		},
@@ -106,7 +106,7 @@
 			{
 				"id": "password-mismatch",
 				"when": "newPassword !== confirmPassword on Save click",
-				"renders": "Inline error Notice under the password fields; save is aborted until the two match. The Notice is cleared immediately when the user retypes the confirm field (onChange)."
+				"renders": "Inline error Notice under the password fields; save is aborted until the two match. The Notice is cleared immediately when the user retypes either the new password or the confirm field (onChange on both fields)."
 			},
 			{
 				"id": "saving",
@@ -128,12 +128,12 @@
 				"effect": "`edit({ locale: value })`; empty value ('') resets to Site Default. Only installed locales + English are offered (REST `locale` enum); installing a new pack on save is wp-admin-only and not surfaced."
 			},
 			{
-				"trigger": "Type a new password (+ confirm)",
-				"effect": "Held in local state. Retyping the confirm field clears any pending mismatch Notice immediately. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, `edit({ password })` then `save()`. Cleared on success."
+				"trigger": "Type a new password or confirm",
+				"effect": "Held in local state. Retyping either field clears any pending mismatch Notice immediately. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, the password is saved via a one-shot `saveEntityRecord` call (never enters shared edits). Password fields cleared on success."
 			},
 			{
 				"trigger": "Click Save Changes",
-				"effect": "Optionally folds the new password into the edits, then `await save()`; on success: success snackbar + password fields cleared. On failure: error banner with `err.message`."
+				"effect": "Step 1: if `hasEdits`, calls `save()` via `handleSave` (profile fields); on failure returns early. Step 2: if a new password was entered, calls `saveEntityRecord('root','user',userId,{password})` directly; on failure shows error banner + leaves password fields filled for retry. On full success: success snackbar + password fields cleared."
 			}
 		],
 		"a11y": {
@@ -166,7 +166,7 @@
 			},
 			{
 				"concern": "password-write-only-no-reauth",
-				"note": "The new-password field has NO current-password re-authentication (REST does not require it) and NO server-side weak-password gate — `WP_REST_Users_Controller` accepts any password except those containing a backslash (`check_user_password`). The app only enforces a client-side confirm-match. The classic wp-admin pass1/pass2 + zxcvbn strength meter + `pw_weak` confirm checkbox are intentionally not reproduced. `password` is never returned by REST, so it lives in local state (not the entity record) and is folded into the edits at save time."
+				"note": "The new-password field has NO current-password re-authentication (REST does not require it) and NO server-side weak-password gate — `WP_REST_Users_Controller` accepts any password except those containing a backslash (`check_user_password`). The app only enforces a client-side confirm-match. The classic wp-admin pass1/pass2 + zxcvbn strength meter + `pw_weak` confirm checkbox are intentionally not reproduced. `password` is never returned by REST, so it lives in local state (not the entity record edits) and is saved via a direct one-shot `saveEntityRecord` call at save time — it never enters the shared edit queue."
 			},
 			{
 				"concern": "locale-installed-only",
