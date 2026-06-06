@@ -2,6 +2,12 @@
 	max-width: 600px;
 }
 
+/* Separate the new-password section from the field block above it. */
+.wp-admin-workspaces-app-profile__password {
+	padding-top: var( --wpds-dimension-padding-md, 12px );
+	border-top: 1px solid var( --wpds-color-border-secondary, #e0e0e0 );
+}
+
 .wp-admin-workspaces-app-profile__app-passwords {
 	max-width: 760px;
 }

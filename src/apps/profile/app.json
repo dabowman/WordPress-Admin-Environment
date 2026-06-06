@@ -3,7 +3,7 @@
 	"id": "core:profile",
 	"version": 1,
 	"title": "Profile",
-	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`.",
+	"description": "Current-user profile editor. Uses `core-data` `useEntityRecord('root','user', userId)`. Edits name fields, email, website, bio, interface language (`locale`), and a basic new-password change.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"platform": {
@@ -36,7 +36,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Below the form, an Application Passwords section (`ApplicationPasswords.js`) lists / creates (with one-time plaintext reveal) / revokes / revokes-all the user's application passwords via imperative `api-fetch` against `/wp/v2/users/{userId}/application-passwords`. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change under an 'Account Management' section. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and saved via a direct one-shot `saveEntityRecord('root','user',userId,{password})` call that NEVER enters the shared entity edits — a failed or abandoned password save cannot linger in the edits and be silently committed on a later unrelated save. Profile field edits go through the normal `save()` path (Step 1); the password goes through a separate `saveEntityRecord` call after the profile save succeeds (Step 2). The confirm-mismatch Notice clears as soon as the user retypes either the new password or confirm field. `useEntitySave` is called with entity coords (`{ kind:'root', name:'user', recordId:userId }`) so REST 4xx/5xx failures are caught via `getLastEntitySaveError` and surfaced as error banners rather than false-positive success snackbars. Success + error route through `@wordpress/notices` snackbar / banner. Below the form, an Application Passwords section (`ApplicationPasswords.js`) lists / creates (with one-time plaintext reveal) / revokes / revokes-all the user's application passwords via imperative `api-fetch` against `/wp/v2/users/{userId}/application-passwords`. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
@@ -53,8 +53,14 @@
 						"name",
 						"email",
 						"url",
-						"description"
+						"description",
+						"locale"
 					]
+				},
+				{
+					"source": "window.wpAdminWorkspaces.profileLanguages",
+					"via": "window-global",
+					"purpose": "Interface-language select options (Site Default + English + installed locales) built by PHP `wp_admin_workspaces_get_profile_languages()`. Falls back to a Site Default + English pair when absent."
 				},
 				{
 					"source": "config.userId",
@@ -85,7 +91,7 @@
 					"source": "root/user",
 					"via": "core-data",
 					"operation": "update",
-					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord."
+					"purpose": "Step 1: saves accumulated `edit()` calls via `save()` from useEntityRecord (all profile fields including `locale`). Step 2 (when a new password was entered): a separate one-shot `saveEntityRecord('root','user',{ id: userId, password })` call — the record object carries `id` so core-data issues a PATCH update, not a POST create. Failure is detected by the `undefined` return value + `getLastEntitySaveError('root','user',userId)` (saveEntityRecord does NOT throw on REST error); on failure an error notice is shown and password fields are left filled for retry. The password never enters the shared entity edits — failed or abandoned password saves cannot pollute a later profile save."
 				},
 				{
 					"source": "/wp/v2/users/{userId}/application-passwords",
@@ -120,13 +126,18 @@
 			},
 			{
 				"id": "ready",
-				"when": "record !== null && !hasEdits",
-				"renders": "Form with the seven fields populated; Save button disabled."
+				"when": "record !== null && !hasEdits && !newPassword",
+				"renders": "Form with the eight fields (incl. interface language) populated + empty password section; Save button disabled."
 			},
 			{
 				"id": "with-edits",
-				"when": "hasEdits === true && !isSaving",
-				"renders": "Same form with Save enabled; dirty-state reported to kernel."
+				"when": "(hasEdits || newPassword) && !isSaving",
+				"renders": "Same form with Save enabled; field edits report dirty-state to kernel (a pending password alone does not — it is local state until save)."
+			},
+			{
+				"id": "password-mismatch",
+				"when": "newPassword !== confirmPassword on Save click",
+				"renders": "Inline error Notice under the password fields; save is aborted until the two match. The Notice is cleared immediately when the user retypes either the new password or the confirm field (onChange on both fields)."
 			},
 			{
 				"id": "saving",
@@ -174,8 +185,16 @@
 				"effect": "`edit({ name: value })` with options generated from username / first / last / first+last / last+first / nickname / current name."
 			},
 			{
+				"trigger": "Choose Interface Language from select",
+				"effect": "`edit({ locale: value })`; empty value ('') resets to Site Default. Only installed locales + English are offered (REST `locale` enum); installing a new pack on save is wp-admin-only and not surfaced."
+			},
+			{
+				"trigger": "Type a new password or confirm",
+				"effect": "Held in local state. Retyping either field clears any pending mismatch Notice immediately. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, the password is saved via a one-shot `saveEntityRecord` call (never enters shared edits). Password fields cleared on success."
+			},
+			{
 				"trigger": "Click Save Changes",
-				"effect": "`await save()`; on success: success snackbar. On failure: error banner with `err.message`."
+				"effect": "Step 1: if `hasEdits`, calls `save()` via `handleSave` (profile fields); on failure returns early. Step 2: if a new password was entered, calls `saveEntityRecord('root','user',{ id: userId, password })` directly (record carries `id` so core-data issues PATCH, not POST); `saveEntityRecord` RESOLVES `undefined` on REST failure (does NOT throw) — detected via falsy return + `getLastEntitySaveError('root','user',userId)`; on failure shows error banner + leaves password fields filled for retry. On full success: snackbar ('Profile updated.' when profile edits were present; 'Password updated.' when only password changed) + password fields cleared."
 			},
 			{
 				"trigger": "Type a name + Add New Application Password (Application Passwords section)",
@@ -215,6 +234,14 @@
 				"note": "The create response's plaintext `password` is shown exactly once and is never re-fetchable (`controller:625`). The reveal panel must stay imperative (`api-fetch`, local state) — a core-data entity cache would lose it. Dismissing or navigating away discards it permanently."
 			},
 			{
+				"concern": "password-write-only-no-reauth",
+				"note": "The new-password field has NO current-password re-authentication (REST does not require it) and NO server-side weak-password gate — `WP_REST_Users_Controller` accepts any password except those containing a backslash (`check_user_password`). The app only enforces a client-side confirm-match. The classic wp-admin pass1/pass2 + zxcvbn strength meter + `pw_weak` confirm checkbox are intentionally not reproduced. `password` is never returned by REST, so it lives in local state (not the entity record edits) and is saved via a direct one-shot `saveEntityRecord` call at save time — it never enters the shared edit queue."
+			},
+			{
+				"concern": "locale-installed-only",
+				"note": "Interface Language offers only Site Default + English + already-installed locales (the REST `locale` enum is `en_US` + `get_available_languages()` plus '' for site default). Installing a downloadable language pack on save is a wp-admin-only sub-feature and is deliberately not offered. REST resolves `locale` via `get_user_locale()`, so a site-default user reads back the resolved site locale (not '') — selecting Site Default ('') writes the reset."
+			},
+			{
 				"concern": "app-password-availability",
 				"note": "Application passwords require HTTPS and are incompatible with Basic-Auth-protected sites; the controller gates server-side. A failed list GET renders an inline unavailable notice (and hides the create form) rather than crashing the profile form."
 			},
@@ -225,8 +252,8 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, Stack, Text",
-				"purpose": "Form layout + save button. URL + email fields are DataForm field defs (type: 'text'/'email'), not direct InputControl imports — DataViews owns their rendering."
+				"import": "@wordpress/ui#Button, InputControl, Notice, Stack, Text",
+				"purpose": "Profile form layout + password inputs + password-mismatch Notice + save button. URL + email fields are DataForm field defs (type: 'text'/'email') — DataViews owns their rendering; `InputControl` is used only for the write-only new-password / confirm-password fields."
 			},
 			{
 				"import": "@wordpress/components#Spinner",
