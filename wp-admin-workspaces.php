@@ -1021,7 +1021,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
 	// this, `userCan()` would default-false on inline-permissioned menu
 	// items that have no screen binding.
 	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
-		wpas_collect_menu_item_caps( $config['menu'], $declared );
+		wp_admin_workspaces_collect_menu_item_caps( $config['menu'], $declared );
 	}
 
 	// Built-in source capability floors (mirrors registry/builtins.js
@@ -1043,7 +1043,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
  * declared on `permissions.capabilities[]`. Mirrors the screen-perms walk
  * for menu items that don't inherit perms from a bound screen.
  */
-function wpas_collect_menu_item_caps( $menu, &$declared ) {
+function wp_admin_workspaces_collect_menu_item_caps( $menu, &$declared ) {
 	if ( ! is_array( $menu ) ) {
 		return;
 	}
@@ -1060,7 +1060,7 @@ function wpas_collect_menu_item_caps( $menu, &$declared ) {
 			}
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			wpas_collect_menu_item_caps( $item['items'], $declared );
+			wp_admin_workspaces_collect_menu_item_caps( $item['items'], $declared );
 		}
 	}
 }
