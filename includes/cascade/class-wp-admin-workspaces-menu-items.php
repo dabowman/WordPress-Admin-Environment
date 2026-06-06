@@ -517,7 +517,11 @@ class WP_Admin_Workspaces_Menu_Items {
 				if ( ! isset( $item['label'] ) && isset( $screen['label'] ) ) {
 					$item['label'] = $screen['label'];
 				}
-				if ( ! isset( $item['icon'] ) && isset( $screen['icon'] ) ) {
+				// `array_key_exists` (not `isset`) so an explicit `icon: null`
+				// on the menu item suppresses inheritance — the author opted
+				// out of the screen icon. `isset` is false for a null value
+				// and would re-fold the screen icon right back (#72).
+				if ( ! array_key_exists( 'icon', $item ) && isset( $screen['icon'] ) ) {
 					$item['icon'] = $screen['icon'];
 				}
 				// Arbitrary-icon escape hatch (#127): a harvested data-URI /

@@ -59,7 +59,7 @@
 | → Uploaded to (parent) | "Uploaded to" link + Attach/Detach (`column_parent():608`) | None | ❌ missing | `post` field available (controller:989) — not read |
 | → Audio/video preview | `<audio>`/`<video>` player in modal | Shows `mime_type` text only (index.js:423-425) | ❌ missing | `source_url` available; just needs a player element |
 | → "Edit more details" / full edit | link to `?item={id}` edit screen | None | ❌ missing | |
-| **Inline image editor** | Crop / rotate L+R / flip H+V / scale / restore / undo-redo / per-size target (`image-edit.js`; `wp_save_image():913`) | None | ❌ missing | **Partially REST-buildable** — see API blockers; crop/rotate/flip via `/edit`, but scale/restore/in-place/target are admin-ajax-only |
+| **Inline image editor** | Crop / rotate L+R / flip H+V / scale / restore / undo-redo / per-size target (`image-edit.js`; `wp_save_image():913`) | Crop / rotate L+R / flip H+V via `ImageEditor.js` (canvas preview + crop drag), POST `/edit` (#125) | 🟡 partial | Crop/rotate/flip built; **scale / restore / undo-redo / per-size target / in-place save still missing** (admin-ajax-only — blockers #1-#4). Saves a NEW attachment, not in-place |
 | **Bulk select** | Checkboxes (list) / "Bulk select" mode (grid) (`column_cb():447`) | None | ❌ missing | |
 | **Bulk delete (permanent)** | `delete` bulk action, N× `wp_delete_attachment()` (`upload.php:327-341`) | Single-item delete only (index.js:151-177) | ❌ missing | Buildable as N parallel `DELETE …?force=true`; no `/batch` (see blockers) |
 | **Single delete (permanent)** | Row action "Delete Permanently" with JS confirm (`_get_row_actions():837`) | Modal Delete button, `force:true`, **no confirm dialog** (index.js:477-485) | 🟡 partial | Works but skips the confirmation classic shows |
@@ -94,7 +94,7 @@ Behaviors present in both that work differently:
 
 4. **Coarse type filter using `media_type` vs. mime groups.** Classic filters on `post_mime_type:` strings and exposes Spreadsheets/Archives sub-buckets derived from `wp_match_mime_types()` (`class-wp-media-list-table.php:161-179`). The workspace filters on the 5-value `media_type` enum (`index.js:26-32`) — "Documents" collapses `application/*` and there is no spreadsheet/archive distinction. Consequence: narrower filtering granularity, though for most users the coarse buckets suffice.
 
-5. **Pagination not URL-addressable.** Classic encodes `?paged=N` (bookmarkable, back/forward works). The workspace holds `page` in `useState` (`index.js:40`); refresh or deep-link always lands on page 1 (app.md "Known limitations" confirms). Consequence: cannot share/bookmark a deep page; browser Back doesn't restore page position.
+5. ✅ **Resolved (#136).** ~~Pagination not URL-addressable.~~ `view.page` now round-trips through `?paged=N` (omitted on page 1) and the single-value `type` filter through `?media_type=<value>`, via the `urlSlots` opt-in on `useEntityDataView`. Bookmark/share a deep page + filter, and browser Back restores position. The author/date filters, search, and the open-detail modal remain local (multi-value/range filters don't round-trip through one query param; the modal is transient).
 
 6. **Thumbnail freshness after upload.** Classic relies on synchronous (or `/post-process`-finalized) subsize generation. The workspace invalidates the list query after upload (`index.js:123-140`) but never reads `missing_image_sizes` nor calls `/post-process`; a large image whose subsizes are deferred can render with `source_url` (full-size) as the tile or a broken/placeholder thumb until a later refetch. Consequence: occasional momentarily-wrong thumbnails on slow servers.
 
@@ -161,7 +161,7 @@ The detail modal hand-rolls form controls (`InputControl` ×2, `TextareaControl`
 2. **Bulk select + bulk delete with confirmation.** *(workspace)* Falls out of #1 plus `createBulkConfirmModal` (`_shared/dataviews/createBulkConfirmModal.js`); delete is N parallel `DELETE …?force=true` (no batch endpoint — blocker #6, but the parallel pattern is the established workaround). Add the self-safe `force:true` everywhere (already correct).
 3. ~~**Add `catch` to `handleUpload` + per-file error surfacing.**~~ **Done (#103).** Each `apiFetch` in `src/apps/media/index.js` is wrapped in its own `try/catch` so a failed file produces a `createErrorNotice` instead of a silent unhandled rejection; the batch continues past the failure. Resolves divergence #3.
 4. **Search, date, author, Mine, Unattached filters.** *(workspace)* All REST-ready (`author[]`, `after`/`before`, `s`, `parent[]=0`). Wire as DataViews `filters`/`search` after #1.
-5. **Inline image editor (crop / rotate / flip).** *(workspace)* Build a canvas editor that POSTs `modifiers[]` to `/wp/v2/media/{id}/edit`. Crop/rotate/flip are fully supported (controller:1635-1745). Surface "Edit Image" in the detail modal for `media_type==='image'`. Note the response is a **new attachment** (blocker #1) — design the UX around "saves as a copy" and let the caller re-point references.
+5. ~~**Inline image editor (crop / rotate / flip).**~~ **Done (#125).** `src/apps/media/ImageEditor.js` fills the `MediaDetails` preview slot with a canvas editor that POSTs `modifiers[]` to `/wp/v2/media/{id}/edit`; the "Edit Image" affordance shows in the detail modal for `media_type==='image'`. The pure rotation/flip/crop → ordered `modifiers[]` mapping is in `imageEditorModel.mjs` (node-tested). The response is a **new attachment** (blocker #1) — the UX says "saves a copy", and `onSaved`/`onReplaced` re-point the open detail to the new id. Scale / per-size target / restore / in-place remain blocked upstream (P3 #13).
 
 **P2 — fills out the detail modal and uploader**
 
@@ -170,7 +170,7 @@ The detail modal hand-rolls form controls (`InputControl` ×2, `TextareaControl`
 8. **Attach / detach to a post.** *(workspace)* `PATCH post:{id}` / `post:0` (controller:1202). Needs a post-picker UI (could reuse a core-data `useEntityRecords('postType','post')` search).
 9. **Autosave the metadata form (or at least migrate to `EntityDataForm`).** *(workspace)* Closes divergence #1 and gives consistent save feedback. Use `_shared/forms/EntityDataForm.js`.
 10. **Delete confirmation dialog.** *(workspace)* Closes divergence #2 — even outside bulk, single delete should confirm (media is trash-less).
-11. **URL-driven pagination + filter state.** *(workspace)* Move `page`/`mediaType` into URL slots per the workspace's URL-as-state principle (CLAUDE.md); fixes divergence #5 and enables deep-links.
+11. ✅ **Done (#136).** **URL-driven pagination + filter state.** *(workspace)* `page` → `?paged` and the `type` filter → `?media_type` move into URL slots via the reusable `urlSlots` opt-in on `useEntityDataView` (pure mapping in `_shared/dataviews/viewUrlSlots.mjs`). Fixed divergence #5; deep-links work.
 12. **Subsize-generation polling.** *(workspace)* After upload, if `missing_image_sizes` is non-empty, poll or call `POST /{id}/post-process` (controller:518); fixes divergence #6.
 
 **P3 — parity polish / upstream asks**

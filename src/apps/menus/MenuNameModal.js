@@ -3,6 +3,7 @@ import { Button, InputControl, Stack } from '@wordpress/ui';
 import { Modal } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 
 /**
  * Create or rename a menu container (`root/menu`).
@@ -63,33 +64,37 @@ export function MenuNameModal( { menu, onClose, onSave, onSaved, onError } ) {
 			}
 			onRequestClose={ onClose }
 		>
-			<Stack direction="column" gap="md">
-				<InputControl
-					label={ __( 'Menu name', 'wp-admin-workspaces' ) }
-					value={ name }
-					onChange={ ( e ) =>
-						setName(
-							typeof e === 'string' ? e : e?.target?.value || ''
-						)
-					}
-				/>
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						loading={ isSaving }
-						disabled={ ! name.trim() || isSaving }
-					>
-						{ isNew
-							? __( 'Create', 'wp-admin-workspaces' )
-							: __( 'Save', 'wp-admin-workspaces' ) }
-					</Button>
+			<PortalThemeScope>
+				<Stack direction="column" gap="md">
+					<InputControl
+						label={ __( 'Menu name', 'wp-admin-workspaces' ) }
+						value={ name }
+						onChange={ ( e ) =>
+							setName(
+								typeof e === 'string'
+									? e
+									: e?.target?.value || ''
+							)
+						}
+					/>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button variant="minimal" onClick={ onClose }>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ handleSave }
+							loading={ isSaving }
+							disabled={ ! name.trim() || isSaving }
+						>
+							{ isNew
+								? __( 'Create', 'wp-admin-workspaces' )
+								: __( 'Save', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		</Modal>
 	);
 }

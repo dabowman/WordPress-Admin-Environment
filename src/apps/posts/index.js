@@ -9,6 +9,7 @@ import { Button, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { navigate, useRoute } from '../../runtime/routing/router';
+import { editHref } from './editHref.mjs';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
 	buildFields,
@@ -33,22 +34,6 @@ import {
 	lockStatusField,
 } from '../_shared/dataviews/pinnedStatus.mjs';
 import ViewTabs from '../_shared/dataviews/ViewTabs';
-
-/**
- * Map a post type id to the URL hash that opens its editor route.
- * Routes are bundled in workspaces that surface PostsApp + the native
- * editor (e.g. single-pane-demo). The `post` / `page` post types get their own pluralized
- * paths (`/posts/{id}/edit`, `/pages/{id}/edit`) — site-editor post
- * types (`wp_template`, `wp_block`, `wp_navigation`) need their own
- * edit canvas + URL-encoding (slug-shaped ids); defer until those
- * screens land.
- * @param {*} postType
- * @param {*} id
- */
-function editHref( postType, id ) {
-	const segment = postType === 'page' ? 'pages' : 'posts';
-	return `#/${ segment }/${ id }/edit`;
-}
 
 const STATUS_LABELS = {
 	publish: __( 'Published', 'wp-admin-workspaces' ),

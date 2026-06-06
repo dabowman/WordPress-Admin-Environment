@@ -544,6 +544,8 @@ Authors can use any valid ARIA role. Engines specialize for a subset; everything
 
 The `style` field accepts the broader set of CSS properties used for decoration (background, color, border, padding, etc.) and is applied to the region's container element. `layout` and `style` are emitted as CSS in the region's stylesheet at mount time.
 
+**The split is an authoring boundary, not a runtime one.** It exists so the workspace.json schema can constrain `layout` to the geometry allowlist above while leaving `style` open to free decoration — the boundary is enforced at validation time. At resolve time `resolveRegion` merges the template's `default-style`, the declaration's `style`, and the declaration's `layout` into a *single* applied style map (per-key, in that precedence order), which the renderer applies as one inline `style` on the region element. There is intentionally no separate geometry-vs-decoration application step in the kernel: both are inline CSS on the same node, so a runtime split would be a no-op. Engines that need geometry and decoration on *different* DOM nodes do so in their own `Layout.js`, reading the region declaration directly.
+
 Authors use logical properties (`inline-size`, `block-size`) rather than physical (`width`, `height`) so layouts work in vertical writing modes without modification.
 
 ### 5.3 `platform` — platform service requests
@@ -798,7 +800,14 @@ Authors bring any DTCG-conformant primitive token system in `tokens.json`. WordP
 
 One brand token in tokens.json fans out to three destinations: WPDS surface (admin), legacy admin/components (compat bridge), frontend (`--wp--preset--*`). Re-branding edits one token.
 
-`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge via the same cascade as `workspace.json` (§10).
+`tokens.json` is a valid W3C DTCG (2025.10) file. Discovery: site root > theme root > plugin root > core baseline. Origins merge with the same *mechanics* as `workspace.json` (§10) — scalar replace, object deep-merge — but over a **different, intentionally shorter, origin set**.
+
+**Tokens cascade order (and why it deviates from §10).** The token cascade is `core → plugin → theme → site` (loaded low→high, deep-merged), against the workspace.json cascade's `core → engine → plugin → site → role → user`. Two deliberate differences:
+
+- **Tokens insert a `theme` origin between `plugin` and `site`.** Tokens are a design-system primitive the active block theme legitimately owns — a theme's `tokens.json` rebrands the admin to match its front end — so the theme sits above the plugin baseline but below explicit site choices. The workspace.json cascade has no theme origin because workspace *structure* (screens / menu / permissions) is not the theme's concern.
+- **Tokens drop the `engine`, `role`, and `user` origins.** Tokens are pure visual primitives with no security surface and no per-role / per-user authoring path today, so there is nothing to gate or personalize at those tiers. (Per-region / per-app visual overrides live in `workspace.json.styles` — §9.2 — not in `tokens.json`.) These origins can be added later without disturbing the lower ones.
+
+Tokens are **additive, not restrict-only**: a higher origin overrides a value but cannot tombstone a key the baseline ships. The resolved tree is exposed to extensions via the final `wp_admin_workspaces_tokens` filter (symmetric with `workspace.json`'s `wp_admin_workspaces_data`; the per-origin loader hook is `wp_admin_workspaces_plugin_tokens`). Implementation: `WP_Admin_Workspaces_Tokens::resolve()` + `src/runtime/tokens/tokensResolver.mjs`.
 
 ### 9.2 WPDS-native styles
 
