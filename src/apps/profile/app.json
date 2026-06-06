@@ -36,7 +36,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, and biographical info. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` and shows a loading state while `isSaving`. Success + error route through `@wordpress/notices` snackbar / banner. Below the form, an Application Passwords section (`ApplicationPasswords.js`) lists / creates (with one-time plaintext reveal) / revokes / revokes-all the user's application passwords via imperative `api-fetch` against `/wp/v2/users/{userId}/application-passwords`. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
@@ -65,6 +65,19 @@
 					"source": "window.wpAdminWorkspaces.userId",
 					"via": "window-global",
 					"purpose": "Identify the acting user (fallback when config.userId is absent); absence of both shows a permission-denied message."
+				},
+				{
+					"source": "/wp/v2/users/{userId}/application-passwords",
+					"via": "api-fetch",
+					"purpose": "List the user's application passwords (Application Passwords section). Imperative api-fetch (not core-data) because the create response returns the plaintext `password` exactly once.",
+					"fields": [
+						"uuid",
+						"app_id",
+						"name",
+						"created",
+						"last_used",
+						"last_ip"
+					]
 				}
 			],
 			"writes": [
@@ -73,6 +86,24 @@
 					"via": "core-data",
 					"operation": "update",
 					"purpose": "Save accumulated `edit()` calls via `save()` from useEntityRecord."
+				},
+				{
+					"source": "/wp/v2/users/{userId}/application-passwords",
+					"via": "api-fetch",
+					"operation": "create",
+					"purpose": "POST a new application password (name only); the response carries the plaintext `password` once for a one-time reveal."
+				},
+				{
+					"source": "/wp/v2/users/{userId}/application-passwords/{uuid}",
+					"via": "api-fetch",
+					"operation": "delete",
+					"purpose": "Revoke a single application password by uuid (after a confirm modal)."
+				},
+				{
+					"source": "/wp/v2/users/{userId}/application-passwords",
+					"via": "api-fetch",
+					"operation": "delete",
+					"purpose": "Revoke all application passwords (after a confirm modal)."
 				}
 			]
 		},
@@ -101,6 +132,36 @@
 				"id": "saving",
 				"when": "isSaving === true",
 				"renders": "Save button shows loading spinner + disabled state."
+			},
+			{
+				"id": "app-passwords-loading",
+				"when": "Application Passwords list GET in flight (items === null)",
+				"renders": "Centered Spinner inside the Application Passwords section."
+			},
+			{
+				"id": "app-passwords-empty",
+				"when": "items.length === 0 (no app passwords yet)",
+				"renders": "Create form + 'No application passwords have been created yet.'"
+			},
+			{
+				"id": "app-passwords-list",
+				"when": "items.length > 0",
+				"renders": "Create form + a table (name / created / last used / last IP / Revoke) + Revoke-all button."
+			},
+			{
+				"id": "app-passwords-revealed",
+				"when": "A new application password was just created",
+				"renders": "One-time plaintext reveal panel (readonly value + Copy + Dismiss)."
+			},
+			{
+				"id": "app-passwords-unavailable",
+				"when": "The list GET failed (HTTPS/Basic-Auth/disabled, or 501)",
+				"renders": "Notice.Root (intent=warning) with the server error message; the create form is hidden."
+			},
+			{
+				"id": "app-passwords-confirm-revoke",
+				"when": "Revoke or Revoke-all clicked",
+				"renders": "Confirmation Modal with a destructive Revoke action."
 			}
 		],
 		"interactions": [
@@ -115,6 +176,18 @@
 			{
 				"trigger": "Click Save Changes",
 				"effect": "`await save()`; on success: success snackbar. On failure: error banner with `err.message`."
+			},
+			{
+				"trigger": "Type a name + Add New Application Password (Application Passwords section)",
+				"effect": "POST /wp/v2/users/{userId}/application-passwords { name }; reveals the returned plaintext password once, refreshes the list, success snackbar."
+			},
+			{
+				"trigger": "Copy (reveal panel)",
+				"effect": "`navigator.clipboard.writeText(password)`; success/error snackbar."
+			},
+			{
+				"trigger": "Revoke (row) / Revoke all application passwords",
+				"effect": "Opens a confirm Modal; on confirm DELETE the single uuid (or the collection), refreshes the list, success snackbar."
 			}
 		],
 		"a11y": {
@@ -136,6 +209,18 @@
 			{
 				"concern": "dataform-edit-controls",
 				"note": "The display-name select (`Edit: 'select'`) and the bio textarea (`Edit: { control: 'textarea', rows: 5 }`) are rendered by `DataForm` from their field definitions — they are DataViews-internal controls, NOT direct `@wordpress/components` imports. The app's only direct `@wordpress/components` leakage is `Spinner`."
+			},
+			{
+				"concern": "app-password-one-time-reveal",
+				"note": "The create response's plaintext `password` is shown exactly once and is never re-fetchable (`controller:625`). The reveal panel must stay imperative (`api-fetch`, local state) — a core-data entity cache would lose it. Dismissing or navigating away discards it permanently."
+			},
+			{
+				"concern": "app-password-availability",
+				"note": "Application passwords require HTTPS and are incompatible with Basic-Auth-protected sites; the controller gates server-side. A failed list GET renders an inline unavailable notice (and hides the create form) rather than crashing the profile form."
+			},
+			{
+				"concern": "app-password-self-scope",
+				"note": "The section manages `userId`'s passwords (the acting user on the self-service /profile screen). Managing another user's application passwords requires the `edit_user` cap; the REST controller enforces this, so an under-privileged admin editing another user sees the unavailable notice."
 			}
 		],
 		"design-system-leakage": [
@@ -146,6 +231,14 @@
 			{
 				"import": "@wordpress/components#Spinner",
 				"purpose": "Loading spinner — no `@wordpress/ui` 0.12 port. The display-name select and bio textarea are `DataForm` `Edit` controls (DataViews-internal), not direct DS imports."
+			},
+			{
+				"import": "@wordpress/ui#Button, Notice, InputControl, Stack, Text, Badge",
+				"purpose": "Application Passwords section — create form, list heading, unavailable warning notice, never-used pill."
+			},
+			{
+				"import": "@wordpress/components#Modal, Button (isDestructive), __experimentalDivider, Spinner",
+				"purpose": "Application Passwords — revoke-confirm modal, destructive Revoke buttons (no WPDS 0.12 critical tone), section divider, list spinner."
 			}
 		]
 	}
