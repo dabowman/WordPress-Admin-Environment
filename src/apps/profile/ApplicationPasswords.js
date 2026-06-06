@@ -22,21 +22,23 @@ import { dateI18n } from '@wordpress/date';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
- * Format an application-password timestamp for display, or a dash when the
- * field is null (never-used passwords). The REST API returns `created` /
- * `last_used` as GMT strings with no timezone suffix (e.g.
- * `"2024-01-15T10:30:00"`); passing `true` as the third arg tells `dateI18n`
- * to treat the input as GMT and render in the site's configured timezone +
- * locale, preventing a day-off error on non-UTC sites.
+ * Format an application-password timestamp for display, or an em dash when
+ * the field is absent. The REST API returns `created` / `last_used` as
+ * offset-less GMT strings (e.g. `"2024-01-15T10:30:00"`). Appending `Z`
+ * makes the string an unambiguous UTC instant so JavaScript's Date parser
+ * treats it correctly; `dateI18n` then renders it in the site's configured
+ * timezone + locale with no third argument needed. The deprecated boolean
+ * third arg (`timezone=true`) is intentionally avoided — it can emit a
+ * `wp.deprecated` console warning and does not reliably signal UTC input.
  *
- * @param {string|null} gmt The `created` / `last_used` GMT datetime, or null.
+ * @param {string|null} gmt The `created` / `last_used` GMT datetime, or null/undefined.
  * @return {string} Localized date, or an em dash placeholder.
  */
 function formatDate( gmt ) {
 	if ( ! gmt ) {
 		return '—';
 	}
-	return dateI18n( 'M j, Y', gmt, true );
+	return dateI18n( 'M j, Y', `${ gmt }Z` );
 }
 
 /**

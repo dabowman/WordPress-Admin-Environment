@@ -45,7 +45,7 @@ A non-WPDS rebuild needs text input + email input + URL input + select + textare
 - **No password change.** WordPress wp-admin's profile page includes a password section; this app omits it. Password updates need the dedicated endpoint with the current-password confirm step.
 - **No two-factor.** Out of scope (no core REST surface). Application Passwords are now supported — see above.
 - **App-password rename not surfaced.** The controller supports `PUT .../{uuid}` (rename); this UI only lists / creates / revokes, matching the most common wp-admin flows. Add an inline rename later if needed.
-- **App-password date locale.** `created` / `last_used` are GMT strings from the REST API. `dateI18n` is called with `timezone=true` so they are parsed as UTC and rendered in the site's configured timezone, preventing a day-off error on non-UTC sites.
+- **App-password date locale.** `created` / `last_used` are offset-less GMT strings from the REST API (e.g. `"2024-01-15T10:30:00"`). A trailing `Z` is appended before passing to `dateI18n` so the value is parsed as an unambiguous UTC instant; `dateI18n` then renders it in the site's configured timezone + locale. The deprecated boolean third argument (`timezone=true`) is not used — it can emit a `wp.deprecated` console warning.
 - **No avatar customization.** WordPress uses Gravatar; this app shows nothing about it.
 - **Admin-email change differs from wp-admin.** REST saves email directly; wp-admin uses a confirm-by-link flow. We don't surface this distinction beyond a description on the field.
 - **Profile is current-user-only.** No editing-another-user flow exists; that would need to live in `core:users` (with `edit_users` cap gating) and a different mount.
