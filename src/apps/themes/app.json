@@ -156,7 +156,7 @@
 			},
 			{
 				"trigger": "Click Live Preview in details",
-				"effect": "Navigate via `<a href>` to the Site Editor preview (`site-editor.php?wp_theme_preview={slug}`, block themes) or the Customizer (`customize.php?theme={slug}`, classic) — routed through the kernel admin-link interceptor.",
+				"effect": "Navigate via `<a href>` to the Customizer preview (`customize.php?theme={slug}`) — routed through the kernel admin-link interceptor.",
 				"guards": [
 					"item.status === 'inactive'"
 				]

@@ -18,12 +18,13 @@
  * @param {Object} post              Post fields.
  * @param {string} post.status       Post status (`publish` / `future` / `draft` / …).
  * @param {string} [post.date]       Publish / scheduled date (ISO, site-local time).
- * @param {string} [post.date_gmt]   Publish / scheduled date in UTC (ISO with `Z`
- *                                   suffix). Preferred over `date` for the missed-
- *                                   schedule comparison — `date` lacks a timezone
- *                                   suffix and is parsed as browser-local, so the
- *                                   cut-over time is timezone-fragile without the GMT
- *                                   field.
+ * @param {string} [post.date_gmt]   Publish / scheduled date in UTC (ISO, no timezone
+ *                                   suffix — WordPress REST emits `mysql_to_rfc3339`
+ *                                   format `Y-m-d\TH:i:s`, no trailing `Z`). Preferred
+ *                                   over `date` for the missed-schedule comparison —
+ *                                   `date` lacks a timezone suffix and is parsed as
+ *                                   browser-local, so the cut-over time is timezone-
+ *                                   fragile without explicit UTC treatment.
  * @param {string} [post.modified]   Last-modified date (ISO, site-local time).
  * @param {number} [now]             Epoch ms to compare scheduled dates against;
  *                                   defaults to the caller's clock at call time.
@@ -35,13 +36,25 @@ export function postDateLabel( post, now = Date.now() ) {
 	const status = post?.status;
 
 	if ( status === 'future' ) {
-		// Prefer `date_gmt` (always UTC, has a `Z` suffix) for the missed-schedule
-		// check. `date` is site-local and lacks a timezone suffix, so
-		// `Date.parse(date)` is interpreted as browser-local time — the cutover
-		// point shifts with the visitor's timezone. Fall back to `date` when
+		// Prefer `date_gmt` for the missed-schedule check — it is always a UTC
+		// instant. WordPress REST emits it WITHOUT a timezone suffix (mysql_to_rfc3339
+		// → `Y-m-dTH:i:s`), so a bare `Date.parse(date_gmt)` would be interpreted
+		// as browser-local time, shifting the cutover with the viewer's timezone.
+		// Guard: only append `Z` when the string carries no timezone designator
+		// (no trailing `Z` and no `+hh:mm`/`-hh:mm` offset) so we never double-mark
+		// a string that already encodes UTC (defensive). Fall back to `date` when
 		// `date_gmt` is absent so the function still works with partial records.
-		const rawDate = post?.date_gmt || post?.date;
-		const scheduled = rawDate ? Date.parse( rawDate ) : NaN;
+		const rawGmt = post?.date_gmt;
+		const rawDate = post?.date;
+		let scheduled = NaN;
+		if ( rawGmt ) {
+			// Treat the GMT value as a true UTC instant.
+			const utcString =
+				/Z$|[+-]\d{2}:\d{2}$/.test( rawGmt ) ? rawGmt : rawGmt + 'Z';
+			scheduled = Date.parse( utcString );
+		} else if ( rawDate ) {
+			scheduled = Date.parse( rawDate );
+		}
 		const missed = Number.isFinite( scheduled ) && scheduled < now;
 		return {
 			key: missed ? 'missed' : 'scheduled',

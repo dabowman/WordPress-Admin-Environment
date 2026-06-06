@@ -7,6 +7,6 @@
 /* Past-due scheduled posts — the "Missed schedule" date label, matching
    wp-admin's `error-message` red. */
 .wp-admin-workspaces-app-posts__date-missed {
-	color: var( --wpds-color-fg-content-error );
+	color: var( --wpds-color-fg-content-error-weak );
 	font-weight: 600;
 }

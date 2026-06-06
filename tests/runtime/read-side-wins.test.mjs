@@ -111,14 +111,14 @@ ok(
 	} )()
 );
 ok(
-	'future + date_gmt in the past → missed (timezone-stable)',
+	'future + date_gmt in the past → missed (REST-accurate no-Z format)',
 	( () => {
-		// date_gmt (UTC with Z suffix) is preferred over date (site-local,
-		// no timezone suffix) for timezone-stable missed-schedule detection.
+		// WordPress REST emits date_gmt WITHOUT a Z suffix (mysql_to_rfc3339 →
+		// Y-m-dTH:i:s). The helper must treat it as UTC, not browser-local.
 		const r = postDateLabel(
 			{
 				status: 'future',
-				date_gmt: '2026-06-01T00:00:00Z',
+				date_gmt: '2026-06-01T00:00:00',
 				date: '2026-06-01T00:00:00',
 			},
 			NOW
@@ -127,19 +127,39 @@ ok(
 	} )()
 );
 ok(
-	'future + date_gmt wins over date when both present',
+	'future + date_gmt wins over date when both present (REST-accurate no-Z)',
 	( () => {
 		// date_gmt says "not yet missed" even if date (parsed browser-local)
 		// might differ — date_gmt should win.
 		const r = postDateLabel(
 			{
 				status: 'future',
-				date_gmt: '2026-07-01T00:00:00Z',
+				date_gmt: '2026-07-01T00:00:00',
 				date: '2026-06-01T00:00:00',
 			},
 			NOW
 		);
 		return r.key === 'scheduled' && r.missedSchedule === false;
+	} )()
+);
+ok(
+	'tz-boundary: date_gmt past-in-UTC must be missed even in +14:00 zone',
+	( () => {
+		// Regression guard: 2026-06-03T23:00:00 UTC is in the PAST relative to NOW
+		// (2026-06-04T12:00:00Z). A viewer in UTC+14 whose engine parsed the no-Z
+		// string as LOCAL would see 2026-06-03T23:00:00+14:00 → UTC 2026-06-03T09:00:00,
+		// still past, BUT a viewer in UTC-12 would parse it as
+		// 2026-06-03T23:00:00-12:00 → UTC 2026-06-04T11:00:00 — one hour in the
+		// FUTURE — and wrongly mark it "scheduled". The Z-append fix must catch this.
+		const r = postDateLabel(
+			{
+				status: 'future',
+				// REST-format (no Z): a UTC instant that is 1 h before NOW.
+				date_gmt: '2026-06-04T11:00:00',
+			},
+			NOW // 2026-06-04T12:00:00Z
+		);
+		return r.key === 'missed' && r.missedSchedule === true;
 	} )()
 );
 ok(
