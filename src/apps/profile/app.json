@@ -134,18 +134,14 @@
 				"note": "Manifest declares `core:dirty-state: true`. The app does NOT call `useDirtyState` directly — it relies on `hasEdits` being read by a sibling NavigationGuard. (`block-navigation-on-dirty` is intentionally not set; profile edits are low-stakes.)"
 			},
 			{
-				"concern": "inputcontrol-event-shape",
-				"note": "WPDS `InputControl` onChange takes a DOM event (`e.target.value`), not the raw value. The same applies wherever WPDS form fields are used."
-			},
-			{
 				"concern": "dataform-edit-controls",
 				"note": "The display-name select (`Edit: 'select'`) and the bio textarea (`Edit: { control: 'textarea', rows: 5 }`) are rendered by `DataForm` from their field definitions — they are DataViews-internal controls, NOT direct `@wordpress/components` imports. The app's only direct `@wordpress/components` leakage is `Spinner`."
 			}
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
-				"purpose": "Form layout + text + URL + email inputs + save button."
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Form layout + save button. URL + email fields are DataForm field defs (type: 'text'/'email'), not direct InputControl imports — DataViews owns their rendering."
 			},
 			{
 				"import": "@wordpress/components#Spinner",
