@@ -120,8 +120,11 @@ function pickCursor( styles ) {
  *
  * Root/chrome popovers keep body-portaling (already correctly root-themed).
  * NOTE: `@wordpress/components` `Modal` uses its own body portal independent of
- * the Popover slot, so Modal-based overlays (DataViews action `RenderModal`)
- * are NOT covered by this seam — see docs/feedback.md.
+ * the Popover slot, so Modal-based overlays (DataViews action `RenderModal`,
+ * app-owned term/media/plugin Modals) are NOT covered by this seam. They
+ * re-establish the region theme by wrapping their content in the kernel's
+ * `<PortalThemeScope>` (ThemeProviderHost.js), which replays the scoped seeds
+ * carried through the portal via React context. See issue #74.
  *
  * @param {Object} root0
  * @param {*}      root0.children

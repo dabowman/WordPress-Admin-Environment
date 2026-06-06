@@ -36,6 +36,15 @@ const { buildSubmitPayload, firstItem } = await import(
 const { computeBulkPayload, resolveBulkTargets, NO_CHANGE } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/bulkEditPayload.mjs' )
 );
+const {
+	readViewSlots,
+	applyViewSlots,
+	viewSlotParams,
+	mergeSlotParams,
+	serializeSlotParams,
+} = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/viewUrlSlots.mjs' )
+);
 
 let pass = 0;
 let fail = 0;
@@ -546,6 +555,154 @@ ok(
 		// Would throw if `items` were null rather than [].
 		return items.filter( () => true );
 	} ).length === 0
+);
+
+// --- viewUrlSlots (#136 URL slot round-trip) ------------------------------
+const MEDIA_SPEC = {
+	page: 'paged',
+	filters: [ { field: 'type', param: 'media_type', operator: 'is' } ],
+};
+
+// readViewSlots: normalize URL params → slot state.
+ok(
+	'readViewSlots: empty params → default page 1, no filters',
+	JSON.stringify( readViewSlots( {}, MEDIA_SPEC ) ) ===
+		JSON.stringify( { page: 1, filters: [] } )
+);
+ok(
+	'readViewSlots: parses paged + media_type',
+	JSON.stringify(
+		readViewSlots( { paged: '3', media_type: 'image' }, MEDIA_SPEC )
+	) ===
+		JSON.stringify( {
+			page: 3,
+			filters: [ { field: 'type', operator: 'is', value: 'image' } ],
+		} )
+);
+ok(
+	'readViewSlots: non-positive / non-numeric paged falls back to 1',
+	readViewSlots( { paged: '0' }, MEDIA_SPEC ).page === 1 &&
+		readViewSlots( { paged: 'x' }, MEDIA_SPEC ).page === 1 &&
+		readViewSlots( { paged: '-2' }, MEDIA_SPEC ).page === 1
+);
+ok(
+	'readViewSlots: empty filter value is omitted',
+	readViewSlots( { media_type: '' }, MEDIA_SPEC ).filters.length === 0
+);
+ok(
+	'readViewSlots: null params tolerated',
+	JSON.stringify( readViewSlots( null, MEDIA_SPEC ) ) ===
+		JSON.stringify( { page: 1, filters: [] } )
+);
+
+// applyViewSlots: overlay slot state onto a base view, preserving other axes.
+const baseView = {
+	type: 'grid',
+	page: 1,
+	search: 'cat',
+	filters: [ { field: 'author', operator: 'is', value: 5 } ],
+};
+const applied = applyViewSlots(
+	baseView,
+	readViewSlots( { paged: '2', media_type: 'video' }, MEDIA_SPEC ),
+	MEDIA_SPEC
+);
+ok( 'applyViewSlots: sets page', applied.page === 2 );
+ok(
+	'applyViewSlots: preserves non-slotted filters (author) + adds slotted (type)',
+	applied.filters.length === 2 &&
+		applied.filters.some( ( f ) => f.field === 'author' ) &&
+		applied.filters.some(
+			( f ) => f.field === 'type' && f.value === 'video'
+		)
+);
+ok(
+	'applyViewSlots: preserves unrelated axes (search/type-layout)',
+	applied.search === 'cat' && applied.type === 'grid'
+);
+ok(
+	'applyViewSlots: a slotted field absent from URL is cleared, others kept',
+	( () => {
+		const withType = {
+			...baseView,
+			filters: [
+				{ field: 'author', operator: 'is', value: 5 },
+				{ field: 'type', operator: 'is', value: 'image' },
+			],
+		};
+		const out = applyViewSlots(
+			withType,
+			readViewSlots( {}, MEDIA_SPEC ),
+			MEDIA_SPEC
+		);
+		return (
+			out.filters.length === 1 && out.filters[ 0 ].field === 'author'
+		);
+	} )()
+);
+
+// viewSlotParams: project a view → flat param map (null = remove).
+ok(
+	'viewSlotParams: page 1 + no filter → all null (clean URL)',
+	( () => {
+		const m = viewSlotParams(
+			{ page: 1, filters: [] },
+			MEDIA_SPEC
+		);
+		return m.paged === null && m.media_type === null;
+	} )()
+);
+ok(
+	'viewSlotParams: page>1 + filter → string values',
+	( () => {
+		const m = viewSlotParams(
+			{
+				page: 4,
+				filters: [ { field: 'type', value: 'audio' } ],
+			},
+			MEDIA_SPEC
+		);
+		return m.paged === '4' && m.media_type === 'audio';
+	} )()
+);
+
+// mergeSlotParams: merge into an existing query string, preserving other slots.
+ok(
+	'mergeSlotParams: preserves unrelated params, sets + deletes',
+	( () => {
+		const out = mergeSlotParams( 'screen=posts&paged=2', {
+			paged: null,
+			media_type: 'image',
+		} );
+		const p = new URLSearchParams( out );
+		return (
+			p.get( 'screen' ) === 'posts' &&
+			p.get( 'paged' ) === null &&
+			p.get( 'media_type' ) === 'image'
+		);
+	} )()
+);
+
+// serializeSlotParams: stable equality key; same state → same key, diff → diff.
+ok(
+	'serializeSlotParams: round-trip equality',
+	serializeSlotParams(
+		applyViewSlots(
+			{},
+			readViewSlots( { paged: '2', media_type: 'image' }, MEDIA_SPEC ),
+			MEDIA_SPEC
+		),
+		MEDIA_SPEC
+	) ===
+		serializeSlotParams(
+			{ page: 2, filters: [ { field: 'type', value: 'image' } ] },
+			MEDIA_SPEC
+		)
+);
+ok(
+	'serializeSlotParams: page change yields a different key',
+	serializeSlotParams( { page: 2, filters: [] }, MEDIA_SPEC ) !==
+		serializeSlotParams( { page: 3, filters: [] }, MEDIA_SPEC )
 );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );

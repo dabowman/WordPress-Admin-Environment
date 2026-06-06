@@ -28,6 +28,7 @@
 import {
 	pickDensity,
 	hasThemeContent,
+	appendScopedStyles,
 	scopedSelector,
 	buildScopedDetailCss,
 	THEME_SCOPE_ATTRIBUTE,
@@ -130,6 +131,53 @@ eq(
 	'non-object value at theme key returns false',
 	hasThemeContent( { theme: 'oops' } ),
 	false
+);
+
+console.log( '\n— appendScopedStyles —' );
+
+// Empty/contentless seed returns the inherited stack unchanged (same
+// identity) — the no-op path PortalThemeScope relies on for zero-cost
+// when a region doesn't theme away from root.
+{
+	const base = [ { theme: {} } ];
+	ok(
+		'contentless seed returns the SAME array identity',
+		appendScopedStyles( base, {} ) === base
+	);
+	ok(
+		'null seed returns the same array identity',
+		appendScopedStyles( base, null ) === base
+	);
+	ok(
+		'undefined seed returns the same array identity',
+		appendScopedStyles( base, undefined ) === base
+	);
+}
+
+// A seed with theme content is appended (outermost-first order preserved),
+// producing a NEW array so React memoization sees a changed reference.
+{
+	const region = { color: { primary: '#abc' } };
+	const app = { theme: { density: 'compact' } };
+	const afterRegion = appendScopedStyles( [], region );
+	eq( 'first seed appended', afterRegion, [ region ] );
+	const afterApp = appendScopedStyles( afterRegion, app );
+	eq(
+		'second seed appended after the first (region, then app)',
+		afterApp,
+		[ region, app ]
+	);
+	ok(
+		'append produces a new array (not mutating the inherited one)',
+		afterApp !== afterRegion && afterRegion.length === 1
+	);
+}
+
+// Non-array inherited input is tolerated (treated as empty base).
+eq(
+	'non-array inherited treated as empty base',
+	appendScopedStyles( undefined, { theme: {} } ),
+	[ { theme: {} } ]
 );
 
 console.log( '\n— scopedSelector —' );
