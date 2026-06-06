@@ -469,7 +469,7 @@ Plugin compatibility: third-party taxonomy plugins (custom term meta UIs, hierar
 
 ### Acceptable interim
 
-For v1 of any new workspace config, `iframe:edit-tags.php?taxonomy={tax}` is the explicit fallback. The developer-admin workspace already uses this. Mark configs with iframe taxonomy panels for replacement when `core:taxonomy` lands.
+For v1 of any new workspace config, `iframe:edit-tags.php?taxonomy={tax}` is an available escape hatch. The `wp-admin-default` baseline ships the native `core:taxonomy` app (parameterized by `config.taxonomy`). Mark configs that still use the iframe for replacement.
 
 ---
 
@@ -499,5 +499,5 @@ For v1 of any new workspace config, `iframe:edit-tags.php?taxonomy={tax}` is the
 - REST schemas: `https://developer.wordpress.org/rest-api/reference/categories/`, `/tags/`, and per-taxonomy at `/wp-json/wp/v2/{rest_base}`
 - `WP_Taxonomy::cap` definitions: `wp-includes/class-wp-taxonomy.php`
 - `wp_dropdown_categories()` — parent select renderer used by core's add/edit forms
-- Current workspace impl: **not yet registered.** Planned `core:taxonomy` source, parameterized by taxonomy slug
-- Workspace config example: `workspaces/developer-workspace.json` currently has `iframe:edit-tags.php?taxonomy=category` as the placeholder
+- Current workspace impl: `core:taxonomy` → `src/apps/taxonomy/index.js`, registered in `src/runtime/registry/builtins.js`. Parameterized by `config.taxonomy` (defaults to `category`).
+- Workspace config example: `workspaces/wp-admin-default.json` ships `core:taxonomy` with `config.taxonomy: "category"` for the Categories screen and `config.taxonomy: "post_tag"` for Tags.

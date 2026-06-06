@@ -418,8 +418,8 @@ class WP_Admin_Workspaces_Data_View_Config {
 				is_array( $value ) &&
 				isset( $out[ $key ] ) &&
 				is_array( $out[ $key ] ) &&
-				self::is_assoc( $value ) &&
-				self::is_assoc( $out[ $key ] )
+				WP_Admin_Workspaces_Util::is_assoc( $value ) &&
+				WP_Admin_Workspaces_Util::is_assoc( $out[ $key ] )
 			) {
 				$out[ $key ] = self::deep_merge_view( $out[ $key ], $value );
 				continue;
@@ -792,18 +792,6 @@ class WP_Admin_Workspaces_Data_View_Config {
 		_doing_it_wrong( __CLASS__, esc_html( $message ), 'v3.0.0' );
 	}
 
-	/**
-	 * Helper — true for assoc array (non-empty, string keys).
-	 *
-	 * @param mixed $arr
-	 * @return bool
-	 */
-	private static function is_assoc( $arr ) {
-		if ( ! is_array( $arr ) || empty( $arr ) ) {
-			return false;
-		}
-		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
-	}
 }
 
 // Post-merge so workspace.json (and downstream origins) are authoritative.

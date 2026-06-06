@@ -10,6 +10,7 @@ import {
 	resolveBulkTargets,
 	NO_CHANGE,
 } from './bulkEditPayload.mjs';
+import { PortalThemeScope } from '../../../runtime/styles/ThemeProviderHost';
 
 /**
  * The shared host for **Bulk Edit** — apply a chosen subset of fields to the M
@@ -257,46 +258,48 @@ export function createBulkEditModal( {
 		// action's `label` / `modalHeader`), so wrapping our own would double the
 		// overlay / header / focus trap. Mirrors `createBulkConfirmModal`.
 		return (
-			<Stack direction="column" gap="md">
-				<Text>
-					{ sprintf(
-						/* translators: %d: number of selected items. */
-						_n(
-							'Editing %d item.',
-							'Editing %d items.',
-							count,
-							'wp-admin-workspaces'
-						),
-						count
-					) }
-				</Text>
-				<DataForm
-					data={ data }
-					fields={ fields }
-					form={ form }
-					onChange={ ( edits ) =>
-						setData( ( prev ) => ( { ...prev, ...edits } ) )
-					}
-				/>
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button
-						tone="neutral"
-						variant="minimal"
-						onClick={ closeModal }
-					>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ onApply }
-						loading={ isBusy }
-						disabled={ ! hasChanges || isBusy }
-					>
-						{ applyLabel }
-					</Button>
+			<PortalThemeScope>
+				<Stack direction="column" gap="md">
+					<Text>
+						{ sprintf(
+							/* translators: %d: number of selected items. */
+							_n(
+								'Editing %d item.',
+								'Editing %d items.',
+								count,
+								'wp-admin-workspaces'
+							),
+							count
+						) }
+					</Text>
+					<DataForm
+						data={ data }
+						fields={ fields }
+						form={ form }
+						onChange={ ( edits ) =>
+							setData( ( prev ) => ( { ...prev, ...edits } ) )
+						}
+					/>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button
+							tone="neutral"
+							variant="minimal"
+							onClick={ closeModal }
+						>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ onApply }
+							loading={ isBusy }
+							disabled={ ! hasChanges || isBusy }
+						>
+							{ applyLabel }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		);
 	};
 }

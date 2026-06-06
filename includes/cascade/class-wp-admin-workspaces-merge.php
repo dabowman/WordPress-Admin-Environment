@@ -344,10 +344,15 @@ class WP_Admin_Workspaces_Merge {
 		return null;
 	}
 
+	/**
+	 * True for a non-empty associative array. Kept as a public method for
+	 * the many cascade callers that reference `WP_Admin_Workspaces_Merge::is_assoc`;
+	 * the logic itself lives once in {@see WP_Admin_Workspaces_Util::is_assoc}.
+	 *
+	 * @param mixed $arr
+	 * @return bool
+	 */
 	public static function is_assoc( $arr ) {
-		if ( ! is_array( $arr ) || empty( $arr ) ) {
-			return false;
-		}
-		return array_keys( $arr ) !== range( 0, count( $arr ) - 1 );
+		return WP_Admin_Workspaces_Util::is_assoc( $arr );
 	}
 }

@@ -207,16 +207,8 @@
 				"note": "Manifest declares `core:dirty-state: true`. The app does NOT call `useDirtyState` directly — it relies on `hasEdits` being read by a sibling NavigationGuard. (`block-navigation-on-dirty` is intentionally not set; profile edits are low-stakes.)"
 			},
 			{
-				"concern": "inputcontrol-event-shape",
-				"note": "WPDS `InputControl` onChange takes a DOM event (`e.target.value`), not the raw value. The same applies wherever WPDS form fields are used."
-			},
-			{
-				"concern": "textarea-fallback",
-				"note": "Uses legacy `TextareaControl` from `@wordpress/components` — WPDS 0.12 has no port."
-			},
-			{
-				"concern": "select-fallback",
-				"note": "Uses legacy `SelectControl` from `@wordpress/components` for the display name (WPDS 0.12 SelectControl has no `__nextHasNoMarginBottom` parity)."
+				"concern": "dataform-edit-controls",
+				"note": "The display-name select (`Edit: 'select'`) and the bio textarea (`Edit: { control: 'textarea', rows: 5 }`) are rendered by `DataForm` from their field definitions — they are DataViews-internal controls, NOT direct `@wordpress/components` imports. The app's only direct `@wordpress/components` leakage is `Spinner`."
 			},
 			{
 				"concern": "app-password-one-time-reveal",
@@ -233,12 +225,12 @@
 		],
 		"design-system-leakage": [
 			{
-				"import": "@wordpress/ui#Button, InputControl, Stack, Text",
-				"purpose": "Form layout + text + URL + email inputs + save button."
+				"import": "@wordpress/ui#Button, Stack, Text",
+				"purpose": "Form layout + save button. URL + email fields are DataForm field defs (type: 'text'/'email'), not direct InputControl imports — DataViews owns their rendering."
 			},
 			{
-				"import": "@wordpress/components#TextareaControl, SelectControl, Spinner",
-				"purpose": "Bio textarea + display-name select + loading spinner — WPDS 0.12 gaps."
+				"import": "@wordpress/components#Spinner",
+				"purpose": "Loading spinner — no `@wordpress/ui` 0.12 port. The display-name select and bio textarea are `DataForm` `Edit` controls (DataViews-internal), not direct DS imports."
 			},
 			{
 				"import": "@wordpress/ui#Button, Notice, InputControl, Stack, Text, Badge",

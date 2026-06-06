@@ -192,9 +192,11 @@ add_action( 'init', function () {
 	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
 }, 5 );
 
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-util.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-prefs-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-themes-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-site-health-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-merge.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-customizable.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-cache.php';
@@ -218,6 +220,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-conf
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-cli.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-validator.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-registry.php';
@@ -537,6 +540,22 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		WP_ADMIN_WORKSPACES_PATH . 'languages'
 	);
 
+	// Media modal. The shared media-library-picker `Edit` control
+	// (`src/apps/_shared/forms/controls/MediaPicker.js`, via
+	// `@wordpress/media-utils` `MediaUpload`) opens the WordPress media frame,
+	// which needs the `media-editor` scripts + the footer template markup that
+	// `wp_enqueue_media()` registers. Consumers today: settings-general's Site
+	// Icon picker.
+	//
+	// PERF NOTE: this is NOT a no-op when no picker is on screen — it enqueues
+	// the media-frame scripts (media-editor/media-views/media-models/plupload)
+	// and prints the backbone media-modal templates on the footer of EVERY
+	// workspace render, a per-page cost paid even on Dashboard/Posts where no
+	// picker exists. Acceptable for alpha; if cold-mount perf
+	// (`docs/perf-baseline.md`) becomes a concern, gate this on whether the
+	// active screen can host a picker rather than enqueuing unconditionally.
+	wp_enqueue_media();
+
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-workspaces` as a dependency loads once the kernel has published
@@ -679,6 +698,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// workspace's own page load are captured (per-screen notices keyed on
 		// `$pagenow` don't fire) — see the harvest class docblock.
 		'adminNotices'  => WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices(),
+		// #125 — the `flip` modifier on the `/wp/v2/media/{id}/edit` route's
+		// `modifiers[]` enum is WP 6.9+. On 6.7/6.8 (supported targets via the
+		// Gutenberg private-API fallback) a `flip` edit returns
+		// `rest_invalid_param` and — because validation is per-item — fails the
+		// whole rotate+flip+crop edit. The media app's `ImageEditor` hides the
+		// flip tools when this is false so flip is never emitted below 6.9.
+		// Crop / rotate work everywhere.
+		'supportsImageFlip' => version_compare( get_bloginfo( 'version' ), '6.9', '>=' ),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-workspaces', '
@@ -688,6 +715,66 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		html.wp-toolbar { padding-top: 0 !important; }
 		#wp-admin-workspaces { position: fixed; inset: 0; z-index: 99999; }
 	' );
+
+	wp_admin_workspaces_guard_jquery_hash_selectors();
+}
+
+/**
+ * Neutralize the jQuery/Sizzle "unrecognized expression: #/<route>" throw on
+ * the workspace shell page (issue #248).
+ *
+ * The hijack renders through `admin-header.php` / `admin-footer.php`, so the
+ * full classic-admin jQuery ecosystem co-loads on the same page as the React
+ * shell. The shell publishes navigation as slash-containing hash routes
+ * (`<a href="#/site-editor">`, `window.location.hash = '#/posts'`). A leading
+ * `#/` is NOT a valid jQuery/Sizzle selector: jQuery's `rquickExpr`
+ * (`#([\w-]+)$`) rejects it, so `$()` falls through to `Sizzle.tokenize`, which
+ * throws. Any co-loaded handler that feeds the URL hash — or a clicked
+ * anchor's `href` — into `jQuery()` (a screen-meta/help handler hit via an
+ * unexpected DOM path, a third-party plugin's anchor/hashchange handler, …)
+ * therefore throws on every shell navigation, aborting the rest of that
+ * handler.
+ *
+ * Rather than enumerate (and dequeue) every co-loaded thrower — fragile,
+ * version-dependent, and impossible to fully pin without the live stack — we
+ * guard at the throw site: wrap `jQuery.fn.init` so a `#/`-prefixed string
+ * selector resolves to an empty set instead of reaching the tokenizer. On the
+ * shell page `#/…` is always a workspace route and never a real element id
+ * (ids can't carry an unescaped `/`), so an empty match is the semantically
+ * correct, no-op result — identical to what a valid-but-nonmatching selector
+ * would return. The guard is intentionally narrow to the route prefix `#/`,
+ * so genuinely-malformed selectors elsewhere still surface.
+ *
+ * jQuery (always present in wp-admin) loads before this; the shim installs at
+ * script-load time, ahead of the DOM-ready / hashchange / click handlers that
+ * actually call `$( hash )`.
+ */
+function wp_admin_workspaces_guard_jquery_hash_selectors() {
+	wp_enqueue_script( 'jquery-core' );
+	$guard = <<<'JS'
+( function ( $ ) {
+	if ( ! $ || ! $.fn || ! $.fn.init || $.fn.init.__wpAdminWorkspacesHashGuard ) {
+		return;
+	}
+	var origInit = $.fn.init;
+	function GuardedInit( selector, context, root ) {
+		if (
+			typeof selector === 'string' &&
+			selector.charCodeAt( 0 ) === 35 /* # */ &&
+			selector.charCodeAt( 1 ) === 47 /* / */
+		) {
+			// A workspace hash route ("#/…"), never an element id on this
+			// page — resolve to an empty set instead of throwing in Sizzle.
+			return new origInit( [], context, root );
+		}
+		return new origInit( selector, context, root );
+	}
+	GuardedInit.prototype = origInit.prototype;
+	GuardedInit.__wpAdminWorkspacesHashGuard = true;
+	$.fn.init = GuardedInit;
+} )( window.jQuery );
+JS;
+	wp_add_inline_script( 'jquery-core', $guard, 'after' );
 }
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
@@ -994,7 +1081,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
 	// this, `userCan()` would default-false on inline-permissioned menu
 	// items that have no screen binding.
 	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
-		wpas_collect_menu_item_caps( $config['menu'], $declared );
+		wp_admin_workspaces_collect_menu_item_caps( $config['menu'], $declared );
 	}
 
 	// Built-in source capability floors (mirrors registry/builtins.js
@@ -1016,7 +1103,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
  * declared on `permissions.capabilities[]`. Mirrors the screen-perms walk
  * for menu items that don't inherit perms from a bound screen.
  */
-function wpas_collect_menu_item_caps( $menu, &$declared ) {
+function wp_admin_workspaces_collect_menu_item_caps( $menu, &$declared ) {
 	if ( ! is_array( $menu ) ) {
 		return;
 	}
@@ -1033,7 +1120,7 @@ function wpas_collect_menu_item_caps( $menu, &$declared ) {
 			}
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			wpas_collect_menu_item_caps( $item['items'], $declared );
+			wp_admin_workspaces_collect_menu_item_caps( $item['items'], $declared );
 		}
 	}
 }

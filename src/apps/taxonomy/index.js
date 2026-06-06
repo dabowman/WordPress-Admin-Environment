@@ -19,6 +19,7 @@ import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { createBulkConfirmModal } from '../_shared/dataviews/createBulkConfirmModal';
 import { buildTermTree, flattenTreeOrder, indentLabel } from './termTree.mjs';
 import { Page } from '../_shared/Page';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 
 const DEFAULT_TAXONOMY_LABEL = {
 	category: __( 'Categories', 'wp-admin-workspaces' ),
@@ -591,32 +592,34 @@ function TermEditModal( {
 			}
 			onRequestClose={ onClose }
 		>
-			<Stack direction="column" gap="md">
-				<DataForm
-					data={ data }
-					fields={ fields }
-					form={ form }
-					onChange={ ( edits ) =>
-						setData( ( prev ) => ( { ...prev, ...edits } ) )
-					}
-				/>
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button variant="minimal" onClick={ onClose }>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ handleSave }
-						loading={ isSaving }
-						disabled={ ! data.name || isSaving }
-					>
-						{ isNew
-							? __( 'Add term', 'wp-admin-workspaces' )
-							: __( 'Save', 'wp-admin-workspaces' ) }
-					</Button>
+			<PortalThemeScope>
+				<Stack direction="column" gap="md">
+					<DataForm
+						data={ data }
+						fields={ fields }
+						form={ form }
+						onChange={ ( edits ) =>
+							setData( ( prev ) => ( { ...prev, ...edits } ) )
+						}
+					/>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button variant="minimal" onClick={ onClose }>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ handleSave }
+							loading={ isSaving }
+							disabled={ ! data.name || isSaving }
+						>
+							{ isNew
+								? __( 'Add term', 'wp-admin-workspaces' )
+								: __( 'Save', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		</Modal>
 	);
 }
