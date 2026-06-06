@@ -590,7 +590,7 @@ Recommendation: ship (1) for v1 (zero-config plugin compatibility) and (2) for n
 | Network-admin variants | n/a | Separate spec (`network-admin/plugins.md`). |
 
 ### Acceptable interim
-For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor.php` are acceptable escape hatches. The developer-admin workspace already uses these. Track them for native replacement.
+For v1, `iframe:plugin-install.php` and `iframe:plugin-editor.php` are acceptable escape hatches for the Add Plugins and Plugin File Editor screens. The `wp-admin-default` baseline ships the native `core:plugins` installed-plugins list; the add and file-editor screens use iframes. `iframe:plugins.php` is available for workspaces that prefer the classic installed-plugins screen.
 
 ---
 
@@ -629,5 +629,5 @@ For v1, `iframe:plugins.php`, `iframe:plugin-install.php`, `iframe:plugin-editor
 - REST schema reference: `https://developer.wordpress.org/rest-api/reference/plugins/`
 - Auto-updates: `wp-admin/includes/update.php` + `auto_update_plugins` site option
 - Capability map: `wp-admin/includes/capabilities.php` (`map_meta_cap` cases for `activate_plugin`, `deactivate_plugin`, `delete_plugin`, `edit_plugin`, `update_plugin`, `resume_plugin`)
-- Current workspace impl: none (iframe fallback in `workspaces/developer-workspace.json`)
+- Current workspace impl: `core:plugins` → `src/apps/plugins/index.js`, registered in `src/runtime/registry/builtins.js`. `wp-admin-default.json` ships the native installed-plugins list. The Add Plugins screen (`plugins-new`) uses `iframe:plugin-install.php` and the Plugin File Editor uses `iframe:plugin-editor.php`.
 - Cross-link: `docs/screens/users.md` (analogous list-with-modal-actions pattern)

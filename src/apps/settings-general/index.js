@@ -15,6 +15,7 @@ import { __ } from '@wordpress/i18n';
 import { eventValue } from '../_shared/forms/eventValue.mjs';
 import { Page } from '../_shared/Page';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
+import { MediaPicker } from '../_shared/forms/controls/MediaPicker';
 
 const CUSTOM_RADIO_VALUE = '__custom__';
 
@@ -132,6 +133,24 @@ export default function SettingsGeneralApp() {
 					onChange={ ( e ) =>
 						edit( { description: eventValue( e ) } )
 					}
+				/>
+
+				{ /* Site Icon — the `site_icon` core setting (integer
+				   attachment id, REST-exposed). Uses the shared
+				   media-library-picker control. */ }
+				<MediaPicker
+					label={ __( 'Site Icon', 'wp-admin-workspaces' ) }
+					help={ __(
+						'The Site Icon is used as a browser and app icon for your site. Icons must be square, and at least 512 × 512 pixels.',
+						'wp-admin-workspaces'
+					) }
+					allowedTypes={ [ 'image' ] }
+					buttonLabel={ __(
+						'Choose a Site Icon',
+						'wp-admin-workspaces'
+					) }
+					value={ editedRecord.site_icon || 0 }
+					onChange={ ( id ) => edit( { site_icon: id } ) }
 				/>
 
 				{ ! isMultisite && (

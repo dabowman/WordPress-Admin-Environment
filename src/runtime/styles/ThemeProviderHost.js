@@ -36,18 +36,42 @@
  *     overrides to a region or application subtree.
  */
 
-import { useId, useMemo, createElement, Component } from '@wordpress/element';
+import {
+	useId,
+	useMemo,
+	useContext,
+	createContext,
+	createElement,
+	Component,
+} from '@wordpress/element';
 
 import { useKernel } from '../kernel-context';
 import {
 	pickDensity,
 	hasThemeContent,
+	appendScopedStyles,
 	buildScopedDetailCss,
 	THEME_SCOPE_ATTRIBUTE,
 	THEME_SCOPE_DETAIL_ATTRIBUTE,
 } from './themeScope.mjs';
 
 const EMPTY_TOKENS = Object.freeze( {} );
+const EMPTY_STYLES_STACK = Object.freeze( [] );
+
+/**
+ * Carries the stack of scoped `styles` seeds (region, then app, …) that
+ * `<ScopedThemeProvider>` has applied above the current node, outermost
+ * first. DS-neutral — the value is an array of opaque `workspace.json.styles`
+ * objects; this context never references a design system.
+ *
+ * React context propagates through portals, so a body-portaled overlay
+ * (`@wordpress/components` `Modal`) still reads the originating region/app
+ * seeds even though its DOM escapes the region's `--wpds-*` scope.
+ * `<PortalThemeScope>` consumes this to replay those providers inside the
+ * portal — the residual gap the per-instance Popover.Slot fix in
+ * `WpdsThemeProvider` doesn't cover (Modal owns a separate body portal).
+ */
+const ScopedStylesContext = createContext( EMPTY_STYLES_STACK );
 
 /**
  * Top-level host. Mounted by the kernel.
@@ -81,6 +105,15 @@ export function ThemeProviderHost( props ) {
  */
 export function ScopedThemeProvider( { styles, children } ) {
 	const { engineSource } = useKernel();
+	const inheritedStack = useContext( ScopedStylesContext );
+	// Publish this seed onto the stack so a body-portaled overlay rendered
+	// anywhere below can replay it (see `<PortalThemeScope>`). Computed
+	// before the early return to keep hook order stable; identity-stable
+	// when this subtree has no theme content (returns the inherited array).
+	const nextStack = useMemo(
+		() => appendScopedStyles( inheritedStack, styles ),
+		[ inheritedStack, styles ]
+	);
 	if ( ! hasThemeContent( styles ) ) {
 		return children;
 	}
@@ -89,15 +122,66 @@ export function ScopedThemeProvider( { styles, children } ) {
 		EMPTY_TOKENS;
 	const density = pickDensity( styles );
 	return createElement(
-		ProviderShell,
-		{
-			engineSource,
-			styles,
-			tokens,
-			density,
-			isRoot: false,
-		},
-		children
+		ScopedStylesContext.Provider,
+		{ value: nextStack },
+		createElement(
+			ProviderShell,
+			{
+				engineSource,
+				styles,
+				tokens,
+				density,
+				isRoot: false,
+			},
+			children
+		)
+	);
+}
+
+/**
+ * Re-applies the active region/app theme seeds inside a body-portaled
+ * overlay so it inherits the originating region's theme instead of the
+ * workspace *root* theme.
+ *
+ * The kernel scopes a region's `--wpds-*` CSS variables to that region's
+ * DOM subtree (via `<ScopedThemeProvider>`). `@wordpress/components`
+ * `Modal` portals its content to `document.body`, escaping that DOM scope
+ * — so a Modal opened from a region that themes away from root (e.g. a
+ * light content region over a dark developer-admin shell) would otherwise
+ * paint with the root theme on both background and foreground.
+ *
+ * React context propagates through portals, so the modal content still
+ * reads `ScopedStylesContext` and we replay each scoped provider here,
+ * outermost first, re-establishing the region's tokens + foreground at the
+ * portal's DOM location. No `regionId` threading is required.
+ *
+ * Wrap the *content inside* the overlay, never the overlay itself:
+ *   - App-owned Modal:     `<Modal><PortalThemeScope>…</PortalThemeScope></Modal>`
+ *   - DataViews RenderModal (DataViews supplies the `<Modal>`): return
+ *     `<PortalThemeScope>…</PortalThemeScope>` as the body.
+ *
+ * No-op (renders children unchanged) when no region/app above declared a
+ * theme — the overlay already inherits the root theme correctly.
+ *
+ * @param {Object} root0
+ * @param {*}      root0.children
+ */
+export function PortalThemeScope( { children } ) {
+	const stack = useContext( ScopedStylesContext );
+	if ( ! stack || stack.length === 0 ) {
+		return children;
+	}
+	// Reset the inherited stack to empty around the replay so the replayed
+	// providers rebuild it identically — a Modal opened from within this
+	// Modal then replays the same seeds once, not twice.
+	return createElement(
+		ScopedStylesContext.Provider,
+		{ value: EMPTY_STYLES_STACK },
+		stack.reduceRight(
+			( acc, styles ) =>
+				createElement( ScopedThemeProvider, { styles }, acc ),
+			children
+		)
 	);
 }
 

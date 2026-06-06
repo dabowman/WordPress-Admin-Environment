@@ -27,6 +27,17 @@ Save flow (`onSave`):
 
 Notice routing: success → snackbar (auto-dismiss), failure → dismissible banner (sticky until the user clears).
 
+## Application Passwords
+
+Below the form, `ApplicationPasswords.js` reproduces wp-admin's Application Passwords block (`user-edit.php:790-883`): list, add (one-time plaintext reveal), revoke one, revoke all. It is **not** a `DataForm` or `useEntityRecord` consumer — it's a list-of-records CRUD whose create response returns the plaintext `password` exactly once and is never re-fetchable (`WP_REST_Application_Passwords_Controller`, `controller:625`), so it drives the nested `/wp/v2/users/{userId}/application-passwords` endpoint imperatively with `api-fetch` and holds the revealed value in local state.
+
+- **List:** `GET .../application-passwords` on mount; a centered Spinner while in flight.
+- **Create:** `POST .../application-passwords { name }` → reveal panel (readonly value + Copy via `navigator.clipboard` + Dismiss), then re-list.
+- **Revoke one:** `DELETE .../application-passwords/{uuid}` behind a confirm Modal.
+- **Revoke all:** `DELETE .../application-passwords` behind a confirm Modal.
+- **Availability:** the controller gates server-side (HTTPS required, Basic-Auth-incompatible, capability). A failed list GET renders a `Notice.Root intent="warning"` and hides the create form instead of crashing the profile form.
+- **Scope:** manages `userId`'s passwords (the acting user on `/profile`). Managing another user's needs `edit_user`; the REST controller enforces it.
+
 ## Rebuild guide
 
 The "form over an entity record" pattern is generic. For a non-`core-data` rebuild:
@@ -42,7 +53,9 @@ A non-WPDS rebuild needs text input + email input + URL input + select + textare
 
 - **Password change has no re-auth and no server weak-password gate.** The new-password field writes `password` straight through `WP_REST_Users_Controller`, which requires **no current-password re-authentication** and applies **no weak-password / strength gate** — it accepts any password except those containing a backslash (`check_user_password`). This app only enforces a client-side confirm-match. The classic wp-admin pass1/pass2 + zxcvbn strength meter + `pw_weak` confirm checkbox are intentionally **not** reproduced (they are entirely client-side in classic; REST has no equivalent). This is a deliberate REST-parity tradeoff, not an oversight.
 - **Interface Language offers installed locales only.** The `locale` select lists Site Default + English + already-installed languages. Installing a downloadable language pack as a side effect of saving is a **wp-admin-only** sub-feature and is not offered here (the REST `locale` enum would reject an uninstalled locale anyway). Note REST resolves `locale` via `get_user_locale()`, so a site-default user reads back the *resolved* site locale rather than an empty value; selecting **Site Default** writes the reset.
-- **No application passwords / two-factor.** Out of scope. (`/wp/v2/users/<id>/application-passwords` is a complete REST controller and is the single largest unbuilt-but-reachable gap — tracked separately.)
+- **No two-factor.** Out of scope (no core REST surface).
+- **App-password rename not surfaced.** The controller supports `PUT .../{uuid}` (rename); this UI only lists / creates / revokes, matching the most common wp-admin flows. Add an inline rename later if needed.
+- **App-password date locale.** `created` / `last_used` are offset-less GMT strings from the REST API (e.g. `"2024-01-15T10:30:00"`). A trailing `Z` is appended before passing to `dateI18n` so the value is parsed as an unambiguous UTC instant; `dateI18n` then renders it in the site's configured timezone + locale. The deprecated boolean third argument (`timezone=true`) is not used — it can emit a `wp.deprecated` console warning.
 - **No avatar customization.** WordPress uses Gravatar; this app shows nothing about it.
 - **Admin-email change differs from wp-admin.** REST saves email directly; wp-admin uses a confirm-by-link flow. We don't surface this distinction beyond a description on the field.
 - **No per-field cap gating for editing another user.** The app accepts `config.userId` (interpolated by the `/users/{id}/edit` route) so the `core:users` Edit action + username link can target a named user. REST enforces the `edit_users` cap server-side; the app itself does not add a client-side gate or per-field restriction beyond what the REST response exposes.

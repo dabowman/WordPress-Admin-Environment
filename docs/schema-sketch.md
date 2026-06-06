@@ -238,6 +238,26 @@ The `detail` slot is engine-declared (a split-view layout). The editor mounts th
 
 Children nested inside a parent menu item do NOT inherit the parent's icon. Each screen renders its own icon; children without an icon render no icon. Authors who want children to look like their parent must declare the icon explicitly.
 
+A menu item that IS bound to a screen inherits the screen's `icon` automatically (folded in by `bind_screens`). To suppress it — render the item with **no icon** while keeping the screen binding — set `icon: null` on the menu item. `bind_screens` checks `array_key_exists` (not `isset`), so an explicit `null` blocks inheritance where an absent key would re-fold the screen icon. Author the `null` in the trust-tier origin where the item is first declared; the cascade treats `null` as a tombstone (key-removal) when it lands over a lower origin's existing item, in which case the key is dropped and the screen icon re-inherits.
+
+**Caveat — `iconSource` folds independently.** `icon: null` suppresses only the named `icon`. If the bound screen ALSO carries an `iconSource` (the #127 arbitrary-icon escape hatch — a harvested data-URI / image-URL icon), that folds onto the item independently (its own `isset` guard in `bind_screens`, not gated by the `icon` opt-out), and every nav renderer prefers `iconSource` over `icon`. So an item whose screen declares both still shows an icon despite `icon: null`. In practice the two are mutually exclusive (the harvested-icon path doesn't set a named `icon`), but to *fully* suppress where both exist, also clear `iconSource`.
+
+**Worked example — origin sensitivity (the footgun).** `icon: null` only suppresses in the origin that *first declares* the item; authored over a lower origin's existing item it tombstones the key and the screen icon re-inherits — the opposite of what an author reaching for "strip this baseline icon" expects.
+
+```jsonc
+// core / plugin baseline declares the item (bound to the `posts` screen, which has an icon):
+//   menu.posts = {}                          → bind_screens folds in screen icon → item shows icon
+
+// CASE A — suppress in the SAME origin that declares the item (works):
+//   menu.posts = { "icon": null }            → array_key_exists('icon') is true → screen icon NOT folded → NO icon ✓
+
+// CASE B — override from a HIGHER consumer origin (site/role/user) over the baseline item (does NOT work):
+//   site:   menu.posts = { "icon": null }    → cascade reads null as a TOMBSTONE → removes the `icon` key
+//                                            → merged item has no `icon` key → bind_screens RE-FOLDS the screen icon → icon REAPPEARS ✗
+```
+
+To suppress a baseline item's icon from a higher origin you cannot use `icon: null` (it tombstones, then re-inherits). This is inherent to overloading `null` as both "suppress" (within-origin) and "tombstone" (cross-origin) in one cascade.
+
 ## Modes
 
 Screens declare which engine-defined chrome mode they want. The engine maps each mode to a set of region states (visible / hidden / minimal). This is how an editor screen hides the sidebar and strips the toolbar without each screen having to know which regions exist.

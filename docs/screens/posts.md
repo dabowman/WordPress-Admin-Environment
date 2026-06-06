@@ -422,7 +422,7 @@ For v1 of any new workspace config, `iframe:edit.php?post_type={type}` is accept
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-posts-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/posts/`
 - Current workspace impl: `src/apps/posts/index.js`
-- Workspace config example: `workspaces/content-author.json`
+- Workspace config example: `workspaces/wp-admin-default.json`
 
 ---
 

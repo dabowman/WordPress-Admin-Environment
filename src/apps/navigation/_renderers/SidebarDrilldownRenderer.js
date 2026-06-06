@@ -95,7 +95,9 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 				{ item.iconSource ? (
 					<ArbitraryIcon iconSource={ item.iconSource } size={ 24 } />
 				) : (
-					<Icon icon={ resolveIcon( item.icon ) } size={ 24 } />
+					item.icon && (
+						<Icon icon={ resolveIcon( item.icon ) } size={ 24 } />
+					)
 				) }
 			</a>
 		);
@@ -127,7 +129,7 @@ function renderCollapsedItem( item, index, currentPrimary ) {
 			tone="neutral"
 			variant="minimal"
 			className="wp-admin-workspaces-nav__item"
-			icon={ resolveIcon( item.icon ) }
+			icon={ item.icon ? resolveIcon( item.icon ) : undefined }
 			render={
 				<a
 					href={ item.href }
@@ -318,7 +320,7 @@ function renderRootItem( item, index, currentPrimary, navState ) {
 			<SidebarNavigationItem
 				key={ `screen-${ item.id }` }
 				uid={ `screen-${ item.id }` }
-				icon={ resolveIcon( item.icon ) }
+				icon={ item.icon ? resolveIcon( item.icon ) : undefined }
 				iconSource={ item.iconSource }
 				withChevron
 				isActive={ isActive }
@@ -366,7 +368,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 			<SidebarNavigationItem
 				key={ `ext-${ item.id || index }` }
 				uid={ `ext-${ item.id || index }` }
-				icon={ resolveIcon( item.icon ) }
+				icon={ item.icon ? resolveIcon( item.icon ) : undefined }
 				iconSource={ item.iconSource }
 				href={ item.href }
 				target="_blank"
@@ -392,7 +394,7 @@ function renderLeafItem( item, index, currentPrimary ) {
 		<SidebarNavigationItem
 			key={ item.id || `nav-${ index }` }
 			uid={ `nav-${ item.id || index }` }
-			icon={ resolveIcon( item.icon ) }
+			icon={ item.icon ? resolveIcon( item.icon ) : undefined }
 			iconSource={ item.iconSource }
 			isActive={ isActive }
 			href={ item.href }

@@ -152,6 +152,46 @@ console.log( '\n— registerIcons tolerates missing args gracefully —' );
 	eq( 'valid follow-up still registers', resolveIcon( 'post' ), 'POST' );
 }
 
+console.log( '\n— subscribers fire on a (late) icon registration —' );
+{
+	const { registerIcons, subscribeIcons } = createIconRegistry();
+	let calls = 0;
+	const unsubscribe = subscribeIcons( () => {
+		calls++;
+	} );
+	registerIcons( { post: 'POST' } );
+	eq( 'table registration notifies', calls, 1 );
+
+	registerIcons( undefined, { fallback: 'FB' } );
+	eq( 'fallback-only registration notifies', calls, 2 );
+
+	// No-op registration (no table, no fallback) must NOT notify.
+	registerIcons();
+	registerIcons( null );
+	eq( 'no-op registration does not notify', calls, 2 );
+
+	unsubscribe();
+	registerIcons( { page: 'PAGE' } );
+	eq( 'unsubscribed listener stops firing', calls, 2 );
+}
+
+console.log( '\n— subscribeIcons ignores a non-function listener —' );
+{
+	const { registerIcons, subscribeIcons } = createIconRegistry();
+	const unsubscribe = subscribeIcons( undefined );
+	ok(
+		'non-function listener returns a no-op unsubscribe',
+		typeof unsubscribe === 'function'
+	);
+	let threw = false;
+	try {
+		registerIcons( { post: 'POST' } );
+	} catch ( e ) {
+		threw = true;
+	}
+	ok( 'registration with no real listener does not throw', ! threw );
+}
+
 console.log( '\n— Summary —' );
 console.log( `PASS: ${ pass }  FAIL: ${ fail }` );
 if ( fail > 0 ) {

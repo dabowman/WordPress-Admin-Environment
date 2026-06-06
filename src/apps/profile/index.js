@@ -11,6 +11,7 @@ import { __ } from '@wordpress/i18n';
 import { eventValue } from '../_shared/forms/eventValue.mjs';
 import { useEntitySave } from '../_shared/forms/useEntitySave';
 import { Page } from '../_shared/Page';
+import ApplicationPasswords from './ApplicationPasswords';
 
 const FORM = {
 	layout: { type: 'regular', labelPosition: 'top' },
@@ -277,17 +278,18 @@ export default function ProfileApp( { config = {} } = {} ) {
 
 	return (
 		<Page title={ __( 'Profile', 'wp-admin-workspaces' ) } hasPadding>
-			<Stack
-				direction="column"
-				gap="xl"
-				className="wp-admin-workspaces-app-profile"
-			>
-				<DataForm
-					data={ editedRecord }
-					fields={ fields }
-					form={ FORM }
-					onChange={ edit }
-				/>
+			<Stack direction="column" gap="2xl">
+				<Stack
+					direction="column"
+					gap="xl"
+					className="wp-admin-workspaces-app-profile"
+				>
+					<DataForm
+						data={ editedRecord }
+						fields={ fields }
+						form={ FORM }
+						onChange={ edit }
+					/>
 
 				{ /* Account management — new password. Write-only (`password`
 				   is never returned by REST), so it sits outside the DataForm
@@ -346,6 +348,9 @@ export default function ProfileApp( { config = {} } = {} ) {
 						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
 					</Button>
 				</Stack>
+			</Stack>
+
+				<ApplicationPasswords key={ userId } userId={ userId } />
 			</Stack>
 		</Page>
 	);
