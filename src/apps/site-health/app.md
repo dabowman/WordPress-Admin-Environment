@@ -59,4 +59,4 @@ A non-WPDS rebuild needs Tabs, Collapsible/accordion, Card, Badge, Button, Spinn
 - **No stale-cache write-back.** The `health-check-site-status-result` transient (dashboard widget + menu badge) isn't written.
 - **HTTPS one-click migration** isn't implemented (no REST surface; classic-only action).
 - **`view_site_health_checks` cap floor.** Subscribers can't see the screen — matches wp-admin.
-- **Full-fidelity fallback.** `iframe:site-health.php` remains available (used in `developer-admin`) for everything not yet ported.
+- **Full-fidelity fallback.** `iframe:site-health.php` remains available as an escape hatch for everything not yet ported.
