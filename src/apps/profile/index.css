@@ -47,7 +47,6 @@
 	font-weight: 600;
 }
 
-.wp-admin-workspaces-app-profile__app-passwords-empty,
-.wp-admin-workspaces-app-profile__app-passwords-error {
+.wp-admin-workspaces-app-profile__app-passwords-empty {
 	color: var( --wpds-color-content-secondary, #757575 );
 }

@@ -156,7 +156,7 @@
 			{
 				"id": "app-passwords-unavailable",
 				"when": "The list GET failed (HTTPS/Basic-Auth/disabled, or 501)",
-				"renders": "Inline notice with the server error message; the create form is hidden."
+				"renders": "Notice.Root (intent=warning) with the server error message; the create form is hidden."
 			},
 			{
 				"id": "app-passwords-confirm-revoke",
@@ -241,8 +241,8 @@
 				"purpose": "Bio textarea + display-name select + loading spinner — WPDS 0.12 gaps."
 			},
 			{
-				"import": "@wordpress/ui#Button, InputControl, Stack, Text, Badge",
-				"purpose": "Application Passwords section — create form, list heading, never-used pill."
+				"import": "@wordpress/ui#Button, Notice, InputControl, Stack, Text, Badge",
+				"purpose": "Application Passwords section — create form, list heading, unavailable warning notice, never-used pill."
 			},
 			{
 				"import": "@wordpress/components#Modal, Button (isDestructive), __experimentalDivider, Spinner",

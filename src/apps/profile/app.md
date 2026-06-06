@@ -26,7 +26,7 @@ Below the form, `ApplicationPasswords.js` reproduces wp-admin's Application Pass
 - **Create:** `POST .../application-passwords { name }` → reveal panel (readonly value + Copy via `navigator.clipboard` + Dismiss), then re-list.
 - **Revoke one:** `DELETE .../application-passwords/{uuid}` behind a confirm Modal.
 - **Revoke all:** `DELETE .../application-passwords` behind a confirm Modal.
-- **Availability:** the controller gates server-side (HTTPS required, Basic-Auth-incompatible, capability). A failed list GET renders an inline unavailable notice and hides the create form instead of crashing the profile form.
+- **Availability:** the controller gates server-side (HTTPS required, Basic-Auth-incompatible, capability). A failed list GET renders a `Notice.Root intent="warning"` and hides the create form instead of crashing the profile form.
 - **Scope:** manages `userId`'s passwords (the acting user on `/profile`). Managing another user's needs `edit_user`; the REST controller enforces it.
 
 ## Rebuild guide
@@ -45,6 +45,7 @@ A non-WPDS rebuild needs text input + email input + URL input + select + textare
 - **No password change.** WordPress wp-admin's profile page includes a password section; this app omits it. Password updates need the dedicated endpoint with the current-password confirm step.
 - **No two-factor.** Out of scope (no core REST surface). Application Passwords are now supported — see above.
 - **App-password rename not surfaced.** The controller supports `PUT .../{uuid}` (rename); this UI only lists / creates / revokes, matching the most common wp-admin flows. Add an inline rename later if needed.
+- **App-password date locale.** `created` / `last_used` are GMT strings from the REST API. `dateI18n` is called with `timezone=true` so they are parsed as UTC and rendered in the site's configured timezone, preventing a day-off error on non-UTC sites.
 - **No avatar customization.** WordPress uses Gravatar; this app shows nothing about it.
 - **Admin-email change differs from wp-admin.** REST saves email directly; wp-admin uses a confirm-by-link flow. We don't surface this distinction beyond a description on the field.
 - **Profile is current-user-only.** No editing-another-user flow exists; that would need to live in `core:users` (with `edit_users` cap gating) and a different mount.

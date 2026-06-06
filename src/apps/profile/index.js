@@ -169,7 +169,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 					</Stack>
 				</Stack>
 
-				<ApplicationPasswords userId={ userId } />
+				<ApplicationPasswords key={ userId } userId={ userId } />
 			</Stack>
 		</Page>
 	);

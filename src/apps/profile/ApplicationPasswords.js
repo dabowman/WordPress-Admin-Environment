@@ -3,7 +3,15 @@ import { useState, useEffect, useCallback } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { Button, Stack, Text, InputControl, Badge } from '@wordpress/ui';
+import {
+	Button,
+	Notice,
+	Stack,
+	Text,
+	InputControl,
+	Badge,
+} from '@wordpress/ui';
+import { eventValue } from '../_shared/forms/eventValue.mjs';
 import {
 	Spinner,
 	Modal,
@@ -14,9 +22,12 @@ import { dateI18n } from '@wordpress/date';
 import { __, sprintf } from '@wordpress/i18n';
 
 /**
- * Format an application-password timestamp (GMT, no tz suffix) for display, or
- * a dash when the field is null (never-used passwords). `dateI18n` renders in
- * the site's configured timezone + locale; the second arg is treated as GMT.
+ * Format an application-password timestamp for display, or a dash when the
+ * field is null (never-used passwords). The REST API returns `created` /
+ * `last_used` as GMT strings with no timezone suffix (e.g.
+ * `"2024-01-15T10:30:00"`); passing `true` as the third arg tells `dateI18n`
+ * to treat the input as GMT and render in the site's configured timezone +
+ * locale, preventing a day-off error on non-UTC sites.
  *
  * @param {string|null} gmt The `created` / `last_used` GMT datetime, or null.
  * @return {string} Localized date, or an em dash placeholder.
@@ -25,7 +36,7 @@ function formatDate( gmt ) {
 	if ( ! gmt ) {
 		return '—';
 	}
-	return dateI18n( 'M j, Y', gmt );
+	return dateI18n( 'M j, Y', gmt, true );
 }
 
 /**
@@ -162,7 +173,13 @@ export default function ApplicationPasswords( { userId } ) {
 			setIsRevoking( false );
 			setConfirmRevoke( null );
 		}
-	}, [ base, confirmRevoke, loadItems, createSuccessNotice, createErrorNotice ] );
+	}, [
+		base,
+		confirmRevoke,
+		loadItems,
+		createSuccessNotice,
+		createErrorNotice,
+	] );
 
 	return (
 		<div className="wp-admin-workspaces-app-profile__app-passwords">
@@ -180,9 +197,9 @@ export default function ApplicationPasswords( { userId } ) {
 				</Text>
 
 				{ loadError && (
-					<Text className="wp-admin-workspaces-app-profile__app-passwords-error">
-						{ loadError }
-					</Text>
+					<Notice.Root intent="warning">
+						<Notice.Description>{ loadError }</Notice.Description>
+					</Notice.Root>
 				) }
 
 				{ ! loadError && (
@@ -201,14 +218,7 @@ export default function ApplicationPasswords( { userId } ) {
 								) }
 								value={ newName }
 								onChange={ ( e ) =>
-									setNewName(
-										// WPDS InputControl onChange passes a DOM
-										// event; some control variants pass the
-										// raw value — accept either.
-										typeof e === 'string'
-											? e
-											: e?.target?.value ?? ''
-									)
+									setNewName( eventValue( e ) )
 								}
 								disabled={ isCreating }
 							/>
