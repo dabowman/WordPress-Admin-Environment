@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/site-health.php` (Status tab) + `wp-admin/site-health-info.php` (Info tab) + `wp-admin/includes/class-wp-site-health.php` + `wp-admin/includes/class-wp-debug-data.php`
-**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the original via `iframe:site-health.php`.
+**Current workspace coverage:** `core:site-health` → `src/apps/site-health/index.js` (native; async REST tests only). `wp-admin-default.json` ships the native app. The `iframe:` escape hatch (e.g. `iframe:site-health.php`) is available for workspaces that prefer the classic PHP screen.
 
 This spec describes the **semantic surface** of the WordPress Site Health screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -371,8 +371,8 @@ Plugin compatibility note: many security and performance plugins (e.g. iThemes S
 ## 15. Mapping & implementation status
 
 ### Current workspace coverage
-- **Source:** none.
-- **What works:** `iframe:site-health.php` works as an `iframe:` escape hatch (e.g. in the `wp-admin-default` baseline).
+- **Source:** `core:site-health` → `src/apps/site-health/index.js`, registered in `src/runtime/registry/builtins.js`. Ships in `wp-admin-default.json` as the native implementation (async REST tests only — see parity gaps below).
+- **What works:** native async-test runner. `iframe:site-health.php` is available as an `iframe:` escape hatch for workspaces that need the full classic screen (direct sync tests, Info tab, HTTPS migration) before the native app reaches parity.
 
 ### Gaps vs. this spec
 
