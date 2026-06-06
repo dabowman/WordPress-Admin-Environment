@@ -1497,6 +1497,7 @@
 			"app": "iframe:options-privacy.php",
 			"permissions": {
 				"capabilities": [
+					"manage_privacy_options",
 					"manage_options"
 				]
 			},

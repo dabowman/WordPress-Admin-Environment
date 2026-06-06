@@ -15,6 +15,7 @@ import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { plus } from '@wordpress/icons';
 import { resolveIcon } from '../../runtime/config/iconMap';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 import {
 	buildItemTree,
 	siblingsOf,
@@ -970,32 +971,34 @@ function DeleteMenuButton( { onDelete } ) {
 			title={ __( 'Delete this menu?', 'wp-admin-workspaces' ) }
 			onRequestClose={ () => setConfirming( false ) }
 		>
-			<Stack direction="column" gap="md">
-				<Text>
-					{ __(
-						'This permanently deletes the menu and all of its items.',
-						'wp-admin-workspaces'
-					) }
-				</Text>
-				<Stack direction="row" justify="flex-end" gap="sm">
-					<Button
-						variant="minimal"
-						onClick={ () => setConfirming( false ) }
-					>
-						{ __( 'Cancel', 'wp-admin-workspaces' ) }
-					</Button>
-					<Button
-						tone="brand"
-						variant="solid"
-						onClick={ () => {
-							setConfirming( false );
-							onDelete();
-						} }
-					>
-						{ __( 'Delete', 'wp-admin-workspaces' ) }
-					</Button>
+			<PortalThemeScope>
+				<Stack direction="column" gap="md">
+					<Text>
+						{ __(
+							'This permanently deletes the menu and all of its items.',
+							'wp-admin-workspaces'
+						) }
+					</Text>
+					<Stack direction="row" justify="flex-end" gap="sm">
+						<Button
+							variant="minimal"
+							onClick={ () => setConfirming( false ) }
+						>
+							{ __( 'Cancel', 'wp-admin-workspaces' ) }
+						</Button>
+						<Button
+							tone="brand"
+							variant="solid"
+							onClick={ () => {
+								setConfirming( false );
+								onDelete();
+							} }
+						>
+							{ __( 'Delete', 'wp-admin-workspaces' ) }
+						</Button>
+					</Stack>
 				</Stack>
-			</Stack>
+			</PortalThemeScope>
 		</Modal>
 	);
 }
