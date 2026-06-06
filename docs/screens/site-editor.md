@@ -461,7 +461,7 @@ v1 ships with the iframe-backed adapter. Native mount is a v2 milestone. See com
 - Templates registry: `wp-includes/class-wp-block-templates-registry.php`
 - Theme JSON resolver: `wp-includes/class-wp-theme-json-resolver.php`
 - Current workspace impl: `src/runtime/apps/SiteEditorApp.js`
-- Workspace config example: `workspaces/developer-workspace.json`
+- Workspace config example: `workspaces/wp-admin-default.json`
 - Companion: [`site-editor-styles.md`](./site-editor-styles.md)
 - Companion: [`site-editor-templates.md`](./site-editor-templates.md)
 - Cross-link: [`themes.md`](./themes.md)

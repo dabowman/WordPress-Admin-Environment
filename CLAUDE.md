@@ -12,7 +12,7 @@ Three artifacts drive the workspace: `app.json` (per-app intrinsics, ships with 
 
 **Region vocabulary:** `role` + `layout` + `platform` + `routing` — one-region-one-app with nested child regions, URL-driven navigation, `routing.route-key` naming the URL slot a region reads, plain `<a href>` navigation, `target` keeping native HTML meaning.
 
-Three engines ship: `core:default` + `core:single-pane` + `core:desktop`. Seven bundled workspaces in `workspaces/`.
+Three engines ship: `core:default` + `core:single-pane` + `core:desktop`. Three bundled workspaces in `workspaces/` (`wp-admin-default` + `single-pane-demo` + `desktop-demo`).
 
 **Tokens.** DTCG `tokens.json` resolver: PHP `WP_Admin_Workspaces_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types.
 
@@ -223,7 +223,7 @@ Skeletal top level (full file-by-file annotations + the application-source table
 wp-admin-workspaces/
 ├── wp-admin-workspaces.php       # Plugin entry point
 ├── webpack.config.js        # Copies dataviews CSS to build/
-├── workspaces/                  # 7 bundled workspace.json configs (wp-admin-default + 6 demos)
+├── workspaces/                  # 3 bundled workspace.json configs (wp-admin-default + 2 demos)
 ├── includes/                # PHP
 │   ├── *-rest.php           # REST controllers (can / prefs / data-view / field-collections)
 │   ├── cascade/             # Resolver, merge, customizable, cache, permissions, modes, data-view-config, classic-menu-bridge, preload, menu-items, admin-routes
