@@ -29,9 +29,9 @@ The Details action uses DataViews' `RenderModal` shape — DataViews owns the fo
 
 ### Details-modal read-side parity (issue #137)
 
-- **Child-theme parent.** When the record carries a `template` (parent stylesheet), the modal shows "This is a child theme of {parent}", resolving the parent's display name through the `themeNames` lookup (falling back to the raw slug).
+- **Child-theme parent.** When the record's `template` (parent stylesheet) differs from its own `stylesheet`, the modal shows "This is a child theme of {parent}", resolving the parent's display name through the `themeNames` lookup (falling back to the raw slug). Non-child themes always have `template === stylesheet` from the REST API — a truthy `template` alone is not the signal; the `template !== stylesheet` check is required.
 - **Tags.** The theme's tags (`tags.raw`, falling back to splitting `tags.rendered`) render as a comma-joined "Tags: …" line.
-- **Live Preview / Customize.** Inactive themes get a Live Preview link built from `is_block_theme`: block themes → `site-editor.php?wp_theme_preview={slug}`, classic themes → `customize.php?theme={slug}`. Rendered as a plain `<a href>` so the kernel admin-link interceptor handles it (the Site Editor has a workspace route; the Customizer is in the hijack endpoint allowlist). `livePreviewUrl()` reads the admin base from `window.wpAdminWorkspaces.adminUrl`.
+- **Live Preview.** Inactive themes get a Live Preview link via `customize.php?theme={slug}`. Both block and classic themes use the Customizer path — the Customizer is in the hijack endpoint allowlist and correctly previews the chosen theme. The native block-theme path (`site-editor.php?wp_theme_preview={slug}`) is intentionally NOT used: the kernel's admin-link interceptor routes `site-editor.php` to the workspace `/site-editor` route and strips the `?wp_theme_preview` param, which would open the active theme's editor rather than previewing the selected one. `livePreviewUrl()` reads the admin base from `window.wpAdminWorkspaces.adminUrl`.
 
 ## DataView integration (C2 / v3 restored)
 
@@ -92,7 +92,7 @@ Two patterns to preserve:
 ## Known limitations
 
 - No install / upload flow. Adding themes happens in wp-admin.
-- Live Preview / Customize is now a details-modal link for inactive themes (issue #137) — block themes route to the Site Editor preview, classic themes to the Customizer — but there's no in-app preview canvas; the link navigates out to the classic surface.
+- Live Preview is now a details-modal link for inactive themes (issue #137) — both block and classic themes use `customize.php?theme={slug}` (the Customizer correctly previews any theme including block themes, and is in the hijack allowlist). There is no in-app preview canvas; the link navigates out to the classic Customizer surface. The native block-theme path (`site-editor.php?wp_theme_preview`) is not used because the kernel's admin-link interceptor strips the query param (known limitation; deferred until the Site Editor route supports a `wp_theme_preview` pass-through).
 - Screenshots are loaded directly from the theme record; no resizing or `srcset`.
 - Description truncation is hard 140 chars in the grid card. Full description lives in the details modal.
 - Activation runs entirely through the workspace REST endpoint (`WP_Admin_Workspaces_Themes_REST`); apiFetch sends the REST nonce automatically. On failure the app surfaces an error snackbar instead of navigating away, so the user keeps their place in the workspace.

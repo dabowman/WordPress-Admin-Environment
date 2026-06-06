@@ -22,6 +22,26 @@ function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
 }
 
+/**
+ * Reject non-http(s) href values. React does not strip `javascript:` URIs
+ * (unlike PHP's `esc_url()`), so REST-supplied URLs must pass this guard
+ * before being rendered as anchor `href` values.
+ *
+ * @param {string} href Candidate URL string.
+ * @return {boolean} True when safe to render as a link.
+ */
+function isSafeHref( href ) {
+	if ( ! href || typeof href !== 'string' ) {
+		return false;
+	}
+	try {
+		const url = new URL( href );
+		return url.protocol === 'https:' || url.protocol === 'http:';
+	} catch {
+		return false;
+	}
+}
+
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-workspaces' ),
 	inactive: __( 'Inactive', 'wp-admin-workspaces' ),
@@ -84,14 +104,20 @@ function screenshotUrl( item ) {
 }
 
 /**
- * Build the Live Preview / Customize URL for a theme, mirroring core's
- * server-computed `actions.customize`: block themes preview through the Site
- * Editor (`site-editor.php?wp_theme_preview={slug}`), classic themes through the
- * Customizer (`customize.php?theme={slug}`). Rendered as a plain `<a href>` so
- * the kernel's admin-link interceptor maps/handles it (the Customizer is in the
- * hijack endpoint allowlist; the Site Editor has a workspace route).
+ * Build the Live Preview URL for a theme. Both block and classic themes use
+ * the Customizer (`customize.php?theme={slug}`) — the Customizer is in the
+ * hijack endpoint allowlist so the browser navigates to the classic surface
+ * and correctly previews the chosen theme.
  *
- * @param {Object} item Mapped theme row (`stylesheet` + `isBlockTheme`).
+ * Note: the block-theme native path is `site-editor.php?wp_theme_preview={slug}`,
+ * but the kernel's admin-link interceptor routes `site-editor.php` to the
+ * workspace `/site-editor` route and drops the `?wp_theme_preview` query
+ * param, which would open the editor on the ACTIVE theme rather than the
+ * previewed one. Until the Site Editor route supports a `wp_theme_preview`
+ * pass-through, the Customizer path is used for all themes. The Customizer
+ * supports block-theme preview natively.
+ *
+ * @param {Object} item Mapped theme row (carries `stylesheet`).
  * @return {string} Absolute admin URL.
  */
 function livePreviewUrl( item ) {
@@ -100,9 +126,6 @@ function livePreviewUrl( item ) {
 			window.wpAdminWorkspaces?.adminUrl ) ||
 		'/wp-admin/';
 	const slug = encodeURIComponent( item.stylesheet );
-	if ( item.isBlockTheme ) {
-		return `${ adminUrl }site-editor.php?wp_theme_preview=${ slug }`;
-	}
 	return `${ adminUrl }customize.php?theme=${ slug }`;
 }
 
@@ -236,9 +259,15 @@ export default function ThemesApp( { config = {} } ) {
 				return null;
 			}
 			const isActive = item.status === 'active';
-			const parentName = item.template
-				? themeNames[ item.template ] || item.template
-				: '';
+			// `template` is the parent theme's stylesheet. For non-child themes
+			// the REST API sets `template` to the theme's own `stylesheet`
+			// (not '') — so a truthy `template` alone can't distinguish a child
+			// theme from a standalone one. The child-theme signal is
+			// `template !== stylesheet`.
+			const parentName =
+				item.template && item.template !== item.stylesheet
+					? themeNames[ item.template ] || item.template
+					: '';
 			return (
 				<Stack
 					direction="column"
@@ -287,7 +316,7 @@ export default function ThemesApp( { config = {} } ) {
 						</Text>
 					) }
 					<Stack direction="row" justify="flex-end" gap="sm">
-						{ item.theme_uri && (
+						{ isSafeHref( item.theme_uri ) && (
 							<Button
 								tone="neutral"
 								variant="outline"

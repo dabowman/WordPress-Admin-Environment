@@ -111,6 +111,38 @@ ok(
 	} )()
 );
 ok(
+	'future + date_gmt in the past → missed (timezone-stable)',
+	( () => {
+		// date_gmt (UTC with Z suffix) is preferred over date (site-local,
+		// no timezone suffix) for timezone-stable missed-schedule detection.
+		const r = postDateLabel(
+			{
+				status: 'future',
+				date_gmt: '2026-06-01T00:00:00Z',
+				date: '2026-06-01T00:00:00',
+			},
+			NOW
+		);
+		return r.key === 'missed' && r.missedSchedule === true;
+	} )()
+);
+ok(
+	'future + date_gmt wins over date when both present',
+	( () => {
+		// date_gmt says "not yet missed" even if date (parsed browser-local)
+		// might differ — date_gmt should win.
+		const r = postDateLabel(
+			{
+				status: 'future',
+				date_gmt: '2026-07-01T00:00:00Z',
+				date: '2026-06-01T00:00:00',
+			},
+			NOW
+		);
+		return r.key === 'scheduled' && r.missedSchedule === false;
+	} )()
+);
+ok(
 	'future with unparseable date → scheduled (no false missed)',
 	postDateLabel( { status: 'future', date: '' }, NOW ).missedSchedule === false
 );

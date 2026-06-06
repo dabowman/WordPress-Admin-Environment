@@ -187,9 +187,11 @@ function buildFieldRenderers() {
 			<Text variant="body-sm">{ item.version }</Text>
 		),
 		// Link the author to its `author_uri` when present (mirrors wp-admin's
-		// "By {author}" link); fall back to plain text otherwise.
+		// "By {author}" link); fall back to plain text otherwise. The URI is
+		// checked with `isSafeHref` — React does not strip `javascript:` URIs
+		// the way PHP's `esc_url()` does, so only http(s) schemes are allowed.
 		author: ( { item } ) =>
-			item.authorUri ? (
+			isSafeHref( item.authorUri ) ? (
 				<Text variant="body-sm">
 					<a
 						href={ item.authorUri }
@@ -207,6 +209,27 @@ function buildFieldRenderers() {
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
+}
+
+/**
+ * Reject non-http(s) href values. React does not strip `javascript:` URIs
+ * (unlike PHP's `esc_url()`), so rendered anchor `href` values from REST
+ * should pass this guard before use. Protocol-relative URIs are rejected;
+ * only explicit `https?:` schemes pass. Empty/absent values return false.
+ *
+ * @param {string} href Candidate URL string.
+ * @return {boolean} True when safe to render as a link.
+ */
+function isSafeHref( href ) {
+	if ( ! href || typeof href !== 'string' ) {
+		return false;
+	}
+	try {
+		const url = new URL( href );
+		return url.protocol === 'https:' || url.protocol === 'http:';
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -381,18 +404,17 @@ export default function PluginsApp( { config = {} } = {} ) {
 				activate: ( items ) => setPluginStatus( items, 'active' ),
 				deactivate: ( items ) => setPluginStatus( items, 'inactive' ),
 				visit: ( items ) => {
-					window.open(
-						items[ 0 ].pluginUri,
-						'_blank',
-						'noopener,noreferrer'
-					);
+					const uri = items[ 0 ].pluginUri;
+					if ( isSafeHref( uri ) ) {
+						window.open( uri, '_blank', 'noopener,noreferrer' );
+					}
 				},
 			},
 			modals: { delete: deleteModal },
-			// `eligibleWhen` JSON only handles equality / membership; a presence
-			// check (plugin URI exists) needs code.
+			// `eligibleWhen` JSON only handles equality / membership; a safe-href
+			// check (plugin URI exists + is http(s)) needs code.
 			eligibilityOverrides: {
-				visit: ( item ) => !! item.pluginUri,
+				visit: ( item ) => isSafeHref( item.pluginUri ),
 			},
 		} );
 	}, [ dataViewConfig, setPluginStatus, refresh ] );
