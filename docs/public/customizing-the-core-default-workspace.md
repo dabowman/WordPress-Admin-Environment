@@ -46,7 +46,7 @@ Three artifacts drive the workspace. Know which one owns what, and customization
 
 Customizing `core:default` is almost entirely an `workspace.json` exercise. The engine is already written; you compose the screens and apps it renders and tune its theme.
 
-**Where the file lives.** Drop a valid `workspace.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `workspaces/` — copy one as a starting point (`workspaces/canonical-demo.json` is the smallest, `workspaces/content-author.json` is a focused real example, `workspaces/wp-admin-default.json` is the exhaustive one).
+**Where the file lives.** Drop a valid `workspace.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `workspaces/` — copy one as a starting point (`workspaces/single-pane-demo.json` and `workspaces/desktop-demo.json` are focused engine demos, `workspaces/wp-admin-default.json` is the exhaustive baseline).
 
 Always set `"version": 3` and `"$wpds": "6.9"`. Every level is `additionalProperties: false` — a typo'd key is a validation error, not a silent no-op.
 
@@ -579,7 +579,7 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 }
 ```
 
-**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density: see `workspaces/content-author.json` for the complete file.
+**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density. The bundled `workspaces/single-pane-demo.json` lands on Posts as a starting point you can build from.
 
 **Restrict Settings to editors + admins** (floor still applies)
 ```json
@@ -639,6 +639,6 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 | Theming mechanics, token→DOM paths, WPDS CSS gotchas | [`../engines-and-design-systems.md`](../engines-and-design-systems.md) |
 | Design rationale, cascade trust tiers, mode catalog | [`../schema-sketch.md`](../schema-sketch.md) |
 | Runtime architecture — regions, routing, gating | [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md) |
-| Starter files to copy | `workspaces/canonical-demo.json`, `workspaces/content-author.json`, `workspaces/wp-admin-default.json` |
+| Starter files to copy | `workspaces/single-pane-demo.json`, `workspaces/desktop-demo.json`, `workspaces/wp-admin-default.json` |
 </content>
 </invoke>

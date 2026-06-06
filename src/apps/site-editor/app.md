@@ -8,7 +8,7 @@ SiteEditorApp is a one-line delegation to `IframeApp` pointing at `site-editor.p
 
 The native mount is blocked on five known issues (top-of-file comment in `SiteEditorApp.js`). Two of them — preferences-store collision with `core:appearance-preferences` and command-palette double-registration — are workspace-architecture concerns. Two — full-screen CSS and hash-router collision — are edit-site internals fighting the workspace's chrome and routing. One — `@wordpress/edit-site` not being in the dep-extraction `BUNDLED_PACKAGES` list — is a webpack config concern. All five must be resolved before the native mount can land safely.
 
-Until then, the iframe is the path. Users get the WordPress Site Editor with admin chrome stripped via injected CSS; the experience is "site editor inside a different workspace" rather than "site editor inside wp-admin."
+Until then, the iframe is the path. Users get the WordPress Site Editor with the **wp-admin shell** (admin menu, admin bar, footer) stripped via injected CSS; the experience is "site editor inside a different workspace" rather than "site editor inside wp-admin." The site editor's **own** chrome — hub, navigation sidebar, header — stays intact, so its native browse→edit flow and the user's persisted `core/preferences` view (inspector open, list view open, …) survive. Preview / embed surfaces that want the canvas as a chrome-less decoration opt in with `config.hideEditorChrome: true`, which is the only path that strips the editor's own chrome (see #253).
 
 ## Rebuild guide
 

@@ -314,7 +314,7 @@ These screens have very low ROI on full reimplementation. Three recommended appr
 
 ### Workspace config recommendation
 
-For most workspaces, omit these screens entirely. The four bundled v1 workspaces (`content-author`, `client-portal`, `developer-admin`, `wp-admin-default`) do not surface these. Only `wp-admin-default` should consider exposing them — and the iframe fallback (approach C) is the path of least resistance.
+For most workspaces, omit these screens entirely. The bundled demo workspaces (`single-pane-demo`, `desktop-demo`) do not surface these. Only the `wp-admin-default` baseline should consider exposing them — and the iframe fallback (approach C) is the path of least resistance.
 
 If a workspace wants to surface a "WordPress version" affordance, the recommended pattern is:
 1. A small "v6.9" badge in the site-hub or footer.

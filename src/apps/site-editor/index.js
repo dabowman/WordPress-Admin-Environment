@@ -47,9 +47,18 @@ import IframeApp from '../iframe-fallback';
  * Authors target `core:site-editor` rather than wiring iframe paths
  * directly, so the native-mount path can land in a v2.x release
  * without workspace.json changes.
+ *
+ * Chrome contract (see #253): the default takeover Editor screen loads
+ * `site-editor.php` with NO editor-chrome hiding, so the site editor keeps its
+ * own hub / navigation sidebar / header and honors the user's persisted
+ * `core/preferences` view (inspector open, list view open, …) and its native
+ * browse→edit flow. Only preview / embed surfaces (e.g. a Styles preview)
+ * should set `config.hideEditorChrome: true` to render the canvas as a
+ * chrome-less decoration; that flag passes straight through to `IframeApp`.
  * @param {*} props
  */
 export default function SiteEditorApp( props ) {
 	const url = props.config?.url || 'site-editor.php';
-	return <IframeApp app={ props.app } config={ { url } } />;
+	const hideEditorChrome = !! props.config?.hideEditorChrome;
+	return <IframeApp app={ props.app } config={ { url, hideEditorChrome } } />;
 }

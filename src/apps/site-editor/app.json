@@ -15,6 +15,11 @@
 			"url": {
 				"type": "string",
 				"default": "site-editor.php"
+			},
+			"hideEditorChrome": {
+				"type": "boolean",
+				"default": false,
+				"description": "Strip the block editor's own hub/sidebar/header so the canvas renders as a chrome-less decoration. Only preview/embed surfaces should set this; the default takeover Editor screen leaves it false so the site editor keeps its native browse→edit flow and the user's persisted core/preferences view."
 			}
 		},
 		"additionalProperties": false
@@ -53,13 +58,13 @@
 			{
 				"id": "ready",
 				"when": "iframe loaded",
-				"renders": "Full-bleed iframe with wp-admin chrome (admin menu, admin bar, footer) hidden by the injected CSS."
+				"renders": "Full-bleed iframe with the wp-admin shell (admin menu, admin bar, footer) hidden by the injected CSS. The site editor's own chrome (hub, navigation sidebar, header) stays intact and honors the user's persisted `core/preferences` view; only `config.hideEditorChrome: true` strips it (preview/embed surfaces)."
 			}
 		],
 		"interactions": [
 			{
 				"trigger": "Mount",
-				"effect": "IframeApp renders `<iframe src=\"site-editor.php\">` and injects chrome-hiding CSS on load."
+				"effect": "IframeApp renders `<iframe src=\"site-editor.php\">` and injects the wp-admin shell-hide CSS on load. Editor-chrome hiding is opt-in via `config.hideEditorChrome`."
 			}
 		],
 		"a11y": {
@@ -68,7 +73,7 @@
 		"constraints": [
 			{
 				"concern": "iframe-css-fragile",
-				"note": "Hides `edit-site-layout__sidebar*` + `edit-site-site-hub` + `edit-site-layout__header-container`; rev with each WordPress release. Verify Style Book canvas layout after upgrades."
+				"note": "When `config.hideEditorChrome` is set, hides `edit-site-layout__sidebar*` + `edit-site-site-hub` + `edit-site-layout__header-container`; rev with each WordPress release. Verify the preview/Style Book canvas layout after upgrades. The default Editor screen does NOT apply these selectors (see #253)."
 			},
 			{
 				"concern": "native-mount-blockers",
