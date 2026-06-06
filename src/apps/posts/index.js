@@ -564,9 +564,11 @@ export default function PostsApp( { config } ) {
 			),
 			status: record.status,
 			date: record.date,
-			// `date_gmt` is always UTC (ends in `Z`) — used by `postDateLabel`
-			// for timezone-stable missed-schedule detection. Absent on some
-			// draft/auto-draft records; falls back to `date` in `postDateLabel`.
+			// `date_gmt` carries no timezone designator — WordPress REST emits
+			// `Y-m-dTH:i:s` (no trailing `Z`). `postDateLabel` appends `Z` before
+			// parsing so it is treated as a true UTC instant for timezone-stable
+			// missed-schedule detection. Absent on some draft/auto-draft records;
+			// falls back to `date` in `postDateLabel`.
 			date_gmt: record.date_gmt || '',
 			modified: record.modified,
 			// `_post_states` badges: sticky (post-only REST field) + password
