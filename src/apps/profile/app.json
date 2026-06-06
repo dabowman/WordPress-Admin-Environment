@@ -36,7 +36,7 @@
 		"icon": "people"
 	},
 	"documentation": {
-		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and folded into the entity edits at save time with a client-side confirm-match check — there is no current-password re-auth and no server-side weak-password gate (REST accepts any non-backslash password). Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
+		"purpose": "Profile editor for the user named by `config.userId` (the acting user, `window.wpAdminWorkspaces.userId`, when `config.userId` is absent). Edits first/last/nickname, display name (chosen from a generated option set), email, website, biographical info, interface language (`locale`), and a basic new-password change under an 'Account Management' section. Reads + writes go through `core-data` `useEntityRecord('root', 'user', userId)`; the save button is disabled until `hasEdits` (or a new password is entered) and shows a loading state while `isSaving`. The new password is write-only (never returned by REST), held in local state and folded into the entity edits at save time with a client-side confirm-match check (the confirm-mismatch Notice clears as soon as the user retypes the confirm field) — there is no current-password re-auth and no server-side weak-password gate (REST accepts any non-backslash password). `useEntitySave` is called with entity coords (`{ kind:'root', name:'user', recordId:userId }`) so REST 4xx/5xx failures are caught via `getLastEntitySaveError` and surfaced as error banners rather than false-positive success snackbars. Success + error route through `@wordpress/notices` snackbar / banner. Covers both the own-profile sub-screen of wp-admin's `users.php?action=editself` flow and (via `config.userId`) the `user-edit.php` edit surface the `core:users` Edit action routes to; the multi-user list lives in `core:users` (`docs/screens/users.md`).",
 		"data": {
 			"reads": [
 				{
@@ -106,7 +106,7 @@
 			{
 				"id": "password-mismatch",
 				"when": "newPassword !== confirmPassword on Save click",
-				"renders": "Inline error Notice under the password fields; save is aborted until the two match."
+				"renders": "Inline error Notice under the password fields; save is aborted until the two match. The Notice is cleared immediately when the user retypes the confirm field (onChange)."
 			},
 			{
 				"id": "saving",
@@ -129,7 +129,7 @@
 			},
 			{
 				"trigger": "Type a new password (+ confirm)",
-				"effect": "Held in local state. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, `edit({ password })` then `save()`. Cleared on success."
+				"effect": "Held in local state. Retyping the confirm field clears any pending mismatch Notice immediately. On Save: if the two differ, an inline error Notice shows and save aborts; if they match, `edit({ password })` then `save()`. Cleared on success."
 			},
 			{
 				"trigger": "Click Save Changes",

@@ -51,10 +51,14 @@ export default function ProfileApp( { config = {} } = {} ) {
 	const { record, editedRecord, edit, save, hasEdits, isSaving } =
 		useEntityRecord( 'root', 'user', userId );
 
-	const handleSave = useEntitySave( save, {
-		success: __( 'Profile updated.', 'wp-admin-workspaces' ),
-		error: __( 'Failed to save profile.', 'wp-admin-workspaces' ),
-	} );
+	const handleSave = useEntitySave(
+		save,
+		{
+			success: __( 'Profile updated.', 'wp-admin-workspaces' ),
+			error: __( 'Failed to save profile.', 'wp-admin-workspaces' ),
+		},
+		{ kind: 'root', name: 'user', recordId: userId }
+	);
 
 	// Interface-language options come from PHP (installed locales + native
 	// names); static for the page lifetime, so read once.
@@ -223,7 +227,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 					className="wp-admin-workspaces-app-profile__password"
 				>
 					<Text variant="heading-md" render={ <h3 /> }>
-						{ __( 'New Password', 'wp-admin-workspaces' ) }
+						{ __( 'Account Management', 'wp-admin-workspaces' ) }
 					</Text>
 					<InputControl
 						type="password"
@@ -239,9 +243,12 @@ export default function ProfileApp( { config = {} } = {} ) {
 							'wp-admin-workspaces'
 						) }
 						value={ confirmPassword }
-						onChange={ ( e ) =>
-							setConfirmPassword( eventValue( e ) )
-						}
+						onChange={ ( e ) => {
+							setConfirmPassword( eventValue( e ) );
+							if ( pwError ) {
+								setPwError( '' );
+							}
+						} }
 						autoComplete="new-password"
 					/>
 					{ pwError && (
@@ -256,9 +263,7 @@ export default function ProfileApp( { config = {} } = {} ) {
 						tone="brand"
 						variant="solid"
 						onClick={ onSave }
-						disabled={
-							( ! hasEdits && ! newPassword ) || isSaving
-						}
+						disabled={ ( ! hasEdits && ! newPassword ) || isSaving }
 						loading={ isSaving }
 					>
 						{ __( 'Save Changes', 'wp-admin-workspaces' ) }
