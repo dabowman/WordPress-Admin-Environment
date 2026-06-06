@@ -3,7 +3,7 @@
 	"id": "core:media",
 	"version": 1,
 	"title": "Media",
-	"description": "DataViews grid + table view of the media library, with an upload affordance above the mount and a host-agnostic MediaDetails metadata editor. Reads via `core-data` `'root','media'` entity.",
+	"description": "DataViews grid + table view of the media library, with an upload affordance above the mount and a host-agnostic MediaDetails metadata editor that hosts an inline crop / rotate / flip image editor in its preview slot. Reads via `core-data` `'root','media'` entity.",
 	"designSystem": "@wordpress/ui",
 	"role": "main",
 	"capabilities": [
@@ -66,7 +66,7 @@
 		"icon": "media"
 	},
 	"documentation": {
-		"purpose": "Media library DataViews host over the `root/media` entity. Default grid layout renders an image thumbnail (or a labeled file-type tile for non-image attachments) per attachment via the `thumbnail` media field; table layout offers sortable Title / Type / Author / Date columns. An upload control sits in a toolbar ABOVE the DataViews mount (multipart `apiFetch`, per-file try/catch). The Edit action opens the host-agnostic `MediaDetails` component (entity-bound `DataForm` over title / alt-text — images only / caption / description) inside a DataViews RenderModal. Copy URL writes the source URL to the clipboard. Delete (single + bulk) permanently removes the attachment (`force: true` — media has no trash).",
+		"purpose": "Media library DataViews host over the `root/media` entity. Default grid layout renders an image thumbnail (or a labeled file-type tile for non-image attachments) per attachment via the `thumbnail` media field; table layout offers sortable Title / Type / Author / Date columns. An upload control sits in a toolbar ABOVE the DataViews mount (multipart `apiFetch`, per-file try/catch). The Edit action opens the host-agnostic `MediaDetails` component (entity-bound `DataForm` over title / alt-text — images only / caption / description) inside a DataViews RenderModal; its preview slot offers an Edit Image affordance for image attachments that swaps in the inline `ImageEditor` (crop / rotate / flip on a canvas, saved via `POST /wp/v2/media/{id}/edit` which returns a NEW attachment the host then re-points to). Copy URL writes the source URL to the clipboard. Delete (single + bulk) permanently removes the attachment (`force: true` — media has no trash).",
 		"rebuilds": "media",
 		"data": {
 			"reads": [
@@ -184,8 +184,21 @@
 					"invalidates": [
 						"root/media"
 					]
+				},
+				{
+					"source": "/wp/v2/media/{id}/edit",
+					"via": "api-fetch",
+					"operation": "custom",
+					"purpose": "Inline image editor (`ImageEditor.js`). POSTs `{ src, modifiers:[{type:'rotate'|'flip'|'crop', args}] }` to the attachments controller's `/edit` route. Crop/rotate/flip only (scale / per-size target / restore / in-place are admin-ajax-only — see docs/parity/media.md blockers #1-#4). The response is a BRAND-NEW attachment (the route always inserts a new post); `onSaved(newAttachment)` bubbles the new id so the host re-points (`MediaDetailsModal` switches `editingId` to it). The pure REST-contract mapping (rotation/flip/crop → ordered `modifiers[]`) lives in `imageEditorModel.mjs`, pinned by `tests/runtime/image-editor-model.test.mjs`.",
+					"invalidates": [
+						"root/media"
+					]
 				}
 			]
+		},
+		"url": {
+			"reads-slots": [ "paged", "media_type" ],
+			"writes-slots": [ "paged", "media_type" ]
 		},
 		"states": [
 			{
@@ -206,7 +219,12 @@
 			{
 				"id": "detail-open",
 				"when": "User clicked Edit on a row",
-				"renders": "DataViews RenderModal hosting `MediaDetails` — preview slot (left) + metadata DataForm (right) + Save / Copy URL / Delete actions."
+				"renders": "DataViews RenderModal hosting `MediaDetails` — preview slot (left) + metadata DataForm (right) + Save / Copy URL / Delete actions. For images, the preview shows an Edit Image button."
+			},
+			{
+				"id": "image-editing",
+				"when": "User clicked Edit Image in MediaDetails (image attachment only)",
+				"renders": "`ImageEditor` replaces the static preview: a canvas preview (composes rotate → flip → crop in REST-apply order) + a rotate-left / rotate-right / flip-H / flip-V / crop toolbar + a draggable, corner-resizable crop overlay + Cancel / Save a copy. Save a copy is disabled until a real edit exists."
 			}
 		],
 		"interactions": [
@@ -221,6 +239,10 @@
 			{
 				"trigger": "Change the Date filter (DataViews)",
 				"effect": "`view.filters` updates → a supplemental `applyDateFilters` pass maps the `before`/`after` operators to the attachments controller's REST `before`/`after` ISO params (`buildQueryArgs` only speaks `is`/`isAny`) → records refetch. One-sided date bound (`before X` OR `after Y`, not a two-ended range — DataViews holds one filter per field)."
+			},
+			{
+				"trigger": "Page through results / change the Type filter",
+				"effect": "`view.page` and the single-value `type` filter mirror to the URL (`?paged=N`, `?media_type=<value>`) via the `urlSlots` opt-in on `useEntityDataView` — refresh / deep-link / browser-back restore the page + filter. `?paged` is omitted on page 1; the slots merge onto the live hash so an unrelated slot (`?screen=`) is preserved."
 			},
 			{
 				"trigger": "Type in the DataViews search box",
@@ -243,6 +265,14 @@
 				"effect": "Buffered `useEntityRecord().save()` commits title / alt_text / caption / description; invalidate the list resolution; close modal."
 			},
 			{
+				"trigger": "Edit Image in MediaDetails (image attachment)",
+				"effect": "Swap the static preview for the inline `ImageEditor`. Rotate / flip buttons mutate transform state; the Crop toggle shows a draggable + corner-resizable selection. The canvas repaints on every change, composing rotate → flip → crop in the same order the controller applies them (so the preview equals the saved result)."
+			},
+			{
+				"trigger": "Save a copy in the image editor",
+				"effect": "`buildModifiers` builds the ordered `modifiers[]` (rotate → flip → crop, no-ops dropped); `apiFetch` POSTs them with `src` to `/wp/v2/media/{id}/edit`. The route returns a NEW attachment — a success snackbar fires, the list invalidates, and the host re-points the open detail to the new id (`onReplaced`). Crop percentages are read against the canvas (post-rotation bounding box), matching what the controller multiplies against."
+			},
+			{
 				"trigger": "Copy URL action",
 				"effect": "`navigator.clipboard.writeText(item.source_url)`; success snackbar (or error notice on clipboard denial)."
 			},
@@ -252,7 +282,8 @@
 			}
 		],
 		"a11y": {
-			"focus-management": "DataViews owns focus inside the grid / table + RenderModal. The RenderModal contract restores focus to the action trigger on close. `MediaDetails` is keyed `item.id` so per-item buffer resets between openings."
+			"focus-management": "DataViews owns focus inside the grid / table + RenderModal. The RenderModal contract restores focus to the action trigger on close. `MediaDetails` is keyed `item.id` so per-item buffer resets between openings. Image-editor crop gap: the `ImageEditor` crop selection (box + corner handles) is pointer-only — the elements are `role=\"presentation\"` divs/spans with no keyboard affordance, so keyboard/AT users can move/resize the crop only with a pointer. Rotate / flip remain fully keyboard-operable (focusable buttons). Not a regression vs. classic wp-admin (its crop is also mouse-driven). A future improvement: make the box focusable and nudge crop geometry via arrow keys through the same `moveCrop`/`resizeCrop` helpers.",
+			"screen-reader": "Image-editor rotate buttons are not toggles: the rotate-left / rotate-right tool buttons are momentary actions and emit NO `aria-pressed` (only the genuine toggles — flip-H, flip-V, crop — do), so a screen reader doesn't announce them as toggle buttons stuck unpressed."
 		},
 		"constraints": [
 			{
@@ -278,6 +309,18 @@
 			{
 				"concern": "host-agnostic-details",
 				"note": "Metadata editing lives in `MediaDetails.js`, decoupled from the DataViews RenderModal host. The #125 image editor lands in its preview slot; a future inspector / side-pane (#136) can host it unchanged."
+			},
+			{
+				"concern": "image-edit-new-attachment",
+				"note": "`POST /wp/v2/media/{id}/edit` ALWAYS creates a new attachment (no in-place REST mode — docs/parity/media.md blocker #1). The editor surfaces this ('Saves a copy — the original is kept') and the new id bubbles up via `onSaved`/`onReplaced` so the host re-points; callers must not assume the id is stable across an edit."
+			},
+			{
+				"concern": "image-edit-modifier-scope",
+				"note": "Only crop / rotate / flip are wired — the `/edit` `modifiers[]` enum supports no others (scale / per-size target / restore / in-place are admin-ajax-only). Modifiers are emitted in REST-apply order (rotate → flip → crop) so the canvas preview equals the saved output; the pure mapping is tested in `imageEditorModel.mjs`."
+			},
+			{
+				"concern": "image-edit-via-api-fetch",
+				"note": "The `/edit` POST uses `apiFetch` (the edit route is an action returning a new attachment, not a standard entity update) — the same documented exception as multipart upload. The canvas only DRAWS the source (never reads pixels back), so a tainted cross-origin (CDN) image still previews."
 			}
 		],
 		"design-system-leakage": [
@@ -286,16 +329,20 @@
 				"purpose": "DataViews (grid + table, filtering / sorting / pagination / selection / per-row + bulk actions / RenderModal) + DataForm (MediaDetails metadata form)."
 			},
 			{
-				"import": "@wordpress/ui#Button, Icon, Stack, Text",
-				"purpose": "Upload toolbar + MediaDetails layout + action buttons."
+				"import": "@wordpress/ui#Button, Icon, Notice, Stack, Text",
+				"purpose": "Upload toolbar + MediaDetails layout + action buttons + the image editor's canvas/crop UI + inline error Notice."
 			},
 			{
 				"import": "@wordpress/components#Button (as DestructiveButton), Spinner, ToggleControl",
 				"purpose": "Destructive delete + records-null spinner gate + Mine / Unattached toggles — WPDS 0.12 gaps."
 			},
 			{
-				"import": "@wordpress/icons#upload, trash, copy, edit",
-				"purpose": "Action + toolbar icons (registered in the core-default engine icon table)."
+				"import": "@wordpress/icons#upload, trash, copy, edit, crop, rotateLeft, rotateRight, flipHorizontal, flipVertical",
+				"purpose": "Action + toolbar icons (registered in the core-default engine icon table); the crop / rotate / flip set is the image-editor toolbar."
+			},
+			{
+				"import": "@wordpress/api-fetch",
+				"purpose": "Multipart upload + the inline image-editor `POST /wp/v2/media/{id}/edit` (both documented non-entity exceptions to the core-data rule)."
 			},
 			{
 				"import": "@wordpress/notices#store",

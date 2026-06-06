@@ -50,7 +50,11 @@
 		},
 		"url": {
 			"reads-slots": [
-				"_self"
+				"_self",
+				"panel"
+			],
+			"writes-slots": [
+				"panel"
 			],
 			"navigates": []
 		},
@@ -69,7 +73,7 @@
 		"interactions": [
 			{
 				"trigger": "Click a panel in the nav",
-				"effect": "`setActive(panel.id)`; right column re-renders with the new panel's Component (or iframe)."
+				"effect": "`navigatePanel(panel.id)` writes `?panel=<id>` onto the live hash (preserving the primary path + unrelated slots); the host re-derives `activeId` from the URL and the right column re-renders with the new panel's Component (or iframe). Refresh / deep-link / browser-back restore the panel."
 			}
 		],
 		"a11y": {
@@ -77,8 +81,8 @@
 		},
 		"constraints": [
 			{
-				"concern": "active-state-local",
-				"note": "Active panel id is in `useState`, NOT the URL. Refreshing the page lands on the first panel, not the previously-active one. A future iteration may move this to a URL slot for parity with NavigationApp's `?screen=` pattern."
+				"concern": "active-state-in-url",
+				"note": "Active panel id lives in the `?panel=<id>` URL slot (#136), resolved as `?panel` → path segment (`segments[0]`) → first panel. Mirrors NavigationApp's `?screen=` so refresh / deep-link / browser-back preserve the panel. A single `?panel` slot means two `core:settings` hosts in one workspace would collide — namespace later if that ever lands."
 			},
 			{
 				"concern": "panel-allowlist-empty-fallback",
