@@ -55,3 +55,16 @@
 	justify-content: center;
 	min-height: 200px;
 }
+
+/*
+ * Media-library-picker preview thumbnail (`MediaPicker.js`). Caps the chosen
+ * attachment's preview so a large image doesn't blow out the form column;
+ * rounds the corner with the WPDS radius token (no hardcoded hex/px in WPDS
+ * app space).
+ */
+.wp-admin-workspaces-media-picker__preview {
+	display: block;
+	max-width: 160px;
+	height: auto;
+	border-radius: var( --wpds-dimension-radius-md, 4px );
+}

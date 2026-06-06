@@ -192,9 +192,11 @@ add_action( 'init', function () {
 	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
 }, 5 );
 
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-util.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-prefs-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-themes-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-site-health-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-merge.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-customizable.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-cache.php';
@@ -218,6 +220,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-conf
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-cli.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-validator.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-registry.php';
@@ -537,6 +540,22 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		WP_ADMIN_WORKSPACES_PATH . 'languages'
 	);
 
+	// Media modal. The shared media-library-picker `Edit` control
+	// (`src/apps/_shared/forms/controls/MediaPicker.js`, via
+	// `@wordpress/media-utils` `MediaUpload`) opens the WordPress media frame,
+	// which needs the `media-editor` scripts + the footer template markup that
+	// `wp_enqueue_media()` registers. Consumers today: settings-general's Site
+	// Icon picker.
+	//
+	// PERF NOTE: this is NOT a no-op when no picker is on screen — it enqueues
+	// the media-frame scripts (media-editor/media-views/media-models/plupload)
+	// and prints the backbone media-modal templates on the footer of EVERY
+	// workspace render, a per-page cost paid even on Dashboard/Posts where no
+	// picker exists. Acceptable for alpha; if cold-mount perf
+	// (`docs/perf-baseline.md`) becomes a concern, gate this on whether the
+	// active screen can host a picker rather than enqueuing unconditionally.
+	wp_enqueue_media();
+
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-workspaces` as a dependency loads once the kernel has published
@@ -679,6 +698,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// workspace's own page load are captured (per-screen notices keyed on
 		// `$pagenow` don't fire) — see the harvest class docblock.
 		'adminNotices'  => WP_Admin_Workspaces_Chrome_Harvest::capture_admin_notices(),
+		// #125 — the `flip` modifier on the `/wp/v2/media/{id}/edit` route's
+		// `modifiers[]` enum is WP 6.9+. On 6.7/6.8 (supported targets via the
+		// Gutenberg private-API fallback) a `flip` edit returns
+		// `rest_invalid_param` and — because validation is per-item — fails the
+		// whole rotate+flip+crop edit. The media app's `ImageEditor` hides the
+		// flip tools when this is false so flip is never emitted below 6.9.
+		// Crop / rotate work everywhere.
+		'supportsImageFlip' => version_compare( get_bloginfo( 'version' ), '6.9', '>=' ),
 	) ) . ';', 'before' );
 
 	wp_add_inline_style( 'wp-admin-workspaces', '

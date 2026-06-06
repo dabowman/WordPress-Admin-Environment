@@ -1,12 +1,13 @@
 /* eslint-disable @wordpress/no-unsafe-wp-apis -- __experimentalItemGroup/Item have no @wordpress/ui 0.12 ports. */
 import './index.css';
-import { useState, useMemo } from '@wordpress/element';
+import { useMemo } from '@wordpress/element';
 import {
 	__experimentalItemGroup as ItemGroup,
 	__experimentalItem as Item,
 } from '@wordpress/components';
 import { Stack } from '@wordpress/ui';
 import { __ } from '@wordpress/i18n';
+import { navigate, useRoute } from '../../runtime/routing/router';
 import SettingsGeneralApp from '../settings-general';
 import SettingsWritingApp from '../settings-writing';
 import SettingsReadingApp from '../settings-reading';
@@ -99,8 +100,14 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 		return BUILTIN_PANELS.filter( passesAllowlist );
 	}, [ config.panels ] );
 
-	const initialPanelId = segments[ 0 ] || panels[ 0 ]?.id;
-	const [ activeId, setActive ] = useState( initialPanelId );
+	// Active panel lives in the URL (#136), mirroring NavigationApp's `?screen=`
+	// slot: refresh / deep-link / browser-back preserve the panel. Resolution
+	// order: explicit `?panel=<id>` slot → path segment (`#/settings/privacy`)
+	// → first available panel. The path-segment fallback keeps workspaces that
+	// route each panel as its own primary path working.
+	const route = useRoute();
+	const activeId = route.params?.panel || segments[ 0 ] || panels[ 0 ]?.id;
+	const setActive = navigatePanel;
 
 	// Unknown sub-route (e.g. `#/settings/nonexistent`) silently falls
 	// back to the first available panel rather than 404-ing. Acceptable
@@ -173,4 +180,29 @@ export default function SettingsApp( { app, config = {}, segments = [] } ) {
 			</Stack>
 		</div>
 	);
+}
+
+/**
+ * Write `?panel=<id>` on top of the current primary path, preserving any other
+ * URL params. Mirrors NavigationApp's `navigateScreen` so the active settings
+ * panel deep-links and survives refresh / browser-back.
+ *
+ * @param {string} panelId Panel id to activate.
+ */
+function navigatePanel( panelId ) {
+	if ( typeof window === 'undefined' ) {
+		return;
+	}
+	const hash = window.location.hash || '';
+	const queryIdx = hash.indexOf( '?' );
+	const primary = queryIdx === -1 ? hash : hash.slice( 0, queryIdx );
+	const search = queryIdx === -1 ? '' : hash.slice( queryIdx + 1 );
+	const params = new URLSearchParams( search );
+	if ( panelId ) {
+		params.set( 'panel', panelId );
+	} else {
+		params.delete( 'panel' );
+	}
+	const next = params.toString();
+	navigate( next ? `${ primary || '#' }?${ next }` : primary || '#' );
 }

@@ -204,6 +204,7 @@ function PersistentRegion( { region, matched, regionState, modeId } ) {
 			role={ role }
 			className={ className }
 			data-region-id={ region.id }
+			aria-label={ region.label || undefined }
 			{ ...appMountedAttr }
 			style={ style }
 			{ ...stateAttrs }
@@ -309,6 +310,11 @@ function ModalRegion( { region, services, matched, regionState, modeId } ) {
 
 	const dialogStyle = toReactStyle( region.style );
 
+	// Accessible name: an authored `label` reads cleanly; absent one, the
+	// region id is the fallback (a raw slug like `editor/inspector`, but
+	// still better than an unnamed dialog).
+	const accessibleName = region.label || region.id;
+
 	return (
 		<>
 			<button
@@ -323,15 +329,15 @@ function ModalRegion( { region, services, matched, regionState, modeId } ) {
 				ref={ dialogRef }
 				role={ role }
 				aria-modal="true"
-				aria-labelledby={ region.id ? labelId : undefined }
+				aria-labelledby={ accessibleName ? labelId : undefined }
 				className={ `${ className } is-modal` }
 				data-region-id={ region.id }
 				style={ dialogStyle }
 				{ ...stateAttrs }
 			>
-				{ region.id ? (
+				{ accessibleName ? (
 					<span id={ labelId } className="screen-reader-text">
-						{ region.id }
+						{ accessibleName }
 					</span>
 				) : null }
 				{ renderRegionApp( region, matched ) }
