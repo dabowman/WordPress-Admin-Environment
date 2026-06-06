@@ -18,6 +18,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { upload } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 import { buildFields } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
@@ -57,6 +58,16 @@ const ACTION_LABELS = {
 	edit: __( 'Edit', 'wp-admin-workspaces' ),
 	'copy-url': __( 'Copy URL', 'wp-admin-workspaces' ),
 	delete: __( 'Delete Permanently', 'wp-admin-workspaces' ),
+};
+
+// URL slot spec (#136): mirror NavigationApp's `?screen=` pattern so refresh /
+// deep-link / browser-back survive. `view.page` ⇄ `?paged=N` (omitted on page 1)
+// and the single-value `type` filter ⇄ `?media_type=<value>`. The author / date
+// filters and the Mine / Unattached toolbar toggles stay in local state — they
+// aren't single-value `is` slots and aren't part of the parity gap.
+const URL_SLOTS = {
+	page: 'paged',
+	filters: [ { field: 'type', param: 'media_type', operator: 'is' } ],
 };
 
 const VIEW_DEFAULTS = {
@@ -206,6 +217,7 @@ export default function MediaApp( { config = {} } ) {
 		screenId,
 		dataViewConfig,
 		viewDefaults: VIEW_DEFAULTS,
+		urlSlots: URL_SLOTS,
 	} );
 
 	// Toolbar pseudo-filters (no DataViews filter UI for these): Mine restricts
@@ -604,6 +616,7 @@ export default function MediaApp( { config = {} } ) {
 					id={ editingId }
 					onClose={ () => setEditingId( null ) }
 					onMutated={ refreshAfterMutation }
+					onReplaced={ ( newId ) => setEditingId( newId ) }
 				/>
 			) }
 		</Page>
@@ -620,24 +633,30 @@ export default function MediaApp( { config = {} } ) {
  * this composite (preview + DataForm + action row).
  *
  * @param {Object}   root0
- * @param {number}   root0.id        Attachment id.
- * @param {Function} root0.onClose   Close callback.
- * @param {Function} root0.onMutated Post-save / delete invalidation callback.
+ * @param {number}   root0.id         Attachment id.
+ * @param {Function} root0.onClose    Close callback.
+ * @param {Function} root0.onMutated  Post-save / delete invalidation callback.
+ * @param {Function} root0.onReplaced Re-point callback after an inline image
+ *                                    edit (the edit returns a NEW attachment id);
+ *                                    switches the modal to the new attachment.
  * @return {JSX.Element} The modal.
  */
-function MediaDetailsModal( { id, onClose, onMutated } ) {
+function MediaDetailsModal( { id, onClose, onMutated, onReplaced } ) {
 	return (
 		<Modal
 			title={ __( 'Media Details', 'wp-admin-workspaces' ) }
 			onRequestClose={ onClose }
 			size="large"
 		>
-			<MediaDetails
-				key={ id }
-				id={ id }
-				onClose={ onClose }
-				onMutated={ onMutated }
-			/>
+			<PortalThemeScope>
+				<MediaDetails
+					key={ id }
+					id={ id }
+					onClose={ onClose }
+					onMutated={ onMutated }
+					onReplaced={ onReplaced }
+				/>
+			</PortalThemeScope>
 		</Modal>
 	);
 }
