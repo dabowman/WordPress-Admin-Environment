@@ -24,6 +24,7 @@ import {
 } from '../_shared/dataviews/pluginSegments.mjs';
 import { UnavailableViaApi } from '../_shared/fallback/UnavailableViaApi';
 import { Page } from '../_shared/Page';
+import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
 
 const STATUS_LABELS = {
 	active: __( 'Active', 'wp-admin-workspaces' ),
@@ -533,22 +534,25 @@ export default function PluginsApp( { config = {} } = {} ) {
 					) }
 					onRequestClose={ () => setIsUploading( false ) }
 				>
-					{ /* No REST surface for zip upload — `create_item` accepts a
-					     wordpress.org slug only. Fall back to the classic upload
-					     screen via the shared no-API affordance. */ }
-					<UnavailableViaApi
-						kind="action"
-						classicPath="plugin-install.php?tab=upload"
-						label={ __(
-							'Open the classic Upload Plugin screen',
-							'wp-admin-workspaces'
-						) }
-						command="wp plugin install /path/to/plugin.zip --activate"
-						agentPrompt={ __(
-							'Install a WordPress plugin from a local .zip archive using `wp plugin install <path-to-zip>`.',
-							'wp-admin-workspaces'
-						) }
-					/>
+					<PortalThemeScope>
+						{ /* No REST surface for zip upload — `create_item`
+						     accepts a wordpress.org slug only. Fall back to the
+						     classic upload screen via the shared no-API
+						     affordance. */ }
+						<UnavailableViaApi
+							kind="action"
+							classicPath="plugin-install.php?tab=upload"
+							label={ __(
+								'Open the classic Upload Plugin screen',
+								'wp-admin-workspaces'
+							) }
+							command="wp plugin install /path/to/plugin.zip --activate"
+							agentPrompt={ __(
+								'Install a WordPress plugin from a local .zip archive using `wp plugin install <path-to-zip>`.',
+								'wp-admin-workspaces'
+							) }
+						/>
+					</PortalThemeScope>
 				</Modal>
 			) }
 		</Page>
