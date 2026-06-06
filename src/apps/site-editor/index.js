@@ -40,7 +40,5 @@ import IframeApp from '../iframe-fallback';
 export default function SiteEditorApp( props ) {
 	const url = props.config?.url || 'site-editor.php';
 	const hideEditorChrome = !! props.config?.hideEditorChrome;
-	return (
-		<IframeApp app={ props.app } config={ { url, hideEditorChrome } } />
-	);
+	return <IframeApp app={ props.app } config={ { url, hideEditorChrome } } />;
 }

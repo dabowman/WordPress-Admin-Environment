@@ -114,68 +114,71 @@ export default function IframeApp( { app, config = {} } ) {
 		return () => $( document ).off( 'heartbeat-tick', onTick );
 	}, [] );
 
-	const onIframeLoad = useCallback( ( event ) => {
-		try {
-			const iframe = event.target;
-			const iframeWin = iframe.contentWindow;
-			const iframeDoc = iframeWin?.document;
-			if ( ! iframeDoc ) {
-				// Cross-origin — can't inspect or inject. Reveal anyway;
-				// blocking forever is worse than showing whatever loaded.
-				setIsReady( true );
-				return;
-			}
-
-			// Session-expiry detection: WordPress renders wp-login.php
-			// inside the iframe when the session is gone. Don't let the
-			// user authenticate inside the iframe — keep it hidden and
-			// force a heartbeat poll so the workspace-level wp-auth-check
-			// modal pops at once instead of waiting for the next ~15s tick.
-			const href = iframeWin.location?.href || '';
-			const isLoginPage =
-				/\/wp-login\.php(\?|$)/.test( href ) ||
-				!! iframeDoc.getElementById( 'loginform' ) ||
-				!! iframeDoc.body?.classList?.contains( 'login' );
-			if ( isLoginPage ) {
-				setIsReady( false );
-				try {
-					if ( window.wp?.heartbeat?.connectNow ) {
-						window.wp.heartbeat.connectNow();
-					}
-				} catch ( _e ) {
-					// wp.heartbeat may not be available; the next
-					// scheduled tick will still surface the modal.
-				}
-				return;
-			}
-
-			// Authenticated admin page — inject the chrome-hide CSS BEFORE
-			// revealing the iframe, so the user never sees the full
-			// wp-admin chrome flash through.
-			const style = iframeDoc.createElement( 'style' );
-			style.textContent = getChromeHideCss( { hideEditorChrome } );
-			iframeDoc.head.appendChild( style );
-			setIsReady( true );
-
-			// Hide again at the START of the next in-iframe navigation
-			// (form submit / link click). Without this, isReady stays
-			// true while the new page loads and the user sees a flash
-			// of un-styled wp-admin chrome before our chrome-hide CSS
-			// runs again on the next onIframeLoad.
+	const onIframeLoad = useCallback(
+		( event ) => {
 			try {
-				iframeWin.addEventListener(
-					'beforeunload',
-					() => setIsReady( false ),
-					{ once: true }
-				);
-			} catch ( _e ) {
-				// Same-origin attach should succeed; cross-origin throws.
+				const iframe = event.target;
+				const iframeWin = iframe.contentWindow;
+				const iframeDoc = iframeWin?.document;
+				if ( ! iframeDoc ) {
+					// Cross-origin — can't inspect or inject. Reveal anyway;
+					// blocking forever is worse than showing whatever loaded.
+					setIsReady( true );
+					return;
+				}
+
+				// Session-expiry detection: WordPress renders wp-login.php
+				// inside the iframe when the session is gone. Don't let the
+				// user authenticate inside the iframe — keep it hidden and
+				// force a heartbeat poll so the workspace-level wp-auth-check
+				// modal pops at once instead of waiting for the next ~15s tick.
+				const href = iframeWin.location?.href || '';
+				const isLoginPage =
+					/\/wp-login\.php(\?|$)/.test( href ) ||
+					!! iframeDoc.getElementById( 'loginform' ) ||
+					!! iframeDoc.body?.classList?.contains( 'login' );
+				if ( isLoginPage ) {
+					setIsReady( false );
+					try {
+						if ( window.wp?.heartbeat?.connectNow ) {
+							window.wp.heartbeat.connectNow();
+						}
+					} catch ( _e ) {
+						// wp.heartbeat may not be available; the next
+						// scheduled tick will still surface the modal.
+					}
+					return;
+				}
+
+				// Authenticated admin page — inject the chrome-hide CSS BEFORE
+				// revealing the iframe, so the user never sees the full
+				// wp-admin chrome flash through.
+				const style = iframeDoc.createElement( 'style' );
+				style.textContent = getChromeHideCss( { hideEditorChrome } );
+				iframeDoc.head.appendChild( style );
+				setIsReady( true );
+
+				// Hide again at the START of the next in-iframe navigation
+				// (form submit / link click). Without this, isReady stays
+				// true while the new page loads and the user sees a flash
+				// of un-styled wp-admin chrome before our chrome-hide CSS
+				// runs again on the next onIframeLoad.
+				try {
+					iframeWin.addEventListener(
+						'beforeunload',
+						() => setIsReady( false ),
+						{ once: true }
+					);
+				} catch ( _e ) {
+					// Same-origin attach should succeed; cross-origin throws.
+				}
+			} catch ( e ) {
+				// Same as cross-origin path — reveal anyway.
+				setIsReady( true );
 			}
-		} catch ( e ) {
-			// Same as cross-origin path — reveal anyway.
-			setIsReady( true );
-		}
-	}, [ hideEditorChrome ] );
+		},
+		[ hideEditorChrome ]
+	);
 
 	if ( ! rawUrl ) {
 		return null;

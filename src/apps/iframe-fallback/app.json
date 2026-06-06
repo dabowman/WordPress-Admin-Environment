@@ -11,6 +11,11 @@
 		"properties": {
 			"url": {
 				"type": "string"
+			},
+			"hideEditorChrome": {
+				"type": "boolean",
+				"default": false,
+				"description": "Strip the block editor's own hub/sidebar/header so the canvas renders as a chrome-less decoration. Only preview/embed surfaces should set this; the default takeover Editor screen leaves it false so the site editor keeps its native browse→edit flow and the user's persisted core/preferences view (see #253)."
 			}
 		},
 		"additionalProperties": true
@@ -76,7 +81,7 @@
 			},
 			{
 				"concern": "config-additional-properties",
-				"note": "Schema allows additional properties on `config` because adapters (SiteEditorApp, custom apps that delegate to IframeApp) may carry extra fields. The app itself only reads `url`."
+				"note": "Schema allows additional properties on `config` because adapters (SiteEditorApp, custom apps that delegate to IframeApp) may carry extra fields. The app itself reads `url` and `hideEditorChrome`; all other keys are passed through opaquely."
 			},
 			{
 				"concern": "spinner-fallback",
