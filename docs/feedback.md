@@ -69,7 +69,7 @@ _Acknowledged, not soon. Revisit when adjacent work touches the area._
 - [#78] [feat] Bucket-level `fieldsRef` inheritance in viewConfigs — deferred; workaround is a 6-line filter. (source: C2 review 2026-05-14)
 - [#79] [feat] Native mounts for `core:editor` + `core:site-editor` (spec §15 v1) — iframe adapters today. (source: V2.M5 gap close)
 - [#80] [bug] workspace.json schema has no `customizable` definition — field implemented but unvalidated. (source: V2.M4 review)
-- [#81] [feat] Refresh demo workspaces to showcase v1/v2 native apps (wired into developer-admin only). (source: M5 browser smoke)
+- ~~[#81] [feat] Refresh demo workspaces to showcase v1/v2 native apps (wired into developer-admin only). (source: M5 browser smoke)~~ **Done — #81 closed; the demo set was trimmed to the surviving three (`wp-admin-default` / `single-pane-demo` / `desktop-demo`). Docs reconciled in the #258 drift sweep.**
 - [#82] [chore] Rename `wpas_collect_nav_item_caps` → `wp_admin_workspaces_` prefix before public-API freeze. (source: V2.M3 review)
 - [#15] [bug] `@wordpress/ui` overlay components blocked on WP core `privateApis` allowlist — Gutenberg-plugin dependency; upstream tracking. (source: pre-M1 inbox)
 - [#20] [feat] Post settings panel for SimpleEditorApp (featured image / taxonomy / excerpt / scheduling). (source: pre-M1 inbox)

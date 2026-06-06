@@ -12,7 +12,7 @@ Three artifacts drive the workspace: `app.json` (per-app intrinsics, ships with 
 
 **Region vocabulary:** `role` + `layout` + `platform` + `routing` — one-region-one-app with nested child regions, URL-driven navigation, `routing.route-key` naming the URL slot a region reads, plain `<a href>` navigation, `target` keeping native HTML meaning.
 
-Three engines ship: `core:default` + `core:single-pane` + `core:desktop`. Seven bundled workspaces in `workspaces/`.
+Three engines ship: `core:default` + `core:single-pane` + `core:desktop`. Three bundled workspaces in `workspaces/` (`wp-admin-default` + `single-pane-demo` + `desktop-demo`).
 
 **Tokens.** DTCG `tokens.json` resolver: PHP `WP_Admin_Workspaces_Tokens` deep-merges site → theme → plugin → core; pure-ESM `tokensResolver.mjs` flattens + resolves curly-brace aliases + coerces 8 DTCG leaf/composite types.
 
@@ -188,6 +188,7 @@ npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/t
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-rest-tests.php      # /data-view screen-scoped permission floor (subscriber 403 on admin-only screens, 404 on unknown screen, 401 logged-out, triple-keyed lookups keep logged-in floor)
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-site-health-rest-tests.php   # issue #124: /site-health/{tests,info} — 401 logged-out, 403 subscriber, 200 admin (direct results + async registry on /tests; debug-data sections w/ private flags on /info), all gated on view_site_health_checks
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-activate-theme-rest-tests.php # issue #189: /activate-theme switch_themes permission + validation floor (subscriber 403, logged-out 401, empty stylesheet 400 rest_invalid_param, unknown 404 rest_theme_not_found, broken theme 400 rest_theme_broken, incompatible theme 400 rest_theme_requirements, valid 200 {stylesheet,name,active})
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-mode-resolution-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-classic-menu-bridge-tests.php
 npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-preload-tests.php
@@ -222,7 +223,7 @@ Skeletal top level (full file-by-file annotations + the application-source table
 wp-admin-workspaces/
 ├── wp-admin-workspaces.php       # Plugin entry point
 ├── webpack.config.js        # Copies dataviews CSS to build/
-├── workspaces/                  # 7 bundled workspace.json configs (wp-admin-default + 6 demos)
+├── workspaces/                  # 3 bundled workspace.json configs (wp-admin-default + 2 demos)
 ├── includes/                # PHP
 │   ├── *-rest.php           # REST controllers (can / prefs / data-view / field-collections)
 │   ├── cascade/             # Resolver, merge, customizable, cache, permissions, modes, data-view-config, classic-menu-bridge, preload, menu-items, admin-routes

@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/export-personal-data.php` + `wp-admin/erase-personal-data.php` + `wp-admin/includes/privacy-tools.php` + `wp-admin/includes/class-wp-privacy-data-export-requests-list-table.php` + `wp-admin/includes/class-wp-privacy-data-removal-requests-list-table.php` + `wp-admin/includes/class-wp-privacy-requests-table.php`
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the originals via `iframe:export-personal-data.php` and `iframe:erase-personal-data.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the originals via `iframe:export-personal-data.php` and `iframe:erase-personal-data.php`.
 
 This spec covers two parallel sub-screens that share an almost identical UI surface and underlying data model. They differ only in action verb (export vs. erase), success email content, and bulk-action labels. One combined spec; per-sub-screen differences called out where relevant.
 
@@ -414,7 +414,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, MailPoet, Yoast, etc. all ho
 
 ### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:export-personal-data.php` and `iframe:erase-personal-data.php` work in `developer-admin` workspace.
+- **What works:** `iframe:export-personal-data.php` and `iframe:erase-personal-data.php` work as `iframe:` escape hatches (e.g. in the `wp-admin-default` baseline).
 
 ### Gaps vs. this spec
 

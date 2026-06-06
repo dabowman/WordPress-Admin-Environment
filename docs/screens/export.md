@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/export.php` + `wp-admin/includes/export.php` (the WXR generator)
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:export.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the original via `iframe:export.php`.
 
 This spec describes the **semantic surface** of the WordPress Export screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -297,7 +297,7 @@ Plugin compatibility note: WooCommerce, BuddyPress, and other plugins extend exp
 
 ### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:export.php` works in `developer-admin` workspace.
+- **What works:** `iframe:export.php` works as an `iframe:` escape hatch (e.g. in the `wp-admin-default` baseline).
 
 ### Gaps vs. this spec
 

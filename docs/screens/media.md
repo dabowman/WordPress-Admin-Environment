@@ -632,4 +632,4 @@ For v1 of any new workspace config, `iframe:upload.php?mode=grid` is acceptable 
 - REST schema: `https://developer.wordpress.org/rest-api/reference/media/`
 - Image-edit endpoint added: 5.5.0; `flip` + `modifiers[]` added: 6.9.0
 - Current workspace impl: `src/apps/media/index.js`
-- Workspace config example: `workspaces/content-author.json`
+- Workspace config example: `workspaces/wp-admin-default.json`
