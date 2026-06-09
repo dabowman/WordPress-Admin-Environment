@@ -93,7 +93,7 @@ This field is required because the WPDS surface is the workspace's contract with
 
 Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails.
 
-Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
+Examples: `wp-admin-default`, `single-pane-demo`, `desktop-demo`, `acme-corp`.
 
 | Property | Description                                                | Type   | Default |
 |----------|------------------------------------------------------------|--------|---------|

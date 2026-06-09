@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/update-core.php` + `wp-admin/includes/update-core.php` + `wp-admin/includes/update.php` + `wp-admin/includes/class-core-upgrader.php`
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:update-core.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline does not ship an Updates screen. The `iframe:` escape hatch (`iframe:update-core.php`) is available for workspaces that need to surface this screen.
 
 This spec describes the **semantic surface** of the WordPress Updates screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -395,8 +395,8 @@ Plugin compatibility note: managed-WordPress hosts (WP Engine, Pantheon, Pressab
 
 ### Current workspace coverage
 
-- **Source:** none. Bundled `developer-workspace.json` uses `iframe:update-core.php` as escape hatch.
-- **What works:** original PHP screen renders inside iframe with chrome hidden.
+- **Source:** none. The bundled `wp-admin-default.json` baseline does not ship an Updates screen at all — the screen is absent from `wp-admin-default.json`.
+- **What works:** `iframe:update-core.php` is available as an `iframe:` escape hatch for workspaces that choose to include this screen.
 
 ### Gaps vs. this spec
 

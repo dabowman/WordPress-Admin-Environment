@@ -656,6 +656,14 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'settingsGeneral' => current_user_can( 'manage_options' )
 			? wp_admin_workspaces_get_settings_general_data()
 			: null,
+		// Interface-language options for the profile editor's `locale` field.
+		// Per-user (the profile form is self-service), so it deliberately offers
+		// only Site Default + English + already-installed locales — exactly the
+		// set the REST `locale` field accepts — and skips the translations-API
+		// HTTP call entirely when nothing extra is installed.
+		'profileLanguages' => is_user_logged_in()
+			? wp_admin_workspaces_get_profile_languages()
+			: array(),
 		'capabilities'  => wp_admin_workspaces_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
@@ -715,6 +723,66 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		html.wp-toolbar { padding-top: 0 !important; }
 		#wp-admin-workspaces { position: fixed; inset: 0; z-index: 99999; }
 	' );
+
+	wp_admin_workspaces_guard_jquery_hash_selectors();
+}
+
+/**
+ * Neutralize the jQuery/Sizzle "unrecognized expression: #/<route>" throw on
+ * the workspace shell page (issue #248).
+ *
+ * The hijack renders through `admin-header.php` / `admin-footer.php`, so the
+ * full classic-admin jQuery ecosystem co-loads on the same page as the React
+ * shell. The shell publishes navigation as slash-containing hash routes
+ * (`<a href="#/site-editor">`, `window.location.hash = '#/posts'`). A leading
+ * `#/` is NOT a valid jQuery/Sizzle selector: jQuery's `rquickExpr`
+ * (`#([\w-]+)$`) rejects it, so `$()` falls through to `Sizzle.tokenize`, which
+ * throws. Any co-loaded handler that feeds the URL hash — or a clicked
+ * anchor's `href` — into `jQuery()` (a screen-meta/help handler hit via an
+ * unexpected DOM path, a third-party plugin's anchor/hashchange handler, …)
+ * therefore throws on every shell navigation, aborting the rest of that
+ * handler.
+ *
+ * Rather than enumerate (and dequeue) every co-loaded thrower — fragile,
+ * version-dependent, and impossible to fully pin without the live stack — we
+ * guard at the throw site: wrap `jQuery.fn.init` so a `#/`-prefixed string
+ * selector resolves to an empty set instead of reaching the tokenizer. On the
+ * shell page `#/…` is always a workspace route and never a real element id
+ * (ids can't carry an unescaped `/`), so an empty match is the semantically
+ * correct, no-op result — identical to what a valid-but-nonmatching selector
+ * would return. The guard is intentionally narrow to the route prefix `#/`,
+ * so genuinely-malformed selectors elsewhere still surface.
+ *
+ * jQuery (always present in wp-admin) loads before this; the shim installs at
+ * script-load time, ahead of the DOM-ready / hashchange / click handlers that
+ * actually call `$( hash )`.
+ */
+function wp_admin_workspaces_guard_jquery_hash_selectors() {
+	wp_enqueue_script( 'jquery-core' );
+	$guard = <<<'JS'
+( function ( $ ) {
+	if ( ! $ || ! $.fn || ! $.fn.init || $.fn.init.__wpAdminWorkspacesHashGuard ) {
+		return;
+	}
+	var origInit = $.fn.init;
+	function GuardedInit( selector, context, root ) {
+		if (
+			typeof selector === 'string' &&
+			selector.charCodeAt( 0 ) === 35 /* # */ &&
+			selector.charCodeAt( 1 ) === 47 /* / */
+		) {
+			// A workspace hash route ("#/…"), never an element id on this
+			// page — resolve to an empty set instead of throwing in Sizzle.
+			return new origInit( [], context, root );
+		}
+		return new origInit( selector, context, root );
+	}
+	GuardedInit.prototype = origInit.prototype;
+	GuardedInit.__wpAdminWorkspacesHashGuard = true;
+	$.fn.init = GuardedInit;
+} )( window.jQuery );
+JS;
+	wp_add_inline_script( 'jquery-core', $guard, 'after' );
 }
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
@@ -1021,7 +1089,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
 	// this, `userCan()` would default-false on inline-permissioned menu
 	// items that have no screen binding.
 	if ( isset( $config['menu'] ) && is_array( $config['menu'] ) ) {
-		wpas_collect_menu_item_caps( $config['menu'], $declared );
+		wp_admin_workspaces_collect_menu_item_caps( $config['menu'], $declared );
 	}
 
 	// Built-in source capability floors (mirrors registry/builtins.js
@@ -1043,7 +1111,7 @@ function wp_admin_workspaces_resolve_capabilities( $config ) {
  * declared on `permissions.capabilities[]`. Mirrors the screen-perms walk
  * for menu items that don't inherit perms from a bound screen.
  */
-function wpas_collect_menu_item_caps( $menu, &$declared ) {
+function wp_admin_workspaces_collect_menu_item_caps( $menu, &$declared ) {
 	if ( ! is_array( $menu ) ) {
 		return;
 	}
@@ -1060,7 +1128,7 @@ function wpas_collect_menu_item_caps( $menu, &$declared ) {
 			}
 		}
 		if ( isset( $item['items'] ) && is_array( $item['items'] ) ) {
-			wpas_collect_menu_item_caps( $item['items'], $declared );
+			wp_admin_workspaces_collect_menu_item_caps( $item['items'], $declared );
 		}
 	}
 }
@@ -1518,26 +1586,95 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
 }, 10, 4 );
 
 /**
+ * Return a `locale => native_name` map for every locale in $locales, resolved
+ * against the translations API. Performs the `require_once` + HTTP fetch for
+ * available translations exactly once per call site, centralising that boilerplate
+ * so both `wp_admin_workspaces_get_profile_languages()` and
+ * `wp_admin_workspaces_get_settings_general_data()` share a single code path.
+ *
+ * @param string[]         $locales       List of locale strings to label (e.g. `get_available_languages()`).
+ * @param array|null       $translations  Pre-fetched result of `wp_get_available_translations()`, or
+ *                                        null to fetch it here. Pass a pre-fetched value when the
+ *                                        caller already holds the translations array to avoid a
+ *                                        redundant HTTP round-trip.
+ * @return array<string,string> Map of `locale => native_name` (falls back to the locale
+ *                               string itself when no native name is known).
+ */
+function wp_admin_workspaces_locale_labels( array $locales, $translations = null ) {
+	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+	if ( null === $translations ) {
+		$translations = wp_get_available_translations();
+	}
+	$labels = array();
+	foreach ( $locales as $locale ) {
+		$labels[ $locale ] = isset( $translations[ $locale ]['native_name'] )
+			? $translations[ $locale ]['native_name']
+			: $locale;
+	}
+	return $labels;
+}
+
+/**
+ * Build the interface-language options the profile editor offers for the user
+ * `locale` field.
+ *
+ * Unlike the Site Language list (admin-only, includes downloadable
+ * translations), this is per-user and offers only Site Default, English, and
+ * locales already installed — exactly the set the REST `locale` field accepts
+ * (its enum is `en_US` + `get_available_languages()`, plus `''` for the site
+ * default). Installing a new language pack on save is a wp-admin-only
+ * sub-feature, deliberately NOT surfaced here.
+ *
+ * The profile form is self-service (every logged-in user mounts it), so this
+ * avoids the translations-API HTTP fetch entirely in the common case where no
+ * extra languages are installed — only resolving native names when there is
+ * actually an installed locale to label.
+ *
+ * @return array<int, array{value:string,label:string}> Flat select options
+ *                                                       (`{ value, label }`).
+ */
+function wp_admin_workspaces_get_profile_languages() {
+	$installed = get_available_languages();
+
+	$options = array(
+		array( 'value' => '', 'label' => __( 'Site Default', 'wp-admin-workspaces' ) ),
+		array( 'value' => 'en_US', 'label' => 'English (United States)' ),
+	);
+
+	if ( empty( $installed ) ) {
+		return $options;
+	}
+
+	$labels = wp_admin_workspaces_locale_labels( $installed );
+	foreach ( $installed as $locale ) {
+		$options[] = array( 'value' => $locale, 'label' => $labels[ $locale ] );
+	}
+
+	return $options;
+}
+
+/**
  * Build the data payload that SettingsGeneralApp consumes (timezone groups,
  * languages, roles, date/time format presets, format previews). Uses the same
  * core helpers wp-admin/options-general.php uses so the app stays in lockstep.
  */
 function wp_admin_workspaces_get_settings_general_data() {
-	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-
 	// Languages (locales installed + downloadable translations).
+	// Fetch the translations array once and pass it into locale_labels() so
+	// the HTTP round-trip to the translations API happens at most once per
+	// request (the earlier refactor accidentally called wp_get_available_translations()
+	// twice — once inside locale_labels() and once here for the downloadable group).
 	$installed_languages = get_available_languages();
-	$translations        = wp_get_available_translations();
+	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+	$translations  = wp_get_available_translations();
+	$locale_labels = wp_admin_workspaces_locale_labels( $installed_languages, $translations );
 
 	$language_options = array(
 		array( 'value' => '', 'label' => 'English (United States)' ),
 	);
 	$installed_group = array();
 	foreach ( $installed_languages as $locale ) {
-		$label = isset( $translations[ $locale ]['native_name'] )
-			? $translations[ $locale ]['native_name']
-			: $locale;
-		$installed_group[] = array( 'value' => $locale, 'label' => $label );
+		$installed_group[] = array( 'value' => $locale, 'label' => $locale_labels[ $locale ] );
 	}
 	$available_group = array();
 	if ( current_user_can( 'install_languages' ) && wp_can_install_language_pack() ) {
