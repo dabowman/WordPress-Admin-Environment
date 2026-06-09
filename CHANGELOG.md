@@ -6,6 +6,21 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added: Plugins status-tab strip (issue #75)
+
+The `core:plugins` app now renders the classic `All | Active | Inactive`
+segment strip (plus `Network active` on multisite) above the list, matching
+the Comments/Posts pattern. The per-status counts were already computed off the
+single unpaginated `wp/v2/plugins` fetch; this surfaces them as a pinned
+`ViewTabs` filter group instead of only inside the column filter dropdown. The
+`Network active` segment appears only when the count tally carries that status
+(single-site installs never do). Pure segment logic factored into
+`src/apps/_shared/dataviews/pluginSegments.mjs` (`buildPluginStatusSegments` /
+`activePluginSegment`), pinned by `tests/runtime/plugin-segments.test.mjs`.
+Closes one item from the issue #75 roadmap bundle; the remaining gaps (Quick
+Edit, directory browse, app-passwords, etc.) need new custom REST routes or
+larger UI surfaces and stay tracked there.
+
 ### Added: media-library-picker + range/slider DataForm controls (#170)
 
 Two shared custom DataForm `Edit` controls close roadmap group C item 8 (parity
