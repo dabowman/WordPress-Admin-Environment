@@ -448,7 +448,11 @@ export default function PostsApp( { config } ) {
 
 	const queryArgs = useMemo( () => {
 		const args = buildQueryArgs( view, QUERY_MAPPING, {
-			status: config.status || 'any',
+			// `pinnedStatus` is the concrete pinned status or null; null falls
+			// back to `any` (the freely-filterable All screen). The hard pin
+			// below re-stamps the same value, so reading it here keeps the dep
+			// array down to `pinnedStatus` (mirroring the `fields` memo).
+			status: pinnedStatus || 'any',
 			context: 'edit',
 			_embed: 'author',
 		} );
@@ -465,7 +469,7 @@ export default function PostsApp( { config } ) {
 		// status (which would revive gated row actions). No-op when unpinned.
 		applyStatusPin( args, pinnedStatus );
 		return applyDateFilters( args, view.filters );
-	}, [ view, config.status, pinnedStatus ] );
+	}, [ view, pinnedStatus ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
 		'postType',
@@ -473,11 +477,15 @@ export default function PostsApp( { config } ) {
 		queryArgs
 	);
 
+	// On a pinned status screen the tab strip is hidden and the locked status
+	// field surfaces no `elementCounts`, so nothing renders these counts. Pass
+	// empty values to short-circuit `useEntityElementCounts` (the same trick
+	// `stickyCount` uses for non-`post` types) and skip the wasted requests.
 	const statusCounts = useEntityElementCounts(
 		'postType',
 		postType,
 		'status',
-		STATUS_VALUES
+		pinnedStatus ? [] : STATUS_VALUES
 	);
 
 	// Counts for the "Mine" and "Sticky" view tabs ride their own count queries
@@ -487,7 +495,7 @@ export default function PostsApp( { config } ) {
 		'postType',
 		postType,
 		'author',
-		currentUserId ? [ currentUserId ] : []
+		! pinnedStatus && currentUserId ? [ currentUserId ] : []
 	);
 	// Sticky is `post`-only — pass no values for other post types so the hook
 	// short-circuits (no `?sticky=true` request that would count all rows).
@@ -495,14 +503,17 @@ export default function PostsApp( { config } ) {
 		'postType',
 		postType,
 		'sticky',
-		postType === 'post' ? [ true ] : []
+		! pinnedStatus && postType === 'post' ? [ true ] : []
 	);
 
 	// Total across all statuses for the "All" tab — one extra count keyed by the
 	// `any` filter value the All tab applies.
-	const anyCount = useEntityElementCounts( 'postType', postType, 'status', [
-		'any',
-	] );
+	const anyCount = useEntityElementCounts(
+		'postType',
+		postType,
+		'status',
+		pinnedStatus ? [] : [ 'any' ]
+	);
 
 	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
