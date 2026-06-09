@@ -92,7 +92,7 @@
 		"icon": "comments"
 	},
 	"documentation": {
-		"purpose": "DataViews-driven comment moderation list. The author cell stacks avatar + name + email (`mailto:`) + author URL link + author IP (moderators only); content renders as HTML; an \"In response to\" column deep-links the parent post (title → workspace post editor + a \"View Post\" permalink, from the embedded `up` link); status + date follow. A Comments / Pings type filter maps to the REST `type` collection param (default `comment`). A `ViewTabs` strip above the list mirrors the classic All / Pending / Approved / Spam / Trash status views with live per-status counts. Bulk + per-row status actions: approve, unapprove, mark as spam, not spam (unspam), restore (untrash), move to trash, delete permanently. Status changes round-trip via partial `saveEntityRecord` PATCH; trash routes through `deleteEntityRecord` (no `force`), permanent delete through `deleteEntityRecord(..., { force: true })`. Per-row Edit (Quick Edit ≡ full Edit collapsed into one `createEntityFormModal` edit-mode modal) and Reply (`createEntityFormModal` create-mode, content-only POST with row-derived `parent`/`post`) substitute for the upstream-blocked inline-cell / detail-row primitives.",
+		"purpose": "DataViews-driven comment moderation list. The author cell stacks avatar + name + email (`mailto:`) + author URL link + author IP (moderators only); content renders as HTML; an \"In response to\" column deep-links the parent post (title → workspace post editor + a \"View Post\" permalink, from the embedded `up` link); status + date follow. An All comment types / Comments / Pings type filter maps to the REST `type` collection param (default `comment`; the All option drops the param so every type returns). A `ViewTabs` strip above the list mirrors the classic All / Pending / Approved / Spam / Trash status views with live per-status counts. Bulk + per-row status actions: approve, unapprove, mark as spam, not spam (unspam), restore (untrash), move to trash, delete permanently. Status changes round-trip via partial `saveEntityRecord` PATCH; trash routes through `deleteEntityRecord` (no `force`), permanent delete through `deleteEntityRecord(..., { force: true })`. Per-row Edit (Quick Edit ≡ full Edit collapsed into one `createEntityFormModal` edit-mode modal) and Reply (`createEntityFormModal` create-mode, content-only POST with row-derived `parent`/`post`) substitute for the upstream-blocked inline-cell / detail-row primitives.",
 		"rebuilds": "comments",
 		"data": {
 			"reads": [
@@ -310,8 +310,8 @@
 				"effect": "Navigate (`<a href=\"#/...\">`) to the workspace post editor (`/posts/{id}/edit` or `/pages/{id}/edit`); the sibling \"View Post\" link opens the live permalink in a new tab. Post metadata comes from the embedded `up` link, no per-row fetch."
 			},
 			{
-				"trigger": "Pick Comments / Pings in the type filter",
-				"effect": "Sets `args.type` to `comment` (default) or `pings`; records refetch. Pings surface pingbacks + trackbacks."
+				"trigger": "Pick All comment types / Comments / Pings in the type filter",
+				"effect": "Sets `args.type` to `comment` (default) or `pings`, or drops it entirely for All comment types; records refetch. Pings surface pingbacks + trackbacks."
 			},
 			{
 				"trigger": "Change view (search / filter / sort / page)",

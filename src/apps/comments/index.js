@@ -17,6 +17,7 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
 import {
 	useEntityElementCounts,
 	invalidateEntityElementCounts,
@@ -61,9 +62,11 @@ const FIELD_LABELS = {
 	type: __( 'Type', 'wp-admin-workspaces' ),
 };
 
-// Comment-type filter options (Comments / Pings), mapped to the REST `type`
-// collection param. `pings` resolves to pingbacks + trackbacks server-side.
+// Comment-type filter options (All / Comments / Pings), mapped to the REST
+// `type` collection param. `pings` resolves to pingbacks + trackbacks
+// server-side; the empty value drops the `type` arg so every type is returned.
 const TYPE_ELEMENTS = [
+	{ value: '', label: __( 'All comment types', 'wp-admin-workspaces' ) },
 	{ value: 'comment', label: __( 'Comments', 'wp-admin-workspaces' ) },
 	{ value: 'pings', label: __( 'Pings', 'wp-admin-workspaces' ) },
 ];
@@ -218,7 +221,7 @@ function AuthorCell( { item } ) {
 						{ item.authorEmail }
 					</a>
 				) : null }
-				{ item.authorUrl ? (
+				{ item.authorUrl && isSafeHref( item.authorUrl ) ? (
 					<a
 						className="wp-admin-workspaces-app-comments__author-url"
 						href={ item.authorUrl }
@@ -437,13 +440,15 @@ export default function CommentsApp( { config = {} } ) {
 				} else if ( filter.operator === 'is' ) {
 					args.status = filter.value;
 				}
-			} else if (
-				filter.field === 'type' &&
-				filter.operator === 'is' &&
-				filter.value
-			) {
-				// `comment` (default) | `pings` (pingbacks + trackbacks).
-				args.type = filter.value;
+			} else if ( filter.field === 'type' && filter.operator === 'is' ) {
+				// `comment` (default) | `pings` (pingbacks + trackbacks) | ''
+				// (All comment types). An explicit empty value widens the query
+				// to every type by dropping the base `type` arg.
+				if ( filter.value ) {
+					args.type = filter.value;
+				} else {
+					delete args.type;
+				}
 			}
 		}
 		return args;

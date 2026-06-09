@@ -18,29 +18,10 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
-}
-
-/**
- * Reject non-http(s) href values. React does not strip `javascript:` URIs
- * (unlike PHP's `esc_url()`), so REST-supplied URLs must pass this guard
- * before being rendered as anchor `href` values.
- *
- * @param {string} href Candidate URL string.
- * @return {boolean} True when safe to render as a link.
- */
-function isSafeHref( href ) {
-	if ( ! href || typeof href !== 'string' ) {
-		return false;
-	}
-	try {
-		const url = new URL( href );
-		return url.protocol === 'https:' || url.protocol === 'http:';
-	} catch {
-		return false;
-	}
 }
 
 const STATUS_LABELS = {

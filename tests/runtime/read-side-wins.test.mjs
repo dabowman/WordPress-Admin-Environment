@@ -3,8 +3,10 @@
  * Tests for the read-side list-app helpers added in issue #137:
  *   - `_shared/versionCompare.mjs` — the Plugins PHP/WP-incompatibility check.
  *   - `_shared/postDateLabel.mjs`  — the Posts status-aware date column label.
+ *   - `_shared/isSafeHref.mjs`     — the shared anchor-href protocol guard
+ *                                    (Plugins/Themes/Comments link rendering).
  *
- * Both are pure + side-effect-free (postDateLabel takes `now` as an arg rather
+ * All are pure + side-effect-free (postDateLabel takes `now` as an arg rather
  * than reading the clock) so they import directly into a node test script.
  */
 import { resolve, dirname } from 'node:path';
@@ -18,6 +20,9 @@ const { compareVersions, meetsMinVersion } = await import(
 );
 const { postDateLabel } = await import(
 	resolve( projectRoot, 'src/apps/_shared/postDateLabel.mjs' )
+);
+const { isSafeHref } = await import(
+	resolve( projectRoot, 'src/apps/_shared/isSafeHref.mjs' )
 );
 
 let pass = 0;
@@ -170,6 +175,31 @@ ok(
 	'null/undefined post → modified fallback (no throw)',
 	postDateLabel( null, NOW ).key === 'modified' &&
 		postDateLabel( undefined, NOW ).key === 'modified'
+);
+
+// --- isSafeHref -----------------------------------------------------------
+ok( 'https URL → safe', isSafeHref( 'https://example.com' ) === true );
+ok( 'http URL → safe', isSafeHref( 'http://example.com/path?q=1' ) === true );
+ok(
+	'javascript: URI → rejected',
+	isSafeHref( 'javascript:alert(1)' ) === false
+);
+ok( 'data: URI → rejected', isSafeHref( 'data:text/html,<x>' ) === false );
+ok( 'mailto: → rejected (http(s) only)', isSafeHref( 'mailto:a@b.test' ) === false );
+ok(
+	'protocol-relative → rejected (new URL throws without base)',
+	isSafeHref( '//evil.test/x' ) === false
+);
+ok(
+	'relative path → rejected',
+	isSafeHref( '/wp-admin/themes.php' ) === false
+);
+ok(
+	'empty / non-string → rejected',
+	isSafeHref( '' ) === false &&
+		isSafeHref( null ) === false &&
+		isSafeHref( undefined ) === false &&
+		isSafeHref( 123 ) === false
 );
 
 console.log( `\n${ pass } passed, ${ fail } failed` );

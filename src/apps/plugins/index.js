@@ -10,6 +10,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { plus } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { meetsMinVersion } from '../_shared/versionCompare.mjs';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -210,27 +211,6 @@ function buildFieldRenderers() {
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
-}
-
-/**
- * Reject non-http(s) href values. React does not strip `javascript:` URIs
- * (unlike PHP's `esc_url()`), so rendered anchor `href` values from REST
- * should pass this guard before use. Protocol-relative URIs are rejected;
- * only explicit `https?:` schemes pass. Empty/absent values return false.
- *
- * @param {string} href Candidate URL string.
- * @return {boolean} True when safe to render as a link.
- */
-function isSafeHref( href ) {
-	if ( ! href || typeof href !== 'string' ) {
-		return false;
-	}
-	try {
-		const url = new URL( href );
-		return url.protocol === 'https:' || url.protocol === 'http:';
-	} catch {
-		return false;
-	}
 }
 
 /**
