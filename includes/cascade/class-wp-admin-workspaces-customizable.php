@@ -28,7 +28,7 @@
  *   - `screens.<id>.permissions` (the security gate)
  *   - `screens.<id>.app` (controls which app mounts)
  *   - `commands[].invoke` (the action target)
- *   - `workspace.engine` (the runtime engine)
+ *   - `engine` (the top-level runtime-engine field)
  *
  * Emergency bypass — undocumented. The `wp_admin_workspaces_customizable_bypass`
  * filter (default-off) short-circuits the entire per-field walker. Intended
@@ -63,7 +63,7 @@ class WP_Admin_Workspaces_Customizable {
 	 * matching `customizable` allowlist entry. The security gate
 	 * (screens.<id>.permissions), the app mount target (screens.<id>.app),
 	 * the command invoke target (commands.*.invoke), and the runtime
-	 * engine (workspace.engine) all sit here.
+	 * engine (the top-level `engine` field) all sit here.
 	 */
 	const DENY_PATTERNS = array(
 		'screens.*.permissions',

@@ -12,8 +12,9 @@
  *
  * The render path delegates to WordPress's own admin-header.php /
  * admin-footer.php so the standard `admin_enqueue_scripts` chain runs —
- * including the Gutenberg plugin's `wp-private-apis` override that every
- * `@wordpress/ui` overlay component depends on. wp_admin_workspaces_enqueue_
+ * including the private-API allowlist every `@wordpress/ui` overlay
+ * component depends on (shipped by core on WP >= 7.0, by the Gutenberg
+ * plugin's `wp-private-apis` override below). wp_admin_workspaces_enqueue_
  * assets() is the gated callback that adds the workspace bundle; its inline
  * CSS hides the surrounding admin chrome so the workspace fills the
  * viewport.
@@ -99,8 +100,9 @@ class WP_Admin_Workspaces_Hijack {
 		) {
 			return false;
 		}
-		// Hard runtime dep: without the Gutenberg plugin the @wordpress/ui
-		// overlay components throw at module-load and the workspace renders blank.
+		// Runtime private-API dep (version-gated): on WP < 7.0 without the
+		// Gutenberg plugin the @wordpress/ui overlay components throw at
+		// module-load and the workspace renders blank.
 		// Stand down so classic wp-admin stays reachable (the admin_notices
 		// warning explains why) rather than taking over `/wp-admin/` into a
 		// blank screen.
@@ -328,8 +330,9 @@ class WP_Admin_Workspaces_Hijack {
 
 	/**
 	 * Render the workspace and exit. Delegates head/footer + script
-	 * printing to WordPress's admin chrome so the Gutenberg private-apis
-	 * override and every `@wordpress/*` dependency register correctly.
+	 * printing to WordPress's admin chrome so the private-API allowlist
+	 * (Gutenberg's override on WP < 7.0) and every `@wordpress/*`
+	 * dependency register correctly.
 	 */
 	private static function render_and_exit() {
 		// admin-header.php expects a title + screen context.

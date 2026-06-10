@@ -8,14 +8,14 @@ import { compileCommands } from './compileCommands.mjs';
  * workspace.json doc + the active engine manifest.
  *
  * The cascade resolver hands the kernel the author-shape v3 doc
- * (`workspace` / `screens` / `menu` / `settings` / `commands`). The kernel
- * is the single place that derives the runtime surfaces from it:
+ * (top-level `engine` / `screens` / `menu` / `settings` / `commands`).
+ * The kernel is the single place that derives the runtime surfaces from it:
  *
- *   - `engine`        ← `workspace.engine`
+ *   - `engine`        ← top-level `engine` (legacy `workspace.engine` fallback)
  *   - `menu-renderer` ← engine manifest `menu-renderer` (strategy id)
  *   - `routes`        ← synthesized from `screens` (+ `routes` escape hatch)
  *   - `regions`       ← engine `defaultRegions` merged under `regions` escape hatch
- *   - `default-route` ← `workspace.default-screen` → screen path
+ *   - `default-route` ← top-level `default-screen` → screen path
  *   - `commands`      ← deduped by id
  *
  * The v3 author blocks pass through unchanged so apps (navigation,
