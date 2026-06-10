@@ -2,7 +2,7 @@
 /**
  * Plugin Name: WP Admin Workspaces
  * Plugin URI: https://github.com/dabowman/WordPress-Admin-Environment
- * Description: A configurable, React-based WordPress admin environment driven by admin.json configuration files.
+ * Description: A configurable, React-based WordPress admin environment driven by workspace.json configuration files.
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7

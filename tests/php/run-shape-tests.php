@@ -8,12 +8,12 @@
  * resolved AUTHOR-shape doc has the structural invariants the kernel
  * depends on:
  *
- *   - top-level `workspace` block present + `workspace.engine` registered.
+ *   - top-level `engine` field present (v3 frame-shape) + registered.
  *   - top-level `screens` block present with ≥ 1 entry.
  *   - every screen declares a primary app (shorthand `app` or `apps[0]`),
  *     and every referenced app source is a `core:*` / `plugin:*` /
  *     `iframe:*` id.
- *   - `workspace.default-screen` (when present) names a real screen.
+ *   - top-level `default-screen` (when present) names a real screen.
  *   - no two screens claim the same `path`.
  *
  * The kernel derives the runtime surfaces (`engine` / `regions` / `routes`

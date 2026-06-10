@@ -1,8 +1,8 @@
 # workspace.json — Schema Design Doc
 
-> Authoritative for the workspace.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
+> Authoritative for the workspace.json shape (top-level `engine` / `default-screen` / `frame` / `settings` / `screens` / `menu` / `commands`) and for cascade semantics, OR-semantic permissions with trust tiers, the engine-declared modes catalog, the 3-tier slot vocabulary, the classic wp-admin menu bridge, and programmatic workspace registration.
 >
-> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/workspace.json`](../schemas/workspace.json), [`admin-app.json`](../schemas/admin-app.json), [`admin-engine.json`](../schemas/admin-engine.json).
+> **Companion docs.** The runtime architecture this schema sits on top of — region vocabulary, URL-driven routing, cascade resolver internals, capability gating layers, the four-tier theming model, the full extension-point list — lives in [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md). The dataView primitive (3-axis registry: `kind/name/variant`) has a dedicated author-facing guide at [`../dataview-config.md`](../dataview-config.md). The JSON Schemas are at [`../schemas/workspace.json`](../schemas/workspace.json), [`workspace-app.json`](../schemas/workspace-app.json), [`workspace-engine.json`](../schemas/workspace-engine.json).
 
 v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline surfaces.
 
