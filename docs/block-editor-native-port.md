@@ -1,133 +1,121 @@
-# Block editor native port — feasibility study
+# Block editor strategy — handoff, chromeless embed, purpose-built native editors
 
-Status: **analysis, no code**. Companion to `docs/parity/block-editor.md` (feature/REST parity audit, which this doc builds on and does not repeat), `docs/screens/editor-block.md` (tier-2 functional spec), and feedback issue #79 (native mounts deferred). Scope: the **post editor** (`core:editor`, today an iframe of `post.php`). The site editor (`core:site-editor`) shares some findings but has extra blockers (its own hash router, global-styles surface) and is out of scope here.
+Status: **decided** (2026-06-10, repo owner). This began as a feasibility study for porting the full block editor as a workspace-native app; the option-space analysis below changed the conclusion. The full-recreation analysis is retained in §6 because its component inventory and infrastructure findings power Tier 3. Companion docs: `docs/parity/block-editor.md` (feature/REST parity audit), `docs/screens/editor-block.md` (tier-2 spec), feedback issue #79.
 
-## Verdict
+## The decision
 
-**Feasible, as a phased composition on `@wordpress/editor`'s public API — not as a mount of `@wordpress/edit-post`, and not (primarily) via the private-API unlock.** Roughly 80% of full-editor functionality is reachable through public, externalized, core-shipped components. The remaining 20% splits into: (a) PHP bootstrap work on the workspace page (editor settings, block asset enqueue, preloads) — substantial but mechanical; (b) three custom REST endpoints wrapping admin-ajax-only operations (post lock, revision restore, preview nonce); and (c) classic meta boxes, which are **not portable** and need a permanent iframe fallback policy.
+Three tiers, replacing the single question "how do we embed the editor?":
 
-The iframe `core:editor` stays as the fallback throughout (and likely forever, for meta-box-bearing posts). The native app ships behind a separate app id, and replaces the implementation behind the `core:editor` contract id only after parity sign-off — the same "id is the contract" pattern `core:site-editor`'s app.md already documents.
+1. **Default: full-page handoff to the real editor** — workspace → `post.php` is a real top-level navigation, exactly as core navigates `edit.php` → `post.php` today. Full fidelity, every plugin, meta boxes, zero compatibility treadmill.
+2. **Option: a server-rendered chromeless editor page, iframed** — a first-party admin endpoint that runs the real editor bootstrap but never renders wp-admin chrome. For workspaces that want the editor *inside* the workspace (multi-pane, desktop windows, branded flows) without the current chrome-hide CSS hacks.
+3. **Purpose-built native editors per use case** — not one recreated "main editor," but small native editors composed from `@wordpress/editor`'s public components for specific users and jobs. `core:simple-editor` is the proof of concept.
 
-## 1. The three candidate strategies
+**This is the workspace identity:** full capability when you want it, through handoff — and the ability to make yourself a *specific* editor for a *specific* user, instead of trying to make the main editor fit every container. The main editor stays core's product; the workspace's product is the configurability around and beside it.
 
-### A. Mount `@wordpress/edit-post` wholesale — **rejected**
+A full native recreation of the post editor (the original subject of this study) is **rejected for now** — see §6 for the analysis and the narrow conditions for revisiting.
 
-`edit-post` is a *page owner*, not a component. Its `initializeEditor` expects to own the document: `FullscreenMode` toggles `body.is-fullscreen-mode` classes, `BrowserURL` rewrites `?post=…&action=edit` query params over our hash router, the meta-box system assumes `post.php`'s form context, and the welcome guide / fullscreen preferences fight the workspace's chrome. These are exactly the five blockers recorded in `src/apps/site-editor/index.js` and `docs/parity/block-editor.md` §"API & platform blockers" #10. Mounting it inside a region reproduces the iframe's "foreign shell" problem without the iframe's isolation. Dead end.
+## 1. The option space (why these three)
 
-### B. Unlock `wp.editor`'s private `Editor` shell — **viable, but only as a tactical instrument**
+| | Iframe `post.php` (status quo) | **Tier 1: Handoff** | **Tier 2: Chromeless page** | Full native recreation (rejected) |
+|---|---|---|---|---|
+| Editor fidelity / plugin compat | High but seamy | **Total** | High (real bootstrap, meta boxes work) | Trails core; plugin long-tail risk |
+| Maintenance burden | Chrome-hide CSS + 15-subsystem bridge, per-release | **Near zero** | Small PHP fork of `edit-form-blocks.php`, per-release | Permanent shell treadmill |
+| Workspace integration (palette, dirty-state, theming, modes) | Partial, via postMessage bridge | None (by design) | Partial, via a *smaller* bridge | Total |
+| Multi-pane / desktop-engine windows | Yes, seamy | No | **Yes** | Yes |
+| URL / title / history / deep links | Degraded | **Native browser** | Degraded (iframe) | Native + extensible |
+| Tracks future core editor features (incl. RTC) | Automatic | **Automatic** | Automatic | Manual adoption, always trailing |
+| Build effort | Sunk | **Smallest (mostly removal)** | M | XL |
 
-Verified against installed `@wordpress/private-apis` 1.45.0 (`build-module/implementation.mjs:43-52`): `__dangerousOptInToUnstableAPIsOnlyForCoreModules` does **string-match-only** verification — no caller identity check, no once-per-module registration. Any code can opt in as `@wordpress/edit-site` and unlock anything. This plugin already crosses that line once, deliberately and narrowly: `engines/core-default/WpdsThemeProvider.js` unlocks `@wordpress/theme.ThemeProvider` this way.
+Precedent that settled it: **WordPress.com's Calypso spent years embedding Gutenberg in an iframe ("Gutenframe") and Automattic ultimately abandoned the embed, defaulting to wp-admin's editor directly.** The organization with the most resources and the strongest incentive to embed concluded the iframe wasn't worth its maintenance. Core itself ships the same model we're adopting: list screens and the editor are separate apps joined by navigation.
 
-Gutenberg trunk's `packages/editor/src/private-apis.js` locks the full `Editor` component (header + tabbed sidebar + canvas + publish flow — the thing `edit-post`'s `Layout` is now a thin wrapper around), plus `BackButton`, `PreferencesModal`, `PostCardPanel`, `usePostFields`, and the whole `interfaceStore`. So one unlock buys near-total parity with minimal code.
+The current iframe-`post.php` approach (with its chrome-hide CSS and the chromeless bridge's editor sub-systems) is **superseded**: Tier 1 replaces it as default; Tier 2 replaces it as the embed surface. Retirement is gradual — the `core:editor` app keeps working until Tier 2 lands.
 
-**Why it's not the primary strategy:** the private `Editor` brings its own chrome — header, sidebar layout, interface skeleton — which is the same architectural mismatch as strategy A minus the body classes. It does not decompose into workspace regions, its CSS is `interface-*`/`editor-*` skeleton CSS that assumes viewport ownership, and every WordPress release can rename/remove what's behind the lock (the consent string itself is versioned by upstream policy; it happened to survive 7.0 unchanged, per CLAUDE.md, but that is luck, not contract). Use unlocks the way `WpdsThemeProvider` does: **per-component, wrapped in try/catch with a public-API fallback, documented inline** — not as the foundation.
+## 2. Tier 1 — handoff (default)
 
-### C. Compose from `@wordpress/editor`'s public exports — **recommended**
+The user is "in the workspace" to browse and manage, "in the editor" to write, with a real page navigation between. Core users live with this exact cut today.
 
-Verified against Gutenberg trunk `packages/editor/src/components/index.js`: the public surface is ~80 components and covers nearly the whole post editor:
+**Mechanics — mostly removal, the architecture already cooperates:**
 
-| Concern | Public components (all in `wp.editor`, externalized, shipped by core) |
+- Workspace edit links become real `<a href="post.php?post=X&action=edit">` anchors. The capture-phase `adminLinkInterceptor` only rewrites hrefs that map to workspace routes via `window.wpAdminWorkspaces.adminRoutes`; with the editor screens' `legacy_path` mappings removed, these anchors **pass through** to a normal top-level navigation. No new mechanism — this is the existing "workspace links never bypass the interceptor" rule doing its job.
+- Remove the post-edit screens' `legacy_path`/`legacy_query` mappings so a direct visit to `post.php` no longer redirects into the workspace.
+- **Return trip is already built:** the editor's exit button targets `edit.php`, which *stays* legacy-mapped to the workspace posts screen — so leaving the editor lands back in the workspace automatically, via machinery that already ships. The elegance of this is the strongest sign the model fits the architecture.
+- Dirty-state guarding is the browser's native `beforeunload` from the editor itself; the workspace-side `useDirtyState`/bridge relay becomes unnecessary for this surface.
+
+**Costs, accepted:** no workspace command palette inside the editor; no workspace theming of editor chrome; the workspace SPA re-boots on return. **One measurement owed:** the editor's dirty-state `beforeunload` handler can disqualify back/forward cache — measure the return-trip cost against `docs/perf-baseline.md` and tune (the kernel boot + preload hydration path is the same one every cold workspace load pays).
+
+**Effort: S.** Mostly deleting mappings + pointing list-app row actions at classic hrefs + a smoke pass on new-post flow (`post-new.php` handoff replaces the current REST auto-draft seeding).
+
+## 3. Tier 2 — server-rendered chromeless editor page (embed option)
+
+A first-party admin endpoint (e.g. a dedicated chromeless action under the existing hijack machinery) that runs the same server bootstrap `wp-admin/edit-form-blocks.php` does — settings build via `get_block_editor_settings()` + `block_editor_settings_all`, block bootstrap via `wp.blocks.unstable__bootstrapServerSideBlockDefinitions(…)`, `enqueue_block_editor_assets`, REST preloads, meta-box form context — but **never renders the admin menu/toolbar**. The page is born chromeless.
+
+What this buys over the status quo iframe:
+
+- **Deletes the chrome-hide CSS hack** (`chromeHide.mjs`'s wp-admin selectors, rev'd each release) and the chrome-flash bug — there is no chrome to hide.
+- **Shrinks the bridge.** Of the chromeless bridge's editor-relevant sub-systems, only dirty-state relay (#15) and link interception (#9) remain necessary; the rest exist to compensate for embedding a page that was never meant to be embedded.
+- **Meta boxes keep working** — it's a real PHP editor page with form context (parity blocker #6 stays solved the only way it can be).
+- **Serves every embed surface:** multi-pane (`screens[].apps[]` + mirror routing), `core:desktop` editor windows, branded takeover flows — and it can also be served top-level as an alternate handoff target for workspaces that want a chromeless editor without wp-admin's shell at all.
+
+Cost: a maintained PHP fork of `edit-form-blocks.php`'s essentials (~300 lines: settings, enqueues, bootstrap inline scripts, meta-box loader plumbing) — fragile in a much smaller, server-side-testable way than CSS selectors against wp-admin's DOM. Prior art: Automattic's `blocks-everywhere` PHP loader, `isolated-block-editor`'s WordPress loader. **Per-release watch:** diff `edit-form-blocks.php` against the fork at each WP release (add to the release checklist next to the WPDS parity sweep).
+
+The `core:editor` app id is the contract (same pattern as `core:site-editor`): when Tier 2 lands, the app's iframe URL switches from chrome-hidden `post.php` to the chromeless endpoint, and the hide-CSS path is deleted. Workspace.json consumers don't migrate anything.
+
+**Effort: M.** The endpoint + bootstrap fork + bridge slimming + tests (PHP shape tests for the bootstrap output; the existing chromeless-bridge test file extends).
+
+## 4. Tier 3 — purpose-built native editors (the workspace identity)
+
+Instead of one recreated main editor, the workspace grows a **family of small native editors**, each composed for a job: the Substack-style writer (`core:simple-editor`, the existing POC), and future candidates like a comment/reply composer, a docs/notes surface, an email-template editor, a landing-page builder with a locked block palette. Each is an ordinary workspace app — cap-gated, themable, engine-portable, palette-integrated — which is exactly what no embedded full editor can be.
+
+**The toolkit** (verified against Gutenberg trunk; all public, externalized, shipped by core as `wp.editor` / `wp.blockEditor`):
+
+| Concern | Public components |
 |---|---|
-| Provider | `EditorProvider` (stable, public — this is the load-bearing fact) |
-| Title + canvas | `PostTitle`; `BlockCanvas` + `BlockTools` from `wp.blockEditor` (public; iframed canvas via `shouldIframe`, which is also WP 7.0's direction for the post editor) |
-| Header | `DocumentBar`, `EditorHistoryUndo/Redo`, `PostSavedState`, `PostPreviewButton`, `PostPublishButton`/`PostPublishButtonLabel`, `PostSwitchToDraftButton`, `WordCount`/`TimeToRead`/`CharacterCount`, `TableOfContents`, `DocumentOutline` |
-| Document sidebar | `PostSchedulePanel`, `PostVisibility`, `PostURLPanel`, `PostAuthorPanel`, `PostFeaturedImagePanel`, `PostTaxonomiesPanel` (hierarchical + flat term selectors), `PostExcerptPanel`, `PostDiscussionPanel`, `PageAttributesPanel`, `PostTemplatePanel`, `PostFormat`, `PostSticky`, `PostPendingStatus`, `PostTrash`, `PostLastRevisionPanel`, `PostSyncStatus` — each with its own `*Check` gate |
-| Block sidebar | `InspectorControls.Slot` etc. from `wp.blockEditor` (public) |
-| Publish flow | `PostPublishPanel` (pre- + post-publish), `EntitiesSavedStates`, `useEntitiesSavedStatesIsDirty` |
+| Provider | `EditorProvider` (owns the `core/editor` store: dirty-state, autosave routing, post semantics, RTC when core ships it) |
+| Title + canvas | `PostTitle`; `BlockCanvas` + `BlockTools` (iframed canvas, same one core uses) |
+| Header pieces | `DocumentBar`, `EditorHistoryUndo/Redo`, `PostSavedState`, `PostPreviewButton`, `PostPublishButton`, `PostSwitchToDraftButton`, `WordCount`, `DocumentOutline` |
+| Document panels | `PostSchedulePanel`, `PostVisibility`, `PostURLPanel`, `PostAuthorPanel`, `PostFeaturedImagePanel`, `PostTaxonomiesPanel`, `PostExcerptPanel`, `PostDiscussionPanel`, `PageAttributesPanel`, `PostTemplatePanel`, `PostFormat`, `PostSticky`, `PostTrash`, `PostLastRevisionPanel` — each with a `*Check` gate |
+| Block inspector | `InspectorControls.Slot` and friends from `wp.blockEditor` |
+| Publish flow | `PostPublishPanel`, `EntitiesSavedStates` |
 | Autosave / recovery | `AutosaveMonitor`, `LocalAutosaveMonitor`, `UnsavedChangesWarning` |
 | Locking | `PostLockedModal` |
-| Code editor | `PostTextEditor`, `PostTitleRaw` |
-| Notices | `EditorNotices`, `EditorSnackbars`, `ErrorBoundary` |
-| Shortcuts | `EditorKeyboardShortcuts`, `EditorKeyboardShortcutsRegister` |
-| **Plugin extension points** | `PluginSidebar`, `PluginSidebarMoreMenuItem`, `PluginDocumentSettingPanel`, `PluginPrePublishPanel`, `PluginPostPublishPanel`, `PluginBlockSettingsMenuItem`, `PluginMoreMenuItem`, `PluginPostStatusInfo`, `PluginPreviewMenuItem` |
+| Code editing | `PostTextEditor`, `PostTitleRaw` |
+| Notices / shortcuts | `EditorNotices`, `EditorSnackbars`, `ErrorBoundary`, `EditorKeyboardShortcuts(Register)` |
+| Plugin slots | `PluginSidebar`, `PluginDocumentSettingPanel`, `PluginPrePublishPanel`, `PluginPostPublishPanel`, `PluginMoreMenuItem`, `PluginPostStatusInfo` (mount only if a given editor *wants* third-party fills) |
 
-What composition costs us: we write the **shell** ourselves — the header bar layout, the tabbed Document/Block sidebar, the inserter panel and list-view drawers (using public `Inserter` / `__experimentalListView` from `wp.blockEditor`), and the wiring between them. That is real work, but it is exactly the work that makes the editor a *workspace citizen*: each shell piece is workspace chrome (region/slot/mode driven) instead of a foreign skeleton. `core:simple-editor` already proves the substrate end-to-end (native `BlockEditorProvider` canvas, entity-backed save, status-gated autosave, dirty-state into `NavigationGuard`) — the native full editor is `EditorProvider` (which owns the `core/editor` store, autosave routing, template resolution, RTC-readiness) layered over the same pattern.
+**Guidance for Tier 3 apps:**
 
-**Note on what `EditorProvider` replaces:** simple-editor hand-rolled autosave routing (issue #101) and dirty-state because raw `BlockEditorProvider` + core-data has no post semantics. `EditorProvider` *is* those semantics — `core/editor`'s `isEditedPostDirty`, `autosave()`, `savePost()`, post-type template handling. The native port should not inherit simple-editor's hand-rolled layer; it rides `core/editor`.
+1. **Prefer `EditorProvider` over raw `BlockEditorProvider` when editing a post-shaped entity.** simple-editor predates this guidance and hand-rolled autosave routing (issue #101) and dirty-state because raw `BlockEditorProvider` has no post semantics. `EditorProvider` *is* those semantics — and it's the RTC-compatibility line when collaboration ships. Migrating simple-editor onto it is a candidate cleanup, not an obligation.
+2. **Private-API budget: zero.** Everything above is public. If a future editor genuinely needs a private unlock, copy the `WpdsThemeProvider` pattern (try/catch, public fallback, inline justification) and record it here.
+3. **Block registration:** `registerCoreBlocks()` with `allowedBlockTypes` works for constrained editors (simple-editor's pattern). An editor that should host *third-party* blocks needs the Tier 2 bootstrap instead — at which point reconsider whether that use case is really Tier 2's.
+4. **Shared REST endpoints, built on demand** (each wraps an admin-ajax-only operation; from the parity audit): `POST /post-lock` (acquire/refresh/takeover — blockers #1/#2), `POST /revisions/{id}/restore` (#4), `GET /preview-link?post=<id>` (#5). None blocks simple-editor today; build under `wp-admin-workspaces/v1` with the standard cap-floor test sweep when the first Tier 3 editor needs them, and tag for upstreaming.
+5. **Known seam:** editor components are `@wordpress/components`-styled inside WPDS chrome. Document per-app in `app.json#design-system-leakage`, same as DataViews.
 
-## 2. The canvas stays an iframe — and that's correct
+## 5. What this strategy deliberately gives up
 
-A "native port" means **no `post.php` page iframe**. It does not mean a DOM-inlined canvas. `wp.blockEditor`'s `BlockCanvas` renders block content inside a srcdoc-style iframe built from `settings.__unstableResolvedAssets` (verified in installed `@wordpress/block-editor` 15.16.0, `src/components/iframe/index.js:99-137`). WordPress 7.0 itself moves the post editor canvas into this iframe whenever every inserted block is Block API v3+ (enforcement deferred for gradual rollout). The canvas iframe gives style isolation (theme styles can't bleed into workspace chrome and vice versa) and is where upstream is going; fighting it would be porting *backwards*. The thing we eliminate is the **admin-page** iframe: wp-admin chrome-hide CSS hacks, the postMessage bridge for dirty-state/links/session, double scrollbars, no deep links, no URL ownership.
+Stated so nobody rediscovers them as surprises:
 
-Consequence: third-party blocks that aren't iframe-ready (API v1/v2 relying on admin DOM access) degrade in the native canvas the same way they will in core 7.x. `BlockCanvas` accepts `shouldIframe={false}` for a compat mode if needed — same lever core uses.
+- **No workspace command palette / theming / cross-screen dirty-guard inside the main editor** (Tier 1 is outside the SPA; Tier 2 is behind an iframe boundary with a thin bridge).
+- **No deep links into main-editor state** (selected block, open panel). Tier 3 editors can have them; the main editor's URL stays `post.php?post=X`.
+- **The main editor never becomes a workspace region.** Multi-pane and desktop windows get the Tier 2 iframe, with iframe-grade integration.
 
-## 3. The PHP bootstrap workstream (the real cost center)
+## 6. Rejected: full native recreation (retained analysis)
 
-Everything `wp-admin/edit-form-blocks.php` does server-side must happen on the workspace page when an editor screen is active. This closes parity blockers #7 and #8 from `docs/parity/block-editor.md`:
+The original study concluded a full port was *feasible* — composed on the public API above, ~80% reachable, with the gaps being PHP bootstrap (now Tier 2's job), three REST endpoints (now Tier 3 §4.4), and meta boxes (unsolvable natively; now moot — Tiers 1/2 keep them). It was rejected anyway because of what feasibility doesn't cover:
 
-1. **Editor settings.** Call `get_block_editor_settings( array_merge( $custom, $defaults ), new WP_Block_Editor_Context( [ 'post' => $post ] ) )` and ship it via the existing `wp_add_inline_script` config channel. This runs the full `block_editor_settings_all` filter chain, so plugin-filtered settings (allowed blocks, color palettes, content width, `__unstableResolvedAssets` for the canvas iframe) match wp-admin exactly. Caveat: settings are **per-post-type** (and per-post for template resolution); the workspace page is one SPA. Plan: bootstrap settings for the common case at page load, and add a small `wp-admin-workspaces/v1/editor-settings?post=<id>` endpoint for per-post refinement at route entry. (Core's `/wp-block-editor/v1/settings` REST route exists but is Gutenberg-plugin-era and context-limited; verify coverage before depending on it.)
-2. **Block registry + assets.** Server-registered block types bootstrap via `wp_add_inline_script( 'wp-blocks', 'wp.blocks.unstable__bootstrapServerSideBlockDefinitions(…)' )` exactly as core does, and third-party block edit code arrives by enqueueing block-type `editor_script` handles + firing **`enqueue_block_editor_assets`** on the workspace hook. Because the hijack renders through WordPress's own `admin-header.php`, this is an ordinary enqueue path — the workspace page *is* an admin page. This single hook is what makes Yoast/ACF/Jetpack-class block + SlotFill scripts load at all.
-3. **Script weight policy.** The editor stack (`wp-editor`, `wp-block-library`, `wp-format-library`, plugin block bundles) is multiple MB and must NOT load for every workspace session. Options, in order of preference: (a) enqueue editor handles only when the resolved workspace contains an editor screen the user can reach **and** defer-load them (`$strategy = 'defer'`); (b) investigate core's new `@wordpress/lazy-editor` package (it appears in the 7.0 private-APIs allowlist — unverified, but the name suggests core is solving exactly this; if it ships a supported lazy-boot path, ride it); (c) a worst-case dynamic script-injection loader that prints ordered handle URLs from `WP_Scripts` for on-demand injection at route entry. Decide during Phase 1 with measurements against `docs/perf-baseline.md`.
-4. **Preloads.** Reuse the existing `preload[]` cascade block to hydrate `apiFetch` for the editor's boot queries (post record with `context=edit`, types, taxonomies, autosaves, `/wp/v2/block-patterns/*`), mirroring `block_editor_rest_api_preload_paths`.
+- **The treadmill:** every core editor shell improvement (new header widgets, zoom-out refinements, collaboration affordances) would need conscious re-adoption, leaving our "main editor" permanently trailing the real one — a worse product for the users who know the editor best.
+- **Plugin long-tail:** SlotFill plugins selecting from the `core/edit-post` store or touching edit-post DOM would break one support thread at a time.
+- **The strategic insight that replaced it:** the embed-dependent wins (multi-pane, desktop windows) are served by Tier 2, and the integration wins (palette, theming, purpose-fit UX) are served *better* by Tier 3 editors that don't carry full-parity obligations.
 
-## 4. Three custom REST endpoints (wrapping admin-only operations)
+**Revisit only if** all three hold: (a) a flagship workspace surface demands full-parity editing *inside* a region with native-grade integration that Tier 2's iframe can't deliver; (b) core's public editor API still covers the shell (re-verify the §4 inventory); (c) someone accepts the treadmill as a permanent staffing cost. Mechanical notes for that future: `edit-post` is a thin wrapper over `@wordpress/editor`'s private `Editor`; the private-apis gate is string-match-only (the `WpdsThemeProvider` precedent); the canvas stays iframed by upstream design (WP 7.0 iframes the post-editor canvas when all inserted blocks are Block API v3+).
 
-Already identified as REST gaps in the parity audit; the native port finally forces building them under `wp-admin-workspaces/v1` (each tagged for upstreaming):
+## 7. Sequencing
 
-| Endpoint | Wraps | Parity blocker |
-|---|---|---|
-| `POST /post-lock` (acquire/refresh/release/takeover) | `wp_set_post_lock` / `wp_check_post_lock` + heartbeat semantics | #1, #2 |
-| `POST /revisions/{id}/restore` | `wp_restore_post_revision` (today only `revision.php` + nonce) | #4 |
-| `GET /preview-link?post=<id>` | autosave + `wp_create_nonce( 'post_preview_' . $id )` URL minting | #5 |
+1. **Tier 1 (S):** remove editor `legacy_path` mappings + switch list-app edit/new actions to classic hrefs + bfcache/return-trip measurement. Default experience flips to handoff.
+2. **Tier 2 (M):** chromeless endpoint + bootstrap fork; `core:editor` app retargets to it; delete chrome-hide CSS path; slim the bridge; add the per-release `edit-form-blocks.php` diff to the release checklist. Demos (desktop engine, multi-pane) move onto it.
+3. **Tier 3 (ongoing, per-app):** simple-editor stays the POC; next purpose-built editor is product-driven. `EditorProvider` migration for simple-editor as opportunistic cleanup; REST endpoints on first need.
 
-All three follow the existing controller pattern (`includes/*-rest.php`) and need the same test treatment as `run-activate-theme-rest-tests.php` (cap floor, 401/403/404/400 sweep). Heartbeat itself (`wp-refresh-post-lock` every 10s) keeps working natively — the workspace page already runs `wp.heartbeat` (the session-recovery code uses it today).
+## 8. Resolved and open
 
-## 5. Third-party compatibility matrix
+Resolved by this decision: meta-box policy (Tiers 1/2 keep them natively — no detection heuristics needed); private-API budget (zero for Tier 3; n/a for Tiers 1/2); simple-editor's fate (stays, as the Tier 3 archetype); the old "flip `core:editor` to native" plan (dropped).
 
-| Surface | Native port outcome |
-|---|---|
-| **Blocks** (registered via `block.json` + editor scripts) | ✅ Work, once §3.2 lands. They register against the same `wp.blocks` global; the canvas iframe is the same one core uses. API v1/v2 iframe-incompat blocks degrade identically to core 7.x. |
-| **Editor SlotFills** (Yoast/RankMath/ACF panels via `registerPlugin` + `PluginSidebar` / `PluginDocumentSettingPanel`) | ✅ Mostly work: render `wp.plugins`' `PluginArea` inside our shell and mount the public `Plugin*` slots. Caveats: plugins importing from `wp.editPost`'s deprecated re-exports still resolve (core keeps the shims), but plugins that *select from* `core/edit-post` store directly (e.g. `isEditorSidebarOpened`) hit a missing/divergent store — we don't mount edit-post. Expect a long-tail compat list; mitigate per-plugin or fall back to iframe. |
-| **Classic meta boxes** (`add_meta_box`) | ❌ Not portable. Server-rendered HTML via `post.php?meta-box-loader=true` with form semantics only `post.php` provides (parity blocker #6). **Policy decision** (see §8): detect at route time whether the post type has registered non-core meta boxes and route those posts to the iframe `core:editor`; everything else gets native. Upstream is aligned — in 7.0 meta boxes already disable collaboration mode and the resizable meta-box pane is getting rethought; classic meta boxes are a sunsetting surface. |
-| **`enqueue_block_editor_assets` consumers** (custom CSS/JS for the editor page) | ✅ Hook fires on the workspace page (§3.2). Styles targeting editor-chrome classnames may mis-hit since our shell isn't the interface skeleton; canvas-targeting styles ride `__unstableResolvedAssets` unchanged. |
-| **Real-time collaboration** (Yjs; pulled from 7.0 at the last minute, still coming) | ✅ By construction — RTC rides `EditorProvider`/core-data/`@wordpress/sync`. Strategy C inherits it when core ships it. Strategies that fork around `EditorProvider` (like simple-editor's hand-rolled save layer) would not. |
-
-## 6. The five recorded native-mount blockers, re-examined for the *post* editor
-
-The blockers in `src/apps/site-editor/index.js` were written against mounting `edit-site`/`edit-post` wholesale. Under strategy C, for the post editor specifically:
-
-1. **Preferences-store collision** → shrinks to a policy. `core/preferences` is scope-keyed; editor component prefs live under their own scope and don't fight `core:appearance-preferences`' keys. Write the ownership rule down, don't build anything.
-2. **Command-palette double-registration** → inverts into an opportunity (§7). We choose which editor commands register; they land in the same `core/commands` store the workspace palette reads.
-3. **Fullscreen-mode CSS** → moot. We never mount `FullscreenMode`; the workspace **modes catalog** (focus/takeover) is the replacement, and it's a better one — declarative, per-region, engine-portable.
-4. **Hash-router collision** → moot for the post editor (that's `BrowserURL`, which we don't mount; the workspace router owns the URL). Still real for the site editor.
-5. **Editor-settings bootstrap** → real, costed in §3. This is the one genuine blocker, and it's plumbing, not architecture.
-
-## 7. What porting natively lets us fix (the opportunity column)
-
-Things broken or impossible in wp-admin's own editor that fall out of workspace-native architecture:
-
-- **URL-addressable editor state / deep links.** The post editor has no router (`?post=5&action=edit` and nothing else). Workspace routes can expose `?screen=`-style slots for the selected block, open sidebar tab, code-editor mode — deep-link a reviewer to the exact block. Upstream has wanted canvas deep-links for years; the iframe made it impossible for us, native makes it cheap (corollary of the URL-as-state principle, spec §6/§18).
-- **One command palette.** Today wp-admin has the editor's Cmd+K and our workspace Cmd+K as parallel universes (the iframe traps the editor's). Native, editor commands register into `core/commands` alongside workspace commands — one palette, full corpus, including workspace navigation from inside the editor.
-- **Cross-screen dirty-state.** Core's editor only guards `beforeunload`. Ours feeds `core/editor` dirtiness into `useDirtyState` → `NavigationGuard`, which guards *workspace* navigation too — and natively it's a `useSelect` instead of chromeless-bridge sub-system 15's postMessage relay.
-- **Fullscreen/`is-fullscreen-mode` body-class hack replaced by modes.** The editor screen declares `mode: focus/takeover`; engines render it; no global body classes, no CSS warfare. Works identically in `core:default`, single-pane, and desktop engines — the editor becomes engine-portable for free, including as a *window* in `core:desktop`.
-- **Multi-pane editing.** `screens[].apps[]` + mirror routing puts a posts list and the editor side-by-side — the workspace's marquee layout trick, structurally impossible in wp-admin.
-- **Editor chrome theming.** Native chrome rides `ThemeProviderHost`/DTCG tokens like every other app. The iframe's editor chrome was untouchable.
-- **Title/identity.** `document.title`, browser history, back-button legibility — all currently degraded by the iframe — become ordinary.
-- **Decomposed inspector.** The Document/Block sidebar can be its own region (slot `detail`/`inspector`), collapsible/dockable per engine, instead of edit-post's hardcoded 280px rail.
-- **Saner meta-box story than core's.** Routing meta-box posts to the iframe editor is arguably a *cleaner* line than core's current half-state (resizable meta-box pane under an iframed canvas, with collaboration silently disabled).
-
-**What a native port does NOT fix** (honesty section): block-level bugs, RichText quirks, inserter search quality, canvas-iframe compat for legacy blocks, performance of large posts — all live inside `block-editor`/`block-library` and ship to us unchanged. We also take on a **maintenance treadmill**: every editor feature core adds to the private `Editor` shell (new header widgets, new panels) must be consciously adopted into our shell. The iframe got those for free. That's the structural price of strategy C, and the main argument for keeping the iframe app as the always-available fallback.
-
-## 8. Risks
-
-1. **Public-API churn.** Public exports deprecate slowly (with shims), but the editor team moves surface between packages (`edit-post` → `editor` migration is recent history). Pin expectations to script handles core ships, add a parity smoke test against `wp.editor` exports (same spirit as `tests/parity` WPDS drift detection).
-2. **Private-API exposure stays bounded.** Budget: zero private unlocks in Phase 1–2. If a Phase 3 gap genuinely needs one (e.g. `PostCardPanel`), copy the WpdsThemeProvider pattern — try/catch, fallback, inline justification — and record it in this doc.
-3. **WPDS seam.** Editor components are `@wordpress/components`-styled; workspace chrome is `@wordpress/ui`/WPDS. The editor screen will be visually "Gutenberg-flavored" inside WPDS chrome. Acceptable (same is true of DataViews); document as known leakage in `app.json#design-system-leakage`.
-4. **Plugin long-tail.** SlotFill plugins selecting `core/edit-post` store, or reading edit-post DOM. Mitigation: compat shim is *possible* (register a minimal `core/edit-post`-shaped store) but smells like strategy A creeping back; prefer the iframe fallback escape hatch per screen (`workspace.json` keeps `core:editor` available).
-5. **Bundle/boot weight.** §3.3. Must be resolved in Phase 1 with numbers, not after.
-6. **RTC unknowns.** When Yjs collaboration ships, it may assume shell affordances (collaborator avatars in header, etc.) that exist only in the private `Editor`. Watch upstream; our shell needs equivalents.
-
-## 9. Phased plan
-
-- **Phase 0 — spike (S).** Branch-level proof: `EditorProvider` + `PostTitle` + `BlockCanvas` + `PostPublishButton` mounted in a workspace region against a real post, with settings hand-fed. Validates externalization, store boot, canvas assets. Kill-switch decision point.
-- **Phase 1 — bootstrap + core shell (L).** PHP settings/assets/preload workstream (§3, including the script-weight decision), new app `core:editor-native` (working id) with header, canvas, document sidebar from public panels, save/publish/autosave via `core/editor`, dirty-state + modes integration. Behind a screen flag; iframe stays default.
-- **Phase 2 — parity grind (L).** Inserter + list-view drawers, code editor (`PostTextEditor`), publish panel flow, locking + the three REST endpoints (§4), autosave-recovery banner (closing the parity doc's open item), revisions panel, preview. Exit = `docs/parity/block-editor.md` matrix all-green except meta boxes.
-- **Phase 3 — plugin compat + flip (M).** `PluginArea` + SlotFill mounts, `enqueue_block_editor_assets` on, per-plugin compat sweep against the top block/SEO plugins, meta-box detection routing to iframe fallback. Flip the `core:editor` contract id to the native implementation; keep iframe app available via workspace.json.
-- **Continuous:** upstream the three REST endpoints + deep-link findings as core proposals (this is the "resolve the editor's own issues" channel with real leverage).
-
-## 10. Open decisions (need owner input)
-
-1. **Meta-box policy** — auto-detect-and-fallback to iframe (recommended), explicit per-screen workspace.json opt-in, or drop classic meta-box support in workspace context entirely?
-2. **Private-API budget** — confirm "zero in Phase 1–2, case-by-case with fallback in Phase 3" or harder line?
-3. **simple-editor's fate** — keep as a distinct writing surface (recommended; different product) or fold into the native editor as a constrained mode once `EditorProvider` makes the constrained version nearly free?
-4. **Script-loading strategy** (§3.3) — needs a perf-baseline measurement before Phase 1 commits to (a)/(b)/(c).
+Open items: the Tier 1 bfcache/return-trip measurement; the Tier 2 endpoint's exact shape under the hijack (dedicated action vs. admin page) — decide at implementation; whether `post-new.php` handoff fully replaces the REST auto-draft seeding flow (it should — core's auto-draft creation happens server-side on that page).
