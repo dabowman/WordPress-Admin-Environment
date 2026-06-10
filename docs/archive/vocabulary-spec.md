@@ -1,13 +1,11 @@
 # WP Admin Workspaces — Vocabulary & Naming Spec
 
-> **Status:** Adopted for the launch rebrand. This is the canonical source of truth
-> for user- and author-facing naming. The pure-rename migration (steps 1–6 in
-> §10) is mechanical; the role-keyed file model (§9) is greenfield feature work
-> sequenced *after* the rename.
->
-> When this file and prose elsewhere disagree, **this file wins** until the other
-> docs are migrated. `CLAUDE.md`, the public references, and the schemas all get
-> updated to match as part of the migration.
+> **Status:** ARCHIVED — the rebrand this spec drove is complete and live. The
+> v3 frame-shape (top-level `engine` / `default-screen` / `frame`), the
+> `workspace.json` file name, and the `workspace-*.json` schema names all
+> shipped; the live sources of truth are `docs/schemas/*` and
+> `docs/schema-sketch.md`. Kept as the historical record of the rename and its
+> glossary. Verify any claim against live source before acting on it.
 
 The product was previously presented under a scatter of terms — "shell", "shell
 environment", "environment", "admin.json". This spec unifies everything the user

@@ -1,6 +1,6 @@
 # WP Admin Workspaces — Core Inclusion Evaluation
 
-> **Date:** 2026-06-09
+> **Date:** 2026-06-09 — ARCHIVED one-time evaluation, not a living spec; the actionable findings are tracked as issues #286–#295.
 > **Posture:** WordPress lead-contributor review, evaluating against core-merge norms (feature-plugin process, back-compat policy, the admin-redesign roadmap, and core's own DataViews / Design System trajectory).
 > **Inputs:** full PHP/security survey (`includes/`, entry point, REST controllers), JS runtime/engine/app survey (`src/`), and project-maturity survey (docs, schemas, test suites, parity audits).
 > **Follow-ups:** the actionable findings below are tracked as issues #286–#295 — see [Tracked follow-ups](#tracked-follow-ups).

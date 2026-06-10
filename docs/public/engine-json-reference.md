@@ -6,7 +6,7 @@ The default engine `core:default` ships with the workspace plugin alongside `cor
 
 Manifests are discovered at the convention path `{plugin}/engines/{name}/engine.json` or registered programmatically through `wp_admin_workspaces_register_engine()`.
 
-This reference covers the engine manifest schema (`admin-engine.json`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`.
+This reference covers the engine manifest schema (`workspace-engine.json`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`.
 
 ## In this article
 
@@ -48,16 +48,16 @@ This reference covers the engine manifest schema (`admin-engine.json`). Engines 
 		}
 	},
 	"modes": {
-		"default":  { "regions": {} },
-		"focus":    { "regions": { "sidebar": { "hidden": true } } },
-		"takeover": { "regions": { "sidebar": { "hidden": true }, "toolbar": { "hidden": true } } }
+		"default":  { "label": "Default",  "regions": {} },
+		"focus":    { "label": "Focus",    "regions": { "sidebar": { "hidden": true } } },
+		"takeover": { "label": "Takeover", "regions": { "sidebar": { "hidden": true }, "toolbar": { "hidden": true } } }
 	},
 	"default-arrangement": "floating-windows",
 	"script": "acme-desktop-engine"
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/workspace-engine.json`](../schemas/admin-engine.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace-engine.json`](../schemas/workspace-engine.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `specializes-roles`, `honored-platform`, `templates` (must contain at least one template), `default-arrangement`, `script`, `modes`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -69,7 +69,7 @@ Examples: `core:default`, `core:single-pane`, `core:desktop`, `plugin:tiling-pro
 
 | Property | Description                                                                                              | Type   | Default |
 |----------|----------------------------------------------------------------------------------------------------------|--------|---------|
-| id       | Namespaced engine id matching `^(core:[a-z][a-z0-9-]*\|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$`.          | string | —       |
+| id       | Namespaced engine id matching `^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*\|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$`.          | string | —       |
 
 ## version
 
@@ -174,6 +174,7 @@ Template ids match `^(core:[a-z][a-z0-9-]*|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]
 | Property        | Description                                                                                                                                                                  | Type    | Default |
 |-----------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|
 | role            | The ARIA role the resulting region carries when instantiated. Drives engine specialization. Required.                                                                          | string  | —       |
+| label           | Optional human-readable template name for tooling. Translatable.                                                                                                              | string  | —       |
 | platform        | Default platform service requests for regions instantiated from this template. Authors can override individual fields when instantiating.                                       | object  | —       |
 | default-style   | Default CSS applied to regions instantiated from this template. Values may be literal CSS strings or token aliases (`{styles.chrome.sidebar.background}`).                     | object  | —       |
 | regions         | Nested child regions, addressable as `{parent}/{child}` in `workspace.json`. Each child has the full template contract.                                                            | object  | —       |
@@ -201,22 +202,25 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 ```json
 {
 	"modes": {
-		"default":  { "regions": {} },
+		"default":  { "label": "Default", "regions": {} },
 		"focus": {
+			"label": "Focus",
 			"regions": {
 				"sidebar":  { "hidden": true },
 				"toolbar":  { "compact": true }
 			}
 		},
 		"takeover": {
+			"label": "Takeover",
 			"regions": {
 				"sidebar":  { "hidden": true },
 				"toolbar":  { "hidden": true },
 				"site-hub": { "hidden": true }
 			}
 		},
-		"modal":    { "regions": {} },
+		"modal":    { "label": "Modal", "modal": true, "regions": {} },
 		"focus-tight": {
+			"label": "Focus (tight)",
 			"extends": "focus",
 			"regions": { "site-hub": { "hidden": true } }
 		}
@@ -227,8 +231,12 @@ Same shape as the app manifest's `platform` block, applied at the region level. 
 | Property      | Description                                                                                                                                                  | Type   | Default |
 |---------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
 | modes         | Map of mode name → mode definition. Must contain a `default` key (schema-enforced). The other three conventional names (`focus`, `takeover`, `modal`) are unenforced conventions. Plugin engines may add their own.                          | object | —       |
+| modes.<name>.label | **Required.** Human-readable mode name, surfaced in tooling and cascade-audit reports. Translatable.                                                    | string | —       |
+| modes.<name>.description | Optional one-line description of what the mode does.                                                                                              | string | —       |
 | modes.<name>.regions | Map of region id → state object. State keys (`hidden`, `compact`, etc.) are engine-defined.                                                          | object | —       |
-| modes.<name>.extends | Optional. Inherit from another mode in the catalog. Recursive, cycle-safe, max depth 10.                                                              | string | —       |
+| modes.<name>.extends | Optional. Inherit region states + chrome flags from another mode in the catalog (deep merge, child wins per-field). Recursive, cycle-safe, max depth 10. | string | —       |
+| modes.<name>.modal | Optional. When `true`, the mode renders as a modal overlay: the current screen stays mounted underneath, the modal layer takes focus + Escape ownership, and engines maintain a LIFO stack of active modals. | boolean | `false` |
+| modes.<name>.chrome | Optional engine-level chrome flags not tied to a specific region (e.g. a `density` override or header-visibility flag). Each engine defines its own chrome vocabulary. | object | —       |
 
 Plugins may extend the catalog via the `wp_admin_workspaces_engine_modes_{engineId}` PHP filter — see [`docs/schema-sketch.md`](../schema-sketch.md#plugin-contributed-modes).
 
@@ -250,15 +258,17 @@ Engine-declared mount points beyond the kernel-reserved `_self` and `palette`. E
 
 | Property             | Description                                                                                       | Type   | Default |
 |----------------------|---------------------------------------------------------------------------------------------------|--------|---------|
-| slots                | Map of slot id → `{ description, scope }`. Slot ids are kebab-case.                              | object | —       |
+| slots                | Map of slot id → `{ scope, label, description, accepts }`. Slot ids are kebab-case.              | object | —       |
 | slots.<id>.scope     | `"workspace"`, `"screen"`, or `"both"`. Required — no default.                                     | string | —       |
+| slots.<id>.label     | Optional human-readable slot name for tooling. Translatable.                                       | string | —       |
 | slots.<id>.description | Human-readable description for tooling.                                                          | string | —       |
+| slots.<id>.accepts   | Hint to authoring tools: `"app"`, `"widget"`, or `"any"`. Not load-bearing.                        | string | —       |
 
 See [`docs/schema-sketch.md#slots`](../schema-sketch.md#slots) for the slot vocabulary design rationale.
 
 ## menu-renderer
 
-Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_workspaces_register_menu_renderer( $id, $callback )`. Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
+Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_workspaces_register_menu_renderer( $renderer_id, $args )` (where `$args['script']` names the script handle that calls `window.wpAdminWorkspaces.kernel.registerMenuRenderer( id, Component )`). Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
 
 | Property        | Description                                                                                              | Type   | Default |
 |-----------------|----------------------------------------------------------------------------------------------------------|--------|---------|

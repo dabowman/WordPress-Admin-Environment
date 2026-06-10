@@ -24,14 +24,14 @@ Three artifact types, three responsibilities:
 
 `workspace.json` is shaped around user-task surfaces:
 
-- **`workspace`** — engine selection, default screen, branding, notices, persistent widgets.
+- **`engine` / `default-screen`** — top-level: which engine renders the workspace and where it lands. **`frame`** — persistent furniture: branding, notice hosts, persistent widgets.
 - **`settings`** — reusable registries: `dataViews` (3-axis `@wordpress/dataviews` config keyed by `kind → name → variant`) and `dataFields` (named field collections).
 - **`screens`** — the id-keyed map of every screen: `apps[]`, `path`, `slot`, `mode`, `permissions`, `dataViewRef`.
 - **`menu`** — an engine-agnostic information-architecture tree; item keys that match a screen id bind to it.
 - **`commands`** — palette entries + keyboard shortcuts.
 - **`styles`** — theme.json-shaped token overrides. **`preload`** — workspace-boot REST preloads. **`regions` / `routes`** — escape hatches.
 
-**The runtime reads this shape directly.** The kernel (`src/runtime/`) derives the region tree + routes from the resolved `screens` / `workspace` blocks and the active engine's `defaultRegions` at mount time (`src/runtime/compile/`). There is no intermediate shape.
+**The runtime reads this shape directly.** The kernel (`src/runtime/`) derives the region tree + routes from the resolved `screens` / `frame` blocks and the active engine's `defaultRegions` at mount time (`src/runtime/compile/`). There is no intermediate shape.
 
 - **Cascade resolver.** Six origins merge into one document with field-aware, restrict-only semantics and `customizable` declarations modeled on block supports: `core` → `engine` (synthetic; carries the active engine's default styles) → `plugin` → `site` → `role` → `user`. Arrays merge by `id`; `null` tombstones any key at any depth. `core`/`engine`/`plugin`/`site` are trusted (may add + remove); `role`/`user` are consumer origins (shrink-only).
 - **Capability gating.** Four layers — region fast-path, app gate, source-cap floor, REST observation. Navigation prunes gated screens recursively. Screen `permissions` are OR-semantic (`capabilities` / `roles`) with trust tiers.
@@ -51,7 +51,7 @@ Three artifact types, three responsibilities:
 
 Most installs want the prebuilt zip — no Node toolchain required on the server:
 
-1. Activate the **Gutenberg** plugin first (hard runtime dependency).
+1. On WordPress 6.7–6.9 only: activate the **Gutenberg** plugin first (runtime private-API dependency — not needed on WordPress 7.0+).
 2. In wp-admin, go to **Plugins → Add New → Upload Plugin**, choose
    `wp-admin-workspaces.zip`, and install.
 3. Activate **WP Admin Workspaces**.
@@ -68,7 +68,7 @@ npm install
 npm run build
 ```
 
-Copy the directory into `wp-content/plugins/`, then activate **WP Admin Workspaces** (activate Gutenberg first).
+Copy the directory into `wp-content/plugins/`, then activate **WP Admin Workspaces** (on WordPress 6.7–6.9, activate Gutenberg first).
 
 ### Building a distributable zip
 
@@ -78,7 +78,7 @@ To produce a `wp-admin-workspaces.zip` that can be uploaded via **Plugins → Ad
 npm run build:zip
 ```
 
-Output: `wp-admin-workspaces.zip` at the project root. It bundles `wp-admin-workspaces.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `workspaces/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. The Gutenberg plugin must already be active on the target site (declared via `Requires Plugins: gutenberg`).
+Output: `wp-admin-workspaces.zip` at the project root. It bundles `wp-admin-workspaces.php`, `uninstall.php`, `includes/`, the compiled `build/`, the bundled `workspaces/`, `assets/`, `languages/`, `core.tokens.json`, `readme.txt`, the bundled engine + app manifest JSONs (`src/runtime/engines/*/engine.json` + `src/apps/*/app.json` — these are what the PHP manifest registry discovers at boot, so they have to ship), `README.md`, and `CHANGELOG.md`. Nothing else from `src/`, `docs/`, `tests/`, or `node_modules/`. On a WordPress 6.7–6.9 target site the Gutenberg plugin must already be active (there is no `Requires Plugins` header — the runtime gate `wp_admin_workspaces_dependencies_met()` handles every version); WordPress 7.0+ needs nothing extra.
 
 ### With wp-env (development)
 
@@ -100,7 +100,7 @@ through from the baseline.
 cp wp-content/plugins/wp-admin-workspaces/workspaces/single-pane-demo.json wp-content/workspace.json
 ```
 
-1. Activate the plugin (and Gutenberg).
+1. Activate the plugin (plus Gutenberg on WordPress 6.7–6.9).
 2. Place a valid `wp-content/workspace.json` (copy one from `workspaces/` and edit, or
    write a small delta like `{ "$schema": "…", "version": 3, "$wpds": "6.9",
    "name": "mine", "engine": "core:default", "frame": { … }, "styles": { … } }`).
@@ -122,7 +122,7 @@ bar shows a reciprocal **Back to workspace** link.
 
 | Engine | Idiom |
 |---|---|
-| `core:default` | Flagship: dark chrome, drilldown sidebar, elevated cards |
+| `core:default` | Flagship: dark chrome, expandable tree sidebar, elevated cards |
 | `core:single-pane` | Mobile-first: appbar + collapsible nav drawer |
 | `core:desktop` | Windowed: compositor, dock, draggable/resizable window frames |
 
@@ -136,7 +136,7 @@ bar shows a reciprocal **Back to workspace** link.
 
 ## `workspace.json` schema
 
-The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`workspace.json`](docs/schemas/workspace.json) (workspace), [`admin-app.json`](docs/schemas/workspace-app.json) (app manifest), [`admin-engine.json`](docs/schemas/workspace-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (workspace.json shape). Author-facing references are in [`docs/public/`](docs/public/).
+The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`workspace.json`](docs/schemas/workspace.json) (workspace), [`workspace-app.json`](docs/schemas/workspace-app.json) (app manifest), [`workspace-engine.json`](docs/schemas/workspace-engine.json) (engine manifest), [`tokens.json`](docs/schemas/tokens.json) (DTCG primitives). The design is documented in [`docs/wp-admin-workspaces-design-spec.md`](docs/wp-admin-workspaces-design-spec.md) (runtime architecture) and [`docs/schema-sketch.md`](docs/schema-sketch.md) (workspace.json shape). Author-facing references are in [`docs/public/`](docs/public/).
 
 ## Application sources
 
@@ -150,10 +150,10 @@ The JSON Schemas live in [`docs/schemas/`](docs/schemas/): [`workspace.json`](do
 | `core:profile` | ✅ | User profile form. |
 | `core:settings` | partial | Composable host; native general / writing / reading / discussion panels, iframed permalinks / media / privacy. |
 | `core:site-editor` | iframe | `site-editor.php` adapter. Native mount deferred. |
-| `core:dashboard` / `core:dashboard-host` | ✅ | Overview cards / widget grid. |
+| `core:dashboard-host` | ✅ | Dashboard widget grid (+ bundled widget apps). |
 | `iframe:{slug}` | iframe | Any wp-admin URL with chrome hidden. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are declared explicitly in each workspace's `workspace` / regions.
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) mount through the active engine's `defaultRegions` and the workspace's `frame` (notices + widgets); the top-level `regions` block is the escape hatch for overriding them.
 
 ## Project structure
 

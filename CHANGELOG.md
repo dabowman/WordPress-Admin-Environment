@@ -172,7 +172,7 @@ Follow-up to the 2026-05-27 engine review (items 1 + 5 resolved earlier). Class 
 
 The product, plugin, and every author/user-facing surface unified under
 **workspaces**. Vocabulary, the dissolved-block shape, and the prefix map are
-canonical in `docs/vocabulary-spec.md`.
+canonical in `docs/archive/vocabulary-spec.md` (archived once the rename landed everywhere).
 
 - **BREAKING — public extension surfaces renamed with no back-compat shims**
   (acceptable for pre-release; no installed base). Third-party integrations
