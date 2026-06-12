@@ -2,11 +2,15 @@
 
 Prose accompanying `app.json#documentation` for the iframe-backed block editor.
 
+## Status under the block-editor strategy (Tier 1 shipped)
+
+Per `docs/block-editor-native-port.md`, **`wp-admin-default` no longer declares any screens that mount this app**: its edit/new links are real anchors to classic `post.php` / `post-new.php` (full-page handoff), and the `post-new.php` legacy redirects were removed so the classic editor pages stay classic. The app itself is untouched and fully functional — any workspace that declares an editor screen (`"app": "core:editor"` at `/posts/{id}/edit` etc.) keeps the iframe embed, and the `core:editor` app id is the Tier 2 contract: when the server-rendered chromeless editor endpoint lands, this app's iframe URL retargets to it and the chrome-hide CSS path is deleted, with no workspace.json migration.
+
 ## Overview
 
 EditorApp is the v2-beta concession: rather than embed `@wordpress/edit-post` natively (five known blockers — see `SiteEditorApp.js`'s top-of-file comment), the workspace wraps wp-admin's `post.php?post={id}&action=edit` in a chrome-stripped iframe. The user-visible result is a full WordPress block editor inside the workspace's content region; the implementation cost is one iframe + ~100 lines of CSS injection + an auto-draft creation flow for new posts.
 
-The iframe escape hatch is documented in CLAUDE.md as "a feature, not a compromise" because the alternative — half-implemented native mount with unresolved preferences-store collisions, command double-registration, hash-router conflicts — would be worse for users than a frame.
+The iframe escape hatch is documented in CLAUDE.md as "a feature, not a compromise" because the alternative — half-implemented native mount with unresolved preferences-store collisions, command double-registration, hash-router conflicts — would be worse for users than a frame. The strategy doc supersedes the framing for the DEFAULT experience (handoff beats embed there) while keeping the iframe as the embed option until Tier 2.
 
 ## Architecture
 

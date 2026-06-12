@@ -334,6 +334,7 @@ Engine-agnostic information-architecture tree. Each item is keyed by id, nested 
 | external      | When true with `href`, opens in a new browser tab.                                                          | boolean | `false` |
 | separator     | Renders as a visual separator. Other fields ignored.                                                       | boolean | `false` |
 | hidden        | Suppresses the item from rendering. Subtree is still in the tree for cascade addressing.                   | boolean | `false` |
+| permissions   | Visibility prune for items NOT bound to a screen (manual `href` links — e.g. an "Add Post" item linking classic `post-new.php`). Same OR-semantic shape as screen permissions (`{ "capabilities": [...], "roles": [...] }`); items without it render for everyone. Screen-bound items inherit the screen's permissions instead. Visibility-only — the link target enforces its own capabilities server-side. | object  | —       |
 
 ### Menu renderers
 
