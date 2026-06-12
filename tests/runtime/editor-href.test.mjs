@@ -86,6 +86,21 @@ console.log( '\n— numeric ids pass through encodeURIComponent unchanged —' )
 	);
 }
 
+console.log( '\n— falsy post types all default to the post segment —' );
+{
+	eq( 'undefined → posts', editorSegment( undefined ), 'posts' );
+	eq( 'null → posts', editorSegment( null ), 'posts' );
+	// Empty string is unreachable from current callers (they default via
+	// `config.postType || 'post'`), but the guard must not build a broken
+	// `#//{id}/edit` hash if one ever slips through.
+	eq( 'empty string → posts', editorSegment( '' ), 'posts' );
+	eq(
+		'empty-string edit href is not segment-less',
+		editHref( '', 42 ),
+		'#/posts/42/edit'
+	);
+}
+
 console.log( '\n— other post types route under their own id —' );
 {
 	eq( 'wp_template segment', editorSegment( 'wp_template' ), 'wp_template' );

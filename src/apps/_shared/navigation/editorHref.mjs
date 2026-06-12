@@ -47,7 +47,13 @@ const EDITOR_SEGMENTS = {
  * @return {string} Route segment (`posts` / `pages` / the post type id).
  */
 export function editorSegment( postType ) {
-	return EDITOR_SEGMENTS[ postType ] ?? String( postType ?? 'post' );
+	// Falsy input (undefined / null / '') means a caller bug — fall back to
+	// the DEFAULT post type's segment rather than building a segment-less
+	// `#//{id}/edit` hash (empty string previously slipped past a bare `??`).
+	if ( ! postType ) {
+		return EDITOR_SEGMENTS.post;
+	}
+	return EDITOR_SEGMENTS[ postType ] ?? String( postType );
 }
 
 /**

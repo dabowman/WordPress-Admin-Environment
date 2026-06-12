@@ -21,7 +21,12 @@ instead of the chrome-hidden iframe embed.
   return trip rides existing machinery). The "Add Post" / "Add Page" menu
   entries became manual href items (`post-new.php`, relative so subdirectory
   installs resolve) carrying their own `permissions` blocks; the
-  `navigate-posts-new` command was dropped with its target route.
+  `navigate-posts-new` command was dropped with its target route. That loses
+  the `Mod+Alt+N` "New Post" palette/keyboard path in `wp-admin-default` —
+  accepted: a `navigate:` command can only target a workspace route (the
+  router hash-navigates), classic wp-admin ships no global new-post shortcut
+  either (the toolbar `+New` mirrors wp-admin's), and any workspace that
+  declares a `/posts/new` editor screen can re-add the command alongside it.
 - **New shared resolver `src/apps/_shared/navigation/editorHref.mjs`**
   (promoted from `src/apps/posts/editHref.mjs`, which it replaces):
   `editTargetHref` / `newTargetHref` check the compiled runtime `routes`

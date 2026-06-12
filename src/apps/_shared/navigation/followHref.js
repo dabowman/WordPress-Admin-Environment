@@ -25,6 +25,8 @@ export function followHref( href ) {
 		navigate( href );
 		return;
 	}
+	// DOM-bound by design (hence `.js`, not a pure `.mjs`): callers are
+	// mounted app code, so `document.body` is always present here.
 	const anchor = document.createElement( 'a' );
 	anchor.href = href;
 	anchor.style.display = 'none';
