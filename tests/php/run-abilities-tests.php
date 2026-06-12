@@ -279,7 +279,11 @@ $result = $A::update_site_config( array(
 ) );
 $T::assert_true( 'site report: menu tombstone applied', in_array( 'menu.comments', $result['applied'], true ) );
 $T::assert_true( 'site report: unrecognized frame block rejected', in_array( 'frame.brand.label', $result['rejected'], true ) );
-$A::update_site_config( array( 'remove' => array( 'frame', 'menu.comments' ) ) );
+
+// remove echoes which paths existed and were deleted; absent paths are
+// simply not echoed.
+$result = $A::update_site_config( array( 'remove' => array( 'frame', 'menu.comments', 'no.such.path' ) ) );
+$T::assert_eq( 'remove report echoes deleted paths only', $result['removed'], array( 'frame', 'menu.comments' ) );
 
 // Nested hide/show round-trips without leaving empty-container cruft in
 // the stored slice (unset_in_tree prunes emptied parents).

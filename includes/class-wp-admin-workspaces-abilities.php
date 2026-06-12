@@ -327,7 +327,7 @@ class WP_Admin_Workspaces_Abilities {
 
 			'wp-admin-workspaces/update-site-config' => array(
 				'label'               => __( 'Update site workspace configuration', 'wp-admin-workspaces' ),
-				'description'         => __( 'Deep-merges a partial patch onto the site-tier workspace configuration, which applies to EVERY user of this site. Null values are stored as tombstones that REMOVE the matching entry from the resolved workspace (e.g. {"menu":{"comments":null}} hides the Comments menu item site-wide). To delete a previously stored key from this slice (including undoing a tombstone), list its dotted path in "remove". The patch is stored verbatim, but only paths the resolver recognizes survive: the response reports which leaf paths will take effect ("applied") versus be dropped at resolve ("rejected") — e.g. unrecognized top-level blocks, or styles/settings paths the active workspace does not declare customizable. Requires manage_options.', 'wp-admin-workspaces' ),
+				'description'         => __( 'Deep-merges a partial patch onto the site-tier workspace configuration, which applies to EVERY user of this site. Null values are stored as tombstones that REMOVE the matching entry from the resolved workspace (e.g. {"menu":{"comments":null}} hides the Comments menu item site-wide). To delete a previously stored key from this slice (including undoing a tombstone), list its dotted path in "remove"; paths that existed and were deleted are echoed under "removed". The patch is stored verbatim, but only paths the resolver recognizes survive: the response reports which leaf paths will take effect ("applied") versus be dropped at resolve ("rejected") — e.g. unrecognized top-level blocks, or styles/settings paths the active workspace does not declare customizable. Requires manage_options.', 'wp-admin-workspaces' ),
 				'category'            => self::CATEGORY,
 				'execute_callback'    => array( __CLASS__, 'update_site_config' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
@@ -358,6 +358,10 @@ class WP_Admin_Workspaces_Abilities {
 							'items' => array( 'type' => 'string' ),
 						),
 						'rejected' => array(
+							'type'  => 'array',
+							'items' => array( 'type' => 'string' ),
+						),
+						'removed'  => array(
 							'type'  => 'array',
 							'items' => array( 'type' => 'string' ),
 						),
@@ -650,9 +654,13 @@ class WP_Admin_Workspaces_Abilities {
 			// merge_with_tombstones consumes them), not key-deletes.
 			$config = WP_Admin_Workspaces_Util::deep_merge_patch( $config, $patch, false );
 		}
+		// Echo which remove paths actually existed (and were deleted) so the
+		// report covers both halves of the input — a path absent from the
+		// stored slice simply won't appear under `removed`.
+		$removed = array();
 		foreach ( $remove as $path ) {
-			if ( is_string( $path ) && $path !== '' ) {
-				self::unset_in_tree( $config, explode( '.', $path ) );
+			if ( is_string( $path ) && $path !== '' && self::unset_in_tree( $config, explode( '.', $path ) ) ) {
+				$removed[] = $path;
 			}
 		}
 
@@ -661,6 +669,7 @@ class WP_Admin_Workspaces_Abilities {
 			'config'   => self::object_if_empty( $config ),
 			'applied'  => $report['applied'],
 			'rejected' => $report['rejected'],
+			'removed'  => $removed,
 		);
 	}
 

@@ -73,7 +73,7 @@ for the user slice, null-as-stored-tombstone for the site slice — and
 |---|---|---|
 | `wp-admin-workspaces/update-user-prefs` | logged-in | Deep-merge `prefs` onto the user slice (null deletes a stored key). Returns `prefs` + the pre-flight report `applied` / `rejected` / `outOfBand` (the `workspace` slug key is honored out-of-band by `active_workspace_slug()`, not the cascade merge). |
 | `wp-admin-workspaces/reset-user-prefs` | logged-in | Deletes the user slice. |
-| `wp-admin-workspaces/update-site-config` | `manage_options` | Deep-merge `config` onto the site slice — nulls are **stored** as tombstones (they remove baseline entries at resolve time). `remove: string[]` deletes dotted paths from the stored slice (e.g. to undo a tombstone); emptied parent containers are pruned. Returns `config` + the `applied`/`rejected` resolve report (see design stance — unrecognized blocks don't survive resolve). |
+| `wp-admin-workspaces/update-site-config` | `manage_options` | Deep-merge `config` onto the site slice — nulls are **stored** as tombstones (they remove baseline entries at resolve time). `remove: string[]` deletes dotted paths from the stored slice (e.g. to undo a tombstone); emptied parent containers are pruned. Returns `config` + the `applied`/`rejected` resolve report (see design stance — unrecognized blocks don't survive resolve) + `removed` echoing which remove paths existed and were deleted. |
 
 ### Semantic abilities
 
