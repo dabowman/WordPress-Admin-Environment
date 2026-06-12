@@ -14,7 +14,8 @@ First Abilities API surface: `WP_Admin_Workspaces_Abilities`
 (`get-workspace-config`, `describe-customization-surface`, `get-user-prefs`,
 `get-site-config`, `list-workspaces`), write primitives (`update-user-prefs`
 with an applied/rejected pre-flight report, `reset-user-prefs`,
-`update-site-config` with stored-tombstone + `remove` semantics), and
+`update-site-config` with stored-tombstone + `remove` semantics and its own
+applied/rejected resolve report), and
 semantic wrappers (`switch-workspace`, `set-default-screen`,
 `hide-menu-item`/`show-menu-item`). Designed for AI agents via
 `wp-abilities/v1` REST: every ability ships input/output JSON schemas +

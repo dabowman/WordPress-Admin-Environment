@@ -209,6 +209,12 @@ $T::assert_eq( 'workspace key reported out-of-band', $result['outOfBand'], array
 $stored = get_user_meta( $subscriber_id, 'wp_admin_workspaces_user_prefs', true );
 $T::assert_eq( 'rejected write still stored verbatim (REST parity)', $stored['styles']['theme']['accent'] ?? null, '#123456' );
 
+// A non-string `workspace` is NOT an out-of-band switch — it falls through
+// to the normal diff and lands in rejected (scalar replacement of a v3 block).
+$result = $A::update_user_prefs( array( 'prefs' => array( 'workspace' => 123 ) ) );
+$T::assert_eq( 'non-string workspace → not out-of-band', $result['outOfBand'], array() );
+$T::assert_true( 'non-string workspace → rejected', in_array( 'workspace', $result['rejected'], true ) );
+
 $result = $A::update_user_prefs( array( 'prefs' => 'not-an-object' ) );
 $T::assert_error_status( 'non-object prefs → 400', $result, 400 );
 
@@ -262,6 +268,27 @@ $T::assert_eq( 'resolved default-screen back to baseline', $resolved['default-sc
 
 $result = $A::update_site_config( array() );
 $T::assert_error_status( 'empty site-config input → 400', $result, 400 );
+
+// Site-tier pre-flight report: a v3 block passes (applied); an
+// unrecognized top-level block is stored but dropped at resolve (rejected).
+$result = $A::update_site_config( array(
+	'config' => array(
+		'frame' => array( 'brand' => array( 'label' => 'Acme' ) ),
+		'menu'  => array( 'comments' => null ),
+	),
+) );
+$T::assert_true( 'site report: menu tombstone applied', in_array( 'menu.comments', $result['applied'], true ) );
+$T::assert_true( 'site report: unrecognized frame block rejected', in_array( 'frame.brand.label', $result['rejected'], true ) );
+$A::update_site_config( array( 'remove' => array( 'frame', 'menu.comments' ) ) );
+
+// Nested hide/show round-trips without leaving empty-container cruft in
+// the stored slice (unset_in_tree prunes emptied parents).
+$result = $A::hide_menu_item( array( 'id' => 'categories' ) );
+$T::assert_eq( 'hide nested item path', is_wp_error( $result ) ? $result->get_error_code() : $result['path'], 'menu.posts.items.categories' );
+$result = $A::show_menu_item( array( 'id' => 'categories' ) );
+$T::assert_eq( 'show nested item ok', is_wp_error( $result ) ? $result->get_error_code() : $result['hidden'], false );
+$site_slice = get_option( 'wp_admin_workspaces_site_config', array() );
+$T::assert_true( 'show prunes emptied menu containers', ! isset( $site_slice['menu'] ) );
 
 // ── 7. switch-workspace ────────────────────────────────────────────────
 

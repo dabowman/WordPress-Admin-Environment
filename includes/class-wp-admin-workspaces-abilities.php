@@ -127,8 +127,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'get_workspace_config' ),
 				'permission_callback' => array( __CLASS__, 'permission_logged_in' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'blocks' => array(
 							'type'        => 'array',
 							'items'       => array( 'type' => 'string' ),
@@ -273,8 +276,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'update_user_prefs' ),
 				'permission_callback' => array( __CLASS__, 'permission_logged_in' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'prefs' => array(
 							'type'                 => 'object',
 							'additionalProperties' => true,
@@ -321,13 +327,16 @@ class WP_Admin_Workspaces_Abilities {
 
 			'wp-admin-workspaces/update-site-config' => array(
 				'label'               => __( 'Update site workspace configuration', 'wp-admin-workspaces' ),
-				'description'         => __( 'Deep-merges a partial patch onto the site-tier workspace configuration, which applies to EVERY user of this site. The site tier is trusted: no customizable allowlist applies, and null values are stored as tombstones that REMOVE the matching entry from the resolved workspace (e.g. {"menu":{"comments":null}} hides the Comments menu item site-wide). To delete a previously stored key from this slice (including undoing a tombstone), list its dotted path in "remove". Requires manage_options.', 'wp-admin-workspaces' ),
+				'description'         => __( 'Deep-merges a partial patch onto the site-tier workspace configuration, which applies to EVERY user of this site. Null values are stored as tombstones that REMOVE the matching entry from the resolved workspace (e.g. {"menu":{"comments":null}} hides the Comments menu item site-wide). To delete a previously stored key from this slice (including undoing a tombstone), list its dotted path in "remove". The patch is stored verbatim, but only paths the resolver recognizes survive: the response reports which leaf paths will take effect ("applied") versus be dropped at resolve ("rejected") — e.g. unrecognized top-level blocks, or styles/settings paths the active workspace does not declare customizable. Requires manage_options.', 'wp-admin-workspaces' ),
 				'category'            => self::CATEGORY,
 				'execute_callback'    => array( __CLASS__, 'update_site_config' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'config' => array(
 							'type'                 => 'object',
 							'additionalProperties' => true,
@@ -343,7 +352,15 @@ class WP_Admin_Workspaces_Abilities {
 				'output_schema'       => array(
 					'type'       => 'object',
 					'properties' => array(
-						'config' => $doc_schema,
+						'config'   => $doc_schema,
+						'applied'  => array(
+							'type'  => 'array',
+							'items' => array( 'type' => 'string' ),
+						),
+						'rejected' => array(
+							'type'  => 'array',
+							'items' => array( 'type' => 'string' ),
+						),
 					),
 				),
 				'meta'                => array( 'show_in_rest' => true ),
@@ -358,8 +375,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'switch_workspace' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'workspace' => array(
 							'type'        => 'string',
 							'description' => __( 'Slug of the workspace to activate (see list-workspaces).', 'wp-admin-workspaces' ),
@@ -383,8 +403,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'set_default_screen' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'screen' => array(
 							'type'        => 'string',
 							'description' => __( 'Screen id (a key of the resolved "screens" map).', 'wp-admin-workspaces' ),
@@ -408,8 +431,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'hide_menu_item' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'id' => array(
 							'type'        => 'string',
 							'description' => __( 'Menu item id (a key in the resolved "menu" tree, at any depth).', 'wp-admin-workspaces' ),
@@ -435,8 +461,11 @@ class WP_Admin_Workspaces_Abilities {
 				'execute_callback'    => array( __CLASS__, 'show_menu_item' ),
 				'permission_callback' => array( __CLASS__, 'permission_manage_options' ),
 				'input_schema'        => array(
-					'type'       => 'object',
-					'properties' => array(
+					'type'                 => 'object',
+					// Strict root: agents get a validation error on stray
+					// input keys instead of silent acceptance.
+					'additionalProperties' => false,
+					'properties'           => array(
 						'id' => array(
 							'type'        => 'string',
 							'description' => __( 'Menu item id that was hidden via hide-menu-item.', 'wp-admin-workspaces' ),
@@ -606,6 +635,15 @@ class WP_Admin_Workspaces_Abilities {
 			}
 		}
 
+		// Pre-flight the resolver's verdict BEFORE storing (same feedback
+		// contract as update-user-prefs) — see preflight_site_patch.
+		$report = is_array( $patch )
+			? self::preflight_site_patch( $patch )
+			: array(
+				'applied'  => array(),
+				'rejected' => array(),
+			);
+
 		$config = self::site_config();
 		if ( is_array( $patch ) ) {
 			// Site-tombstone semantics: nulls are STORED (the cascade's
@@ -619,7 +657,11 @@ class WP_Admin_Workspaces_Abilities {
 		}
 
 		self::save_site_config( $config );
-		return array( 'config' => self::object_if_empty( $config ) );
+		return array(
+			'config'   => self::object_if_empty( $config ),
+			'applied'  => $report['applied'],
+			'rejected' => $report['rejected'],
+		);
 	}
 
 	// ─── Semantic callbacks ──────────────────────────────────────────────
@@ -818,17 +860,22 @@ class WP_Admin_Workspaces_Abilities {
 	/**
 	 * Run a user-tier patch through the same `customizable` enforcement the
 	 * resolver applies, and diff leaf paths to report what will stick.
+	 * Both sides flatten via `Customizable::flatten_leaf_paths` — the same
+	 * walker enforcement uses — so the diff can't desync from it.
 	 *
-	 * The `workspace` key (a string slug) is read out-of-band by
+	 * The `workspace` key (a STRING slug only) is read out-of-band by
 	 * `Resolver::active_workspace_slug()` — it never travels the cascade
-	 * merge, so it's excluded from the diff and reported separately.
+	 * merge, so it's excluded from the diff and reported separately. A
+	 * non-string `workspace` value isn't a switch: it falls through to the
+	 * normal diff (and lands in `rejected` — the cascade drops scalar
+	 * replacements of v3 blocks from consumer origins).
 	 *
 	 * @param array $patch The user-prefs patch.
 	 * @return array { applied: string[], rejected: string[], out_of_band: string[] }
 	 */
 	private static function preflight_user_patch( $patch ) {
 		$out_of_band = array();
-		if ( array_key_exists( 'workspace', $patch ) && ! is_array( $patch['workspace'] ) ) {
+		if ( array_key_exists( 'workspace', $patch ) && is_string( $patch['workspace'] ) ) {
 			$out_of_band[] = 'workspace';
 			unset( $patch['workspace'] );
 		}
@@ -840,10 +887,8 @@ class WP_Admin_Workspaces_Abilities {
 			'user'
 		);
 
-		$patch_paths    = array();
-		$accepted_paths = array();
-		self::flatten_paths( $patch, '', $patch_paths );
-		self::flatten_paths( $accepted, '', $accepted_paths );
+		$patch_paths    = WP_Admin_Workspaces_Customizable::flatten_leaf_paths( $patch );
+		$accepted_paths = WP_Admin_Workspaces_Customizable::flatten_leaf_paths( $accepted );
 
 		return array(
 			'applied'     => array_values( array_intersect( $patch_paths, $accepted_paths ) ),
@@ -853,48 +898,34 @@ class WP_Admin_Workspaces_Abilities {
 	}
 
 	/**
-	 * Flatten a tree into dotted leaf paths. Keyed lists (entries carrying
-	 * id/slug/name) step by id — mirrors the enforcement walker so the
-	 * pre-flight diff compares like with like.
+	 * Pre-flight a site-tier patch the same way: run it through the exact
+	 * `filter_doc` pass the resolver applies to the site origin and diff
+	 * leaf paths. The site tier is trusted for the v3 top-level blocks
+	 * (they pass verbatim), but `filter_doc` still rebuilds the doc from
+	 * the blocks it recognizes — an unrecognized top-level key (e.g.
+	 * `frame`) and `styles`/`settings` paths without a matching
+	 * `customizable` declaration are stored but dropped at resolve. The
+	 * report surfaces that instead of echoing the write as if it took
+	 * effect.
 	 *
-	 * @param mixed  $value  Subtree.
-	 * @param string $prefix Accumulated dotted path.
-	 * @param array  $out    Accumulator (by reference).
+	 * @param array $patch The site-config patch.
+	 * @return array { applied: string[], rejected: string[] }
 	 */
-	private static function flatten_paths( $value, $prefix, &$out ) {
-		if ( ! is_array( $value ) || empty( $value ) ) {
-			if ( $prefix !== '' ) {
-				$out[] = $prefix;
-			}
-			return;
-		}
-		if ( WP_Admin_Workspaces_Util::is_assoc( $value ) ) {
-			foreach ( $value as $k => $v ) {
-				self::flatten_paths( $v, $prefix === '' ? (string) $k : $prefix . '.' . $k, $out );
-			}
-			return;
-		}
-		$key   = null;
-		$first = reset( $value );
-		if ( is_array( $first ) ) {
-			foreach ( array( 'id', 'slug', 'name' ) as $k ) {
-				if ( array_key_exists( $k, $first ) ) {
-					$key = $k;
-					break;
-				}
-			}
-		}
-		if ( $key !== null ) {
-			foreach ( $value as $entry ) {
-				if ( is_array( $entry ) && isset( $entry[ $key ] ) ) {
-					self::flatten_paths( $entry, $prefix . '.' . $entry[ $key ], $out );
-				}
-			}
-			return;
-		}
-		foreach ( $value as $i => $entry ) {
-			self::flatten_paths( $entry, $prefix . '.' . $i, $out );
-		}
+	private static function preflight_site_patch( $patch ) {
+		$resolved = wp_admin_workspaces_get_active_config();
+		$accepted = WP_Admin_Workspaces_Customizable::filter_doc(
+			is_array( $resolved ) ? $resolved : array(),
+			$patch,
+			'site'
+		);
+
+		$patch_paths    = WP_Admin_Workspaces_Customizable::flatten_leaf_paths( $patch );
+		$accepted_paths = WP_Admin_Workspaces_Customizable::flatten_leaf_paths( $accepted );
+
+		return array(
+			'applied'  => array_values( array_intersect( $patch_paths, $accepted_paths ) ),
+			'rejected' => array_values( array_diff( $patch_paths, $accepted_paths ) ),
+		);
 	}
 
 	/**
@@ -1012,22 +1043,31 @@ class WP_Admin_Workspaces_Abilities {
 	}
 
 	/**
-	 * Segment-array unsetter. Returns whether the key existed.
+	 * Segment-array unsetter. Returns whether the key existed. Containers
+	 * emptied by the removal are pruned on the way back up so hide/show
+	 * churn (and deep `remove` paths) don't accrete `{items:{}}` husks in
+	 * the stored slice — harmless at resolve, but noise in get-site-config.
 	 */
 	private static function unset_in_tree( &$arr, $segments ) {
-		$cur  = &$arr;
-		$last = array_pop( $segments );
-		foreach ( $segments as $seg ) {
-			if ( ! isset( $cur[ $seg ] ) || ! is_array( $cur[ $seg ] ) ) {
-				return false;
-			}
-			$cur = &$cur[ $seg ];
+		if ( ! is_array( $arr ) || empty( $segments ) ) {
+			return false;
 		}
-		if ( is_array( $cur ) && array_key_exists( $last, $cur ) ) {
-			unset( $cur[ $last ] );
+		$seg = array_shift( $segments );
+		if ( ! array_key_exists( $seg, $arr ) ) {
+			return false;
+		}
+		if ( empty( $segments ) ) {
+			unset( $arr[ $seg ] );
 			return true;
 		}
-		return false;
+		if ( ! is_array( $arr[ $seg ] ) ) {
+			return false;
+		}
+		$removed = self::unset_in_tree( $arr[ $seg ], $segments );
+		if ( $removed && $arr[ $seg ] === array() ) {
+			unset( $arr[ $seg ] );
+		}
+		return $removed;
 	}
 }
 

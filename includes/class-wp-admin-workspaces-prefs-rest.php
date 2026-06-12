@@ -106,6 +106,12 @@ class WP_Admin_Workspaces_Prefs_REST {
 		return rest_ensure_response( (object) array() );
 	}
 
+	/**
+	 * Back-compat alias only — nothing in this class reads it anymore. The
+	 * merge + key-count depth cap lives in
+	 * `WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH`; retained here for any
+	 * external consumer that learned the old constant.
+	 */
 	const MAX_MERGE_DEPTH = WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH;
 
 	/** Max serialized prefs payload — structural config, not a data file. */

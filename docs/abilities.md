@@ -38,7 +38,13 @@ move into the abilities:
   agent learns the allowlist instead of failing silently.
 - Site-tier writes go straight to the `wp_admin_workspaces_site_config`
   option (trusted origin, `manage_options`); cache invalidation rides the
-  existing `update_option_*` hook.
+  existing `update_option_*` hook. The same feedback contract applies:
+  `update-site-config` pre-flights through `filter_doc( …, 'site' )` and
+  reports `applied`/`rejected`. The site tier passes the v3 top-level
+  blocks verbatim, but `filter_doc` rebuilds the doc from only the blocks
+  it recognizes — an unrecognized top-level key (e.g. `frame`) and
+  `styles`/`settings` paths without a matching `customizable` declaration
+  are stored but dropped at resolve, and the report says so.
 - Discovery is first-class: `describe-customization-surface` is the inverse
   view of `filter_doc` (`WP_Admin_Workspaces_Customizable::describe_writable_paths()`),
   reporting per-tier writability before a write is attempted.
@@ -67,7 +73,7 @@ for the user slice, null-as-stored-tombstone for the site slice — and
 |---|---|---|
 | `wp-admin-workspaces/update-user-prefs` | logged-in | Deep-merge `prefs` onto the user slice (null deletes a stored key). Returns `prefs` + the pre-flight report `applied` / `rejected` / `outOfBand` (the `workspace` slug key is honored out-of-band by `active_workspace_slug()`, not the cascade merge). |
 | `wp-admin-workspaces/reset-user-prefs` | logged-in | Deletes the user slice. |
-| `wp-admin-workspaces/update-site-config` | `manage_options` | Deep-merge `config` onto the site slice — nulls are **stored** as tombstones (they remove baseline entries at resolve time). `remove: string[]` deletes dotted paths from the stored slice (e.g. to undo a tombstone). |
+| `wp-admin-workspaces/update-site-config` | `manage_options` | Deep-merge `config` onto the site slice — nulls are **stored** as tombstones (they remove baseline entries at resolve time). `remove: string[]` deletes dotted paths from the stored slice (e.g. to undo a tombstone); emptied parent containers are pruned. Returns `config` + the `applied`/`rejected` resolve report (see design stance — unrecognized blocks don't survive resolve). |
 
 ### Semantic abilities
 

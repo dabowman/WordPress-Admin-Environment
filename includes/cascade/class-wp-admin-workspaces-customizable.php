@@ -321,6 +321,28 @@ class WP_Admin_Workspaces_Customizable {
 	}
 
 	/**
+	 * Flatten a doc/patch into dotted leaf paths using the SAME walker
+	 * enforcement uses (`collect_leaves`), so the abilities' pre-flight
+	 * applied/rejected diff compares like with like. Keeping this here —
+	 * next to the enforcement walker — is deliberate: any change to leaf
+	 * collection (keyed-list detection, key fields) updates both in one
+	 * place instead of silently desyncing an external copy.
+	 *
+	 * @param array $tree Doc or patch tree.
+	 * @return string[] Dotted leaf paths.
+	 */
+	public static function flatten_leaf_paths( $tree ) {
+		if ( ! is_array( $tree ) ) {
+			return array();
+		}
+		$leaves = array();
+		foreach ( $tree as $k => $v ) {
+			self::collect_leaves( $v, (string) $k, $leaves );
+		}
+		return array_keys( $leaves );
+	}
+
+	/**
 	 * Recursive worker for `describe_writable_paths` over a v3 block —
 	 * collect `{ path, mode }` entries for every `customizable` declaration
 	 * in the subtree. Keyed lists step by `id`/`slug`/`name` exactly like
@@ -340,7 +362,13 @@ class WP_Admin_Workspaces_Customizable {
 				'path' => $path,
 				'mode' => 'subtree',
 			);
-		} elseif ( is_array( $decl ) ) {
+			// Everything under this node is already writable — the
+			// shallowest matching declaration wins in `path_is_allowed`, so
+			// deeper declarations can't restrict it. Skip the descent; it
+			// would only emit redundant entries inside the subtree.
+			return;
+		}
+		if ( is_array( $decl ) ) {
 			foreach ( $decl as $rel ) {
 				if ( is_string( $rel ) ) {
 					$out[] = array(
