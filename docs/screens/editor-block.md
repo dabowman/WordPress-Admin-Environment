@@ -401,7 +401,10 @@ Validation:
 - `?meta-box-loader=true&meta-box-loader-nonce=…` — meta-box AJAX iframe loader (back-compat)
 - `?action=preview` (on `post.php`) — preview-link redirect
 
-### Recommended workspace URL state
+### Workspace URL state under the Tier 1 decision
+
+Per `docs/block-editor-native-port.md`, the default workspace does NOT host this screen — the editor's URLs are the classic ones above, reached by a real top-level navigation (handoff). The recommendation below applies only to a workspace that opts into hosting an editor screen (the iframe embed today, the Tier 2 chromeless endpoint later, or a Tier 3 purpose-built editor):
+
 ```
 #/editor?type=post&id=123
 #/editor?type=post&new=1                  ← creates auto-draft on mount

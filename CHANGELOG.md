@@ -47,6 +47,61 @@ Supporting changes:
   file-override 409 (via the `wp_admin_workspaces_workspace_json_path`
   filter). Skips cleanly when the Abilities API is absent.
 
+### Changed: Tier 1 block-editor handoff — wp-admin-default edits in the real editor (issue #79, `docs/block-editor-native-port.md`)
+
+Implements sequencing step 1 of the block-editor strategy decision (2026-06-10):
+the default workspace's content-editing flow is now a **full-page handoff** to
+classic `post.php` / `post-new.php` — the same navigation model core ships —
+instead of the chrome-hidden iframe embed.
+
+- **`wp-admin-default.json`** no longer declares the four editor screens
+  (`posts-new` / `post-edit` / `pages-new` / `page-edit`), which also removes
+  their `post-new.php` legacy redirects — visiting the classic editor URLs now
+  stays classic. The `edit.php` mappings on the list screens are untouched, so
+  the editor's exit button still lands back on the workspace posts list (the
+  return trip rides existing machinery). The "Add Post" / "Add Page" menu
+  entries became manual href items (`post-new.php`, relative so subdirectory
+  installs resolve) carrying their own `permissions` blocks; the
+  `navigate-posts-new` command was dropped with its target route. That loses
+  the `Mod+Alt+N` "New Post" palette/keyboard path in `wp-admin-default` —
+  accepted: a `navigate:` command can only target a workspace route (the
+  router hash-navigates), classic wp-admin ships no global new-post shortcut
+  either (the toolbar `+New` mirrors wp-admin's), and any workspace that
+  declares a `/posts/new` editor screen can re-add the command alongside it.
+- **New shared resolver `src/apps/_shared/navigation/editorHref.mjs`**
+  (promoted from `src/apps/posts/editHref.mjs`, which it replaces):
+  `editTargetHref` / `newTargetHref` check the compiled runtime `routes`
+  (`useKernel().config.routes`) and emit the workspace editor route when the
+  active workspace declares one, the classic relative href otherwise. That
+  route detection is what keeps `single-pane-demo`'s native
+  `core:simple-editor` screens linking in-workspace with zero config — and
+  gives `desktop-demo` (PostsApp with no editor routes) working classic edit
+  links where the old hash links dangled.
+- **New `src/apps/_shared/navigation/followHref.js`** for flows with no anchor
+  (DataViews action callbacks, quick-draft's post-save continuation): hash →
+  router; anything else → a synthetic click on a real `<a>`, so the
+  capture-phase admin-link interceptor still governs (never
+  `window.location.assign`).
+- **Consumers repointed:** PostsApp (row-title is now a real anchor via
+  `Button render={<a/>}`; Edit action via `followHref`), toolbar `+New`
+  (per-type detection — CPTs with no workspace add-new route now hand off to
+  `post-new.php?post_type=` instead of emitting dead hash links), and the
+  activity / recent-posts (real anchors) + quick-draft (followHref) dashboard
+  widgets. The REST auto-draft seeding flow in `core:editor` is now unused by
+  every bundled workspace — `post-new.php` creates the auto-draft server-side —
+  but the app and its flow remain intact as the embed option and the Tier 2
+  retarget contract.
+- **Schema:** `workspace.json#$defs/menuItem` gained an author-declarable
+  `permissions` block (OR-semantic, visibility-only — the link target enforces
+  real capabilities server-side; deliberately not in the consumer-origin
+  deny-list).
+- **Tests:** `tests/runtime/posts-edit-href.test.mjs` →
+  `tests/runtime/editor-href.test.mjs` (classic-href + route-detection cases
+  added); `run-alpha-routing-tests.php` pins that the baseline never maps
+  `post.php` / `post-new.php` while `/posts` keeps its `edit.php` return trip.
+- **Still owed:** the bfcache/return-trip measurement against
+  `docs/perf-baseline.md` (needs a running install).
+
 ### Added: Plugins status-tab strip (issue #75)
 
 The `core:plugins` app now renders the classic `All | Active | Inactive`

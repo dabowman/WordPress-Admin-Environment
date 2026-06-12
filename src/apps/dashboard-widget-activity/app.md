@@ -4,7 +4,7 @@ Activity tile, decomposed from the retired `core:dashboard` monolith (issue #133
 
 ## Rebuild guide
 
-- Recently published: query `postType/post` `{ per_page: 5, status: 'publish', orderby: 'date', order: 'desc', context: 'edit' }`; render each row as a click-to-edit title + publish date → `navigate('#/posts/{id}/edit')`.
+- Recently published: query `postType/post` `{ per_page: 5, status: 'publish', orderby: 'date', order: 'desc', context: 'edit' }`; render each row as a click-to-edit title (real anchor; href via `editTargetHref('post', id, routes)` — workspace editor route when declared, classic `post.php` handoff otherwise) + publish date.
 - Comments awaiting moderation: query `root/comment` `{ per_page: 5, status: 'hold', context: 'edit' }`; render author + stripped-tag excerpt; a `Moderate all` link → `navigate('#/comments')`.
 - Show a `Spinner` per section while its query resolves; render distinct empty-state copy per section.
 

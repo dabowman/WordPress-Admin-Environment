@@ -67,7 +67,7 @@ _Acknowledged, not soon. Revisit when adjacent work touches the area._
 - [#75] [feat] Entity-CRUD apps: screen-spec feature gaps (status counts, quick/bulk edit, directory browse, …). (source: standardization review 2026-05-26)
 - [#76] [feat] `settings-general` → DataForm migration — deferred pending grouped-select support. (source: standardization review 2026-05-26)
 - [#78] [feat] Bucket-level `fieldsRef` inheritance in viewConfigs — deferred; workaround is a 6-line filter. (source: C2 review 2026-05-14)
-- [#79] [feat] Native mounts for `core:editor` + `core:site-editor` (spec §15 v1) — iframe adapters today. (source: V2.M5 gap close)
+- [#79] [feat] ~~Native mounts for `core:editor` + `core:site-editor` (spec §15 v1) — iframe adapters today.~~ **Superseded by the block-editor strategy decision (`docs/block-editor-native-port.md`, 2026-06-10): full native recreation rejected; Tier 1 handoff shipped 2026-06-12 (wp-admin-default edits in the real `post.php`). Remaining under this id: the Tier 2 chromeless editor endpoint (the `core:editor` retarget) + the bfcache/return-trip measurement.** (source: V2.M5 gap close)
 - [#80] [bug] workspace.json schema has no `customizable` definition — field implemented but unvalidated. (source: V2.M4 review)
 - ~~[#81] [feat] Refresh demo workspaces to showcase v1/v2 native apps (wired into developer-admin only). (source: M5 browser smoke)~~ **Done — #81 closed; the demo set was trimmed to the surviving three (`wp-admin-default` / `single-pane-demo` / `desktop-demo`). Docs reconciled in the #258 drift sweep.**
 - [#82] [chore] Rename `wpas_collect_nav_item_caps` → `wp_admin_workspaces_` prefix before public-API freeze. (source: V2.M3 review)

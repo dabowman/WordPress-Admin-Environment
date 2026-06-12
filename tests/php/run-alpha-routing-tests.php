@@ -255,6 +255,23 @@ $T::ok( 'baseline maps /pages with post_type=page', ( $lm['/pages']['legacy_quer
 $T::ok( 'baseline maps /media → upload.php', ( $lm['/media']['legacy_path'] ?? '' ) === 'upload.php' );
 $T::ok( 'baseline does NOT map allowlisted plugin-install', ! isset( $lm['/plugins/new'] ) );
 
+// Tier 1 handoff (docs/block-editor-native-port.md): the baseline declares NO
+// editor screens, so post.php / post-new.php never redirect into the
+// workspace — they are real top-level navigations to the actual editor. The
+// return trip (edit.php → the workspace posts list) stays mapped above.
+$baseline_legacy_paths = array_map(
+	static function ( $entry ) {
+		return $entry['legacy_path'] ?? '';
+	},
+	$lm
+);
+$T::ok( 'baseline never maps post.php (editor handoff)', ! in_array( 'post.php', $baseline_legacy_paths, true ) );
+$T::ok( 'baseline never maps post-new.php (add-new handoff)', ! in_array( 'post-new.php', $baseline_legacy_paths, true ) );
+$_GET = array( 'post' => '42', 'action' => 'edit' );
+$T::ok( 'post.php?post=42&action=edit stays classic against the baseline', $match_legacy->invoke( null, 'post.php', $lm ) === null );
+$_GET = array();
+$T::ok( 'bare post-new.php stays classic against the baseline', $match_legacy->invoke( null, 'post-new.php', $lm ) === null );
+
 // ── Runtime private-API dependency gate (version-gated) ─────────────
 
 echo "\n— private-API dependency gate —\n";
