@@ -15,12 +15,18 @@ import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 import { navigate } from '../../runtime/routing/router';
+import { useKernel } from '../../runtime/kernel-context';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
 
 function stripTags( html ) {
 	return html.replace( /<[^>]*>/g, '' ).trim();
 }
 
 export default function DashboardWidgetActivityApp() {
+	// Editor-link target (Tier 1 handoff): the workspace editor route when
+	// the active workspace declares one, classic `post.php` otherwise.
+	const { config: runtimeConfig } = useKernel();
+	const routes = runtimeConfig?.routes;
 	const publishedQuery = useMemo(
 		() => ( {
 			per_page: 5,
@@ -73,8 +79,14 @@ export default function DashboardWidgetActivityApp() {
 							<Button
 								tone="neutral"
 								variant="minimal"
-								onClick={ () =>
-									navigate( `#/posts/${ post.id }/edit` )
+								render={
+									<a
+										href={ editTargetHref(
+											'post',
+											post.id,
+											routes
+										) }
+									/>
 								}
 							>
 								{ post.title?.raw ||

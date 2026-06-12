@@ -1,6 +1,6 @@
 # Block editor strategy — handoff, chromeless embed, purpose-built native editors
 
-Status: **decided** (2026-06-10, repo owner). This began as a feasibility study for porting the full block editor as a workspace-native app; the option-space analysis below changed the conclusion. The full-recreation analysis is retained in §6 because its component inventory and infrastructure findings power Tier 3. Companion docs: `docs/parity/block-editor.md` (feature/REST parity audit), `docs/screens/editor-block.md` (tier-2 spec), feedback issue #79.
+Status: **decided** (2026-06-10, repo owner); **Tier 1 implemented** (2026-06-12 — see the CHANGELOG "Tier 1 block-editor handoff" entry for the mechanics as shipped: `editorHref.mjs` route-detection resolver + `followHref`, editor screens/legacy mappings removed from `wp-admin-default`, menu/toolbar/widget links repointed, `edit.php` return trip kept). This began as a feasibility study for porting the full block editor as a workspace-native app; the option-space analysis below changed the conclusion. The full-recreation analysis is retained in §6 because its component inventory and infrastructure findings power Tier 3. Companion docs: `docs/parity/block-editor.md` (feature/REST parity audit), `docs/screens/editor-block.md` (tier-2 spec), feedback issue #79.
 
 ## The decision
 
@@ -110,7 +110,7 @@ The original study concluded a full port was *feasible* — composed on the publ
 
 ## 7. Sequencing
 
-1. **Tier 1 (S):** remove editor `legacy_path` mappings + switch list-app edit/new actions to classic hrefs + bfcache/return-trip measurement. Default experience flips to handoff.
+1. **Tier 1 (S): ✅ shipped (2026-06-12).** `wp-admin-default` declares no editor screens (and so no `post-new.php` legacy mappings); list-app/menu/toolbar/widget edit + new links resolve through `src/apps/_shared/navigation/editorHref.mjs` — workspace editor route when the active workspace declares one, classic relative href otherwise. Default experience is handoff; `single-pane-demo`'s native simple-editor flow is preserved by route detection. The bfcache/return-trip measurement is still owed (needs a running install — tracked in §8 open items).
 2. **Tier 2 (M):** chromeless endpoint + bootstrap fork; `core:editor` app retargets to it; delete chrome-hide CSS path; slim the bridge; add the per-release `edit-form-blocks.php` diff to the release checklist. Demos (desktop engine, multi-pane) move onto it.
 3. **Tier 3 (ongoing, per-app):** simple-editor stays the POC; next purpose-built editor is product-driven. `EditorProvider` migration for simple-editor as opportunistic cleanup; REST endpoints on first need.
 

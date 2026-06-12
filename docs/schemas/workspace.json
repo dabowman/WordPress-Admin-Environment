@@ -551,6 +551,10 @@
 					"default": false,
 					"description": "When true, the item is suppressed from rendering. The subtree is still addressable by cascade (so a higher origin can un-hide), unlike a `null` tombstone which removes the entry entirely."
 				},
+				"permissions": {
+					"$ref": "#/$defs/permissions",
+					"description": "Visibility prune for items NOT bound to a screen (manual `href` links — e.g. the baseline's Add Post item linking classic `post-new.php`). Same OR-semantic evaluation as screen permissions; items without the block render for everyone. Screen-bound items ignore this — they inherit the bound screen's permissions at bind time. Visibility only: the link target enforces its own capabilities server-side, so this is UX pruning, not a security gate (and is deliberately NOT in the consumer-origin deny-list)."
+				},
 				"customizable": {
 					"$ref": "#/$defs/customizable",
 					"description": "Consumer-origin write allowlist for this menu item (and its nested `items`). Allowlist paths are relative to this node, e.g. `[ \"label\", \"position\" ]` or `[ \"items.posts.position\" ]`. See `#/$defs/customizable`."

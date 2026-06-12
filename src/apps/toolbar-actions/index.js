@@ -8,6 +8,8 @@ import { plus } from '@wordpress/icons';
 import { decodeEntities } from '@wordpress/html-entities';
 
 import { resolveIcon } from '../../runtime/config/iconMap';
+import { useKernel } from '../../runtime/kernel-context';
+import { newTargetHref } from '../_shared/navigation/editorHref.mjs';
 import ArbitraryIcon, {
 	TrustedNodeTitle,
 } from '../_shared/icons/ArbitraryIcon';
@@ -24,8 +26,10 @@ import ArbitraryIcon, {
  *      (arbitrary-icon, #127/#128) rendered through `ArbitraryIcon`.
  *   2. **Dynamic +New (#129)** — a dropdown enumerated from the
  *      registered post types (`GET /wp/v2/types?context=edit` via
- *      core-data), gated on each type's create capability, building
- *      `#/{rest_base}/new` hrefs. Mirrors wp-admin's runtime `+New`.
+ *      core-data), gated on each type's create capability. Hrefs resolve
+ *      per-type via `newTargetHref`: the workspace `/{rest_base}/new`
+ *      route when declared, classic `post-new.php` otherwise (Tier 1
+ *      handoff). Mirrors wp-admin's runtime `+New`.
  *   3. **Admin-bar harvest (#128)** — plugin admin-bar nodes harvested
  *      server-side (`window.wpAdminWorkspaces.adminBar`) that the workspace
  *      doesn't own first-class. Each top-level node renders as a button
@@ -43,9 +47,16 @@ import ArbitraryIcon, {
  * children (it would risk rendering blank).
  */
 
+/**
+ * Built-in command → href resolvers. Each resolves against the compiled
+ * runtime routes (Tier 1 handoff, `docs/block-editor-native-port.md`): the
+ * workspace's own add-new route when it declares one, the classic
+ * `post-new.php` URL otherwise — a real top-level navigation the admin-link
+ * interceptor passes through.
+ */
 const COMMAND_HREFS = {
-	'core/new-post': '#/posts/new',
-	'core/new-page': '#/pages/new',
+	'core/new-post': ( routes ) => newTargetHref( 'post', routes ),
+	'core/new-page': ( routes ) => newTargetHref( 'page', routes ),
 };
 
 /**
@@ -74,7 +85,13 @@ export default function ToolbarActionsApp( { config = {} } ) {
 	const left = Array.isArray( config.left ) ? config.left : [];
 	const right = Array.isArray( config.right ) ? config.right : [];
 
-	const newItems = useNewContentItems();
+	// Compiled runtime routes — the add-new links resolve against them so a
+	// workspace shipping its own editor screens keeps in-workspace targets
+	// while everything else hands off to classic (Tier 1).
+	const { config: runtimeConfig } = useKernel();
+	const routes = runtimeConfig?.routes;
+
+	const newItems = useNewContentItems( routes );
 	const adminBarNodes = useAdminBarNodes();
 
 	const hasContent =
@@ -88,7 +105,7 @@ export default function ToolbarActionsApp( { config = {} } ) {
 			<Stack direction="row" gap="xs" align="center">
 				{ newItems.length > 0 && <NewContentMenu items={ newItems } /> }
 				{ left.map( ( action, i ) =>
-					renderAction( action, `left-${ i }` )
+					renderAction( action, `left-${ i }`, routes )
 				) }
 			</Stack>
 
@@ -96,7 +113,7 @@ export default function ToolbarActionsApp( { config = {} } ) {
 
 			<Stack direction="row" gap="xs" align="center">
 				{ right.map( ( action, i ) =>
-					renderAction( action, `right-${ i }` )
+					renderAction( action, `right-${ i }`, routes )
 				) }
 				{ adminBarNodes.map( ( node ) => (
 					<AdminBarNode key={ `ab-${ node.id }` } node={ node } />
@@ -111,48 +128,61 @@ export default function ToolbarActionsApp( { config = {} } ) {
  * dropdown items. Reads `getPostTypes({ context: 'edit' })` from
  * core-data and gates each on `canUser('create', { kind, name })`.
  *
+ * Each item's href resolves per-type via `newTargetHref`: the workspace
+ * `/{rest_base}/new` route when the active workspace declares one, the
+ * classic `post-new.php?post_type=` URL otherwise. Custom post types —
+ * which no bundled workspace declares add-new routes for — hand off to
+ * classic instead of emitting dead hash links.
+ *
+ * @param {Object} routes Compiled runtime routes block.
  * @return {Array<{ id: string, label: string, href: string }>} New-content items.
  */
-function useNewContentItems() {
-	return useSelect( ( select ) => {
-		const core = select( coreStore );
-		const postTypes = core.getPostTypes( { context: 'edit' } );
-		if ( ! postTypes ) {
-			return [];
-		}
-		const items = [];
-		for ( const type of postTypes ) {
-			// Skip non-creatable / internal types. wp-admin's +New shows
-			// content types gated on `show_in_admin_bar` (not exposed in the
-			// REST `types` response). `rest_base` presence + the create cap
-			// alone over-enumerate — the editor-infrastructure types
-			// (wp_block / wp_navigation / wp_template* / fonts) are
-			// creatable for an admin but excluded from classic's +New. The
-			// denylist mirrors that exclusion.
-			const restBase = type?.rest_base;
-			if ( ! restBase || NEW_CONTENT_TYPE_DENYLIST.has( type?.slug ) ) {
-				continue;
+function useNewContentItems( routes ) {
+	return useSelect(
+		( select ) => {
+			const core = select( coreStore );
+			const postTypes = core.getPostTypes( { context: 'edit' } );
+			if ( ! postTypes ) {
+				return [];
 			}
-			const canCreate = core.canUser( 'create', {
-				kind: 'postType',
-				name: type.slug,
-			} );
-			if ( ! canCreate ) {
-				continue;
+			const items = [];
+			for ( const type of postTypes ) {
+				// Skip non-creatable / internal types. wp-admin's +New shows
+				// content types gated on `show_in_admin_bar` (not exposed in the
+				// REST `types` response). `rest_base` presence + the create cap
+				// alone over-enumerate — the editor-infrastructure types
+				// (wp_block / wp_navigation / wp_template* / fonts) are
+				// creatable for an admin but excluded from classic's +New. The
+				// denylist mirrors that exclusion.
+				const restBase = type?.rest_base;
+				if (
+					! restBase ||
+					NEW_CONTENT_TYPE_DENYLIST.has( type?.slug )
+				) {
+					continue;
+				}
+				const canCreate = core.canUser( 'create', {
+					kind: 'postType',
+					name: type.slug,
+				} );
+				if ( ! canCreate ) {
+					continue;
+				}
+				items.push( {
+					id: type.slug,
+					label: decodeEntities(
+						type?.labels?.add_new_item ||
+							type?.labels?.singular_name ||
+							type?.name ||
+							type.slug
+					),
+					href: newTargetHref( type.slug, routes, restBase ),
+				} );
 			}
-			items.push( {
-				id: type.slug,
-				label: decodeEntities(
-					type?.labels?.add_new_item ||
-						type?.labels?.singular_name ||
-						type?.name ||
-						type.slug
-				),
-				href: `#/${ restBase }/new`,
-			} );
-		}
-		return items;
-	}, [] );
+			return items;
+		},
+		[ routes ]
+	);
 }
 
 /**
@@ -265,8 +295,8 @@ function AdminBarNode( { node } ) {
 	);
 }
 
-function renderAction( action, key ) {
-	const href = action.href || COMMAND_HREFS[ action.command ];
+function renderAction( action, key, routes ) {
+	const href = action.href || COMMAND_HREFS[ action.command ]?.( routes );
 	if ( ! href ) {
 		return null;
 	}

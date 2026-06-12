@@ -8,8 +8,10 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { Button, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
-import { navigate, useRoute } from '../../runtime/routing/router';
-import { editHref } from './editHref.mjs';
+import { useRoute } from '../../runtime/routing/router';
+import { useKernel } from '../../runtime/kernel-context';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
+import { followHref } from '../_shared/navigation/followHref';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import {
 	buildFields,
@@ -172,14 +174,19 @@ function makeTaxonomyElements( taxonomy ) {
  * Field id → render callback. View-config declares the *shape*; the React
  * layer supplies the row renderer. Unknown ids fall through to DataViews'
  * default renderer for the declared field type.
- * @param {string} postType Active post type id from app config.
+ *
+ * The title is a real anchor (`Button render={<a/>}`): when the active
+ * workspace declares no editor route the href is the classic `post.php`
+ * URL, and the click must reach the admin-link interceptor as a native
+ * link click for the Tier 1 handoff (plus middle-click / copy-link).
+ * @param {Function} hrefFor `( id ) => href` editor-link resolver.
  */
-function buildFieldRenderers( postType ) {
+function buildFieldRenderers( hrefFor ) {
 	return {
 		title: ( { item } ) => (
 			<Button
 				variant="minimal"
-				onClick={ () => navigate( editHref( postType, item.id ) ) }
+				render={ <a href={ hrefFor( item.id ) } /> }
 			>
 				{ item.title }
 			</Button>
@@ -406,6 +413,11 @@ export default function PostsApp( { config } ) {
 	const routeAuthor = useRoute().params?.author;
 	const authorFilterId = authorIdFromConfig( routeAuthor ?? config.author );
 
+	// Editor-link target (Tier 1 handoff): workspace editor route when the
+	// active workspace declares one, classic `post.php` otherwise.
+	const { config: runtimeConfig } = useKernel();
+	const editorRoutes = runtimeConfig?.routes;
+
 	const { config: dataViewConfig } = useDataView( screenId );
 
 	// Seed the author scope once as an initial `author` view-filter — the same
@@ -527,7 +539,9 @@ export default function PostsApp( { config } ) {
 				  );
 		return buildFields( fieldSpecs, {
 			labels: FIELD_LABELS,
-			renderers: buildFieldRenderers( postType ),
+			renderers: buildFieldRenderers( ( id ) =>
+				editTargetHref( postType, id, editorRoutes )
+			),
 			elementFallbacks: {
 				status: elementsFromLabels( STATUS_LABELS ),
 				// `format` is a finite known set — feed a static element list
@@ -548,7 +562,7 @@ export default function PostsApp( { config } ) {
 					? { categories: makeTaxonomyElements( 'category' ) }
 					: {},
 		} );
-	}, [ dataViewConfig, postType, statusCounts ] );
+	}, [ dataViewConfig, postType, statusCounts, editorRoutes ] );
 
 	const actions = useMemo( () => {
 		// Status mutations move rows between filters, so the list query and the
@@ -753,8 +767,13 @@ export default function PostsApp( { config } ) {
 		return buildActions( dataViewConfig.actions, {
 			labels: ACTION_LABELS,
 			callbacks: {
+				// No anchor to render in an action menu — `followHref`
+				// synthesizes the link click so the interceptor still
+				// governs the classic-handoff case.
 				edit: ( items ) =>
-					navigate( editHref( postType, items[ 0 ].id ) ),
+					followHref(
+						editTargetHref( postType, items[ 0 ].id, editorRoutes )
+					),
 				view: ( items ) => {
 					window.open(
 						items[ 0 ].link,
@@ -773,6 +792,7 @@ export default function PostsApp( { config } ) {
 	}, [
 		dataViewConfig,
 		postType,
+		editorRoutes,
 		deleteEntityRecord,
 		saveEntityRecord,
 		invalidateResolution,

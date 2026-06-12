@@ -13,12 +13,18 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { TextareaControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { navigate } from '../../runtime/routing/router';
+import { useKernel } from '../../runtime/kernel-context';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
+import { followHref } from '../_shared/navigation/followHref';
 import { recentDraftsQuery } from '../dashboard-widget-recent-posts/query.mjs';
 
 import './index.css';
 
 export default function DashboardWidgetQuickDraftApp() {
+	// Editor-link target (Tier 1 handoff): the workspace editor route when
+	// the active workspace declares one, classic `post.php` otherwise.
+	const { config: runtimeConfig } = useKernel();
+	const routes = runtimeConfig?.routes;
 	const [ title, setTitle ] = useState( '' );
 	const [ content, setContent ] = useState( '' );
 	const [ isSaving, setSaving ] = useState( false );
@@ -60,11 +66,12 @@ export default function DashboardWidgetQuickDraftApp() {
 			}
 			if ( draft?.id ) {
 				// Navigate FIRST, then skip the post-navigate state
-				// resets — `navigate()` triggers a hashchange that
-				// unmounts this component, so any setState after this
-				// point fires on an unmounted node. The success path
-				// returns without touching local state.
-				navigate( `#/posts/${ draft.id }/edit` );
+				// resets — following the link unmounts this component
+				// (hashchange for a workspace editor route, full-page
+				// handoff to classic `post.php` otherwise), so any
+				// setState after this point fires on an unmounted node.
+				// The success path returns without touching local state.
+				followHref( editTargetHref( 'post', draft.id, routes ) );
 				return;
 			}
 			// No draft id (defensive) — reset form + spinner in place.
@@ -72,7 +79,14 @@ export default function DashboardWidgetQuickDraftApp() {
 			setContent( '' );
 			setSaving( false );
 		},
-		[ title, content, isSaving, saveEntityRecord, invalidateResolution ]
+		[
+			title,
+			content,
+			isSaving,
+			routes,
+			saveEntityRecord,
+			invalidateResolution,
+		]
 	);
 
 	return (
