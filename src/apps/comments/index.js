@@ -11,6 +11,7 @@ import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { userCan } from '../../runtime/capabilities/userCan';
+import { useKernel } from '../../runtime/kernel-context';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -18,6 +19,7 @@ import {
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
 import { isSafeHref } from '../_shared/isSafeHref.mjs';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
 import {
 	useEntityElementCounts,
 	invalidateEntityElementCounts,
@@ -242,43 +244,23 @@ function AuthorCell( { item } ) {
 }
 
 /**
- * Workspace editor hash-route for a comment's parent post. `page` post types
- * get `/pages/{id}/edit`; everything else falls back to `/posts/{id}/edit`
- * (the same convention PostsApp's `editHref` uses). Returns `''` for post types
- * without a workspace edit canvas so the renderer can fall back to the
- * permalink. Rendered as `<a href="#/…">` so the kernel router handles it.
- *
- * @param {string} postType Embedded post `type`.
- * @param {number} postId   Comment's `post` id.
- * @return {string} Hash route, or '' when no editor route applies.
- */
-function postEditHref( postType, postId ) {
-	if ( ! postId ) {
-		return '';
-	}
-	if ( postType === 'page' ) {
-		return `#/pages/${ postId }/edit`;
-	}
-	if ( postType === 'post' ) {
-		return `#/posts/${ postId }/edit`;
-	}
-	return '';
-}
-
-/**
  * "In response to" cell. Deep-links the parent post: the title routes to the
- * workspace post editor when one exists (post / page), and a "View Post" link
- * opens the live permalink. Mirrors wp-admin's `column_response`.
+ * editor via the route-aware `editHrefFor` resolver — the workspace editor
+ * route when the active workspace declares one, else the classic `post.php`
+ * handoff (Tier 1, the same `editTargetHref` path PostsApp uses) — and a
+ * "View Post" link opens the live permalink. Mirrors wp-admin's
+ * `column_response`.
  *
- * @param {Object} root0
- * @param {Object} root0.item The DataViews row.
+ * @param {Object}   root0
+ * @param {Object}   root0.item        The DataViews row.
+ * @param {Function} root0.editHrefFor `( postType, postId ) => href` resolver.
  * @return {JSX.Element} The response cell.
  */
-function ResponseCell( { item } ) {
+function ResponseCell( { item, editHrefFor } ) {
 	if ( ! item.post ) {
 		return <Text className="wp-admin-workspaces-app__muted">—</Text>;
 	}
-	const editHref = postEditHref( item.postType, item.post );
+	const editHref = editHrefFor( item.postType, item.post );
 	const title = item.postTitle || __( '(no title)', 'wp-admin-workspaces' );
 	return (
 		<Stack direction="column" gap="xs">
@@ -302,25 +284,34 @@ function ResponseCell( { item } ) {
 }
 
 /**
- * Field id → render callback. Module-scoped — renderers capture no props.
+ * Field id → render callback. Built per-render so the `response` cell can
+ * close over the route-aware editor-href resolver (the workspace editor route
+ * when declared, else the classic `post.php` handoff — Tier 1).
+ *
+ * @param {Function} editHrefFor `( postType, postId ) => href` editor resolver.
+ * @return {Object} Field id → render callback.
  */
-const FIELD_RENDERERS = {
-	author: AuthorCell,
-	response: ResponseCell,
-	// Trust boundary: `item.content` is `record.content.rendered`, which
-	// WordPress core filters server-side via `wp_filter_comment_content`
-	// (kses + the comment-text filter chain). Author-supplied raw HTML has
-	// been sanitized before it reaches the REST response.
-	content: ( { item } ) => (
-		<div
-			className="wp-admin-workspaces-app-comments__excerpt"
-			dangerouslySetInnerHTML={ { __html: item.content } }
-		/>
-	),
-	status: ( { item } ) => (
-		<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
-	),
-};
+function buildFieldRenderers( editHrefFor ) {
+	return {
+		author: AuthorCell,
+		response: ( { item } ) => (
+			<ResponseCell item={ item } editHrefFor={ editHrefFor } />
+		),
+		// Trust boundary: `item.content` is `record.content.rendered`, which
+		// WordPress core filters server-side via `wp_filter_comment_content`
+		// (kses + the comment-text filter chain). Author-supplied raw HTML has
+		// been sanitized before it reaches the REST response.
+		content: ( { item } ) => (
+			<div
+				className="wp-admin-workspaces-app-comments__excerpt"
+				dangerouslySetInnerHTML={ { __html: item.content } }
+			/>
+		),
+		status: ( { item } ) => (
+			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+		),
+	};
+}
 
 // ---- Edit / Reply DataForm field + form definitions ------------------------
 
@@ -400,6 +391,13 @@ export default function CommentsApp( { config = {} } ) {
 	const screenId = config.screenId || null;
 
 	const { config: dataViewConfig } = useDataView( screenId );
+
+	// Route-aware editor links for the "In response to" column: the workspace
+	// editor route when the active workspace ships one, else the classic
+	// `post.php` handoff (Tier 1). `wp-admin-default` declares no editor
+	// screens, so a bare `#/posts/{id}/edit` would be a dead link there.
+	const { config: runtimeConfig } = useKernel();
+	const editorRoutes = runtimeConfig?.routes;
 
 	const { view, setView, selection, setSelection } = useEntityDataView( {
 		screenId,
@@ -593,7 +591,9 @@ export default function CommentsApp( { config = {} } ) {
 		() =>
 			buildFields( dataViewConfig.fields, {
 				labels: FIELD_LABELS,
-				renderers: FIELD_RENDERERS,
+				renderers: buildFieldRenderers( ( postType, postId ) =>
+					editTargetHref( postType || 'post', postId, editorRoutes )
+				),
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
 					// Translated Comments/Pings options for the type filter; the
@@ -604,7 +604,7 @@ export default function CommentsApp( { config = {} } ) {
 					status: statusCounts,
 				},
 			} ),
-		[ dataViewConfig, statusCounts ]
+		[ dataViewConfig, statusCounts, editorRoutes ]
 	);
 
 	const actions = useMemo( () => {
