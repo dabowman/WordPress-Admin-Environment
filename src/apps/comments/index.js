@@ -262,13 +262,12 @@ function ResponseCell( { item, editHrefFor } ) {
 	}
 	const editHref = editHrefFor( item.postType, item.post );
 	const title = item.postTitle || __( '(no title)', 'wp-admin-workspaces' );
+	// `editHref` is always a real href — `editTargetHref` yields the workspace
+	// route or the classic `post.php` handoff, never '' — so the title is
+	// always a link (matches wp-admin's `column_response`).
 	return (
 		<Stack direction="column" gap="xs">
-			{ editHref ? (
-				<a href={ editHref }>{ title }</a>
-			) : (
-				<Text>{ title }</Text>
-			) }
+			<a href={ editHref }>{ title }</a>
 			{ item.postLink ? (
 				<a
 					className="wp-admin-workspaces-app__muted"
