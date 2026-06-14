@@ -260,7 +260,7 @@ class WP_Admin_Workspaces_Resolver {
 	 * ships with the engine but workspace.json wins on every overlapping key.
 	 *
 	 * The effective engine id is resolved by the caller — for an override
-	 * file that omits `workspace.engine`, it falls back to the baseline's
+	 * file that omits an `engine` declaration, it falls back to the baseline's
 	 * engine, so a partial override never loses the engine's default
 	 * styles.
 	 *

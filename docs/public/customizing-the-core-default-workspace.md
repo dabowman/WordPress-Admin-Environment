@@ -46,7 +46,7 @@ Three artifacts drive the workspace. Know which one owns what, and customization
 
 Customizing `core:default` is almost entirely an `workspace.json` exercise. The engine is already written; you compose the screens and apps it renders and tune its theme.
 
-**Where the file lives.** Drop a valid `workspace.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `workspaces/` — copy one as a starting point (`workspaces/canonical-demo.json` is the smallest, `workspaces/content-author.json` is a focused real example, `workspaces/wp-admin-default.json` is the exhaustive one).
+**Where the file lives.** Drop a valid `workspace.json` at `wp-content/workspace.json`. It loads as a **partial override** on top of the `wp-admin-default` baseline (theme.json model: you declare deltas, the baseline supplies the rest). Bundled starter templates live in `workspaces/` — copy one as a starting point (`workspaces/single-pane-demo.json` and `workspaces/desktop-demo.json` are focused engine demos, `workspaces/wp-admin-default.json` is the exhaustive baseline).
 
 Always set `"version": 3` and `"$wpds": "6.9"`. Every level is `additionalProperties: false` — a typo'd key is a validation error, not a silent no-op.
 
@@ -98,7 +98,7 @@ Before customizing, know what the engine already ships — most of it you simply
 
 - **A region tree** — a persistent `sidebar` (site-hub + navigation), a routable `content` region, a `detail` side-pane that mirrors a sub-route, a modal `command-palette` (bound to `Mod+K`), and banner/snackbar notice mounts. You don't write these; the engine synthesizes them from your `screens`.
 - **Four chrome modes** — `default`, `focus`, `takeover`, `modal`. A screen picks one with `"mode": "..."`.
-- **A menu renderer** — `sidebar-tree`: nested menu items render as an expandable in-place tree, auto-expanding the branch that contains the active route. (The engine also bundles `sidebar-drilldown` as an alternative — slide-in sub-screens with a back link.)
+- **A menu renderer** — `sidebar-tree`: nested menu items render as an expandable in-place tree, auto-expanding the branch that contains the active route. (The bundled navigation app also registers `sidebar-drilldown` as an alternative — slide-in sub-screens with a back link — but selecting it is an `engine.json` decision, not a workspace.json one.)
 - **Slots** — places your apps/widgets can mount: `detail` (side-pane), `grid` (dashboard tiles, via `core:dashboard-host`), `palette` (command palette), plus the persistent widget slots `toolbar` and `sidebar-footer`.
 - **WPDS chrome + a default theme** — `#3858E9` primary, white background, `default` density, dark elevated-card idiom. Override any of it from `styles`.
 
@@ -265,7 +265,7 @@ Engine-agnostic information architecture. A nested tree of id-keyed items; items
 | `separator` | Visual divider; other fields ignored. |
 | `hidden` | Hide from the menu while keeping the subtree addressable for cascade. |
 
-**Menu rendering on `core:default`.** The engine names `sidebar-tree`: nested items expand in place, and the branch containing the active route auto-expands. Drill-down/expansion ancestry derives from the URL, so deep-links and refresh land correctly. (The engine also bundles `sidebar-drilldown` — slide-in sub-screens with a back link, honoring `config.collapsed` for an icon rail — if you fork the engine to name it.) Renderers cap nesting depth (default 3).
+**Menu rendering on `core:default`.** The engine names `sidebar-tree`: nested items expand in place, and the branch containing the active route auto-expands. Drill-down/expansion ancestry derives from the URL, so deep-links and refresh land correctly. (The bundled navigation app also registers `sidebar-drilldown` — slide-in sub-screens with a back link — but `menu-renderer` is an `engine.json` field, not a workspace.json one: switching it means shipping an engine that names it.) Renderers cap nesting depth (default 3).
 
 **The classic wp-admin menu bridge.** Every third-party `add_menu_page()` / `add_submenu_page()` registration (Yoast, ACF, WooCommerce, …) is auto-ingested under `menu.ingested.items[]` — no workspace.json edit needed for them to appear. To curate:
 
@@ -384,7 +384,7 @@ WPDS-shaped theme tree. Four customization paths, in increasing escape-hatch ord
 
 1. **`styles.theme`** — ThemeProvider seeds. The primary path: set `color.primary`, `color.bg`, `density` (`default` / `compact` / `comfortable`), `cursor.control`, and the provider derives the entire WPDS token matrix (color ramps, density-tuned spacing, light/dark by background luminance). `core:default` seeds `primary: #3858E9`, `bg: #ffffff`, `density: default` — override only what you want changed.
 2. **`styles.regions[id].theme` / `styles.applications[id].theme`** — nested provider overrides scoped to one region/app subtree (e.g. a dark `detail` pane over a light workspace).
-3. **`styles.chrome.<surface>` + direct slot overrides** (`styles.color` / `border` / `dimension` / `elevation` / `font`) — escape hatch for slot values seeds can't express. **`core:default` chrome surfaces:** `sidebar`, `toolbar`, `siteHub`, `content`, `canvas`.
+3. **`styles.chrome.<surface>` + direct slot overrides** (`styles.color` / `border` / `dimension` / `elevation` / `font`) — escape hatch for slot values seeds can't express. **`core:default` chrome surfaces:** `canvas`, `content`, `sidebar`, `toolbar`, `detail`, `site-hub`.
 4. **DTCG `tokens.json` aliases** — a sibling `tokens.json` of design primitives, referenced with curly-brace aliases (`"{color.brand.500}"`). The PHP resolver deep-merges site → theme → plugin → core token files and resolves the aliases.
 
 **Inside WPDS engine/app code, never hardcode hex — use `var(--wpds-*)`.** From `workspace.json` you express intent through these four surfaces and the runtime emits the CSS variables for you.
@@ -563,6 +563,8 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 } } } } }
 ```
 
+This works because the `wp-admin-default` baseline already declares the `postType/post/_default` triple — your partial deep-merges into it, and `fields[]` merge by `id` (a new id appends). Beware the other case: if you declare a `(kind, name, variant)` triple that **no** origin in the cascade declares, your copy replaces the app's `app.json#dataView` baseline outright (no deep-merge) — mirror the baseline completely, or use the per-screen overlay below instead.
+
 **…or on the Posts screen only**
 ```json
 "screens": { "posts": { "dataView": {
@@ -579,7 +581,7 @@ To let `role`/`user` origins edit specific paths, declare a `customizable` allow
 }
 ```
 
-**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density: see `workspaces/content-author.json` for the complete file.
+**A focused writing workspace** — land on Posts, editors in `focus` mode, comfortable density. The bundled `workspaces/single-pane-demo.json` lands on Posts as a starting point you can build from.
 
 **Restrict Settings to editors + admins** (floor still applies)
 ```json
@@ -639,6 +641,6 @@ For non-trivial changes, load the workspace in `wp-env` and walk the screens man
 | Theming mechanics, token→DOM paths, WPDS CSS gotchas | [`../engines-and-design-systems.md`](../engines-and-design-systems.md) |
 | Design rationale, cascade trust tiers, mode catalog | [`../schema-sketch.md`](../schema-sketch.md) |
 | Runtime architecture — regions, routing, gating | [`../wp-admin-workspaces-design-spec.md`](../wp-admin-workspaces-design-spec.md) |
-| Starter files to copy | `workspaces/canonical-demo.json`, `workspaces/content-author.json`, `workspaces/wp-admin-default.json` |
+| Starter files to copy | `workspaces/single-pane-demo.json`, `workspaces/desktop-demo.json`, `workspaces/wp-admin-default.json` |
 </content>
 </invoke>

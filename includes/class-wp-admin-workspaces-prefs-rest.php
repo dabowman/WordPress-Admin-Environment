@@ -106,7 +106,13 @@ class WP_Admin_Workspaces_Prefs_REST {
 		return rest_ensure_response( (object) array() );
 	}
 
-	const MAX_MERGE_DEPTH = 10;
+	/**
+	 * Back-compat alias only — nothing in this class reads it anymore. The
+	 * merge + key-count depth cap lives in
+	 * `WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH`; retained here for any
+	 * external consumer that learned the old constant.
+	 */
+	const MAX_MERGE_DEPTH = WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH;
 
 	/** Max serialized prefs payload — structural config, not a data file. */
 	const MAX_BYTES = 262144;
@@ -114,56 +120,17 @@ class WP_Admin_Workspaces_Prefs_REST {
 	/** Max total keys (recursive) in a single prefs write. */
 	const MAX_KEYS = 500;
 
-	/**
-	 * Count keys across a nested array, bounded by the merge depth so a
-	 * pathological payload can't make the counter itself expensive.
-	 *
-	 * @param mixed $value Decoded JSON value.
-	 * @param int   $depth Current depth.
-	 * @return int
-	 */
-	private static function count_keys( $value, $depth = 0 ) {
-		if ( ! is_array( $value ) || $depth >= self::MAX_MERGE_DEPTH ) {
-			return 0;
-		}
-		$count = count( $value );
-		foreach ( $value as $v ) {
-			if ( is_array( $v ) ) {
-				$count += self::count_keys( $v, $depth + 1 );
-				if ( $count > self::MAX_KEYS ) {
-					// Short-circuit — caller only cares whether we crossed it.
-					return $count;
-				}
-			}
-		}
-		return $count;
+	// Merge + key-count primitives live in WP_Admin_Workspaces_Util
+	// (`deep_merge_patch` / `count_keys`) so this transport and the
+	// customization abilities share one implementation.
+
+	private static function count_keys( $value ) {
+		return WP_Admin_Workspaces_Util::count_keys( $value, self::MAX_KEYS );
 	}
 
-	private static function deep_merge( $base, $over, $depth = 0 ) {
-		if ( $depth >= self::MAX_MERGE_DEPTH ) {
-			// Cap recursion. Pathological nested payloads (legitimate or
-			// adversarial) can't push past this, even though PHP's
-			// memory_limit would catch true exhaustion. Replace at the
-			// cap-depth boundary so the structure terminates predictably.
-			return $over;
-		}
-		if ( ! is_array( $base ) ) {
-			return $over;
-		}
-		if ( ! is_array( $over ) ) {
-			return $over === null ? $base : $over;
-		}
-		$out = $base;
-		foreach ( $over as $k => $v ) {
-			if ( $v === null ) {
-				unset( $out[ $k ] );
-				continue;
-			}
-			$out[ $k ] = is_array( $v ) && is_array( $base[ $k ] ?? null )
-				? self::deep_merge( $base[ $k ], $v, $depth + 1 )
-				: $v;
-		}
-		return $out;
+	private static function deep_merge( $base, $over ) {
+		// User-prefs semantics: null deletes the stored key.
+		return WP_Admin_Workspaces_Util::deep_merge_patch( $base, $over, true );
 	}
 }
 

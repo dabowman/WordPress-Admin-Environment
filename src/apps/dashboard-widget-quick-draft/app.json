@@ -3,7 +3,7 @@
 	"id": "core:dashboard-widget-quick-draft",
 	"version": 1,
 	"title": "Quick Draft",
-	"description": "Mini form to start a new post draft without leaving the dashboard. On submit, navigates to the full editor.",
+	"description": "Mini form to start a new post draft without leaving the dashboard. On submit, follows the editor link for the new draft (workspace editor route when declared, classic post.php handoff otherwise).",
 	"designSystem": "@wordpress/ui",
 	"role": "region",
 	"capabilities": [ "edit_posts" ],
@@ -31,7 +31,7 @@
 			]
 		},
 		"url": {
-			"navigates": [ "#/posts/{id}/edit" ]
+			"navigates": [ "#/posts/{id}/edit — only when the active workspace declares the editor route", "post.php?post={id}&action=edit — classic handoff default (Tier 1)" ]
 		},
 		"states": [
 			{
@@ -53,7 +53,7 @@
 		"interactions": [
 			{
 				"trigger": "Submit form",
-				"effect": "`saveEntityRecord('postType','post', {title, content, status:'draft'})` → invalidate the recent-drafts query → `navigate('#/posts/{id}/edit')`."
+				"effect": "`saveEntityRecord('postType','post', {title, content, status:'draft'})` → invalidate the recent-drafts query → `followHref(editTargetHref('post', id, routes))` (workspace editor route when declared, classic `post.php` handoff otherwise)."
 			}
 		],
 		"constraints": [

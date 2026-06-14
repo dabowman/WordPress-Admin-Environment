@@ -6,6 +6,118 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added: workspace-customization abilities (Abilities API)
+
+First Abilities API surface: `WP_Admin_Workspaces_Abilities`
+(`includes/class-wp-admin-workspaces-abilities.php`) registers the
+`wp-admin-workspaces` category + 12 abilities — read primitives
+(`get-workspace-config`, `describe-customization-surface`, `get-user-prefs`,
+`get-site-config`, `list-workspaces`), write primitives (`update-user-prefs`
+with an applied/rejected pre-flight report, `reset-user-prefs`,
+`update-site-config` with stored-tombstone + `remove` semantics and its own
+applied/rejected resolve report), and
+semantic wrappers (`switch-workspace`, `set-default-screen`,
+`hide-menu-item`/`show-menu-item`). Designed for AI agents via
+`wp-abilities/v1` REST: every ability ships input/output JSON schemas +
+LLM-oriented descriptions; reads carry `meta.readonly`. Feature-detected —
+silent no-op below WP 6.9 (no `Requires at least` bump). Catalog + design
+stance in `docs/abilities.md`; ability IDs are stable API.
+
+Supporting changes:
+
+- **`WP_Admin_Workspaces_Customizable::describe_writable_paths()`** — the
+  inverse view of `filter_doc`: reports consumer-tier writable paths
+  (`{path, mode: subtree|exact}`) from a merged doc's `customizable`
+  declarations, deny-list filtered. Backs `describe-customization-surface`;
+  reusable by the appearance-preferences UI later.
+- **Cascade fix:** `default-screen` joined
+  `WP_Admin_Workspaces_Customizable::V3_TOP_LEVEL_BLOCKS`. Previously a
+  site-origin `default-screen` was silently dropped by `filter_doc`
+  (contradicting the "site may declare any block shape" trust-tier rule),
+  so the site tier could never change the default screen. Consumer origins
+  still can't set it (scalar replacements are rejected for them).
+- **Shared patch primitives:** `deep_merge_patch` (null-deletes for the user
+  slice / null-as-stored-tombstone for the site slice) + `count_keys` moved
+  from `WP_Admin_Workspaces_Prefs_REST` privates into
+  `WP_Admin_Workspaces_Util`; the REST transport now delegates, so REST and
+  abilities share one merge implementation and one set of payload bounds.
+- **Tests:** `tests/php/run-abilities-tests.php` — registration, permission
+  floors per role, per-user prune, locked-baseline vs fixture-allowlist
+  describe/pre-flight, site-tier writes asserted against the RESOLVED doc
+  (pins the `default-screen` fix), switch-workspace error states incl. the
+  file-override 409 (via the `wp_admin_workspaces_workspace_json_path`
+  filter). Skips cleanly when the Abilities API is absent.
+
+### Changed: Tier 1 block-editor handoff — wp-admin-default edits in the real editor (issue #79, `docs/block-editor-native-port.md`)
+
+Implements sequencing step 1 of the block-editor strategy decision (2026-06-10):
+the default workspace's content-editing flow is now a **full-page handoff** to
+classic `post.php` / `post-new.php` — the same navigation model core ships —
+instead of the chrome-hidden iframe embed.
+
+- **`wp-admin-default.json`** no longer declares the four editor screens
+  (`posts-new` / `post-edit` / `pages-new` / `page-edit`), which also removes
+  their `post-new.php` legacy redirects — visiting the classic editor URLs now
+  stays classic. The `edit.php` mappings on the list screens are untouched, so
+  the editor's exit button still lands back on the workspace posts list (the
+  return trip rides existing machinery). The "Add Post" / "Add Page" menu
+  entries became manual href items (`post-new.php`, relative so subdirectory
+  installs resolve) carrying their own `permissions` blocks; the
+  `navigate-posts-new` command was dropped with its target route. That loses
+  the `Mod+Alt+N` "New Post" palette/keyboard path in `wp-admin-default` —
+  accepted: a `navigate:` command can only target a workspace route (the
+  router hash-navigates), classic wp-admin ships no global new-post shortcut
+  either (the toolbar `+New` mirrors wp-admin's), and any workspace that
+  declares a `/posts/new` editor screen can re-add the command alongside it.
+- **New shared resolver `src/apps/_shared/navigation/editorHref.mjs`**
+  (promoted from `src/apps/posts/editHref.mjs`, which it replaces):
+  `editTargetHref` / `newTargetHref` check the compiled runtime `routes`
+  (`useKernel().config.routes`) and emit the workspace editor route when the
+  active workspace declares one, the classic relative href otherwise. That
+  route detection is what keeps `single-pane-demo`'s native
+  `core:simple-editor` screens linking in-workspace with zero config — and
+  gives `desktop-demo` (PostsApp with no editor routes) working classic edit
+  links where the old hash links dangled.
+- **New `src/apps/_shared/navigation/followHref.js`** for flows with no anchor
+  (DataViews action callbacks, quick-draft's post-save continuation): hash →
+  router; anything else → a synthetic click on a real `<a>`, so the
+  capture-phase admin-link interceptor still governs (never
+  `window.location.assign`).
+- **Consumers repointed:** PostsApp (row-title is now a real anchor via
+  `Button render={<a/>}`; Edit action via `followHref`), toolbar `+New`
+  (per-type detection — CPTs with no workspace add-new route now hand off to
+  `post-new.php?post_type=` instead of emitting dead hash links), and the
+  activity / recent-posts (real anchors) + quick-draft (followHref) dashboard
+  widgets. The REST auto-draft seeding flow in `core:editor` is now unused by
+  every bundled workspace — `post-new.php` creates the auto-draft server-side —
+  but the app and its flow remain intact as the embed option and the Tier 2
+  retarget contract.
+- **Schema:** `workspace.json#$defs/menuItem` gained an author-declarable
+  `permissions` block (OR-semantic, visibility-only — the link target enforces
+  real capabilities server-side; deliberately not in the consumer-origin
+  deny-list).
+- **Tests:** `tests/runtime/posts-edit-href.test.mjs` →
+  `tests/runtime/editor-href.test.mjs` (classic-href + route-detection cases
+  added); `run-alpha-routing-tests.php` pins that the baseline never maps
+  `post.php` / `post-new.php` while `/posts` keeps its `edit.php` return trip.
+- **Still owed:** the bfcache/return-trip measurement against
+  `docs/perf-baseline.md` (needs a running install).
+
+### Added: Plugins status-tab strip (issue #75)
+
+The `core:plugins` app now renders the classic `All | Active | Inactive`
+segment strip (plus `Network active` on multisite) above the list, matching
+the Comments/Posts pattern. The per-status counts were already computed off the
+single unpaginated `wp/v2/plugins` fetch; this surfaces them as a pinned
+`ViewTabs` filter group instead of only inside the column filter dropdown. The
+`Network active` segment appears only when the count tally carries that status
+(single-site installs never do). Pure segment logic factored into
+`src/apps/_shared/dataviews/pluginSegments.mjs` (`buildPluginStatusSegments` /
+`activePluginSegment`), pinned by `tests/runtime/plugin-segments.test.mjs`.
+Closes one item from the issue #75 roadmap bundle; the remaining gaps (Quick
+Edit, directory browse, app-passwords, etc.) need new custom REST routes or
+larger UI surfaces and stay tracked there.
+
 ### Added: media-library-picker + range/slider DataForm controls (#170)
 
 Two shared custom DataForm `Edit` controls close roadmap group C item 8 (parity
@@ -157,7 +269,7 @@ Follow-up to the 2026-05-27 engine review (items 1 + 5 resolved earlier). Class 
 
 The product, plugin, and every author/user-facing surface unified under
 **workspaces**. Vocabulary, the dissolved-block shape, and the prefix map are
-canonical in `docs/vocabulary-spec.md`.
+canonical in `docs/archive/vocabulary-spec.md` (archived once the rename landed everywhere).
 
 - **BREAKING — public extension surfaces renamed with no back-compat shims**
   (acceptable for pre-release; no installed base). Third-party integrations

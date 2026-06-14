@@ -237,8 +237,8 @@ $method = $ref->getMethod( 'engine_origin' );
 $method->setAccessible( true );
 
 // engine_origin() now takes the resolved engine id (a string) — the
-// caller (load_origins) extracts it from the override file's
-// workspace.engine, falling back to the baseline's engine.
+// caller (load_origins) extracts it from the override file's top-level
+// `engine`, falling back to the baseline's engine.
 $origin_full = $method->invoke( null, $test_engine_id );
 $T::assert_true(
 	'engine_origin: returns synthetic styles doc for engine with default-styles',

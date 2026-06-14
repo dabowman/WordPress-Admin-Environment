@@ -37,7 +37,7 @@
 			]
 		},
 		"url": {
-			"navigates": [ "#/posts/{id}/edit" ]
+			"navigates": [ "#/posts/{id}/edit — only when the active workspace declares the editor route", "post.php?post={id}&action=edit — classic handoff default (Tier 1)" ]
 		},
 		"states": [
 			{
@@ -59,7 +59,7 @@
 		"interactions": [
 			{
 				"trigger": "Click a draft title",
-				"effect": "`navigate('#/posts/{id}/edit')`."
+				"effect": "Real anchor; href resolves via `editTargetHref('post', id, routes)` — workspace editor route when declared, classic `post.php` handoff otherwise."
 			}
 		],
 		"design-system-leakage": [

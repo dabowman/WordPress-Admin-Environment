@@ -17,8 +17,10 @@ import SidebarDrilldownRenderer from './_renderers/SidebarDrilldownRenderer';
 import SidebarTreeRenderer from './_renderers/SidebarTreeRenderer';
 
 // Register the renderers the bundled core engines ship through
-// `core:navigation`. `sidebar-drilldown` is `core:default`'s strategy;
-// `sidebar-tree` is available to any engine that names it. Engine-owned
+// `core:navigation`. `core:default` names `sidebar-tree` in its
+// engine.json; `sidebar-drilldown` is the fallback when an engine ships
+// no `menu-renderer` field, and stays available to any engine that
+// names it. Engine-owned
 // renderers that aren't part of core:navigation — `core:single-pane`'s
 // `drawer` — register from their own engine module so they travel with
 // the engine when it's extracted to a plugin. Third-party `plugin:*`

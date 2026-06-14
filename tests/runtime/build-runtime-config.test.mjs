@@ -7,7 +7,7 @@
  * directly (`src/runtime/compile/*`):
  *   - synthesizeRoutes      — screens → routes (+ screenId, slot routes, iframe)
  *   - synthesizeRegions     — engine defaultRegions merged under workspace regions
- *   - synthesizeDefaultRoute — workspace.default-screen → path, with fallback
+ *   - synthesizeDefaultRoute — top-level default-screen → path, with fallback
  *   - compileCommands       — dedupe by id (later wins)
  *   - translateIframeRef    — iframe:<slug> → core:iframe-fallback + config.url
  *   - buildRuntimeConfig    — orchestrator + e2e over every bundled workspace
@@ -341,7 +341,7 @@ eq(
 console.log( '\n— synthesizeDefaultRoute —\n' );
 
 eq(
-	'default from workspace.default-screen',
+	'default from top-level default-screen',
 	synthesizeDefaultRoute(
 		{ home: { path: '/dashboard/home' }, posts: { path: '/posts' } },
 		'home'

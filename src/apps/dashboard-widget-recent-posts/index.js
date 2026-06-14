@@ -19,11 +19,16 @@ import { Button, Stack, Text } from '@wordpress/ui';
 import { Spinner } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { navigate } from '../../runtime/routing/router';
+import { useKernel } from '../../runtime/kernel-context';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
 import { recentDraftsQuery } from './query.mjs';
 
 export default function DashboardWidgetRecentPostsApp() {
 	const userId = window.wpAdminWorkspaces?.userId;
+	// Editor-link target (Tier 1 handoff): the workspace editor route when
+	// the active workspace declares one, classic `post.php` otherwise.
+	const { config: runtimeConfig } = useKernel();
+	const routes = runtimeConfig?.routes;
 	const query = useMemo( () => recentDraftsQuery( userId ), [ userId ] );
 	const drafts = useEntityRecords( 'postType', 'post', query, {
 		enabled: !! userId,
@@ -52,8 +57,14 @@ export default function DashboardWidgetRecentPostsApp() {
 					<Button
 						tone="neutral"
 						variant="minimal"
-						onClick={ () =>
-							navigate( `#/posts/${ draft.id }/edit` )
+						render={
+							<a
+								href={ editTargetHref(
+									'post',
+									draft.id,
+									routes
+								) }
+							/>
 						}
 					>
 						{ draft.title?.raw ||

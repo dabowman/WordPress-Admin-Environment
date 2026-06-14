@@ -250,8 +250,8 @@
 				"author"
 			],
 			"navigates": [
-				"#/posts/{id}/edit",
-				"#/pages/{id}/edit"
+				"#/{segment}/{id}/edit — only when the active workspace declares the editor route",
+				"post.php?post={id}&action=edit — classic full-page handoff default (Tier 1, docs/block-editor-native-port.md)"
 			]
 		},
 		"states": [
@@ -289,11 +289,11 @@
 		"interactions": [
 			{
 				"trigger": "Click row title",
-				"effect": "Navigate to the editor route for the post type via `navigate(editHref(postType, item.id))`."
+				"effect": "Real anchor (`Button render={<a/>}`) whose href resolves via `editTargetHref(postType, item.id, routes)`: the workspace editor route when the active workspace declares one, classic `post.php?post={id}&action=edit` otherwise (full-page handoff — the admin-link interceptor passes it through as a top-level navigation)."
 			},
 			{
 				"trigger": "Edit row action",
-				"effect": "Same as clicking the title — navigate to editor."
+				"effect": "Same target as the title link, followed via `followHref` (no anchor exists in an action menu; the synthetic anchor click keeps the interceptor in charge)."
 			},
 			{
 				"trigger": "View row action",

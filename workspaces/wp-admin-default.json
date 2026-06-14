@@ -945,40 +945,6 @@
 				"post_type": "post"
 			}
 		},
-		"posts-new": {
-			"label": "Add New Post",
-			"icon": "plus",
-			"path": "/posts/new",
-			"app": "core:editor",
-			"config": {
-				"postType": "post"
-			},
-			"permissions": {
-				"capabilities": [
-					"edit_posts"
-				]
-			},
-			"mode": "takeover",
-			"legacy_path": "post-new.php",
-			"legacy_query": {
-				"post_type": "post"
-			}
-		},
-		"post-edit": {
-			"label": "Edit Post",
-			"path": "/posts/{id}/edit",
-			"app": "core:editor",
-			"config": {
-				"postType": "post",
-				"id": "{id}"
-			},
-			"permissions": {
-				"capabilities": [
-					"edit_posts"
-				]
-			},
-			"mode": "takeover"
-		},
 		"categories": {
 			"label": "Categories",
 			"icon": "category",
@@ -1056,40 +1022,6 @@
 			"legacy_query": {
 				"post_type": "page"
 			}
-		},
-		"pages-new": {
-			"label": "Add New Page",
-			"icon": "plus",
-			"path": "/pages/new",
-			"app": "core:editor",
-			"config": {
-				"postType": "page"
-			},
-			"permissions": {
-				"capabilities": [
-					"edit_pages"
-				]
-			},
-			"mode": "takeover",
-			"legacy_path": "post-new.php",
-			"legacy_query": {
-				"post_type": "page"
-			}
-		},
-		"page-edit": {
-			"label": "Edit Page",
-			"path": "/pages/{id}/edit",
-			"app": "core:editor",
-			"config": {
-				"postType": "page",
-				"id": "{id}"
-			},
-			"permissions": {
-				"capabilities": [
-					"edit_pages"
-				]
-			},
-			"mode": "takeover"
 		},
 		"media": {
 			"label": "Media",
@@ -1546,7 +1478,14 @@
 				},
 				"posts-new": {
 					"label": "Add Post",
-					"position": 20
+					"icon": "plus",
+					"href": "post-new.php",
+					"position": 20,
+					"permissions": {
+						"capabilities": [
+							"edit_posts"
+						]
+					}
 				},
 				"categories": {
 					"position": 30
@@ -1569,7 +1508,14 @@
 				},
 				"pages-new": {
 					"label": "Add Page",
-					"position": 20
+					"icon": "plus",
+					"href": "post-new.php?post_type=page",
+					"position": 20,
+					"permissions": {
+						"capabilities": [
+							"edit_pages"
+						]
+					}
 				}
 			}
 		},
@@ -1737,12 +1683,6 @@
 			"shortcut": "Mod+K",
 			"invoke": "core:command-palette",
 			"label": "Open Command Palette"
-		},
-		{
-			"id": "navigate-posts-new",
-			"shortcut": "Mod+Alt+N",
-			"navigate": "/posts/new",
-			"label": "New Post"
 		},
 		{
 			"id": "navigate-posts",

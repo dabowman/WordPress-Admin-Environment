@@ -2,7 +2,7 @@
 
 **Status:** Tier 2 — full spec.
 **Source PHP:** `wp-admin/import.php` + `wp-admin/includes/import.php` + `wp-admin/includes/class-wp-importer.php`
-**Current workspace coverage:** None. Bundled `developer-workspace.json` exposes the original via `iframe:import.php`.
+**Current workspace coverage:** None. The bundled `wp-admin-default.json` baseline exposes the original via `iframe:import.php`.
 
 This spec describes the **semantic surface** of the WordPress Import screen so an agent can rebuild it in any UI library or framework. It does not prescribe component names, CSS, or specific React APIs.
 
@@ -307,7 +307,7 @@ Plugin compatibility note: most importer plugins are old (WordPress Importer is 
 
 ### Current workspace coverage
 - **Source:** none.
-- **What works:** `iframe:import.php` works in `developer-admin` workspace.
+- **What works:** `iframe:import.php` works as an `iframe:` escape hatch (e.g. in the `wp-admin-default` baseline).
 
 ### Gaps vs. this spec
 

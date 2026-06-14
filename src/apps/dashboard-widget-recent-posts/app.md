@@ -6,7 +6,7 @@ Lists the five most recently modified post drafts. Ported from `core:dashboard`'
 
 - Query `postType/post` with `{ per_page: 5, status: 'draft', orderby: 'modified', order: 'desc', context: 'edit' }`.
 - Render each row as a clickable title + modified-date.
-- Click → `navigate('#/posts/{id}/edit')`.
+- Each draft title is a real anchor whose href resolves via `editTargetHref('post', id, routes)` — the workspace editor route when the active workspace declares one, the classic `post.php?post={id}&action=edit` handoff otherwise (Tier 1, `docs/block-editor-native-port.md`).
 
 ## Known limitations
 
