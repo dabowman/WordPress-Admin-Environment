@@ -221,6 +221,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config-rest.php';
+require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-abilities.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-cli.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-validator.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/manifests/class-wp-admin-workspaces-manifest-registry.php';

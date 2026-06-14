@@ -6,6 +6,48 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Added: workspace-customization abilities (Abilities API)
+
+First Abilities API surface: `WP_Admin_Workspaces_Abilities`
+(`includes/class-wp-admin-workspaces-abilities.php`) registers the
+`wp-admin-workspaces` category + 12 abilities — read primitives
+(`get-workspace-config`, `describe-customization-surface`, `get-user-prefs`,
+`get-site-config`, `list-workspaces`), write primitives (`update-user-prefs`
+with an applied/rejected pre-flight report, `reset-user-prefs`,
+`update-site-config` with stored-tombstone + `remove` semantics and its own
+applied/rejected resolve report), and
+semantic wrappers (`switch-workspace`, `set-default-screen`,
+`hide-menu-item`/`show-menu-item`). Designed for AI agents via
+`wp-abilities/v1` REST: every ability ships input/output JSON schemas +
+LLM-oriented descriptions; reads carry `meta.readonly`. Feature-detected —
+silent no-op below WP 6.9 (no `Requires at least` bump). Catalog + design
+stance in `docs/abilities.md`; ability IDs are stable API.
+
+Supporting changes:
+
+- **`WP_Admin_Workspaces_Customizable::describe_writable_paths()`** — the
+  inverse view of `filter_doc`: reports consumer-tier writable paths
+  (`{path, mode: subtree|exact}`) from a merged doc's `customizable`
+  declarations, deny-list filtered. Backs `describe-customization-surface`;
+  reusable by the appearance-preferences UI later.
+- **Cascade fix:** `default-screen` joined
+  `WP_Admin_Workspaces_Customizable::V3_TOP_LEVEL_BLOCKS`. Previously a
+  site-origin `default-screen` was silently dropped by `filter_doc`
+  (contradicting the "site may declare any block shape" trust-tier rule),
+  so the site tier could never change the default screen. Consumer origins
+  still can't set it (scalar replacements are rejected for them).
+- **Shared patch primitives:** `deep_merge_patch` (null-deletes for the user
+  slice / null-as-stored-tombstone for the site slice) + `count_keys` moved
+  from `WP_Admin_Workspaces_Prefs_REST` privates into
+  `WP_Admin_Workspaces_Util`; the REST transport now delegates, so REST and
+  abilities share one merge implementation and one set of payload bounds.
+- **Tests:** `tests/php/run-abilities-tests.php` — registration, permission
+  floors per role, per-user prune, locked-baseline vs fixture-allowlist
+  describe/pre-flight, site-tier writes asserted against the RESOLVED doc
+  (pins the `default-screen` fix), switch-workspace error states incl. the
+  file-override 409 (via the `wp_admin_workspaces_workspace_json_path`
+  filter). Skips cleanly when the Abilities API is absent.
+
 ### Changed: Tier 1 block-editor handoff — wp-admin-default edits in the real editor (issue #79, `docs/block-editor-native-port.md`)
 
 Implements sequencing step 1 of the block-editor strategy decision (2026-06-10):

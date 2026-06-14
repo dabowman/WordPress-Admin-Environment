@@ -50,8 +50,18 @@ class WP_Admin_Workspaces_Customizable {
 	/** Origins subject to per-field path-allowlist enforcement. */
 	const CONSUMER_ORIGINS = array( 'role', 'user' );
 
-	/** v3 top-level blocks gated by per-field enforcement on consumer origins. */
-	const V3_TOP_LEVEL_BLOCKS = array( 'menu', 'screens', 'commands', 'workspace', 'preload', 'regions', 'routes' );
+	/**
+	 * v3 top-level blocks gated by per-field enforcement on consumer origins.
+	 *
+	 * `default-screen` rides this list so the trusted `site` origin can set
+	 * it (filter_doc rebuilds consumer/site docs from only the blocks named
+	 * here — before it was listed, a site-origin `default-screen` was
+	 * silently dropped, contradicting the documented "site may declare any
+	 * block shape" trust-tier rule). Consumer origins (role/user) still
+	 * can't touch it: it's a scalar at the top of the block, and
+	 * `filter_v3_block` rejects scalar replacements from consumers outright.
+	 */
+	const V3_TOP_LEVEL_BLOCKS = array( 'menu', 'screens', 'commands', 'workspace', 'preload', 'regions', 'routes', 'default-screen' );
 
 	/**
 	 * Hardcoded deny patterns. Each pattern is a dotted path against the
@@ -204,6 +214,207 @@ class WP_Admin_Workspaces_Customizable {
 		// writable by a downstream origin — they identify the workspace.
 
 		return $out;
+	}
+
+	/**
+	 * Describe every path a CONSUMER origin (role/user) may write, given a
+	 * resolved/merged doc. The inverse view of `filter_doc`: instead of
+	 * filtering a patch, it reports the allowlist so a client (the
+	 * customization abilities, the appearance-preferences UI) can discover
+	 * what is writable before attempting a write.
+	 *
+	 * Mirrors `filter_doc`'s enforcement surfaces exactly — only
+	 * declarations enforcement actually honors are reported:
+	 *   - `styles`: the ROOT `customizable` declaration only (nested styles
+	 *     declarations are not consulted by `filter_doc`).
+	 *   - `settings.applications` / `settings.regions`: per-entry
+	 *     declarations (`filter_writes`).
+	 *   - v3 top-level blocks: declarations at ANY depth
+	 *     (`path_is_allowed` walks every ancestor).
+	 *
+	 * Returns a list of `{ path, mode }` entries:
+	 *   - mode `subtree` — a `customizable: true` node; everything under
+	 *     `path` is writable EXCEPT paths matching the hardcoded deny-list
+	 *     (callers must surface `DENY_PATTERNS` alongside).
+	 *   - mode `exact` — an allowlist entry; only a leaf at exactly `path`
+	 *     is writable (`tail_matches_any` is an exact-tail match).
+	 *
+	 * Entries whose own path matches `DENY_PATTERNS` are dropped — the
+	 * deny-list beats any allowlist.
+	 *
+	 * @param array $doc The cascade-merged (or resolved) doc whose
+	 *                   `customizable` declarations to read.
+	 * @return array[] List of `array( 'path' => string, 'mode' => string )`.
+	 */
+	public static function describe_writable_paths( $doc ) {
+		$out = array();
+		if ( ! is_array( $doc ) ) {
+			return $out;
+		}
+
+		// styles — root declaration only (mirrors filter_doc → filter_subtree).
+		$styles_decl = self::read_decl( $doc['styles'] ?? null );
+		if ( $styles_decl === true ) {
+			$out[] = array(
+				'path' => 'styles',
+				'mode' => 'subtree',
+			);
+		} elseif ( is_array( $styles_decl ) ) {
+			foreach ( $styles_decl as $path ) {
+				if ( is_string( $path ) ) {
+					$out[] = array(
+						'path' => 'styles.' . $path,
+						'mode' => 'exact',
+					);
+				}
+			}
+		}
+
+		// settings.applications / settings.regions — per-entry declarations
+		// (mirrors filter_doc → filter_settings → filter_writes).
+		foreach ( array( 'applications', 'regions' ) as $coll ) {
+			$entries = $doc['settings'][ $coll ] ?? null;
+			if ( ! is_array( $entries ) ) {
+				continue;
+			}
+			foreach ( self::index_by_key( $entries, 'id' ) as $id => $entry ) {
+				$decl = self::read_decl( $entry );
+				$base = "settings.{$coll}.{$id}";
+				if ( $decl === true ) {
+					$out[] = array(
+						'path' => $base,
+						'mode' => 'subtree',
+					);
+				} elseif ( is_array( $decl ) ) {
+					foreach ( $decl as $path ) {
+						if ( is_string( $path ) ) {
+							$out[] = array(
+								'path' => $base . '.' . $path,
+								'mode' => 'exact',
+							);
+						}
+					}
+				}
+			}
+		}
+
+		// v3 top-level blocks — declarations honored at any depth
+		// (mirrors filter_doc → filter_v3_block → path_is_allowed).
+		foreach ( self::V3_TOP_LEVEL_BLOCKS as $block ) {
+			if ( isset( $doc[ $block ] ) && is_array( $doc[ $block ] ) ) {
+				self::collect_decl_paths( $doc[ $block ], $block, $out );
+			}
+		}
+
+		// The hardcoded deny-list beats every allowlist — drop entries it
+		// would reject anyway. (A `subtree` entry may still CONTAIN denied
+		// paths — e.g. `screens.foo` subtree with `screens.foo.permissions`
+		// denied — which is why callers surface DENY_PATTERNS alongside.)
+		$out = array_values( array_filter(
+			$out,
+			function ( $entry ) {
+				return ! self::path_matches_any_pattern( $entry['path'], self::DENY_PATTERNS );
+			}
+		) );
+
+		return $out;
+	}
+
+	/**
+	 * Flatten a doc/patch into dotted leaf paths using the SAME walker
+	 * enforcement uses (`collect_leaves`), so the abilities' pre-flight
+	 * applied/rejected diff compares like with like. Keeping this here —
+	 * next to the enforcement walker — is deliberate: any change to leaf
+	 * collection (keyed-list detection, key fields) updates both in one
+	 * place instead of silently desyncing an external copy.
+	 *
+	 * @param array $tree Doc or patch tree.
+	 * @return string[] Dotted leaf paths.
+	 */
+	public static function flatten_leaf_paths( $tree ) {
+		if ( ! is_array( $tree ) ) {
+			return array();
+		}
+		$leaves = array();
+		foreach ( $tree as $k => $v ) {
+			self::collect_leaves( $v, (string) $k, $leaves );
+		}
+		return array_keys( $leaves );
+	}
+
+	/**
+	 * Recursive worker for `describe_writable_paths` over a v3 block —
+	 * collect `{ path, mode }` entries for every `customizable` declaration
+	 * in the subtree. Keyed lists step by `id`/`slug`/`name` exactly like
+	 * `collect_leaves` so the reported paths match what enforcement checks.
+	 *
+	 * @param array  $node Subtree to walk.
+	 * @param string $path Dotted path of the subtree (block name first).
+	 * @param array  $out  Accumulator (by reference).
+	 */
+	private static function collect_decl_paths( $node, $path, &$out ) {
+		if ( ! is_array( $node ) ) {
+			return;
+		}
+		$decl = self::read_decl( $node );
+		if ( $decl === true ) {
+			$out[] = array(
+				'path' => $path,
+				'mode' => 'subtree',
+			);
+			// Everything under this node is already writable — the
+			// shallowest matching declaration wins in `path_is_allowed`, so
+			// deeper declarations can't restrict it. Skip the descent; it
+			// would only emit redundant entries inside the subtree.
+			return;
+		}
+		if ( is_array( $decl ) ) {
+			foreach ( $decl as $rel ) {
+				if ( is_string( $rel ) ) {
+					$out[] = array(
+						'path' => $path . '.' . $rel,
+						'mode' => 'exact',
+					);
+				}
+			}
+		}
+
+		if ( WP_Admin_Workspaces_Merge::is_assoc( $node ) ) {
+			foreach ( $node as $k => $v ) {
+				if ( $k === self::FIELD ) {
+					continue;
+				}
+				if ( is_array( $v ) ) {
+					self::collect_decl_paths( $v, $path . '.' . $k, $out );
+				}
+			}
+			return;
+		}
+
+		// List-form. Keyed (id/slug/name) steps by id; plain lists by index.
+		$key   = null;
+		$first = reset( $node );
+		if ( is_array( $first ) ) {
+			foreach ( array( 'id', 'slug', 'name' ) as $k ) {
+				if ( array_key_exists( $k, $first ) ) {
+					$key = $k;
+					break;
+				}
+			}
+		}
+		if ( $key !== null ) {
+			foreach ( $node as $entry ) {
+				if ( is_array( $entry ) && isset( $entry[ $key ] ) ) {
+					self::collect_decl_paths( $entry, $path . '.' . $entry[ $key ], $out );
+				}
+			}
+			return;
+		}
+		foreach ( $node as $i => $entry ) {
+			if ( is_array( $entry ) ) {
+				self::collect_decl_paths( $entry, $path . '.' . $i, $out );
+			}
+		}
 	}
 
 	/**
