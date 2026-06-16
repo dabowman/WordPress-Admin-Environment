@@ -7,19 +7,35 @@
  * `core:desktop-iframe`. They previously each carried a byte-near copy of this
  * CSS + injection boilerplate; this is the single source.
  *
- * The site-editor selectors are a superset that's a harmless no-op on the
- * plain post/admin pages the other two apps mount.
+ * The CSS comes in two tiers:
  *
- * TODO: site-editor chrome-hiding selectors are fragile — rev with each WP
- * release. Verify the Style Book canvas layout after upgrades.
+ *   - `BASE_CHROME_HIDE_CSS` hides the WP-admin shell (admin menu, admin bar,
+ *     footer) so a classic wp-admin page or the site editor sits flush in the
+ *     region. Always safe — a harmless no-op on a fullscreen `site-editor.php`
+ *     that renders none of those nodes.
+ *   - `EDITOR_CHROME_HIDE_CSS` additionally strips the *block editor's own*
+ *     hub / navigation sidebar / header so the canvas reads as a chrome-less
+ *     decoration. This is ONLY appropriate for preview / embed surfaces (the
+ *     Design drill-down, a Styles preview). On the full takeover Editor screen
+ *     it removes the editor's own affordances and prevents the user's
+ *     persisted `core/preferences` view from expressing itself — see #253.
+ *     It is therefore OPT-IN, never injected by default.
+ *
+ * TODO: the editor-chrome selectors are fragile — rev with each WP release.
+ * Verify the Style Book / preview canvas layout after upgrades. Scoping them to
+ * the one embed context that needs them (rather than every iframe) shrinks this
+ * surface.
  */
-export const CHROME_HIDE_CSS = `
+export const BASE_CHROME_HIDE_CSS = `
 	#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter {
 		display: none !important;
 	}
 	#wpcontent { margin-left: 0 !important; }
 	html.wp-toolbar { padding-top: 0 !important; }
 	#wpbody-content { padding-top: 0; }
+`;
+
+export const EDITOR_CHROME_HIDE_CSS = `
 	.edit-site-layout__sidebar-region,
 	.edit-site-layout__sidebar,
 	.edit-site-site-hub,
@@ -34,6 +50,24 @@ export const CHROME_HIDE_CSS = `
 `;
 
 /**
+ * Build the chrome-hide stylesheet text.
+ *
+ * Returns the base WP-admin shell hide by default. Pass `hideEditorChrome` to
+ * additionally strip the block editor's own hub / sidebar / header — only
+ * preview / embed surfaces should opt in (see #253).
+ *
+ * @param {Object}  [options]                  Options.
+ * @param {boolean} [options.hideEditorChrome] Also hide the block editor's own
+ *                                             chrome. Defaults to false.
+ * @return {string} The stylesheet text.
+ */
+export function getChromeHideCss( { hideEditorChrome = false } = {} ) {
+	return hideEditorChrome
+		? BASE_CHROME_HIDE_CSS + EDITOR_CHROME_HIDE_CSS
+		: BASE_CHROME_HIDE_CSS;
+}
+
+/**
  * Append the chrome-hide stylesheet to an iframe's document.
  *
  * Accesses `iframeEl.contentDocument` (which can throw a `SecurityError` on a
@@ -42,17 +76,20 @@ export const CHROME_HIDE_CSS = `
  * is surfaced in debug builds (sibling iframe code used to swallow these
  * silently).
  *
- * @param {HTMLIFrameElement} iframeEl The iframe element.
+ * @param {HTMLIFrameElement} iframeEl                   The iframe element.
+ * @param {Object}            [options]                  Options.
+ * @param {boolean}           [options.hideEditorChrome] Also hide the block
+ *                                                       editor's own chrome.
  * @return {boolean} True when the style was injected.
  */
-export function injectChromeHide( iframeEl ) {
+export function injectChromeHide( iframeEl, { hideEditorChrome = false } = {} ) {
 	try {
 		const doc = iframeEl && iframeEl.contentDocument;
 		if ( ! doc ) {
 			return false;
 		}
 		const style = doc.createElement( 'style' );
-		style.textContent = CHROME_HIDE_CSS;
+		style.textContent = getChromeHideCss( { hideEditorChrome } );
 		doc.head.appendChild( style );
 		return true;
 	} catch ( e ) {

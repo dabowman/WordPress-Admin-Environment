@@ -51,7 +51,7 @@
 		"interactions": [
 			{ "trigger": "Click an action", "effect": "Native anchor navigation. External actions open in new tab." },
 			{ "trigger": "Middle-click / Cmd-click", "effect": "Native browser behavior — opens in new tab. Works because IconButton renders as `<a>`." },
-			{ "trigger": "Open +New dropdown", "effect": "Menu of creatable post types; each item navigates to `#/{rest_base}/new`." },
+			{ "trigger": "Open +New dropdown", "effect": "Menu of creatable post types; each item's href resolves via `newTargetHref` — the workspace `/{rest_base}/new` route when the active workspace declares one, classic `post-new.php?post_type=` otherwise (Tier 1 handoff)." },
 			{ "trigger": "Open a harvested admin-bar node with children", "effect": "Dropdown of the node's child links." }
 		],
 		"a11y": {

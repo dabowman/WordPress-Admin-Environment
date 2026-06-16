@@ -55,7 +55,7 @@ instead.
 
 == Installation ==
 
-1. Activate the **Gutenberg** plugin.
+1. On WordPress 6.7–6.9 only: activate the **Gutenberg** plugin (not needed on 7.0+).
 2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
 3. Activate **WP Admin Workspaces**.
@@ -82,8 +82,9 @@ nonce-protected toggle), or disable the workspace under Settings → WP Admin Wo
 
 = What happens if I deactivate Gutenberg? =
 
-The workspace stands down and classic wp-admin is served, with an admin notice
-explaining why. The admin never goes blank.
+On WordPress 7.0+, nothing — core supplies what the workspace needs. On WordPress
+6.7–6.9 the workspace stands down and classic wp-admin is served, with an admin
+notice explaining why. The admin never goes blank.
 
 == Changelog ==
 

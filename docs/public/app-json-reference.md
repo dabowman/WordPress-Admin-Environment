@@ -4,7 +4,7 @@
 
 Manifests contain only intrinsic, install-independent declarations: the app's ARIA role, the platform services it requests from its hosting engine, the WordPress capabilities required to mount it, the configuration schema it accepts when `workspace.json` passes values, the slots it exposes for in-screen sub-mounts, and a baseline `dataView` family if the app renders an entity list. Manifests deliberately do not declare layout, geometry, keystroke bindings, or which install they belong to — those are install decisions and live in `workspace.json`.
 
-This reference covers the app manifest schema (`admin-app.json`).
+This reference covers the app manifest schema (`workspace-app.json`).
 
 ## In this article
 
@@ -22,7 +22,6 @@ This reference covers the app manifest schema (`admin-app.json`).
 - [script](#script)
 - [style](#style)
 - [window](#window)
-- [dashboardWidget](#dashboardwidget)
 - [slots](#slots)
 - [slotHints](#slothints)
 - [dataView](#dataview)
@@ -43,7 +42,7 @@ This reference covers the app manifest schema (`admin-app.json`).
 }
 ```
 
-The schema is also available in-repo at [`docs/schemas/workspace-app.json`](../schemas/admin-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
+The schema is also available in-repo at [`docs/schemas/workspace-app.json`](../schemas/workspace-app.json) for offline tooling. Relative `$schema` paths are accepted (mirroring the `block.json` convention).
 
 **Required fields:** `id`, `version`, `title`, `role`, `script`. All other top-level fields are optional. `additionalProperties` is `false` — unknown top-level fields are a validation error.
 
@@ -59,15 +58,15 @@ The runtime registry rejects duplicate ids; plugins extending core apps must use
 
 | Property | Description                                                                                                  | Type   | Default |
 |----------|--------------------------------------------------------------------------------------------------------------|--------|---------|
-| id       | Namespaced app id matching `^(core:[a-z][a-z0-9-]*\|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9-]*)$`.                | string | —       |
+| id       | Namespaced app id matching `^(core:[a-z][a-z0-9]*(-[a-z0-9]+)*\|plugin:[a-z][a-z0-9-]*/[a-z][a-z0-9]*(-[a-z0-9]+)*)$`.                | string | —       |
 
 ## version
 
-Manifest schema version this document conforms to (currently `3`). Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
+Manifest schema version this document conforms to. v3 is the current shape (paired with the v3 `workspace.json` schema); manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
 
-| Property | Description                                       | Type    | Default |
-|----------|---------------------------------------------------|---------|---------|
-| version  | Manifest version. Must be `3` for the current shape. | integer | —       |
+| Property | Description                                                                       | Type    | Default |
+|----------|-----------------------------------------------------------------------------------|---------|---------|
+| version  | Manifest version, integer `>= 1`. v3 is the current shape; v1/v2 remain readable. | integer | —       |
 
 ## title
 
@@ -212,62 +211,40 @@ Optional window-mount hints for engines that mount this app inside a window-fram
 | multiInstance   | When `true`, the app may be opened as multiple simultaneous windows with independent state. When `false`, re-opening focuses the existing window. | boolean | `false` |
 | icon            | Icon registry name (resolved by the active engine's icon table). Used for window-frame titlebar, taskbar/dock entry, overview switcher. | string  | generic app icon |
 
-## dashboardWidget
-
-Optional dashboard-widget hints. When present, the app may be mounted as a tile inside a `core:dashboard-grid` region by `core:dashboard-host`. The block carries default placement + sizing hints; `workspace.json`'s top-level `dashboardWidgets[appId]` overrides per-id (workspace.json wins per-property).
-
-Apps that are not eligible widgets (kernel chrome, editors, etc.) omit this block.
-
-```json
-{
-	"dashboardWidget": {
-		"title": "Recent Drafts",
-		"defaultSize": { "w": 2, "h": 1 },
-		"minSize": { "w": 1, "h": 1 },
-		"position": "auto"
-	}
-}
-```
-
-### Dashboard widget fields
-
-| Property      | Description                                                                                                                                          | Type             | Default       |
-|---------------|------------------------------------------------------------------------------------------------------------------------------------------------------|------------------|---------------|
-| title         | Tile-header title. Translatable. Falls back to the manifest's top-level `title` when omitted.                                                       | string           | `title`       |
-| defaultSize   | Initial `{ w, h }` size in grid cells. Both `w` and `h` required when set; integers `>= 1`.                                                          | object           | `{ w: 1, h: 1 }` |
-| minSize       | Floor `{ w, h }` size in grid cells. Both required when set; integers `>= 1`. The host clamps `workspace.json` overrides to this floor.                  | object           | `{ w: 1, h: 1 }` |
-| position      | `"auto"` (auto-flow) or explicit `{ row, col }` (1-indexed CSS Grid coordinates). Both `row` and `col` required when an object is given.             | string \| object | `"auto"`      |
-
 ## slots
 
-Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) declare the named slots they expose to other apps in the same screen's `apps[]` array. Each entry under `slots` is a `{ description }` object naming a slot.
+Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) declare the named slots they expose to other apps in the same screen's `apps[]` array. Each entry under `slots` is keyed by a kebab-case slot id and requires a `label`; `description` and `accepts` are optional.
 
 ```json
 {
 	"slots": {
-		"grid": { "description": "Widget grid tiles." }
+		"grid": {
+			"label": "Dashboard Grid",
+			"description": "Tile grid that lays widgets out by CSS Grid auto-flow.",
+			"accepts": "widget"
+		}
 	}
 }
 ```
 
 A screen mounting `core:dashboard-host` (which declares a `grid` slot) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
 
-| Property              | Description                                                                                                              | Type   | Default |
-|-----------------------|--------------------------------------------------------------------------------------------------------------------------|--------|---------|
-| slots                 | Map of slot id → `{ description, scope? }`. Slot ids are kebab-case. Scope defaults to `"screen"`.                       | object | —       |
+| Property    | Description                                                                                                                                                              | Type   | Default |
+|-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| label       | **Required.** Human-readable slot name, surfaced in IDE auto-completion and cascade-audit reports. Translatable.                                                          | string | —       |
+| description | Optional one-line description of what mounts in this slot and how the slot host arranges its children. Translatable.                                                       | string | —       |
+| accepts     | Hint to authoring tools about what belongs in the slot: `app` (full screen-style apps), `widget` (tile-style widgets sized via `slotHints`), or `any`. Not load-bearing.   | string | `"app"` |
 
 ## slotHints
 
-Optional. Default size + position hints for grid-style slot hosts. Cascade-overrideable per-entry from workspace.json `screens[id].apps[].size` / `position`.
+Optional. Size + position defaults the app prefers when it is mounted into a grid-style slot exposed by another app or engine. New in v3 — replaces the v2 `dashboardWidget` block by separating intrinsic defaults (this block) from per-install placement (`screens[id].apps[i]` entries). Every field is overrideable by the placing entry (`screens[id].apps[].size` / `position`); slot hosts that don't understand grid sizing ignore the block entirely. Widget identity (title, hidden-state) lives on the `screens[id].apps[i]` entry that places the widget.
 
 ```json
 {
 	"slotHints": {
-		"grid": {
-			"defaultSize": { "w": 2, "h": 1 },
-			"minSize":     { "w": 1, "h": 1 },
-			"position":    "auto"
-		}
+		"defaultSize": { "w": 2, "h": 1 },
+		"minSize":     { "w": 1, "h": 1 },
+		"position":    "auto"
 	}
 }
 ```

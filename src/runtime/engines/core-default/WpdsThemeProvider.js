@@ -56,7 +56,7 @@ const RealThemeProvider = ( () => {
 		// eslint-disable-next-line no-console
 		console.warn(
 			'wp-admin-workspaces: @wordpress/theme.ThemeProvider unavailable. ' +
-				'Workspace will render empty. Ensure the Gutenberg plugin is active. ' +
+				'Workspace will render empty. Requires WordPress 7.0+, or the Gutenberg plugin on 6.7–6.9. ' +
 				( e?.message || e )
 		);
 		return null;
@@ -152,7 +152,7 @@ export function WpdsThemeProvider( { styles, density, isRoot, children } ) {
 	if ( ! RealThemeProvider ) {
 		// eslint-disable-next-line no-console
 		console.error(
-			'wp-admin-workspaces: @wordpress/theme.ThemeProvider not reachable. Activate the Gutenberg plugin.'
+			'wp-admin-workspaces: @wordpress/theme.ThemeProvider not reachable. Requires WordPress 7.0+, or the Gutenberg plugin on 6.7–6.9.'
 		);
 		return null;
 	}

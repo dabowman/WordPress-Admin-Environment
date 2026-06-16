@@ -1,9 +1,9 @@
 # WordPress Admin Shell — Design Spec
 
 > Authoritative source for the WP Admin Workspaces runtime architecture.
-> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the workspace.json shape (`workspace` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/workspace.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
+> **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the workspace.json shape (top-level `engine` / `default-screen` / `frame` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/workspace.json), [`workspace-app.json`](./schemas/workspace-app.json), [`workspace-engine.json`](./schemas/workspace-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
 >
-> **Version vocabulary note.** This spec uses "v1" / "MVP" to name *product milestones* (MVP → v1 "comprehensive shell", §17 roadmap). That is a different axis from the repo's *architecture* versioning ("v3 shape" in `CLAUDE.md`), which tracks the workspace.json schema reshape. The current architecture is **v3** (`workspace` / `settings` / `screens` / `menu` / `commands` + three artifacts), described in the header below; the runtime contracts in this spec are current and survive v2 → v3 unchanged. Read "v1" here as a milestone label, not the current schema shape.
+> **Version vocabulary note.** This spec uses "v1" / "MVP" to name *product milestones* (MVP → v1 "comprehensive shell", §17 roadmap). That is a different axis from the repo's *architecture* versioning ("v3 shape" in `CLAUDE.md`), which tracks the workspace.json schema reshape. The current architecture is **v3** (top-level `engine` / `frame` / `settings` / `screens` / `menu` / `commands` + three artifacts), described in the header below; the runtime contracts in this spec are current and survive v2 → v3 unchanged. Read "v1" here as a milestone label, not the current schema shape.
 
 The shell is built on three artifact types (app manifest, engine manifest, `workspace.json`). Regions are described by a three-layer vocabulary (`role` / `layout` / `platform`) and compose by recursive nesting — there are no slots in the region tree and no selection event bus; app coordination is data-layer only. Navigation is URL-driven: every navigable surface is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes.
 
@@ -364,7 +364,7 @@ Engines register the same way as apps: convention path (`{plugin}/engines/{name}
 
 `workspace.json` declares **install-specific decisions**: which engine renders, which regions exist on this install, which apps live in them, how URLs route, what keystrokes do what, and what the install looks like (token overrides). Every line is a decision a site author plausibly makes. Nothing intrinsic to apps or engines belongs here.
 
-> **Authoring shape.** Authors write workspace.json with the top-level blocks (`workspace` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/workspace.json`](./schemas/workspace.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
+> **Authoring shape.** Authors write workspace.json with the top-level blocks (`engine` / `default-screen` / `frame` / `settings` / `screens` / `menu` / `commands` / `styles` / `preload`) plus the escape-hatch `regions` / `routes` blocks. See [`docs/schema-sketch.md`](./schema-sketch.md) for the authoritative shape and [`docs/schemas/workspace.json`](./schemas/workspace.json) for the schema. The example below shows the resolved region tree the kernel builds from `screens` / `menu` + the engine's `defaultRegions` — useful when reasoning about region declarations.
 
 ```jsonc
 {
@@ -1082,7 +1082,7 @@ export default {
 
 **Coexistence with wp-admin.** Standard wp-admin remains fully functional. As of 0.1.0 the shell takes over the admin root (`/wp-admin/`, bare `index.php`, bare `admin.php`) when a `wp-content/workspace.json` override is present — see §19. Classic stays reachable for every allowlisted endpoint (RPC / install / update / customizer / network admin), via plugin `?page=` pages, and via the cap-gated `?classic=1` cookie escape hatch.
 
-**No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. workspace.json has a single shape (`workspace` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
+**No migration path.** Nothing has shipped publicly, so there is no installed base and no prior shape to migrate from. workspace.json has a single shape (top-level `engine` / `frame` / `settings` / `screens` / `menu` / `commands`), read natively by the runtime.
 
 ---
 
@@ -1117,7 +1117,7 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
   - `core:settings`, `core:users`, `core:comments`
   - `core:site-editor` (native mount, replacing iframe)
 - [ ] Four-layer capability gating with recursive nav drilldown removal
-- [ ] JSON Schemas published at `schemas.wp.org/workspace.json`, `admin-app.json`, `admin-engine.json`
+- [ ] JSON Schemas published at `schemas.wp.org/workspace.json`, `workspace-app.json`, `workspace-engine.json`
 - [ ] WP-CLI: `wp admin-shell list|activate|register|upgrade-config`
 - [ ] Coordinate `tokens.json` proposal with WordPress core for theme.json v3 alignment
 
@@ -1367,7 +1367,7 @@ In-repo:
 - [`schema-sketch.md`](./schema-sketch.md) — **workspace.json design doc**: workspace / settings / screens / menu / commands shape, permissions OR-semantic with trust tiers, modes catalog with `extends`, 3-tier slot vocabulary, programmatic workspace registration.
 - [`dataview-config.md`](./dataview-config.md) — author-facing guide for the dataView primitive.
 - [`core-default-engine.md`](./core-default-engine.md) — engine contract worked example.
-- [`schemas/workspace.json`](./schemas/workspace.json), [`admin-app.json`](./schemas/admin-app.json), [`admin-engine.json`](./schemas/admin-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
+- [`schemas/workspace.json`](./schemas/workspace.json), [`workspace-app.json`](./schemas/workspace-app.json), [`workspace-engine.json`](./schemas/workspace-engine.json), [`tokens.json`](./schemas/tokens.json) — JSON Schemas.
 - [`public/workspace-json-reference.md`](./public/workspace-json-reference.md), [`app-json-reference.md`](./public/app-json-reference.md), [`engine-json-reference.md`](./public/engine-json-reference.md) — public-facing reference docs.
 - [`archive/research/admin-customization-prior-art.md`](./archive/research/admin-customization-prior-art.md) — Calypso, CIAB, Untangling, MSD context. (Archived.)
 - [`archive/research/shell-architecture-research.md`](./archive/research/shell-architecture-research.md) — GNOME, KDE, COSMIC, tiling WMs, VS Code, fish/nu — patterns informing this design. (Archived.)

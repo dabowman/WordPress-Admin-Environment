@@ -28,7 +28,7 @@
  * `Customizable` deny-list + `Permissions` shrink-only enforcement that
  * gate the consumer origins (site/role/user). So the file may add+remove
  * baseline screens (null tombstones), grow `screens[].permissions`, and
- * change `workspace.engine` — the same authority as the bundled plugin.
+ * change the top-level `engine` — the same authority as the bundled plugin.
  * That is correct: writing `wp-content/workspace.json` requires filesystem
  * access, which already implies running arbitrary plugin code, so there's
  * no privilege boundary to defend here. See spec §19.

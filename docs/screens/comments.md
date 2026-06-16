@@ -543,4 +543,4 @@ For v1 of any new workspace config, `iframe:edit-comments.php` is acceptable as 
 - REST controller: `wp-includes/rest-api/endpoints/class-wp-rest-comments-controller.php`
 - REST schema: `https://developer.wordpress.org/rest-api/reference/comments/`
 - Current workspace impl: `src/apps/comments/index.js`
-- Workspace config example: `workspaces/developer-workspace.json`
+- Workspace config example: `workspaces/wp-admin-default.json`

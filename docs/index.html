@@ -210,7 +210,7 @@
       <div class="cta">
         <a class="btn" href="#install">Get started</a>
         <a class="btn ghost" href="https://github.com/dabowman/WordPress-Admin-Environment">View on GitHub</a>
-        <span class="hint">WordPress 6.7+ · requires the Gutenberg plugin</span>
+        <span class="hint">WordPress 7.0+, or 6.7+ with the Gutenberg plugin</span>
       </div>
     </div>
   </section>
@@ -311,10 +311,8 @@
   <span class="tok-key">"version"</span><span class="tok-punc">:</span> <span class="tok-num">3</span><span class="tok-punc">,</span>
   <span class="tok-key">"$wpds"</span><span class="tok-punc">:</span> <span class="tok-str">"6.9"</span><span class="tok-punc">,</span>
   <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"writers-room"</span><span class="tok-punc">,</span>
-  <span class="tok-key">"workspace"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
-    <span class="tok-key">"engine"</span><span class="tok-punc">:</span> <span class="tok-str">"core:single-pane"</span><span class="tok-punc">,</span>
-    <span class="tok-key">"default-screen"</span><span class="tok-punc">:</span> <span class="tok-str">"posts"</span>
-  <span class="tok-punc">},</span>
+  <span class="tok-key">"engine"</span><span class="tok-punc">:</span> <span class="tok-str">"core:single-pane"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"default-screen"</span><span class="tok-punc">:</span> <span class="tok-str">"posts"</span><span class="tok-punc">,</span>
   <span class="tok-key">"screens"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
     <span class="tok-key">"posts"</span><span class="tok-punc">:</span> <span class="tok-punc">{</span>
       <span class="tok-key">"label"</span><span class="tok-punc">:</span> <span class="tok-str">"Stories"</span><span class="tok-punc">,</span>
@@ -342,7 +340,7 @@
       <table class="table">
         <thead><tr><th>Engine</th><th>Idiom</th></tr></thead>
         <tbody>
-          <tr><td><code>core:default</code></td><td>Flagship — dark chrome, drilldown sidebar, elevated cards.</td></tr>
+          <tr><td><code>core:default</code></td><td>Flagship — dark chrome, expandable tree sidebar, elevated cards.</td></tr>
           <tr><td><code>core:single-pane</code></td><td>Mobile-first — appbar plus a collapsible navigation drawer.</td></tr>
           <tr><td><code>core:desktop</code></td><td>Windowed — compositor, dock, and draggable / resizable window frames.</td></tr>
         </tbody>
@@ -358,7 +356,7 @@
       <h2>Install in a few minutes</h2>
       <p class="intro">The plugin ships the <code style="font-family:var(--mono)">wp-admin-default</code> baseline. With no <code style="font-family:var(--mono)">workspace.json</code> present, wp-admin stays classic and untouched — the file is both the trigger and the configuration.</p>
       <div class="steps">
-        <div class="step"><div class="n"></div><p>Activate the <strong>Gutenberg</strong> plugin first — it's a hard runtime dependency (the workspace uses private APIs only Gutenberg's allowlist exposes).</p></div>
+        <div class="step"><div class="n"></div><p>On WordPress 6.7–6.9 only: activate the <strong>Gutenberg</strong> plugin first (it supplies a private-API allowlist those versions lack). WordPress 7.0+ ships it in core — no extra plugin needed.</p></div>
         <div class="step"><div class="n"></div><p>Install <strong>WP Admin Workspaces</strong>: upload <code>wp-admin-workspaces.zip</code> via <em>Plugins → Add New → Upload Plugin</em>, or build from source with <code>npm install &amp;&amp; npm run build</code>.</p></div>
         <div class="step"><div class="n"></div><p>Turn the workspace on: copy a starter template to <code>wp-content/workspace.json</code>, e.g. <code>cp workspaces/single-pane-demo.json wp-content/workspace.json</code> — then edit it down to your deltas.</p></div>
         <div class="step"><div class="n"></div><p>Visit <code>/wp-admin/</code>. Press <code>Cmd/Ctrl + K</code> for the command palette. A <strong>Classic wp-admin</strong> escape hatch stays in the admin bar.</p></div>

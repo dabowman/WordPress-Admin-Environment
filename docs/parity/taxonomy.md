@@ -17,7 +17,7 @@
   - `saveEntityRecord('taxonomy', taxonomy, payload)` → `POST`/`PUT /wp/v2/{rest_base}` (`index.js:335`).
   - `deleteEntityRecord('taxonomy', taxonomy, id, { force: true })` → `DELETE /wp/v2/{rest_base}/{id}?force=true` (`index.js:155`).
   - DataView spec via `useDataView(screenId)` reading `settings.dataViews.taxonomy.{name}.{variant}` (`index.js:80`).
-- **Project screen spec:** `docs/screens/taxonomy.md` exists (Tier-2, full). **Caveat:** it is stale — it still says "Current workspace coverage: **Not implemented**" (line 5) and describes the app as planned. The spec's *semantic surface* is accurate and used as the parity yardstick here, but its status/mapping sections (§15) and the references to a `developer-workspace.json` workspace (§17 line 501-502) are out of date. **Doc gap to report:** update `docs/screens/taxonomy.md` §15 + the `app.md` references to the now-deleted `developer-workspace.json`.
+- **Project screen spec:** `docs/screens/taxonomy.md` exists (Tier-2, full). **Caveat:** it is stale — it still says "Current workspace coverage: **Not implemented**" (line 5) and describes the app as planned. The spec's *semantic surface* is accurate and used as the parity yardstick here, but its status/mapping sections (§15) are out of date. (The references to the now-deleted `developer-workspace.json` in `docs/screens/taxonomy.md` §17 and `app.md` were removed in the #258 docs-drift sweep.) **Doc gap to report:** update `docs/screens/taxonomy.md` §15.
 
 ## Feature parity matrix
 
@@ -152,5 +152,5 @@ The app uses both DataViews (list) and DataForm (the modal form). Usage is **lar
 11. **Categories below-list hint + converter link.** Static "deleting a category…" note; link the category↔tag converter out to classic `import.php`. Where: `src/apps/taxonomy/index.js`. Workspace-side (converter itself is [upstream]/out-of-scope).
 12. **Reassign-on-delete.** Requires a `reassign`/`default` param on the terms DELETE controller. **[upstream]** — file a core REST ticket; until then, document that delete reparents to the taxonomy default.
 13. **Custom-tax default-term protection.** Requires `default_term_{taxonomy}` (or a per-term `protected`/`is_default` schema flag) exposed in REST. **[upstream].**
-14. **Doc hygiene.** Update `docs/screens/taxonomy.md` §15 (status is "Not implemented" but the app exists, line 5) and remove `app.md`/spec references to the deleted `developer-workspace.json` workspace (`src/apps/taxonomy/app.md:13,29`; `docs/screens/taxonomy.md:501-502`). Doc-side.
+14. **Doc hygiene.** Update `docs/screens/taxonomy.md` §15 (status is "Not implemented" but the app exists, line 5). The `app.md`/spec references to the deleted `developer-workspace.json` workspace were removed in the #258 docs-drift sweep. Doc-side.
 15. **Slug-collision feedback + description HTML.** Reflect the server-rewritten slug after save; consider rendering sanitized description HTML rather than `stripTags`. Where: `src/apps/taxonomy/index.js:46-48, 328-343`. Workspace-side.

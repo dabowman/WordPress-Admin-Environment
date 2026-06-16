@@ -11,6 +11,11 @@
 		"properties": {
 			"url": {
 				"type": "string"
+			},
+			"hideEditorChrome": {
+				"type": "boolean",
+				"default": false,
+				"description": "Strip the block editor's own hub/sidebar/header so the canvas renders as a chrome-less decoration. Only preview/embed surfaces should set this; the default takeover Editor screen leaves it false so the site editor keeps its native browse→edit flow and the user's persisted core/preferences view (see #253)."
 			}
 		},
 		"additionalProperties": true
@@ -29,7 +34,7 @@
 		"icon": "external"
 	},
 	"documentation": {
-		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin chrome hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin + edit-site sidebar + site-hub + canvas container — covering both classic wp-admin pages and edit-site iframes. The workspace's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
+		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin shell hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The base chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin — the wp-admin shell common to every admin page. `config.hideEditorChrome: true` additionally strips the block editor's own sidebar / site-hub / header / canvas container (only preview/embed surfaces should opt in; see #253). The workspace's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
 		"data": {
 			"reads": [
 				{
@@ -59,7 +64,7 @@
 		"interactions": [
 			{
 				"trigger": "Iframe `load` event",
-				"effect": "Set `isLoading=false`; attempt to inject chrome-hiding CSS into `event.target.contentDocument`. Cross-origin iframes throw and we silently swallow."
+				"effect": "Set `isLoading=false`; attempt to inject the wp-admin shell-hide CSS into `event.target.contentDocument` (plus the editor-chrome selectors when `config.hideEditorChrome`). Cross-origin iframes throw and we silently swallow."
 			}
 		],
 		"a11y": {
@@ -68,7 +73,7 @@
 		"constraints": [
 			{
 				"concern": "css-selectors-fragile",
-				"note": "Chrome-hide selectors target wp-admin's class names (`#adminmenuwrap`, `#wpadminbar`, `#wpcontent`, `.edit-site-layout__sidebar*`, etc.). Rev with each WordPress release. Style Book canvas in edit-site has historically been the most fragile."
+				"note": "Base chrome-hide selectors target wp-admin's shell class names (`#adminmenuwrap`, `#wpadminbar`, `#wpcontent`). The fragile edit-site selectors (`.edit-site-layout__sidebar*`, `.edit-site-site-hub`, `.edit-site-layout__header-container`, canvas container) are opt-in via `config.hideEditorChrome` — only injected for preview/embed surfaces. Rev with each WordPress release; the Style Book canvas in edit-site has historically been the most fragile."
 			},
 			{
 				"concern": "cross-origin-silent-skip",
@@ -76,7 +81,7 @@
 			},
 			{
 				"concern": "config-additional-properties",
-				"note": "Schema allows additional properties on `config` because adapters (SiteEditorApp, custom apps that delegate to IframeApp) may carry extra fields. The app itself only reads `url`."
+				"note": "Schema allows additional properties on `config` because adapters (SiteEditorApp, custom apps that delegate to IframeApp) may carry extra fields. The app itself reads `url` and `hideEditorChrome`; all other keys are passed through opaquely."
 			},
 			{
 				"concern": "spinner-fallback",

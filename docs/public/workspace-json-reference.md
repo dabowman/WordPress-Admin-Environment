@@ -16,7 +16,8 @@ This reference covers the workspace.json workspace schema (`workspace.json`).
 - [title](#title)
 - [description](#description)
 - [user-switchable](#user-switchable)
-- [workspace](#workspace)
+- [engine / default-screen / frame](#engine--default-screen--frame)
+- [theme-support](#theme-support)
 - [settings](#settings)
 - [screens](#screens)
 - [menu](#menu)
@@ -25,7 +26,6 @@ This reference covers the workspace.json workspace schema (`workspace.json`).
 - [preload](#preload)
 - [regions / routes](#regions--routes-escape-hatches)
 - [customizable](#customizable)
-- [v2 surfaces (deprecated)](#v2-surfaces-deprecated)
 
 ## JSON Schema
 
@@ -60,6 +60,7 @@ The schema is also available in-repo at [`docs/schemas/workspace.json`](../schem
 | `engine` | Top-level (required) — which engine renders the workspace. | Last writer wins; `role`/`user` origins can never write it (hardcoded deny). |
 | `default-screen` | Top-level — screen id the workspace lands on when no URL hash is present. | Last writer wins. |
 | `frame` | Persistent furniture wired into the workspace: branding, notice hosts, persistent widgets (toolbar / sidebar-footer / status-bar). Distinct from `styles.chrome`, which paints it. | Deep-merge per-field. `frame.widgets.<slot>` arrays merge by `id`. |
+| `theme-support` | READ-ONLY synthetic block stamped during resolution — active-theme metadata (`block-theme`, `theme-supports`) used to prune the Appearance menu group. Never authored. | Stamped post-cascade; author values are ignored. |
 | `settings` | Reusable definition registries referenced from elsewhere by id. Contains `dataViews` (3-axis `@wordpress/dataviews` configuration keyed by `kind → name → variant`) and `dataFields` (named field collections). Mirrors the theme.json `settings` pattern. | Deep-merge per-registry, per-entry. |
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
@@ -93,7 +94,7 @@ This field is required because the WPDS surface is the workspace's contract with
 
 Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails.
 
-Examples: `wp-admin-default`, `developer-admin`, `content-author`, `client-portal`, `acme-corp`.
+Examples: `wp-admin-default`, `single-pane-demo`, `desktop-demo`, `acme-corp`.
 
 | Property | Description                                                | Type   | Default |
 |----------|------------------------------------------------------------|--------|---------|
@@ -152,7 +153,10 @@ Install-level intrinsics. `engine` (top-level, required) and `default-screen` (t
 | frame.branding   | `{ logo, title, icon }` — install-level branding shown by `core:site-hub` and similar chrome.                                                         | object  | —       |
 | frame.notices    | `{ banner, snackbar }` — apps that render workspace-scope system notices.                                                                            | object  | —       |
 | frame.widgets    | Map of `<slot>: [ { id, app, ... } ]` — apps that mount persistently across every screen, into engine-declared workspace slots.                       | object  | —       |
-| styles           | Per-workspace style overrides (alternative location to top-level `styles`).                                                                          | object  | —       |
+
+## theme-support
+
+READ-ONLY synthetic block stamped during resolution (`WP_Admin_Workspaces_Appearance_Menu`) — authors never declare it. Carries the active-theme determination used to prune the Appearance menu group: `block-theme` (boolean, from `wp_is_block_theme()`) plus a `theme-supports` map (feature → boolean, from `current_theme_supports()`). It appears in the resolved document agents and tooling read back; writing it in an authored `workspace.json` has no effect.
 
 ## settings
 
@@ -255,7 +259,11 @@ The map of every screen the workspace exposes. Each entry is keyed by a kebab-ca
 | permissions     | Access policy `{ capabilities: [], roles: [] }` with OR semantics. Default when absent: admin-only. See [Permissions](../schema-sketch.md#permissions).    | object           | —       |
 | preload         | REST paths to hydrate when this screen activates. Additive with workspace-level `preload[]`.                                                                  | array            | —       |
 | hidden          | When `true` at any cascade origin, the screen is suppressed entirely.                                                                                        | boolean          | `false` |
-| styles          | Per-screen style overrides.                                                                                                                                  | object           | —       |
+| iconSource      | Arbitrary-icon escape hatch `{ type, value }` for icons the name-based registry can't resolve (data-URI SVG, image URL). Emitted by the classic-menu bridge; preferred over `icon` when both are present. | object           | —       |
+| customizable    | Consumer-origin write allowlist for this screen (see [customizable](#customizable)). The hardcoded deny-list still blocks `permissions` and `app` from `role`/`user` writes even if listed. | boolean \| array | `false` |
+| legacy_path     | Classic wp-admin script this screen replaces (e.g. `edit.php`). Powers both the JS admin-link interceptor and the server-side classic→workspace redirect (GET-only). | string           | —       |
+| legacy_query    | Query-string equalities that must all match for the `legacy_path` mapping to apply (e.g. `{ "post_type": "page" }`).                                          | object           | —       |
+| legacy_params   | Maps `{token}` segments in the screen `path` to classic query keys so captured ids round-trip (e.g. `{ "id": "post" }` for `post.php?post=42`).               | object           | —       |
 
 ### `apps[]` entry
 
@@ -326,6 +334,7 @@ Engine-agnostic information-architecture tree. Each item is keyed by id, nested 
 | external      | When true with `href`, opens in a new browser tab.                                                          | boolean | `false` |
 | separator     | Renders as a visual separator. Other fields ignored.                                                       | boolean | `false` |
 | hidden        | Suppresses the item from rendering. Subtree is still in the tree for cascade addressing.                   | boolean | `false` |
+| permissions   | Visibility prune for items NOT bound to a screen (manual `href` links — e.g. an "Add Post" item linking classic `post-new.php`). Same OR-semantic shape as screen permissions (`{ "capabilities": [...], "roles": [...] }`); items without it render for everyone. Screen-bound items inherit the screen's permissions instead. Visibility-only — the link target enforces its own capabilities server-side. | object  | —       |
 
 ### Menu renderers
 
@@ -450,7 +459,7 @@ Three accepted shapes:
 
 The array form requires unique, non-empty strings; the closest `customizable` declaration to a leaf wins as the cascade walks ancestors.
 
-Entry types that honor `customizable`: `workspace`, each `screens[id]`, each `menu` item (and its nested `items`), each `commands` entry, each `frame.widgets.<slot>[]` entry, `styles`, each `regions[id]` (and nested child regions), and each `routes` entry.
+Entry types that honor `customizable`: `frame`, each `screens[id]`, each `menu` item (and its nested `items`), each `commands` entry, each `frame.widgets.<slot>[]` entry, `styles`, each `regions[id]` (and nested child regions), and each `routes` entry.
 
 Two limits always apply regardless of the declaration:
 
