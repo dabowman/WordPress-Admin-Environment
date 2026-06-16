@@ -36,6 +36,9 @@ const { buildSubmitPayload, firstItem } = await import(
 const { computeBulkPayload, resolveBulkTargets, NO_CHANGE } = await import(
 	resolve( projectRoot, 'src/apps/_shared/dataviews/bulkEditPayload.mjs' )
 );
+const { resolvePinnedStatus, applyStatusPin, lockStatusField } = await import(
+	resolve( projectRoot, 'src/apps/_shared/dataviews/pinnedStatus.mjs' )
+);
 const {
 	readViewSlots,
 	applyViewSlots,
@@ -555,6 +558,98 @@ ok(
 		// Would throw if `items` were null rather than [].
 		return items.filter( () => true );
 	} ).length === 0
+);
+
+// --- pinnedStatus (dedicated status-screen lock) -------------------------
+ok(
+	'resolvePinnedStatus pins a concrete status',
+	resolvePinnedStatus( 'trash' ) === 'trash' &&
+		resolvePinnedStatus( 'draft' ) === 'draft'
+);
+ok(
+	'resolvePinnedStatus does NOT pin "any" (All screen stays filterable)',
+	resolvePinnedStatus( 'any' ) === null
+);
+ok(
+	'resolvePinnedStatus does NOT pin absent / empty / non-string',
+	resolvePinnedStatus( undefined ) === null &&
+		resolvePinnedStatus( '' ) === null &&
+		resolvePinnedStatus( null ) === null &&
+		resolvePinnedStatus( 5 ) === null
+);
+
+ok(
+	'applyStatusPin forces the pinned status over a filter-derived value',
+	applyStatusPin( { status: 'publish' }, 'trash' ).status === 'trash'
+);
+ok(
+	'applyStatusPin is a no-op when unpinned (All screen keeps its status)',
+	applyStatusPin( { status: 'publish' }, null ).status === 'publish'
+);
+ok(
+	'applyStatusPin sets the pin even when no status arg was present',
+	applyStatusPin( {}, 'draft' ).status === 'draft'
+);
+ok(
+	'applyStatusPin honors a custom REST param name',
+	applyStatusPin( {}, 'spam', 'comment_status' ).comment_status === 'spam'
+);
+ok(
+	'applyStatusPin returns the same args object (mutates in place)',
+	( () => {
+		const a = { status: 'x' };
+		return applyStatusPin( a, 'trash' ) === a;
+	} )()
+);
+
+const lockedSpecs = lockStatusField(
+	[
+		{ id: 'title', type: 'text' },
+		{ id: 'status', type: 'text', filterBy: { operators: [ 'isAny' ] } },
+	],
+	'trash'
+);
+ok(
+	'lockStatusField strips filterBy from the status field when pinned',
+	lockedSpecs[ 1 ].filterBy === undefined && lockedSpecs[ 1 ].id === 'status'
+);
+ok(
+	'lockStatusField leaves other fields untouched',
+	lockedSpecs[ 0 ].id === 'title'
+);
+ok(
+	'lockStatusField is a no-op when unpinned',
+	( () => {
+		const specs = [
+			{ id: 'status', type: 'text', filterBy: { operators: [ 'is' ] } },
+		];
+		return lockStatusField( specs, null ) === specs;
+	} )()
+);
+ok(
+	'lockStatusField does not mutate the source spec',
+	( () => {
+		const status = {
+			id: 'status',
+			type: 'text',
+			filterBy: { operators: [ 'is' ] },
+		};
+		lockStatusField( [ status ], 'draft' );
+		return status.filterBy !== undefined;
+	} )()
+);
+ok(
+	'lockStatusField honors a custom field id',
+	lockStatusField(
+		[ { id: 'comment_status', type: 'text', filterBy: {} } ],
+		'spam',
+		'comment_status'
+	)[ 0 ].filterBy === undefined
+);
+ok(
+	'lockStatusField tolerates nullish specs',
+	Array.isArray( lockStatusField( undefined, 'trash' ) ) &&
+		lockStatusField( undefined, 'trash' ).length === 0
 );
 
 // --- viewUrlSlots (#136 URL slot round-trip) ------------------------------

@@ -33,6 +33,11 @@ import {
 } from '../_shared/dataviews/BulkEditModal';
 import { NO_CHANGE } from '../_shared/dataviews/bulkEditPayload.mjs';
 import { buildQueryArgs } from '../_shared/dataviews/buildQueryArgs.mjs';
+import {
+	resolvePinnedStatus,
+	applyStatusPin,
+	lockStatusField,
+} from '../_shared/dataviews/pinnedStatus.mjs';
 import ViewTabs from '../_shared/dataviews/ViewTabs';
 
 const STATUS_LABELS = {
@@ -458,6 +463,14 @@ export default function PostsApp( { config } ) {
 	const screenId = config.screenId || null;
 	const currentUserId = window.wpAdminWorkspaces?.userId;
 
+	// Dedicated status screens (Trash / Drafts / Pending) declare a concrete
+	// `config.status`; that locks the list to it. The query is hard-pinned to
+	// the status below (a UI filter can't override it → gated row actions can't
+	// reappear on the wrong screen), the status field is made non-filterable,
+	// and the status view-tab strip is hidden. `any` / absent (All Posts) does
+	// NOT pin, so that screen stays freely filterable. See pinnedStatus.mjs.
+	const pinnedStatus = resolvePinnedStatus( config.status );
+
 	// "View posts" (Users screen) scopes the list to one author via the
 	// `?author=N` URL slot. The `posts` screen declares `config.author:
 	// "{author}"`, but the primary content region resolves on `_self` (the
@@ -502,7 +515,11 @@ export default function PostsApp( { config } ) {
 
 	const queryArgs = useMemo( () => {
 		const args = buildQueryArgs( view, QUERY_MAPPING, {
-			status: config.status || 'any',
+			// `pinnedStatus` is the concrete pinned status or null; null falls
+			// back to `any` (the freely-filterable All screen). The hard pin
+			// below re-stamps the same value, so reading it here keeps the dep
+			// array down to `pinnedStatus` (mirroring the `fields` memo).
+			status: pinnedStatus || 'any',
 			context: 'edit',
 			_embed: 'author',
 		} );
@@ -514,8 +531,12 @@ export default function PostsApp( { config } ) {
 				args.sticky = filter.value === true || filter.value === 'true';
 			}
 		}
+		// Hard-pin: on a dedicated status screen the pinned status overrides
+		// any filter-derived status so the list can't be steered to another
+		// status (which would revive gated row actions). No-op when unpinned.
+		applyStatusPin( args, pinnedStatus );
 		return applyDateFilters( args, view.filters );
-	}, [ view, config.status ] );
+	}, [ view, pinnedStatus ] );
 
 	const { records, isResolving, totalItems, totalPages } = useEntityRecords(
 		'postType',
@@ -523,11 +544,15 @@ export default function PostsApp( { config } ) {
 		queryArgs
 	);
 
+	// On a pinned status screen the tab strip is hidden and the locked status
+	// field surfaces no `elementCounts`, so nothing renders these counts. Pass
+	// empty values to short-circuit `useEntityElementCounts` (the same trick
+	// `stickyCount` uses for non-`post` types) and skip the wasted requests.
 	const statusCounts = useEntityElementCounts(
 		'postType',
 		postType,
 		'status',
-		STATUS_VALUES
+		pinnedStatus ? [] : STATUS_VALUES
 	);
 
 	// Counts for the "Mine" and "Sticky" view tabs ride their own count queries
@@ -537,7 +562,7 @@ export default function PostsApp( { config } ) {
 		'postType',
 		postType,
 		'author',
-		currentUserId ? [ currentUserId ] : []
+		! pinnedStatus && currentUserId ? [ currentUserId ] : []
 	);
 	// Sticky is `post`-only — pass no values for other post types so the hook
 	// short-circuits (no `?sticky=true` request that would count all rows).
@@ -545,14 +570,17 @@ export default function PostsApp( { config } ) {
 		'postType',
 		postType,
 		'sticky',
-		postType === 'post' ? [ true ] : []
+		! pinnedStatus && postType === 'post' ? [ true ] : []
 	);
 
 	// Total across all statuses for the "All" tab — one extra count keyed by the
 	// `any` filter value the All tab applies.
-	const anyCount = useEntityElementCounts( 'postType', postType, 'status', [
-		'any',
-	] );
+	const anyCount = useEntityElementCounts(
+		'postType',
+		postType,
+		'status',
+		pinnedStatus ? [] : [ 'any' ]
+	);
 
 	const { deleteEntityRecord, saveEntityRecord, invalidateResolution } =
 		useDispatch( coreStore );
@@ -598,12 +626,17 @@ export default function PostsApp( { config } ) {
 		// On a non-`post` binding the `categories`/`format` filters carry no
 		// resolvable options, so drop their field specs rather than surface
 		// empty filter dropdowns (mirrors the POST_ONLY_BULK_FIELDS gate).
-		const fieldSpecs =
+		const baseSpecs =
 			postType === 'post'
 				? dataViewConfig.fields
 				: dataViewConfig.fields.filter(
 						( f ) => ! POST_ONLY_FILTER_FIELDS.includes( f.id )
 				  );
+		// On a pinned status screen, make the status field non-filterable so the
+		// UI offers no way to change the pinned status (kept as a display
+		// column). The query is hard-pinned regardless; this drops the
+		// affordance. No-op when unpinned.
+		const fieldSpecs = lockStatusField( baseSpecs, pinnedStatus );
 		return buildFields( fieldSpecs, {
 			labels: FIELD_LABELS,
 			renderers: buildFieldRenderers( ( id ) =>
@@ -629,7 +662,7 @@ export default function PostsApp( { config } ) {
 					? { categories: makeTaxonomyElements( 'category' ) }
 					: {},
 		} );
-	}, [ dataViewConfig, postType, statusCounts, editorRoutes ] );
+	}, [ dataViewConfig, postType, statusCounts, pinnedStatus, editorRoutes ] );
 
 	const actions = useMemo( () => {
 		// Status mutations move rows between filters, so the list query and the
@@ -1002,12 +1035,17 @@ export default function PostsApp( { config } ) {
 				</div>
 			) : (
 				<>
-					<ViewTabs
-						segments={ tabSegments }
-						currentValue={ activeTab }
-						onSelect={ onSelectTab }
-						counts={ tabCounts }
-					/>
+					{ /* The status tab strip switches status, which a pinned
+						   screen (Trash / Drafts / Pending) must not allow — hide
+						   it there. */ }
+					{ ! pinnedStatus && (
+						<ViewTabs
+							segments={ tabSegments }
+							currentValue={ activeTab }
+							onSelect={ onSelectTab }
+							counts={ tabCounts }
+						/>
+					) }
 					<DataViews
 						data={ data }
 						fields={ fields }
