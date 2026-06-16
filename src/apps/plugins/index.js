@@ -6,9 +6,11 @@ import { DataViews } from '@wordpress/dataviews/wp';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch } from '@wordpress/data';
 import { Button, Icon, Notice, Stack, Text } from '@wordpress/ui';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { plus } from '@wordpress/icons';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { meetsMinVersion } from '../_shared/versionCompare.mjs';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -118,20 +120,80 @@ const INSTALL_FORM = {
 	fields: [ 'slug', 'activate' ],
 };
 
+// Running environment versions, read once from the inline config global. Used
+// to flag plugins whose declared `requires_php` / `requires_wp` exceed this
+// install (mirrors core's PHP/WP-incompatibility inline row). Absent globals →
+// `meetsMinVersion` treats every plugin as compatible (no false warnings).
+const ENV_PHP =
+	( typeof window !== 'undefined' && window.wpAdminWorkspaces?.phpVersion ) ||
+	'';
+const ENV_WP =
+	( typeof window !== 'undefined' && window.wpAdminWorkspaces?.wpVersion ) ||
+	'';
+
+/**
+ * Build the PHP/WP-incompatibility warning sentences for a plugin row, or `[]`
+ * when the running environment satisfies both declared minimums. Mirrors the
+ * "does not work with your version of PHP/WordPress" inline row wp-admin shows.
+ *
+ * @param {Object} item Mapped plugin row (carries `requiresPhp`/`requiresWp`).
+ * @return {string[]} Zero, one, or two warning sentences.
+ */
+function incompatibilityWarnings( item ) {
+	const warnings = [];
+	if ( ! meetsMinVersion( ENV_PHP, item.requiresPhp ) ) {
+		warnings.push(
+			sprintf(
+				/* translators: 1: required PHP version, 2: running PHP version */
+				__(
+					'Requires PHP %1$s — this site runs %2$s.',
+					'wp-admin-workspaces'
+				),
+				item.requiresPhp,
+				ENV_PHP
+			)
+		);
+	}
+	if ( ! meetsMinVersion( ENV_WP, item.requiresWp ) ) {
+		warnings.push(
+			sprintf(
+				/* translators: 1: required WordPress version, 2: running WordPress version */
+				__(
+					'Requires WordPress %1$s — this site runs %2$s.',
+					'wp-admin-workspaces'
+				),
+				item.requiresWp,
+				ENV_WP
+			)
+		);
+	}
+	return warnings;
+}
+
 function buildFieldRenderers() {
 	return {
-		name: ( { item } ) => (
-			<Stack direction="column" gap="xs">
-				<Text variant="body-md">
-					<strong>{ item.name }</strong>
-				</Text>
-				<Text variant="body-sm">
-					{ item.description.length > 160
-						? `${ item.description.slice( 0, 160 ) }…`
-						: item.description }
-				</Text>
-			</Stack>
-		),
+		name: ( { item } ) => {
+			const warnings = incompatibilityWarnings( item );
+			return (
+				<Stack direction="column" gap="xs">
+					<Text variant="body-md">
+						<strong>{ item.name }</strong>
+					</Text>
+					<Text variant="body-sm">
+						{ item.description.length > 160
+							? `${ item.description.slice( 0, 160 ) }…`
+							: item.description }
+					</Text>
+					{ warnings.length > 0 && (
+						<Notice.Root intent="error">
+							<Notice.Description>
+								{ warnings.join( ' ' ) }
+							</Notice.Description>
+						</Notice.Root>
+					) }
+				</Stack>
+			);
+		},
 		status: ( { item } ) => (
 			<Text variant="body-sm">
 				{ STATUS_LABELS[ item.status ] || item.status }
@@ -140,7 +202,24 @@ function buildFieldRenderers() {
 		version: ( { item } ) => (
 			<Text variant="body-sm">{ item.version }</Text>
 		),
-		author: ( { item } ) => <Text variant="body-sm">{ item.author }</Text>,
+		// Link the author to its `author_uri` when present (mirrors wp-admin's
+		// "By {author}" link); fall back to plain text otherwise. The URI is
+		// checked with `isSafeHref` — React does not strip `javascript:` URIs
+		// the way PHP's `esc_url()` does, so only http(s) schemes are allowed.
+		author: ( { item } ) =>
+			isSafeHref( item.authorUri ) ? (
+				<Text variant="body-sm">
+					<a
+						href={ item.authorUri }
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						{ item.author }
+					</a>
+				</Text>
+			) : (
+				<Text variant="body-sm">{ item.author }</Text>
+			),
 	};
 }
 
@@ -247,6 +326,8 @@ export default function PluginsApp( { config = {} } = {} ) {
 				author: stripTags( r.author || '' ),
 				authorUri: r.author_uri,
 				pluginUri: r.plugin_uri,
+				requiresPhp: r.requires_php || '',
+				requiresWp: r.requires_wp || '',
 				rawRecord: r,
 			} ) );
 	}, [ records, view ] );
@@ -351,18 +432,17 @@ export default function PluginsApp( { config = {} } = {} ) {
 				activate: ( items ) => setPluginStatus( items, 'active' ),
 				deactivate: ( items ) => setPluginStatus( items, 'inactive' ),
 				visit: ( items ) => {
-					window.open(
-						items[ 0 ].pluginUri,
-						'_blank',
-						'noopener,noreferrer'
-					);
+					const uri = items[ 0 ].pluginUri;
+					if ( isSafeHref( uri ) ) {
+						window.open( uri, '_blank', 'noopener,noreferrer' );
+					}
 				},
 			},
 			modals: { delete: deleteModal },
-			// `eligibleWhen` JSON only handles equality / membership; a presence
-			// check (plugin URI exists) needs code.
+			// `eligibleWhen` JSON only handles equality / membership; a safe-href
+			// check (plugin URI exists + is http(s)) needs code.
 			eligibilityOverrides: {
-				visit: ( item ) => !! item.pluginUri,
+				visit: ( item ) => isSafeHref( item.pluginUri ),
 			},
 		} );
 	}, [ dataViewConfig, setPluginStatus, refresh ] );

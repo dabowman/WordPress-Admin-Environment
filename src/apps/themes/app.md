@@ -15,7 +15,7 @@ Four pieces of state drive the app:
 1. **`dataView`** — pulled via `useDataView(screenId)`. Carries the JSON spec for fields, default view, default layouts, and actions. The baseline ships in `app.json#dataView` and reaches the resolved cascade via `inject_app_baselines`. Sites and plugins override via workspace.json `settings.dataViews.root.theme.<variant|_default>` or the `wp_admin_workspaces_data_view_config_root_theme[_<variant>]` filter. **Field renderers and action callbacks live in the React layer** — the spec carries data only; `buildFieldRenderers()` and `buildActions()` in `index.js` map ids to behavior.
 2. **`view`** — a local `useState` mirroring the DataViews controlled shape, seeded from `dataView.defaultView`. Owned by the app; DataViews calls `onChangeView(next)` on every user-driven change.
 3. **`themes`** — the raw entity records from `useEntityRecords('root', 'theme', { context: 'edit', status: 'active,inactive' })`.
-4. **`data`** — a `useMemo` projection of `themes` into the flat row shape DataViews wants (`{ id, name, screenshot, status, description, version, author, theme_uri, rawRecord }`). `id` is the stylesheet (themes are keyed by slug, not numeric id).
+4. **`data`** — a `useMemo` projection of `themes` into the flat row shape DataViews wants (`{ id, name, screenshot, status, description, version, author, theme_uri, template, tags, isBlockTheme, rawRecord }`). `id` is the stylesheet (themes are keyed by slug, not numeric id). A sibling `themeNames` memo (`{ stylesheet → name }`) lets a child theme's modal name its parent.
 
 The Activate action calls a `useCallback` `activate(theme)` that:
 
@@ -25,7 +25,13 @@ The Activate action calls a `useCallback` `activate(theme)` that:
 
 The inline Activate button in the details modal awaits that boolean and only calls `closeModal()` on `true`, so a failed activation keeps the modal open (with the error snackbar) rather than dismissing as if it succeeded.
 
-The Details action uses DataViews' `RenderModal` shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app renders the full description + version + author + Theme site link + an inline Activate button (visible only when `status !== 'active'`).
+The Details action uses DataViews' `RenderModal` shape — DataViews owns the focus trap, backdrop, and dismiss handling. Inside the modal the app renders the full description + version + author + Theme site link + an inline Activate button (visible only when `status !== 'active'`), plus the read-side parity additions below.
+
+### Details-modal read-side parity (issue #137)
+
+- **Child-theme parent.** When the record's `template` (parent stylesheet) differs from its own `stylesheet`, the modal shows "This is a child theme of {parent}", resolving the parent's display name through the `themeNames` lookup (falling back to the raw slug). Non-child themes always have `template === stylesheet` from the REST API — a truthy `template` alone is not the signal; the `template !== stylesheet` check is required.
+- **Tags.** The theme's tags (`tags.raw`, falling back to splitting `tags.rendered`) render as a comma-joined "Tags: …" line.
+- **Live Preview.** Inactive themes get a Live Preview link via `customize.php?theme={slug}`. Both block and classic themes use the Customizer path — the Customizer is in the hijack endpoint allowlist and correctly previews the chosen theme. The native block-theme path (`site-editor.php?wp_theme_preview={slug}`) is intentionally NOT used: the kernel's admin-link interceptor routes `site-editor.php` to the workspace `/site-editor` route and strips the `?wp_theme_preview` param, which would open the active theme's editor rather than previewing the selected one. `livePreviewUrl()` reads the admin base from `window.wpAdminWorkspaces.adminUrl`.
 
 ## DataView integration (C2 / v3 restored)
 
@@ -86,7 +92,7 @@ Two patterns to preserve:
 ## Known limitations
 
 - No install / upload flow. Adding themes happens in wp-admin.
-- No theme preview (live preview via Customizer or block-theme preview).
+- Live Preview is now a details-modal link for inactive themes (issue #137) — both block and classic themes use `customize.php?theme={slug}` (the Customizer correctly previews any theme including block themes, and is in the hijack allowlist). There is no in-app preview canvas; the link navigates out to the classic Customizer surface. The native block-theme path (`site-editor.php?wp_theme_preview`) is not used because the kernel's admin-link interceptor strips the query param (known limitation; deferred until the Site Editor route supports a `wp_theme_preview` pass-through).
 - Screenshots are loaded directly from the theme record; no resizing or `srcset`.
 - Description truncation is hard 140 chars in the grid card. Full description lives in the details modal.
 - Activation runs entirely through the workspace REST endpoint (`WP_Admin_Workspaces_Themes_REST`); apiFetch sends the REST nonce automatically. On failure the app surfaces an error snackbar instead of navigating away, so the user keeps their place in the workspace.
@@ -95,7 +101,6 @@ Two patterns to preserve:
 Parity gaps versus `docs/screens/themes.md` not surfaced in the v2 app:
 
 - No "Add New Theme" upload affordance.
-- No live-preview / customizer launch.
 - No multisite "Network Activate" action variant.
 - No theme-update notice integration.
 - No theme delete action — wp-admin's row Delete + capability gate are not wired up here.

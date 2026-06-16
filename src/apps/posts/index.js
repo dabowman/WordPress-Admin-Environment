@@ -1,18 +1,21 @@
 import '../_shared/app.css';
+import './index.css';
 import { Spinner } from '@wordpress/components';
 import { useMemo, useRef } from '@wordpress/element';
 import { useEntityRecords, store as coreStore } from '@wordpress/core-data';
 import { useDispatch, resolveSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews } from '@wordpress/dataviews/wp';
-import { Button, Text } from '@wordpress/ui';
+import { Badge, Button, Stack, Text } from '@wordpress/ui';
 import { __, sprintf, _n } from '@wordpress/i18n';
+import { dateI18n } from '@wordpress/date';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useRoute } from '../../runtime/routing/router';
 import { useKernel } from '../../runtime/kernel-context';
 import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
 import { followHref } from '../_shared/navigation/followHref';
 import { useDataView } from '../../runtime/dataView/useDataView';
+import { postDateLabel } from '../_shared/postDateLabel.mjs';
 import {
 	buildFields,
 	elementsFromLabels,
@@ -186,20 +189,72 @@ function makeTaxonomyElements( taxonomy ) {
  * link click for the Tier 1 handoff (plus middle-click / copy-link).
  * @param {Function} hrefFor `( id ) => href` editor-link resolver.
  */
+// Status-aware date label keys → localized strings, mirroring wp-admin's
+// `column_date()`. `missed` is the past-due scheduled state.
+const DATE_LABELS = {
+	published: __( 'Published', 'wp-admin-workspaces' ),
+	scheduled: __( 'Scheduled', 'wp-admin-workspaces' ),
+	missed: __( 'Missed schedule', 'wp-admin-workspaces' ),
+	modified: __( 'Last Modified', 'wp-admin-workspaces' ),
+};
+
 function buildFieldRenderers( hrefFor ) {
 	return {
 		title: ( { item } ) => (
-			<Button
-				variant="minimal"
-				render={ <a href={ hrefFor( item.id ) } /> }
+			<Stack
+				direction="row"
+				gap="xs"
+				align="center"
+				wrap="wrap"
+				className="wp-admin-workspaces-app-posts__title"
 			>
-				{ item.title }
-			</Button>
+				<Button
+					variant="minimal"
+					render={ <a href={ hrefFor( item.id ) } /> }
+				>
+					{ item.title }
+				</Button>
+				{ item.sticky && (
+					<Badge intent="warning">
+						{ __( 'Sticky', 'wp-admin-workspaces' ) }
+					</Badge>
+				) }
+				{ item.passwordProtected && (
+					<Badge intent="neutral">
+						{ __( 'Password protected', 'wp-admin-workspaces' ) }
+					</Badge>
+				) }
+			</Stack>
 		),
 		status: ( { item } ) => (
 			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
 		),
 		author: ( { item } ) => <Text>{ item.author }</Text>,
+		// Status-aware date: "Published" / "Scheduled" / "Missed schedule" /
+		// "Last Modified" above the formatted date, like wp-admin's Date column.
+		date: ( { item } ) => {
+			const { key, dateField, missedSchedule } = postDateLabel( item );
+			const value = item[ dateField ];
+			return (
+				<Stack direction="column" gap="xs">
+					<Text
+						variant="body-sm"
+						className={
+							missedSchedule
+								? 'wp-admin-workspaces-app-posts__date-missed'
+								: 'wp-admin-workspaces-app__muted'
+						}
+					>
+						{ DATE_LABELS[ key ] }
+					</Text>
+					{ value && (
+						<Text variant="body-sm">
+							{ dateI18n( 'M j, Y g:i a', value ) }
+						</Text>
+					) }
+				</Stack>
+			);
+		},
 	};
 }
 
@@ -549,6 +604,18 @@ export default function PostsApp( { config } ) {
 			),
 			status: record.status,
 			date: record.date,
+			// `date_gmt` carries no timezone designator — WordPress REST emits
+			// `Y-m-dTH:i:s` (no trailing `Z`). `postDateLabel` appends `Z` before
+			// parsing so it is treated as a true UTC instant for timezone-stable
+			// missed-schedule detection. Absent on some draft/auto-draft records;
+			// falls back to `date` in `postDateLabel`.
+			date_gmt: record.date_gmt || '',
+			modified: record.modified,
+			// `_post_states` badges: sticky (post-only REST field) + password
+			// protection (the `edit`-context `password` field is the raw
+			// password — non-empty means protected).
+			sticky: !! record.sticky,
+			passwordProtected: !! record.password,
 			author: record._embedded?.author?.[ 0 ]?.name || '',
 			link: record.link,
 			rawRecord: record,

@@ -11,12 +11,15 @@ import { __, sprintf, _n } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { userCan } from '../../runtime/capabilities/userCan';
+import { useKernel } from '../../runtime/kernel-context';
 import {
 	buildFields,
 	elementsFromLabels,
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
+import { editTargetHref } from '../_shared/navigation/editorHref.mjs';
 import {
 	useEntityElementCounts,
 	invalidateEntityElementCounts,
@@ -55,9 +58,20 @@ const STATUS_VALUES = Object.keys( STATUS_LABELS );
 const FIELD_LABELS = {
 	author: __( 'Author', 'wp-admin-workspaces' ),
 	content: __( 'Comment', 'wp-admin-workspaces' ),
+	response: __( 'In response to', 'wp-admin-workspaces' ),
 	status: __( 'Status', 'wp-admin-workspaces' ),
 	date: __( 'Date', 'wp-admin-workspaces' ),
+	type: __( 'Type', 'wp-admin-workspaces' ),
 };
+
+// Comment-type filter options (All / Comments / Pings), mapped to the REST
+// `type` collection param. `pings` resolves to pingbacks + trackbacks
+// server-side; the empty value drops the `type` arg so every type is returned.
+const TYPE_ELEMENTS = [
+	{ value: '', label: __( 'All comment types', 'wp-admin-workspaces' ) },
+	{ value: 'comment', label: __( 'Comments', 'wp-admin-workspaces' ) },
+	{ value: 'pings', label: __( 'Pings', 'wp-admin-workspaces' ) },
+];
 
 const ACTION_LABELS = {
 	edit: __( 'Edit', 'wp-admin-workspaces' ),
@@ -209,7 +223,7 @@ function AuthorCell( { item } ) {
 						{ item.authorEmail }
 					</a>
 				) : null }
-				{ item.authorUrl ? (
+				{ item.authorUrl && isSafeHref( item.authorUrl ) ? (
 					<a
 						className="wp-admin-workspaces-app-comments__author-url"
 						href={ item.authorUrl }
@@ -230,24 +244,73 @@ function AuthorCell( { item } ) {
 }
 
 /**
- * Field id → render callback. Module-scoped — renderers capture no props.
+ * "In response to" cell. Deep-links the parent post: the title routes to the
+ * editor via the route-aware `editHrefFor` resolver — the workspace editor
+ * route when the active workspace declares one, else the classic `post.php`
+ * handoff (Tier 1, the same `editTargetHref` path PostsApp uses) — and a
+ * "View Post" link opens the live permalink. Mirrors wp-admin's
+ * `column_response`.
+ *
+ * @param {Object}   root0
+ * @param {Object}   root0.item        The DataViews row.
+ * @param {Function} root0.editHrefFor `( postType, postId ) => href` resolver.
+ * @return {JSX.Element} The response cell.
  */
-const FIELD_RENDERERS = {
-	author: AuthorCell,
-	// Trust boundary: `item.content` is `record.content.rendered`, which
-	// WordPress core filters server-side via `wp_filter_comment_content`
-	// (kses + the comment-text filter chain). Author-supplied raw HTML has
-	// been sanitized before it reaches the REST response.
-	content: ( { item } ) => (
-		<div
-			className="wp-admin-workspaces-app-comments__excerpt"
-			dangerouslySetInnerHTML={ { __html: item.content } }
-		/>
-	),
-	status: ( { item } ) => (
-		<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
-	),
-};
+function ResponseCell( { item, editHrefFor } ) {
+	if ( ! item.post ) {
+		return <Text className="wp-admin-workspaces-app__muted">—</Text>;
+	}
+	const editHref = editHrefFor( item.postType, item.post );
+	const title = item.postTitle || __( '(no title)', 'wp-admin-workspaces' );
+	// `editHref` is always a real href — `editTargetHref` yields the workspace
+	// route or the classic `post.php` handoff, never '' — so the title is
+	// always a link (matches wp-admin's `column_response`).
+	return (
+		<Stack direction="column" gap="xs">
+			<a href={ editHref }>{ title }</a>
+			{ item.postLink ? (
+				<a
+					className="wp-admin-workspaces-app__muted"
+					href={ item.postLink }
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{ __( 'View Post', 'wp-admin-workspaces' ) }
+				</a>
+			) : null }
+		</Stack>
+	);
+}
+
+/**
+ * Field id → render callback. Built per-render so the `response` cell can
+ * close over the route-aware editor-href resolver (the workspace editor route
+ * when declared, else the classic `post.php` handoff — Tier 1).
+ *
+ * @param {Function} editHrefFor `( postType, postId ) => href` editor resolver.
+ * @return {Object} Field id → render callback.
+ */
+function buildFieldRenderers( editHrefFor ) {
+	return {
+		author: AuthorCell,
+		response: ( { item } ) => (
+			<ResponseCell item={ item } editHrefFor={ editHrefFor } />
+		),
+		// Trust boundary: `item.content` is `record.content.rendered`, which
+		// WordPress core filters server-side via `wp_filter_comment_content`
+		// (kses + the comment-text filter chain). Author-supplied raw HTML has
+		// been sanitized before it reaches the REST response.
+		content: ( { item } ) => (
+			<div
+				className="wp-admin-workspaces-app-comments__excerpt"
+				dangerouslySetInnerHTML={ { __html: item.content } }
+			/>
+		),
+		status: ( { item } ) => (
+			<Text>{ STATUS_LABELS[ item.status ] || item.status }</Text>
+		),
+	};
+}
 
 // ---- Edit / Reply DataForm field + form definitions ------------------------
 
@@ -328,6 +391,13 @@ export default function CommentsApp( { config = {} } ) {
 
 	const { config: dataViewConfig } = useDataView( screenId );
 
+	// Route-aware editor links for the "In response to" column: the workspace
+	// editor route when the active workspace ships one, else the classic
+	// `post.php` handoff (Tier 1). `wp-admin-default` declares no editor
+	// screens, so a bare `#/posts/{id}/edit` would be a dead link there.
+	const { config: runtimeConfig } = useKernel();
+	const editorRoutes = runtimeConfig?.routes;
+
 	const { view, setView, selection, setSelection } = useEntityDataView( {
 		screenId,
 		dataViewConfig,
@@ -346,6 +416,13 @@ export default function CommentsApp( { config = {} } ) {
 					: view.sort?.field || 'date_gmt',
 			context: 'edit',
 			status: 'any',
+			// Embed the `up` link (parent post) so the "In response to" column
+			// names + deep-links the post without an N+1 fetch per row.
+			_embed: 'up',
+			// Default to real comments — `WP_Comment_Query` would otherwise
+			// surface pingbacks/trackbacks under `'all'`. The Comments/Pings
+			// filter (below) overrides this.
+			type: 'comment',
 		};
 		if ( view.search ) {
 			args.search = view.search;
@@ -359,6 +436,15 @@ export default function CommentsApp( { config = {} } ) {
 					args.status = filter.value.join( ',' );
 				} else if ( filter.operator === 'is' ) {
 					args.status = filter.value;
+				}
+			} else if ( filter.field === 'type' && filter.operator === 'is' ) {
+				// `comment` (default) | `pings` (pingbacks + trackbacks) | ''
+				// (All comment types). An explicit empty value widens the query
+				// to every type by dropping the base `type` arg.
+				if ( filter.value ) {
+					args.type = filter.value;
+				} else {
+					delete args.type;
 				}
 			}
 		}
@@ -397,6 +483,9 @@ export default function CommentsApp( { config = {} } ) {
 				Object.values( avatarUrls )[ 0 ] ||
 				'';
 			const authorUrl = record.author_url || '';
+			// The embedded parent post (`_embed: 'up'`) supplies the "In
+			// response to" title + permalink + post type without a per-row fetch.
+			const embeddedPost = record._embedded?.up?.[ 0 ] || null;
 			return {
 				id: record.id,
 				author: decodeEntities( record.author_name || '' ),
@@ -409,7 +498,17 @@ export default function CommentsApp( { config = {} } ) {
 				content: record.content?.rendered || '',
 				status: record.status,
 				date: record.date,
+				type: record.type || 'comment',
 				post: record.post,
+				postTitle: embeddedPost
+					? decodeEntities(
+							embeddedPost.title?.rendered ||
+								embeddedPost.title?.raw ||
+								''
+					  )
+					: '',
+				postLink: embeddedPost?.link || '',
+				postType: embeddedPost?.type || '',
 				rawRecord: record,
 			};
 		} );
@@ -491,15 +590,20 @@ export default function CommentsApp( { config = {} } ) {
 		() =>
 			buildFields( dataViewConfig.fields, {
 				labels: FIELD_LABELS,
-				renderers: FIELD_RENDERERS,
+				renderers: buildFieldRenderers( ( postType, postId ) =>
+					editTargetHref( postType || 'post', postId, editorRoutes )
+				),
 				elementFallbacks: {
 					status: elementsFromLabels( STATUS_LABELS ),
+					// Translated Comments/Pings options for the type filter; the
+					// JSON field ships English labels, this localizes them.
+					type: TYPE_ELEMENTS,
 				},
 				elementCounts: {
 					status: statusCounts,
 				},
 			} ),
-		[ dataViewConfig, statusCounts ]
+		[ dataViewConfig, statusCounts, editorRoutes ]
 	);
 
 	const actions = useMemo( () => {

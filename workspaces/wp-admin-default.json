@@ -422,6 +422,12 @@
 								"enableSorting": false
 							},
 							{
+								"id": "response",
+								"type": "text",
+								"label": "In response to",
+								"enableSorting": false
+							},
+							{
 								"id": "status",
 								"type": "text",
 								"label": "Status",
@@ -453,6 +459,17 @@
 								"id": "date",
 								"type": "datetime",
 								"label": "Submitted"
+							},
+							{
+								"id": "type",
+								"type": "text",
+								"label": "Type",
+								"enableSorting": false,
+								"filterBy": {
+									"operators": [
+										"is"
+									]
+								}
 							}
 						],
 						"defaultView": {
@@ -461,6 +478,7 @@
 							"fields": [
 								"author",
 								"content",
+								"response",
 								"status",
 								"date"
 							]
@@ -638,6 +656,11 @@
 										"label": "Inactive"
 									}
 								]
+							},
+							{
+								"id": "author",
+								"type": "text",
+								"label": "Author"
 							}
 						],
 						"defaultView": {
@@ -646,7 +669,8 @@
 							"fields": [
 								"name",
 								"status",
-								"version"
+								"version",
+								"author"
 							],
 							"titleField": "name"
 						},

@@ -635,6 +635,12 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		'nonce'         => wp_create_nonce( 'wp_rest' ),
 		'userId'        => get_current_user_id(),
 		'siteName'      => get_bloginfo( 'name' ),
+		// Running PHP + WordPress versions, so list apps can flag resources
+		// whose declared `requires_php` / `requires_wp` exceed the environment
+		// (e.g. the Plugins list's PHP/WP-incompatibility warning). Mirrors
+		// core's `is_php_version_compatible()` / `is_wp_version_compatible()`.
+		'phpVersion'    => PHP_VERSION,
+		'wpVersion'     => get_bloginfo( 'version' ),
 		'workspaces'        => wp_admin_workspaces_get_available_workspaces(),
 		// True when a wp-content/workspace.json override is active — it wins over
 		// the active-workspace option, so the workspace switcher hides + switchWorkspace()

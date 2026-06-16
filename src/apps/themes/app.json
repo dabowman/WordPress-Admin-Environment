@@ -66,7 +66,7 @@
 		"icon": "layout"
 	},
 	"documentation": {
-		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the workspace's custom `/wp-admin-workspaces/v1/activate-theme` endpoint (gated on `switch_themes`); on failure it surfaces an error snackbar. The Details action opens a modal with full description + version + author + theme-site link.",
+		"purpose": "DataViews host over the `root/theme` entity. Default grid layout shows screenshot + name + status + truncated description; table layout offers sortable columns for power users. The Activate action (eligible only when status=inactive) calls the workspace's custom `/wp-admin-workspaces/v1/activate-theme` endpoint (gated on `switch_themes`); on failure it surfaces an error snackbar. The Details action opens a modal with full description + version + author + theme-site link, plus (for child themes) a \"This is a child theme of {parent}\" line, the theme's tags, and a Live Preview / Customize link (block themes → Site Editor, classic → Customizer) for inactive themes.",
 		"rebuilds": "themes",
 		"data": {
 			"reads": [
@@ -95,7 +95,10 @@
 						"author.rendered",
 						"screenshot",
 						"status",
-						"theme_uri"
+						"theme_uri",
+						"template",
+						"tags.raw",
+						"is_block_theme"
 					],
 					"query": {
 						"context": "edit",
@@ -129,7 +132,7 @@
 			{
 				"id": "details-open",
 				"when": "User clicked Details on a row",
-				"renders": "DataViews RenderModal with large screenshot + full description + version / author + Theme site / Activate buttons."
+				"renders": "DataViews RenderModal with large screenshot + full description + version / author + (child themes) parent-theme line + tags + Theme site / Live Preview / Activate buttons."
 			}
 		],
 		"interactions": [
@@ -149,6 +152,13 @@
 				"effect": "`window.open(theme.theme_uri, '_blank')`.",
 				"guards": [
 					"!!theme.theme_uri"
+				]
+			},
+			{
+				"trigger": "Click Live Preview in details",
+				"effect": "Navigate via `<a href>` to the Customizer preview (`customize.php?theme={slug}`) — routed through the kernel admin-link interceptor.",
+				"guards": [
+					"item.status === 'inactive'"
 				]
 			}
 		],

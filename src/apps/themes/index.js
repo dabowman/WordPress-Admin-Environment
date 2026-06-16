@@ -8,7 +8,7 @@ import { useDispatch } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews/wp';
 import { Button, Stack, Text } from '@wordpress/ui';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
 import { useDataView } from '../../runtime/dataView/useDataView';
 import { PortalThemeScope } from '../../runtime/styles/ThemeProviderHost';
@@ -18,6 +18,7 @@ import {
 } from '../_shared/dataviews/buildFields.mjs';
 import { buildActions } from '../_shared/dataviews/buildActions';
 import { useEntityDataView } from '../_shared/dataviews/useEntityDataView';
+import { isSafeHref } from '../_shared/isSafeHref.mjs';
 
 function stripTags( html ) {
 	return ( html || '' ).replace( /<[^>]*>/g, '' ).trim();
@@ -82,6 +83,32 @@ function screenshotUrl( item ) {
 	return `${ siteUrl }/wp-content/themes/${ encodeURIComponent(
 		item.stylesheet
 	) }/screenshot.png`;
+}
+
+/**
+ * Build the Live Preview URL for a theme. Both block and classic themes use
+ * the Customizer (`customize.php?theme={slug}`) — the Customizer is in the
+ * hijack endpoint allowlist so the browser navigates to the classic surface
+ * and correctly previews the chosen theme.
+ *
+ * Note: the block-theme native path is `site-editor.php?wp_theme_preview={slug}`,
+ * but the kernel's admin-link interceptor routes `site-editor.php` to the
+ * workspace `/site-editor` route and drops the `?wp_theme_preview` query
+ * param, which would open the editor on the ACTIVE theme rather than the
+ * previewed one. Until the Site Editor route supports a `wp_theme_preview`
+ * pass-through, the Customizer path is used for all themes. The Customizer
+ * supports block-theme preview natively.
+ *
+ * @param {Object} item Mapped theme row (carries `stylesheet`).
+ * @return {string} Absolute admin URL.
+ */
+function livePreviewUrl( item ) {
+	const adminUrl =
+		( typeof window !== 'undefined' &&
+			window.wpAdminWorkspaces?.adminUrl ) ||
+		'/wp-admin/';
+	const slug = encodeURIComponent( item.stylesheet );
+	return `${ adminUrl }customize.php?theme=${ slug }`;
 }
 
 // Module-scoped — renderers are stateless and capture no props.
@@ -164,6 +191,49 @@ export default function ThemesApp( { config = {} } ) {
 		[ invalidateResolution, themesQuery, createNotice ]
 	);
 
+	const data = useMemo( () => {
+		if ( ! themes ) {
+			return [];
+		}
+		return themes.map( ( record ) => ( {
+			id: record.stylesheet,
+			stylesheet: record.stylesheet,
+			name: decodeEntities(
+				record.name?.rendered ||
+					record.name?.raw ||
+					record.stylesheet ||
+					''
+			),
+			screenshot: record.screenshot || '',
+			status: record.status,
+			description: stripTags( record.description?.rendered || '' ),
+			version: record.version || '',
+			author: stripTags( record.author?.rendered || '' ),
+			theme_uri: record.theme_uri || '',
+			// Parent stylesheet for child themes (`''` for top-level themes).
+			template: record.template || '',
+			// Tags array (`tags.raw`); fall back to splitting the rendered string.
+			tags: Array.isArray( record.tags?.raw )
+				? record.tags.raw
+				: ( record.tags?.rendered || '' )
+						.split( ',' )
+						.map( ( t ) => t.trim() )
+						.filter( Boolean ),
+			isBlockTheme: !! record.is_block_theme,
+			rawRecord: record,
+		} ) );
+	}, [ themes ] );
+
+	// stylesheet → display name, so a child theme's details modal can name its
+	// parent rather than print the raw slug. Built from the loaded library.
+	const themeNames = useMemo( () => {
+		const map = {};
+		for ( const item of data ) {
+			map[ item.stylesheet ] = item.name;
+		}
+		return map;
+	}, [ data ] );
+
 	const renderDetailsModal = useCallback(
 		( { items, closeModal } ) => {
 			const item = items[ 0 ];
@@ -171,6 +241,15 @@ export default function ThemesApp( { config = {} } ) {
 				return null;
 			}
 			const isActive = item.status === 'active';
+			// `template` is the parent theme's stylesheet. For non-child themes
+			// the REST API sets `template` to the theme's own `stylesheet`
+			// (not '') — so a truthy `template` alone can't distinguish a child
+			// theme from a standalone one. The child-theme signal is
+			// `template !== stylesheet`.
+			const parentName =
+				item.template && item.template !== item.stylesheet
+					? themeNames[ item.template ] || item.template
+					: '';
 			return (
 				<PortalThemeScope>
 					<Stack
@@ -184,6 +263,21 @@ export default function ThemesApp( { config = {} } ) {
 						<Text variant="heading-md" render={ <h2 /> }>
 							{ item.name }
 						</Text>
+						{ parentName && (
+							<Text
+								variant="body-sm"
+								className="wp-admin-workspaces-app__muted"
+							>
+								{ sprintf(
+									/* translators: %s: parent theme name. */
+									__(
+										'This is a child theme of %s.',
+										'wp-admin-workspaces'
+									),
+									parentName
+								) }
+							</Text>
+						) }
 						<Text>{ item.description }</Text>
 						<Text variant="body-sm">
 							{ __( 'Version', 'wp-admin-workspaces' ) }:{ ' ' }
@@ -195,8 +289,17 @@ export default function ThemesApp( { config = {} } ) {
 								  item.author
 								: '' }
 						</Text>
+						{ item.tags.length > 0 && (
+							<Text
+								variant="body-sm"
+								className="wp-admin-workspaces-app__muted"
+							>
+								{ __( 'Tags', 'wp-admin-workspaces' ) }:{ ' ' }
+								{ item.tags.join( ', ' ) }
+							</Text>
+						) }
 						<Stack direction="row" justify="flex-end" gap="sm">
-							{ item.theme_uri && (
+							{ isSafeHref( item.theme_uri ) && (
 								<Button
 									tone="neutral"
 									variant="outline"
@@ -210,6 +313,20 @@ export default function ThemesApp( { config = {} } ) {
 								>
 									{ __(
 										'Theme site',
+										'wp-admin-workspaces'
+									) }
+								</Button>
+							) }
+							{ ! isActive && (
+								<Button
+									tone="neutral"
+									variant="outline"
+									render={
+										<a href={ livePreviewUrl( item ) } />
+									}
+								>
+									{ __(
+										'Live Preview',
 										'wp-admin-workspaces'
 									) }
 								</Button>
@@ -236,31 +353,8 @@ export default function ThemesApp( { config = {} } ) {
 				</PortalThemeScope>
 			);
 		},
-		[ activate ]
+		[ activate, themeNames ]
 	);
-
-	const data = useMemo( () => {
-		if ( ! themes ) {
-			return [];
-		}
-		return themes.map( ( record ) => ( {
-			id: record.stylesheet,
-			stylesheet: record.stylesheet,
-			name: decodeEntities(
-				record.name?.rendered ||
-					record.name?.raw ||
-					record.stylesheet ||
-					''
-			),
-			screenshot: record.screenshot || '',
-			status: record.status,
-			description: stripTags( record.description?.rendered || '' ),
-			version: record.version || '',
-			author: stripTags( record.author?.rendered || '' ),
-			theme_uri: record.theme_uri || '',
-			rawRecord: record,
-		} ) );
-	}, [ themes ] );
 
 	const fields = useMemo(
 		() =>

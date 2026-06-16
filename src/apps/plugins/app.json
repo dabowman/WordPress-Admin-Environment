@@ -101,7 +101,9 @@
 						"version",
 						"author",
 						"author_uri",
-						"plugin_uri"
+						"plugin_uri",
+						"requires_php",
+						"requires_wp"
 					],
 					"query": {
 						"context": "edit"
@@ -242,6 +244,14 @@
 			{
 				"concern": "network-active",
 				"note": "Multisite shows `network-active` status. Deactivate action covers both `active` + `network-active` to keep the row menu functional in network admin."
+			},
+			{
+				"concern": "author-link",
+				"note": "The Author cell links to the plugin's `author_uri` when present (mirrors wp-admin's \"By {author}\" link), falling back to plain text. `author_uri` is projected onto each row."
+			},
+			{
+				"concern": "version-incompatibility-warning",
+				"note": "When a plugin's `requires_php` / `requires_wp` exceeds the running environment (`window.wpAdminWorkspaces.phpVersion` / `wpVersion`), the name cell renders a `Notice.Root` warning — the workspace equivalent of wp-admin's \"does not work with your version\" inline row. Comparison via the shared `_shared/versionCompare.mjs` (`meetsMinVersion`); absent globals or an absent `requires_*` never warn."
 			}
 		],
 		"design-system-leakage": [
