@@ -1718,7 +1718,6 @@
 	],
 	"styles": {
 		"theme": {
-			"density": "compact",
 			"color": {
 				"bg": "#ffffff",
 				"primary": "#3858e9"
