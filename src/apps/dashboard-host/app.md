@@ -48,11 +48,9 @@ The host reads three inputs:
 
 `composeScreenWidgets({ screen, manifests })` builds the resolved tile list. Per-entry `size` / `position` override the manifest's `slotHints` per-property at the install layer.
 
-## v3 vs v2
+## Placement model
 
-- **v2** read manifest `dashboardWidget` blocks + workspace.json's top-level `dashboardWidgets` overrides. Both have been retired in v3; placement now follows the uniform screen-app model.
-- **v3** dissolves the C4 widget API into `screens[id].apps[]` with `slot: "grid"`. Apps still ship intrinsic defaults — through the new `slotHints` block on app manifests — but install-layer placement lives on the screen-app entry.
-- The v3 compiler ships a back-compat path (`translate_v2_dashboard_widgets`) that folds v2-shape `dashboardWidgets` into the `dashboard-widgets` screen's `apps[]` when both are present. Authors get one cycle to migrate; `_doing_it_wrong` fires under `WP_DEBUG`.
+Placement follows the uniform screen-app model: `screens[id].apps[]` with `slot: "grid"`. Apps ship intrinsic defaults through the `slotHints` block on their manifests; install-layer placement lives on the screen-app entry.
 
 ## Slot vocabulary
 
@@ -87,7 +85,7 @@ Tombstones — `$args['hidden'] = true` translates to a cascade `__tombstone` ma
 A rebuild needs:
 
 - A read of `config.screens[screenId].apps[]` filtered by `slot === 'grid'`.
-- A read of each entry's referenced manifest's `slotHints` block — same shape as `admin-app-v3.json#/$defs/slotHints`.
+- A read of each entry's referenced manifest's `slotHints` block — same shape as `workspace-app.json#/$defs/slotHints`.
 - A merge equivalent to `composeScreenWidgets({ screen, manifests })` — per-entry `size`/`position` override `slotHints` per-property; `defaultSize` clamped to `minSize`.
 - A grid container with `display: grid` + auto-fill columns at the design-system's card-grid breakpoint.
 - A way to mount the widget app inside each tile — for the workspace, this is `<MountedApp>` which threads cap gating + theming. Rebuilds need an equivalent.

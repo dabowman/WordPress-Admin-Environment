@@ -86,7 +86,7 @@ class WP_Admin_Workspaces_Config_REST {
 		// `$config`, which is engine-invariant per user. Drives `engineModes`
 		// below; the modes catalog is derived from this manifest.
 		$active_engine_id       = is_array( $config )
-			? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+			? ( $config['engine'] ?? null )
 			: null;
 		$active_engine_manifest = $active_engine_id
 			? WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $active_engine_id )

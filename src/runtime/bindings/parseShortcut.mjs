@@ -2,7 +2,7 @@
  * Parse a `@wordpress/keyboard-shortcuts`-style shortcut string into
  * a matcher predicate over a `KeyboardEvent`.
  *
- * Supported syntax (spec §8 + admin-v2.json `binding.shortcut` regex):
+ * Supported syntax (spec §8 + the workspace.json schema’s `binding.shortcut` regex):
  *   Mod+K            — primary modifier (Cmd on macOS, Ctrl elsewhere)
  *   Shift+Mod+P
  *   Alt+ArrowDown

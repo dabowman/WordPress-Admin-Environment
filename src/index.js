@@ -50,11 +50,6 @@ if ( window.wpAdminWorkspaces ) {
 		resolveIcon,
 	};
 	window.wpAdminWorkspaces.kernel = kernelSurface;
-
-	// Back-compat: the flat `registerMenuRenderer` alias shipped before
-	// the namespaced `kernel` surface existed. Keep it pointing at the
-	// same function so existing loose renderer scripts don't break.
-	window.wpAdminWorkspaces.registerMenuRenderer = registerMenuRenderer;
 }
 
 const container = document.getElementById( 'wp-admin-workspaces' );

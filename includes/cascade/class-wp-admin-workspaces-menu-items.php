@@ -666,8 +666,8 @@ add_filter( 'wp_admin_workspaces_data_plugin', array( 'WP_Admin_Workspaces_Menu_
 // tree, and sequences this pass BEFORE
 // `WP_Admin_Workspaces_Data_View_Config::inject_app_baselines` (priority 6)
 // so dataView baselines attach to screens already contributed by the
-// menu-item shim. See `docs/upgrade-v2-to-v3.md` filter-ordering
-// section.
+// menu-item shim. See `docs/schema-sketch.md` for the filter-ordering
+// contract.
 add_filter( 'wp_admin_workspaces_data', array( 'WP_Admin_Workspaces_Menu_Items', 'bind_screens' ), 5 );
 
 // Registry state lives in static class memory — invisible to the

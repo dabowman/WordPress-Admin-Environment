@@ -4,7 +4,7 @@
  * Reads:
  *   - The active screen id from the URL (v3 matches `screens[id].path`
  *     against the parsed URL primary path; if the active config has no
- *     `screens` block — i.e. it's a v2 workspace — the hook returns the
+ *     `screens` block, the hook returns the
  *     default mode for every region).
  *   - The flattened engine-modes catalog from `window.wpAdminWorkspaces.engineModes`
  *     (populated by `WP_Admin_Workspaces_Modes::resolve_engine_modes()` in PHP).
@@ -17,7 +17,7 @@
  *
  * Graceful degradation:
  *   - No engineModes block → returns `{ modal: false, regions: {} }` (i.e.
- *     all regions render normally; v2 behavior preserved).
+ *     all regions render normally).
  *   - No screens block → returns `{ modal: false, regions: {} }` (same).
  *   - URL doesn't match any screen → returns `{ modal: false, regions: {} }`.
  *   - Modal mode → returns `{ modal: true, regions: null }`; Region.js

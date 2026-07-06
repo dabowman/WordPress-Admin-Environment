@@ -1,6 +1,6 @@
 <?php
 /**
- * PHP-side structural validator for v2 manifests (V2.M1 task 4).
+ * PHP-side structural validator for app + engine manifests.
  *
  * Rich JSON Schema 2020-12 validation runs at authoring time via Ajv
  * (`npm run test:schema`). PHP performs only the structural checks

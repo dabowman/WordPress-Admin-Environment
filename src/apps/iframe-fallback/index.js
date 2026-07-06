@@ -25,7 +25,7 @@ import { getChromeHideCss } from '../_shared/iframe/chromeHide.mjs';
  * `wp-auth-check` and reloads the iframe so it re-fetches the real page
  * once the user has re-authenticated.
  *
- * Source: `config.url` (the v2-canonical placement). Absolute URLs
+ * Source: `config.url`. Absolute URLs
  * pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`.
  *
  * `config.hideEditorChrome` (default false) opts into stripping the block

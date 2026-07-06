@@ -48,8 +48,7 @@ export function hydrateInlineScreenDataView( inline, screenId ) {
 	// Client-side merge fallback. Resolve the (kind, name, variant) triple
 	// the screen consumes — explicit `dataViewRef` wins, then explicit
 	// `dataViewKind`/`dataViewName`/`dataViewVariant`, then manifest +
-	// config inference (with `screen.config.variant` honored for v2
-	// back-compat).
+	// config inference (with `screen.config.variant` honored).
 	const { kind, name, variant } = inferTriple( inline, screen );
 
 	let base = {};
@@ -353,7 +352,7 @@ function inferTriple( inline, screen ) {
 	} else if ( kind === 'taxonomy' && typeof cfg.taxonomy === 'string' && cfg.taxonomy !== '' ) {
 		name = cfg.taxonomy;
 	}
-	// v2 back-compat — `route.config.variant` flows into screen synthesis.
+	// `route.config.variant` flows into screen synthesis.
 	const variant =
 		typeof cfg.variant === 'string' && cfg.variant !== ''
 			? cfg.variant

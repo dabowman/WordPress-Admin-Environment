@@ -79,10 +79,6 @@
 			{
 				"concern": "no-runtime-mutation",
 				"note": "The host is config-driven only — widgets are computed from `composeScreenWidgets({ screen, manifests })` once per (screen, manifests) tuple. Drag-to-reorder is out of scope; authors reorder via workspace.json `apps[]` ordering and `position` overrides."
-			},
-			{
-				"concern": "v2-back-compat",
-				"note": "v2 workspaces with the legacy top-level `dashboardWidgets` block + manifest `dashboardWidget` blocks flow through the v3 compiler's back-compat layer, which folds each entry into the `dashboard-widgets` screen's `apps[]` array with `slot: \"grid\"`. The host never sees v2-shape data directly."
 			}
 		],
 		"design-system-leakage": [

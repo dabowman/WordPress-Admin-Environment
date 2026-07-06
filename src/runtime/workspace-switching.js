@@ -3,7 +3,7 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Programmatic workspace-switching plumbing (plan §M5.8).
  *
- * v1 ships the plumbing without a user-facing toggle per spec §6.4.1:
+ * `switchWorkspace(slug)` drives the option-based switching path:
  *
  *   1. Caller invokes `switchWorkspace(slug)`.
  *   2. Function writes `wp_admin_workspaces_active_workspace` via the core

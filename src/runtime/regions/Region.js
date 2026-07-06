@@ -1,7 +1,7 @@
 /**
  * Generic, declaration-driven region renderer.
  *
- * v2-shape regions only — every region declares `role` (directly or
+ * Every region declares `role` (directly or
  * via `template` instantiation) plus optional `platform`, `routing`,
  * `style`, `app`, `config`, `regions`. The renderer composes behavior
  * from platform-service requests (spec §5.3) via `getPlatformServices`:
@@ -10,8 +10,7 @@
  *   - `autofocusSelector` → focus on mount (else useFocusOnMount default)
  *   - placement: 'overlay' → backdrop wrapper
  *   - `isTriggerable`     → start closed; an external binding flips
- *                           the open state. V2.M5 wires the binding
- *                           consumer.
+ *                           the open state via the bindings consumer.
  *
  * Capability gate runs at every Region level so nested children share
  * the same fast-path the kernel uses for top-level regions (spec §8
@@ -119,12 +118,11 @@ function childId( parentId, key ) {
 	return `${ parentId }/${ key }`;
 }
 
-/* ─────────────────────── generic (v2 declarations) ─────── */
+/* ─────────────────────── generic region renderer ─────── */
 
 /**
- * Renderer for v2-shape declarations (no legacy `source`). Composes
- * the region's behavior from platform-service requests (spec §5.3) via
- * `getPlatformServices`:
+ * Composes the region's behavior from platform-service requests
+ * (spec §5.3) via `getPlatformServices`:
  *   - `isModal`           → ARIA modal + focus trap + constrained tabbing
  *   - `dismissTriggers`   → Escape / backdrop-click handlers
  *   - `autofocusSelector` → focus on mount (else useFocusOnMount default)
@@ -133,9 +131,6 @@ function childId( parentId, key ) {
  * Persistent regions render as a plain landmark container; modal
  * regions wrap with backdrop + focus trap. Children + app + contains[]
  * render inside the resolved container.
- *
- * V2.M7 will retire the legacy switch above; once bundled workspaces
- * migrate to v2, every region flows through this path.
  * @param {Object} root0
  * @param {*}      root0.region
  */
@@ -439,7 +434,7 @@ function kebab( s ) {
 }
 
 /**
- * Decide which app to mount in a v2 region:
+ * Decide which app to mount in a region:
  *
  *   - If the region has `routing.route-key` and the URL slot resolved
  *     to a route entry, mount that route's app with its (interpolated)

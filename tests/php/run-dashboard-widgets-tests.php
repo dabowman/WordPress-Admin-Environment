@@ -11,7 +11,7 @@
  *   - Standalone flavor: also synthesizes an app manifest with slotHints.
  *   - workspace.json declaration wins per-entry-id via the cascade's id-keyed array merge.
  *   - Tombstone semantics: hidden:true marks the contributed entry as a cascade tombstone.
- *   - v2 `dashboardWidgets` block translated to screen-app entries at compile time.
+ *   - Registered widgets contribute screen-app entries at compile time.
  *   - Lazy + deferred manifest forwarding.
  *   - Entry-id derivation from app id.
  */

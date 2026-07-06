@@ -35,7 +35,7 @@ class WP_Admin_Workspaces_Admin_Routes {
 	private static $warned_gc_time = array();
 
 	/**
-	 * Mirrors `docs/schemas/admin-v2.json#/properties/routes` pattern.
+	 * Mirrors the `docs/schemas/workspace.json` routes-block path pattern.
 	 */
 	const PATH_PATTERN = '#^/[A-Za-z0-9_/{}\-*]*$#';
 

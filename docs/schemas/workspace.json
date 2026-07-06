@@ -861,7 +861,7 @@
 						},
 						"density": {
 							"enum": [ "default", "compact", "comfortable" ],
-							"description": "Spacing scale. `compact` for data-dense surfaces; `comfortable` for focused panels. Equivalent to top-level `styles.density` (legacy)."
+							"description": "Spacing scale. `compact` for data-dense surfaces; `comfortable` for focused panels."
 						}
 					}
 				},
@@ -874,10 +874,6 @@
 				"border": { "type": "object", "additionalProperties": true },
 				"elevation": { "type": "object", "additionalProperties": true },
 				"font": { "type": "object", "additionalProperties": true },
-				"density": {
-					"enum": [ "default", "compact", "comfortable" ],
-					"description": "Legacy. Prefer `styles.theme.density`. Read as fallback."
-				},
 				"chrome": {
 					"type": "object",
 					"additionalProperties": true,

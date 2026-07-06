@@ -25,10 +25,8 @@ function wp_admin_workspaces_uninstall_cleanup() {
 	// LIKE sweep catches the known set plus any future additions; the explicit
 	// list documents what exists today.
 	$known_options = array(
-		'wp_admin_workspaces_active_config',
 		'wp_admin_workspaces_active_workspace',
 		'wp_admin_workspaces_cascade',
-		'wp_admin_workspaces_db_version',
 		'wp_admin_workspaces_role_config',
 		'wp_admin_workspaces_settings',
 		'wp_admin_workspaces_site_config',
@@ -58,28 +56,6 @@ function wp_admin_workspaces_uninstall_cleanup() {
 	// User preferences (the `/user-prefs` endpoint's usermeta). delete_all
 	// clears the key for every user in one query.
 	delete_metadata( 'user', 0, 'wp_admin_workspaces_user_prefs', '', true );
-
-	// Legacy `wp_admin_shell_*` rows from installs that predate the 0.1.0
-	// workspaces rebrand. The upgrade migration bridges values forward into
-	// the new namespace but intentionally leaves the old keys in place, so
-	// sweep both namespaces here — otherwise an upgraded install orphans its
-	// pre-rebrand options / transients / user-prefs meta on uninstall.
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- one-time uninstall sweep; no caching applies.
-	$wpdb->query(
-		$wpdb->prepare(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
-			$wpdb->esc_like( 'wp_admin_shell_' ) . '%'
-		)
-	);
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- one-time uninstall sweep; no caching applies.
-	$wpdb->query(
-		$wpdb->prepare(
-			"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-			$wpdb->esc_like( '_transient_wp_admin_shell_' ) . '%',
-			$wpdb->esc_like( '_transient_timeout_wp_admin_shell_' ) . '%'
-		)
-	);
-	delete_metadata( 'user', 0, 'wp_admin_shell_user_prefs', '', true );
 }
 
 if ( is_multisite() ) {

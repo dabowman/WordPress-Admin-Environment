@@ -19,9 +19,9 @@ class WP_Admin_Workspaces_Origin_Core {
 	 * Slug of the shipped default baseline. This is the workspace.json that
 	 * fills the cascade `core` slot when a `wp-content/workspace.json`
 	 * override file is present — the file then layers over it as a
-	 * partial delta (theme.json model). The file still lives in `workspaces/`
-	 * for back-compat (the option-driven selector + the shape-test sweep
-	 * still reference it there); only its cascade ROLE changed.
+	 * partial delta (theme.json model). It lives in `workspaces/` alongside
+	 * the other bundled workspaces (the option-driven selector + the
+	 * shape-test sweep reference it there).
 	 */
 	const BASELINE_SLUG = 'wp-admin-default';
 

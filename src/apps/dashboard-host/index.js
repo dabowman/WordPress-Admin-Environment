@@ -7,19 +7,13 @@
  * `<MountedApp>` so the existing 4-layer cap gating + theming +
  * source-cap floor apply uniformly.
  *
- * v3 vs v2:
- *   - **v2** read manifest `dashboardWidget` blocks + workspace.json
- *     `dashboardWidgets` overrides. Both have been retired — the
- *     placement model is now uniform with the rest of the workspace
- *     (screen-app entries with a `slot` field).
- *   - **v3** reads `config.screens[screenId].apps[]` filtered by
- *     `slot === 'grid'`. Per-entry `size` / `position` override the
- *     manifest's `slotHints` defaults.
+ * Placement model: the host reads `config.screens[screenId].apps[]`
+ * filtered by `slot === 'grid'` — uniform with the rest of the
+ * workspace (screen-app entries with a `slot` field). Per-entry
+ * `size` / `position` override the manifest's `slotHints` defaults.
  *
- * The v3 compiler injects `config.screenId` into the route config
- * before mount, so the host knows which screen it's hosting. v2
- * workspaces reach this host through the compiler's
- * `synthesize_v2_screens_from_routes` back-compat path.
+ * The compiler injects `config.screenId` into the route config
+ * before mount, so the host knows which screen it's hosting.
  *
  * Why direct render instead of `useDynamicChildren`: the host is
  * config-driven (no drag-to-reorder, no runtime mutation). The

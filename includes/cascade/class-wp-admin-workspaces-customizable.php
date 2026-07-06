@@ -145,11 +145,10 @@ class WP_Admin_Workspaces_Customizable {
 	 * @param array       $upstream    The merged upstream tree.
 	 * @param array       $downstream  The single-origin doc to filter.
 	 * @param string|null $origin      The origin name (`role` / `user` /
-	 *                                 etc). When null, trust-tier behavior
-	 *                                 is assumed (back-compat with tests
-	 *                                 that called the 2-arg form).
+	 *                                 etc). Pass null only for a
+	 *                                 non-consumer (trust-tier) caller.
 	 */
-	public static function filter_doc( $upstream, $downstream, $origin = null ) {
+	public static function filter_doc( $upstream, $downstream, $origin ) {
 		if ( ! is_array( $downstream ) ) {
 			return array();
 		}

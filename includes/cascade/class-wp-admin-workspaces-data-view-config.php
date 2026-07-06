@@ -16,18 +16,15 @@
  *      itself is identified per-screen by `dataViewRef` (preferred),
  *      explicit `dataViewKind`/`dataViewName`/`dataViewVariant`, or
  *      inferred from the screen's primary app manifest's `dataView`
- *      block + `screen.config.{postType,taxonomy,variant}` (v2
- *      back-compat path).
+ *      block + `screen.config.{postType,taxonomy,variant}`.
  *   3. **App manifest baselines**: each app's `dataView` block (including
  *      every `variants.<id>`) is injected into
  *      `settings.dataViews[kind][name][<variant>]` at the `core` origin.
  *      workspace.json / site / role / user wins per-triple.
  *
- * Field collections live at `settings.dataFields[<collection-id>]` (the
- * v3 home of the v2 `fieldCollections` block — same shape, renamed and
- * moved under the `settings` registries grouping). View definitions
- * reference a collection via `fieldsRef`; resolution merges
- * ref-wins-inline-overrides per-field.
+ * Field collections live at `settings.dataFields[<collection-id>]`.
+ * View definitions reference a collection via `fieldsRef`; resolution
+ * merges ref-wins-inline-overrides per-field.
  *
  * Filter hooks:
  *   - `wp_admin_workspaces_data_view_config_{kind}_{name}` — always fires
@@ -129,7 +126,7 @@ class WP_Admin_Workspaces_Data_View_Config {
 	 *      `dataViewVariant`, defaults to `_default`).
 	 *   3. Manifest inference — primary app's `dataView.kind`/`name`
 	 *      overridden by `screen.config.postType` / `screen.config.taxonomy`,
-	 *      variant defaults to `screen.config.variant` (v2 back-compat)
+	 *      variant defaults to `screen.config.variant`
 	 *      then `_default`.
 	 *
 	 * Once the triple is identified, `resolve_data_view_triple` runs,
@@ -625,16 +622,10 @@ class WP_Admin_Workspaces_Data_View_Config {
 	 * user wins outright, no deep-merge. To extend a manifest baseline,
 	 * hook `wp_admin_workspaces_data_view_config_{$kind}_{$name}[_{$variant}]`.
 	 *
-	 * v3 restoration: the manifest's `dataView` block carries a
+	 * The manifest's `dataView` block carries a
 	 * `variants: { <id>: <doc> }` family. Every variant is injected as
 	 * its own triple — `_default` plus any author-defined variant ids.
-	 * The variant key is PRESERVED in the injected entry (the v3-initial
-	 * `unset( $entry['variant'] )` bug is gone).
-	 *
-	 * Back-compat shape recognition: when the manifest declares a flat
-	 * top-level `defaultView` / `fields` / `actions` / etc. instead of
-	 * a nested `variants` map, treat the whole block as the `_default`
-	 * variant entry. Matches the shape v3-initial manifests use.
+	 * The variant key is PRESERVED in the injected entry.
 	 *
 	 * @param array $doc Post-merge resolved document.
 	 * @return array
@@ -665,18 +656,9 @@ class WP_Admin_Workspaces_Data_View_Config {
 				continue;
 			}
 
-			// Detect shape: variants family OR back-compat flat _default.
-			$variants = array();
-			if ( isset( $vc['variants'] ) && is_array( $vc['variants'] ) && ! empty( $vc['variants'] ) ) {
-				$variants = $vc['variants'];
-			} else {
-				$flat = $vc;
-				unset( $flat['kind'], $flat['name'], $flat['variants'] );
-				if ( ! empty( $flat ) ) {
-					$variants = array( '_default' => $flat );
-				}
-			}
-
+			$variants = isset( $vc['variants'] ) && is_array( $vc['variants'] )
+				? $vc['variants']
+				: array();
 			if ( empty( $variants ) ) {
 				continue;
 			}

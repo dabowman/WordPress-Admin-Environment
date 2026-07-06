@@ -103,94 +103,6 @@ add_action( 'admin_notices', function () {
 define( 'WP_ADMIN_WORKSPACES_VERSION', '0.1.0' );
 define( 'WP_ADMIN_WORKSPACES_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_WORKSPACES_URL', plugin_dir_url( __FILE__ ) );
-define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 2 );
-
-/**
- * Version-stamped migration. Plan §M2.9 + issue #6.
- *
- * The `wp_admin_workspaces_db_version` option stamps the highest migration
- * step that has run for this install. Each step runs at most once per
- * install lifetime; reactivation / downgrade-then-upgrade cycles
- * cannot re-fire steps that already completed (which would otherwise
- * clobber a user's later choice with the legacy MVP value).
- *
- * Step 1: copy the pre-MVP `wp_admin_shell_active_config` legacy option
- *         into the MVP `wp_admin_shell_active_shell` key when the latter
- *         is empty (faithful to the original pre-rebrand chain; reads the
- *         real on-disk legacy key names, which a code rename can never
- *         touch).
- *
- * Step 2: the 0.1.0 "workspaces" rebrand renamed every persisted option
- *         from `wp_admin_shell_*` to `wp_admin_workspaces_*`. Stored
- *         option names are not subject to a code rename, so copy each
- *         legacy key forward to its new name when the new key is absent
- *         (idempotent). Without this, an upgraded install silently loses
- *         its active-workspace selection AND its enable toggle — the
- *         latter would re-enable a deliberately-disabled admin takeover.
- *         The legacy `wp_admin_shell_*` rows are left in place (uninstall
- *         sweeps both namespaces); the bridge only seeds the new keys.
- *
- * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
- * disk), bump WP_ADMIN_WORKSPACES_DB_VERSION and add a step here. Steps
- * must be idempotent w.r.t. their own stamp — running twice is a bug,
- * but a partially-failed migration that re-runs from a lower stamp
- * should converge.
- */
-add_action( 'init', function () {
-	$current_version = (int) get_option( 'wp_admin_workspaces_db_version', 0 );
-	if ( $current_version >= WP_ADMIN_WORKSPACES_DB_VERSION ) {
-		return;
-	}
-
-	if ( $current_version < 1 ) {
-		// Step 1 — pre-MVP active-config → MVP active-workspace write-copy.
-		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
-			$legacy = get_option( 'wp_admin_shell_active_config', '' );
-			if ( $legacy !== '' ) {
-				update_option( 'wp_admin_shell_active_shell', $legacy );
-			}
-		}
-	}
-
-	if ( $current_version < 2 ) {
-		// Step 2 — wp_admin_shell_* → wp_admin_workspaces_* option bridge.
-		$option_map = array(
-			'wp_admin_shell_active_shell'      => 'wp_admin_workspaces_active_workspace',
-			'wp_admin_shell_workspace_enabled' => 'wp_admin_workspaces_enabled',
-			'wp_admin_shell_settings'          => 'wp_admin_workspaces_settings',
-			'wp_admin_shell_site_config'       => 'wp_admin_workspaces_site_config',
-			'wp_admin_shell_role_config'       => 'wp_admin_workspaces_role_config',
-		);
-		$sentinel = '__wpaw_absent__';
-		foreach ( $option_map as $old_key => $new_key ) {
-			$old_val = get_option( $old_key, $sentinel );
-			if ( $sentinel !== $old_val && $sentinel === get_option( $new_key, $sentinel ) ) {
-				update_option( $new_key, $old_val );
-			}
-		}
-
-		// User-prefs meta: rename the meta_key for every user that hasn't
-		// already got the new key (guarded so a partial re-run is safe).
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- one-time keyed migration; no caching applies.
-		$wpdb->query(
-			$wpdb->prepare(
-				"UPDATE {$wpdb->usermeta} m
-				 SET m.meta_key = %s
-				 WHERE m.meta_key = %s
-				   AND NOT EXISTS (
-				       SELECT 1 FROM ( SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s ) e
-				       WHERE e.user_id = m.user_id
-				   )",
-				'wp_admin_workspaces_user_prefs',
-				'wp_admin_shell_user_prefs',
-				'wp_admin_workspaces_user_prefs'
-			)
-		);
-	}
-
-	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
-}, 5 );
 
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-util.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
@@ -216,7 +128,6 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspa
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-chrome-harvest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-modes.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-permissions.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
@@ -282,7 +193,7 @@ function wp_admin_workspaces_register_template( $engine_id, $template_id, $templ
  * An engine names a renderer through its `engine.json` `menu-renderer`
  * field; a `plugin:{slug}/{name}` id resolves to a React component a
  * plugin supplies. This declares the id + the script handle that
- * registers that component (`window.wpAdminWorkspaces.registerMenuRenderer`).
+ * registers that component (`window.wpAdminWorkspaces.kernel.registerMenuRenderer`).
  * The workspace enqueues the script on the admin-workspace page.
  *
  * The renderer component receives `{ items, currentPrimary, navConfig }`
@@ -560,7 +471,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-workspaces` as a dependency loads once the kernel has published
-	// `window.wpAdminWorkspaces.registerMenuRenderer`.
+	// `window.wpAdminWorkspaces.kernel.registerMenuRenderer`.
 	WP_Admin_Workspaces_Menu_Renderers::enqueue_assets();
 
 	$config = wp_admin_workspaces_get_active_config();
@@ -578,7 +489,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 	// Only the active engine's styles enqueue — keeps non-WPDS engines
 	// from loading WPDS tokens (and vice versa for other DS plugins).
 	$active_engine_id      = is_array( $config )
-		? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+		? ( $config['engine'] ?? null )
 		: null;
 	$active_engine_manifest = $active_engine_id ? WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
 

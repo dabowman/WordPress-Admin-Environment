@@ -1,5 +1,5 @@
 /**
- * Pure widget composition — turns a v3 `screens[id]` entry's `apps[]`
+ * Pure widget composition — turns a `screens[id]` entry's `apps[]`
  * array (filtered to `slot: "grid"`) and the in-page app manifest
  * registry into a flat list of tile descriptors the
  * `core:dashboard-host` app feeds into its tile renderer.
@@ -16,7 +16,7 @@
  *   - `title`  — the resolved widget title (entry override > entry-id-as-title
  *                 fallback chain handled by callers).
  *
- * Rules (mirror the v3 schema + spec §13 #13):
+ * Rules (mirror the schema + spec §13 #13):
  *   - Only entries with `slot === "grid"` are widgets.
  *   - Entries with no `app` field are skipped (degenerate).
  *   - Entries referencing an app id absent from the manifest registry
@@ -31,12 +31,6 @@
  *
  * Pure ESM, framework-agnostic — node tests exercise this without
  * needing webpack or React.
- *
- * Renamed conceptually from v2's `composeWidgets(manifests, overrides)`
- * which read the manifest's `dashboardWidget` block + workspace.json's
- * top-level `dashboardWidgets` block. v3 dissolves both into the
- * screen-app placement model — manifest `slotHints` + per-screen
- * `apps[]` entries.
  */
 
 const DEFAULT_SIZE = Object.freeze( { w: 1, h: 1 } );

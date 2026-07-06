@@ -18,19 +18,13 @@ import { deepMergeUnder } from './styles/deepMergeUnder.mjs';
 import { buildRuntimeConfig } from './compile/buildRuntimeConfig.mjs';
 
 /**
- * Mount the v1 kernel against a resolved config.
+ * Mount the kernel against a resolved config.
  *
  * Flow:
  *   1. Build a registry instance and register all built-in sources.
  *   2. Resolve the active engine and the region source for each declared
  *      region, returning a tree the engine can render.
  *   3. Wrap the engine output in the kernel/router/slot providers.
- *
- * v0 (MVP flat) → v1 normalization runs server-side in
- * `WP_Admin_Workspaces_Origin_Core::normalize_v0`. The kernel never sees the
- * legacy shape regardless of source. The MVP-era JS-side `normalizeV0`
- * shim retired with this commit; if a future config-delivery path
- * bypasses PHP, restore it.
  *
  * Returns a React element that the entry script renders into the DOM.
  * @param {*} config
@@ -72,17 +66,16 @@ export function kernel( config ) {
 		( typeof window !== 'undefined' && window.wpAdminWorkspaces?.tokens ) ||
 		{};
 
-	// Workspace-switching plumbing (no UI surface in v1; v2 prefs UI).
+	// Workspace-switching plumbing.
 	attachWorkspaceSwitcherToWindow();
 
-	const engineId =
-		config.engine || config.workspace?.engine || 'core:default';
+	const engineId = config.engine || 'core:default';
 	const engineManifest = getEngineManifest( engineId );
 
 	// Build the runtime config from the resolved v3 author doc + the active
 	// engine manifest. The kernel is the single place that derives the
 	// runtime surfaces (`engine`, `routes`, `regions`, `default-route`,
-	// `commands`) from the v3 `workspace` / `screens` / `menu` / `commands`
+	// `commands`) from the `screens` / `menu` / `commands`
 	// blocks; the author blocks pass through unchanged for apps to read.
 	const runtimeConfig = buildRuntimeConfig( config, engineManifest );
 

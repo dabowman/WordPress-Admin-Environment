@@ -11,7 +11,7 @@
  *
  * What's covered here:
  *   1. `pickDensity` — tier-1 (`styles.theme.density`) wins over
- *      legacy (`styles.density`); raw string passes through unchanged;
+ *      raw string passes through unchanged;
  *      undefined/null returns undefined.
  *   2. `hasThemeContent` — recognizes `theme` block + every top-level
  *      override key; returns false for empty / non-object / null input.
@@ -67,17 +67,9 @@ eq(
 	'compact'
 );
 eq(
-	'tier-4 legacy styles.density string returns as-is',
+	'top-level styles.density is ignored (theme.density is the only source)',
 	pickDensity( { density: 'comfortable' } ),
-	'comfortable'
-);
-eq(
-	'tier-1 wins over legacy when both authored',
-	pickDensity( {
-		theme: { density: 'comfortable' },
-		density: 'compact',
-	} ),
-	'comfortable'
+	undefined
 );
 eq(
 	'non-WPDS density string passes through unchanged (e.g. Material "dense")',

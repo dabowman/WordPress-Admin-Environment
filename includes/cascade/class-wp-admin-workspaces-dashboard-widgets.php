@@ -1,22 +1,21 @@
 <?php
 /**
- * Dashboard-widgets registry (v3 reshape — 3c.1).
+ * Dashboard-widgets registry.
  *
  * Plugins register a widget app for the dashboard grid via
- * `wp_admin_workspaces_register_dashboard_widget()`. In v3 the registry
+ * `wp_admin_workspaces_register_dashboard_widget()`. The registry
  * contributes a screen-app entry under the target screen
- * (`dashboard-widgets` by default) instead of writing into the v2
- * top-level `dashboardWidgets` block. The cascade pipeline then
+ * (`dashboard-widgets` by default). The cascade pipeline then
  * merges these entries with any workspace.json `screens[id].apps[]`
  * declarations via the normal id-keyed array merge.
  *
  * Schema:
  *   - `screens[id].apps[]` entries shape: see
- *     `docs/schemas/admin-v3.json#/$defs/appsEntry`.
+ *     `docs/schemas/workspace.json#/$defs/appsEntry`.
  *   - Manifest `slotHints` shape: see
- *     `docs/schemas/admin-app-v3.json#/$defs/slotHints`.
+ *     `docs/schemas/workspace-app.json#/$defs/slotHints`.
  *
- * Two flavors preserved verbatim from v2:
+ * Two flavors:
  *
  *   1. **Override flavor.** `$args` carries placement/size only
  *      (`position`, `defaultSize`, `minSize`, `title`, `hidden`).
@@ -243,7 +242,7 @@ class WP_Admin_Workspaces_Dashboard_Widgets {
 			$entry['position'] = $placement['position'];
 		}
 
-		// `title` is NOT a valid `appsEntry` field per admin-v3.json
+		// `title` is NOT a valid `appsEntry` field per workspace.json
 		// (`additionalProperties: false`). The widget's display title
 		// flows through the synthesized manifest's `title` field (set
 		// by `register()` when the standalone-flavor `script` arg is

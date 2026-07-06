@@ -21,10 +21,9 @@
  * path they appear at. A later origin can resurrect a tombstoned key by
  * writing a non-null value at the same path.
  *
- * The merge engine ALSO carries a small origin-tag layer (`tag_origin` /
- * `merge_with_restrict`) used by the restrict-only enforcement step in
- * spec §4.4.1. Tags are stripped before the resolver returns the merged
- * config to consumers.
+ * The merge engine ALSO carries a small origin-tag layer (`tag_origin`)
+ * used by the restrict-only enforcement step in spec §4.4.1. Tags are
+ * stripped before the resolver returns the merged config to consumers.
  *
  * @package WP_Admin_Workspaces
  */
@@ -83,12 +82,7 @@ class WP_Admin_Workspaces_Merge {
 		return self::merge_internal( $base, $over, true, true );
 	}
 
-	private static function merge_internal( $base, $over, $authoritative, $tombstone_authority = null ) {
-		// Back-compat: callers that don't pass tombstone_authority get the
-		// historical coupling (tombstones honored iff authoritative).
-		if ( $tombstone_authority === null ) {
-			$tombstone_authority = (bool) $authoritative;
-		}
+	private static function merge_internal( $base, $over, $authoritative, $tombstone_authority ) {
 		if ( ! is_array( $over ) ) {
 			return $over === null ? $base : $over;
 		}
@@ -179,15 +173,6 @@ class WP_Admin_Workspaces_Merge {
 			$doc[ $i ] = self::tag_origin( $entry, $origin );
 		}
 		return $doc;
-	}
-
-	/**
-	 * Back-compat alias for the authoritative merge. Older callers that
-	 * imported `merge_with_restrict` continue to work; new code should
-	 * use `merge_authoritative` for clarity.
-	 */
-	public static function merge_with_restrict( $base, $over ) {
-		return self::merge_authoritative( $base, $over );
 	}
 
 	/**

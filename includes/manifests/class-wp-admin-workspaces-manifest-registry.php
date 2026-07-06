@@ -2,7 +2,7 @@
 /**
  * Manifest registry — apps and engines (V2.M1 tasks 2, 3, 5, 6).
  *
- * Holds the in-memory catalog of registered v2 app and engine manifests
+ * Holds the in-memory catalog of registered app and engine manifests
  * for the current request. Plugins populate the registry by either:
  *
  *   1. Convention-path discovery — placing `apps/<name>/app.json` or

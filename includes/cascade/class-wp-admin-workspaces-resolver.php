@@ -209,14 +209,13 @@ class WP_Admin_Workspaces_Resolver {
 		if ( is_array( $file_doc ) ) {
 			$plugin_doc       = $file_doc;
 			$core_doc         = WP_Admin_Workspaces_Origin_Core::load_baseline();
-			$effective_engine = $plugin_doc['workspace']['engine']
-				?? $plugin_doc['engine']
-				?? ( is_array( $core_doc ) ? ( $core_doc['workspace']['engine'] ?? $core_doc['engine'] ?? null ) : null );
+			$effective_engine = $plugin_doc['engine']
+				?? ( is_array( $core_doc ) ? ( $core_doc['engine'] ?? null ) : null );
 		} else {
-			// Back-compat path — a selected full workspace occupies the
-			// `plugin` slot and REPLACES the baseline (unchanged from
-			// pre-0.1.0 behavior). Programmatic registrations win over
-			// file-based workspaces of the same slug (spec §13 #6).
+			// Option-selected path — the active workspace occupies the
+			// `plugin` slot and REPLACES the baseline. Programmatic
+			// registrations win over file-based workspaces of the same
+			// slug (spec §13 #6).
 			$workspace_slug = $context['workspace'] ?? self::active_workspace_slug();
 
 			if ( class_exists( 'WP_Admin_Workspaces_Registry' ) && WP_Admin_Workspaces_Registry::has( $workspace_slug ) ) {
@@ -226,20 +225,14 @@ class WP_Admin_Workspaces_Resolver {
 				$plugin_doc = WP_Admin_Workspaces_Origin_Core::load( $workspace_path );
 			}
 
-			// A full selected workspace declaring an engine (v2 root `engine`
-			// or v1 `settings.workspace.layoutEngine`) replaces the baseline —
-			// merging the v1-shaped empty_doc under it would inject
+			// A full selected workspace declaring an `engine` replaces the
+			// baseline — merging the empty_doc under it would inject
 			// conflicting keys. Otherwise the empty_doc guards against a
 			// missing workspace.
-			$has_plugin_engine =
-				( is_array( $plugin_doc ) && (
-					isset( $plugin_doc['engine'] ) ||
-					isset( $plugin_doc['workspace']['engine'] ) ||
-					isset( $plugin_doc['settings']['workspace']['layoutEngine'] )
-				) );
-			$core_doc         = $has_plugin_engine ? array() : WP_Admin_Workspaces_Origin_Core::empty_doc();
-			$effective_engine = is_array( $plugin_doc )
-				? ( $plugin_doc['workspace']['engine'] ?? $plugin_doc['engine'] ?? null )
+			$has_plugin_engine = is_array( $plugin_doc ) && isset( $plugin_doc['engine'] );
+			$core_doc          = $has_plugin_engine ? array() : WP_Admin_Workspaces_Origin_Core::empty_doc();
+			$effective_engine  = is_array( $plugin_doc )
+				? ( $plugin_doc['engine'] ?? null )
 				: null;
 		}
 
@@ -265,8 +258,8 @@ class WP_Admin_Workspaces_Resolver {
 	 * styles.
 	 *
 	 * Returns an empty array when:
-	 *   - No engine id is resolved (legacy v0 workspaces default to
-	 *     `core:default` at the JS layer; PHP doesn't infer here).
+	 *   - No engine id is resolved (the JS layer defaults to
+	 *     `core:default`; PHP doesn't infer here).
 	 *   - The engine manifest registry is unavailable (e.g. tests calling
 	 *     `resolve_with` directly with hand-rolled origin arrays).
 	 *   - The engine manifest declares no `default-styles`.
@@ -301,7 +294,7 @@ class WP_Admin_Workspaces_Resolver {
 		if ( ! $user || empty( $user->roles ) ) {
 			return array();
 		}
-		// First role wins. Multi-role merging is a v2 concern.
+		// First role wins. Multi-role merging is a deliberate non-goal for now.
 		foreach ( (array) $user->roles as $role ) {
 			if ( isset( $role_config[ $role ] ) && is_array( $role_config[ $role ] ) ) {
 				return $role_config[ $role ];

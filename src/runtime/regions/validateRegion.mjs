@@ -4,7 +4,7 @@
  * Spec §5.4: a region cannot have both a fixed `app` and a
  * `routing.route-key`. Either it holds an app for the life of the
  * workspace or it reads its app from the URL — never both. The schema at
- * `docs/schemas/admin-v2.json` enforces this for hand-authored
+ * The workspace.json schema enforces this for hand-authored
  * documents; the runtime confirms the rule during composition because
  * (a) merge can introduce a violation when a template ships an `app`
  * and the declaration adds a `routing.route-key`, and (b) configs

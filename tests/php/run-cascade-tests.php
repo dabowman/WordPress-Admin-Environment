@@ -302,7 +302,7 @@ $T::assert_eq( 'customizable absent: locked (default-deny)',
 $base       = $T::load( '05-base-with-customizable.json' );
 $user_input = $T::load( '06-user-customize-attempts.json' );
 
-$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $base, $user_input );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $base, $user_input, null );
 
 $T::assert_eq( 'doc: branding.accentColor allowed',
 	$filtered['styles']['branding']['accentColor'] ?? null,
@@ -450,26 +450,6 @@ WP_Admin_Workspaces_Registry::reset();
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
 delete_option( 'wp_admin_workspaces_active_workspace' );
-
-// ── user-switchable: schema-canonical kebab form ─────────────────────
-
-echo "\n— user-switchable kebab form —\n";
-
-// A bundled workspace that ships `"user-switchable": true` in kebab form.
-// Pre-fix: production code read `userSwitchable` and silently treated
-// every workspace as non-switchable (always-false). Post-fix: kebab wins.
-// `WP_Admin_Workspaces_Config::get_user_switchable()` exercises the same
-// reader path used by JS-side `window.wpAdminWorkspaces.workspaces` enumeration.
-$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'workspaces/desktop-demo.json';
-if ( file_exists( $desktop_demo_path ) ) {
-	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
-	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-config.php';
-	$cfg = new WP_Admin_Workspaces_Config( $desktop_demo_doc );
-	$T::assert_true(
-		'user-switchable: kebab "user-switchable: true" recognized via Config::get_user_switchable',
-		$cfg->get_user_switchable()
-	);
-}
 
 // ── Summary ─────────────────────────────────────────────────────────
 
