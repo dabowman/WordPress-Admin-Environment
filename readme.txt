@@ -39,6 +39,11 @@ different people.
 **Pluggable engines** — `core:default` (sidebar + content), `core:single-pane`
 (mobile-first drawer), and `core:desktop` (windowed) ship bundled.
 
+**Bundled workspaces** — `wp-admin-default` (classic parity: every screen reachable,
+plugin menus bridged, legacy pages through the iframe escape hatch) plus three
+personas for the same install: `writer` (a focused writing desk), `developer` (a
+windowed ops console), and `client-portal` (a minimal branded client admin).
+
 == Important: WordPress 7.0 or the Gutenberg plugin ==
 
 The workspace has a **runtime private-API dependency**: `@wordpress/ui` overlay

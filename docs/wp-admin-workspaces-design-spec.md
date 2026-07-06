@@ -1,5 +1,10 @@
-# WordPress Admin Workspaces — Design Spec
+# WordPress Admin Workspaces — Architecture Reference
 
+> The day-three document. New to the project? Start with the
+> [README](../README.md) — the pitch, the bundled workspaces, and the
+> five-minute quickstart live there. Come back here when you need the
+> runtime contracts in full.
+>
 > Authoritative source for the WP Admin Workspaces runtime architecture.
 > **Companion docs:** [`docs/schema-sketch.md`](./schema-sketch.md) is the design doc for the workspace.json shape (top-level `engine` / `default-screen` / `frame` / `settings` / `screens` / `menu` / `commands`); the JSON Schemas live at [`docs/schemas/workspace.json`](./schemas/workspace.json), [`workspace-app.json`](./schemas/workspace-app.json), [`workspace-engine.json`](./schemas/workspace-engine.json). This spec covers the runtime contracts: the three artifacts (§4), region vocabulary (§5), URL-driven routing (§6), token cascade (§9), origin cascade (§10), capability gating (§11), and the extension-point surface (§13).
 >
@@ -7,7 +12,7 @@
 
 The shell is built on three artifact types (app manifest, engine manifest, `workspace.json`). Regions are described by a three-layer vocabulary (`role` / `layout` / `platform`) and compose by recursive nesting — there are no slots in the region tree and no selection event bus; app coordination is data-layer only. Navigation is URL-driven: every navigable surface is addressable by a URL, and the URL alone determines what each region mounts. Plain `<a href>` links work; `target` keeps its native HTML meaning (`_self`, `_blank`, etc.); no shell-specific overload of HTML attributes.
 
-workspace.json is shaped around user-task surfaces — `workspace` / `settings` / `screens` / `menu` / `commands`. The runtime kernel reads this shape directly: it derives the region tree + routes from the active engine's `defaultRegions` and the resolved `screens` / `workspace` blocks at mount time (`src/runtime/compile/`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`. The DataView primitive is a 3-axis registry (`kind` / `name` / `variant`) — see §13 #7 and [`docs/dataview-config.md`](./dataview-config.md).
+workspace.json is shaped around user-task surfaces — `settings` / `screens` / `menu` / `commands` (+ top-level `engine` / `default-screen` / `frame`). The runtime kernel reads this shape directly: it derives the region tree + routes from the active engine's `defaultRegions` and the resolved `screens` block at mount time (`src/runtime/compile/`). Engines declare three top-level blocks the kernel honors: `menu-renderer`, `slots`, `modes`. The DataView primitive is a 3-axis registry (`kind` / `name` / `variant`) — see §13 #7 and [`docs/dataview-config.md`](./dataview-config.md).
 
 ---
 
@@ -1151,6 +1156,8 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 ---
 
 ## 16. Non-goals
+
+- **Screen-by-screen rewriting of wp-admin.** Out of scope by design. The parity workspace (`wp-admin-default`) + the `iframe:` escape hatch is the permanent coverage guarantee, not a stopgap — native rebuilds happen only where they prove the thesis (see `docs/decisions.md`).
 
 These are explicitly out of scope. Listing them prevents scope creep arguments later.
 
