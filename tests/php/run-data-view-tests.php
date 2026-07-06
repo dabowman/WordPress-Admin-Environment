@@ -2,7 +2,7 @@
 /**
  * Data-view-config + data-field-collections tests — v3 restoration shape.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-data-view-tests.php`
  *
  * Coverage (3-axis registry restoration):
  *   - `WP_Admin_Workspaces_Data_Field_Collections::register` validation + readback.

@@ -17,7 +17,7 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
 | `docs/public/app-json-reference.md` | Author-facing reference. Per-field tables. |
 | `docs/wp-admin-workspaces-design-spec.md` | §4.1 (app manifest), §5.3 (platform services), §11 (capabilities + permissions), §13 (extension points). |
 | `docs/dataview-config.md` | dataView 3-axis registry, `extends`, variant resolution. |
-| `docs/admin-json-api-validation.md` | REST API coverage per app source. |
+| `docs/workspace-api-validation.md` | REST API coverage per app source. |
 | `docs/research/app-validation-2026-05-04.md` | WPDS / REST / core-data audit of every bundled `src/apps/*`. |
 | `docs/screens/*.md` | 42 tier-2 functional specs for every wp-admin screen — source of truth for any rebuild. |
 | `src/apps/posts/app.json` + `app.md` | Reference manifest with complete `dataView` variants family + `documentation` block. |
@@ -584,11 +584,11 @@ For full patterns see the "Recurring patterns to enforce in review" section in C
 npm run test:schema
 
 # Manifest registration + cap floor
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-manifest-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-tests.php
 
 # If app declares dataView family
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-data-view-tests.php
 ```
 
 If the app is a dashboard widget (mounted via `screens[id].apps[i].slot: "grid"`), also run `tests/php/run-dashboard-widgets-tests.php`.

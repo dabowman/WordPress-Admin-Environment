@@ -2,7 +2,7 @@
 /**
  * Alpha routing / hijack test runner (W2 + W3 + W5 + W7).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-alpha-routing-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-alpha-routing-tests.php`
  *
  * Covers the workspace-as-primary-entry decision logic:
  *   - is_root_entry(): which admin URLs the render hijack takes over
@@ -54,10 +54,7 @@ class WPAS_Alpha_Routing_Runner {
 	}
 }
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-if ( ! file_exists( $plugin_dir . 'wp-admin-workspaces.php' ) ) {
-	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
-}
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 $user = get_user_by( 'login', 'admin' ) ?: get_user_by( 'id', 1 );

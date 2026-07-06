@@ -15,7 +15,7 @@
  * contract test (`tests/runtime/chromeless-bridge-contract.test.mjs`).
  * Here we only verify the PHP gate.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-chromeless-bridge-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-chromeless-bridge-tests.php`
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );

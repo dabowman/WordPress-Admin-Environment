@@ -2,7 +2,7 @@
 /**
  * Capability gating tests — server-side surface (plan §M5).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-tests.php`
  *
  * Coverage:
  *   - `wp_admin_workspaces_resolve_capabilities()` returns correct booleans
@@ -65,7 +65,7 @@ class WPAS_Cap_Test_Runner {
 
 $T = 'WPAS_Cap_Test_Runner';
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 // Force the workspace to wp-admin-default for predictable cap surface.

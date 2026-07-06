@@ -2,7 +2,7 @@
 /**
  * Standalone cascade-resolver test runner.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php`
  *
  * Class-scoped state because `wp eval-file` wraps the file in `eval()`,
  * which breaks `global $foo` lookups across helper functions.
@@ -17,10 +17,7 @@ class WPAS_Cascade_Test_Runner {
 	public static $fixture_dir;
 
 	public static function init() {
-		self::$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-		if ( ! file_exists( self::$plugin_dir . 'wp-admin-workspaces.php' ) ) {
-			self::$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
-		}
+		self::$plugin_dir = dirname( __DIR__, 2 ) . '/';
 		self::$fixture_dir = self::$plugin_dir . 'tests/php/fixtures/';
 	}
 

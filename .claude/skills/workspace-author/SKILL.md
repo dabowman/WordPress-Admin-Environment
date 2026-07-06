@@ -48,7 +48,7 @@ When unclear which file to touch, ask the user **what** they want to change (scr
 ## Sanity checks before declaring "done"
 
 - Schema validates: `npm run test:schema` (Ajv sweep — runs on every workspace, app, engine, fixture).
-- PHP shape: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php` (validates author-shape invariants — primary app valid, paths unique, default-screen resolves).
+- PHP shape: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-shape-tests.php` (validates author-shape invariants — primary app valid, paths unique, default-screen resolves).
 - Cascade behavior: `tests/php/run-cascade-tests.php` for merge / tombstone semantics.
 - Visual: load the workspace in `wp-env` and open `wp-admin` (default install URL `http://localhost:8888/wp-admin/`).
 

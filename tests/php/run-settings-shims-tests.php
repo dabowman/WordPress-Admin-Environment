@@ -2,7 +2,7 @@
 /**
  * Settings REST shim tests — issues #106, #117, #118 (folds in #212).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-settings-shims-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-settings-shims-tests.php`
  *
  * Coverage:
  *   - #117 (media): the eight image-size / uploads options are registered with

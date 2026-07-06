@@ -2,7 +2,7 @@
 /**
  * Appearance-menu prune-pass tests — theme-support-aware (issue #121).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-appearance-menu-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-appearance-menu-tests.php`
  *
  * Coverage:
  *   - Block-theme signal is stamped at `workspace.theme-support`

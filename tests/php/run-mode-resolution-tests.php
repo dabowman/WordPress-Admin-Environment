@@ -2,7 +2,7 @@
 /**
  * Mode resolution tests — v3 chrome modes.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-mode-resolution-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-mode-resolution-tests.php`
  *
  * Coverage:
  *   - `resolve_engine_modes` with no `modes` block (synthesizes default-only catalog).

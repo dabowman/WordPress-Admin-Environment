@@ -2,7 +2,7 @@
 /**
  * Dashboard-widgets registry tests (v3 reshape — 3c.1).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-dashboard-widgets-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-dashboard-widgets-tests.php`
  *
  * Coverage:
  *   - `WP_Admin_Workspaces_Dashboard_Widgets::register` validation + readback.

@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WP Admin Workspaces 0.1.0\n"
-"Report-Msgid-Bugs-To: https://github.com/dabowman/WordPress-Admin-Environment/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/dabowman/WordPress-Admin-Workspaces/issues\n"
 "POT-Creation-Date: 2026-05-28 19:36+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"

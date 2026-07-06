@@ -7,7 +7,7 @@ This file holds the recorded measurement that supports the v1 readiness claim. *
 ## Methodology
 
 1. Plain wp-env install with the plugin active (on WP 6.7–6.9 also activate Gutenberg per the runtime dep; not needed on 7.0+).
-2. Login as administrator, set `wp_admin_workspaces_active_shell = wp-admin-default` (or drop a `wp-content/workspace.json`).
+2. Login as administrator, set `wp_admin_workspaces_active_workspace = wp-admin-default` (or drop a `wp-content/workspace.json`).
 3. Open Chrome (or equivalent), DevTools → Network → "Disable cache" + Performance → throttle to **Fast 4G** + **CPU: 4× slowdown**.
 4. In Performance, start recording.
 5. Hard reload `http://localhost:8888/wp-admin/` (the workspace takes over the admin root; the old `admin.php?page=wp-admin-workspaces` entry is gone).

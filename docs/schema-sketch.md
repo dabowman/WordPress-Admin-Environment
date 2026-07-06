@@ -26,7 +26,7 @@ v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline
 
 ```json
 {
-  "$schema": "https://schemas.wp.org/admin/v3.json",
+  "$schema": "../docs/schemas/workspace.json",
   "version": 3,
   "$wpds": "6.9",
   "name": "wp-admin-default",

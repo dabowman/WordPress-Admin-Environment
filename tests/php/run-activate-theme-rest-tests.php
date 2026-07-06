@@ -22,12 +22,12 @@
  *   - Admin, intact-but-incompatible theme      → 400 rest_theme_requirements.
  *   - Admin, valid installed theme              → 200 { stylesheet, name, active: true }.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-activate-theme-rest-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-activate-theme-rest-tests.php`
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 class WPAS_Activate_Theme_REST_Test_Runner {

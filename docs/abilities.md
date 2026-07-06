@@ -98,7 +98,7 @@ Pinned end-to-end by `tests/php/run-abilities-tests.php` (§6).
 ## Testing
 
 ```bash
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-abilities-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-abilities-tests.php
 ```
 
 Covers registration (`wp_get_ability` per id), permission floors per role,

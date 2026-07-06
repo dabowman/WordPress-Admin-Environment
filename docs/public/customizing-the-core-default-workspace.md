@@ -604,13 +604,13 @@ This works because the `wp-admin-default` baseline already declares the `postTyp
 npm run test:schema
 
 # 2. Author-shape invariants — each screen has a primary app, paths unique, default-screen resolves
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-shape-tests.php
 
 # 3. Cascade semantics — merge / tombstones / trust tier
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php
 
 # 4. Capability + permissions gating
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-gating-smoke.php
 ```
 
 For non-trivial changes, load the workspace in `wp-env` and walk the screens manually. Per-screen functional specs live in `docs/screens/*.md` (the source of truth when rebuilding any wp-admin surface).

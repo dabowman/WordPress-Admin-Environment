@@ -24,7 +24,7 @@ import IframeApp from '../iframe-fallback';
  *     IframeApp configured to that wp-admin URL).
  *
  * Built-in panels reflect the REST coverage matrix in
- * docs/admin-json-api-validation.md §core:settings:
+ * docs/workspace-api-validation.md §core:settings:
  *
  *   general     — full coverage, native (existing SettingsGeneralApp)
  *   writing     — partial: default category + post format

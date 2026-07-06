@@ -62,8 +62,8 @@ Grab `wp-admin-workspaces.zip` from the releases page, or build one yourself wit
 ### From source (development)
 
 ```bash
-git clone https://github.com/dabowman/WordPress-Admin-Environment.git
-cd WordPress-Admin-Environment
+git clone https://github.com/dabowman/WordPress-Admin-Workspaces.git
+cd WordPress-Admin-Workspaces
 npm install
 npm run build
 ```
@@ -206,7 +206,7 @@ npm run test:runtime     # pure-ESM runtime modules
 npm run test:engines     # core:desktop engine
 
 # PHP fixture tests (inside the wp-env CLI container)
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php
 # … see docs / CLAUDE.md for the full list
 ```
 

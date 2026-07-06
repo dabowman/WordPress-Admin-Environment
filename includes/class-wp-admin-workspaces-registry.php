@@ -2,7 +2,7 @@
 /**
  * Programmatic workspace registry (spec §13 #6).
  *
- * Plugins call `wp_admin_workspaces_register_workspace( $slug, $admin_json )`
+ * Plugins call `wp_admin_workspaces_register_workspace( $slug, $workspace_json )`
  * to contribute a complete workspace at runtime — useful for workspaces whose
  * shape is computed (per role, per site, per feature flag) rather than
  * stored on disk.
@@ -36,11 +36,11 @@ class WP_Admin_Workspaces_Registry {
 	 * Register a complete workspace programmatically.
 	 *
 	 * @param string $slug      Unique slug. Sanitized via `sanitize_file_name`.
-	 * @param array  $admin_json Full workspace.json document.
+	 * @param array  $workspace_json Full workspace.json document.
 	 *
 	 * @return string|WP_Error Slug on success, WP_Error otherwise.
 	 */
-	public static function register( $slug, $admin_json ) {
+	public static function register( $slug, $workspace_json ) {
 		$slug = is_string( $slug ) ? sanitize_file_name( $slug ) : '';
 		if ( $slug === '' ) {
 			return new WP_Error(
@@ -48,7 +48,7 @@ class WP_Admin_Workspaces_Registry {
 				'register_workspace: slug must be a non-empty string'
 			);
 		}
-		if ( ! is_array( $admin_json ) ) {
+		if ( ! is_array( $workspace_json ) ) {
 			return new WP_Error(
 				'wp_admin_workspaces_invalid_shell_doc',
 				"register_workspace: workspace.json doc for '$slug' must be an array"
@@ -57,11 +57,11 @@ class WP_Admin_Workspaces_Registry {
 
 		// Stamp the slug into the doc when missing so consumers
 		// (cascade tagging, dropdown) have a stable identifier.
-		if ( ! isset( $admin_json['name'] ) || ! is_string( $admin_json['name'] ) || $admin_json['name'] === '' ) {
-			$admin_json['name'] = $slug;
+		if ( ! isset( $workspace_json['name'] ) || ! is_string( $workspace_json['name'] ) || $workspace_json['name'] === '' ) {
+			$workspace_json['name'] = $slug;
 		}
 
-		self::$registered[ $slug ] = $admin_json;
+		self::$registered[ $slug ] = $workspace_json;
 		return $slug;
 	}
 

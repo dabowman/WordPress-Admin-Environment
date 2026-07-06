@@ -2,7 +2,7 @@
 /**
  * Manifest validator + registry tests (V2.M1 task 4).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-manifest-tests.php`
  *
  * Coverage:
  *   - Validator accepts every fixture under

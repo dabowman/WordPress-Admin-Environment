@@ -26,12 +26,12 @@ npm run test:runtime     # ~277 across 13 files
 npm run test:engines     # 63 (TS via Node --experimental-strip-types)
 npm run build            # webpack production build, 3 pre-existing size warnings allowed
 
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php          # 29
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-tests.php              # 54
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php            # 111
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-manifest-tests.php         # 67
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php           # 13
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php  # 22
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php          # 29
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-tests.php              # 54
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-shape-tests.php            # 111
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-manifest-tests.php         # 67
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-tokens-tests.php           # 13
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-engine-defaults-tests.php  # 22
 ```
 
 Combined: **709 assertions**.

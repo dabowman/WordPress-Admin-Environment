@@ -429,4 +429,4 @@ For workspaces that need full parity, `iframe:options-general.php` is the escape
 - REST API reference: `https://developer.wordpress.org/rest-api/reference/settings/`
 - Current workspace impl: `src/apps/settings-general/index.js`
 - Settings host: `src/apps/settings/index.js`
-- Doc reference: `docs/admin-json-api-validation.md` for API coverage analysis
+- Doc reference: `docs/workspace-api-validation.md` for API coverage analysis

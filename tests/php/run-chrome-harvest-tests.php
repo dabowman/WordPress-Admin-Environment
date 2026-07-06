@@ -2,7 +2,7 @@
 /**
  * Admin-bar + admin-notices runtime-harvest tests (#128).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-chrome-harvest-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-chrome-harvest-tests.php`
  *
  * Coverage:
  *   - Core admin-bar node-id skip detection + filter expansion.

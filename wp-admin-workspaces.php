@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: WP Admin Workspaces
- * Plugin URI: https://github.com/dabowman/WordPress-Admin-Environment
+ * Plugin URI: https://github.com/dabowman/WordPress-Admin-Workspaces
  * Description: A configurable, React-based WordPress admin environment driven by workspace.json configuration files.
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Author: WP Admin Workspaces Contributors
- * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
+ * Author URI: https://github.com/dabowman/WordPress-Admin-Workspaces
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wp-admin-workspaces
@@ -259,7 +259,7 @@ function wp_admin_workspaces_register_engine( $manifest_or_path ) {
 /**
  * Register a region template against an existing engine. Plugin
  * extension point per spec §13 #4 — adds a `templates[$template_id]`
- * entry to the engine's manifest at runtime so admin.json regions can
+ * entry to the engine's manifest at runtime so workspace.json regions can
  * reference it via `template`. The engine must already be registered.
  *
  * @param string $engine_id  Engine id to extend.
@@ -310,12 +310,12 @@ function wp_admin_workspaces_register_menu_renderer( $renderer_id, $args ) {
  * workspaces: site/role/user origins still merge on top.
  *
  * @param string $slug      Unique slug.
- * @param array  $admin_json Full admin.json document.
+ * @param array  $workspace_json Full workspace.json document.
  *
  * @return string|WP_Error slug on success, WP_Error on failure.
  */
-function wp_admin_workspaces_register_workspace( $slug, $admin_json ) {
-	return WP_Admin_Workspaces_Registry::register( $slug, $admin_json );
+function wp_admin_workspaces_register_workspace( $slug, $workspace_json ) {
+	return WP_Admin_Workspaces_Registry::register( $slug, $workspace_json );
 }
 
 /**
@@ -682,7 +682,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// V2.M5 — DTCG primitives layer. Site → theme → plugin → core
 		// origins merged here. Empty object when no origin contributes.
 		// `compileStyles` consumes this when resolving non-`styles.*`
-		// curly-brace aliases in admin.json `styles`. Token serialization
+		// curly-brace aliases in workspace.json `styles`. Token serialization
 		// is skipped entirely when the resolved styles tree references
 		// zero token aliases — the DTCG layer is dead weight for workspaces
 		// that only set seeds + slot overrides. The empty-path cast to
@@ -794,7 +794,7 @@ JS;
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
 /**
- * Read the active admin.json configuration through the M2 cascade resolver.
+ * Read the active workspace.json configuration through the M2 cascade resolver.
  *
  * Five origins (core / plugin / site / role / user) are loaded, filtered,
  * and merged into a single resolved doc. The legacy single-file loader is
@@ -916,7 +916,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
  * resolves to no route). The `workspace.default-screen` is always kept so the
  * kernel always has a landing route — its mounted app cap-gates itself.
  *
- * @param array $config  Full resolved admin.json doc.
+ * @param array $config  Full resolved workspace.json doc.
  * @param int   $user_id Current user id.
  * @return array Pruned copy.
  */
@@ -1171,7 +1171,7 @@ function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
  * the workspace ships seeds + slot overrides only — the DTCG layer would be
  * dead weight on the wire.
  *
- * Contract: DTCG aliases are valid ONLY under `admin.json#styles`. App
+ * Contract: DTCG aliases are valid ONLY under `workspace.json#styles`. App
  * manifests (`app.json#dataView`, etc.), engine `default-style` blocks,
  * and any other config surface MUST NOT carry `{tokens.*}` references —
  * the detector deliberately does not scan them, so a stray alias outside
@@ -1180,7 +1180,7 @@ function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
  * cross-reference from other config surfaces via `{styles.path}` if
  * needed.
  *
- * @param array $config Resolved admin.json config.
+ * @param array $config Resolved workspace.json config.
  * @return bool
  */
 function wp_admin_workspaces_styles_reference_tokens( $config ) {
@@ -1201,7 +1201,7 @@ function wp_admin_workspaces_tree_has_token_alias( $node ) {
 		if ( ! preg_match( '/^\{([^}]+)\}$/', $node, $m ) ) {
 			return false;
 		}
-		// Within-doc aliases (`{styles.path}`) resolve from admin.json
+		// Within-doc aliases (`{styles.path}`) resolve from workspace.json
 		// directly; they don't reach the tokens table. Only "foreign"
 		// aliases (`{color.brand.500}`, `{size.lg}`, etc.) need the
 		// DTCG tree.
