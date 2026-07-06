@@ -325,7 +325,7 @@ Fifteen surfaces, all in place. Spec §13 + `docs/public/{admin,app,engine}-json
 | 8 | Register a data-field collection | `wp_admin_workspaces_register_data_field_collection( $id, $kind, $name, $fields, $fields_module )`; workspace.json `settings.dataFields` overrides; `fieldsRef` merges ref-wins-inline |
 | 9 | Declare REST preloads | `preload[]` block (string path or `[path, method]`); additive across origins, deduped, hydrated via `rest_preload_api_request` on `wp-api-fetch` |
 | 10 | Register a nav menu item | `wp_admin_workspaces_register_menu_item( $id, $args )` (`to`/`label`/`icon`/`badge`/`parent`/`parent_type`/`position` + workspace's `region`/`capability`); priority 5; dup id → `WP_Error` |
-| 11 | Register an admin route | `wp_admin_workspaces_register_route( $path, $args )` (`app`/`config`/`static_data`; `gc_time` ignored); priority 5; path `^/[A-Za-z0-9_/{}\-*]*$` |
+| 11 | Register an admin route | `wp_admin_workspaces_register_route( $path, $args )` (`app`/`config`/`static_data`); priority 5; path `^/[A-Za-z0-9_/{}\-*]*$` |
 | 12 | Contribute a cache-invalidation signal | `wp_admin_workspaces_cache_signals` filter — hook it if you hold static state (vs defensive `WP_Admin_Workspaces_Cache::flush()`) |
 | 13 | Register a dashboard widget | `wp_admin_workspaces_register_dashboard_widget( $id, $args )` — override-only or standalone; workspace.json `dashboardWidgets[id]` wins, then `composeWidgets()` per-property over manifest. Widgets are apps (4-layer cap gating applies) |
 | 14 | Filter classic-menu-bridge skip-list | `wp_admin_workspaces_classic_menu_core_slugs` — request-scoped memo (`…Bridge::reset()` in tests); bridge synthesizes `screens[ingested-<slug>]` + `menu.ingested.items[]` at priority 6 |

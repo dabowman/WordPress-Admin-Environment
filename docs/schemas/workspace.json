@@ -651,7 +651,7 @@
 					"type": "string",
 					"minLength": 1,
 					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
-					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge. Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
 				},
 				"fieldsRef": {
 					"type": "string",
@@ -816,7 +816,7 @@
 				"fieldsModule": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the workspace runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
+					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the workspace runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands."
 				}
 			}
 		},
@@ -1148,7 +1148,7 @@
 						},
 						{
 							"enum": [ "GET", "OPTIONS" ],
-							"description": "HTTP verb. CIAB convention preloads only GET + OPTIONS — the WP REST controller dispatches OPTIONS for entity schema discovery."
+							"description": "HTTP verb. Preloads are GET + OPTIONS only — the WP REST controller dispatches OPTIONS for entity schema discovery."
 						}
 					],
 					"items": false,

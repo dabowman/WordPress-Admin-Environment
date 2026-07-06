@@ -538,7 +538,7 @@ Engines that ship alternative grid implementations MAY ignore the `dataView` blo
 ### DataViews
 
 - **Registry lives at `settings.dataViews.<kind>.<name>.<variant>`.** Three axes; each leaf is a complete `@wordpress/dataviews` configuration (`fieldsRef`, `defaultView`, `defaultLayouts`, `actions`, etc.). The `_default` variant is the unqualified base; other variant ids are author-defined.
-- **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge (CIAB independent-resolution rule). Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
+- **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge. Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
 - **Inline override on screens via `screens[id].dataView`.** Deep-merges on top of the resolved triple. Per-screen tweak pattern that survives alongside `dataViewRef`.
 - **Per-base + per-variant filter hooks.** `wp_admin_workspaces_data_view_config_{kind}_{name}` fires for every triple; `wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}` fires additionally whenever the variant is non-`_default`.
 - **Tombstones via `null`.** A higher origin sets `settings.dataViews.postType.post._default.fields.author: null` to remove the author column from the base globally. Or `screens.posts.dataView.fields.author: null` to remove it only on the Posts screen.
@@ -894,7 +894,7 @@ The engine's render path consults the renderer registry. Plugin renderers receiv
 
 ### Plugin-contributed dataView overrides
 
-Preserved from v2 with the v3 rename: the `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_workspaces_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant. CIAB plugins migrate via `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`.
+Preserved from v2 with the v3 rename: the `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_workspaces_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant.
 
 ## Open design questions
 

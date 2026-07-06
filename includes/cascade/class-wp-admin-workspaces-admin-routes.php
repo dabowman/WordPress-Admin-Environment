@@ -7,11 +7,10 @@
  * cascade through the synthetic `plugin` origin so workspace.json can still
  * override per-path.
  *
- * Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […],
- * 'gc_time' => … ] )` — `app` names the app to mount, `config` carries
- * route configuration, `static_data` is folded into `config` for forward
- * compatibility, and `gc_time` is accepted but ignored (no workspace
- * equivalent — emits a one-time `WP_DEBUG` notice).
+ * Args: `( $path, [ 'app' => …, 'config' => […], 'static_data' => […] ] )`
+ * — `app` names the app to mount, `config` carries route configuration,
+ * and `static_data` is folded into `config` (explicit `config` keys win
+ * on collision).
  *
  * @package WP_Admin_Workspaces
  */
@@ -28,13 +27,6 @@ class WP_Admin_Workspaces_Admin_Routes {
 	private static $registry = array();
 
 	/**
-	 * Per-path `gc_time → ignored` warn-once map.
-	 *
-	 * @var array<string, bool>
-	 */
-	private static $warned_gc_time = array();
-
-	/**
 	 * Mirrors the `docs/schemas/workspace.json` routes-block path pattern.
 	 */
 	const PATH_PATTERN = '#^/[A-Za-z0-9_/{}\-*]*$#';
@@ -47,7 +39,6 @@ class WP_Admin_Workspaces_Admin_Routes {
 	 *     @type string     $app          App id to mount. Required.
 	 *     @type array|null $config       Configuration passed to the app. Optional.
 	 *     @type array|null $static_data  Folded into `config`.
-	 *     @type int|null   $gc_time      Accepted but ignored; dev-warns.
 	 * }
 	 *
 	 * @return string|WP_Error Path on success, WP_Error on failure.
@@ -131,10 +122,6 @@ class WP_Admin_Workspaces_Admin_Routes {
 			$route['legacy_params'] = $args['legacy_params'];
 		}
 
-		if ( array_key_exists( 'gc_time', $args ) && $args['gc_time'] !== null ) {
-			self::warn_gc_time( $path );
-		}
-
 		self::$registry[ $path ] = $route;
 		return $path;
 	}
@@ -208,8 +195,7 @@ class WP_Admin_Workspaces_Admin_Routes {
 	 * Reset the registry. Test-only.
 	 */
 	public static function reset() {
-		self::$registry       = array();
-		self::$warned_gc_time = array();
+		self::$registry = array();
 	}
 
 	/**
@@ -232,22 +218,6 @@ class WP_Admin_Workspaces_Admin_Routes {
 			}
 		}
 		return $doc;
-	}
-
-	private static function warn_gc_time( $path ) {
-		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
-			return;
-		}
-		if ( ! empty( self::$warned_gc_time[ $path ] ) ) {
-			return;
-		}
-		self::$warned_gc_time[ $path ] = true;
-		$message = sprintf(
-			/* translators: %s: route path */
-			__( 'Admin route %s declared "gc_time". The workspace does not implement TanStack Router cache GC; the value is accepted and ignored.', 'wp-admin-workspaces' ),
-			$path
-		);
-		trigger_error( esc_html( $message ), E_USER_NOTICE );
 	}
 }
 

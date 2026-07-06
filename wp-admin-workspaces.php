@@ -230,16 +230,13 @@ function wp_admin_workspaces_register_workspace( $slug, $workspace_json ) {
 }
 
 /**
- * Register a nav menu item — CIAB compatibility shim (spec §13 #10).
+ * Register a nav menu item (spec §13 #10).
  *
- * Mechanical port of CIAB's `next_admin_register_menu_item()`. Plugins
- * that previously called `next_admin_register_menu_item()` rename to
- * `wp_admin_workspaces_register_menu_item()` and drop their inline
- * `current_user_can()` gates — the `capability` arg flows through the
- * workspace's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
- * `parent`, `parent_type`, `position`) carry over 1:1; the workspace adds
- * an optional `region` arg (defaults to the first `core:navigation`
- * region in the resolved tree).
+ * Plugins declare the item's `to`, `label`, `icon`, `badge`, `parent`,
+ * `parent_type`, and `position`, plus an optional `region` arg (defaults
+ * to the first `core:navigation` region in the resolved tree). No inline
+ * `current_user_can()` gate is needed — the `capability` arg flows
+ * through the workspace's 4-layer cap model.
  *
  * Timing: call from `init` priority 9 or earlier (`plugins_loaded` is
  * fine). The cascade resolver's first run on the page render or first
@@ -263,16 +260,11 @@ function wp_admin_workspaces_register_menu_item( $id, $args ) {
 }
 
 /**
- * Register an admin route — CIAB compatibility shim (spec §13 #11).
+ * Register an admin route (spec §13 #11).
  *
- * Mechanical port of CIAB's `next_admin_register_admin_route()`. The
- * arg signature collapses CIAB's positional
- * (`$path, $content_module, $route_module, $before_load, $static_data, $gc_time`)
- * into `($path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ])`.
- * `app` replaces `content_module`, `static_data` is folded into `config`
- * for forward compatibility (explicit `config` keys win on collision),
- * and `gc_time` is accepted but ignored (TanStack-specific cache GC,
- * no workspace equivalent — emits a one-time `WP_DEBUG` notice).
+ * Signature: `($path, [ 'app' => …, 'config' => […], 'static_data' => […] ])`.
+ * `app` names the app to mount; `static_data` is folded into `config`
+ * (explicit `config` keys win on collision).
  *
  * Timing: same as `wp_admin_workspaces_register_menu_item()` — call from
  * `init` priority 9 or earlier so the cascade resolver picks the route
@@ -557,13 +549,10 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// the active-workspace option, so the workspace switcher hides + switchWorkspace()
 		// refuses (writing the option would be a silent no-op).
 		'fileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
-		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
-		// production builds. PHP `_deprecated_hook` is gated by
-		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
-		// JS shims default to `NODE_ENV !== 'production'` so prod builds
-		// stay silent. Site admins with `WP_DEBUG` on get JS warnings
-		// even when consuming a minified workspace bundle. Removed in v3.1
-		// when the shims themselves go away.
+		// Opt-in surface for non-fatal JS diagnostics (e.g. chrome-hide
+		// injection failures) in minified builds — site admins with
+		// `WP_DEBUG` on get the console warnings production builds
+		// otherwise suppress.
 		'debug'         => defined( 'WP_DEBUG' ) && WP_DEBUG,
 		'user'          => array(
 			'displayName' => $current_user->display_name,

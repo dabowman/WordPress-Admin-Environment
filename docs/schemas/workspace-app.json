@@ -408,7 +408,7 @@
 							"$ref": "#/$defs/appDataViewVariant"
 						}
 					},
-					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; workspace.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge — CIAB independent-resolution rule). `_default` itself MUST NOT declare `extends` (schema-enforced)."
+					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; workspace.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge). `_default` itself MUST NOT declare `extends` (schema-enforced)."
 				}
 			}
 		},
@@ -422,7 +422,7 @@
 					"type": "string",
 					"minLength": 1,
 					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
-					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`."
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge. Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`."
 				},
 				"fieldsRef": {
 					"type": "string",
