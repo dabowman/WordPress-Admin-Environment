@@ -1157,10 +1157,9 @@ Goal: complete authoring surface (three artifacts, full vocabulary, two engines)
 
 ## 16. Non-goals
 
-- **Screen-by-screen rewriting of wp-admin.** Out of scope by design. The parity workspace (`wp-admin-default`) + the `iframe:` escape hatch is the permanent coverage guarantee, not a stopgap — native rebuilds happen only where they prove the thesis (see `docs/decisions.md`).
-
 These are explicitly out of scope. Listing them prevents scope creep arguments later.
 
+- **Screen-by-screen rewriting of wp-admin.** Out of scope by design. The parity workspace (`wp-admin-default`) + the `iframe:` escape hatch is the permanent coverage guarantee, not a stopgap — native rebuilds happen only where they prove the thesis (see `docs/decisions.md`).
 - **Replacing the block editor.** The shell composes the editor; it does not reimplement it.
 - **Replacing the REST API.** The shell consumes the API.
 - **Multisite network admin shell.** Network-admin-specific features (site management, network plugins) deferred.

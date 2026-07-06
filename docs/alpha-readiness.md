@@ -26,7 +26,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
   omits `engine`.
-- [manual] Copy `workspaces/writer.json` → `wp-content/workspace.json`, load
+- [manual] Activate the writer workspace (`wp admin-workspace activate writer`), load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
   delta; the baseline's screens/menu stay, only the chrome retints.
@@ -191,10 +191,13 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   SFTP/git/wp-cli. No settings UI writes it (filesystem caps + nonce + locking
   are post-alpha). Ship the `.htaccess` / nginx note so the file isn't served
   as static JSON.
-- **Bundled `workspaces/*` are starter templates**, not a selectable catalog —
-  copy one to `wp-content/workspace.json` and edit. The
-  `wp_admin_workspaces_active_workspace` option remains the option-based
-  activation path but is hidden by the switcher when a file override is
+- **Two activation paths with different merge semantics.** Activating a
+  bundled workspace via the `wp_admin_workspaces_active_workspace` option
+  REPLACES the baseline (the personas render as authored); a
+  `wp-content/workspace.json` file is a partial delta MERGED over the
+  baseline (customization) and wins over the option while present — copying
+  a full persona file there keeps every baseline screen routable, which is
+  usually not what you want. The switcher hides while a file override is
   active.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it

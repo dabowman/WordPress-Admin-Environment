@@ -43,10 +43,13 @@ and venue remain open until the persona workspaces exist.
 
 ## App surface (Phase 2 option)
 
-**Full cut.** `core:posts` is the sole native *screen* showcase and gets the
-polish budget. System/chrome apps (navigation, site-hub, toolbar-actions,
-notices, user-menu, command-palette, preview-pane, iframe-fallback) are shell
-infrastructure and stay — they are not screens. Other native screen apps are
+**Full cut.** `core:posts` is the flagship native screen and gets the polish
+budget; `core:simple-editor` (the writer persona's editor) and
+`core:settings-workspace` (the workspace's own on/off panel) are the only
+other native screen apps. System/chrome apps (navigation, site-hub,
+toolbar-actions, notices, user-menu, command-palette, iframe-fallback) are
+shell infrastructure and stay — they are not screens; preview-pane, which
+had no consumer left, is parked. Other native screen apps are
 parked on an archive branch, their screens routed through the iframe escape
 hatch in `wp-admin-default`. The bundled demo workspaces are rewritten as
 persona workspaces per D4; engine-specific apps follow their engines.

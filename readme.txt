@@ -64,9 +64,11 @@ instead.
 2. Upload `wp-admin-workspaces.zip` via **Plugins → Add New → Upload Plugin**, or copy the
    plugin folder into `wp-content/plugins/`.
 3. Activate **WP Admin Workspaces**.
-4. To turn the workspace on, drop a valid `workspace.json` at `wp-content/workspace.json`
-   (copy a starter from the plugin's `workspaces/` directory and edit it). With no file
-   present, wp-admin stays classic and untouched.
+4. To turn the workspace on, either activate a bundled workspace
+   (`wp admin-workspace activate writer` — it replaces the baseline outright), or drop
+   a `workspace.json` delta at `wp-content/workspace.json` (a partial override layered
+   on the `wp-admin-default` baseline, like `theme.json` over core defaults). With
+   neither present, wp-admin stays classic and untouched.
 
 Press `Cmd/Ctrl+K` for the command palette. The workspace admin bar shows a
 "Classic wp-admin" escape button (session-scoped, available to every logged-in user).

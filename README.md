@@ -44,18 +44,35 @@ And one coverage guarantee: **any wp-admin screen the workspace doesn't rebuild 
 
 ## Five-minute quickstart
 
+Two ways in — **pick a workspace**, or **customize the baseline**:
+
 ```bash
-# 1. Install + activate the plugin (see Installation below), then:
-cp wp-content/plugins/wp-admin-workspaces/workspaces/writer.json wp-content/workspace.json
+# 1. Install + activate the plugin (see Installation below), then
+#    pick a bundled workspace. It REPLACES the baseline outright:
+wp admin-workspace activate writer
 
-# 2. Visit /wp-admin/ — you're in the writing desk.
-
-# 3. Change one value: edit wp-content/workspace.json and set
-#    "styles": { "theme": { "color": { "primary": "#d63638" } } }
-#    Reload. The admin re-themes.
+# 2. Visit /wp-admin/ — you're in the writing desk. Try the others:
+#    `wp admin-workspace activate developer` / `client-portal` /
+#    `wp admin-workspace activate wp-admin-default` to go back.
 ```
 
-The file at `wp-content/workspace.json` is both the trigger and the configuration. It behaves like `theme.json` over core defaults: a **partial override** layered on the `wp-admin-default` baseline — declare only what you change, everything else falls through. Delete the file and wp-admin goes back to classic, untouched.
+(No WP-CLI? Any client of the REST settings endpoint can write the
+`wp_admin_workspaces_active_workspace` option, and workspaces flagged
+`user-switchable` appear in the workspace's own user-menu switcher.)
+
+To **customize** instead, drop a delta file at `wp-content/workspace.json`. The file behaves like `theme.json` over core defaults: a **partial override** layered on the `wp-admin-default` baseline — declare only what you change, everything else falls through (and the file wins over the activated-workspace option while present):
+
+```json
+{
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "mine",
+	"engine": "core:default",
+	"styles": { "theme": { "color": { "primary": "#d63638" } } }
+}
+```
+
+Reload `/wp-admin/` — the admin re-themes. Delete the file and wp-admin goes back to the activated workspace (or classic, if none was activated).
 
 `Cmd/Ctrl+K` opens the command palette. The workspace toolbar shows a **Classic wp-admin** button (a session-scoped escape hatch for every logged-in user); classic shows a reciprocal **Back to workspace** link.
 
@@ -98,7 +115,7 @@ The bundled app surface is deliberately small — the thesis is the kernel + the
 | `core:editor` / `core:site-editor` | iframe | Chromeless `post.php` / `site-editor.php` wrappers. Editing in `wp-admin-default` hands off to the real block editor and returns to the workspace. |
 | `iframe:{slug}` | iframe | Any wp-admin URL with chrome hidden — the escape hatch every other screen rides. |
 
-System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are engine furniture, not screens. A previous iteration built ~20 more native screen apps (media, users, comments, taxonomy, plugins, themes, settings panels, a dashboard grid…); they're parked on the [`archive/native-apps`](../../tree/archive/native-apps) branch, recoverable per screen (see `docs/decisions.md`).
+System apps (`core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`) are engine furniture, not screens, and the `core:desktop` engine brings four compositor apps of its own (`desktop-compositor`, `desktop-dock-app`, `desktop-window-frame`, `desktop-iframe`) — 17 app directories in all. A previous iteration built ~20 more native screen apps (media, users, comments, taxonomy, plugins, themes, settings panels, a dashboard grid…); they're parked on the [`archive/native-apps`](../../tree/archive/native-apps) branch, recoverable per screen (see `docs/decisions.md`).
 
 ## Non-goals
 
