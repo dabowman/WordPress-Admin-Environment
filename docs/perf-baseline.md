@@ -12,7 +12,7 @@ This file holds the recorded measurement that supports the v1 readiness claim. *
 4. In Performance, start recording.
 5. Hard reload `http://localhost:8888/wp-admin/` (the workspace takes over the admin root; the old `admin.php?page=wp-admin-workspaces` entry is gone).
 6. Stop recording when the routed app's first paint settles.
-7. Measure from `navigationStart` to first paint of the routable region's first app (the Dashboard iframe for `wp-admin-default`, the Posts list for `single-pane-demo`).
+7. Measure from `navigationStart` to first paint of the routable region's first app (the Dashboard iframe for `wp-admin-default`, the Posts list for `writer`).
 
 Repeat 3 times, record the median.
 
@@ -23,8 +23,9 @@ Repeat 3 times, record the median.
 | Workspace | Commit | Cold mount (ms) | Notes |
 |---|---|---:|---|
 | wp-admin-default  | _pending_ | _pending_ | _pending_ |
-| single-pane-demo  | _pending_ | _pending_ | _pending_ |
-| desktop-demo      | _pending_ | _pending_ | _pending_ |
+| writer            | _pending_ | _pending_ | _pending_ |
+| developer         | _pending_ | _pending_ | _pending_ |
+| client-portal     | _pending_ | _pending_ | _pending_ |
 
 Pass if all three workspaces fall under **500 ms**. Annotate any miss with the network/CPU breakdown so we know which budget got blown.
 
@@ -33,7 +34,7 @@ Pass if all three workspaces fall under **500 ms**. Annotate any miss with the n
 - Network: `index.js` (boot bundle), `index.css`, `dataviews.css`. Post-C5 the per-app code is no longer in the boot bundle — each app loads on-demand from its own chunk (`build/app-<id>.js`) the first time its region mounts.
 - Parse + execute: kernel registers built-ins, the resolved config arrives via inline `<script>`, token CSS injects.
 - React: engine + region tree + the routed app render.
-- First app's data: PostsApp (single-pane-demo) fires `useEntityRecords` query; iframed apps mount the iframe (defer first paint of iframed content from the cold-mount measurement — measure to workspace-card paint, not to iframed-content paint).
+- First app's data: PostsApp (writer) fires `useEntityRecords` query; iframed apps mount the iframe (defer first paint of iframed content from the cold-mount measurement — measure to workspace-card paint, not to iframed-content paint).
 
 ## Bundle size — Track D (C5) lazy app loading
 

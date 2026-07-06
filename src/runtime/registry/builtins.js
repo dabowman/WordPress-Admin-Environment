@@ -75,46 +75,6 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-simple-editor" */ '../../apps/simple-editor'
 			),
 	},
-	'core:media': {
-		load: () =>
-			import( /* webpackChunkName: "app-media" */ '../../apps/media' ),
-	},
-	'core:profile': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-profile" */ '../../apps/profile'
-			),
-	},
-	'core:settings-general': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings-general" */ '../../apps/settings-general'
-			),
-	},
-	'core:settings-writing': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings-writing" */ '../../apps/settings-writing'
-			),
-	},
-	'core:settings-reading': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings-reading" */ '../../apps/settings-reading'
-			),
-	},
-	'core:settings-discussion': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings-discussion" */ '../../apps/settings-discussion'
-			),
-	},
-	'core:settings-media': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings-media" */ '../../apps/settings-media'
-			),
-	},
 	'core:settings-workspace': {
 		load: () =>
 			import(
@@ -127,80 +87,16 @@ const APP_LOADERS = {
 				/* webpackChunkName: "app-iframe-fallback" */ '../../apps/iframe-fallback'
 			),
 	},
-	'core:users': {
-		load: () =>
-			import( /* webpackChunkName: "app-users" */ '../../apps/users' ),
-	},
-	'core:user-new': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-user-new" */ '../../apps/user-new'
-			),
-	},
-	'core:comments': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-comments" */ '../../apps/comments'
-			),
-	},
-	'core:settings': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-settings" */ '../../apps/settings'
-			),
-	},
 	'core:site-editor': {
 		load: () =>
 			import(
 				/* webpackChunkName: "app-site-editor" */ '../../apps/site-editor'
 			),
 	},
-	'core:plugins': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-plugins" */ '../../apps/plugins'
-			),
-	},
-	'core:themes': {
-		load: () =>
-			import( /* webpackChunkName: "app-themes" */ '../../apps/themes' ),
-	},
-	'core:tools': {
-		load: () =>
-			import( /* webpackChunkName: "app-tools" */ '../../apps/tools' ),
-	},
-	'core:site-health': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-site-health" */ '../../apps/site-health'
-			),
-	},
-	'core:taxonomy': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-taxonomy" */ '../../apps/taxonomy'
-			),
-	},
-	'core:menus': {
-		load: () =>
-			import( /* webpackChunkName: "app-menus" */ '../../apps/menus' ),
-	},
 	'core:command-palette': {
 		load: () =>
 			import(
 				/* webpackChunkName: "app-command-palette" */ '../../apps/command-palette'
-			),
-	},
-	'core:preview-pane': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-preview-pane" */ '../../apps/preview-pane'
-			),
-	},
-	'core:appearance-preferences': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-appearance-preferences" */ '../../apps/appearance-preferences'
 			),
 	},
 	'core:user-menu': {
@@ -234,45 +130,8 @@ const APP_LOADERS = {
 			),
 	},
 
-	// ─── C4 dashboard widget grid ──────────────────────────────────
-	'core:dashboard-host': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-host" */ '../../apps/dashboard-host'
-			),
-	},
-	'core:dashboard-widget-at-a-glance': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-widget-at-a-glance" */ '../../apps/dashboard-widget-at-a-glance'
-			),
-	},
-	'core:dashboard-widget-activity': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-widget-activity" */ '../../apps/dashboard-widget-activity'
-			),
-	},
-	'core:dashboard-widget-recent-posts': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-widget-recent-posts" */ '../../apps/dashboard-widget-recent-posts'
-			),
-	},
-	'core:dashboard-widget-quick-draft': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-widget-quick-draft" */ '../../apps/dashboard-widget-quick-draft'
-			),
-	},
 	// #134 — captured-HTML tile for bridged classic dashboard widgets. One
 	// shared app the PHP harvest mounts once per surviving plugin widget.
-	'core:dashboard-widget-classic': {
-		load: () =>
-			import(
-				/* webpackChunkName: "app-dashboard-widget-classic" */ '../../apps/dashboard-widget-classic'
-			),
-	},
 };
 
 const NON_ROUTABLE_APPS = new Set( [
@@ -280,7 +139,6 @@ const NON_ROUTABLE_APPS = new Set( [
 	'core:site-hub',
 	'core:toolbar-actions',
 	'core:command-palette',
-	'core:preview-pane',
 	'core:notices-banner',
 	'core:notices-snackbar',
 	'core:user-menu',

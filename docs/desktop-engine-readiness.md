@@ -38,7 +38,7 @@ Combined: **709 assertions**.
 
 ## Manual smoke
 
-Switch the active workspace to `desktop-demo` via the workspace-picker. Run
+Switch the active workspace to `developer` via the workspace-picker. Run
 through every section below. Mark blockers in
 [`docs/feedback.md`](feedback.md).
 
@@ -108,7 +108,7 @@ through every section below. Mark blockers in
 - [ ] Default desktop palette renders (dark canvas, blue wallpaper,
       translucent dock).
 - [ ] Adding `styles.chrome.dock.background: "#ff0000"` to
-      `desktop-demo.json` repaints the dock red — slot override
+      `developer.json` repaints the dock red — slot override
       flows through `compileStyles`.
 - [ ] Adding `styles.theme.color.bg: "#1a1a2e"` repaints the canvas
       via the `theme.color.bg` ergonomic seed.

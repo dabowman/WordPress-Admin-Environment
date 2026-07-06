@@ -97,7 +97,7 @@ through from the baseline.
 ```bash
 # Quickstart: copy a starter template, then visit /wp-admin/
 # (any valid workspace.json here turns the workspace on)
-cp wp-content/plugins/wp-admin-workspaces/workspaces/single-pane-demo.json wp-content/workspace.json
+cp wp-content/plugins/wp-admin-workspaces/workspaces/writer.json wp-content/workspace.json
 ```
 
 1. Activate the plugin (plus Gutenberg on WordPress 6.7–6.9).
@@ -131,8 +131,9 @@ bar shows a reciprocal **Back to workspace** link.
 | Slug | Notes |
 |---|---|
 | `wp-admin-default` | Default install. Mirrors stock wp-admin via capability-gated screens + iframe fallbacks + the classic-menu bridge. |
-| `single-pane-demo` | `core:single-pane` engine demo. |
-| `desktop-demo` | `core:desktop` engine demo. |
+| `writer` | Focused writing desk — posts, pages, distraction-free editor (`core:single-pane`). |
+| `developer` | Windowed ops console — content, plugins, users, diagnostics side-by-side (`core:desktop`). |
+| `client-portal` | Minimal branded admin for clients — content and media only (`core:default`). |
 
 ## `workspace.json` schema
 

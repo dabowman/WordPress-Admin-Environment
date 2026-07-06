@@ -67,7 +67,7 @@ class WP_Admin_Workspaces_Origin_Core {
 				'home' => array(
 					'label' => 'Home',
 					'path'  => '/',
-					'app'   => 'core:dashboard-host',
+					'app'   => 'iframe:index.php',
 				),
 			),
 			'styles'    => array(),

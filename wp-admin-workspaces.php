@@ -119,7 +119,6 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspa
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-field-collections.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-view-config.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-bridge.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-preload.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-menu-items.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-appearance-menu.php';
@@ -129,7 +128,6 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspa
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-modes.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-permissions.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-abilities.php';
@@ -560,17 +558,6 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 			'profileUrl'  => '#/profile',
 			'logoutUrl'   => wp_logout_url( admin_url( '/' ) ),
 		),
-		'settingsGeneral' => current_user_can( 'manage_options' )
-			? wp_admin_workspaces_get_settings_general_data()
-			: null,
-		// Interface-language options for the profile editor's `locale` field.
-		// Per-user (the profile form is self-service), so it deliberately offers
-		// only Site Default + English + already-installed locales — exactly the
-		// set the REST `locale` field accepts — and skips the translations-API
-		// HTTP call entirely when nothing extra is installed.
-		'profileLanguages' => is_user_logged_in()
-			? wp_admin_workspaces_get_profile_languages()
-			: array(),
 		'capabilities'  => wp_admin_workspaces_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
@@ -1491,206 +1478,6 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
 
 	return true;
 }, 10, 4 );
-
-/**
- * Return a `locale => native_name` map for every locale in $locales, resolved
- * against the translations API. Performs the `require_once` + HTTP fetch for
- * available translations exactly once per call site, centralising that boilerplate
- * so both `wp_admin_workspaces_get_profile_languages()` and
- * `wp_admin_workspaces_get_settings_general_data()` share a single code path.
- *
- * @param string[]         $locales       List of locale strings to label (e.g. `get_available_languages()`).
- * @param array|null       $translations  Pre-fetched result of `wp_get_available_translations()`, or
- *                                        null to fetch it here. Pass a pre-fetched value when the
- *                                        caller already holds the translations array to avoid a
- *                                        redundant HTTP round-trip.
- * @return array<string,string> Map of `locale => native_name` (falls back to the locale
- *                               string itself when no native name is known).
- */
-function wp_admin_workspaces_locale_labels( array $locales, $translations = null ) {
-	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-	if ( null === $translations ) {
-		$translations = wp_get_available_translations();
-	}
-	$labels = array();
-	foreach ( $locales as $locale ) {
-		$labels[ $locale ] = isset( $translations[ $locale ]['native_name'] )
-			? $translations[ $locale ]['native_name']
-			: $locale;
-	}
-	return $labels;
-}
-
-/**
- * Build the interface-language options the profile editor offers for the user
- * `locale` field.
- *
- * Unlike the Site Language list (admin-only, includes downloadable
- * translations), this is per-user and offers only Site Default, English, and
- * locales already installed — exactly the set the REST `locale` field accepts
- * (its enum is `en_US` + `get_available_languages()`, plus `''` for the site
- * default). Installing a new language pack on save is a wp-admin-only
- * sub-feature, deliberately NOT surfaced here.
- *
- * The profile form is self-service (every logged-in user mounts it), so this
- * avoids the translations-API HTTP fetch entirely in the common case where no
- * extra languages are installed — only resolving native names when there is
- * actually an installed locale to label.
- *
- * @return array<int, array{value:string,label:string}> Flat select options
- *                                                       (`{ value, label }`).
- */
-function wp_admin_workspaces_get_profile_languages() {
-	$installed = get_available_languages();
-
-	$options = array(
-		array( 'value' => '', 'label' => __( 'Site Default', 'wp-admin-workspaces' ) ),
-		array( 'value' => 'en_US', 'label' => 'English (United States)' ),
-	);
-
-	if ( empty( $installed ) ) {
-		return $options;
-	}
-
-	$labels = wp_admin_workspaces_locale_labels( $installed );
-	foreach ( $installed as $locale ) {
-		$options[] = array( 'value' => $locale, 'label' => $labels[ $locale ] );
-	}
-
-	return $options;
-}
-
-/**
- * Build the data payload that SettingsGeneralApp consumes (timezone groups,
- * languages, roles, date/time format presets, format previews). Uses the same
- * core helpers wp-admin/options-general.php uses so the app stays in lockstep.
- */
-function wp_admin_workspaces_get_settings_general_data() {
-	// Languages (locales installed + downloadable translations).
-	// Fetch the translations array once and pass it into locale_labels() so
-	// the HTTP round-trip to the translations API happens at most once per
-	// request (the earlier refactor accidentally called wp_get_available_translations()
-	// twice — once inside locale_labels() and once here for the downloadable group).
-	$installed_languages = get_available_languages();
-	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-	$translations  = wp_get_available_translations();
-	$locale_labels = wp_admin_workspaces_locale_labels( $installed_languages, $translations );
-
-	$language_options = array(
-		array( 'value' => '', 'label' => 'English (United States)' ),
-	);
-	$installed_group = array();
-	foreach ( $installed_languages as $locale ) {
-		$installed_group[] = array( 'value' => $locale, 'label' => $locale_labels[ $locale ] );
-	}
-	$available_group = array();
-	if ( current_user_can( 'install_languages' ) && wp_can_install_language_pack() ) {
-		foreach ( $translations as $locale => $data ) {
-			if ( in_array( $locale, $installed_languages, true ) ) {
-				continue;
-			}
-			$available_group[] = array(
-				'value' => $locale,
-				'label' => isset( $data['native_name'] ) ? $data['native_name'] : $locale,
-			);
-		}
-	}
-
-	// Timezones, grouped by continent. Mirrors wp_timezone_choice() output.
-	$tz_identifiers = timezone_identifiers_list();
-	$tz_groups      = array(
-		array( 'label' => __( 'UTC', 'wp-admin-workspaces' ), 'options' => array(
-			array( 'value' => 'UTC', 'label' => 'UTC' ),
-		) ),
-	);
-	$by_continent = array();
-	foreach ( $tz_identifiers as $zone ) {
-		if ( $zone === 'UTC' ) {
-			continue;
-		}
-		$parts     = explode( '/', $zone );
-		$continent = $parts[0];
-		if ( ! in_array( $continent, array( 'Africa', 'America', 'Antarctica', 'Arctic', 'Asia', 'Atlantic', 'Australia', 'Europe', 'Indian', 'Pacific' ), true ) ) {
-			continue;
-		}
-		$by_continent[ $continent ][] = array(
-			'value' => $zone,
-			'label' => str_replace( array( $continent . '/', '_' ), array( '', ' ' ), $zone ),
-		);
-	}
-	foreach ( $by_continent as $continent => $zones ) {
-		$tz_groups[] = array(
-			'label'   => $continent,
-			'options' => $zones,
-		);
-	}
-	// Manual UTC offsets (UTC-12 through UTC+14, half/quarter step).
-	$offset_options = array();
-	$offset_range   = array( -12, -11.5, -11, -10.5, -10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 7.5, 8, 8.5, 8.75, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.75, 13, 13.75, 14 );
-	foreach ( $offset_range as $offset ) {
-		$value = 'UTC' . ( $offset >= 0 ? '+' : '' ) . $offset;
-		$offset_options[] = array( 'value' => $value, 'label' => $value );
-	}
-	$tz_groups[] = array(
-		'label'   => __( 'Manual offsets', 'wp-admin-workspaces' ),
-		'options' => $offset_options,
-	);
-
-	// Roles for new-user default.
-	$roles_raw = wp_roles()->get_names();
-	$role_options = array();
-	foreach ( $roles_raw as $slug => $name ) {
-		$role_options[] = array(
-			'value' => $slug,
-			'label' => translate_user_role( $name ),
-		);
-	}
-
-	// Date/time format presets (same filters core uses).
-	$date_formats = array_unique( apply_filters( 'date_formats', array( __( 'F j, Y' ), 'Y-m-d', 'm/d/Y', 'd/m/Y' ) ) );
-	$time_formats = array_unique( apply_filters( 'time_formats', array( __( 'g:i a' ), 'g:i A', 'H:i' ) ) );
-
-	$current_offset = get_option( 'gmt_offset' );
-	$current_tz     = get_option( 'timezone_string' );
-	if ( empty( $current_tz ) ) {
-		if ( 0 == $current_offset ) {
-			$current_tz = 'UTC+0';
-		} elseif ( $current_offset < 0 ) {
-			$current_tz = 'UTC' . $current_offset;
-		} else {
-			$current_tz = 'UTC+' . $current_offset;
-		}
-	}
-
-	return array(
-		'languages' => array(
-			'installed' => $installed_group,
-			'available' => $available_group,
-			'default'   => $language_options,
-		),
-		'timezone'    => array(
-			'groups'  => $tz_groups,
-			'current' => $current_tz,
-			'utcNow'  => date_i18n( 'Y-m-d H:i:s', false, true ),
-			'localNow' => date_i18n( 'Y-m-d H:i:s' ),
-		),
-		'roles'       => $role_options,
-		'dateFormats' => array_values( array_map( function ( $fmt ) {
-			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
-		}, $date_formats ) ),
-		'timeFormats' => array_values( array_map( function ( $fmt ) {
-			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
-		}, $time_formats ) ),
-		'isMultisite' => is_multisite(),
-		'siteurlConst' => defined( 'WP_SITEURL' ),
-		'homeConst'    => defined( 'WP_HOME' ),
-		'pendingAdminEmail' => get_option( 'new_admin_email' ),
-		'weekdays'     => array_map( function ( $i ) {
-			global $wp_locale;
-			return array( 'value' => (string) $i, 'label' => $wp_locale->get_weekday( $i ) );
-		}, range( 0, 6 ) ),
-	);
-}
 
 /**
  * List available workspace configurations from the workspaces/ directory plus

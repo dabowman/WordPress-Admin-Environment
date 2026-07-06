@@ -12,8 +12,9 @@ wp-admin-workspaces/
 ├── webpack.config.js        # Custom webpack config (copies dataviews CSS to build/)
 ├── workspaces/                  # Bundled workspace.json configurations (workspace/screens/menu shape)
 │   ├── wp-admin-default.json     # DEFAULT install workspace — wp-admin mirror w/ capability-gated screens + iframe-fallback screens
-│   ├── single-pane-demo.json     # Demo: core:single-pane engine
-│   └── desktop-demo.json         # Demo: core:desktop engine
+│   ├── writer.json               # Persona: focused writing desk (core:single-pane)
+│   ├── developer.json            # Persona: windowed ops console (core:desktop)
+│   └── client-portal.json        # Persona: minimal branded client admin (core:default)
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
 ├── includes/                # PHP
@@ -94,49 +95,30 @@ wp-admin-workspaces/
 **App-dir conventions.** Same shape as `engines/`. A `plugin:*` app dir
 holds `app.json` + `index.js` + optional `index.css` (spec §13 #3).
 Webpack picks up CSS through the dependency graph and tree-shakes unused
-apps' CSS. Apps without CSS (command-palette, preview-pane, appearance)
-skip `index.css`. `notices-banner` + `notices-snackbar` are independent
-dirs. `navigation/index.js` bundles its drill-down helpers (Screen /
+apps' CSS. Apps without CSS (e.g. command-palette) skip `index.css`.
+`notices-banner` + `notices-snackbar` are independent dirs.
+`navigation/index.js` bundles its drill-down helpers (Screen /
 Item / Button + slide keyframes) into its own `index.css`; the Sidebar*
 presentational helpers live under `navigation/_components/`.
-`site-hub/SiteIcon.js` is a sibling of `site-hub/index.js`. Settings
-sub-panels (SettingsDiscussionApp / Reading / Writing) live inside
-`settings/` as siblings of the host (internal helpers, not registered
-apps). Rule of thumb: a presentational helper used by exactly one app
-belongs inside that app's dir; promote to a shared location only when a
-second consumer appears.
+`site-hub/SiteIcon.js` is a sibling of `site-hub/index.js`. Rule of
+thumb: a presentational helper used by exactly one app belongs inside
+that app's dir; promote to a shared location only when a second
+consumer appears.
 
 ## Application sources
 
 | Source | Component | Native? | Cap floor | Notes |
 |---|---|---|---|---|
-| `core:posts` | PostsApp | ✅ | — | DataViews table; `config.postType`. dataView consumer on `(postType, <name>, variant)`. |
-| `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save. See notes below. |
+| `core:posts` | PostsApp | ✅ | — | The native showcase. DataViews table; `config.postType`. dataView consumer on `(postType, <name>, variant)`. |
+| `core:simple-editor` | SimpleEditorApp | ✅ | — | Substack-style; title + 9 blocks + auto-save. The writer workspace's editor. See notes below. |
 | `core:editor` | EditorApp | iframe | — | `post.php?post={id}&action=edit`. Tier 1 (`docs/block-editor-native-port.md`): `wp-admin-default` no longer declares screens mounting it — edit/new links hand off to classic full-page. The app stays as the embed option for workspaces that declare editor screens, and the `core:editor` id is the Tier 2 retarget contract. Full native recreation rejected — see the strategy doc. |
-| `core:media` | MediaApp | ✅ | — | Grid, upload, detail modal |
-| `core:taxonomy` | TaxonomyApp | ✅ | — | DataViews + create/edit/delete terms. dataView consumer on `(taxonomy, <name>, variant)`; manifest baseline binds `(taxonomy, category)`. |
-| `core:profile` | ProfileApp | ✅ | — | `useEntityRecord('root','user',userId)` |
-| `core:users` | UsersApp | ✅ | `list_users` | DataViews + bulk delete with reassign + self-delete guard; dataView consumer on `(root, user, variant)`. |
-| `core:comments` | CommentsApp | ✅ | `moderate_comments` | DataViews + approve/spam/trash via partial saveEntityRecord. dataView consumer on `(root, comment, variant)`. |
-| `core:settings` | SettingsApp | partial | `manage_options` | Composable host; imports the standalone native panels (general/writing/reading/discussion) + iframes permalinks/media/privacy |
-| `core:settings-general` | SettingsGeneralApp | ✅ | — | Standalone General panel (hand-rolled — optgroup selects + date/time radios don't fit DataForm) |
-| `core:settings-writing` | settings-writing | ✅ | `manage_options` | Standalone Writing panel; `DataForm` over `default_category` + `default_post_format`. Default workspace mounts directly |
-| `core:settings-reading` | settings-reading | ✅ | `manage_options` | Standalone Reading panel; `DataForm` over front-page + feed options. Default workspace mounts directly |
-| `core:settings-discussion` | settings-discussion | ✅ | `manage_options` | Standalone Discussion panel; `DataForm` over default comment + ping status. Default workspace mounts directly |
-| `core:plugins` | PluginsApp | ✅ | `activate_plugins` | DataViews on `'root','plugin'`; activate/deactivate via REST. dataView consumer on `(root, plugin, variant)`. |
-| `core:themes` | ThemesApp | ✅ | `switch_themes` | DataViews on `'root','theme'`. dataView consumer on `(root, theme, variant)`; grid default with screenshot tiles + Activate / Details. |
-| `core:tools` | ToolsApp | ✅ | — | Linker cards to import/export/site-health |
-| `core:site-health` | SiteHealthApp | ✅ | `view_site_health_checks` | `/wp-site-health/v1/tests/{id}` runner |
 | `core:site-editor` | SiteEditorApp | iframe | `edit_theme_options` | `site-editor.php` adapter. Native `@wordpress/edit-site` mount not yet implemented; five blockers documented in `SiteEditorApp.js`. |
-| `core:appearance-preferences` | AppearancePreferencesApp | ✅ | — | Per-user appearance-preferences UI driven by `customizable` (density / accent / default-route). NOT the wp-admin Appearance hub. |
-| `core:iframe-fallback` | IframeApp | iframe | — | URL relative to `adminUrl`, chrome hidden via injected CSS |
-| `core:navigation` … `core:user-menu` | system apps | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:preview-pane`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`. Each workspace declares them explicitly in regions / workspace widgets. `core:command-palette` reads `commands[]` + synthesizes "Go to X" entries from `screens[id]` via `compileCommands.mjs`; palette names `core/admin-workspace/palette-<encoded-id>` (first-write-wins dedup). |
-| `core:dashboard-host` | DashboardHostApp | ✅ | — | Workspace dashboard screen + widget-grid controller (replaced the deleted `core:dashboard` monolith, #133). Renders a greeting **header** (host chrome — time-of-day + acting user's display name) above a CSS Grid. Reads `screens[id].apps[]` with `slot: "grid"`; size/position from `slotHints` + per-entry overrides. Compiler `dashboard-host/composeScreenWidgets.mjs`; `wp_admin_workspaces_register_dashboard_widget()` contributes a `slot: "grid"` screen-app entry. Bundled mount: `/dashboard/home` in `wp-admin-default`. |
-| `core:dashboard-widget-at-a-glance` | DashboardWidgetAtAGlanceApp | ✅ | `read` | Default tile. Site-wide counts (posts / pages / pending comments / users) via `totalItems`. NOT author-scoped. |
-| `core:dashboard-widget-activity` | DashboardWidgetActivityApp | ✅ | `edit_posts` | Default tile. Recently published posts + comments awaiting moderation (site-wide); post titles are real anchors via `editTargetHref` (workspace editor route when declared, classic `post.php` handoff otherwise — Tier 1), `Moderate all` → `#/comments`. |
-| `core:dashboard-widget-recent-posts` | DashboardWidgetRecentPostsApp | ✅ | `edit_posts` | Default tile. Recent Drafts — **author-scoped** (`author: userId` + `enabled: !!userId`, fail-closed; #217). Five most recent drafts; titles are real anchors via `editTargetHref` (workspace editor route when declared, classic `post.php` handoff otherwise — Tier 1). |
-| `core:dashboard-widget-quick-draft` | DashboardWidgetQuickDraftApp | ✅ | `edit_posts` | Default tile. Title + textarea + Save Draft → `saveEntityRecord`, invalidate author-scoped recent-drafts query, follow the editor link via `followHref(editTargetHref(…))` (Tier 1 handoff default). Empty body seeds an empty paragraph block to satisfy WP's empty-post rejection. |
+| `core:settings-workspace` | SettingsWorkspaceApp | ✅ | `manage_options` | The workspace's own Settings → Workspace enable/disable panel (`DataForm` over the `wp_admin_workspaces_enabled` option; mirrors the classic settings page). |
+| `core:iframe-fallback` | IframeApp | iframe | — | The escape-hatch host every `iframe:` ref mounts. URL relative to `adminUrl`, chrome hidden via injected CSS. |
+| `core:navigation` … `core:user-menu` | system apps | — | — | `core:navigation`, `core:site-hub`, `core:toolbar-actions`, `core:command-palette`, `core:notices-banner`, `core:notices-snackbar`, `core:user-menu`. Mounted by engine `defaultRegions` / frame widgets, not screens. `core:command-palette` reads `commands[]` + synthesizes "Go to X" entries from `screens[id]` via `compileCommands.mjs`; palette names `core/admin-workspace/palette-<encoded-id>` (first-write-wins dedup). |
 | Desktop engine apps | `core:desktop-{compositor,dock-app,window-frame,iframe}` | ✅ | — | See `docs/desktop-engine-readiness.md`. |
+
+**Parked apps** (recoverable on the `archive/native-apps` branch; see `docs/decisions.md`): media, taxonomy, users, user-new, comments, menus, tools, site-health, plugins, themes, profile, the settings host + general/writing/reading/discussion/media panels, appearance-preferences, dashboard-host + the five dashboard widgets, preview-pane. `wp-admin-default` routes their screens through `iframe:` refs instead.
 
 ### `core:simple-editor` notes
 
