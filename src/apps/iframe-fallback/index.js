@@ -41,7 +41,18 @@ export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';
 	const hideEditorChrome = !! config.hideEditorChrome;
 	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
-	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
+	const isAbsolute = /^https?:\/\//.test( rawUrl );
+	const base = isAbsolute ? rawUrl : adminUrl + rawUrl;
+	// Admin-relative URLs carry the explicit chromeless flag so the PHP
+	// hijack stands down even when the browser doesn't send Sec-Fetch-*
+	// headers (the header check is the fallback signal, not the only one).
+	// Matters most for `iframe:index.php` — the admin root the hijack
+	// itself takes over. Absolute URLs (external embeds) stay untouched.
+	const src = isAbsolute
+		? base
+		: `${ base }${
+				base.includes( '?' ) ? '&' : '?'
+		  }wp_admin_workspaces_chromeless=1`;
 
 	// `isReady` gates the iframe's visibility. Inverted from the old
 	// `isLoading`: it's true only AFTER onIframeLoad has confirmed the

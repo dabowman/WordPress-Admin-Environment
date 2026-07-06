@@ -201,7 +201,7 @@ $T::flush();
 $result = $A::update_user_prefs( array(
 	'prefs' => array(
 		'styles'    => array( 'theme' => array( 'accent' => '#123456' ) ),
-		'workspace' => 'single-pane-demo',
+		'workspace' => 'writer',
 	),
 ) );
 $T::assert_true( 'locked baseline → styles write rejected', in_array( 'styles.theme.accent', $result['rejected'], true ) );
@@ -299,9 +299,9 @@ $T::assert_true( 'show prunes emptied menu containers', ! isset( $site_slice['me
 $result = $A::switch_workspace( array( 'workspace' => 'no-such-workspace-xyz' ) );
 $T::assert_error_status( 'switch unknown slug → 404', $result, 404 );
 
-$result = $A::switch_workspace( array( 'workspace' => 'single-pane-demo' ) );
-$T::assert_eq( 'switch ok', is_wp_error( $result ) ? $result->get_error_code() : $result['active'], 'single-pane-demo' );
-$T::assert_eq( 'active-workspace option written', get_option( 'wp_admin_workspaces_active_workspace' ), 'single-pane-demo' );
+$result = $A::switch_workspace( array( 'workspace' => 'writer' ) );
+$T::assert_eq( 'switch ok', is_wp_error( $result ) ? $result->get_error_code() : $result['active'], 'writer' );
+$T::assert_eq( 'active-workspace option written', get_option( 'wp_admin_workspaces_active_workspace' ), 'writer' );
 
 // Back to the baseline for the remaining cases.
 $A::switch_workspace( array( 'workspace' => 'wp-admin-default' ) );
@@ -317,7 +317,7 @@ $path_filter = function () use ( $T ) {
 add_filter( 'wp_admin_workspaces_workspace_json_path', $path_filter );
 WP_Admin_Workspaces_Origin_File::reset_memo();
 
-$result = $A::switch_workspace( array( 'workspace' => 'single-pane-demo' ) );
+$result = $A::switch_workspace( array( 'workspace' => 'writer' ) );
 $T::assert_error_status( 'override file in force → 409', $result, 409 );
 
 $surface = $A::describe_customization_surface();

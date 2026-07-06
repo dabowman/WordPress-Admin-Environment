@@ -21,8 +21,8 @@ Manifests carry **intrinsic, install-independent** declarations: ARIA role, plat
 | `docs/research/app-validation-2026-05-04.md` | WPDS / REST / core-data audit of every bundled `src/apps/*`. |
 | `docs/screens/*.md` | 42 tier-2 functional specs for every wp-admin screen — source of truth for any rebuild. |
 | `src/apps/posts/app.json` + `app.md` | Reference manifest with complete `dataView` variants family + `documentation` block. |
-| `src/apps/dashboard-host/app.json` | App that declares a `slots` block. |
-| `src/apps/dashboard-widget-recent-posts/app.json` | Widget app — ships `slotHints` for grid-cell defaults. |
+| `dashboard-host` app.json (on `archive/native-apps`) | App that declares a `slots` block. |
+| `dashboard-widget-recent-posts` app.json (on `archive/native-apps`) | Widget app — ships `slotHints` for grid-cell defaults. |
 
 ## Top-level shape (cheat sheet)
 
@@ -355,7 +355,7 @@ When the user opens a screen mounting your app, the kernel walks four checks in 
 
 1. **Region fast-path.** If the region declares `capability: "X"` (workspace.json install-level), and the user lacks X, the whole subtree skips before mount.
 2. **App gate.** `app.json#capabilities[]` AND-floor. User must hold ALL listed caps.
-3. **Source-cap floor.** Built-in apps declare a floor (e.g. `core:users` floors at `list_users`). Workspace can extend it but can't lower it.
+3. **Source-cap floor.** Built-in apps declare a floor (e.g. the parked `core:users` app floors at `list_users`). Workspace can extend it but can't lower it.
 4. **REST observation.** The app's actual REST calls return 403/401 if user lacks the cap on the specific entity. Apps handle gracefully (empty state, permission-denied banner).
 
 Your app fits at layer 2. Be conservative — over-declaring `capabilities[]` is safer than under-declaring.

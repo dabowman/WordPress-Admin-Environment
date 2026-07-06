@@ -1429,8 +1429,8 @@ add_action( 'init', function () {
 /**
  * Route a manual UTC-offset timezone write to `gmt_offset`.
  *
- * The Timezone select (wp_admin_workspaces_get_settings_general_data) offers a
- * "Manual offsets" optgroup of `UTC±X` values alongside the IANA city zones.
+ * A Timezone select (classic options-general.php, or a REST client) offers
+ * "Manual offsets" `UTC±X` values alongside the IANA city zones.
  * Both write the single REST `timezone` field (core option `timezone_string`).
  * For a `UTC±X` value `sanitize_option('timezone_string')` rejects the
  * non-IANA string and reverts to the stored value, so the save is silently

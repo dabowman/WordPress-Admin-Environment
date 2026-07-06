@@ -43,7 +43,7 @@ This reference covers the workspace.json workspace schema (`workspace.json`).
 		"dashboard-home": {
 			"label": "Home",
 			"path": "/dashboard/home",
-			"app": "core:dashboard-host"
+			"app": "iframe:index.php"
 		}
 	}
 }

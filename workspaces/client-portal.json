@@ -36,7 +36,10 @@
 					"edit_posts"
 				]
 			},
-			"legacy_path": "edit.php"
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post"
+			}
 		},
 		"pages": {
 			"label": "Pages",
@@ -50,6 +53,10 @@
 				"capabilities": [
 					"edit_pages"
 				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "page"
 			}
 		},
 		"media": {

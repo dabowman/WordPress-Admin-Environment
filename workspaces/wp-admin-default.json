@@ -1054,10 +1054,6 @@
 		[
 			"/wp/v2/posts",
 			"OPTIONS"
-		],
-		[
-			"/wp/v2/users",
-			"OPTIONS"
 		]
 	],
 	"styles": {

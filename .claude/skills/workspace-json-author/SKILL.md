@@ -596,9 +596,9 @@ For non-trivial changes, also load the workspace in `wp-env` and walk the screen
 - **`menu` item keys matching screen ids** bind implicitly. If you don't see a screen in the menu, check the item key spelling matches the screen id exactly.
 - **Empty `permissions: {}`** = admin-only (fail-closed). To open a screen to "any logged-in user", declare `permissions: { capabilities: [ "read" ] }`.
 - **`role` / `user` origin cannot grant** permissions — only shrink. Use site/plugin origins to widen.
-- **`apps[]` slot vocabulary** is the union of kernel-reserved (`_self`, `palette`), engine-declared (`detail`, `inspector`, `dashboard-grid`, `toolbar`, `sidebar-footer`, `status-bar`), and app-declared slots (e.g. `core:dashboard-host` exposes `grid`). Reference to a slot that doesn't resolve is a validation error.
+- **`apps[]` slot vocabulary** is the union of kernel-reserved (`_self`, `palette`), engine-declared (`detail`, `inspector`, `dashboard-grid`, `toolbar`, `sidebar-footer`, `status-bar`), and app-declared slots (a grid-host app exposing `grid`; the bundled `core:dashboard-host` is parked on `archive/native-apps`). Reference to a slot that doesn't resolve is a validation error.
 - **For `apps[]` entries**, `id` is the cascade merge key. Make it stable + descriptive (`list`, `preview`, `host`) — NOT the app id.
-- **Widgets live on screen `apps[]`** with `slot: "grid"` against a `core:dashboard-host` mount — there is no top-level `dashboardWidgets` block.
+- **Widgets live on screen `apps[]`** with `slot: "grid"` against a grid-host app mount (the bundled `core:dashboard-host` is parked on `archive/native-apps`) — there is no top-level `dashboardWidgets` block.
 
 ## When you need more
 

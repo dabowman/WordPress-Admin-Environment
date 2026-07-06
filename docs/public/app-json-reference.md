@@ -227,7 +227,7 @@ Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) d
 }
 ```
 
-A screen mounting `core:dashboard-host` (which declares a `grid` slot) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
+A screen mounting an app that declares a `grid` slot (e.g. a dashboard-grid host — the bundled one is parked on `archive/native-apps`) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
 
 | Property    | Description                                                                                                                                                              | Type   | Default |
 |-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|

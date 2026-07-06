@@ -61,6 +61,16 @@ the v1 router shape, the v2 DataView/fieldCollections shape readers, and the
 flat `registerMenuRenderer` alias all go. Pre-1.0, the schema may change
 without migration paths.
 
+## App-specific PHP REST surfaces
+
+The site-health and activate-theme REST controllers (plus the settings
+`show_in_rest` shims) stay in `main` even though their bundled native
+consumers are parked: they are tested, generic REST gap-fillers any
+workspace/app author (or the Abilities surface) can use. The classic
+dashboard-widget bridge + per-widget REST endpoint were parked WITH the
+dashboard grid — the iframed classic dashboard renders plugin widgets
+natively (JS included), which supersedes the captured-HTML tier.
+
 ## Upstream private-API ask
 
 The Gutenberg-repo ask for a public consumption path (the one item left of

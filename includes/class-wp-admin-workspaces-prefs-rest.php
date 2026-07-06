@@ -2,7 +2,8 @@
 /**
  * /wp-admin-workspaces/v1/user-prefs — read + write the user-origin slice.
  *
- * Backs `core:appearance-preferences`. Returns the full `wp_admin_workspaces_user_prefs`
+ * Backs the user-tier customization surface (Abilities API + any
+ * preferences UI). Returns the full `wp_admin_workspaces_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
  * `customizable` paths the active workspace exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save
