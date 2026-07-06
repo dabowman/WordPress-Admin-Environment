@@ -694,9 +694,9 @@ JS;
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
 /**
- * Read the active workspace.json configuration through the M2 cascade resolver.
+ * Read the active workspace.json configuration through the cascade resolver.
  *
- * Five origins (core / plugin / site / role / user) are loaded, filtered,
+ * Six origins (core / engine / plugin / site / role / user) are loaded, filtered,
  * and merged into a single resolved doc. The legacy single-file loader is
  * gone — every workspace file goes through the same pipeline so behavior is
  * uniform whether the workspace ships with the plugin, lives in DB options,

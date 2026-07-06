@@ -83,7 +83,7 @@ wp_admin_workspaces_register_menu_renderer( 'plugin:my/breadcrumb-menu', array(
 
 ```js
 // JS (in that script) — register the component.
-window.wpAdminWorkspaces.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
+window.wpAdminWorkspaces.kernel.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
 ```
 
 Every renderer component receives the same props: `{ items, currentPrimary, navConfig }` — the host-pruned + ordered menu tree, the active URL primary path, and the per-region nav config block. It returns React.

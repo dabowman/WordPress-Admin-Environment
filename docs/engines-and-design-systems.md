@@ -179,7 +179,7 @@ Author customization, in order of preference:
    primitives, consumable from any of the above via `{tokens.x.y}`.
 
 Density: `ThemeProviderHost.pickDensity()` (helper `themeScope.mjs`)
-pulls `styles.theme.density`, falls back to `styles.density`, passes
+pulls `styles.theme.density` and passes
 the raw string to the engine's provider. The `default|compact|
 comfortable` enum validation lives in `WpdsThemeProvider`, NOT the
 kernel — a Material/Tailwind engine interprets the raw string itself.

@@ -123,7 +123,7 @@ Authors discover what an engine does well by reading this list. Empty list is va
 
 Platform service requests this engine implements. An app declaring a `platform.{service}: true` request gets that service only if the active engine lists it here. Apps requesting unhonored services still mount; the unhonored requests are no-ops with a logged warning in development. The list grows additively in minor spec versions; engines ship updates as the spec adds services they choose to implement.
 
-The v1 core platform service vocabulary:
+The core platform service vocabulary:
 
 | Service                              | What honoring it means                                                                                          |
 |--------------------------------------|------------------------------------------------------------------------------------------------------------------|
@@ -268,7 +268,7 @@ See [`docs/schema-sketch.md#slots`](../schema-sketch.md#slots) for the slot voca
 
 ## menu-renderer
 
-Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_workspaces_register_menu_renderer( $renderer_id, $args )` (where `$args['script']` names the script handle that calls `window.wpAdminWorkspaces.kernel.registerMenuRenderer( id, Component )`). Omitting the field is equivalent to `none`. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
+Identifier of the strategy the engine uses to render the workspace `menu` tree. Schema enum: `sidebar-drilldown` (`core:default`), `sidebar-tree`, `dock` (`core:desktop`), `drawer` (`core:single-pane`), `none` (explicit opt-out — engine ignores the `menu` block; authors drive navigation through `regions` / `routes`), or a plugin-namespaced renderer (`plugin:{slug}/{name}`) registered via `wp_admin_workspaces_register_menu_renderer( $renderer_id, $args )` (where `$args['script']` names the script handle that calls `window.wpAdminWorkspaces.kernel.registerMenuRenderer( id, Component )`). Omitting the field falls back to the default `sidebar-drilldown` renderer. Plugin renderers that fail to resolve at activation time fall back to `none` with a dev-mode warning.
 
 | Property        | Description                                                                                              | Type   | Default |
 |-----------------|----------------------------------------------------------------------------------------------------------|--------|---------|

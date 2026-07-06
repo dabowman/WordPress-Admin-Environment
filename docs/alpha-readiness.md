@@ -77,7 +77,7 @@ Workspace** screen flips the `wp_admin_workspaces_enabled` option;
 the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in
-  `run-alpha-trigger-tests.php` covers it: `workspace_enabled=false`
+  `run-alpha-trigger-tests.php` covers it: `wp_admin_workspaces_enabled=false`
   vetoes a present `wp-content/workspace.json` AND the legacy active-workspace
   option; flipping back to true restores the file-trigger path.
 - [manual] **Workspace → Settings → Workspace.** Uncheck "Activate WP

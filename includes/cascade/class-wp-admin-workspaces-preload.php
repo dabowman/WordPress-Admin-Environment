@@ -5,7 +5,7 @@
  * `rest_preload_api_request`, and ships the resulting cache as inline
  * script attached to the `wp-api-fetch` handle.
  *
- * Spec §13 #9. Schema: `docs/schemas/admin-v2.json#preload` +
+ * Spec §13 #9. Schema: `docs/schemas/workspace.json#preload` +
  * `#/$defs/preloadEntry`.
  *
  * Cascade semantics differ from the rest of workspace.json: the resolved

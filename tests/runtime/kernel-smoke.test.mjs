@@ -187,7 +187,6 @@ for ( const file of shellFiles ) {
 	// the same iframe rewrite the route synthesis applies.
 	const defaultScreenId =
 		config[ 'default-screen' ] ||
-		config.workspace?.[ 'default-screen' ] ||
 		'';
 	const landingScreen = ( config.screens || {} )[ defaultScreenId ];
 	const primary = primaryApp( landingScreen );
@@ -261,7 +260,6 @@ for ( const file of shellFiles ) {
 	// `navigate` already covers its path (path-dedup, by design).
 	const defaultScreenId =
 		config[ 'default-screen' ] ||
-		config.workspace?.[ 'default-screen' ] ||
 		'';
 	const landingScreen = ( config.screens || {} )[ defaultScreenId ];
 	const path =

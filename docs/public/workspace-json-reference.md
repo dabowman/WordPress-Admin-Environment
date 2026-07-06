@@ -65,7 +65,7 @@ The schema is also available in-repo at [`docs/schemas/workspace.json`](../schem
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
 | `commands` | First-class palette entries + keyboard shortcuts. Each command has an explicit `id` field. | Merge by `id`. |
-| `styles` | Tokens, slot overrides, chrome. theme-developer surface intact from v2 (see [§9 of the design spec](../wp-admin-workspaces-design-spec.md#9-tokens-and-styling)). | Deep-merge per-field. |
+| `styles` | Tokens, slot overrides, chrome — the theme-developer surface (see [§9 of the design spec](../wp-admin-workspaces-design-spec.md#9-tokens-and-styling)). | Deep-merge per-field. |
 | `preload` | Workspace-boot REST preloads. Additional per-screen preloads live in `screens[id].preload`. | Additive concatenation; dedupe by `path+method`. |
 | `regions` | **Escape hatch** — direct region tree for engines that need it (windowed, MDI, multi-pane). | Deep-merge. Optional in v3; `screens` block synthesizes regions for the common case. |
 | `routes` | **Escape hatch** — direct URL→app mapping for non-screen compositions. | Deep-merge by route key. Optional in v3. |
@@ -74,7 +74,7 @@ For the full design rationale around each block, see [`docs/schema-sketch.md`](.
 
 ## version
 
-Schema version this document targets. Must be `3` for v3 workspaces. The runtime accepts v2 workspaces through the v3.0 release cycle and synthesizes screens-from-routes via the v3 compiler's back-compat path. v0 (MVP flat shape) is still normalized internally.
+Schema version this document targets. Must be `3`. The runtime accepts higher versions with a warning and best-effort load; there is no automatic normalization from other shapes.
 
 | Property | Description                                              | Type    | Default |
 |----------|----------------------------------------------------------|---------|---------|
@@ -364,7 +364,7 @@ First-class palette + keyboard-shortcut bindings. Each command has an explicit `
 | navigate  | URL pattern to navigate to. Pure shortcut — no app mounts directly. Mutually exclusive with `invoke`.                                      | string | —       |
 | label     | Display label in the palette UI.                                                                                                            | string | —       |
 
-The v2 → v3 rename: `bindings[]` → `commands[]`. Each entry gains an explicit `id` (was implicit by `shortcut`).
+Each entry carries an explicit `id` — the cascade addresses commands by id and deep-merges per-field.
 
 ## styles
 
@@ -394,7 +394,6 @@ Escape hatch for slot values that seeds can't express. Layered over ThemeProvide
 | border      | Direct border token overrides.                                                                                                                | object | —       |
 | elevation   | Direct elevation / shadow token overrides.                                                                                                    | object | —       |
 | font        | Direct font / typography token overrides.                                                                                                     | object | —       |
-| density     | Legacy. Prefer `styles.theme.density`. Read as a fallback.                                                                                    | string | —       |
 
 ### styles.chrome
 

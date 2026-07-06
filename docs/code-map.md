@@ -17,7 +17,6 @@ wp-admin-workspaces/
 ├── assets/
 │   └── acme-logo.svg        # Example branding asset for client portal demo
 ├── includes/                # PHP
-│   ├── class-wp-admin-workspaces-config.php           # Read-only wrapper around merged tree
 │   ├── class-wp-admin-workspaces-can-rest.php         # /wp-admin-workspaces/v1/can/{cap}
 │   ├── class-wp-admin-workspaces-prefs-rest.php       # /wp-admin-workspaces/v1/user-prefs
 │   ├── class-wp-admin-workspaces-data-view-rest.php   # /wp-admin-workspaces/v1/data-view + /data-view/variants
