@@ -24,7 +24,7 @@
 		"version": {
 			"type": "integer",
 			"minimum": 1,
-			"description": "Manifest schema version this document conforms to. v3 is the current shape, paired with the v3 workspace.json (workspace) schema. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored. Manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path."
+			"description": "Manifest schema version this document conforms to. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored."
 		},
 
 		"title": {

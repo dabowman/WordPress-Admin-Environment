@@ -192,9 +192,10 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   are post-alpha). Ship the `.htaccess` / nginx note so the file isn't served
   as static JSON.
 - **Bundled `workspaces/*` are starter templates**, not a selectable catalog —
-  copy one to `wp-content/workspace.json` and edit. The legacy
-  `wp_admin_workspaces_active_workspace` option still works as a back-compat
-  trigger but is hidden by the switcher when a file override is active.
+  copy one to `wp-content/workspace.json` and edit. The
+  `wp_admin_workspaces_active_workspace` option remains the option-based
+  activation path but is hidden by the switcher when a file override is
+  active.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it
   may add+remove baseline screens (null tombstones), grow

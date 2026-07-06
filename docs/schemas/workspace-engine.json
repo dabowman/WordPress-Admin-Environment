@@ -34,7 +34,7 @@
 		"version": {
 			"type": "integer",
 			"minimum": 3,
-			"description": "Engine manifest schema version. v3 is the current shape. Bump only on breaking changes to this engine's manifest contract. v3 manifests must declare `3` here so the resolver can distinguish them from v1/v2 manifests at load time."
+			"description": "Engine manifest schema version. Bump only on breaking changes to this engine's manifest contract."
 		},
 
 		"title": {

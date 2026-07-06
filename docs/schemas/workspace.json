@@ -18,7 +18,7 @@
 		"version": {
 			"type": "integer",
 			"const": 3,
-			"description": "workspace.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/schema-sketch.md`."
+			"description": "workspace.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load; there is no automatic normalization from other shapes."
 		},
 
 		"$wpds": {
@@ -163,7 +163,7 @@
 							"$ref": "#/$defs/dataFieldCollection"
 						}
 					},
-					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). DataViews reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. Renamed from v2 `fieldCollections`; moved under `settings.dataFields` for the registries grouping (paired with `settings.dataViews`). The per-descriptor word `field` stays — matches `@wordpress/dataviews` upstream. See schema-sketch.md §Fields and spec §13 #8."
+					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). DataViews reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. The per-descriptor word `field` matches `@wordpress/dataviews` upstream. See schema-sketch.md §Fields and spec §13 #8."
 				}
 			}
 		},
@@ -797,7 +797,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "fields" ],
-			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. DataView entries reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; DataView entries add *purpose* (which fields appear in this list, which actions fire). Renamed from v2 `fieldCollections`; moved under `settings.dataFields`. The per-descriptor word `field` matches `@wordpress/dataviews` upstream and is unchanged.",
+			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. DataView entries reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; DataView entries add *purpose* (which fields appear in this list, which actions fire). The per-descriptor word `field` matches `@wordpress/dataviews` upstream.",
 			"properties": {
 				"kind": {
 					"type": "string",

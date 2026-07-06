@@ -1263,10 +1263,11 @@ baseline in the cascade `core` slot. A valid `wp-content/workspace.json` is a
 **partial override** loaded into the `plugin` slot; the field-aware merge
 folds its keys over the baseline (a delta-only file inherits every baseline
 screen/menu/command). `wp_admin_workspaces_workspace_active()` is the single
-source of truth: true when a valid file is present, OR the legacy
-`wp_admin_workspaces_active_workspace` option was explicitly written (back-compat).
-Validation is partial-permissive — the override need not be a complete shell;
-completeness of the *merged* doc is enforced post-resolution.
+source of truth: true when a valid file is present, OR the
+`wp_admin_workspaces_active_workspace` option was explicitly written
+(the option-based activation path).
+Validation is partial-permissive — the override need not be a complete
+workspace; completeness of the *merged* doc is enforced post-resolution.
 
 **Trust tier.** The override file sits in the `plugin` cascade slot — a
 TRUSTED origin merged via `merge_authoritative`, bypassing the
