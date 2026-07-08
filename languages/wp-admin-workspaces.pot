@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-08T14:08:06+00:00\n"
+"POT-Creation-Date: 2026-07-08T14:28:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wp-admin-workspaces\n"
@@ -536,7 +536,6 @@ msgid "Back to list"
 msgstr ""
 
 #: src/apps/editor/index.js:344
-#: src/apps/_shared/roles.js:14
 msgid "Editor"
 msgstr ""
 
@@ -630,7 +629,6 @@ msgstr ""
 #: src/apps/posts/index.js:83
 #: src/apps/simple-editor/DocumentSettingsSidebar.js:476
 #: src/apps/simple-editor/DocumentSettingsSidebar.js:480
-#: src/apps/_shared/roles.js:15
 msgid "Author"
 msgstr ""
 
@@ -1147,18 +1145,6 @@ msgstr ""
 
 #: src/apps/_shared/forms/useEntitySave.js:53
 msgid "Failed to save changes."
-msgstr ""
-
-#: src/apps/_shared/roles.js:13
-msgid "Administrator"
-msgstr ""
-
-#: src/apps/_shared/roles.js:16
-msgid "Contributor"
-msgstr ""
-
-#: src/apps/_shared/roles.js:17
-msgid "Subscriber"
 msgstr ""
 
 #: src/runtime/dirty-state/NavigationGuard.js:6
