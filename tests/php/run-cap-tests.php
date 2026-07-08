@@ -68,6 +68,17 @@ $T = 'WPAS_Cap_Test_Runner';
 $plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
+// Hermetic guard: ignore any REAL wp-content/workspace.json for this run.
+// This suite asserts against the option-selected workspace; a developer's
+// own override file would outrank the option (file wins) and skew every
+// expectation below.
+add_filter( 'wp_admin_workspaces_workspace_json_path', function () {
+	return get_temp_dir() . 'wpas-tests-no-such-workspace.json';
+} );
+if ( class_exists( 'WP_Admin_Workspaces_Origin_File' ) ) {
+	WP_Admin_Workspaces_Origin_File::reset_memo();
+}
+
 // Force the workspace to wp-admin-default for predictable cap surface.
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 

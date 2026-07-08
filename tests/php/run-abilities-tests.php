@@ -113,6 +113,22 @@ $A = 'WP_Admin_Workspaces_Abilities';
 // Pin workspace + clean slate so the resolver sees the stock baseline.
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 delete_option( 'wp_admin_workspaces_site_config' );
+
+// Hermetic guard: ignore any REAL wp-content/workspace.json for this run.
+// A developer's own override file would otherwise outrank the option-
+// activated fixtures below (file wins over option) and fail the
+// file-absent assertions. The 409 block later re-points this at its
+// temp fixture via $fixture_file; until then the path resolves to a
+// file that never exists.
+add_filter(
+	'wp_admin_workspaces_workspace_json_path',
+	function () {
+		return WPAS_Abilities_Test_Runner::$fixture_file
+			? WPAS_Abilities_Test_Runner::$fixture_file
+			: get_temp_dir() . 'wpas-abilities-no-such-workspace.json';
+	}
+);
+WP_Admin_Workspaces_Origin_File::reset_memo();
 $T::flush();
 
 $admin_id      = $T::ensure_user( 'wpas_abilities_admin', 'administrator' );
