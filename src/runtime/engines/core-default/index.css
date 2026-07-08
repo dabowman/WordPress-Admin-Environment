@@ -159,8 +159,9 @@
  * padding so the host's own grid container reaches the region edges.
  * Touches engine-owned chrome (`region__app`), so it belongs engine-side.
  * Scoped on `data-region-id$="dashboard-grid"` so the rule fires for any
- * workspace-chosen id ending in `dashboard-grid`. Tile chrome lives with the
- * host app — `src/apps/dashboard-host/index.css`. */
+ * workspace-chosen id ending in `dashboard-grid`. Tile chrome lives with
+ * whatever grid-host app the workspace supplies (the bundled host is
+ * parked on `archive/native-apps`). */
 .wp-admin-workspaces-region[data-region-id$="dashboard-grid"]
 	.wp-admin-workspaces-region__app {
 	padding: 0;
