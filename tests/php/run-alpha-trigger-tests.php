@@ -209,7 +209,7 @@ $T::ok( 'file present → workspace active', wp_admin_workspaces_is_active() ===
 $T::use_override( '' );
 $T::ok( 'no file + no option → workspace inactive', wp_admin_workspaces_is_active() === false );
 
-update_option( 'wp_admin_workspaces_active_workspace', 'single-pane-demo' );
+update_option( 'wp_admin_workspaces_active_workspace', 'writer' );
 $T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_is_active() === true );
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.
