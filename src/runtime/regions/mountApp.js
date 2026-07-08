@@ -210,7 +210,7 @@ function retryLazyApp( registry, appId ) {
 	}
 }
 
-export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
+export function MountedApp( { appRef, regionId, fallback = null } ) {
 	const { registry, config } = useKernel();
 
 	const appInstance = resolveAppInstance( appRef );
@@ -291,7 +291,6 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 		app: appInstance,
 		config: mergedConfig,
 		regionId,
-		segments: segments || [],
 	};
 
 	let content;
