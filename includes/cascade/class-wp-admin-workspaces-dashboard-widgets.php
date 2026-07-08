@@ -246,9 +246,9 @@ class WP_Admin_Workspaces_Dashboard_Widgets {
 		// (`additionalProperties: false`). The widget's display title
 		// flows through the synthesized manifest's `title` field (set
 		// by `register()` when the standalone-flavor `script` arg is
-		// present) and is resolved by `composeScreenWidgets` via the
-		// manifest registry. Programmatic-only callers can override
-		// the title at the manifest layer or via workspace.json.
+		// present); a grid-host app resolves it via the manifest
+		// registry. Programmatic-only callers can override the title
+		// at the manifest layer or via workspace.json.
 
 		return $entry;
 	}
@@ -265,7 +265,7 @@ class WP_Admin_Workspaces_Dashboard_Widgets {
 	 * + `bravo/widget`) don't collide on the same entry id.
 	 *
 	 * Examples:
-	 *   - `core:dashboard-widget-recent-posts` → `dashboard-widget-recent-posts`
+	 *   - `core:some-widget` → `some-widget`
 	 *   - `plugin:acme/sales-stats`            → `acme-sales-stats`
 	 *
 	 * @param string $app_id

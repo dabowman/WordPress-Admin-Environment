@@ -758,7 +758,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
 
 	add_settings_error(
 		'wp_admin_workspaces_active_workspace',
-		'wp_admin_workspaces_unknown_shell',
+		'wp_admin_workspaces_unknown_workspace_slug',
 		sprintf(
 			/* translators: %s: workspace slug */
 			__( 'Unknown workspace: "%s". The previous active workspace was kept.', 'wp-admin-workspaces' ),

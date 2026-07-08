@@ -1,101 +1,151 @@
-# Copyright (C) WP Admin Workspaces Contributors
-# This file is distributed under the GPL-2.0-or-later license.
+# Copyright (C) 2026 WP Admin Workspaces Contributors
+# This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
 "Project-Id-Version: WP Admin Workspaces 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/dabowman/WordPress-Admin-Workspaces/issues\n"
-"POT-Creation-Date: 2026-05-28 19:36+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2026-07-08T14:08:06+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wp-admin-workspaces\n"
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:105
-msgid "Admin route \"static_data\" must be an array when provided."
+#. Plugin Name of the plugin
+#: wp-admin-workspaces.php
+#: includes/class-wp-admin-workspaces-abilities.php:77
+#: wp-admin-workspaces.php:349
+#: wp-admin-workspaces.php:350
+#: wp-admin-workspaces.php:375
+msgid "WP Admin Workspaces"
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:247
-msgid "Admin route %s declared \"gc_time\". The workspace does not implement TanStack Router cache GC; the value is accepted and ignored."
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: wp-admin-workspaces.php
+msgid "https://github.com/dabowman/WordPress-Admin-Workspaces"
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:59
+#. Description of the plugin
+#: wp-admin-workspaces.php
+msgid "A configurable, React-based WordPress admin environment driven by workspace.json configuration files."
+msgstr ""
+
+#. Author of the plugin
+#: wp-admin-workspaces.php
+msgid "WP Admin Workspaces Contributors"
+msgstr ""
+
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:50
 msgid "Admin route path must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:66
+#. translators: %s: route path
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:57
+#, php-format
 msgid "Admin route path %s does not match the route pattern (leading slash, alnum/underscore/hyphen/curly-brace/asterisk segments)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:72
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:63
 msgid "Admin route args must be an array."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:78
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:69
 msgid "Admin route requires a non-empty \"app\" arg."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:85
+#. translators: %s: route path
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:76
+#, php-format
 msgid "Admin route %s is already registered. Use a different path."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:96
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:87
 msgid "Admin route \"config\" must be an array when provided."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-classic-menu-bridge.php:601
+#: includes/cascade/class-wp-admin-workspaces-admin-routes.php:96
+msgid "Admin route \"static_data\" must be an array when provided."
+msgstr ""
+
+#: includes/cascade/class-wp-admin-workspaces-classic-menu-bridge.php:836
 msgid "Plugins"
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:87
+#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:86
 msgid "Dashboard widget id must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:97
+#. translators: %s: app id
+#: includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php:96
+#, php-format
 msgid "Dashboard widget id %s must be namespaced (core:* or plugin:slug/name)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:183
-msgid "Data field collection %1$s declared fieldsModule \"%2$s\". The workspace does not resolve fieldsModule in this release; the value is reserved for future native script-modules support."
-msgstr ""
-
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:55
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:50
 msgid "Data field collection id must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:61
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:56
 msgid "Data field collection kind must be a non-empty string."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:67
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:62
 msgid "Data field collection name must be a non-empty string or null (universal)."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:73
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:68
 msgid "Data field collection fields must be an array."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:80
+#. translators: %s: collection id
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:75
+#, php-format
 msgid "Data field collection %s is already registered. Use a different id."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:94
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:89
 msgid "fieldsModule must be a non-empty string or omitted."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:294
+#. translators: %1$s: collection id, %2$s: fieldsModule handle
+#: includes/cascade/class-wp-admin-workspaces-data-field-collections.php:178
+#, php-format
+msgid "Data field collection %1$s declared fieldsModule \"%2$s\". The workspace does not resolve fieldsModule in this release; the value is reserved for future native script-modules support."
+msgstr ""
+
+#. translators: 1: kind, 2: name
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:291
+#, php-format
 msgid "settings.dataViews.%1$s.%2$s._default declared `extends`. The implicit base cannot extend a sibling; ignoring."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:314
+#. translators: 1: chain, 2: max depth
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:311
+#, php-format
 msgid "settings.dataViews `extends` chain %1$s exceeded max depth %2$d; returning base entry without inheritance."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:329
+#. translators: 1: chain
+#: includes/cascade/class-wp-admin-workspaces-data-view-config.php:326
+#, php-format
 msgid "settings.dataViews `extends` chain %1$s contained a cycle; returning base entry without inheritance."
 msgstr ""
 
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:93
+msgid "Menu item id must be a non-empty string."
+msgstr ""
+
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:99
+msgid "Menu item args must be an array."
+msgstr ""
+
+#. translators: %s: menu item id
 #: includes/cascade/class-wp-admin-workspaces-menu-items.php:106
+#, php-format
 msgid "Menu item %s is already registered. Use a different id."
 msgstr ""
 
@@ -103,7 +153,9 @@ msgstr ""
 msgid "Menu item \"label\" must be a non-empty string when set."
 msgstr ""
 
+#. translators: %s: rejected `href` value
 #: includes/cascade/class-wp-admin-workspaces-menu-items.php:138
+#, php-format
 msgid "Menu item \"href\" value %s uses a scheme that is not in the allowlist (http/https/ftp/ftps/mailto/tel/sms or relative `/`/`#`)."
 msgstr ""
 
@@ -115,906 +167,789 @@ msgstr ""
 msgid "Menu item \"position\" must be an integer or null."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-menu-items.php:639
+#. translators: 1: menu item id, 2: missing parent id
+#: includes/cascade/class-wp-admin-workspaces-menu-items.php:649
+#, php-format
 msgid "Menu item %1$s declared parent %2$s but no such item exists in the menu tree. Falling back to root."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-menu-items.php:93
-msgid "Menu item id must be a non-empty string."
-msgstr ""
-
-#: includes/cascade/class-wp-admin-workspaces-menu-items.php:99
-msgid "Menu item args must be an array."
-msgstr ""
-
-#: includes/cascade/class-wp-admin-workspaces-merge.php:143
+#. translators: %s: key name
+#: includes/cascade/class-wp-admin-workspaces-merge.php:137
+#, php-format
 msgid "Consumer-origin (role/user) null tombstone for key \"%s\" ignored — only trust-tier origins (core/engine/plugin/site) may drop keys via null. Author your override as an empty / replacement value instead."
 msgstr ""
 
-#: includes/cascade/class-wp-admin-workspaces-merge.php:267
+#. translators: %s: entry id
+#: includes/cascade/class-wp-admin-workspaces-merge.php:252
+#, php-format
 msgid "Consumer-origin (role/user) __tombstone marker for entry \"%s\" ignored — only trust-tier origins (core/engine/plugin/site) may drop keyed-array entries."
 msgstr ""
 
 #: includes/cascade/class-wp-admin-workspaces-preload.php:176
+#, php-format
 msgid "WP Admin Workspaces preload skipped %1$s: %2$s"
 msgstr ""
 
-#: includes/origins/class-wp-admin-workspaces-origin-file.php:235
+#: includes/class-wp-admin-workspaces-abilities.php:78
+msgid "Inspect and customize the WP Admin Workspaces admin experience: resolved workspace configuration, per-tier customization, workspace switching, menu visibility."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:124
+msgid "Get workspace configuration"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:125
+msgid "Returns the fully resolved workspace.json document for the current user — all six cascade origins merged, pruned to the screens and menu items the user can reach. Pass \"blocks\" to fetch a subset (e.g. [\"screens\",\"menu\"]) and keep the payload small. Read-only; reflects what the workspace UI actually renders for this user."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:138
+msgid "Top-level blocks to include (e.g. \"screens\", \"menu\", \"styles\", \"commands\", \"settings\"). Omit for the full document."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:150
+msgid "Describe the customization surface"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:151
+msgid "Reports what the current user is allowed to customize, per tier. The \"user\" tier is allowlist-enforced: only the returned allowedPaths (mode \"subtree\" = everything under the path; mode \"exact\" = that leaf only) survive the cascade, and deniedPatterns are rejected even inside an allowed subtree. An empty allowedPaths list means the active workspace declares nothing user-customizable (the default, locked posture). The \"site\" tier is trusted (no allowlist) but requires the manage_options capability — its \"writable\" flag reflects the current user. Consult this before calling update-user-prefs or update-site-config."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:202
+msgid "True when a wp-content/workspace.json override file is present; the active-workspace option is ignored while it is."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:214
+msgid "Get user workspace preferences"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:215
+msgid "Returns the current user's stored workspace preference slice (the \"user\" cascade origin) verbatim. Note: stored is not the same as effective — the cascade filters this slice against the workspace's customizable allowlist at read time. Use describe-customization-surface to see which of these paths actually take effect."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:227
+msgid "Get site workspace configuration"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:228
+msgid "Returns the site-tier workspace configuration slice (the wp_admin_workspaces_site_config option) verbatim — the site-wide overrides layered on the active workspace for every user. Null values are tombstones that remove the matching baseline entry. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:240
+msgid "List available workspaces"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:241
+msgid "Lists every workspace that can be activated (bundled JSON files plus programmatic registrations), the currently active slug, and whether a wp-content/workspace.json override file is in force (when it is, switch-workspace is unavailable). Workspaces flagged user-switchable may also be selected per-user via the \"workspace\" key in update-user-prefs."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:273
+msgid "Update user workspace preferences"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:274
+msgid "Deep-merges a partial patch onto the current user's workspace preference slice. A null value deletes the stored key. The patch is STORED verbatim but only paths the active workspace declares customizable take effect in the cascade — the response reports which leaf paths will apply (\"applied\") and which the cascade will ignore (\"rejected\"); the \"workspace\" key (a per-user workspace switch, honored only for user-switchable workspaces) is reported under \"outOfBand\". Call describe-customization-surface first to learn the writable paths."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:287
+msgid "Partial preference document to deep-merge (e.g. {\"styles\":{\"theme\":{\"accent\":\"#0073aa\"}}}). Null deletes a stored key."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:314
+msgid "Reset user workspace preferences"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:315
+msgid "Deletes the current user's entire workspace preference slice, returning them to the workspace defaults resolved from the site, role, and workspace tiers. Irreversible — there is no undo for the discarded preferences."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:329
+msgid "Update site workspace configuration"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:330
+msgid "Deep-merges a partial patch onto the site-tier workspace configuration, which applies to EVERY user of this site. Null values are stored as tombstones that REMOVE the matching entry from the resolved workspace (e.g. {\"menu\":{\"comments\":null}} hides the Comments menu item site-wide). To delete a previously stored key from this slice (including undoing a tombstone), list its dotted path in \"remove\"; paths that existed and were deleted are echoed under \"removed\". The patch is stored verbatim, but only paths the resolver recognizes survive: the response reports which leaf paths will take effect (\"applied\") versus be dropped at resolve (\"rejected\") — e.g. unrecognized top-level blocks, or styles/settings paths the active workspace does not declare customizable. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:343
+msgid "Partial workspace document to deep-merge. Null values are stored as tombstones (they remove the matching baseline entry at resolve time)."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:348
+msgid "Dotted paths to delete from the stored slice (e.g. \"menu.comments\" to undo a tombstone). Path segments cannot themselves contain dots."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:376
+msgid "Switch the active workspace"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:377
+msgid "Sets the site-wide active workspace (every user is affected). Fails when the slug is not in list-workspaces, or when a wp-content/workspace.json override file is in force (the file wins over the option, so the switch would be a silent no-op). For a per-user switch, set the \"workspace\" key via update-user-prefs instead — honored only for workspaces flagged user-switchable. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:389
+msgid "Slug of the workspace to activate (see list-workspaces)."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:404
+msgid "Set the default screen"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:405
+msgid "Sets which screen the workspace opens on (site-wide, all users) by writing \"default-screen\" to the site tier. The screen id must exist in the resolved workspace — fetch get-workspace-config with blocks [\"screens\"] to see valid ids; on failure the error data includes them. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:417
+msgid "Screen id (a key of the resolved \"screens\" map)."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:432
+msgid "Hide a menu item"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:433
+msgid "Hides a navigation menu item site-wide (every user) by writing a null tombstone at its position in the site tier. Cosmetic only: the underlying screen stays reachable by URL and its capability gates are untouched. The id must exist in the resolved menu tree (fetch get-workspace-config with blocks [\"menu\"]). Undo with show-menu-item. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:445
+msgid "Menu item id (a key in the resolved \"menu\" tree, at any depth)."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:462
+msgid "Show a hidden menu item"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:463
+msgid "Restores a menu item previously hidden at the site tier (the inverse of hide-menu-item) by removing its null tombstone from the site configuration slice. Fails when the id is not tombstoned at the site tier — an item hidden by the workspace file or a role/user slice cannot be restored here. Requires manage_options."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:475
+msgid "Menu item id that was hidden via hide-menu-item."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:572
+#: includes/class-wp-admin-workspaces-prefs-rest.php:67
+msgid "Login required."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:580
+msgid "\"prefs\" must be an object."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:631
+msgid "Provide \"config\" (object to merge) and/or \"remove\" (paths to delete)."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:688
+msgid "\"workspace\" must be a non-empty workspace slug."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:695
+msgid "A wp-content/workspace.json override file is active; it wins over the active-workspace option, so switching would have no effect. Remove the file to switch workspaces."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:703
+msgid "Unknown workspace slug."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:724
+msgid "\"screen\" must be a non-empty screen id."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:735
+msgid "No screen with that id exists in the resolved workspace."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:767
+msgid "No menu item with that id exists in the resolved menu tree."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:798
+msgid "That menu item is not hidden at the site tier. Items hidden by the workspace file or another origin cannot be restored here."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:855
+msgid "Patch payload too large."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:862
+msgid "Patch payload has too many keys."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-abilities.php:949
+msgid "\"id\" must be a non-empty menu item id."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-classic-mode.php:136
+msgid "↩ Back to workspace"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-classic-mode.php:142
+msgid "Classic wp-admin"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-field-collections-rest.php:56
+#: includes/class-wp-admin-workspaces-data-view-rest.php:229
+msgid "kind and name must contain at least one [A-Za-z0-9_-] character after sanitization."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-view-rest.php:123
+msgid "You must be logged in to access this endpoint."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-view-rest.php:138
+msgid "Unknown screen id."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-view-rest.php:150
+msgid "You are not allowed to read this screen view."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-view-rest.php:173
+msgid "Pass either `screen` OR `kind`+`name`, not both."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-data-view-rest.php:180
+msgid "Pass `screen=<id>` for per-screen resolution or `kind=<X>&name=<Y>[&variant=<Z>]` for direct triple lookup."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-hijack.php:340
+#: src/apps/navigation/_renderers/SidebarDrilldownRenderer.js:196
+msgid "Admin"
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-prefs-rest.php:75
+msgid "Body must be an object."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-prefs-rest.php:86
+msgid "Preferences payload too large."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-prefs-rest.php:93
+msgid "Preferences payload has too many keys."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-site-health-rest.php:79
+msgid "You are not currently logged in."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-site-health-rest.php:87
+msgid "Sorry, you are not allowed to view Site Health checks on this site."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-themes-rest.php:69
+msgid "A theme stylesheet is required."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-themes-rest.php:78
+msgid "The requested theme is not installed."
+msgstr ""
+
+#: includes/class-wp-admin-workspaces-themes-rest.php:89
+msgid "This theme is not allowed on this site."
+msgstr ""
+
+#. translators: %s: theme error message.
+#: includes/class-wp-admin-workspaces-themes-rest.php:99
+#, php-format
+msgid "The theme cannot be activated: %s"
+msgstr ""
+
+#. translators: 1: file path, 2: reason
+#: includes/origins/class-wp-admin-workspaces-origin-file.php:237
+#, php-format
 msgid "Ignoring %1$s — %2$s. Falling back to the wp-admin-default baseline."
 msgstr ""
 
-#: src/apps/_shared/dataviews/createBulkConfirmModal.js:76 src/apps/media/index.js:493 src/apps/taxonomy/index.js:365
-msgid "Cancel"
+#: wp-admin-workspaces.php:95
+msgid "WP Admin Workspaces requires either WordPress 7.0+ or the Gutenberg plugin. The workspace uses @wordpress/ui components that depend on private APIs; WordPress 7.0 ships those in core, while earlier versions need the Gutenberg plugin to whitelist them. The workspace has stood down — classic wp-admin is being served until one of those is available."
 msgstr ""
 
-#: src/apps/_shared/forms/EntityDataForm.js:77 src/apps/profile/index.js:151 src/apps/settings-general/index.js:384 src/apps/settings-workspace/index.js:125
-msgid "Save Changes"
+#: wp-admin-workspaces.php:380
+#: src/apps/settings-workspace/index.js:81
+msgid "Workspace"
 msgstr ""
 
-#: src/apps/_shared/forms/useEntitySave.js:22
-msgid "Changes saved."
+#: wp-admin-workspaces.php:385
+#: src/apps/settings-workspace/index.js:29
+msgid "Activate WP Admin Workspace"
 msgstr ""
 
-#: src/apps/_shared/forms/useEntitySave.js:24
-msgid "Failed to save changes."
+#: wp-admin-workspaces.php:387
+msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/workspace.json. Disable to fall back to classic."
 msgstr ""
 
-#: src/apps/appearance/index.js:118
-msgid "Appearance saved."
+#. translators: %s: workspace slug
+#: wp-admin-workspaces.php:764
+#, php-format
+msgid "Unknown workspace: \"%s\". The previous active workspace was kept."
 msgstr ""
 
-#: src/apps/appearance/index.js:123 src/apps/simple-editor/index.js:253
-msgid "Save failed."
+#: wp-admin-workspaces.php:1190
+msgid "Site address (front-end URL)."
 msgstr ""
 
-#: src/apps/appearance/index.js:135
-msgid "Appearance reset."
+#: wp-admin-workspaces.php:1196
+msgid "Allow new user registration."
 msgstr ""
 
-#: src/apps/appearance/index.js:140
-msgid "Reset failed."
+#: wp-admin-workspaces.php:1202
+msgid "Default role for new users."
 msgstr ""
 
-#: src/apps/appearance/index.js:153
-msgid "Appearance"
+#: wp-admin-workspaces.php:1220
+msgid "Number of items shown in syndication feeds."
 msgstr ""
 
-#: src/apps/appearance/index.js:158
-msgid "The active workspace does not expose any user-customizable appearance settings."
+#: wp-admin-workspaces.php:1227
+msgid "Whether syndication feeds show an excerpt rather than full text."
 msgstr ""
 
-#: src/apps/appearance/index.js:167
-msgid "Density"
+#: wp-admin-workspaces.php:1257
+msgid "Image size dimension (pixels)."
 msgstr ""
 
-#: src/apps/appearance/index.js:171
-msgid "Default"
+#: wp-admin-workspaces.php:1265
+msgid "Whether thumbnails are cropped to exact dimensions."
 msgstr ""
 
-#: src/apps/appearance/index.js:175
-msgid "Compact"
+#: wp-admin-workspaces.php:1272
+msgid "Whether uploads are organized into month- and year-based folders."
 msgstr ""
 
-#: src/apps/appearance/index.js:179
-msgid "Comfortable"
-msgstr ""
-
-#: src/apps/appearance/index.js:191
-msgid "Accent color (hex)"
-msgstr ""
-
-#: src/apps/appearance/index.js:192
-msgid "Used by the brand surface, focus ring, and compat bridge."
-msgstr ""
-
-#: src/apps/appearance/index.js:221
-msgid "Default route"
-msgstr ""
-
-#: src/apps/appearance/index.js:222
-msgid "Where the workspace lands when you open it (e.g. /posts, /media)."
-msgstr ""
-
-#: src/apps/appearance/index.js:240
-msgid "Reset to workspace defaults"
-msgstr ""
-
-#: src/apps/command-palette/compileCommands.mjs:36 src/apps/command-palette/index.js:53
+#. translators: %s: screen label or path
+#: src/apps/command-palette/index.js:53
+#, js-format
 msgid "Go to %s"
 msgstr ""
 
-#: src/apps/comments/index.js:220
-msgid "Updated."
-msgstr ""
-
-#: src/apps/comments/index.js:229
-msgid "Action failed."
-msgstr ""
-
-#: src/apps/comments/index.js:236
-msgid "%1$d of %2$d comment failed to update."
-msgid_plural "%1$d of %2$d comments failed to update."
-msgstr[0] ""
-msgstr[1] ""
-
-#: src/apps/comments/index.js:277
-msgid "Move this comment to trash?"
-msgstr ""
-
-#: src/apps/comments/index.js:278
-msgid "Move these comments to trash?"
-msgstr ""
-
-#: src/apps/comments/index.js:299
-msgid "%1$d of %2$d comment failed to move to trash."
-msgid_plural "%1$d of %2$d comments failed to move to trash."
-msgstr[0] ""
-msgstr[1] ""
-
-#: src/apps/comments/index.js:312
-msgid "Moved to trash."
-msgstr ""
-
-#: src/apps/comments/index.js:35
-msgid "Approved"
-msgstr ""
-
-#: src/apps/comments/index.js:36 src/apps/posts/index.js:45
-msgid "Pending"
-msgstr ""
-
-#: src/apps/comments/index.js:37
-msgid "Spam"
-msgstr ""
-
-#: src/apps/comments/index.js:279 src/apps/comments/index.js:38 src/apps/posts/index.js:48
-msgid "Trash"
-msgstr ""
-
-#: src/apps/comments/index.js:45 src/apps/plugins/index.js:29 src/apps/posts/index.js:57 src/apps/themes/index.js:181 src/apps/themes/index.js:37
-msgid "Author"
-msgstr ""
-
-#: src/apps/comments/index.js:46
-msgid "Comment"
-msgstr ""
-
-#: src/apps/comments/index.js:47 src/apps/plugins/index.js:27 src/apps/posts/index.js:56 src/apps/settings-writing/index.js:16 src/apps/themes/index.js:34
-msgid "Status"
-msgstr ""
-
-#: src/apps/comments/index.js:48 src/apps/posts/index.js:58
-msgid "Date"
-msgstr ""
-
-#: src/apps/comments/index.js:52
-msgid "Approve"
-msgstr ""
-
-#: src/apps/comments/index.js:53
-msgid "Unapprove"
-msgstr ""
-
-#: src/apps/comments/index.js:54
-msgid "Mark as spam"
-msgstr ""
-
-#: src/apps/comments/index.js:55
-msgid "Move to trash"
-msgstr ""
-
-#: src/apps/comments/index.js:64
-msgid "Approved."
-msgstr ""
-
-#: src/apps/comments/index.js:65
-msgid "Set to pending."
-msgstr ""
-
-#: src/apps/comments/index.js:66
-msgid "Marked as spam."
-msgstr ""
-
-#: src/apps/dashboard-host/index.js:100
-msgid "No dashboard widgets are registered."
-msgstr ""
-
-#: src/apps/dashboard-widget-quick-draft/index.js:107
-msgid "Save Draft"
-msgstr ""
-
-#: src/apps/dashboard-widget-quick-draft/index.js:55 src/apps/simple-editor/index.js:31
-msgid "Save failed"
-msgstr ""
-
-#: src/apps/dashboard-widget-quick-draft/index.js:83 src/apps/media/index.js:430 src/apps/posts/index.js:55 src/apps/simple-editor/index.js:412
-msgid "Title"
-msgstr ""
-
-#: src/apps/dashboard-widget-quick-draft/index.js:86
-msgid "Draft title"
-msgstr ""
-
-#: src/apps/dashboard-widget-quick-draft/index.js:91
-msgid "What's on your mind?"
-msgstr ""
-
-#: src/apps/dashboard-widget-recent-posts/index.js:27 src/apps/dashboard/index.js:173
-msgid "No drafts yet. Start writing!"
-msgstr ""
-
-#: src/apps/dashboard-widget-recent-posts/index.js:50 src/apps/dashboard/index.js:200 src/apps/posts/index.js:174
-msgid "(no title)"
-msgstr ""
-
-#: src/apps/dashboard/index.js:102
-msgid "Here is a snapshot of your site."
-msgstr ""
-
-#: src/apps/dashboard/index.js:115
-msgid "Write a post"
-msgstr ""
-
-#: src/apps/dashboard/index.js:122
-msgid "Add a page"
-msgstr ""
-
-#: src/apps/dashboard/index.js:129
-msgid "Upload media"
-msgstr ""
-
-#: src/apps/dashboard/index.js:135
-msgid "Published posts"
-msgstr ""
-
-#: src/apps/dashboard/index.js:140
-msgid "Published pages"
-msgstr ""
-
-#: src/apps/dashboard/index.js:145
-msgid "Pending comments"
-msgstr ""
-
-#: src/apps/dashboard/index.js:150
-msgid "Users"
-msgstr ""
-
-#: src/apps/dashboard/index.js:161
-msgid "Recent drafts"
-msgstr ""
-
-#: src/apps/dashboard/index.js:222
-msgid "Comments awaiting moderation"
-msgstr ""
-
-#: src/apps/dashboard/index.js:240
-msgid "Inbox zero. Nothing pending."
-msgstr ""
-
-#: src/apps/dashboard/index.js:279
-msgid "Moderate all"
-msgstr ""
-
-#: src/apps/dashboard/index.js:77
-msgid "Good morning"
-msgstr ""
-
-#: src/apps/dashboard/index.js:80
-msgid "Good afternoon"
-msgstr ""
-
-#: src/apps/dashboard/index.js:82
-msgid "Good evening"
-msgstr ""
-
-#: src/apps/dashboard/index.js:95
-msgid "%1$s, %2$s"
-msgstr ""
-
-#: src/apps/editor/index.js:118 src/apps/editor/index.js:148 src/apps/simple-editor/index.js:191 src/apps/simple-editor/index.js:380
-msgid "Back to list"
-msgstr ""
-
-#: src/apps/editor/index.js:158
-msgid "Editor"
-msgstr ""
-
-#: src/apps/editor/index.js:71 src/apps/simple-editor/index.js:168
+#: src/apps/editor/index.js:150
+#: src/apps/simple-editor/index.js:194
 msgid "Failed to create draft."
 msgstr ""
 
-#: src/apps/media/index.js:184
-msgid "URL copied to clipboard."
+#: src/apps/editor/index.js:301
+#: src/apps/editor/index.js:333
+#: src/apps/simple-editor/index.js:220
+#: src/apps/simple-editor/index.js:413
+msgid "Back to list"
 msgstr ""
 
-#: src/apps/media/index.js:190
-msgid "Failed to copy URL."
-msgstr ""
-
-#: src/apps/media/index.js:207 src/apps/settings/index.js:77
-msgid "Media"
-msgstr ""
-
-#: src/apps/media/index.js:230
-msgid "Upload"
-msgstr ""
-
-#: src/apps/media/index.js:258
-msgid "No media items found."
-msgstr ""
-
-#: src/apps/media/index.js:27
-msgid "All"
-msgstr ""
-
-#: src/apps/media/index.js:271
-msgid "Upload your first file"
-msgstr ""
-
-#: src/apps/media/index.js:28
-msgid "Images"
-msgstr ""
-
-#: src/apps/media/index.js:29 src/apps/settings-writing/index.js:17
-msgid "Video"
-msgstr ""
-
-#: src/apps/media/index.js:30 src/apps/settings-writing/index.js:18
-msgid "Audio"
-msgstr ""
-
-#: src/apps/media/index.js:31
-msgid "Documents"
-msgstr ""
-
-#: src/apps/media/index.js:332
-msgid "Previous"
-msgstr ""
-
-#: src/apps/media/index.js:344
-msgid "Next"
-msgstr ""
-
-#: src/apps/media/index.js:409
-msgid "Media Details"
-msgstr ""
-
-#: src/apps/media/index.js:436
-msgid "Alt Text"
-msgstr ""
-
-#: src/apps/media/index.js:442
-msgid "Caption"
-msgstr ""
-
-#: src/apps/media/index.js:448 src/apps/taxonomy/index.js:27 src/apps/taxonomy/index.js:302 src/apps/themes/index.js:35
-msgid "Description"
-msgstr ""
-
-#: src/apps/media/index.js:475
-msgid "Copy URL"
-msgstr ""
-
-#: src/apps/media/index.js:484 src/apps/plugins/index.js:219 src/apps/plugins/index.js:36 src/apps/taxonomy/index.js:151 src/apps/taxonomy/index.js:32 src/apps/users/index.js:204 src/apps/users/index.js:30
-msgid "Delete"
-msgstr ""
-
-#: src/apps/media/index.js:502 src/apps/taxonomy/index.js:376
-msgid "Save"
+#: src/apps/editor/index.js:344
+#: src/apps/_shared/roles.js:14
+msgid "Editor"
 msgstr ""
 
 #: src/apps/navigation/_components/SidebarNavigationScreen.js:62
 msgid "Back"
 msgstr ""
 
-#: src/apps/navigation/_components/SidebarNavigationScreen.js:68 src/apps/site-hub/index.js:76
+#: src/apps/navigation/_components/SidebarNavigationScreen.js:68
+#: src/apps/site-hub/index.js:76
 msgid "Go to the Dashboard"
 msgstr ""
 
-#: src/apps/navigation/_renderers/SidebarDrilldownRenderer.js:173
-msgid "Admin"
+#: src/apps/posts/index.js:44
+#: src/apps/posts/index.js:58
+#: src/apps/posts/index.js:195
+msgid "Published"
 msgstr ""
 
-#: src/apps/plugins/index.js:124
-msgid "Failed to update plugin status."
+#: src/apps/posts/index.js:45
+#: src/apps/posts/index.js:59
+msgid "Draft"
 msgstr ""
 
-#: src/apps/plugins/index.js:20 src/apps/themes/index.js:26
-msgid "Active"
+#: src/apps/posts/index.js:46
+#: src/apps/posts/index.js:60
+msgid "Pending"
 msgstr ""
 
-#: src/apps/plugins/index.js:21 src/apps/themes/index.js:27
-msgid "Inactive"
+#: src/apps/posts/index.js:47
+#: src/apps/posts/index.js:61
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:21
+msgid "Private"
 msgstr ""
 
-#: src/apps/plugins/index.js:211
-msgid "Permanently delete this plugin? This cannot be undone."
+#: src/apps/posts/index.js:48
+#: src/apps/posts/index.js:196
+msgid "Scheduled"
 msgstr ""
 
-#: src/apps/plugins/index.js:215
-msgid "Permanently delete these plugins? This cannot be undone."
+#: src/apps/posts/index.js:49
+msgid "Trash"
 msgstr ""
 
-#: src/apps/plugins/index.js:22
-msgid "Network active"
+#: src/apps/posts/index.js:67
+msgid "Standard"
 msgstr ""
 
-#: src/apps/plugins/index.js:235
-msgid "Failed to delete plugin."
+#: src/apps/posts/index.js:68
+msgid "Aside"
 msgstr ""
 
-#: src/apps/plugins/index.js:26
-msgid "Plugin"
+#: src/apps/posts/index.js:69
+msgid "Gallery"
 msgstr ""
 
-#: src/apps/plugins/index.js:28 src/apps/themes/index.js:178 src/apps/themes/index.js:36
-msgid "Version"
+#: src/apps/posts/index.js:70
+msgid "Link"
 msgstr ""
 
-#: src/apps/plugins/index.js:33 src/apps/themes/index.js:214 src/apps/themes/index.js:41
-msgid "Activate"
+#: src/apps/posts/index.js:71
+msgid "Image"
 msgstr ""
 
-#: src/apps/plugins/index.js:34
-msgid "Deactivate"
+#: src/apps/posts/index.js:72
+msgid "Quote"
 msgstr ""
 
-#: src/apps/plugins/index.js:35
-msgid "Visit plugin site"
+#: src/apps/posts/index.js:73
+#: src/apps/posts/index.js:82
+#: src/apps/posts/index.js:300
+msgid "Status"
 msgstr ""
 
-#: src/apps/posts/index.js:203
+#: src/apps/posts/index.js:74
+msgid "Video"
+msgstr ""
+
+#: src/apps/posts/index.js:75
+msgid "Audio"
+msgstr ""
+
+#: src/apps/posts/index.js:76
+msgid "Chat"
+msgstr ""
+
+#: src/apps/posts/index.js:81
+#: src/apps/simple-editor/index.js:446
+msgid "Title"
+msgstr ""
+
+#: src/apps/posts/index.js:83
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:476
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:480
+#: src/apps/_shared/roles.js:15
+msgid "Author"
+msgstr ""
+
+#: src/apps/posts/index.js:84
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:347
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:630
+msgid "Categories"
+msgstr ""
+
+#: src/apps/posts/index.js:85
+#: src/apps/posts/index.js:316
+msgid "Format"
+msgstr ""
+
+#: src/apps/posts/index.js:86
+msgid "Date"
+msgstr ""
+
+#: src/apps/posts/index.js:90
+#: src/apps/posts/index.js:92
+msgid "Edit"
+msgstr ""
+
+#: src/apps/posts/index.js:91
+msgid "View"
+msgstr ""
+
+#: src/apps/posts/index.js:93
+#: src/apps/posts/index.js:707
+msgid "Move to Trash"
+msgstr ""
+
+#: src/apps/posts/index.js:94
+msgid "Restore"
+msgstr ""
+
+#: src/apps/posts/index.js:95
+#: src/apps/posts/index.js:760
+msgid "Delete Permanently"
+msgstr ""
+
+#: src/apps/posts/index.js:197
+msgid "Missed schedule"
+msgstr ""
+
+#: src/apps/posts/index.js:198
+msgid "Last Modified"
+msgstr ""
+
+#: src/apps/posts/index.js:219
+#: src/apps/posts/index.js:305
+#: src/apps/posts/index.js:307
+#: src/apps/posts/index.js:950
+msgid "Sticky"
+msgstr ""
+
+#: src/apps/posts/index.js:224
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:24
+msgid "Password protected"
+msgstr ""
+
+#: src/apps/posts/index.js:310
+msgid "Not sticky"
+msgstr ""
+
+#: src/apps/posts/index.js:321
+msgid "Comments"
+msgstr ""
+
+#: src/apps/posts/index.js:323
+msgid "Allow"
+msgstr ""
+
+#: src/apps/posts/index.js:326
+msgid "Do not allow"
+msgstr ""
+
+#: src/apps/posts/index.js:333
+msgid "Author (user ID)"
+msgstr ""
+
+#: src/apps/posts/index.js:339
+msgid "Parent (post ID)"
+msgstr ""
+
+#: src/apps/posts/index.js:345
+msgid "Categories (comma-separated IDs)"
+msgstr ""
+
+#: src/apps/posts/index.js:354
+msgid "Tags (comma-separated IDs)"
+msgstr ""
+
+#: src/apps/posts/index.js:603
+msgid "(no title)"
+msgstr ""
+
+#: src/apps/posts/index.js:691
+#: src/apps/simple-editor/index.js:430
+msgid "Update"
+msgstr ""
+
+#: src/apps/posts/index.js:699
 msgid "Are you sure you want to move this item to the trash?"
 msgstr ""
 
-#: src/apps/posts/index.js:207
+#: src/apps/posts/index.js:703
 msgid "Are you sure you want to move these items to the trash?"
 msgstr ""
 
-#: src/apps/posts/index.js:234
+#. translators: 1: failed item count, 2: total item count
+#: src/apps/posts/index.js:717
+#, js-format
 msgid "%1$d of %2$d item failed to move to trash."
 msgid_plural "%1$d of %2$d items failed to move to trash."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/apps/posts/index.js:43
-msgid "Published"
-msgstr ""
-
-#: src/apps/posts/index.js:44
-msgid "Draft"
-msgstr ""
-
-#: src/apps/posts/index.js:46
-msgid "Private"
-msgstr ""
-
-#: src/apps/posts/index.js:47
-msgid "Scheduled"
-msgstr ""
-
-#: src/apps/posts/index.js:62 src/apps/taxonomy/index.js:31
-msgid "Edit"
-msgstr ""
-
-#: src/apps/posts/index.js:63
-msgid "View"
-msgstr ""
-
-#: src/apps/posts/index.js:211 src/apps/posts/index.js:64
-msgid "Move to Trash"
-msgstr ""
-
-#: src/apps/preview-pane/index.js:44
-msgid "Select an item to preview."
-msgstr ""
-
-#: src/apps/preview-pane/index.js:94
-msgid "Item not found."
-msgstr ""
-
-#: src/apps/profile/index.js:112
-msgid "Profile unavailable: missing user context."
-msgstr ""
-
-#: src/apps/profile/index.js:133 src/apps/user-menu/index.js:37
-msgid "Profile"
-msgstr ""
-
-#: src/apps/profile/index.js:30
-msgid "Profile updated."
-msgstr ""
-
-#: src/apps/profile/index.js:31
-msgid "Failed to save profile."
-msgstr ""
-
-#: src/apps/profile/index.js:59
-msgid "First Name"
-msgstr ""
-
-#: src/apps/profile/index.js:64
-msgid "Last Name"
-msgstr ""
-
-#: src/apps/profile/index.js:69
-msgid "Nickname"
-msgstr ""
-
-#: src/apps/profile/index.js:74
-msgid "Display Name"
-msgstr ""
-
-#: src/apps/profile/index.js:81 src/apps/users/index.js:24
-msgid "Email"
-msgstr ""
-
-#: src/apps/profile/index.js:86
-msgid "Website"
-msgstr ""
-
-#: src/apps/profile/index.js:91
-msgid "Biographical Info"
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:14
-msgid "Allow people to submit comments on new posts"
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:26
-msgid "Allow link notifications from other blogs (pingbacks and trackbacks)"
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:48 src/apps/settings/index.js:65
-msgid "Discussion"
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:50 src/apps/settings-general/index.js:26 src/apps/settings-reading/index.js:153 src/apps/settings-writing/index.js:70
-msgid "Settings saved."
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:51 src/apps/settings-general/index.js:27 src/apps/settings-reading/index.js:154 src/apps/settings-writing/index.js:71
-msgid "Failed to save settings."
-msgstr ""
-
-#: src/apps/settings-discussion/index.js:55
-msgid "The fine-grained discussion settings (comment moderation rules, blocklists, avatars) are not exposed by the WordPress REST API. Use the legacy Discussion Settings screen for those fields."
-msgstr ""
-
-#: src/apps/settings-general/index.js:112
-msgid "General Settings"
-msgstr ""
-
-#: src/apps/settings-general/index.js:117
-msgid "Site Title"
-msgstr ""
-
-#: src/apps/settings-general/index.js:122
-msgid "Tagline"
-msgstr ""
-
-#: src/apps/settings-general/index.js:123
-msgid "In a few words, explain what this site is about."
-msgstr ""
-
-#: src/apps/settings-general/index.js:136
-msgid "WordPress Address (URL)"
-msgstr ""
-
-#: src/apps/settings-general/index.js:148
-msgid "Defined by WP_SITEURL constant."
-msgstr ""
-
-#: src/apps/settings-general/index.js:156
-msgid "Site Address (URL)"
-msgstr ""
-
-#: src/apps/settings-general/index.js:168
-msgid "Defined by WP_HOME constant."
-msgstr ""
-
-#: src/apps/settings-general/index.js:172
-msgid "Enter the same as the WordPress Address unless your home page lives elsewhere."
-msgstr ""
-
-#: src/apps/settings-general/index.js:184
-msgid "Administration Email Address"
-msgstr ""
-
-#: src/apps/settings-general/index.js:193
-msgid "Used for admin purposes. Note: REST API saves this directly without the email-confirmation step that wp-admin uses."
-msgstr ""
-
-#: src/apps/settings-general/index.js:202
-msgid "There is a pending admin email change to:"
-msgstr ""
-
-#: src/apps/settings-general/index.js:218
-msgid "Membership"
-msgstr ""
-
-#: src/apps/settings-general/index.js:221
-msgid "Anyone can register"
-msgstr ""
-
-#: src/apps/settings-general/index.js:232
-msgid "New User Default Role"
-msgstr ""
-
-#: src/apps/settings-general/index.js:250
-msgid "Site Language"
-msgstr ""
-
-#: src/apps/settings-general/index.js:261
-msgid "Installed"
-msgstr ""
-
-#: src/apps/settings-general/index.js:270
-msgid "Available"
-msgstr ""
-
-#: src/apps/settings-general/index.js:282
-msgid "Timezone"
-msgstr ""
-
-#: src/apps/settings-general/index.js:285
-msgid "Choose either a city in the same timezone as you or a UTC offset."
-msgstr ""
-
-#: src/apps/settings-general/index.js:302
-msgid "Universal time:"
-msgstr ""
-
-#: src/apps/settings-general/index.js:305
-msgid "Local time:"
-msgstr ""
-
-#: src/apps/settings-general/index.js:313
-msgid "Date Format"
-msgstr ""
-
-#: src/apps/settings-general/index.js:328
-msgid "Custom date format"
-msgstr ""
-
-#: src/apps/settings-general/index.js:340
-msgid "Time Format"
-msgstr ""
-
-#: src/apps/settings-general/index.js:355
-msgid "Custom time format"
-msgstr ""
-
-#: src/apps/settings-general/index.js:367
-msgid "Week Starts On"
-msgstr ""
-
-#: src/apps/settings-general/index.js:104 src/apps/settings-general/index.js:94
-msgid "Custom"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:107
-msgid "Blog pages show at most"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:116
-msgid "Syndication feeds show the most recent"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:128
-msgid "For each post in a feed, include"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:134
-msgid "Full text"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:135
-msgid "Excerpt"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:151 src/apps/settings/index.js:59
-msgid "Reading"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:158
-msgid "Search-engine visibility (the “discourage search engines” toggle) is not exposed by the REST API. Use the legacy Reading Settings screen for that field."
-msgstr ""
-
-#: src/apps/settings-reading/index.js:57
-msgid "— Select —"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:67
-msgid "Your homepage displays"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:72
-msgid "Your latest posts"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:76
-msgid "A static page"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:83
-msgid "Homepage"
-msgstr ""
-
-#: src/apps/settings-reading/index.js:95
-msgid "Posts page"
-msgstr ""
-
-#: src/apps/settings-workspace/index.js:100
-msgid "Reload the page to apply the change."
-msgstr ""
-
-#: src/apps/settings-workspace/index.js:111
-msgid "Reload now"
-msgstr ""
-
-#: src/apps/settings-workspace/index.js:28 wp-admin-workspaces.php:384
-msgid "Activate WP Admin Workspace"
-msgstr ""
-
-#: src/apps/settings-workspace/index.js:29
+#. translators: %d: trashed item count
+#: src/apps/posts/index.js:733
+#, js-format
+msgid "%d item moved to trash."
+msgid_plural "%d items moved to trash."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/apps/posts/index.js:752
+msgid "Are you sure you want to permanently delete this item? This cannot be undone."
+msgstr ""
+
+#: src/apps/posts/index.js:756
+msgid "Are you sure you want to permanently delete these items? This cannot be undone."
+msgstr ""
+
+#. translators: 1: failed item count, 2: total item count
+#: src/apps/posts/index.js:772
+#, js-format
+msgid "%1$d of %2$d item failed to delete."
+msgid_plural "%1$d of %2$d items failed to delete."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: permanently deleted item count
+#: src/apps/posts/index.js:788
+#, js-format
+msgid "%d item permanently deleted."
+msgid_plural "%d items permanently deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: 1: failed item count, 2: total item count
+#: src/apps/posts/index.js:829
+#, js-format
+msgid "%1$d of %2$d item failed to restore."
+msgid_plural "%1$d of %2$d items failed to restore."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: restored item count
+#: src/apps/posts/index.js:845
+#, js-format
+msgid "%d item restored to draft."
+msgid_plural "%d items restored to draft."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/apps/posts/index.js:911
+msgid "All"
+msgstr ""
+
+#: src/apps/posts/index.js:918
+msgid "Mine"
+msgstr ""
+
+#: src/apps/settings-workspace/index.js:30
 msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Disable to fall back to classic."
 msgstr ""
 
-#: src/apps/settings-workspace/index.js:56
+#: src/apps/settings-workspace/index.js:57
 msgid "Workspace setting saved."
 msgstr ""
 
-#: src/apps/settings-workspace/index.js:62
+#: src/apps/settings-workspace/index.js:63
 msgid "Failed to save workspace setting."
 msgstr ""
 
-#: src/apps/settings-workspace/index.js:80 wp-admin-workspaces.php:379
-msgid "Workspace"
-msgstr ""
-
-#: src/apps/settings-workspace/index.js:91
+#: src/apps/settings-workspace/index.js:95
 msgid "To re-enable from classic wp-admin, visit Settings → WP Admin Workspaces."
 msgstr ""
 
-#: src/apps/settings-writing/index.js:10
-msgid "Aside"
+#: src/apps/settings-workspace/index.js:104
+msgid "Reload the page to apply the change."
 msgstr ""
 
-#: src/apps/settings-writing/index.js:11
-msgid "Chat"
+#: src/apps/settings-workspace/index.js:115
+msgid "Reload now"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:12
-msgid "Gallery"
+#: src/apps/settings-workspace/index.js:129
+#: src/apps/_shared/forms/EntityDataForm.js:98
+msgid "Save Changes"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:13
-msgid "Link"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:20
+msgid "Public"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:14
-msgid "Image"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:145
+msgid "Status & visibility"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:15
-msgid "Quote"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:156
+msgid "Visibility"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:42
-msgid "Default Post Category"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:166
+msgid "Password"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:53
-msgid "Default Post Format"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:182
+msgid "Publish on"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:68 src/apps/settings/index.js:53
-msgid "Writing"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:183
+msgid "Set a future date to schedule. Use the Publish button to go live."
 msgstr ""
 
-#: src/apps/settings-writing/index.js:75
-msgid "Post via email and remote-publishing settings are not exposed by the WordPress REST API. Use the legacy Writing Settings screen for those fields."
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:225
+msgid "URL"
 msgstr ""
 
-#: src/apps/settings-writing/index.js:9
-msgid "Standard"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:231
+msgid "Slug"
 msgstr ""
 
-#: src/apps/settings/index.js:112
-msgid "No settings panels are available."
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:383
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:388
+msgid "Featured image"
 msgstr ""
 
-#: src/apps/settings/index.js:47
-msgid "General"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:409
+msgid "Replace image"
 msgstr ""
 
-#: src/apps/settings/index.js:71
-msgid "Permalinks"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:413
+msgid "Set featured image"
 msgstr ""
 
-#: src/apps/settings/index.js:83
-msgid "Privacy"
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:426
+#: src/apps/_shared/forms/controls/MediaPicker.js:136
+msgid "Remove"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:33
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:505
+msgid "Excerpt"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:509
+msgid "Write an excerpt (optional)"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:540
+msgid "Discussion"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:545
+msgid "Allow comments"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:558
+msgid "Allow pingbacks & trackbacks"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:622
+msgid "Post"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:643
+msgid "Tags"
+msgstr ""
+
+#: src/apps/simple-editor/DocumentSettingsSidebar.js:647
+msgid "Add tags"
+msgstr ""
+
+#: src/apps/simple-editor/index.js:38
+msgid "Save failed"
+msgstr ""
+
+#: src/apps/simple-editor/index.js:40
 msgid "Saving…"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:340
-msgid "Tell your story…"
+#: src/apps/simple-editor/index.js:45
+msgid "Auto-saved"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:35
+#: src/apps/simple-editor/index.js:47
 msgid "Saved"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:37
+#: src/apps/simple-editor/index.js:49
 msgid "Unsaved changes"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:397
-msgid "Update"
+#: src/apps/simple-editor/index.js:365
+msgid "Tell your story…"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:398
+#: src/apps/simple-editor/index.js:431
 msgid "Publish"
 msgstr ""
 
-#: src/apps/simple-editor/index.js:413
+#: src/apps/simple-editor/index.js:447
 msgid "Post title"
 msgstr ""
 
-#: src/apps/site-health/index.js:108 src/apps/tools/index.js:10
-msgid "Site Health"
-msgstr ""
-
-#: src/apps/site-health/index.js:11
-msgid "WordPress.org communication"
-msgstr ""
-
-#: src/apps/site-health/index.js:111
-msgid "good"
-msgstr ""
-
-#: src/apps/site-health/index.js:113
-msgid "recommended"
-msgstr ""
-
-#: src/apps/site-health/index.js:115
-msgid "critical"
-msgstr ""
-
-#: src/apps/site-health/index.js:127
-msgid "Re-run tests"
-msgstr ""
-
-#: src/apps/site-health/index.js:15
-msgid "Background updates"
-msgstr ""
-
-#: src/apps/site-health/index.js:19
-msgid "Loopback requests"
-msgstr ""
-
-#: src/apps/site-health/index.js:21
-msgid "HTTPS status"
-msgstr ""
-
-#: src/apps/site-health/index.js:24
-msgid "Authorization header"
-msgstr ""
-
-#: src/apps/site-health/index.js:37
-msgid "Good"
-msgstr ""
-
-#: src/apps/site-health/index.js:38
-msgid "Recommended"
-msgstr ""
-
-#: src/apps/site-health/index.js:39
-msgid "Critical"
+#: src/apps/simple-editor/index.js:480
+msgid "Document settings"
 msgstr ""
 
 #: src/apps/site-hub/index.js:108
@@ -1025,182 +960,205 @@ msgstr ""
 msgid "Open command palette"
 msgstr ""
 
-#: src/apps/site-hub/SiteIcon.js:54 src/apps/site-hub/SiteIcon.js:68
+#: src/apps/site-hub/SiteIcon.js:54
+#: src/apps/site-hub/SiteIcon.js:68
 msgid "Site Icon"
 msgstr ""
 
-#: src/apps/taxonomy/index.js:146
-msgid "Delete this term?"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:147
-msgid "Delete these terms? Posts assigned to them will lose this term."
-msgstr ""
-
-#: src/apps/taxonomy/index.js:173
-msgid "Failed to delete term."
-msgstr ""
-
-#: src/apps/taxonomy/index.js:178
-msgid "Term deleted."
-msgstr ""
-
-#: src/apps/taxonomy/index.js:18
-msgid "Categories"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:19
-msgid "Tags"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:228
-msgid "Add new"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:24 src/apps/taxonomy/index.js:291 src/apps/themes/index.js:32 src/apps/users/index.js:23
-msgid "Name"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:25 src/apps/taxonomy/index.js:297
-msgid "Slug"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:26
-msgid "Count"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:270
-msgid "Term saved."
-msgstr ""
-
-#: src/apps/taxonomy/index.js:277
-msgid "Failed to save term."
-msgstr ""
-
-#: src/apps/taxonomy/index.js:349 src/apps/taxonomy/index.js:375
-msgid "Add term"
-msgstr ""
-
-#: src/apps/taxonomy/index.js:350
-msgid "Edit term"
-msgstr ""
-
-#: src/apps/themes/index.js:142
-msgid "Theme activated."
-msgstr ""
-
-#: src/apps/themes/index.js:199
-msgid "Theme site"
-msgstr ""
-
-#: src/apps/themes/index.js:203 src/runtime/regions/Region.js:314
-msgid "Close"
-msgstr ""
-
-#: src/apps/themes/index.js:33
-msgid "Screenshot"
-msgstr ""
-
-#: src/apps/themes/index.js:42
-msgid "Details"
-msgstr ""
-
-#: src/apps/tools/index.js:102 src/apps/tools/index.js:113
-msgid "Open"
-msgstr ""
-
-#: src/apps/tools/index.js:11
-msgid "Check that your site is running on the latest WordPress and that key services are reachable."
-msgstr ""
-
-#: src/apps/tools/index.js:19
-msgid "Import"
-msgstr ""
-
-#: src/apps/tools/index.js:20
-msgid "Pull content into this site from another WordPress install or a third-party platform."
-msgstr ""
-
-#: src/apps/tools/index.js:28
-msgid "Export"
-msgstr ""
-
-#: src/apps/tools/index.js:29
-msgid "Download an XML archive of posts, pages, comments, custom fields, terms, and authors."
-msgstr ""
-
-#: src/apps/tools/index.js:37
-msgid "Export personal data"
-msgstr ""
-
-#: src/apps/tools/index.js:38
-msgid "Generate a privacy-compliant export of a user’s personal data on request."
-msgstr ""
-
-#: src/apps/tools/index.js:46
-msgid "Erase personal data"
-msgstr ""
-
-#: src/apps/tools/index.js:47
-msgid "Delete a user’s personal data on request."
-msgstr ""
-
-#: src/apps/tools/index.js:66
-msgid "Tools"
-msgstr ""
-
-#: src/apps/tools/index.js:69
-msgid "Routine maintenance tasks. Some still link out to the legacy WordPress screens."
+#: src/apps/toolbar-actions/index.js:194
+msgctxt "admin bar add-new menu"
+msgid "New"
 msgstr ""
 
 #: src/apps/user-menu/index.js:21
 msgid "User"
 msgstr ""
 
-#: src/apps/user-menu/index.js:54
+#: src/apps/user-menu/index.js:39
+msgid "Profile"
+msgstr ""
+
+#: src/apps/user-menu/index.js:56
 msgid "Switch to"
 msgstr ""
 
-#: src/apps/user-menu/index.js:64
+#: src/apps/user-menu/index.js:67
 msgid "Log out"
 msgstr ""
 
-#: src/apps/users/index.js:174
-msgid "You cannot delete your own account."
+#: src/apps/_shared/dataviews/BulkEditModal.js:74
+msgid "Apply"
 msgstr ""
 
-#: src/apps/users/index.js:179
-msgid "Delete this user permanently? Their content will be reassigned to you."
+#: src/apps/_shared/dataviews/BulkEditModal.js:141
+msgid "No users to update."
 msgstr ""
 
-#: src/apps/users/index.js:184
-msgid "Delete these users permanently? Their content will be reassigned to you."
+#: src/apps/_shared/dataviews/BulkEditModal.js:154
+msgid "Set a field to apply."
 msgstr ""
 
-#: src/apps/users/index.js:195
-msgid "(Your own account will be skipped.)"
+#: src/apps/_shared/dataviews/BulkEditModal.js:185
+msgid "Failed to update."
 msgstr ""
 
-#: src/apps/users/index.js:230
-msgid "User(s) deleted."
-msgstr ""
-
-#: src/apps/users/index.js:237
-msgid "%1$d of %2$d user failed to delete."
-msgid_plural "%1$d of %2$d users failed to delete."
+#. translators: %d: number of items updated.
+#: src/apps/_shared/dataviews/BulkEditModal.js:214
+#, js-format
+msgid "%d item updated."
+msgid_plural "%d items updated."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/apps/users/index.js:25
-msgid "Roles"
+#. translators: 1: number updated, 2: number that failed.
+#: src/apps/_shared/dataviews/BulkEditModal.js:231
+#, js-format
+msgid "%1$d updated, %2$d failed."
 msgstr ""
 
-#: src/apps/users/index.js:254
-msgid "Failed to delete user(s)."
+#. translators: %d: number of selected items.
+#: src/apps/_shared/dataviews/BulkEditModal.js:266
+#, js-format
+msgid "Editing %d item."
+msgid_plural "Editing %d items."
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/apps/_shared/dataviews/BulkEditModal.js:289
+#: src/apps/_shared/dataviews/createBulkConfirmModal.js:105
+#: src/apps/_shared/dataviews/EntityFormModal.js:142
+#: src/apps/_shared/dataviews/EntityFormModal.js:257
+msgid "Cancel"
 msgstr ""
 
-#: src/apps/users/index.js:26
-msgid "Registered"
+#: src/apps/_shared/dataviews/BulkEditModal.js:329
+msgid "— No change —"
+msgstr ""
+
+#: src/apps/_shared/dataviews/EntityFormModal.js:68
+msgid "Save"
+msgstr ""
+
+#: src/apps/_shared/dataviews/EntityFormModal.js:70
+msgid "Add new"
+msgstr ""
+
+#: src/apps/_shared/dataviews/EntityFormModal.js:210
+#: src/apps/_shared/dataviews/EntityFormModal.js:226
+msgid "Failed to create."
+msgstr ""
+
+#: src/apps/_shared/dataviews/EntityFormModal.js:216
+msgid "Created."
+msgstr ""
+
+#: src/apps/_shared/dataviews/ViewTabs.js:80
+msgid "Filter view"
+msgstr ""
+
+#. translators: 1: segment label, 2: item count.
+#: src/apps/_shared/dataviews/ViewTabs.js:88
+#, js-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#. translators: 1: option name, 2: option value
+#: src/apps/_shared/fallback/UnavailableViaApi.js:87
+#, js-format
+msgid "Set the WordPress option `%1$s` to `%2$s` using `wp option update`."
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:159
+#: src/apps/_shared/fallback/UnavailableViaApi.js:220
+msgid "Open the classic settings screen"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:160
+#: src/apps/_shared/fallback/UnavailableViaApi.js:224
+msgid "Open the classic screen"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:166
+msgid "This setting isn’t writable through the workspace API. Use one of the options below to make the change."
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:170
+msgid "This change isn’t available through the workspace API. Use one of the options below to make the change."
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:202
+msgid "Value:"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:214
+msgid "Classic screen"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:246
+msgid "WP-CLI"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:248
+msgid "Run this WP-CLI command"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:264
+#: src/apps/_shared/fallback/UnavailableViaApi.js:311
+msgid "Copied!"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:265
+#: src/apps/_shared/fallback/UnavailableViaApi.js:312
+msgid "Copy"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:275
+msgid "Command copied to clipboard"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:290
+msgid "Coding agent"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:295
+msgid "Paste this prompt into your coding agent"
+msgstr ""
+
+#: src/apps/_shared/fallback/UnavailableViaApi.js:322
+msgid "Prompt copied to clipboard"
+msgstr ""
+
+#: src/apps/_shared/forms/controls/MediaPicker.js:123
+msgid "Change"
+msgstr ""
+
+#: src/apps/_shared/forms/controls/MediaPicker.js:125
+msgid "Select image"
+msgstr ""
+
+#: src/apps/_shared/forms/useEntityAutosave.js:141
+#: src/apps/_shared/forms/useEntityAutosave.js:173
+msgid "Save failed."
+msgstr ""
+
+#: src/apps/_shared/forms/useEntitySave.js:50
+msgid "Changes saved."
+msgstr ""
+
+#: src/apps/_shared/forms/useEntitySave.js:53
+msgid "Failed to save changes."
+msgstr ""
+
+#: src/apps/_shared/roles.js:13
+msgid "Administrator"
+msgstr ""
+
+#: src/apps/_shared/roles.js:16
+msgid "Contributor"
+msgstr ""
+
+#: src/apps/_shared/roles.js:17
+msgid "Subscriber"
 msgstr ""
 
 #: src/runtime/dirty-state/NavigationGuard.js:6
@@ -1211,58 +1169,28 @@ msgstr ""
 msgid "Close navigation"
 msgstr ""
 
-#: src/runtime/kernel.js:101
-msgid "Unknown layout engine:"
-msgstr ""
-
-#: src/runtime/kernel.js:42
+#: src/runtime/kernel.js:36
 msgid "Workspace configuration not found."
 msgstr ""
 
-#: src/runtime/regions/mountApp.js:101
-msgid "Retry"
+#: src/runtime/kernel.js:98
+msgid "Unknown layout engine:"
 msgstr ""
 
-#: src/runtime/regions/mountApp.js:91
+#. translators: %s: app id (e.g. "core:posts")
+#: src/runtime/regions/mountApp.js:92
+#, js-format
 msgid "Failed to load app \"%s\"."
 msgstr ""
 
-#: src/runtime/regions/mountApp.js:94
+#: src/runtime/regions/mountApp.js:95
 msgid "Failed to load app."
 msgstr ""
 
-#: wp-admin-workspaces.php:1002
-msgid "Site address (front-end URL)."
+#: src/runtime/regions/mountApp.js:102
+msgid "Retry"
 msgstr ""
 
-#: wp-admin-workspaces.php:1008
-msgid "Allow new user registration."
-msgstr ""
-
-#: wp-admin-workspaces.php:1014
-msgid "Default role for new users."
-msgstr ""
-
-#: wp-admin-workspaces.php:1057
-msgid "UTC"
-msgstr ""
-
-#: wp-admin-workspaces.php:1090
-msgid "Manual offsets"
-msgstr ""
-
-#: wp-admin-workspaces.php:348 wp-admin-workspaces.php:349 wp-admin-workspaces.php:374
-msgid "WP Admin Workspaces"
-msgstr ""
-
-#: wp-admin-workspaces.php:386
-msgid "When enabled, the workspace replaces classic wp-admin at /wp-admin/. Requires a valid wp-content/workspace.json. Disable to fall back to classic."
-msgstr ""
-
-#: wp-admin-workspaces.php:51
-msgid "WP Admin Workspaces requires the Gutenberg plugin to be active. The workspace uses @wordpress/ui components that depend on private APIs only Gutenberg whitelists. The workspace has stood down — classic wp-admin is being served until Gutenberg is reactivated."
-msgstr ""
-
-#: wp-admin-workspaces.php:659
-msgid "Unknown workspace: \"%s\". The previous active workspace was kept."
+#: src/runtime/regions/Region.js:318
+msgid "Close"
 msgstr ""

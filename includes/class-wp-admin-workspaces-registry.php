@@ -50,7 +50,7 @@ class WP_Admin_Workspaces_Registry {
 		}
 		if ( ! is_array( $workspace_json ) ) {
 			return new WP_Error(
-				'wp_admin_workspaces_invalid_shell_doc',
+				'wp_admin_workspaces_invalid_workspace_doc',
 				"register_workspace: workspace.json doc for '$slug' must be an array"
 			);
 		}
