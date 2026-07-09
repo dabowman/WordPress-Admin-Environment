@@ -23,12 +23,12 @@
  *   - switch-workspace: unknown slug 404, valid switch, 409 while a
  *     workspace.json override file is in force (via the path filter).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-abilities-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-abilities-tests.php`
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 if ( ! function_exists( 'wp_register_ability' ) ) {
@@ -113,6 +113,22 @@ $A = 'WP_Admin_Workspaces_Abilities';
 // Pin workspace + clean slate so the resolver sees the stock baseline.
 update_option( 'wp_admin_workspaces_active_workspace', 'wp-admin-default' );
 delete_option( 'wp_admin_workspaces_site_config' );
+
+// Hermetic guard: ignore any REAL wp-content/workspace.json for this run.
+// A developer's own override file would otherwise outrank the option-
+// activated fixtures below (file wins over option) and fail the
+// file-absent assertions. The 409 block later re-points this at its
+// temp fixture via $fixture_file; until then the path resolves to a
+// file that never exists.
+add_filter(
+	'wp_admin_workspaces_workspace_json_path',
+	function () {
+		return WPAS_Abilities_Test_Runner::$fixture_file
+			? WPAS_Abilities_Test_Runner::$fixture_file
+			: get_temp_dir() . 'wpas-abilities-no-such-workspace.json';
+	}
+);
+WP_Admin_Workspaces_Origin_File::reset_memo();
 $T::flush();
 
 $admin_id      = $T::ensure_user( 'wpas_abilities_admin', 'administrator' );
@@ -201,7 +217,7 @@ $T::flush();
 $result = $A::update_user_prefs( array(
 	'prefs' => array(
 		'styles'    => array( 'theme' => array( 'accent' => '#123456' ) ),
-		'workspace' => 'single-pane-demo',
+		'workspace' => 'writer',
 	),
 ) );
 $T::assert_true( 'locked baseline → styles write rejected', in_array( 'styles.theme.accent', $result['rejected'], true ) );
@@ -299,9 +315,9 @@ $T::assert_true( 'show prunes emptied menu containers', ! isset( $site_slice['me
 $result = $A::switch_workspace( array( 'workspace' => 'no-such-workspace-xyz' ) );
 $T::assert_error_status( 'switch unknown slug → 404', $result, 404 );
 
-$result = $A::switch_workspace( array( 'workspace' => 'single-pane-demo' ) );
-$T::assert_eq( 'switch ok', is_wp_error( $result ) ? $result->get_error_code() : $result['active'], 'single-pane-demo' );
-$T::assert_eq( 'active-workspace option written', get_option( 'wp_admin_workspaces_active_workspace' ), 'single-pane-demo' );
+$result = $A::switch_workspace( array( 'workspace' => 'writer' ) );
+$T::assert_eq( 'switch ok', is_wp_error( $result ) ? $result->get_error_code() : $result['active'], 'writer' );
+$T::assert_eq( 'active-workspace option written', get_option( 'wp_admin_workspaces_active_workspace' ), 'writer' );
 
 // Back to the baseline for the remaining cases.
 $A::switch_workspace( array( 'workspace' => 'wp-admin-default' ) );
@@ -317,7 +333,7 @@ $path_filter = function () use ( $T ) {
 add_filter( 'wp_admin_workspaces_workspace_json_path', $path_filter );
 WP_Admin_Workspaces_Origin_File::reset_memo();
 
-$result = $A::switch_workspace( array( 'workspace' => 'single-pane-demo' ) );
+$result = $A::switch_workspace( array( 'workspace' => 'writer' ) );
 $T::assert_error_status( 'override file in force → 409', $result, 409 );
 
 $surface = $A::describe_customization_surface();

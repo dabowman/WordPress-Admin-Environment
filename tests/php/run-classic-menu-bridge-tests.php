@@ -2,7 +2,7 @@
 /**
  * Classic wp-admin menu bridge tests (3c.3).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-classic-menu-bridge-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-classic-menu-bridge-tests.php`
  *
  * Coverage:
  *   - Slug → screen id derivation (kebab-case, prefix stripping).

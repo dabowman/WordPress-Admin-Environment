@@ -62,11 +62,11 @@ The runtime registry rejects duplicate ids; plugins extending core apps must use
 
 ## version
 
-Manifest schema version this document conforms to. v3 is the current shape (paired with the v3 `workspace.json` schema); manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
+Manifest schema version this document conforms to. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load.
 
 | Property | Description                                                                       | Type    | Default |
 |----------|-----------------------------------------------------------------------------------|---------|---------|
-| version  | Manifest version, integer `>= 1`. v3 is the current shape; v1/v2 remain readable. | integer | —       |
+| version  | Manifest version, integer `>= 1`.                                                 | integer | —       |
 
 ## title
 
@@ -227,7 +227,7 @@ Optional. Apps that host sub-mount-points (dashboard hosts, layout containers) d
 }
 ```
 
-A screen mounting `core:dashboard-host` (which declares a `grid` slot) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
+A screen mounting an app that declares a `grid` slot (e.g. a dashboard-grid host — the bundled one is parked on `archive/native-apps`) gains the `grid` slot for use by any other app in the screen with `apps[i].slot: "grid"`.
 
 | Property    | Description                                                                                                                                                              | Type   | Default |
 |-------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|

@@ -20,13 +20,13 @@ v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline
 
 6. **Engine-agnostic IA.** The `menu` block is an information-architecture tree. The active engine renders it into its native arrangement: sidebar drilldown for `core:default`, dock for `core:desktop`, drawer for `core:single-pane`.
 
-7. **No backwards compat with v1.** This hasn't shipped publicly. Breaking changes are fine; getting the shape right is the priority.
+7. **No backwards-compat obligations.** Nothing has shipped publicly. Breaking changes are fine; getting the shape right is the priority.
 
 ## Top-level shape
 
 ```json
 {
-  "$schema": "https://schemas.wp.org/admin/v3.json",
+  "$schema": "../docs/schemas/workspace.json",
   "version": 3,
   "$wpds": "6.9",
   "name": "wp-admin-default",
@@ -95,7 +95,7 @@ v3 reshapes workspace.json around user-task surfaces instead of runtime-pipeline
 | `screens` | The map of every screen the workspace exposes. Each entry defines what a screen IS (label, icon, apps[], path, slot, mode, permissions, `dataViewRef`/`dataView`, preload). Says nothing about where the screen appears in any menu — that's the `menu` block's job. | Deep-merge per-screen, per-field. `screens[id].apps[]` merges by `id`. `hidden: true` at any origin removes the screen. |
 | `menu` | Engine-agnostic IA — a tree of nested items. Each item is keyed by id. Items with sub-items become containers (no separate "groups" block); item keys that match a screen id implicitly bind to that screen. | Deep-merge per-item, nested. Array-merge-by-id applies through every depth. |
 | `commands` | First-class palette entries + keyboard shortcuts. Each command has an explicit `id` field. | Merge by `id`. |
-| `styles` | Tokens, slot overrides, chrome. Unchanged from v2 — theme-developer surface intact. | Deep-merge per-field. |
+| `styles` | Tokens, slot overrides, chrome — the theme-developer surface. | Deep-merge per-field. |
 | `preload` | Workspace-boot REST preloads. Additional per-screen preloads live in `screens[id].preload`. | Additive concatenation; dedup by `path+method`. |
 | `regions` | Escape hatch — direct region tree for engines that need it (windowed, MDI, multi-pane). | Deep-merge. Optional in v3; `screens` block synthesizes regions for the common case. |
 | `routes` | Escape hatch — direct URL→app mapping for non-screen compositions. | Deep-merge by route key. Optional in v3. |
@@ -287,7 +287,7 @@ Screens declare which engine-defined chrome mode they want. The engine maps each
 }
 ```
 
-### v1 core modes
+### Core modes
 
 Four named modes ship with the runtime. Engines opt into honoring them; engines may add their own.
 
@@ -538,7 +538,7 @@ Engines that ship alternative grid implementations MAY ignore the `dataView` blo
 ### DataViews
 
 - **Registry lives at `settings.dataViews.<kind>.<name>.<variant>`.** Three axes; each leaf is a complete `@wordpress/dataviews` configuration (`fieldsRef`, `defaultView`, `defaultLayouts`, `actions`, etc.). The `_default` variant is the unqualified base; other variant ids are author-defined.
-- **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge (CIAB independent-resolution rule). Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
+- **Variants are first-class registry entries at `settings.dataViews.<kind>.<name>.<variant>`.** Use explicit `extends: '<other-variant>'` for inheritance — no implicit `_default` merge. Screens reference a variant via `dataViewRef: 'kind/name/variant'` and may layer additional inline overlay via `dataView`.
 - **Inline override on screens via `screens[id].dataView`.** Deep-merges on top of the resolved triple. Per-screen tweak pattern that survives alongside `dataViewRef`.
 - **Per-base + per-variant filter hooks.** `wp_admin_workspaces_data_view_config_{kind}_{name}` fires for every triple; `wp_admin_workspaces_data_view_config_{kind}_{name}_{variant}` fires additionally whenever the variant is non-`_default`.
 - **Tombstones via `null`.** A higher origin sets `settings.dataViews.postType.post._default.fields.author: null` to remove the author column from the base globally. Or `screens.posts.dataView.fields.author: null` to remove it only on the Posts screen.
@@ -546,7 +546,7 @@ Engines that ship alternative grid implementations MAY ignore the `dataView` blo
 ### DataFields
 
 - **Named field collections.** Plugins / apps ship reusable field bundles registered through `settings.dataFields[id]`. Views reference a collection via `fieldsRef` and the resolver merges ref-wins-inline-overrides — collection provides the base, inline `fields` shallow-merges per-id, inline-only ids append after the base.
-- **Same shape as v2 `fieldCollections`.** Moved under `settings.dataFields` for the registries grouping; the registry name changed, the per-entry shape did not.
+- **Lives under `settings.dataFields`** — the registries grouping, paired with `settings.dataViews`.
 - **Per-descriptor field word stays `field`** — matches `@wordpress/dataviews` upstream convention (`{ id, type, label, elements, enableSorting, ... }`).
 - **Cascade-extensible.** Plugin origin contributes; site/role/user can override or hide fields per collection.
 
@@ -565,7 +565,7 @@ Engines that ship alternative grid implementations MAY ignore the `dataView` blo
 Notes:
 
 - **`id`** is required. Cascade addresses commands by id. Tombstone via `null` on the id entry removes it.
-- **`invoke`** mounts a triggerable app (as in v2 `bindings`).
+- **`invoke`** mounts a triggerable app.
 - **`navigate`** changes the URL — pure shortcut to a screen path. Doesn't require an app to mount.
 - **`label`** surfaces the command in the palette UI even when it's keyboard-only.
 - **Cascade**: array merge by `id`. Later origin wins per-field.
@@ -637,7 +637,7 @@ Higher origins overriding the path of an existing screen by ID continue to work 
 
 ### Restrict-only enforcement
 
-Existing v2 invariant carries forward: the cascade is restrict-only. Higher origins may TIGHTEN policy but not LOOSEN it. The interpretation depends on the block:
+The cascade is restrict-only. Higher origins may TIGHTEN policy but not LOOSEN it. The interpretation depends on the block:
 
 - For AND-semantic fields (e.g. app manifest `capabilities[]`): add allowed, remove rejected.
 - For OR-semantic fields (e.g. `permissions.capabilities`): see [Permissions](#permissions) section — direction inverts.
@@ -861,7 +861,7 @@ wp_admin_workspaces_register_workspace( 'my-workspace', array(
 
 Behavior:
 
-- Accepts v3-shape arrays only. No v1/v2 normalization. Plugin authors migrating from v2 use a one-time migration helper.
+- Accepts the current shape only; no normalization from other shapes.
 - Returns `true` on success or `WP_Error` on schema validation failure.
 - Late-registered workspaces appear in the workspace-switcher and slot into the `plugin` cascade origin.
 - Plugin-registered workspaces are still subject to site/role/user origin overrides via the cascade.
@@ -894,7 +894,7 @@ The engine's render path consults the renderer registry. Plugin renderers receiv
 
 ### Plugin-contributed dataView overrides
 
-Preserved from v2 with the v3 rename: the `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_workspaces_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant. CIAB plugins migrate via `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`.
+The `wp_admin_workspaces_data_view_config_{kind}_{name}[_{variant}]` filter runs on the resolved `dataView` doc after cascade resolution. The base filter (`wp_admin_workspaces_data_view_config_{kind}_{name}`) always fires; the per-variant suffix (`..._{variant}`) fires additionally whenever a screen consumes a non-`_default` variant.
 
 ## Open design questions
 
@@ -908,22 +908,22 @@ Lower-priority items deferred. The items below are the design-level questions:
 
 4. **App-internal slot-fill contributions.** Apps already accept plugin contributions via slot/fill within their own React tree (PluginSidebar pattern). Whether the schema declares these or leaves them as app-internal concerns. Post-v3 concern.
 
-## What this collapses
+## Common intents — where to edit
 
-| Intent | v1/v2 places touched | v3 places touched |
-|--------|----------------------|-------------------|
-| Add screen for custom post type | `routes` + `regions.sidebar.nav.config.items[]` + `viewConfigs.postType.product` + `fieldCollections` (opt) | `screens.<id>` + entry in `menu` tree + (opt) `settings.dataViews.postType.product._default` |
-| Add column to existing screen | `viewConfigs.postType.post.fields[]` (filter or workspace.json) | `settings.dataViews.postType.post.<variant>.fields[]` (global per-variant) OR `screens.posts.dataView.fields[]` (per-screen) |
-| Reorganize / rename sidebar | nested array surgery in `regions.sidebar.nav.config.items[]` | edit nested `menu` tree by id (cascade-friendly at every depth) |
-| Restrict a screen by capability/role | one of four places | `screens.<id>.permissions` (single block, OR-semantic) |
-| Replace built-in screen | route override + nav item override | `screens.<id>.app` (single field) — menu item survives, still bound by id |
-| Set landing screen | `default-route` | `default-screen` |
-| Rename a screen in the menu without changing identity | edit nested nav array | menu item `label` override at the right depth |
-| Hide a screen | tombstone via nav array surgery | `screens.<id>: null` (full removal) OR nested menu-item tombstone (menu-only hide) |
-| Add a dashboard widget | `dashboardWidgets[id]` + manifest registration | `screens.dashboard-home.apps[]` entry with `slot: "grid"` |
-| Add a toolbar widget | not supported in v1/v2 | `frame.widgets.toolbar[]` entry |
-| Multi-pane composition | regions + routes + per-region styling | `screens[id].apps[]` with `slot` on each entry |
-| Hide editor chrome (focus mode) | not first-class — case-by-case CSS / region surgery | `screens.post-edit.mode: "focus"` |
-| Per-role workspace | separate workspace.json files + role option | unchanged |
+| Intent | Where in workspace.json |
+|--------|-------------------------|
+| Add screen for custom post type | `screens.<id>` + entry in `menu` tree + (opt) `settings.dataViews.postType.product._default` |
+| Add column to existing screen | `settings.dataViews.postType.post.<variant>.fields[]` (global per-variant) OR `screens.posts.dataView.fields[]` (per-screen) |
+| Reorganize / rename sidebar | edit nested `menu` tree by id (cascade-friendly at every depth) |
+| Restrict a screen by capability/role | `screens.<id>.permissions` (single block, OR-semantic) |
+| Replace built-in screen | `screens.<id>.app` (single field) — menu item survives, still bound by id |
+| Set landing screen | `default-screen` |
+| Rename a screen in the menu without changing identity | menu item `label` override at the right depth |
+| Hide a screen | `screens.<id>: null` (full removal) OR nested menu-item tombstone (menu-only hide) |
+| Add a dashboard widget | `screens.dashboard-home.apps[]` entry with `slot: "grid"` |
+| Add a toolbar widget | `frame.widgets.toolbar[]` entry |
+| Multi-pane composition | `screens[id].apps[]` with `slot` on each entry |
+| Hide editor chrome (focus mode) | `screens.post-edit.mode: "focus"` |
+| Per-role workspace | separate workspace.json per role via the role origin |
 
-The expensive intents (screen, column, menu, restrict, replace, focus, widgets) all collapse to one entry edit. That's the win.
+Every expensive intent (screen, column, menu, restrict, replace, focus, widgets) is one entry edit. That's the design goal.

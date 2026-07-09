@@ -8,12 +8,7 @@
  * site/role/user overrides can extend or replace collections via the
  * same workspace.json `settings.dataFields` block.
  *
- * v3 rename: v2's top-level `fieldCollections` block moved under
- * `settings.dataFields`. The per-descriptor word `field` stays — matches
- * `@wordpress/dataviews` upstream. Class + function names gain the
- * `Data_` / `data_` prefix to match the surrounding restoration sweep.
- *
- * Schema: see `docs/schemas/admin-v3.json#/$defs/dataFieldCollection`.
+ * Schema: see `docs/schemas/workspace.json#/$defs/dataFieldCollection`.
  *
  * @package WP_Admin_Workspaces
  */

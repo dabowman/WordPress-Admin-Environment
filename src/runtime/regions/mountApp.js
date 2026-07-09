@@ -3,7 +3,7 @@
  *
  * `appRef` is either:
  *   - a namespaced id string (`core:posts`, `plugin:foo/bar`) — the
- *     v2-canonical reference. The id is the source; the registry
+ *     canonical reference. The id is the source; the registry
  *     resolves it. Optional inline config is supplied by the caller.
  *   - a fully-formed app instance object (`{ id, source, config?,
  *     capability? }`) — the runtime path the kernel uses when it
@@ -210,7 +210,7 @@ function retryLazyApp( registry, appId ) {
 	}
 }
 
-export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
+export function MountedApp( { appRef, regionId, fallback = null } ) {
 	const { registry, config } = useKernel();
 
 	const appInstance = resolveAppInstance( appRef );
@@ -291,7 +291,6 @@ export function MountedApp( { appRef, regionId, segments, fallback = null } ) {
 		app: appInstance,
 		config: mergedConfig,
 		regionId,
-		segments: segments || [],
 	};
 
 	let content;

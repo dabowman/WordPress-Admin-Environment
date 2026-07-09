@@ -25,7 +25,7 @@
 			},
 			"variant": {
 				"type": "string",
-				"description": "Optional DataView variant id to consume (e.g. 'drafts'). When the v3 compiler synthesizes screens from v2 routes, `config.variant` stays on `screen.config.variant` and the resolver's step-3 manifest-inference path reads it directly — v2-shape workspaces still reach the right `settings.dataViews.postType.<postType>.<variant>` triple without a separate `dataViewVariant` stamp."
+				"description": "Optional DataView variant id to consume (e.g. 'drafts'). A screen that relies on manifest inference (no explicit `dataViewRef`) selects a variant via `screen.config.variant` — the resolver's manifest-inference path reads it directly to reach the right `settings.dataViews.postType.<postType>.<variant>` triple."
 			},
 			"contentWidth": {
 				"type": [

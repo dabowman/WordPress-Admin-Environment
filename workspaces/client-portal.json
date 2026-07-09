@@ -1,0 +1,123 @@
+{
+	"$schema": "../docs/schemas/workspace.json",
+	"version": 3,
+	"$wpds": "6.9",
+	"name": "client-portal",
+	"title": "Client Portal",
+	"description": "A minimal, branded workspace for site clients — content and media only, on the core:default engine. No plugins, no settings, no site surgery: the menu is three items, and everything the client shouldn't touch simply isn't there. Editing hands off to the block editor and returns here.",
+	"user-switchable": true,
+	"engine": "core:default",
+	"default-screen": "content",
+	"frame": {
+		"branding": {
+			"title": "Client Portal",
+			"logo": null
+		},
+		"notices": {
+			"banner": {
+				"app": "core:notices-banner"
+			},
+			"snackbar": {
+				"app": "core:notices-snackbar"
+			}
+		}
+	},
+	"screens": {
+		"content": {
+			"label": "Content",
+			"icon": "post",
+			"path": "/content",
+			"app": "core:posts",
+			"config": {
+				"postType": "post"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_posts"
+				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "post"
+			}
+		},
+		"pages": {
+			"label": "Pages",
+			"icon": "page",
+			"path": "/pages",
+			"app": "core:posts",
+			"config": {
+				"postType": "page"
+			},
+			"permissions": {
+				"capabilities": [
+					"edit_pages"
+				]
+			},
+			"legacy_path": "edit.php",
+			"legacy_query": {
+				"post_type": "page"
+			}
+		},
+		"media": {
+			"label": "Media",
+			"icon": "media",
+			"path": "/media",
+			"app": "iframe:upload.php",
+			"permissions": {
+				"capabilities": [
+					"upload_files"
+				]
+			}
+		},
+		"profile": {
+			"label": "My Profile",
+			"path": "/profile",
+			"app": "iframe:profile.php",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			}
+		},
+		"command-palette": {
+			"label": "Command Palette",
+			"slot": "palette",
+			"app": "core:command-palette",
+			"permissions": {
+				"capabilities": [
+					"read"
+				]
+			},
+			"mode": "modal"
+		}
+	},
+	"menu": {
+		"content": {
+			"position": 10
+		},
+		"pages": {
+			"position": 20
+		},
+		"media": {
+			"position": 30
+		}
+	},
+	"commands": [
+		{
+			"id": "core-command-palette",
+			"shortcut": "Mod+K",
+			"invoke": "core:command-palette",
+			"label": "Open Command Palette"
+		}
+	],
+	"styles": {
+		"theme": {
+			"color": {
+				"primary": "#1d7c5f",
+				"bg": "#f6f8f7"
+			},
+			"density": "default"
+		}
+	}
+}

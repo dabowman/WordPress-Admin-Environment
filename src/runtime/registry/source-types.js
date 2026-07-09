@@ -1,5 +1,5 @@
 /**
- * Source-type contracts for the WP Admin Workspaces v1 runtime.
+ * Source-type contracts for the WP Admin Workspaces runtime.
  *
  * These are JSDoc typedefs only — pure shape, no runtime. They mirror
  * spec §5 of `docs/wp-admin-workspaces-design-spec.md`.
@@ -36,14 +36,13 @@
  * Props delivered to an `AppSource.Component` when it mounts inside a region.
  *
  * @typedef {Object} AppSourceProps
- * @property {Object}   app         - The application instance from the resolved config.
- * @property {string}   app.id      - The application id from workspace.json.
- * @property {string}   app.source  - The source string (e.g. `core:posts`).
- * @property {string}   [app.title] - Display title.
- * @property {string}   [app.icon]  - Icon name (resolved via iconMap).
- * @property {Object}   [config]    - Per-instance config validated against `configSchema`.
- * @property {string[]} [segments]  - Sub-route segments (single routable region only in v1).
- * @property {string}   regionId    - The id of the region currently mounting this app.
+ * @property {Object} app         - The application instance from the resolved config.
+ * @property {string} app.id      - The application id from workspace.json.
+ * @property {string} app.source  - The source string (e.g. `core:posts`).
+ * @property {string} [app.title] - Display title.
+ * @property {string} [app.icon]  - Icon name (resolved via iconMap).
+ * @property {Object} [config]    - Per-instance config validated against `configSchema`.
+ * @property {string} regionId    - The id of the region currently mounting this app.
  */
 
 /**

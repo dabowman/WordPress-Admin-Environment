@@ -2,7 +2,7 @@
 /**
  * Data-view-config + data-field-collections tests — v3 restoration shape.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-data-view-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-data-view-tests.php`
  *
  * Coverage (3-axis registry restoration):
  *   - `WP_Admin_Workspaces_Data_Field_Collections::register` validation + readback.
@@ -873,7 +873,8 @@ WPAS_Data_View_Test_Runner::assert_true(
 	isset( $prepopulated['settings']['dataViews']['postType']['recipe']['drafts'] )
 );
 
-// Back-compat shape: manifest declares flat (no variants:) → treat as _default.
+// A manifest dataView block without a `variants` map injects NOTHING —
+// the flat shape has no reader; baselines must declare variants._default.
 $reg->register_app( array(
 	'id'       => 'plugin:wpas-test/flat-shape-app',
 	'version'  => 1,
@@ -891,13 +892,8 @@ $reg->register_app( array(
 ) );
 $flat_injected = WP_Admin_Workspaces_Data_View_Config::inject_app_baselines( array() );
 WPAS_Data_View_Test_Runner::assert_true(
-	'flat-shape manifest gets _default baseline',
-	isset( $flat_injected['settings']['dataViews']['postType']['flat']['_default'] )
-);
-WPAS_Data_View_Test_Runner::assert_eq(
-	'flat-shape baseline carries defaultView',
-	$flat_injected['settings']['dataViews']['postType']['flat']['_default']['defaultView']['perPage'],
-	33
+	'flat-shape (variants-less) manifest injects no baseline',
+	! isset( $flat_injected['settings']['dataViews']['postType']['flat'] )
 );
 
 // Apps without a dataView block are skipped.

@@ -130,13 +130,13 @@ npm run lint:ts
 PHP suites run through the wp-env CLI container, exactly as in `CLAUDE.md`:
 
 ```bash
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php
 # ...and the rest of the run-*.php files under tests/php/
 ```
 
 > **Path note:** wp-env mounts the repo at
 > `wp-content/plugins/<repo-dir-name>`. The commands above (and in `CLAUDE.md`)
-> assume the checkout dir is `WordPress-Admin-Environment`. If the cloud
+> assume the checkout dir is `WordPress-Admin-Workspaces`. If the cloud
 > checkout name differs, adjust the in-container path accordingly — confirm with
 > `npx wp-env run cli ls wp-content/plugins`.
 

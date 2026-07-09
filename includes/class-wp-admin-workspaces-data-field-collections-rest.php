@@ -5,8 +5,7 @@
  * GET /field-collections?kind=postType&name=post
  *   Returns `{ kind, name, collections: { id: { kind, name, fields, fieldsModule? }, ... } }`.
  *   Includes exact-name matches plus universal collections (where the
- *   collection's `name === null`). v3 reads `settings.dataFields[]` (the
- *   renamed home of v2's top-level `fieldCollections` block).
+ *   collection's `name === null`). Reads `settings.dataFields[]`.
  *
  * @package WP_Admin_Workspaces
  */

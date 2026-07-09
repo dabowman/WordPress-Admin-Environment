@@ -38,7 +38,7 @@
  * `regions` so deeply-templated children resolve regardless of where
  * they sit in the tree.
  *
- * The engine manifest's `templates[id]` entries follow `admin-engine-v2.json`
+ * The engine manifest's `templates[id]` entries follow the engine-manifest schema (`workspace-engine.json`)
  * — `role`, `platform`, `default-style`, optional nested `regions`.
  */
 

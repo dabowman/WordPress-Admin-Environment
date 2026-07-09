@@ -14,7 +14,8 @@ import IframeApp from '../iframe-fallback';
  * about `@wordpress/edit-site` running in the SAME document as the kernel —
  * stays live. The blockers, with re-validated status:
  *
- *   1. Preferences-store collision with `core:appearance-preferences` — both
+ *   1. Preferences-store collision with the user-prefs surface (the parked
+ *      `core:appearance-preferences` app on `archive/native-apps`) — both
  *      surface appearance/personalization UI. `@wordpress/edit-site` writes
  *      `wp.data.dispatch('core/preferences')` namespaced state; the workspace
  *      panel persists to its own `/wp-admin-workspaces/v1/user-prefs` store, so

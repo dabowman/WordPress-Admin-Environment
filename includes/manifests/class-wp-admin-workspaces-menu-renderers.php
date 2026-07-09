@@ -15,12 +15,12 @@
  * The renderer's script must register the component against the kernel's
  * published surface:
  *
- *     window.wpAdminWorkspaces.registerMenuRenderer(
+ *     window.wpAdminWorkspaces.kernel.registerMenuRenderer(
  *         'plugin:my/breadcrumb-menu',
  *         MyBreadcrumbMenu
  *     );
  *
- * `registerMenuRenderer` is mirrored onto `window.wpAdminWorkspaces` by the
+ * `registerMenuRenderer` is mirrored onto `window.wpAdminWorkspaces.kernel` by the
  * kernel boot module. The component receives `{ items, currentPrimary,
  * navConfig }` and returns React.
  *
@@ -66,7 +66,7 @@ class WP_Admin_Workspaces_Menu_Renderers {
 	 * @param string $renderer_id Renderer id (`plugin:{slug}/{name}`).
 	 * @param array  $args {
 	 *     @type string      $script Registered script handle that calls
-	 *                               `window.wpAdminWorkspaces.registerMenuRenderer`.
+	 *                               `window.wpAdminWorkspaces.kernel.registerMenuRenderer`.
 	 *                               Should declare `wp-admin-workspaces` as a
 	 *                               dependency. Required.
 	 *     @type string|null $style  Optional registered style handle to
@@ -112,7 +112,7 @@ class WP_Admin_Workspaces_Menu_Renderers {
 	 * handler after the main `wp-admin-workspaces` bundle is enqueued, so a
 	 * renderer script that declares `wp-admin-workspaces` as a dependency loads
 	 * after the kernel boot module that publishes
-	 * `window.wpAdminWorkspaces.registerMenuRenderer`.
+	 * `window.wpAdminWorkspaces.kernel.registerMenuRenderer`.
 	 *
 	 * Only already-registered handles enqueue — a plugin is responsible
 	 * for `wp_register_script()`-ing its handle before the workspace page

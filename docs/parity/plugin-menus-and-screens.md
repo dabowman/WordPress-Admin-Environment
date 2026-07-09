@@ -84,7 +84,7 @@ Icon (`add_menu_page` param 6) is one of: a Dashicons class (`dashicons-chart-pi
 
 ---
 
-## PART 2 — How the WP Admin Workspaces does it (`/Users/davidbowman/Github/WordPress-Admin-Environment`)
+## PART 2 — How the WP Admin Workspaces does it (`/Users/davidbowman/Github/WordPress-Admin-Workspaces`)
 
 ### 2.1 The classic-menu bridge (auto-ingestion)
 

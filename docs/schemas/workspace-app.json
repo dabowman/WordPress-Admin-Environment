@@ -24,7 +24,7 @@
 		"version": {
 			"type": "integer",
 			"minimum": 1,
-			"description": "Manifest schema version this document conforms to. v3 is the current shape, paired with the v3 workspace.json (workspace) schema. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored. Manifests still declaring `version: 1` or `version: 2` are read through the v1/v2 reader path."
+			"description": "Manifest schema version this document conforms to. Bump only on breaking changes to this app's manifest contract (e.g., field renames, type changes). Adding optional fields does not require a version bump. The runtime accepts higher versions with a warning and best-effort load: known fields are honored, unknown fields preserved on the manifest object but ignored."
 		},
 
 		"title": {
@@ -311,7 +311,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "w", "h" ],
-			"description": "Grid-cell width/height pair used by slot hosts that lay out children on a grid (e.g. the dashboard-host's `grid` slot, a tiling engine's tiling pane). Cells, not pixels — the host owns the cell dimension. Authors pick small integers (1–4 typical). Renamed conceptually from the v2 `dashboardWidgetSize` $def; field shape identical.",
+			"description": "Grid-cell width/height pair used by slot hosts that lay out children on a grid (e.g. the dashboard-host's `grid` slot, a tiling engine's tiling pane). Cells, not pixels — the host owns the cell dimension. Authors pick small integers (1–4 typical).",
 			"properties": {
 				"w": {
 					"type": "integer",
@@ -351,7 +351,7 @@
 					"description": "Explicit `{row, col}` placement. 1-indexed CSS Grid coordinates."
 				}
 			],
-			"description": "Where on the grid this entry renders by default. `auto` (default) yields auto-flow; an explicit `{row, col}` object pins the entry. Each `screens[id].apps[i].position` or `frame.widgets.<slot>[i].position` override at the install layer wins per install. Renamed conceptually from the v2 `dashboardWidgetPosition` $def; shape identical."
+			"description": "Where on the grid this entry renders by default. `auto` (default) yields auto-flow; an explicit `{row, col}` object pins the entry. Each `screens[id].apps[i].position` or `frame.widgets.<slot>[i].position` override at the install layer wins per install."
 		},
 
 		"slotHints": {
@@ -408,7 +408,7 @@
 							"$ref": "#/$defs/appDataViewVariant"
 						}
 					},
-					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; workspace.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge — CIAB independent-resolution rule). `_default` itself MUST NOT declare `extends` (schema-enforced)."
+					"description": "Map of variant id → complete DataView config for that variant. `_default` is the implicit unqualified base; other variant ids are author-defined (`drafts`, `pending`, `trash`, `active`, etc.). Each variant entry is injected as a `settings.dataViews[kind][name][<variant>]` baseline at the `core` origin; workspace.json wins per-triple. Variant inheritance via explicit `extends: '<variant>'` (no implicit `_default` merge). `_default` itself MUST NOT declare `extends` (schema-enforced)."
 				}
 			}
 		},
@@ -422,7 +422,7 @@
 					"type": "string",
 					"minLength": 1,
 					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
-					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`."
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge. Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`."
 				},
 				"fieldsRef": {
 					"type": "string",
@@ -463,7 +463,7 @@
 		"appDocumentation": {
 			"type": "object",
 			"additionalProperties": false,
-			"description": "Documentation contract: machine-readable description of what the app does at runtime, intended for reviewers, ecosystem tooling, and authors rebuilding the app on a different design system or framework. Not load-bearing: the runtime does not read or enforce any field here. The contract pairs with a sibling `app.md` prose document — structured facts live here, narrative explanation lives in markdown. v3 prunes the v2 `dashboardWidget`-specific references; size/position defaults now live in `slotHints`, and widget placement is a per-install concern.",
+			"description": "Documentation contract: machine-readable description of what the app does at runtime, intended for reviewers, ecosystem tooling, and authors rebuilding the app on a different design system or framework. Not load-bearing: the runtime does not read or enforce any field here. The contract pairs with a sibling `app.md` prose document — structured facts live here, narrative explanation lives in markdown. Size/position defaults live in `slotHints`; widget placement is a per-install concern.",
 			"properties": {
 				"purpose": {
 					"type": "string",

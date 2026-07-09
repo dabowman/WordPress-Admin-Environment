@@ -70,7 +70,7 @@ Names the strategy the engine uses to render the resolved `menu` block. Required
 | `dock`              | Items render as tiles in a dock rail; `parent` produces a folder. | `core:desktop` — rendered by its own `core:desktop-dock-app`, **not** via `core:navigation`. The field on `core:desktop` is declarative intent; a workspace that mounts `core:navigation` under the desktop engine sees no `dock` renderer registered and falls back to `sidebar-drilldown`. |
 | `drawer`            | Items render in a collapsible-accordion drawer; `parent` produces a section. | `core:single-pane` — registered from the engine module (`DrawerRenderer.js`) so it travels with the engine on extraction. |
 | `none`              | The engine ignores `menu` entirely; `core:navigation` renders nothing. Authors must use `regions` / `routes` escape hatches. | — |
-| absent              | No field → `core:navigation` falls back to `sidebar-drilldown` (back-compat for engines predating the field). | — |
+| absent              | No field → `core:navigation` falls back to `sidebar-drilldown` (the default when an engine names no renderer). | — |
 
 **Plugin renderers.** Renderer ids are global — an engine *names* a renderer; a plugin *supplies* it under a `plugin:{slug}/{name}` id (core ids are reserved). The renderer is a React component; the registry is JS-side. A plugin registers the component against the kernel's published surface from a script handle, and declares that handle to PHP so the workspace enqueues it on the admin-workspace page:
 
@@ -83,7 +83,7 @@ wp_admin_workspaces_register_menu_renderer( 'plugin:my/breadcrumb-menu', array(
 
 ```js
 // JS (in that script) — register the component.
-window.wpAdminWorkspaces.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
+window.wpAdminWorkspaces.kernel.registerMenuRenderer( 'plugin:my/breadcrumb-menu', MyBreadcrumbMenu );
 ```
 
 Every renderer component receives the same props: `{ items, currentPrimary, navConfig }` — the host-pruned + ordered menu tree, the active URL primary path, and the per-region nav config block. It returns React.

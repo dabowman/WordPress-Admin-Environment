@@ -43,8 +43,14 @@ import './index.css';
 function buildChromelessSrc( rawUrl ) {
 	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
 	const base = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
-	const join = base.includes( '?' ) ? '&' : '?';
-	return `${ base }${ join }wp_admin_workspaces_chromeless=1`;
+	// Fragment-safe: the param joins the query string before any `#` —
+	// appended after it, the flag would ride the fragment and never
+	// reach PHP's $_GET.
+	const hashAt = base.indexOf( '#' );
+	const path = hashAt === -1 ? base : base.slice( 0, hashAt );
+	const fragment = hashAt === -1 ? '' : base.slice( hashAt );
+	const join = path.includes( '?' ) ? '&' : '?';
+	return `${ path }${ join }wp_admin_workspaces_chromeless=1${ fragment }`;
 }
 
 /**

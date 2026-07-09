@@ -2,7 +2,7 @@
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://schemas.wp.org/workspace.json",
 	"title": "WP Admin Workspaces — workspace.json (v3)",
-	"description": "Declares a WP Admin Workspaces workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. v3 reshapes the document around user-task surfaces (`workspace` / `settings` / `screens` / `menu` / `commands`) instead of the v2 runtime-pipeline surfaces (`regions` / `routes` / `viewConfigs` / `bindings`). Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
+	"description": "Declares a WP Admin Workspaces workspace — engine selection, branding, persistent chrome, the map of screens the workspace exposes, the engine-agnostic menu tree, command-palette bindings, REST preloads, and styles. The document is shaped around user-task surfaces (`settings` / `screens` / `menu` / `commands`), with `regions` / `routes` as runtime escape hatches. Cascade origins (core / engine / plugin / site / role / user) deep-merge per-field; arrays merge by `id`; `null` tombstones any property at any depth. Path collisions, permission-tier violations, and restrict-only enforcement are validated at resolve time, not by this schema. See `docs/schema-sketch.md` for the full design rationale and `docs/wp-admin-workspaces-design-spec.md` for the runtime spec.",
 
 	"type": "object",
 	"required": [ "version", "$wpds", "name", "engine", "screens" ],
@@ -18,7 +18,7 @@
 		"version": {
 			"type": "integer",
 			"const": 3,
-			"description": "workspace.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load. v3 makes a clean break from v1/v2 — there is no automatic normalization from earlier shapes; authors migrating from v2 use a one-time migration helper documented in `docs/schema-sketch.md`."
+			"description": "workspace.json schema version this document targets. v3 is the current shape. The runtime accepts higher versions with a warning and best-effort load; there is no automatic normalization from other shapes."
 		},
 
 		"$wpds": {
@@ -31,7 +31,7 @@
 			"type": "string",
 			"minLength": 1,
 			"pattern": "^[a-z][a-z0-9-]*$",
-			"description": "Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails. Examples: `wp-admin-default`, `single-pane-demo`, `desktop-demo`, `acme-corp`."
+			"description": "Unique kebab-case identifier for this workspace on this install. Used in cascade origin storage, WP-CLI commands (`wp admin-workspace activate <name>`), and the URL when a workspace-switcher exists. Must be unique within the install — registering a second workspace with the same name fails. Examples: `wp-admin-default`, `writer`, `developer`, `client-portal`, `acme-corp`."
 		},
 
 		"title": {
@@ -59,7 +59,7 @@
 			"type": "string",
 			"minLength": 1,
 			"pattern": "^[a-z][a-z0-9-]*$",
-			"description": "Screen id (key into `screens`) where the workspace lands when no URL hash is present. Replaces v2's `default-route` — instead of a path, an id resolves to the screen's resolved `path`. On capability denial of the default screen, the workspace falls through to the first permitted screen with a `path`."
+			"description": "Screen id (key into `screens`) where the workspace lands when no URL hash is present. An id, not a path — it resolves to the screen's resolved `path`. On capability denial of the default screen, the workspace falls through to the first permitted screen with a `path`."
 		},
 		"frame": {
 			"type": "object",
@@ -163,7 +163,7 @@
 							"$ref": "#/$defs/dataFieldCollection"
 						}
 					},
-					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). DataViews reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. Renamed from v2 `fieldCollections`; moved under `settings.dataFields` for the registries grouping (paired with `settings.dataViews`). The per-descriptor word `field` stays — matches `@wordpress/dataviews` upstream. See schema-sketch.md §Fields and spec §13 #8."
+					"description": "Named field collections, keyed by collection id (slash-namespacing allowed, e.g. `core/post-fields`, `woocommerce/product-fields`). Each entry binds a set of field descriptors to an entity `(kind, name)` pair (or universal when `name` is null). DataViews reference a collection via `fieldsRef`; the runtime merges ref-wins-inline-overrides per-field. The per-descriptor word `field` matches `@wordpress/dataviews` upstream. See schema-sketch.md §Fields and spec §13 #8."
 				}
 			}
 		},
@@ -190,7 +190,7 @@
 		"commands": {
 			"type": "array",
 			"items": { "$ref": "#/$defs/command" },
-			"description": "First-class palette entries + keyboard shortcuts. Replaces v2's `bindings` array, broadened to include `navigate`-only entries (URL change without mounting a triggerable app) and surface labels for palette display. Each entry has a required `id`; cascade merges by `id` with later origins winning per-field. Tombstone via `null` on a matching `id` entry removes the command. See schema-sketch.md §Commands shape."
+			"description": "First-class palette entries + keyboard shortcuts, including `navigate`-only entries (URL change without mounting a triggerable app) and surface labels for palette display. Each entry has a required `id`; cascade merges by `id` with later origins winning per-field. Tombstone via `null` on a matching `id` entry removes the command. See schema-sketch.md §Commands shape."
 		},
 
 		"styles": {
@@ -566,7 +566,7 @@
 			"type": [ "object", "null" ],
 			"additionalProperties": false,
 			"required": [ "id" ],
-			"description": "A first-class command-palette entry, optionally with a keyboard shortcut. Replaces v2's `bindings` array, broadened. Each command must have an `id`; cascade addresses commands by id and deep-merges per-field. Tombstone via `null`. A command may declare `invoke` (mount a triggerable app), `navigate` (URL change without mounting), or both. `label` surfaces the command in the palette UI; absence means the command is keyboard-only. See schema-sketch.md §Commands shape.",
+			"description": "A first-class command-palette entry, optionally with a keyboard shortcut. Each command must have an `id`; cascade addresses commands by id and deep-merges per-field. Tombstone via `null`. A command may declare `invoke` (mount a triggerable app), `navigate` (URL change without mounting), or both. `label` surfaces the command in the palette UI; absence means the command is keyboard-only. See schema-sketch.md §Commands shape.",
 			"properties": {
 				"id": {
 					"type": "string",
@@ -651,7 +651,7 @@
 					"type": "string",
 					"minLength": 1,
 					"pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$|^_default$",
-					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge (CIAB independent-resolution rule). Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
+					"description": "Variant inheritance — names a sibling variant id under the same `(kind, name)` whose resolved doc this entry deep-merges on top of. No implicit `_default` merge. Resolved recursively; max depth 10; cycles dev-warn and short-circuit. `_default` itself MUST NOT declare `extends`. Only meaningful on registry entries under `settings.dataViews[kind][name][variant]` or on app-manifest variant entries; ignored on per-screen inline overlays (`screens[id].dataView`)."
 				},
 				"fieldsRef": {
 					"type": "string",
@@ -797,7 +797,7 @@
 			"type": "object",
 			"additionalProperties": false,
 			"required": [ "kind", "fields" ],
-			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. DataView entries reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; DataView entries add *purpose* (which fields appear in this list, which actions fire). Renamed from v2 `fieldCollections`; moved under `settings.dataFields`. The per-descriptor word `field` matches `@wordpress/dataviews` upstream and is unchanged.",
+			"description": "A named bundle of field descriptors bound to an entity `(kind, name)` pair. DataView entries reference a collection via `fieldsRef` to share field definitions across multiple variants. The collection is the *shape* of the entity's UI surface; DataView entries add *purpose* (which fields appear in this list, which actions fire). The per-descriptor word `field` matches `@wordpress/dataviews` upstream.",
 			"properties": {
 				"kind": {
 					"type": "string",
@@ -816,7 +816,7 @@
 				"fieldsModule": {
 					"type": "string",
 					"minLength": 1,
-					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the workspace runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands. CIAB-compat field name."
+					"description": "Reserved. Native ESM script-module handle for client-side field extensions. Forward-compat declaration only — the workspace runtime does not resolve or load this value. Real resolution wires up when the deferred native-script-modules + `.asset.php` build modernization arc lands."
 				}
 			}
 		},
@@ -824,7 +824,7 @@
 		"styles": {
 			"type": "object",
 			"additionalProperties": true,
-			"description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`, `density`. Plus `chrome` (workspace-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
+			"description": "WPDS-shaped style tree. Top-level subtrees mirror the WPDS token matrix at the pinned `$wpds` version: `color`, `dimension`, `border`, `elevation`, `font`. Plus `chrome` (workspace-only slots), `regions` (per-region overrides), `applications` (per-app overrides). Slot values may be DTCG token aliases (`{color.brand.500}`), literal CSS values (`#3858e9`, `16px`), or inline DTCG objects. The schema is intentionally loose at this level: WPDS slot validation is delegated to the runtime resolver against the pinned `$wpds` matrix, since the slot list grows with WordPress versions and embedding it here would freeze the schema to a specific version. Authors get IDE feedback on slot names from a runtime-generated companion schema rather than this static document.",
 			"properties": {
 				"customizable": {
 					"$ref": "#/$defs/customizable",
@@ -861,7 +861,7 @@
 						},
 						"density": {
 							"enum": [ "default", "compact", "comfortable" ],
-							"description": "Spacing scale. `compact` for data-dense surfaces; `comfortable` for focused panels. Equivalent to top-level `styles.density` (legacy)."
+							"description": "Spacing scale. `compact` for data-dense surfaces; `comfortable` for focused panels."
 						}
 					}
 				},
@@ -874,10 +874,6 @@
 				"border": { "type": "object", "additionalProperties": true },
 				"elevation": { "type": "object", "additionalProperties": true },
 				"font": { "type": "object", "additionalProperties": true },
-				"density": {
-					"enum": [ "default", "compact", "comfortable" ],
-					"description": "Legacy. Prefer `styles.theme.density`. Read as fallback."
-				},
 				"chrome": {
 					"type": "object",
 					"additionalProperties": true,
@@ -1152,7 +1148,7 @@
 						},
 						{
 							"enum": [ "GET", "OPTIONS" ],
-							"description": "HTTP verb. CIAB convention preloads only GET + OPTIONS — the WP REST controller dispatches OPTIONS for entity schema discovery."
+							"description": "HTTP verb. Preloads are GET + OPTIONS only — the WP REST controller dispatches OPTIONS for entity schema discovery."
 						}
 					],
 					"items": false,

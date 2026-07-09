@@ -34,8 +34,8 @@ export const THEME_SCOPE_DETAIL_ATTRIBUTE = 'data-theme-scope-detail';
 
 /**
  * Extract a density value from a styles tree. Returns whatever string
- * the author authored (tier-1 `styles.theme.density`, tier-4 legacy
- * `styles.density`) or `undefined`. Validation of the value against a
+ * the author authored (`styles.theme.density`) or `undefined`.
+ * Validation of the value against a
  * DS-specific vocabulary is the engine's ThemeProvider's responsibility
  * — the kernel does not enforce a fixed enum here so engines built on
  * design systems with different density names (Material's `dense`,
@@ -50,9 +50,6 @@ export function pickDensity( styles ) {
 	}
 	if ( typeof styles.theme?.density === 'string' ) {
 		return styles.theme.density;
-	}
-	if ( typeof styles.density === 'string' ) {
-		return styles.density;
 	}
 	return undefined;
 }

@@ -485,7 +485,7 @@ class WP_Admin_Workspaces_Classic_Menu_Bridge {
 	 * Derive a stable, slug-pattern-safe v3 screen id from a wp-admin
 	 * slug. Format: `ingested-<slugified>`.
 	 *
-	 * Matches the v3 admin-v3.json `screens` patternProperties regex
+	 * Matches the workspace.json schema’s `screens` patternProperties regex
 	 * `^[a-z][a-z0-9-]*$`.
 	 *
 	 * @param string $slug Original wp-admin slug.

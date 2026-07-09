@@ -1,13 +1,13 @@
 <?php
 /**
  * Plugin Name: WP Admin Workspaces
- * Plugin URI: https://github.com/dabowman/WordPress-Admin-Environment
+ * Plugin URI: https://github.com/dabowman/WordPress-Admin-Workspaces
  * Description: A configurable, React-based WordPress admin environment driven by workspace.json configuration files.
  * Version: 0.1.0
  * Requires PHP: 7.4
  * Requires at least: 6.7
  * Author: WP Admin Workspaces Contributors
- * Author URI: https://github.com/dabowman/WordPress-Admin-Environment
+ * Author URI: https://github.com/dabowman/WordPress-Admin-Workspaces
  * License: GPL-2.0-or-later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: wp-admin-workspaces
@@ -103,94 +103,6 @@ add_action( 'admin_notices', function () {
 define( 'WP_ADMIN_WORKSPACES_VERSION', '0.1.0' );
 define( 'WP_ADMIN_WORKSPACES_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WP_ADMIN_WORKSPACES_URL', plugin_dir_url( __FILE__ ) );
-define( 'WP_ADMIN_WORKSPACES_DB_VERSION', 2 );
-
-/**
- * Version-stamped migration. Plan §M2.9 + issue #6.
- *
- * The `wp_admin_workspaces_db_version` option stamps the highest migration
- * step that has run for this install. Each step runs at most once per
- * install lifetime; reactivation / downgrade-then-upgrade cycles
- * cannot re-fire steps that already completed (which would otherwise
- * clobber a user's later choice with the legacy MVP value).
- *
- * Step 1: copy the pre-MVP `wp_admin_shell_active_config` legacy option
- *         into the MVP `wp_admin_shell_active_shell` key when the latter
- *         is empty (faithful to the original pre-rebrand chain; reads the
- *         real on-disk legacy key names, which a code rename can never
- *         touch).
- *
- * Step 2: the 0.1.0 "workspaces" rebrand renamed every persisted option
- *         from `wp_admin_shell_*` to `wp_admin_workspaces_*`. Stored
- *         option names are not subject to a code rename, so copy each
- *         legacy key forward to its new name when the new key is absent
- *         (idempotent). Without this, an upgraded install silently loses
- *         its active-workspace selection AND its enable toggle — the
- *         latter would re-enable a deliberately-disabled admin takeover.
- *         The legacy `wp_admin_shell_*` rows are left in place (uninstall
- *         sweeps both namespaces); the bridge only seeds the new keys.
- *
- * If a future migration is needed (e.g. a v0 → v1 schema rewrite on
- * disk), bump WP_ADMIN_WORKSPACES_DB_VERSION and add a step here. Steps
- * must be idempotent w.r.t. their own stamp — running twice is a bug,
- * but a partially-failed migration that re-runs from a lower stamp
- * should converge.
- */
-add_action( 'init', function () {
-	$current_version = (int) get_option( 'wp_admin_workspaces_db_version', 0 );
-	if ( $current_version >= WP_ADMIN_WORKSPACES_DB_VERSION ) {
-		return;
-	}
-
-	if ( $current_version < 1 ) {
-		// Step 1 — pre-MVP active-config → MVP active-workspace write-copy.
-		if ( get_option( 'wp_admin_shell_active_shell', '' ) === '' ) {
-			$legacy = get_option( 'wp_admin_shell_active_config', '' );
-			if ( $legacy !== '' ) {
-				update_option( 'wp_admin_shell_active_shell', $legacy );
-			}
-		}
-	}
-
-	if ( $current_version < 2 ) {
-		// Step 2 — wp_admin_shell_* → wp_admin_workspaces_* option bridge.
-		$option_map = array(
-			'wp_admin_shell_active_shell'      => 'wp_admin_workspaces_active_workspace',
-			'wp_admin_shell_workspace_enabled' => 'wp_admin_workspaces_enabled',
-			'wp_admin_shell_settings'          => 'wp_admin_workspaces_settings',
-			'wp_admin_shell_site_config'       => 'wp_admin_workspaces_site_config',
-			'wp_admin_shell_role_config'       => 'wp_admin_workspaces_role_config',
-		);
-		$sentinel = '__wpaw_absent__';
-		foreach ( $option_map as $old_key => $new_key ) {
-			$old_val = get_option( $old_key, $sentinel );
-			if ( $sentinel !== $old_val && $sentinel === get_option( $new_key, $sentinel ) ) {
-				update_option( $new_key, $old_val );
-			}
-		}
-
-		// User-prefs meta: rename the meta_key for every user that hasn't
-		// already got the new key (guarded so a partial re-run is safe).
-		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- one-time keyed migration; no caching applies.
-		$wpdb->query(
-			$wpdb->prepare(
-				"UPDATE {$wpdb->usermeta} m
-				 SET m.meta_key = %s
-				 WHERE m.meta_key = %s
-				   AND NOT EXISTS (
-				       SELECT 1 FROM ( SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s ) e
-				       WHERE e.user_id = m.user_id
-				   )",
-				'wp_admin_workspaces_user_prefs',
-				'wp_admin_shell_user_prefs',
-				'wp_admin_workspaces_user_prefs'
-			)
-		);
-	}
-
-	update_option( 'wp_admin_workspaces_db_version', WP_ADMIN_WORKSPACES_DB_VERSION );
-}, 5 );
 
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-util.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-can-rest.php';
@@ -207,7 +119,6 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspa
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-field-collections.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-data-view-config.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-widgets.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-dashboard-bridge.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-preload.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-menu-items.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-appearance-menu.php';
@@ -216,9 +127,7 @@ require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspa
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-chrome-harvest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-modes.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/cascade/class-wp-admin-workspaces-permissions.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-view-rest.php';
-require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-dashboard-widget-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-data-field-collections-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-config-rest.php';
 require_once WP_ADMIN_WORKSPACES_PATH . 'includes/class-wp-admin-workspaces-abilities.php';
@@ -259,7 +168,7 @@ function wp_admin_workspaces_register_engine( $manifest_or_path ) {
 /**
  * Register a region template against an existing engine. Plugin
  * extension point per spec §13 #4 — adds a `templates[$template_id]`
- * entry to the engine's manifest at runtime so admin.json regions can
+ * entry to the engine's manifest at runtime so workspace.json regions can
  * reference it via `template`. The engine must already be registered.
  *
  * @param string $engine_id  Engine id to extend.
@@ -282,7 +191,7 @@ function wp_admin_workspaces_register_template( $engine_id, $template_id, $templ
  * An engine names a renderer through its `engine.json` `menu-renderer`
  * field; a `plugin:{slug}/{name}` id resolves to a React component a
  * plugin supplies. This declares the id + the script handle that
- * registers that component (`window.wpAdminWorkspaces.registerMenuRenderer`).
+ * registers that component (`window.wpAdminWorkspaces.kernel.registerMenuRenderer`).
  * The workspace enqueues the script on the admin-workspace page.
  *
  * The renderer component receives `{ items, currentPrimary, navConfig }`
@@ -310,25 +219,22 @@ function wp_admin_workspaces_register_menu_renderer( $renderer_id, $args ) {
  * workspaces: site/role/user origins still merge on top.
  *
  * @param string $slug      Unique slug.
- * @param array  $admin_json Full admin.json document.
+ * @param array  $workspace_json Full workspace.json document.
  *
  * @return string|WP_Error slug on success, WP_Error on failure.
  */
-function wp_admin_workspaces_register_workspace( $slug, $admin_json ) {
-	return WP_Admin_Workspaces_Registry::register( $slug, $admin_json );
+function wp_admin_workspaces_register_workspace( $slug, $workspace_json ) {
+	return WP_Admin_Workspaces_Registry::register( $slug, $workspace_json );
 }
 
 /**
- * Register a nav menu item — CIAB compatibility shim (spec §13 #10).
+ * Register a nav menu item (spec §13 #10).
  *
- * Mechanical port of CIAB's `next_admin_register_menu_item()`. Plugins
- * that previously called `next_admin_register_menu_item()` rename to
- * `wp_admin_workspaces_register_menu_item()` and drop their inline
- * `current_user_can()` gates — the `capability` arg flows through the
- * workspace's 4-layer cap model. CIAB args (`to`, `label`, `icon`, `badge`,
- * `parent`, `parent_type`, `position`) carry over 1:1; the workspace adds
- * an optional `region` arg (defaults to the first `core:navigation`
- * region in the resolved tree).
+ * Plugins declare the item's `to`, `label`, `icon`, `badge`, `parent`,
+ * `parent_type`, and `position`, plus an optional `region` arg (defaults
+ * to the first `core:navigation` region in the resolved tree). No inline
+ * `current_user_can()` gate is needed — the `capability` arg flows
+ * through the workspace's 4-layer cap model.
  *
  * Timing: call from `init` priority 9 or earlier (`plugins_loaded` is
  * fine). The cascade resolver's first run on the page render or first
@@ -352,16 +258,11 @@ function wp_admin_workspaces_register_menu_item( $id, $args ) {
 }
 
 /**
- * Register an admin route — CIAB compatibility shim (spec §13 #11).
+ * Register an admin route (spec §13 #11).
  *
- * Mechanical port of CIAB's `next_admin_register_admin_route()`. The
- * arg signature collapses CIAB's positional
- * (`$path, $content_module, $route_module, $before_load, $static_data, $gc_time`)
- * into `($path, [ 'app' => …, 'config' => […], 'static_data' => […], 'gc_time' => … ])`.
- * `app` replaces `content_module`, `static_data` is folded into `config`
- * for forward compatibility (explicit `config` keys win on collision),
- * and `gc_time` is accepted but ignored (TanStack-specific cache GC,
- * no workspace equivalent — emits a one-time `WP_DEBUG` notice).
+ * Signature: `($path, [ 'app' => …, 'config' => […], 'static_data' => […] ])`.
+ * `app` names the app to mount; `static_data` is folded into `config`
+ * (explicit `config` keys win on collision).
  *
  * Timing: same as `wp_admin_workspaces_register_menu_item()` — call from
  * `init` priority 9 or earlier so the cascade resolver picks the route
@@ -560,7 +461,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 	// Plugin menu renderers (spec §13 #15). Each registered renderer's
 	// script enqueues here, after the main bundle, so a handle declaring
 	// `wp-admin-workspaces` as a dependency loads once the kernel has published
-	// `window.wpAdminWorkspaces.registerMenuRenderer`.
+	// `window.wpAdminWorkspaces.kernel.registerMenuRenderer`.
 	WP_Admin_Workspaces_Menu_Renderers::enqueue_assets();
 
 	$config = wp_admin_workspaces_get_active_config();
@@ -578,7 +479,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 	// Only the active engine's styles enqueue — keeps non-WPDS engines
 	// from loading WPDS tokens (and vice versa for other DS plugins).
 	$active_engine_id      = is_array( $config )
-		? ( $config['workspace']['engine'] ?? $config['engine'] ?? null )
+		? ( $config['engine'] ?? null )
 		: null;
 	$active_engine_manifest = $active_engine_id ? WP_Admin_Workspaces_Manifest_Registry::instance()->get_engine( $active_engine_id ) : null;
 
@@ -646,13 +547,10 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// the active-workspace option, so the workspace switcher hides + switchWorkspace()
 		// refuses (writing the option would be a silent no-op).
 		'fileActive' => class_exists( 'WP_Admin_Workspaces_Origin_File' ) && WP_Admin_Workspaces_Origin_File::exists_and_valid(),
-		// v3 3d.5 Item 2 — opt-in surface for JS deprecation warnings in
-		// production builds. PHP `_deprecated_hook` is gated by
-		// `WP_DEBUG_LOG` only and fires regardless of build mode; the
-		// JS shims default to `NODE_ENV !== 'production'` so prod builds
-		// stay silent. Site admins with `WP_DEBUG` on get JS warnings
-		// even when consuming a minified workspace bundle. Removed in v3.1
-		// when the shims themselves go away.
+		// Opt-in surface for non-fatal JS diagnostics (e.g. chrome-hide
+		// injection failures) in minified builds — site admins with
+		// `WP_DEBUG` on get the console warnings production builds
+		// otherwise suppress.
 		'debug'         => defined( 'WP_DEBUG' ) && WP_DEBUG,
 		'user'          => array(
 			'displayName' => $current_user->display_name,
@@ -660,17 +558,6 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 			'profileUrl'  => '#/profile',
 			'logoutUrl'   => wp_logout_url( admin_url( '/' ) ),
 		),
-		'settingsGeneral' => current_user_can( 'manage_options' )
-			? wp_admin_workspaces_get_settings_general_data()
-			: null,
-		// Interface-language options for the profile editor's `locale` field.
-		// Per-user (the profile form is self-service), so it deliberately offers
-		// only Site Default + English + already-installed locales — exactly the
-		// set the REST `locale` field accepts — and skips the translations-API
-		// HTTP call entirely when nothing extra is installed.
-		'profileLanguages' => is_user_logged_in()
-			? wp_admin_workspaces_get_profile_languages()
-			: array(),
 		'capabilities'  => wp_admin_workspaces_resolve_capabilities( $client_config ),
 		// V2.M1 — manifest payload. Empty until plugins ship app.json /
 		// engine.json files; the kernel reads from this map alongside
@@ -682,7 +569,7 @@ function wp_admin_workspaces_enqueue_assets( $hook = '' ) {
 		// V2.M5 — DTCG primitives layer. Site → theme → plugin → core
 		// origins merged here. Empty object when no origin contributes.
 		// `compileStyles` consumes this when resolving non-`styles.*`
-		// curly-brace aliases in admin.json `styles`. Token serialization
+		// curly-brace aliases in workspace.json `styles`. Token serialization
 		// is skipped entirely when the resolved styles tree references
 		// zero token aliases — the DTCG layer is dead weight for workspaces
 		// that only set seeds + slot overrides. The empty-path cast to
@@ -794,9 +681,9 @@ JS;
 add_action( 'admin_enqueue_scripts', 'wp_admin_workspaces_enqueue_assets' );
 
 /**
- * Read the active admin.json configuration through the M2 cascade resolver.
+ * Read the active workspace.json configuration through the cascade resolver.
  *
- * Five origins (core / plugin / site / role / user) are loaded, filtered,
+ * Six origins (core / engine / plugin / site / role / user) are loaded, filtered,
  * and merged into a single resolved doc. The legacy single-file loader is
  * gone — every workspace file goes through the same pipeline so behavior is
  * uniform whether the workspace ships with the plugin, lives in DB options,
@@ -871,7 +758,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
 
 	add_settings_error(
 		'wp_admin_workspaces_active_workspace',
-		'wp_admin_workspaces_unknown_shell',
+		'wp_admin_workspaces_unknown_workspace_slug',
 		sprintf(
 			/* translators: %s: workspace slug */
 			__( 'Unknown workspace: "%s". The previous active workspace was kept.', 'wp-admin-workspaces' ),
@@ -916,7 +803,7 @@ function wp_admin_workspaces_sanitize_active_workspace( $value ) {
  * resolves to no route). The `workspace.default-screen` is always kept so the
  * kernel always has a landing route — its mounted app cap-gates itself.
  *
- * @param array $config  Full resolved admin.json doc.
+ * @param array $config  Full resolved workspace.json doc.
  * @param int   $user_id Current user id.
  * @return array Pruned copy.
  */
@@ -1171,7 +1058,7 @@ function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
  * the workspace ships seeds + slot overrides only — the DTCG layer would be
  * dead weight on the wire.
  *
- * Contract: DTCG aliases are valid ONLY under `admin.json#styles`. App
+ * Contract: DTCG aliases are valid ONLY under `workspace.json#styles`. App
  * manifests (`app.json#dataView`, etc.), engine `default-style` blocks,
  * and any other config surface MUST NOT carry `{tokens.*}` references —
  * the detector deliberately does not scan them, so a stray alias outside
@@ -1180,7 +1067,7 @@ function wp_admin_workspaces_collect_nav_item_caps( $items, &$declared ) {
  * cross-reference from other config surfaces via `{styles.path}` if
  * needed.
  *
- * @param array $config Resolved admin.json config.
+ * @param array $config Resolved workspace.json config.
  * @return bool
  */
 function wp_admin_workspaces_styles_reference_tokens( $config ) {
@@ -1201,7 +1088,7 @@ function wp_admin_workspaces_tree_has_token_alias( $node ) {
 		if ( ! preg_match( '/^\{([^}]+)\}$/', $node, $m ) ) {
 			return false;
 		}
-		// Within-doc aliases (`{styles.path}`) resolve from admin.json
+		// Within-doc aliases (`{styles.path}`) resolve from workspace.json
 		// directly; they don't reach the tokens table. Only "foreign"
 		// aliases (`{color.brand.500}`, `{size.lg}`, etc.) need the
 		// DTCG tree.
@@ -1542,8 +1429,8 @@ add_action( 'init', function () {
 /**
  * Route a manual UTC-offset timezone write to `gmt_offset`.
  *
- * The Timezone select (wp_admin_workspaces_get_settings_general_data) offers a
- * "Manual offsets" optgroup of `UTC±X` values alongside the IANA city zones.
+ * A Timezone select (classic options-general.php, or a REST client) offers
+ * "Manual offsets" `UTC±X` values alongside the IANA city zones.
  * Both write the single REST `timezone` field (core option `timezone_string`).
  * For a `UTC±X` value `sanitize_option('timezone_string')` rejects the
  * non-IANA string and reverts to the stored value, so the save is silently
@@ -1591,206 +1478,6 @@ add_filter( 'rest_pre_update_setting', function ( $updated, $name, $value, $args
 
 	return true;
 }, 10, 4 );
-
-/**
- * Return a `locale => native_name` map for every locale in $locales, resolved
- * against the translations API. Performs the `require_once` + HTTP fetch for
- * available translations exactly once per call site, centralising that boilerplate
- * so both `wp_admin_workspaces_get_profile_languages()` and
- * `wp_admin_workspaces_get_settings_general_data()` share a single code path.
- *
- * @param string[]         $locales       List of locale strings to label (e.g. `get_available_languages()`).
- * @param array|null       $translations  Pre-fetched result of `wp_get_available_translations()`, or
- *                                        null to fetch it here. Pass a pre-fetched value when the
- *                                        caller already holds the translations array to avoid a
- *                                        redundant HTTP round-trip.
- * @return array<string,string> Map of `locale => native_name` (falls back to the locale
- *                               string itself when no native name is known).
- */
-function wp_admin_workspaces_locale_labels( array $locales, $translations = null ) {
-	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-	if ( null === $translations ) {
-		$translations = wp_get_available_translations();
-	}
-	$labels = array();
-	foreach ( $locales as $locale ) {
-		$labels[ $locale ] = isset( $translations[ $locale ]['native_name'] )
-			? $translations[ $locale ]['native_name']
-			: $locale;
-	}
-	return $labels;
-}
-
-/**
- * Build the interface-language options the profile editor offers for the user
- * `locale` field.
- *
- * Unlike the Site Language list (admin-only, includes downloadable
- * translations), this is per-user and offers only Site Default, English, and
- * locales already installed — exactly the set the REST `locale` field accepts
- * (its enum is `en_US` + `get_available_languages()`, plus `''` for the site
- * default). Installing a new language pack on save is a wp-admin-only
- * sub-feature, deliberately NOT surfaced here.
- *
- * The profile form is self-service (every logged-in user mounts it), so this
- * avoids the translations-API HTTP fetch entirely in the common case where no
- * extra languages are installed — only resolving native names when there is
- * actually an installed locale to label.
- *
- * @return array<int, array{value:string,label:string}> Flat select options
- *                                                       (`{ value, label }`).
- */
-function wp_admin_workspaces_get_profile_languages() {
-	$installed = get_available_languages();
-
-	$options = array(
-		array( 'value' => '', 'label' => __( 'Site Default', 'wp-admin-workspaces' ) ),
-		array( 'value' => 'en_US', 'label' => 'English (United States)' ),
-	);
-
-	if ( empty( $installed ) ) {
-		return $options;
-	}
-
-	$labels = wp_admin_workspaces_locale_labels( $installed );
-	foreach ( $installed as $locale ) {
-		$options[] = array( 'value' => $locale, 'label' => $labels[ $locale ] );
-	}
-
-	return $options;
-}
-
-/**
- * Build the data payload that SettingsGeneralApp consumes (timezone groups,
- * languages, roles, date/time format presets, format previews). Uses the same
- * core helpers wp-admin/options-general.php uses so the app stays in lockstep.
- */
-function wp_admin_workspaces_get_settings_general_data() {
-	// Languages (locales installed + downloadable translations).
-	// Fetch the translations array once and pass it into locale_labels() so
-	// the HTTP round-trip to the translations API happens at most once per
-	// request (the earlier refactor accidentally called wp_get_available_translations()
-	// twice — once inside locale_labels() and once here for the downloadable group).
-	$installed_languages = get_available_languages();
-	require_once ABSPATH . 'wp-admin/includes/translation-install.php';
-	$translations  = wp_get_available_translations();
-	$locale_labels = wp_admin_workspaces_locale_labels( $installed_languages, $translations );
-
-	$language_options = array(
-		array( 'value' => '', 'label' => 'English (United States)' ),
-	);
-	$installed_group = array();
-	foreach ( $installed_languages as $locale ) {
-		$installed_group[] = array( 'value' => $locale, 'label' => $locale_labels[ $locale ] );
-	}
-	$available_group = array();
-	if ( current_user_can( 'install_languages' ) && wp_can_install_language_pack() ) {
-		foreach ( $translations as $locale => $data ) {
-			if ( in_array( $locale, $installed_languages, true ) ) {
-				continue;
-			}
-			$available_group[] = array(
-				'value' => $locale,
-				'label' => isset( $data['native_name'] ) ? $data['native_name'] : $locale,
-			);
-		}
-	}
-
-	// Timezones, grouped by continent. Mirrors wp_timezone_choice() output.
-	$tz_identifiers = timezone_identifiers_list();
-	$tz_groups      = array(
-		array( 'label' => __( 'UTC', 'wp-admin-workspaces' ), 'options' => array(
-			array( 'value' => 'UTC', 'label' => 'UTC' ),
-		) ),
-	);
-	$by_continent = array();
-	foreach ( $tz_identifiers as $zone ) {
-		if ( $zone === 'UTC' ) {
-			continue;
-		}
-		$parts     = explode( '/', $zone );
-		$continent = $parts[0];
-		if ( ! in_array( $continent, array( 'Africa', 'America', 'Antarctica', 'Arctic', 'Asia', 'Atlantic', 'Australia', 'Europe', 'Indian', 'Pacific' ), true ) ) {
-			continue;
-		}
-		$by_continent[ $continent ][] = array(
-			'value' => $zone,
-			'label' => str_replace( array( $continent . '/', '_' ), array( '', ' ' ), $zone ),
-		);
-	}
-	foreach ( $by_continent as $continent => $zones ) {
-		$tz_groups[] = array(
-			'label'   => $continent,
-			'options' => $zones,
-		);
-	}
-	// Manual UTC offsets (UTC-12 through UTC+14, half/quarter step).
-	$offset_options = array();
-	$offset_range   = array( -12, -11.5, -11, -10.5, -10, -9.5, -9, -8.5, -8, -7.5, -7, -6.5, -6, -5.5, -5, -4.5, -4, -3.5, -3, -2.5, -2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 5.75, 6, 6.5, 7, 7.5, 8, 8.5, 8.75, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.75, 13, 13.75, 14 );
-	foreach ( $offset_range as $offset ) {
-		$value = 'UTC' . ( $offset >= 0 ? '+' : '' ) . $offset;
-		$offset_options[] = array( 'value' => $value, 'label' => $value );
-	}
-	$tz_groups[] = array(
-		'label'   => __( 'Manual offsets', 'wp-admin-workspaces' ),
-		'options' => $offset_options,
-	);
-
-	// Roles for new-user default.
-	$roles_raw = wp_roles()->get_names();
-	$role_options = array();
-	foreach ( $roles_raw as $slug => $name ) {
-		$role_options[] = array(
-			'value' => $slug,
-			'label' => translate_user_role( $name ),
-		);
-	}
-
-	// Date/time format presets (same filters core uses).
-	$date_formats = array_unique( apply_filters( 'date_formats', array( __( 'F j, Y' ), 'Y-m-d', 'm/d/Y', 'd/m/Y' ) ) );
-	$time_formats = array_unique( apply_filters( 'time_formats', array( __( 'g:i a' ), 'g:i A', 'H:i' ) ) );
-
-	$current_offset = get_option( 'gmt_offset' );
-	$current_tz     = get_option( 'timezone_string' );
-	if ( empty( $current_tz ) ) {
-		if ( 0 == $current_offset ) {
-			$current_tz = 'UTC+0';
-		} elseif ( $current_offset < 0 ) {
-			$current_tz = 'UTC' . $current_offset;
-		} else {
-			$current_tz = 'UTC+' . $current_offset;
-		}
-	}
-
-	return array(
-		'languages' => array(
-			'installed' => $installed_group,
-			'available' => $available_group,
-			'default'   => $language_options,
-		),
-		'timezone'    => array(
-			'groups'  => $tz_groups,
-			'current' => $current_tz,
-			'utcNow'  => date_i18n( 'Y-m-d H:i:s', false, true ),
-			'localNow' => date_i18n( 'Y-m-d H:i:s' ),
-		),
-		'roles'       => $role_options,
-		'dateFormats' => array_values( array_map( function ( $fmt ) {
-			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
-		}, $date_formats ) ),
-		'timeFormats' => array_values( array_map( function ( $fmt ) {
-			return array( 'value' => $fmt, 'label' => date_i18n( $fmt ) );
-		}, $time_formats ) ),
-		'isMultisite' => is_multisite(),
-		'siteurlConst' => defined( 'WP_SITEURL' ),
-		'homeConst'    => defined( 'WP_HOME' ),
-		'pendingAdminEmail' => get_option( 'new_admin_email' ),
-		'weekdays'     => array_map( function ( $i ) {
-			global $wp_locale;
-			return array( 'value' => (string) $i, 'label' => $wp_locale->get_weekday( $i ) );
-		}, range( 0, 6 ) ),
-	);
-}
 
 /**
  * List available workspace configurations from the workspaces/ directory plus

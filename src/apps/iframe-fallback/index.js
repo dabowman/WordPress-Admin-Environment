@@ -7,6 +7,21 @@ import { installIframeBridge } from '../../runtime/platform/iframeBridge.mjs';
 import { getChromeHideCss } from '../_shared/iframe/chromeHide.mjs';
 
 /**
+ * Append `wp_admin_workspaces_chromeless=1` to an admin-relative URL,
+ * fragment-safely: the param joins the query string before any `#`.
+ *
+ * @param {string} url Admin-relative URL (may carry a query + fragment).
+ * @return {string} URL with the chromeless flag in the query string.
+ */
+function appendChromelessFlag( url ) {
+	const hashAt = url.indexOf( '#' );
+	const path = hashAt === -1 ? url : url.slice( 0, hashAt );
+	const fragment = hashAt === -1 ? '' : url.slice( hashAt );
+	const join = path.includes( '?' ) ? '&' : '?';
+	return `${ path }${ join }wp_admin_workspaces_chromeless=1${ fragment }`;
+}
+
+/**
  * Renders a wp-admin page inside an iframe with the default chrome
  * hidden. The iframe URL resolves relative to the WordPress admin URL.
  *
@@ -25,7 +40,7 @@ import { getChromeHideCss } from '../_shared/iframe/chromeHide.mjs';
  * `wp-auth-check` and reloads the iframe so it re-fetches the real page
  * once the user has re-authenticated.
  *
- * Source: `config.url` (the v2-canonical placement). Absolute URLs
+ * Source: `config.url`. Absolute URLs
  * pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`.
  *
  * `config.hideEditorChrome` (default false) opts into stripping the block
@@ -41,7 +56,16 @@ export default function IframeApp( { app, config = {} } ) {
 	const rawUrl = config.url || '';
 	const hideEditorChrome = !! config.hideEditorChrome;
 	const adminUrl = window.wpAdminWorkspaces?.adminUrl || '/wp-admin/';
-	const src = /^https?:\/\//.test( rawUrl ) ? rawUrl : adminUrl + rawUrl;
+	const isAbsolute = /^https?:\/\//.test( rawUrl );
+	const base = isAbsolute ? rawUrl : adminUrl + rawUrl;
+	// Admin-relative URLs carry the explicit chromeless flag so the PHP
+	// hijack stands down even when the browser doesn't send Sec-Fetch-*
+	// headers (the header check is the fallback signal, not the only one).
+	// Matters most for `iframe:index.php` — the admin root the hijack
+	// itself takes over. Absolute URLs (external embeds) stay untouched.
+	// The param splices in BEFORE any `#fragment` — appended after it,
+	// the flag would ride the fragment and never reach PHP's $_GET.
+	const src = isAbsolute ? base : appendChromelessFlag( base );
 
 	// `isReady` gates the iframe's visibility. Inverted from the old
 	// `isLoading`: it's true only AFTER onIframeLoad has confirmed the

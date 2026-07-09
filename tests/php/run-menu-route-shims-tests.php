@@ -2,7 +2,7 @@
 /**
  * Menu-item + admin-route shim tests — v3 nested-tree shape.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-menu-route-shims-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-menu-route-shims-tests.php`
  *
  * Coverage:
  *   - Menu-item registration validates ids/args, rejects duplicates,

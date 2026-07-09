@@ -55,16 +55,28 @@ try {
 	const page = await ctx.newPage();
 
 	// Authenticate (skipped automatically if already logged in / no form present).
-	await page.goto( `${ BASE }/wp-login.php`, { waitUntil: 'networkidle' } );
+	// `load` + a settle delay, NOT `networkidle` — the workspace keeps the
+	// network busy (heartbeat, REST preloads, iframed screens), so
+	// networkidle never fires once the plugin is active.
+	await page.goto( `${ BASE }/wp-login.php`, { waitUntil: 'load' } );
 	if ( await page.locator( '#user_login' ).count() ) {
 		await page.fill( '#user_login', USER );
 		await page.fill( '#user_pass', PASS );
 		await page.click( '#wp-submit' );
-		await page.waitForLoadState( 'networkidle' );
+		await page.waitForLoadState( 'load' );
 	}
 
-	await page.goto( `${ BASE }${ target }`, { waitUntil: 'networkidle' } );
-	await page.screenshot( { path: out, fullPage: true } );
+	await page.goto( `${ BASE }${ target }`, { waitUntil: 'load' } );
+	await page.waitForTimeout(
+		parseInt( process.env.WP_SETTLE_MS || '4000', 10 )
+	);
+	// WP_FULLPAGE=0 for fixed-viewport layouts (the desktop compositor)
+	// where a full-page capture stretches the canvas and sheds the
+	// window chrome.
+	await page.screenshot( {
+		path: out,
+		fullPage: process.env.WP_FULLPAGE !== '0',
+	} );
 	// eslint-disable-next-line no-console
 	console.log( `saved ${ out }  ←  ${ BASE }${ target }` );
 } finally {

@@ -11,7 +11,7 @@
  * and the generic Region renderer one place to read those services
  * from any region declaration.
  *
- * v2-shape declarations only — `region.platform` and `region.role`
+ * `region.platform` and `region.role`
  * are read directly. Engine templates pre-merge their own defaults
  * via `resolveRegion`.
  *

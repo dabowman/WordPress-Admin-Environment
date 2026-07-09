@@ -454,7 +454,7 @@ function AuthorPanel( { editedRecord, edit } ) {
 	// requires the admin-only `list_users` cap, so it 403s for Editors/Authors
 	// (who CAN reassign authors via `edit_others_posts`) and the panel would
 	// silently vanish. `who` is NOT deprecated (no `_deprecated_argument`) and
-	// matches the repo convention (`src/apps/media/index.js`).
+	// matches the repo convention (see the parked media app on `archive/native-apps`).
 	const { records } = useEntityRecords( 'root', 'user', {
 		who: 'authors',
 		per_page: 100,

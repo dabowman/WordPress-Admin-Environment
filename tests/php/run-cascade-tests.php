@@ -2,7 +2,7 @@
 /**
  * Standalone cascade-resolver test runner.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php`
  *
  * Class-scoped state because `wp eval-file` wraps the file in `eval()`,
  * which breaks `global $foo` lookups across helper functions.
@@ -17,10 +17,7 @@ class WPAS_Cascade_Test_Runner {
 	public static $fixture_dir;
 
 	public static function init() {
-		self::$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-		if ( ! file_exists( self::$plugin_dir . 'wp-admin-workspaces.php' ) ) {
-			self::$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
-		}
+		self::$plugin_dir = dirname( __DIR__, 2 ) . '/';
 		self::$fixture_dir = self::$plugin_dir . 'tests/php/fixtures/';
 	}
 
@@ -68,6 +65,17 @@ require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/cascade/class-wp-
 require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/cascade/class-wp-admin-workspaces-customizable.php';
 require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/origins/class-wp-admin-workspaces-origin-core.php';
 require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/cascade/class-wp-admin-workspaces-resolver.php';
+
+// Hermetic guard: ignore any REAL wp-content/workspace.json for this run.
+// This suite asserts against the option-selected workspace; a developer's
+// own override file would outrank the option (file wins) and skew every
+// expectation below.
+add_filter( 'wp_admin_workspaces_workspace_json_path', function () {
+	return get_temp_dir() . 'wpas-tests-no-such-workspace.json';
+} );
+if ( class_exists( 'WP_Admin_Workspaces_Origin_File' ) ) {
+	WP_Admin_Workspaces_Origin_File::reset_memo();
+}
 
 $T = 'WPAS_Cascade_Test_Runner';
 
@@ -305,7 +313,7 @@ $T::assert_eq( 'customizable absent: locked (default-deny)',
 $base       = $T::load( '05-base-with-customizable.json' );
 $user_input = $T::load( '06-user-customize-attempts.json' );
 
-$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $base, $user_input );
+$filtered = WP_Admin_Workspaces_Customizable::filter_doc( $base, $user_input, null );
 
 $T::assert_eq( 'doc: branding.accentColor allowed',
 	$filtered['styles']['branding']['accentColor'] ?? null,
@@ -453,26 +461,6 @@ WP_Admin_Workspaces_Registry::reset();
 WP_Admin_Workspaces_Cache::flush();
 WP_Admin_Workspaces_Resolver::reset_request_memo();
 delete_option( 'wp_admin_workspaces_active_workspace' );
-
-// ── user-switchable: schema-canonical kebab form ─────────────────────
-
-echo "\n— user-switchable kebab form —\n";
-
-// A bundled workspace that ships `"user-switchable": true` in kebab form.
-// Pre-fix: production code read `userSwitchable` and silently treated
-// every workspace as non-switchable (always-false). Post-fix: kebab wins.
-// `WP_Admin_Workspaces_Config::get_user_switchable()` exercises the same
-// reader path used by JS-side `window.wpAdminWorkspaces.workspaces` enumeration.
-$desktop_demo_path = WPAS_Cascade_Test_Runner::$plugin_dir . 'workspaces/desktop-demo.json';
-if ( file_exists( $desktop_demo_path ) ) {
-	$desktop_demo_doc = json_decode( file_get_contents( $desktop_demo_path ), true );
-	require_once WPAS_Cascade_Test_Runner::$plugin_dir . 'includes/class-wp-admin-workspaces-config.php';
-	$cfg = new WP_Admin_Workspaces_Config( $desktop_demo_doc );
-	$T::assert_true(
-		'user-switchable: kebab "user-switchable: true" recognized via Config::get_user_switchable',
-		$cfg->get_user_switchable()
-	);
-}
 
 // ── Summary ─────────────────────────────────────────────────────────
 

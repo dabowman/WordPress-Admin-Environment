@@ -34,7 +34,7 @@
 		"icon": "external"
 	},
 	"documentation": {
-		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin shell hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The base chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin — the wp-admin shell common to every admin page. `config.hideEditorChrome: true` additionally strips the block editor's own sidebar / site-hub / header / canvas container (only preview/embed surfaces should opt in; see #253). The workspace's escape hatch: any wp-admin screen without a native v2 port can be surfaced through this app without writing custom React.",
+		"purpose": "Renders any wp-admin URL inside an iframe with the default wp-admin shell hidden via injected CSS. Absolute URLs pass through; relative URLs resolve under `window.wpAdminWorkspaces.adminUrl`. The base chrome-hide CSS targets adminmenu / adminbar / footer / wpcontent margin — the wp-admin shell common to every admin page. `config.hideEditorChrome: true` additionally strips the block editor's own sidebar / site-hub / header / canvas container (only preview/embed surfaces should opt in; see #253). The workspace's escape hatch: any wp-admin screen without a native port can be surfaced through this app without writing custom React.",
 		"data": {
 			"reads": [
 				{

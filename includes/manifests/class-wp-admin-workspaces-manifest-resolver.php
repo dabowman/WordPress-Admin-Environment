@@ -16,9 +16,8 @@
  *   - app config validating against the app manifest's config-schema
  *     (deferred to a separate config validator — Ajv-side)
  *
- * V2.M1 ships the primitives. V2.M2 (region-vocabulary rebuild) wires
- * them into the composition pipeline that produces a mountable region
- * tree from a v2 workspace.json.
+ * The manifest primitives feed the composition pipeline that produces
+ * a mountable region tree from a workspace.json.
  *
  * @package WP_Admin_Workspaces
  */

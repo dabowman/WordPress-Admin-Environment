@@ -31,12 +31,12 @@
  *   - Menu-tree pruning: items pointing at cap-restricted screens drop
  *     from the rendered tree.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-gating-smoke.php`
  */
 
 defined( 'ABSPATH' ) || die( 'Run via wp eval-file.' );
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 if ( ! class_exists( 'WP_Admin_Workspaces_Permissions' ) ) {

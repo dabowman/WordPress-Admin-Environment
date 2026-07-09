@@ -5,7 +5,7 @@
  * makes full-page handoff to the real editor the DEFAULT: edit/new links are
  * real anchors to classic `post.php` / `post-new.php` that the capture-phase
  * `adminLinkInterceptor` passes through as a top-level navigation. A
- * workspace that ships its OWN editor screen (e.g. `single-pane-demo`'s
+ * workspace that ships its OWN editor screen (e.g. the writer workspace's
  * `core:simple-editor` at `/posts/{id}/edit`) keeps in-workspace links: the
  * `editTargetHref` resolver checks the compiled runtime `routes` block for a
  * matching editor route and only falls back to the classic URL when the

@@ -501,8 +501,8 @@ Filter contributes through the `plugin` cascade origin; site / role / user can s
 npm run test:schema
 
 # Engine resolution: modes, templates, default-styles
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-mode-resolution-tests.php
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-engine-defaults-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-mode-resolution-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-engine-defaults-tests.php
 
 # Kernel DS-neutrality (engine code in engines/, NOT kernel)
 node --test tests/runtime/kernel-no-ds-import.test.mjs

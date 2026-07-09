@@ -20,8 +20,6 @@ import ArbitraryIcon, {
  *
  *   1. `config.left` / `config.right` — authored action descriptors:
  *        - { href, icon, label, external? } — link
- *        - { command, icon, label }         — built-in command via
- *          `COMMAND_HREFS`
  *      An action may also carry an `iconSource` escape-hatch descriptor
  *      (arbitrary-icon, #127/#128) rendered through `ArbitraryIcon`.
  *   2. **Dynamic +New (#129)** — a dropdown enumerated from the
@@ -46,18 +44,6 @@ import ArbitraryIcon, {
  * `IconButton` is icon-prop-based and not a reliable host for arbitrary
  * children (it would risk rendering blank).
  */
-
-/**
- * Built-in command → href resolvers. Each resolves against the compiled
- * runtime routes (Tier 1 handoff, `docs/block-editor-native-port.md`): the
- * workspace's own add-new route when it declares one, the classic
- * `post-new.php` URL otherwise — a real top-level navigation the admin-link
- * interceptor passes through.
- */
-const COMMAND_HREFS = {
-	'core/new-post': ( routes ) => newTargetHref( 'post', routes ),
-	'core/new-page': ( routes ) => newTargetHref( 'page', routes ),
-};
 
 /**
  * Internal `show_in_rest` post types that are creatable for an admin but
@@ -105,7 +91,7 @@ export default function ToolbarActionsApp( { config = {} } ) {
 			<Stack direction="row" gap="xs" align="center">
 				{ newItems.length > 0 && <NewContentMenu items={ newItems } /> }
 				{ left.map( ( action, i ) =>
-					renderAction( action, `left-${ i }`, routes )
+					renderAction( action, `left-${ i }` )
 				) }
 			</Stack>
 
@@ -113,7 +99,7 @@ export default function ToolbarActionsApp( { config = {} } ) {
 
 			<Stack direction="row" gap="xs" align="center">
 				{ right.map( ( action, i ) =>
-					renderAction( action, `right-${ i }`, routes )
+					renderAction( action, `right-${ i }` )
 				) }
 				{ adminBarNodes.map( ( node ) => (
 					<AdminBarNode key={ `ab-${ node.id }` } node={ node } />
@@ -295,8 +281,8 @@ function AdminBarNode( { node } ) {
 	);
 }
 
-function renderAction( action, key, routes ) {
-	const href = action.href || COMMAND_HREFS[ action.command ]?.( routes );
+function renderAction( action, key ) {
+	const href = action.href;
 	if ( ! href ) {
 		return null;
 	}

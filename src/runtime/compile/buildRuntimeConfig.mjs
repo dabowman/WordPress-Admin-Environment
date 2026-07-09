@@ -11,7 +11,7 @@ import { compileCommands } from './compileCommands.mjs';
  * (top-level `engine` / `screens` / `menu` / `settings` / `commands`).
  * The kernel is the single place that derives the runtime surfaces from it:
  *
- *   - `engine`        ← top-level `engine` (legacy `workspace.engine` fallback)
+ *   - `engine`        ← top-level `engine`
  *   - `menu-renderer` ← engine manifest `menu-renderer` (strategy id)
  *   - `routes`        ← synthesized from `screens` (+ `routes` escape hatch)
  *   - `regions`       ← engine `defaultRegions` merged under `regions` escape hatch
@@ -33,8 +33,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 		return config;
 	}
 
-	const engineId =
-		config.engine || config.workspace?.engine || 'core:default';
+	const engineId = config.engine || 'core:default';
 	const screens = config.screens || {};
 	const defaultRegions =
 		engineManifest && engineManifest.defaultRegions
@@ -45,10 +44,7 @@ export function buildRuntimeConfig( config, engineManifest ) {
 	const regions = synthesizeRegions( defaultRegions, config.regions || {} );
 	const defaultRoute =
 		config[ 'default-route' ] ||
-		synthesizeDefaultRoute(
-			screens,
-			config[ 'default-screen' ] || config.workspace?.[ 'default-screen' ] || ''
-		);
+		synthesizeDefaultRoute( screens, config[ 'default-screen' ] || '' );
 	const commands = compileCommands( config.commands || [] );
 
 	// Surface the engine's chosen menu-rendering strategy on the runtime

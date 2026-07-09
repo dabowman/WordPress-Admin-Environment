@@ -2,7 +2,7 @@
 
 Manual smoke checklist for the first public alpha (workspace as the primary
 admin entry, driven by a `wp-content/workspace.json` override on the
-`wp-admin-default` baseline). Run against the `single-pane-demo` starter on a
+`wp-admin-default` baseline). Run against the `writer` starter on a
 wp-env machine with the Gutenberg plugin active.
 
 This doc is authored for the actual alpha surface — it is **not** the
@@ -26,7 +26,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   baseline (baseline screens survive); a trusted-origin `null` tombstone
   removes a baseline screen; engine falls back to the baseline when the file
   omits `engine`.
-- [manual] Copy `workspaces/single-pane-demo.json` → `wp-content/workspace.json`, load
+- [manual] Activate the writer workspace (`wp admin-workspace activate writer`), load
   `/wp-admin/` — the resolved tree carries the file's regions over the
   baseline. Trim the file to a one-key `{ "styles": { "color": { … } } }`
   delta; the baseline's screens/menu stay, only the chrome retints.
@@ -45,7 +45,7 @@ endpoint allowlist and the cap-gated `?classic=1` cookie.
   a `_doing_it_wrong` notice and the admin still loads (degrades to
   baseline) — it does **not** white-screen.
 - [auto] `wp_admin_workspaces_workspace_active()`: true with a valid file OR
-  an explicitly-written `wp_admin_workspaces_active_shell` option; false on a
+  an explicitly-written `wp_admin_workspaces_active_workspace` option; false on a
   fresh install with neither. When the file is active,
   `window.wpAdminWorkspaces.workspaceFileActive` is true — the workspace switcher
   hides and `switchShell()` throws (writing the option would be a silent
@@ -77,7 +77,7 @@ Workspace** screen flips the `wp_admin_workspaces_enabled` option;
 the session-scoped `?classic=1` cookie remains as a power-user shortcut.
 
 - [auto] **Persistent toggle.** The trigger truth table in
-  `run-alpha-trigger-tests.php` covers it: `workspace_enabled=false`
+  `run-alpha-trigger-tests.php` covers it: `wp_admin_workspaces_enabled=false`
   vetoes a present `wp-content/workspace.json` AND the legacy active-workspace
   option; flipping back to true restores the file-trigger path.
 - [manual] **Workspace → Settings → Workspace.** Uncheck "Activate WP
@@ -191,10 +191,14 @@ the session-scoped `?classic=1` cookie remains as a power-user shortcut.
   SFTP/git/wp-cli. No settings UI writes it (filesystem caps + nonce + locking
   are post-alpha). Ship the `.htaccess` / nginx note so the file isn't served
   as static JSON.
-- **Bundled `workspaces/*` are starter templates**, not a selectable catalog —
-  copy one to `wp-content/workspace.json` and edit. The legacy
-  `wp_admin_workspaces_active_shell` option still works as a back-compat
-  trigger but is hidden by the switcher when a file override is active.
+- **Two activation paths with different merge semantics.** Activating a
+  bundled workspace via the `wp_admin_workspaces_active_workspace` option
+  REPLACES the baseline (the personas render as authored); a
+  `wp-content/workspace.json` file is a partial delta MERGED over the
+  baseline (customization) and wins over the option while present — copying
+  a full persona file there keeps every baseline screen routable, which is
+  usually not what you want. The switcher hides while a file override is
+  active.
 - **The override file has trusted-tier cascade authority by design.** It
   loads into the `plugin` slot and merges via `merge_authoritative`, so it
   may add+remove baseline screens (null tombstones), grow

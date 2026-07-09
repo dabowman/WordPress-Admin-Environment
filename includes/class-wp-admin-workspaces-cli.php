@@ -56,7 +56,7 @@ class WP_Admin_Workspaces_CLI {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp admin-workspace activate single-pane-demo
+	 *     wp admin-workspace activate writer
 	 *
 	 * @when after_wp_load
 	 */

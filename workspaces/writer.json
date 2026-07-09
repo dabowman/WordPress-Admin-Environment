@@ -2,9 +2,9 @@
 	"$schema": "../docs/schemas/workspace.json",
 	"version": 3,
 	"$wpds": "6.9",
-	"name": "single-pane-demo",
-	"title": "Single Pane Demo",
-	"description": "Demo workspace exercising the core:single-pane engine. Mobile-style appbar + main pane; navigation collapses to a hamburger drawer.",
+	"name": "writer",
+	"title": "Writing Desk",
+	"description": "A focused writing workspace for authors — posts, pages, and a distraction-free editor on the core:single-pane engine. Everything else stays out of the way; media management rides the classic-admin escape hatch.",
 	"engine": "core:single-pane",
 	"default-screen": "posts",
 	"frame": {
@@ -15,6 +15,10 @@
 			"snackbar": {
 				"app": "core:notices-snackbar"
 			}
+		},
+		"branding": {
+			"title": "Writing Desk",
+			"logo": null
 		}
 	},
 	"screens": {
@@ -151,5 +155,14 @@
 			"navigate": "/posts/new",
 			"label": "New Post"
 		}
-	]
+	],
+	"user-switchable": true,
+	"styles": {
+		"theme": {
+			"color": {
+				"primary": "#8a4baf"
+			},
+			"density": "comfortable"
+		}
+	}
 }

@@ -17,7 +17,7 @@
  *    a top-level navigation.
  * 3. Target resolution: workspace hash when the compiled runtime `routes`
  *    block declares a matching editor / add-new route, classic handoff
- *    otherwise — the signal that keeps `single-pane-demo`'s native
+ *    otherwise — the signal that keeps `writer`'s native
  *    `core:simple-editor` flow in-workspace while `wp-admin-default`
  *    hands off.
  */
@@ -193,7 +193,7 @@ console.log( '\n— classic handoff hrefs are relative admin URLs —' );
 
 console.log( '\n— workspace-route detection —' );
 {
-	// The single-pane-demo shape: native editor screens declared.
+	// The writer-workspace shape: native editor screens declared.
 	const nativeRoutes = {
 		'/posts': { app: 'core:posts' },
 		'/posts/new': { app: 'core:simple-editor' },

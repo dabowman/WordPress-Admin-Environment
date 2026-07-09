@@ -2,7 +2,7 @@
 /**
  * REST preload tests — C1 phase.
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-preload-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-preload-tests.php`
  *
  * Coverage:
  *   - `WP_Admin_Workspaces_Preload::normalize_entry` accepts strings + 2-tuples,

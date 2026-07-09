@@ -2,7 +2,8 @@
 /**
  * /wp-admin-workspaces/v1/user-prefs — read + write the user-origin slice.
  *
- * Backs `core:appearance-preferences`. Returns the full `wp_admin_workspaces_user_prefs`
+ * Backs the user-tier customization surface (Abilities API + any
+ * preferences UI). Returns the full `wp_admin_workspaces_user_prefs`
  * user-meta (a flat object) so the UI can render whatever
  * `customizable` paths the active workspace exposes; writes are partial
  * (deep-merged onto the existing prefs) so multiple controls can save
@@ -105,14 +106,6 @@ class WP_Admin_Workspaces_Prefs_REST {
 		}
 		return rest_ensure_response( (object) array() );
 	}
-
-	/**
-	 * Back-compat alias only — nothing in this class reads it anymore. The
-	 * merge + key-count depth cap lives in
-	 * `WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH`; retained here for any
-	 * external consumer that learned the old constant.
-	 */
-	const MAX_MERGE_DEPTH = WP_Admin_Workspaces_Util::PATCH_MAX_DEPTH;
 
 	/** Max serialized prefs payload — structural config, not a data file. */
 	const MAX_BYTES = 262144;

@@ -44,7 +44,7 @@ A: `app.json#dataView` with `_default` and any variants you support. Cascade-ove
 A: `null` tombstone at any layer. `settings.dataViews.postType.post._default.fields.author: null` removes the author column globally. Same syntax works inside `screens[id].dataView`.
 
 **Q: I want to extend the drafts view from `_default` instead of duplicating its config.**
-A: `settings.dataViews.postType.post.drafts: { "extends": "_default", "defaultView": { "filters": [...] } }`. Variants are independent by default (CIAB convention) — opt into inheritance with `extends`.
+A: `settings.dataViews.postType.post.drafts: { "extends": "_default", "defaultView": { "filters": [...] } }`. Variants are independent by default — opt into inheritance with `extends`.
 
 **Q: I want a screen to use the drafts variant instead of `_default`.**
 A: `screens.my-drafts.dataViewRef: "postType/post/drafts"`. The screen names the registry triple it consumes.
@@ -59,7 +59,7 @@ Every `dataView` registry entry is addressed by a three-part triple.
 
 `_default` is the implicit fallback when no variant is specified. A triple like `postType/post/_default` is the canonical "all Posts" view; `postType/post/drafts` is the variant scoped to draft status.
 
-Variant inheritance is opt-in via `extends: "<variant>"`. There is no implicit merge from `_default` — a `drafts` variant that declares no `extends` resolves entirely from its own declared fields. This matches CIAB's independent-resolution rule. Authors who want the v2-style implicit merge write `"extends": "_default"` explicitly.
+Variant inheritance is opt-in via `extends: "<variant>"`. There is no implicit merge from `_default` — a `drafts` variant that declares no `extends` resolves entirely from its own declared fields. Authors who want an implicit-merge feel write `"extends": "_default"` explicitly.
 
 The resolver caps `extends` chains at depth 10 and detects cycles. `drafts extends compact extends _default` is legal; a cycle silently returns the leaf doc with a dev-mode warning.
 
@@ -88,7 +88,6 @@ add_filter(
 );
 ```
 
-Migrating from CIAB: `s/next_admin_entity_view_config_/wp_admin_workspaces_data_view_config_/g`. The mechanical rename ports both the base filter and the per-variant filter — CIAB's 3-axis hook naming maps directly.
 
 ## REST endpoints
 

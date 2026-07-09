@@ -70,7 +70,7 @@ The smallest file that customizes the workspace — pins the engine, sets a land
             "label": "Home",
             "icon": "home",
             "path": "/dashboard/home",
-            "app": "core:dashboard-host"
+            "app": "iframe:index.php"
         },
         "posts": {
             "label": "Posts",
@@ -99,7 +99,7 @@ Before customizing, know what the engine already ships — most of it you simply
 - **A region tree** — a persistent `sidebar` (site-hub + navigation), a routable `content` region, a `detail` side-pane that mirrors a sub-route, a modal `command-palette` (bound to `Mod+K`), and banner/snackbar notice mounts. You don't write these; the engine synthesizes them from your `screens`.
 - **Four chrome modes** — `default`, `focus`, `takeover`, `modal`. A screen picks one with `"mode": "..."`.
 - **A menu renderer** — `sidebar-tree`: nested menu items render as an expandable in-place tree, auto-expanding the branch that contains the active route. (The bundled navigation app also registers `sidebar-drilldown` as an alternative — slide-in sub-screens with a back link — but selecting it is an `engine.json` decision, not a workspace.json one.)
-- **Slots** — places your apps/widgets can mount: `detail` (side-pane), `grid` (dashboard tiles, via `core:dashboard-host`), `palette` (command palette), plus the persistent widget slots `toolbar` and `sidebar-footer`.
+- **Slots** — places your apps/widgets can mount: `detail` (side-pane), `grid` (dashboard tiles, when the screen mounts a grid-host app — the bundled host is parked on `archive/native-apps`), `palette` (command palette), plus the persistent widget slots `toolbar` and `sidebar-footer`.
 - **WPDS chrome + a default theme** — `#3858E9` primary, white background, `default` density, dark elevated-card idiom. Override any of it from `styles`.
 
 ---
@@ -177,7 +177,7 @@ The id-keyed map of every screen. Each screen says **what** mounts (`app` or `ap
 }
 ```
 
-One app reads the URL via `routing.mode: "mirror"` (the `detail` region synthesizes its value from the primary path); the rest are static decorations. Dashboard tiles are the same shape against a `core:dashboard-host` mount:
+One app reads the URL via `routing.mode: "mirror"` (the `detail` region synthesizes its value from the primary path); the rest are static decorations. Dashboard tiles are the same shape against a grid-host mount (the bundled `core:dashboard-host` + widget apps are parked on `archive/native-apps`; the pattern applies to any grid-host app):
 
 ```json
 "dashboard-home": {
@@ -465,7 +465,7 @@ Mount targets the engine exposes. Reference a slot that doesn't resolve and vali
 | `_self` | URL slot | The primary content region (default for any screen). |
 | `detail` | URL slot / `apps[]` slot | The complementary side-pane; `routing.mode: "mirror"` feeds it from the primary path. Dismisses on `Escape`. |
 | `palette` | URL slot | The modal command palette overlay. |
-| `grid` | `apps[]` slot | Dashboard tiles, via a `core:dashboard-host` mount. Honors `size: { w, h }` and `position`. |
+| `grid` | `apps[]` slot | Dashboard tiles, via a grid-host app mount (bundled host parked on `archive/native-apps`). Honors `size: { w, h }` and `position`. |
 | `toolbar` | `widgets` slot | Persistent topbar widgets. The topbar has `start` / `center` / `end` child regions. |
 | `sidebar-footer` | `widgets` slot | Persistent bottom-of-sidebar widgets (e.g. `core:user-menu`). |
 
@@ -604,13 +604,13 @@ This works because the `wp-admin-default` baseline already declares the `postTyp
 npm run test:schema
 
 # 2. Author-shape invariants — each screen has a primary app, paths unique, default-screen resolves
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-shape-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-shape-tests.php
 
 # 3. Cascade semantics — merge / tombstones / trust tier
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cascade-tests.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cascade-tests.php
 
 # 4. Capability + permissions gating
-npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-cap-gating-smoke.php
+npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-cap-gating-smoke.php
 ```
 
 For non-trivial changes, load the workspace in `wp-env` and walk the screens manually. Per-screen functional specs live in `docs/screens/*.md` (the source of truth when rebuilding any wp-admin surface).

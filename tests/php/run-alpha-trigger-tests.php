@@ -2,7 +2,7 @@
 /**
  * Alpha file-trigger test runner (W1).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-alpha-trigger-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-alpha-trigger-tests.php`
  *
  * Covers the theme.json-style override origin:
  *   - WP_Admin_Workspaces_Origin_File partial-permissive validation (valid
@@ -71,10 +71,7 @@ class WPAS_Alpha_Trigger_Runner {
 	}
 }
 
-$plugin_dir = WP_PLUGIN_DIR . '/WordPress-Admin-Environment/';
-if ( ! file_exists( $plugin_dir . 'wp-admin-workspaces.php' ) ) {
-	$plugin_dir = WP_PLUGIN_DIR . '/wp-admin-workspaces/';
-}
+$plugin_dir = dirname( __DIR__, 2 ) . '/';
 require_once $plugin_dir . 'wp-admin-workspaces.php';
 
 WPAS_Alpha_Trigger_Runner::$fixture_dir = $plugin_dir . 'tests/php/fixtures/alpha/';
@@ -212,7 +209,7 @@ $T::ok( 'file present → workspace active', wp_admin_workspaces_is_active() ===
 $T::use_override( '' );
 $T::ok( 'no file + no option → workspace inactive', wp_admin_workspaces_is_active() === false );
 
-update_option( 'wp_admin_workspaces_active_workspace', 'single-pane-demo' );
+update_option( 'wp_admin_workspaces_active_workspace', 'writer' );
 $T::ok( 'no file + explicit option → workspace active', wp_admin_workspaces_is_active() === true );
 
 // Settings → Workspace toggle vetoes the file/legacy triggers.

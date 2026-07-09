@@ -2,9 +2,9 @@
 	"$schema": "../docs/schemas/workspace.json",
 	"version": 3,
 	"$wpds": "6.9",
-	"name": "desktop-demo",
-	"title": "Desktop demo (core:desktop engine)",
-	"description": "Demo workspace exercising the windowed desktop engine. The three persistent regions (wallpaper, workspace, dock) map to engine templates of the same names. Workspace hosts the compositor app and accepts runtime-mutated child regions (one per open window) via the `core:dynamic-children` platform service. The dock reads its launcher tiles from the regions escape-hatch config; clicking a tile dispatches `openWindow` to the compositor.",
+	"name": "developer",
+	"title": "Developer Console",
+	"description": "A windowed operations workspace for developers and site operators on the core:desktop engine — content, plugins, users, and diagnostics open side-by-side as desktop windows; classic screens ride the chromeless iframe bridge.",
 	"user-switchable": true,
 	"engine": "core:desktop",
 	"default-screen": "posts",
@@ -48,7 +48,10 @@
 			"label": "Media",
 			"icon": "media",
 			"path": "/media",
-			"app": "core:media",
+			"app": "core:desktop-iframe",
+			"config": {
+				"url": "upload.php"
+			},
 			"permissions": {
 				"capabilities": [
 					"upload_files"
@@ -59,7 +62,10 @@
 			"label": "Users",
 			"icon": "people",
 			"path": "/users",
-			"app": "core:users",
+			"app": "core:desktop-iframe",
+			"config": {
+				"url": "users.php"
+			},
 			"permissions": {
 				"capabilities": [
 					"list_users"
@@ -70,7 +76,10 @@
 			"label": "Settings",
 			"icon": "settings",
 			"path": "/settings",
-			"app": "core:settings",
+			"app": "core:desktop-iframe",
+			"config": {
+				"url": "options-general.php"
+			},
 			"permissions": {
 				"capabilities": [
 					"manage_options"
@@ -81,7 +90,10 @@
 			"label": "Site Health",
 			"icon": "wordpress",
 			"path": "/site-health",
-			"app": "core:site-health",
+			"app": "core:desktop-iframe",
+			"config": {
+				"url": "site-health.php"
+			},
 			"permissions": {
 				"capabilities": [
 					"view_site_health_checks"
@@ -112,6 +124,20 @@
 				]
 			},
 			"mode": "modal"
+		},
+		"plugins": {
+			"label": "Plugins",
+			"icon": "plugins",
+			"path": "/plugins",
+			"app": "core:desktop-iframe",
+			"config": {
+				"url": "plugins.php"
+			},
+			"permissions": {
+				"capabilities": [
+					"activate_plugins"
+				]
+			}
 		}
 	},
 	"menu": {
@@ -135,6 +161,9 @@
 		},
 		"permalinks": {
 			"position": 70
+		},
+		"plugins": {
+			"position": 35
 		}
 	},
 	"commands": [
@@ -167,6 +196,11 @@
 						"label": "Users",
 						"icon": "people",
 						"href": "#/users"
+					},
+					{
+						"label": "Plugins",
+						"icon": "plugins",
+						"href": "#/plugins"
 					},
 					{
 						"label": "Pages",

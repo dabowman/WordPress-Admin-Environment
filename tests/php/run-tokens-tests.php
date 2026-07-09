@@ -2,7 +2,7 @@
 /**
  * tokens.json discovery + merge tests (V2.M5 task 2).
  *
- * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Environment/tests/php/run-tokens-tests.php`
+ * Invoke: `npx wp-env run cli wp eval-file wp-content/plugins/WordPress-Admin-Workspaces/tests/php/run-tokens-tests.php`
  *
  * Coverage:
  *   - Core baseline (`core.tokens.json`) loads

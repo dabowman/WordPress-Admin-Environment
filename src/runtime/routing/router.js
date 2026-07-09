@@ -9,7 +9,7 @@ import {
 import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
 
 /**
- * URL-driven router (V2.M3 task 2 + 3 + 4 + 7).
+ * URL-driven router.
  *
  * Spec §6: the URL is the full source of truth for workspace state. The
  * router observes URL changes via `hashchange` (and the Navigation API
@@ -20,11 +20,7 @@ import { parseHash, readSlot, matchRoute, interpolate } from './matchRoute.mjs';
  *
  * Public surface:
  *   - <RouterProvider>            — listens to URL changes, exposes parsed URL.
- *   - useRoute()                  — { primary, params, hash, appId, segments }.
- *                                   New v2 fields (primary, params) plus
- *                                   legacy v1 fields (appId, segments) so
- *                                   v1 workspaces continue to work during the
- *                                   transition.
+ *   - useRoute()                  — { primary, params, hash }.
  *   - useRouteForRegion(region, routesBlock)
  *                                 — resolves a region's route-key slot
  *                                   against the routes block; returns
@@ -42,8 +38,6 @@ const RouteContext = createContext( {
 	primary: '',
 	params: {},
 	hash: '',
-	appId: null,
-	segments: [],
 } );
 
 export function RouterProvider( { children, defaultRoute } ) {
@@ -193,22 +187,15 @@ export function navigateRoute( route ) {
 }
 
 /**
- * Decompose a URL hash into both the v2 shape (primary + params) and
- * the legacy v1 shape (appId + segments). v1 workspaces consume appId +
- * segments; v2 workspaces consume primary + params via useRouteForRegion.
+ * Decompose a URL hash into the parsed route shape (primary + params).
+ * Regions consume primary + params via useRouteForRegion.
  * @param {*} hash
  */
 function decompose( hash ) {
-	const v2 = parseHash( hash );
-	const segments = ( v2.primary || '' )
-		.replace( /^\//, '' )
-		.split( '/' )
-		.filter( Boolean );
+	const parsed = parseHash( hash );
 	return {
-		primary: v2.primary,
-		params: v2.params,
+		primary: parsed.primary,
+		params: parsed.params,
 		hash: hash || '',
-		appId: segments[ 0 ] || null,
-		segments: segments.slice( 1 ),
 	};
 }

@@ -31,8 +31,7 @@
  *
  * Published surface for loose plugin scripts: `src/index.js` mirrors the
  * default-registry register/resolve functions onto
- * `window.wpAdminWorkspaces.kernel` (and keeps the flat
- * `window.wpAdminWorkspaces.registerMenuRenderer` alias for back-compat) so a
+ * `window.wpAdminWorkspaces.kernel` so a
  * third-party renderer shipped as a standalone script (no bundler access
  * to this module) can still register. This registry is subscribable
  * (`subscribeMenuRenderers` + `getMenuRendererEpoch`), so even a truly
