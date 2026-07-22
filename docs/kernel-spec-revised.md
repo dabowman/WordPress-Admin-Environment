@@ -347,6 +347,8 @@ Fully specced in this draft:
   removals are deny-listed alongside additions; (b) the *tested* method is
   `enforce_trust_tiers`, a parallel implementation that is not on the pipeline
   (this is exactly **F4** from §1). A CC-1 violation on two axes at once.
+  **Resolved as Option A** (§4.3.3): `permissions` is locked to trusted tiers;
+  both enforcers are deleted and the docs corrected.
 
 - **CAS-5 — `describe_writable_paths` is a hand-authored mirror of `filter_doc`
   enforcement.** The Abilities API advertises "what a consumer may write" from
@@ -444,40 +446,47 @@ retained unchanged.
 
 **`describe_writable_paths` (CAS-5) rides the same traversal** — see §4.3.4.
 
-#### 4.3.3 CAS-4 — One permissions guard, one policy, tested on the live path
+#### 4.3.3 CAS-4 — Permissions are trusted-tier only (Option A, resolved)
 
 This is a **CC-1** fix. Today two guards claim `screens[].permissions` and
-disagree; resolving it is first a **policy decision**, then a de-duplication.
+encode conflicting policies; the resolution collapses them to one.
 
-**Decide the policy (open — see §4.5).** What may a consumer origin (role/user)
-do to a screen's `permissions` OR-set?
+**Decision (resolved): Option A — `permissions` is locked to trusted tiers.**
+Consumer origins (`role` / `user`) cannot write `screens[].permissions` at all —
+not additions (an escalation, always forbidden) and not removals. To restrict a
+role's reach, consumers use screen visibility (`hidden: true` / role-config
+screen removal), not permission edits. This is what the code *already does* (the
+`screens.*.permissions` deny-list wins over the never-reached shrink-only
+enforcer), so adopting A is a **subtractive** change — delete the inert
+machinery and correct the docs to describe the real behavior.
 
-- **Option A — Locked (deny all).** Consumers cannot touch `permissions` at all;
-  to restrict a role's reach, use `hidden: true` or role-config screen removal.
-  This is what the code *actually does today* (the deny-list wins). Simplest;
-  matches the "security gate survives even `customizable`" intent.
-- **Option B — Shrink-only (the documented behavior).** Consumers may *remove*
-  caps/roles (which only makes a screen harder to reach — safe, non-escalating)
-  but never add. This is what CLAUDE.md and `enforce_origin_tier` describe, and
-  what does *not* currently work because the deny-list preempts it.
+*Rationale.* The permissions OR-set is a security gate; keeping exactly one
+writer for it (trusted tiers) is the cleaner governance story and deletes code
+rather than adding a footgun. The one thing A cannot express — narrowing a
+*capability-based* requirement for a subset of users who differ by capability,
+not role — is deliberately pushed **into the app**: an app that needs
+capability-level behavior within a screen gates that itself (via `userCan` /
+`checkCan` / its REST floor), where the check is closest to the behavior it
+governs. The cascade governs *which screens exist per role*; the app governs
+*capability-level behavior within a screen*. (This mirrors §1's principle that
+WordPress caps stay the authority — the app asks WP directly.)
 
-The two are a real fork: removing from an OR-set is provably non-escalating, so
-B is defensible governance; A is stricter and simpler. **The spec does not
-pick — the owner does.** Whichever wins, there is exactly one guard afterward:
+**Consequences.**
 
-- **If A:** delete `enforce_origin_tier` *and* the parallel `enforce_trust_tiers`
-  entirely. The `screens.*.permissions` deny-list is the sole guard. Correct
-  CLAUDE.md / `docs/schema-sketch.md` to state "consumers cannot modify
-  `permissions`."
-- **If B:** the deny-list can no longer be a blanket path match (it can't express
-  "removals only"). Move the shrink-only decision into the single permissions
-  enforcer, run it where the deny-list does *not* preempt it, and drop the
-  blanket `screens.*.permissions` deny entry in favor of the enforcer's
-  add-rejecting intersection. `enforce_trust_tiers` is deleted regardless.
-
-**Test on the live path.** Whichever guard survives is the one the security
-cascade tests exercise (`run-security-cascade-tests.php`). Delete the untested
-parallel method so no test can pass against code that never runs (CC-1).
+- **Delete `enforce_origin_tier` AND the parallel `enforce_trust_tiers`.** Both
+  the inert shipping method and its untested twin go; the
+  `screens.*.permissions` deny-list is the sole guard. (Removing the
+  `enforce_origin_tier` call from `resolve_with` Phase 2 is part of this.)
+- **Correct the docs to match the code.** CLAUDE.md's "role/user … can REMOVE
+  caps/roles from `screens[].permissions`" is wrong today and stays wrong under
+  A — rewrite it (and `docs/schema-sketch.md`) to "consumer origins cannot modify
+  `permissions`; restrict a role's reach via screen visibility." This closes the
+  documented-vs-actual contradiction by fixing the docs, not the code.
+- **Test on the live path (CC-1).** The `screens.*.permissions` deny-list is what
+  `run-security-cascade-tests.php` must exercise for the "consumer cannot write
+  permissions" invariant — including the removal case (a consumer *removal*
+  attempt is dropped, same as an addition). No test may reference the deleted
+  methods.
 
 #### 4.3.4 CAS-5 — Derive `describe` from the enforcer, don't mirror it
 
@@ -511,11 +520,12 @@ comment.
    list cases the old path corrupted. Add the list-shape fixtures **before** the
    swap (repo rule: fixture precedes the fix). Delete the repair machinery only
    once the differential test is green.
-3. **CAS-4** — resolve the policy fork (§4.5) first; it decides whether guards
-   are deleted (Option A) or restructured (Option B). Either way, delete
-   `enforce_trust_tiers` and ensure `run-security-cascade-tests.php` targets the
-   surviving guard. Independent of CAS-2, but the CAS-5 unification (step 4) is
-   cleaner once CAS-2's in-place traversal exists.
+3. **CAS-4** (Option A, resolved) — subtractive and independent of CAS-2. Delete
+   `enforce_origin_tier` + `enforce_trust_tiers` and the `enforce_origin_tier`
+   call in `resolve_with`; leave the `screens.*.permissions` deny-list as the
+   sole guard. Add/adjust `run-security-cascade-tests.php` to assert a consumer
+   *removal* attempt on `screens[].permissions` is dropped (not just an
+   addition). Correct CLAUDE.md + `docs/schema-sketch.md` in the same change.
 4. **CAS-5** — build on CAS-2's traversal: extract the shared rule-decision
    function, route `filter_doc` and `describe_writable_paths` through it, delete
    `collect_decl_paths`, add the parity test. Do after CAS-2.
@@ -529,9 +539,6 @@ comment.
   semantically load-bearing — verify against `run-security-cascade-tests.php`).
 - **CAS-1 scope.** Does `Origins` also absorb the cache-signal registration
   surface (CAS-3), or is that a separate owner? Decide when CAS-3 is specced.
-- **CAS-4 policy fork (blocking).** Option A (consumers cannot touch
-  `permissions`) or Option B (shrink-only removal, the documented-but-broken
-  behavior)? This is a governance decision, not an implementation detail — it
-  determines whether the permissions enforcer is deleted or restructured, and
-  whether CLAUDE.md is corrected or the code is fixed to match it. Needs an
-  owner's call before CAS-4 can be built.
+- **CAS-4 policy fork — RESOLVED: Option A** (permissions locked to trusted
+  tiers; capability-level control within a screen belongs to the app). See
+  §4.3.3. No longer blocking.
