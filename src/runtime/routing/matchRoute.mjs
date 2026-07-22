@@ -11,8 +11,13 @@
  *
  * Pattern resolution is most-specific-wins: `/posts/new` beats
  * `/posts/{id}` for `/posts/new`. "Specific" means literal segments
- * outweigh parameter segments; longer literal-prefix wins ties. The
- * scoring matches the PHP resolver in `WP_Admin_Workspaces_Manifest_Resolver`.
+ * outweigh parameter segments (see `specificity`). On an EQUAL specificity
+ * score the first matching pattern in iteration (declaration) order wins —
+ * the same first-wins tie-break the PHP admin-route resolver documents
+ * (`class-wp-admin-workspaces-admin-routes.php`); overlapping patterns that
+ * score the same should be disambiguated by specificity, not relied on to
+ * resolve by order. The scoring matches the PHP resolver in
+ * `WP_Admin_Workspaces_Manifest_Resolver`.
  *
  * Spec §6.3: route configs may reference captured params via `{name}`
  * curly braces. `interpolate(config, params)` substitutes string values

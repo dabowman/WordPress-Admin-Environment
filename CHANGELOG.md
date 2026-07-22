@@ -6,6 +6,46 @@ All notable changes to WP Admin Workspaces. Format follows [Keep a Changelog](ht
 
 ## [Unreleased]
 
+### Fixed: sequence keyboard shortcuts (`g p`) were silently dead (kernel review)
+
+The workspace.json `commands[].shortcut` grammar documents vim-style SEQUENCE
+shortcuts (`g p`, `g m`) — an ordered run of keys separated by a space — and
+`wp-admin-default` ships three (`g p` → Posts, `g m` → Media, `g d` →
+Dashboard). But `parseShortcut` split only on `+`, so it compiled `"g p"` into
+a predicate comparing `event.key === "g p"`, which can never fire. Every
+sequence shortcut was a silent no-op.
+
+- **New `src/runtime/bindings/sequenceTracker.mjs`** — a pure, timer-free state
+  machine that arms on the prefix key, advances step-by-step, completes on the
+  final key, ignores lone-modifier keydowns (so `g Shift+P` and an idle Shift
+  tap don't derail a pending sequence), shares prefixes across sequences
+  (`g p` / `g m`), and lets completion win over arming a new sequence.
+- **`buildCommandsArray`** now compiles a whitespace-bearing shortcut into an
+  ordered `steps[]` array (each step a `parseShortcut` chord predicate) and a
+  plain chord into a single `match` predicate; malformed sequences (an
+  unparseable step) are dropped rather than half-compiled.
+- **`parseShortcut`** rejects any whitespace-bearing string (`null`) — a
+  sequence that reached the single-chord parser is a bug, not a key named
+  `"g p"`.
+- **`<BindingsConsumer>`** wires the tracker with a 1s inter-key inactivity
+  reset. Chords still win first; the sequence prefix key is not swallowed
+  (vim convention), only the completing key calls `preventDefault`. The
+  focused-app deferral already keeps `g p` from firing while typing "gp" in a
+  field. The `useMemo`/`[ compiled ]` rebind-perf shape is preserved.
+- Coverage: `tests/runtime/sequence-shortcuts.test.mjs` (26 checks) pins the
+  parser rejection, sequence compilation, and the full tracker state machine.
+
+### Fixed: misc kernel review nits
+
+- **`matchRoute.mjs`** header comment claimed "longer literal-prefix wins ties"
+  for equal-specificity route patterns; the code (and the PHP admin-route
+  resolver it mirrors) actually resolve ties by first-declared iteration order.
+  Comment corrected; `tests/runtime/match-route.test.mjs` now pins the
+  first-wins tie-break so it can't drift to `>=` unnoticed.
+- **`deepMergeUnder.mjs`** (the defensive engine-`default-styles`-under-`styles`
+  merge the kernel runs for raw fixture/Storybook config) gained direct
+  coverage: `tests/runtime/deep-merge-under.test.mjs` (15 checks).
+
 ### Added: workspace-customization abilities (Abilities API)
 
 First Abilities API surface: `WP_Admin_Workspaces_Abilities`

@@ -122,6 +122,28 @@ ok(
 	'empty routes block returns null',
 	matchRoute( {}, '/posts' ) === null
 );
+
+// Equal-specificity tie-break: two patterns that score the same both match a
+// value → the FIRST in declaration/iteration order wins. Documented behavior
+// (matches the PHP admin-route resolver's first-wins note). Pinned so an
+// accidental change to `score > bestScore` (vs `>=`) is caught.
+console.log( '\n— matchRoute: equal-specificity first-wins tie-break —\n' );
+{
+	const first = { '/{a}/x': { app: 'A' }, '/y/{b}': { app: 'B' } };
+	// Both patterns score 11 (one literal +10, one param +1) and both match
+	// `/y/x`. First-declared (`/{a}/x`) wins.
+	ok(
+		'first-declared equal-score pattern wins',
+		matchRoute( first, '/y/x' ).pattern === '/{a}/x'
+	);
+	// Reversing declaration order flips the winner — proves order is the
+	// tie-break, not some hidden pattern-string preference.
+	const second = { '/y/{b}': { app: 'B' }, '/{a}/x': { app: 'A' } };
+	ok(
+		'reversed order flips the equal-score winner',
+		matchRoute( second, '/y/x' ).pattern === '/y/{b}'
+	);
+}
 ok(
 	'non-string value returns null',
 	matchRoute( ROUTES, null ) === null

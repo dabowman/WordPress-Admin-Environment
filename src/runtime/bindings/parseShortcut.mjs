@@ -12,7 +12,15 @@
  * Key tokens:       single-char letters/digits, named keys
  *                   (ArrowUp, Escape, F1, Slash, …)
  *
- * Pure ESM. Tests in tests/runtime/bindings.test.mjs.
+ * This parses a SINGLE chord only. Space-separated SEQUENCE shortcuts
+ * (`g p`, `g m`) are split into per-chord steps upstream in
+ * `buildCommandsArray` and tracked by `sequenceTracker.mjs`; a shortcut
+ * string that still contains whitespace here is a sequence that reached the
+ * wrong parser, so it returns `null` rather than compiling a matcher that
+ * would compare `event.key` against a multi-key string and never fire.
+ *
+ * Pure ESM. Tests in tests/runtime/bindings.test.mjs +
+ * tests/runtime/sequence-shortcuts.test.mjs.
  */
 
 const MOD_TOKENS = new Set( [ 'Mod', 'Shift', 'Alt', 'Ctrl', 'Meta' ] );
@@ -32,13 +40,25 @@ function isMac() {
 }
 
 /**
- * Returns a predicate `(event) => boolean` matching the shortcut.
+ * Returns a predicate `(event) => boolean` matching the shortcut, or `null`
+ * for an empty / whitespace-bearing / modifier-only string.
  *
  * Optionally pass `{ mac: boolean }` to override platform detection
  * (test paths use this to avoid coupling to the host).
+ *
+ * @param {*}       shortcut      Single-chord shortcut string (e.g. `Mod+K`).
+ * @param {Object}  [options]     Overrides.
+ * @param {boolean} [options.mac] Force platform (skip `isMac()` detection).
+ * @return {Function|null} Event predicate, or null for unusable input.
  */
 export function parseShortcut( shortcut, options = {} ) {
 	if ( typeof shortcut !== 'string' || shortcut.length === 0 ) {
+		return null;
+	}
+	// Whitespace marks a multi-chord sequence — not a single chord. Sequences
+	// are compiled step-by-step upstream (`buildCommandsArray`); reject here so
+	// a stray `"g p"` can't produce a matcher that never fires.
+	if ( /\s/.test( shortcut ) ) {
 		return null;
 	}
 	const tokens = shortcut.split( '+' );
